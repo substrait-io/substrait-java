@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Checkout submodules
+        uses: textbook/git-checkout-submodule-action@master
+          with:
+          remote: true
       - name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
@@ -22,7 +26,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      uses: textbook/git-checkout-submodule-action@master
+        with:
+          remote: true
     - uses: DeLaGuardo/setup-graalvm@5.0
       with:
         graalvm: '22.0.0.2'
