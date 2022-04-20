@@ -101,6 +101,8 @@ public class GenericRoundtripTest {
         if (type.equals(Boolean.TYPE)) {
             return rand.nextBoolean();
         } else if (type.equals((Integer.TYPE)) || type.equals(Integer.class)) {
+            // we generate always "1" as this is often use for timestamp construction
+            // and need to respect the days/months/years formats.
             return 1;
         } else if (type.equals(Long.TYPE) || type.equals(Long.class)) {
             return rand.nextLong();
