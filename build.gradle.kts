@@ -19,10 +19,18 @@ dependencies {
   compileOnly("org.immutables:value-annotations:2.8.8")
 }
 
+val submodulesUpdate by
+  tasks.creating(Exec::class) {
+    group = "Build Setup"
+    description = "Updates (and inits) substrait git submodule"
+    commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
+  }
+
 allprojects {
   repositories { mavenCentral() }
 
   tasks.configureEach<Test> { useJUnitPlatform() }
+  tasks.withType<JavaCompile> { dependsOn(submodulesUpdate) }
 
   tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("--enable-preview") }
 
