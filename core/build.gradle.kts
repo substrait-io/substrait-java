@@ -3,10 +3,11 @@ import com.google.protobuf.gradle.protoc
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
-    id("java")
-    id("idea")
-    id("antlr")
-    id("com.google.protobuf") version "0.8.17"
+  id("java")
+  id("idea")
+  id("antlr")
+  id("com.google.protobuf") version "0.8.17"
+  id("com.diffplug.spotless") version "6.5.1"
 }
 
 dependencies {

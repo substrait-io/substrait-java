@@ -1,7 +1,8 @@
 plugins {
-    id("java")
-    id("idea")
-    id("com.palantir.graal") version "0.10.0"
+  id("java")
+  id("idea")
+  id("com.palantir.graal") version "0.10.0"
+  id("com.diffplug.spotless") version "6.5.1"
 }
 
 java {
