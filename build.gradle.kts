@@ -1,3 +1,5 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+import com.diffplug.gradle.spotless.SpotlessPlugin
 import com.github.vlsi.gradle.dsl.configureEach
 
 plugins {
@@ -36,8 +38,10 @@ allprojects {
 
   tasks.withType<Test>().configureEach { jvmArgs("--enable-preview") }
 
+  plugins.withType<SpotlessPlugin>().configureEach {
+    configure<SpotlessExtension> { kotlinGradle { ktfmt().googleStyle() } }
+  }
+
   group = "io.substrait"
   version = "1.0-SNAPSHOT"
 }
-
-spotless { kotlinGradle { ktfmt().googleStyle() } }
