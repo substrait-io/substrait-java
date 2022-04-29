@@ -5,7 +5,10 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import org.junit.jupiter.api.Test;
+import org.junit.Assume;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -13,75 +16,74 @@ import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+
 
 public class GenericRoundtripTest {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GenericRoundtripTest.class);
 
-    @Test
-    void genericExpressionTest() {
-        //We list all public and static methods of ExpressionCreator
-        List<Method> methodsToTest = getMethods(ExpressionCreator.class, true, true);
 
-        // We generate synthetic input params (for a subset of types we support)
-        for (Method m : methodsToTest) {
-            List<Object> paramInst = instantiateParams(m);
+    @ParameterizedTest
+    @MethodSource("generateInvocations")
+    /**
+     * This tests executes a roundtrip for {@link Method} m invoked with a {@link List<Object>} of parameters.
+     * If the param generation has failed the {@link UnsupportedTypeGenerationException} e is populated,
+     * and the test will be ignored (kept here for tracking).
+     */
+    public void roundtripTest(Method m, List<Object> paramInst, UnsupportedTypeGenerationException e)
+            throws InvocationTargetException, IllegalAccessException {
 
-            // If we have all params we perform a roundtrip test.
-            if (paramInst.size() == m.getParameterCount()) {
-                prettyPrintInvocation(m, paramInst);
-                roundtripTest(m, paramInst);
-            } else {
-                System.out.println("Skipping method: " + m.getName() + " becasue we don't support all params.");
-            }
-
+        // If there is an UncoveredTypeGenerationException we  ignore this test
+        if (e != null) {
+            Assume.assumeTrue(e.getMessage(), false);
         }
 
-    }
-
-    private void roundtripTest(Method m, List<Object> paramInst) {
-        Expression val = null;
-        try {
-            val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        // roundtrip to protobuff and back and check equality
+        Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
         var to = new ExpressionProtoConverter(null);
         var from = new ProtoExpressionConverter(null, null, null);
         assertEquals(val, from.from(val.accept(to)));
     }
 
 
-    private void prettyPrintInvocation(Method m, List<Object> paramInst) {
-        List<String> params = new ArrayList<>();
-        for (Class p : m.getParameterTypes()) {
-            params.add(p.getName());
+    //Parametrized case generator
+    private static Collection generateInvocations() {
+
+        ArrayList<Arguments> invocations = new ArrayList<>();
+
+        //We list all public and static methods of ExpressionCreator
+        List<Method> methodsToTest = getMethods(ExpressionCreator.class, true, true);
+
+
+        // We generate synthetic input params (for a subset of types we support)
+        for (Method m : methodsToTest) {
+            try {
+                invocations.add(arguments(m, instantiateParams(m), null));
+            } catch (UnsupportedTypeGenerationException e) {
+                invocations.add(arguments(m, null, e));
+            }
         }
-        System.out.println("Invoking " + m.getName() + " (" + params + ") with values (" + paramInst + ")");
+        return invocations;
     }
 
-    private List<Object> instantiateParams(Method m) {
-        String paramName = "";
+
+    private static List<Object> instantiateParams(Method m) throws UnsupportedTypeGenerationException {
         List<Object> l = new ArrayList<>();
         for (Class param : m.getParameterTypes()) {
             Object val = valGenerator(param);
             if (val == null) {
-                System.out.println("We can't yet handle type: " + param.getName());
-                break;
+                throw new UnsupportedTypeGenerationException("We can't yet handle generation for type: " +
+                         param.getName());
             }
             l.add(valGenerator(param));
         }
         return l;
     }
 
-    private List<Method> getMethods(Class c, boolean filterPublicOnly, boolean filterStaticOnly) {
+    private static List<Method> getMethods(Class c, boolean filterPublicOnly, boolean filterStaticOnly) {
         Method[] allMethods = c.getMethods();
         List<Method> selectedMethods = new ArrayList<>();
         for (Method m : allMethods) {
@@ -95,10 +97,11 @@ public class GenericRoundtripTest {
     }
 
 
-    private Object valGenerator(Class<?> type) {
+    private static Object valGenerator(Class<?> type) {
         Random rand = new Random();
 
-        if (type.equals(Boolean.TYPE)) {
+        // For each "type" generate some random value
+        if (type.equals(Boolean.TYPE) || type.equals(Boolean.class)) {
             return rand.nextBoolean();
         } else if (type.equals((Integer.TYPE)) || type.equals(Integer.class)) {
             // we generate always "1" as this is often use for timestamp construction
@@ -120,10 +123,18 @@ public class GenericRoundtripTest {
             return ByteString.copyFromUtf8(UUID.randomUUID().toString());
         } else if (type.equals(BigDecimal.class)) {
             return BigDecimal.valueOf(rand.nextLong());
-        } else if (type.equals(Instant.class)){
+        } else if (type.equals(Instant.class)) {
             return Instant.now();
         }
 
         return null;
     }
+
+    // Class used to propagate type generation errors from param generator to test cases
+    private static class UnsupportedTypeGenerationException extends Exception {
+        public UnsupportedTypeGenerationException(String s) {
+            super(s);
+        }
+    }
+
 }
