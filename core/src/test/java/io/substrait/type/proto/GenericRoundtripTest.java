@@ -9,7 +9,6 @@ import org.junit.Assume;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -21,10 +20,13 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 
 public class GenericRoundtripTest {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GenericRoundtripTest.class);
-
 
     @ParameterizedTest
     @MethodSource("generateInvocations")
@@ -43,6 +45,7 @@ public class GenericRoundtripTest {
 
         // roundtrip to protobuff and back and check equality
         Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
+
         var to = new ExpressionProtoConverter(null);
         var from = new ProtoExpressionConverter(null, null, null);
         assertEquals(val, from.from(val.accept(to)));
