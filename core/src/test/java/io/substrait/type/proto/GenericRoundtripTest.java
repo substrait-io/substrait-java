@@ -5,7 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -40,7 +40,7 @@ public class GenericRoundtripTest {
 
         // If there is an UncoveredTypeGenerationException we  ignore this test
         if (e != null) {
-            Assume.assumeTrue(e.getMessage(), false);
+            Assumptions.assumeTrue(false, e.getMessage());
         }
 
         // roundtrip to protobuff and back and check equality
