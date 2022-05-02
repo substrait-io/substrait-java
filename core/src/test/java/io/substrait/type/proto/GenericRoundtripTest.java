@@ -28,6 +28,8 @@ import java.util.UUID;
 public class GenericRoundtripTest {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GenericRoundtripTest.class);
 
+    static Random rand = new Random(123);
+
     @ParameterizedTest
     @MethodSource("generateInvocations")
     /**
@@ -101,15 +103,15 @@ public class GenericRoundtripTest {
 
 
     private static Object valGenerator(Class<?> type) {
-        Random rand = new Random();
-
         // For each "type" generate some random value
+
         if (type.equals(Boolean.TYPE) || type.equals(Boolean.class)) {
             return rand.nextBoolean();
         } else if (type.equals((Integer.TYPE)) || type.equals(Integer.class)) {
-            // we generate always "1" as this is often use for timestamp construction
-            // and need to respect the days/months/years formats.
-            return 1;
+            // we generate always numbers in 1-12 as this is often use for timestamp
+            // construction and need to respect the days/months/years formats.
+            // we would not test all values, but get ok coverage of basics
+            return rand.nextInt(11)+1;
         } else if (type.equals(Long.TYPE) || type.equals(Long.class)) {
             return rand.nextLong();
         } else if (type.equals(Double.TYPE) || type.equals(Double.class)) {
