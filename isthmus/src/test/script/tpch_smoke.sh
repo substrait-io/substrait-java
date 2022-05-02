@@ -8,21 +8,16 @@ TPCH="../resources/tpch/"
 DDL=`cat ${TPCH}/schema.sql`
 QUERY_FOLDER="${TPCH}/queries"
 
-# echo $DDL
-
-for i in {1..5}; do echo $i; done
-
-for querynum in {1..22}; do
-     if [ $querynum -lt 10 ]; then
-       querynumstr="0${querynum}"
+##for QUERYNUM in {1..22}; do
+QUERY_TO_RUN=(1 3 5 6 10 14 19)
+for QUERY_NUM in "${QUERY_TO_RUN[@]}"; do
+     if [ $QUERY_NUM -lt 10 ]; then
+       QUERY=`cat ${QUERY_FOLDER}/0${QUERY_NUM}.sql`
      else
-       querynumstr="${querynum}"
+       QUERY=`cat ${QUERY_FOLDER}/${QUERY_NUM}.sql`
     fi
 
-    QUERY=`cat ${QUERY_FOLDER}/${querynumstr}.sql`
-    echo "Processing tpc-h query", $querynum
+    echo "Processing tpc-h query", $QUERY_NUM
     echo $QUERY
     $CMD "${QUERY}" --create "${DDL}"
 done
-
-## $CMD 'select l_orderkey from lineitem' --create "${DDL}"
