@@ -296,6 +296,7 @@ public interface Expression {
       ByteBuffer bb = ByteBuffer.allocate(16);
       bb.putLong(value().getMostSignificantBits());
       bb.putLong(value().getLeastSignificantBits());
+      bb.rewind();
       return ByteString.copyFrom(bb);
     }
   }
