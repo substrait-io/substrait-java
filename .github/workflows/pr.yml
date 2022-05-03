@@ -43,6 +43,7 @@ jobs:
       run: gradle nativeImage
     - name: Smoke Test
       run: ./isthmus/src/test/script/smoke.sh
+           ./isthmus/src/test/script/tpch_smoke.sh
     - name: Rename the artifact to OS-unique name
       shell: bash
       run: |

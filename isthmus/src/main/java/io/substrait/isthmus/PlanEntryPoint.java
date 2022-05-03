@@ -18,7 +18,8 @@ public class PlanEntryPoint implements Callable<Integer> {
   @Parameters(index = "0", description = "The sql we should parse.")
   private String sql;
 
-  @Option(names = {"-c", "--create"}, description = "Create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
+  @Option(names = {"-c", "--create"},
+          description = "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
   private List<String> createStatements;
 
   @Override

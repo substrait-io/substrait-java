@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.proto.Plan;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 public class SimplePlansTest extends PlanTestBase {
 
@@ -37,6 +39,13 @@ public class SimplePlansTest extends PlanTestBase {
     print(s.execute("select * from lineitem WHERE L_ORDERKEY > 10", creates));
   }
 
+  @Test
+  public void joinWithMultiDDLInOneString() throws IOException, SqlParseException {
+    SqlToSubstrait s = new SqlToSubstrait();
+    List<String>  ddlStmts = Lists.newArrayList(asString("tpch/schema.sql"));
+    print(s.execute("select * from lineitem l, orders o WHERE o.o_orderkey = l.l_orderkey  and L_ORDERKEY > 10",
+            ddlStmts));
+  }
 
   private void print(Plan plan) {
     try {
