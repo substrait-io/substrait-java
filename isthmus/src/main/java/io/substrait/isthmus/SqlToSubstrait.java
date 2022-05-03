@@ -29,6 +29,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
@@ -66,8 +67,10 @@ public class SqlToSubstrait {
 
     if(tables != null) {
       for (String tableDef : tables) {
-        DefinedTable t = parseCreateTable(factory, validator, tableDef);
-        rootSchema.add(t.getName(), t);
+        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
+        for (DefinedTable t : tList) {
+          rootSchema.add(t.getName(), t);
+        }
       }
     }
 
@@ -123,42 +126,46 @@ public class SqlToSubstrait {
     EXTENSION_COLLECTION = defaults;
   }
 
-  private DefinedTable parseCreateTable(RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
+  private List<DefinedTable> parseCreateTable(RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
       SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY));
-      var parsed = parser.parseQuery();
-      //var validated = validator.validate(parsed);
+      List<DefinedTable> definedTableList = new ArrayList<>();
 
-      if (!(parsed instanceof SqlCreateTable)) {
-        fail("Not a valid CREATE TABLE statement.");
-      }
-
-      SqlCreateTable create = (SqlCreateTable) parsed;
-      if (create.name.names.size() > 1) {
-        fail("Only simple table names are allowed.", create.name.getParserPosition());
-      }
-
-      if (create.query != null) {
-        fail("CTAS not supported.", create.name.getParserPosition());
-      }
-
-      List<String> names = new ArrayList<>();
-      List<RelDataType> columnTypes = new ArrayList<>();
-
-      for (SqlNode node : create.columnList) {
-        if (!(node instanceof SqlColumnDeclaration)) {
-          fail("Unexpected column list construction.", node.getParserPosition());
+      SqlNodeList nodeList = parser.parseStmtList();
+      for (SqlNode parsed : nodeList) {
+        if (!(parsed instanceof SqlCreateTable)) {
+          fail("Not a valid CREATE TABLE statement.");
         }
 
-        SqlColumnDeclaration col = (SqlColumnDeclaration) node;
-        if (col.name.names.size() != 1) {
-          fail("Expected simple column names.", col.name.getParserPosition());
+        SqlCreateTable create = (SqlCreateTable) parsed;
+        if (create.name.names.size() > 1) {
+          fail("Only simple table names are allowed.", create.name.getParserPosition());
         }
 
-        names.add(col.name.names.get(0));
-        columnTypes.add(col.dataType.deriveType(validator));
+        if (create.query != null) {
+          fail("CTAS not supported.", create.name.getParserPosition());
+        }
+
+        List<String> names = new ArrayList<>();
+        List<RelDataType> columnTypes = new ArrayList<>();
+
+        for (SqlNode node : create.columnList) {
+          if (!(node instanceof SqlColumnDeclaration)) {
+            fail("Unexpected column list construction.", node.getParserPosition());
+          }
+
+          SqlColumnDeclaration col = (SqlColumnDeclaration) node;
+          if (col.name.names.size() != 1) {
+            fail("Expected simple column names.", col.name.getParserPosition());
+          }
+
+          names.add(col.name.names.get(0));
+          columnTypes.add(col.dataType.deriveType(validator));
+        }
+
+        definedTableList.add(new DefinedTable(create.name.names.get(0), factory, factory.createStructType(columnTypes, names)));
       }
 
-      return new DefinedTable(create.name.names.get(0), factory, factory.createStructType(columnTypes, names));
+      return definedTableList;
   }
 
   private static SqlParseException fail(String text, SqlParserPos pos) {
