@@ -32,104 +32,104 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
 
   @Override
   public Expression visit(io.substrait.expression.Expression.BoolLiteral expr) {
-    return lit(bldr -> bldr.setBoolean(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setBoolean(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.I8Literal expr) {
-    return lit(bldr -> bldr.setI8(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setI8(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.I16Literal expr) {
-    return lit(bldr -> bldr.setI16(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setI16(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.I32Literal expr) {
-    return lit(bldr -> bldr.setI32(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setI32(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.I64Literal expr) {
-    return lit(bldr -> bldr.setI64(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setI64(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.FP32Literal expr) {
-    return lit(bldr -> bldr.setFp32(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setFp32(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.FP64Literal expr) {
-    return lit(bldr -> bldr.setFp64(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setFp64(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.StrLiteral expr) {
-    return lit(bldr -> bldr.setString(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setString(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.BinaryLiteral expr) {
-    return lit(bldr -> bldr.setBinary(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setBinary(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.TimeLiteral expr) {
-    return lit(bldr -> bldr.setTime(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setTime(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.DateLiteral expr) {
-    return lit(bldr -> bldr.setDate(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setDate(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.TimestampLiteral expr) {
-    return lit(bldr -> bldr.setTimestamp(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setTimestamp(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.TimestampTZLiteral expr) {
-    return lit(bldr -> bldr.setTimestampTz(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setTimestampTz(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.IntervalYearLiteral expr) {
-    return lit(bldr -> bldr.setIntervalYearToMonth(
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setIntervalYearToMonth(
         Expression.Literal.IntervalYearToMonth.newBuilder().setYears(expr.years()).setMonths(expr.months())));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.IntervalDayLiteral expr) {
-    return lit(bldr -> bldr.setIntervalDayToSecond(
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setIntervalDayToSecond(
         Expression.Literal.IntervalDayToSecond.newBuilder().setDays(expr.days()).setSeconds(expr.seconds())));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.UUIDLiteral expr) {
-    return lit(bldr -> bldr.setUuid(expr.toBytes()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setUuid(expr.toBytes()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.FixedCharLiteral expr) {
-    return lit(bldr -> bldr.setFixedChar(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setFixedChar(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.VarCharLiteral expr) {
-    return lit(bldr -> bldr.setVarChar(Expression.Literal.VarChar.newBuilder().setValue(expr.value()).setLength(expr.length())));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setVarChar(Expression.Literal.VarChar.newBuilder().setValue(expr.value()).setLength(expr.length())));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.FixedBinaryLiteral expr) {
-    return lit(bldr -> bldr.setFixedBinary(expr.value()));
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setFixedBinary(expr.value()));
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.DecimalLiteral expr) {
-    return lit(bldr -> bldr.setDecimal(
+    return lit(bldr -> bldr.setNullable(expr.nullable()).setDecimal(
         Expression.Literal.Decimal.newBuilder()
             .setValue(expr.value())
             .setPrecision(expr.precision())
@@ -144,7 +144,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         var value = toLiteral(e.getValue());
         return Expression.Literal.Map.KeyValue.newBuilder().setKey(key).setValue(value).build();
       }).toList();
-      bldr.setMap(Expression.Literal.Map.newBuilder().addAllKeyValues(keyValues));
+      bldr.setNullable(expr.nullable()).setMap(Expression.Literal.Map.newBuilder().addAllKeyValues(keyValues));
     });
   }
 
@@ -152,7 +152,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.ListLiteral expr) {
     return lit(bldr -> {
       var values = expr.values().stream().map(this::toLiteral).toList();
-      bldr.setList(Expression.Literal.List.newBuilder().addAllValues(values));
+      bldr.setNullable(expr.nullable()).setList(Expression.Literal.List.newBuilder().addAllValues(values));
     });
   }
 
@@ -160,7 +160,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.StructLiteral expr) {
     return lit(bldr -> {
       var values = expr.fields().stream().map(this::toLiteral).toList();
-      bldr.setStruct(Expression.Literal.Struct.newBuilder().addAllFields(values));
+      bldr.setNullable(expr.nullable()).setStruct(Expression.Literal.Struct.newBuilder().addAllFields(values));
     });
   }
 
