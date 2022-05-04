@@ -18,6 +18,8 @@ public abstract class FieldReference implements Expression {
 
   public abstract Optional<Expression> inputExpression();
 
+  public abstract Optional<Integer> outerReferenceStepsOut();
+
   public Type getType() {
     return type();
   }
@@ -82,6 +84,15 @@ public abstract class FieldReference implements Expression {
     return ImmutableFieldReference.builder()
         .addSegments(StructField.of(index))
         .type(knownType)
+        .build();
+  }
+
+  public static FieldReference newRootStructOuterReference(
+      int index, Type knownType, int stepsOut) {
+    return ImmutableFieldReference.builder()
+        .addSegments(StructField.of(index))
+        .type(knownType)
+        .outerReferenceStepsOut(stepsOut)
         .build();
   }
 

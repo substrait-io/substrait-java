@@ -9,6 +9,7 @@ import io.substrait.relation.*;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,6 +21,7 @@ import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.*;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -32,13 +34,15 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   private final RexVisitor<Expression> converter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
 
+  Map<RexFieldAccess, Integer> fieldAccessDepthMap;
+
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
     this.extensions = extensions;
     var converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.DEFAULTS);
     converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
-    this.converter = new RexExpressionConverter(converters);
+    this.converter = new RexExpressionConverter(this, converters);
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
   }
@@ -260,13 +264,28 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 
+  private void popFieldAccessDepthMap(RelNode root) {
+    final OuterReferenceResolver resolver = new OuterReferenceResolver();
+    resolver.apply(root);
+    fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
+  }
+
+  public Integer getFieldAccessDepth(RexFieldAccess fieldAccess) {
+    return fieldAccessDepthMap.get(fieldAccess);
+  }
+
   public Rel apply(RelNode r) {
     return reverseAccept(r);
   }
 
   public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {
+    return convert(root.rel, extensions);
+  }
+
+  public static Rel convert(RelNode rel, SimpleExtension.ExtensionCollection extensions) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(root.rel.getCluster().getTypeFactory(), extensions);
-    return visitor.apply(root.rel);
+        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions);
+    visitor.popFieldAccessDepthMap(rel);
+    return visitor.apply(rel);
   }
 }
