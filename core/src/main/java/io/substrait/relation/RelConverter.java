@@ -2,7 +2,7 @@ package io.substrait.relation;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
-import io.substrait.expression.proto.FunctionLookup;
+import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.*;
 import io.substrait.proto.Rel;
 import io.substrait.type.proto.TypeProtoConverter;
@@ -12,11 +12,11 @@ import java.util.List;
 public class RelConverter implements RelVisitor<Rel, RuntimeException> {
 
   private final ExpressionProtoConverter protoConverter;
-  private final FunctionLookup functionLookup;
+  private final FunctionCollector functionCollector;
 
-  public RelConverter(FunctionLookup functionLookup) {
-    this.functionLookup = functionLookup;
-    this.protoConverter = new ExpressionProtoConverter(functionLookup);
+  public RelConverter(FunctionCollector functionCollector) {
+    this.functionCollector = functionCollector;
+    this.protoConverter = new ExpressionProtoConverter(functionCollector);
   }
 
   private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
@@ -67,7 +67,7 @@ public class RelConverter implements RelVisitor<Rel, RuntimeException> {
             .addAllArgs(toProto(measure.getFunction().arguments()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
-                functionLookup.getFunctionReference(measure.getFunction().declaration()));
+                functionCollector.getFunctionReference(measure.getFunction().declaration()));
 
     var builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 

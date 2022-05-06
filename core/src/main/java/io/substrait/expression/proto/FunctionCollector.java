@@ -11,44 +11,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Maintains a mapping between function anchors and function references. Generates references for
  * new anchors.
  */
-public class FunctionLookup {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionLookup.class);
+public class FunctionCollector extends AbstractFunctionLookup {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionCollector.class);
 
-  private final BidiMap<Integer, SimpleExtension.FunctionAnchor> map = new BidiMap<>();
-  private final BidiMap<Integer, String> uriMap = new BidiMap<>();
+  private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
+  private final BidiMap<Integer, String> uriMap;
 
   private int counter = -1;
 
+  public FunctionCollector() {
+    super(new HashMap<>());
+    funcMap = new BidiMap<>(map);
+    uriMap = new BidiMap<>(new HashMap<>());
+  }
+
   public int getFunctionReference(SimpleExtension.Function declaration) {
-    Integer i = map.reverseGet(declaration.getAnchor());
+    Integer i = funcMap.reverseGet(declaration.getAnchor());
     if (i != null) {
       return i;
     }
     ++counter; // prefix here to make clearer than postfixing at end.
-    map.put(counter, declaration.getAnchor());
+    funcMap.put(counter, declaration.getAnchor());
     return counter;
-  }
-
-  public SimpleExtension.ScalarFunctionVariant getScalarFunction(
-      int reference, SimpleExtension.ExtensionCollection extensions) {
-    var anchor = map.get(reference);
-    if (anchor == null) {
-      throw new IllegalArgumentException(
-          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
-    }
-
-    return extensions.getScalarFunction(anchor);
-  }
-
-  public SimpleExtension.AggregateFunctionVariant getAggregateFunction(
-      int reference, SimpleExtension.ExtensionCollection extensions) {
-    var anchor = map.get(reference);
-    if (anchor == null) {
-      throw new IllegalArgumentException(
-          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
-    }
-
-    return extensions.getAggregateFunction(anchor);
   }
 
   public void addFunctionsToPlan(Plan.Builder builder) {
@@ -56,7 +40,7 @@ public class FunctionLookup {
     var uris = new HashMap<String, SimpleExtensionURI>();
 
     var extensionList = new ArrayList<SimpleExtensionDeclaration>();
-    for (var e : map.forwardMap.entrySet()) {
+    for (var e : funcMap.forwardMap.entrySet()) {
       SimpleExtensionURI uri =
           uris.computeIfAbsent(
               e.getValue().namespace(),
@@ -82,9 +66,13 @@ public class FunctionLookup {
 
   /** We don't depend on guava... */
   private static class BidiMap<T1, T2> {
+    private final Map<T1, T2> forwardMap;
+    private final Map<T2, T1> reverseMap;
 
-    private final Map<T1, T2> forwardMap = new HashMap<>();
-    private final Map<T2, T1> reverseMap = new HashMap<>();
+    public BidiMap(Map<T1, T2> forwardMap) {
+      this.forwardMap = forwardMap;
+      this.reverseMap = new HashMap<>();
+    }
 
     public T2 get(T1 t1) {
       return forwardMap.get(t1);
