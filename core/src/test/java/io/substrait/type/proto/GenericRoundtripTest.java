@@ -1,5 +1,6 @@
 package io.substrait.type.proto;
 
+import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -49,7 +50,7 @@ public class GenericRoundtripTest {
     Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
 
     var to = new ExpressionProtoConverter(null, null);
-    var from = new ProtoExpressionConverter(null, null, null);
+    var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE);
     assertEquals(val, from.from(val.accept(to)));
   }
 

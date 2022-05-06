@@ -35,6 +35,16 @@ public abstract class Join extends BiRel {
     public JoinRel.JoinType toProto() {
       return proto;
     }
+
+    public static JoinType fromProto(JoinRel.JoinType proto) {
+      for (var v : values()) {
+        if (v.proto == proto) {
+          return v;
+        }
+      }
+
+      throw new IllegalArgumentException("Unknown type: " + proto);
+    }
   }
 
   @Override
