@@ -1,17 +1,16 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.function.TypeExpression;
 import io.substrait.type.Type;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CalciteTypeTest extends CalciteObjs {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteTypeTest.class);
@@ -79,19 +78,29 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void timestamptz(boolean nullable) {
-    testType(Type.withNullability(nullable).TIMESTAMP_TZ, SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, nullable, 6);
+    testType(
+        Type.withNullability(nullable).TIMESTAMP_TZ,
+        SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+        nullable,
+        6);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void intervalYear(boolean nullable) {
-    testType(Type.withNullability(nullable).INTERVAL_YEAR, type.createSqlIntervalType(TypeConverter.INTERVAL_YEAR), nullable);
+    testType(
+        Type.withNullability(nullable).INTERVAL_YEAR,
+        type.createSqlIntervalType(TypeConverter.INTERVAL_YEAR),
+        nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void intervalDay(boolean nullable) {
-    testType(Type.withNullability(nullable).INTERVAL_DAY, type.createSqlIntervalType(TypeConverter.INTERVAL_DAY), nullable);
+    testType(
+        Type.withNullability(nullable).INTERVAL_DAY,
+        type.createSqlIntervalType(TypeConverter.INTERVAL_DAY),
+        nullable);
   }
 
   @ParameterizedTest
@@ -135,54 +144,55 @@ class CalciteTypeTest extends CalciteObjs {
   void list(boolean nullable) {
     testType(
         Type.withNullability(nullable).list(Type.REQUIRED.I16),
-        type.createArrayType(type.createSqlType(SqlTypeName.SMALLINT), -1), nullable);
+        type.createArrayType(type.createSqlType(SqlTypeName.SMALLINT), -1),
+        nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void map(boolean nullable) {
-    testType(Type.withNullability(nullable).map(Type.REQUIRED.STRING, Type.REQUIRED.I8),
+    testType(
+        Type.withNullability(nullable).map(Type.REQUIRED.STRING, Type.REQUIRED.I8),
         type.createMapType(
-            type.createSqlType(SqlTypeName.VARCHAR),
-            type.createSqlType(SqlTypeName.TINYINT)),
+            type.createSqlType(SqlTypeName.VARCHAR), type.createSqlType(SqlTypeName.TINYINT)),
         nullable);
   }
 
   @Test
   void struct() {
-    testType(Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
+    testType(
+        Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
         type.createStructType(
-            Arrays.asList(type.createSqlType(SqlTypeName.VARCHAR),
-                type.createSqlType(SqlTypeName.TINYINT)),
-            Arrays.asList("foo", "bar")
-        ),
+            Arrays.asList(
+                type.createSqlType(SqlTypeName.VARCHAR), type.createSqlType(SqlTypeName.TINYINT)),
+            Arrays.asList("foo", "bar")),
         Arrays.asList("foo", "bar"));
   }
 
   @Test
   void nestedStruct() {
-    testType(Type.REQUIRED.struct(
+    testType(
+        Type.REQUIRED.struct(
             Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
             Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
             Type.REQUIRED.STRING),
         type.createStructType(
             Arrays.asList(
                 type.createStructType(
-                    Arrays.asList(type.createSqlType(SqlTypeName.VARCHAR),
+                    Arrays.asList(
+                        type.createSqlType(SqlTypeName.VARCHAR),
                         type.createSqlType(SqlTypeName.TINYINT)),
-                    Arrays.asList("inner1", "inner2")
-                ),
+                    Arrays.asList("inner1", "inner2")),
                 type.createStructType(
-                    Arrays.asList(type.createSqlType(SqlTypeName.VARCHAR),
+                    Arrays.asList(
+                        type.createSqlType(SqlTypeName.VARCHAR),
                         type.createSqlType(SqlTypeName.TINYINT)),
-                    Arrays.asList("inner3", "inner4")
-                ),
+                    Arrays.asList("inner3", "inner4")),
                 type.createSqlType(SqlTypeName.VARCHAR)),
-            Arrays.asList("topStruct1", "topStruct2", "topVarChar")
-        ),
-        Arrays.asList("topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
+            Arrays.asList("topStruct1", "topStruct2", "topVarChar")),
+        Arrays.asList(
+            "topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
   }
-
 
   private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable) {
     testType(expression, type.createTypeWithNullability(type.createSqlType(typeName), nullable));
@@ -192,17 +202,21 @@ class CalciteTypeTest extends CalciteObjs {
     testType(expression, type.createTypeWithNullability(calciteType, nullable));
   }
 
-  private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec) {
-    testType(expression, type.createTypeWithNullability(
-        type.createSqlType(typeName, prec), nullable));
+  private void testType(
+      TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec) {
+    testType(
+        expression, type.createTypeWithNullability(type.createSqlType(typeName, prec), nullable));
   }
 
-  private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec, int scale) {
-    testType(expression, type.createTypeWithNullability(
-        type.createSqlType(typeName, prec, scale), nullable));
+  private void testType(
+      TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec, int scale) {
+    testType(
+        expression,
+        type.createTypeWithNullability(type.createSqlType(typeName, prec, scale), nullable));
   }
 
-  private void testType(TypeExpression expression, RelDataType calciteType, List<String> dfsFieldNames) {
+  private void testType(
+      TypeExpression expression, RelDataType calciteType, List<String> dfsFieldNames) {
     assertEquals(expression, TypeConverter.convert(calciteType));
     assertEquals(calciteType, TypeConverter.convert(type, expression, dfsFieldNames));
   }
@@ -210,5 +224,4 @@ class CalciteTypeTest extends CalciteObjs {
   private void testType(TypeExpression expression, RelDataType type) {
     testType(expression, type, null);
   }
-
 }

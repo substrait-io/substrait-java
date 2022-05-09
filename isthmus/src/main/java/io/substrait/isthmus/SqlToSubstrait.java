@@ -7,6 +7,10 @@ import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelConverter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -14,7 +18,6 @@ import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
@@ -44,28 +47,22 @@ import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-/**
- * Take a SQL statement and a set of table definitions and return a substrait plan.
- */
+/** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait {
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    SqlToRelConverter.Config converterConfig = SqlToRelConverter.config()
-        .withTrimUnusedFields(true)
-        .withExpand(false);
+    SqlToRelConverter.Config converterConfig =
+        SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
 
     RelDataTypeFactory factory = new JavaTypeFactoryImpl();
-    CalciteConnectionConfig config = CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-    CalciteCatalogReader catalogReader = new CalciteCatalogReader(rootSchema, Arrays.asList(), factory, config);
+    CalciteConnectionConfig config =
+        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, Arrays.asList(), factory, config);
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
 
-    if(tables != null) {
+    if (tables != null) {
       for (String tableDef : tables) {
         List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
         for (DefinedTable t : tList) {
@@ -78,35 +75,46 @@ public class SqlToSubstrait {
     var parsed = parser.parseQuery();
 
     VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
-    RelOptCluster cluster = RelOptCluster.create(planner,new RexBuilder(factory));
+    RelOptCluster cluster = RelOptCluster.create(planner, new RexBuilder(factory));
 
-    cluster.setMetadataQuerySupplier(() -> {
-      ProxyingMetadataHandlerProvider handler = new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
-      return new RelMetadataQuery(handler);
-    });
+    cluster.setMetadataQuerySupplier(
+        () -> {
+          ProxyingMetadataHandlerProvider handler =
+              new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
+          return new RelMetadataQuery(handler);
+        });
 
-    SqlToRelConverter converter = new SqlToRelConverter(null, validator, catalogReader, cluster, StandardConvertletTable.INSTANCE, converterConfig);
+    SqlToRelConverter converter =
+        new SqlToRelConverter(
+            null,
+            validator,
+            catalogReader,
+            cluster,
+            StandardConvertletTable.INSTANCE,
+            converterConfig);
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
-      var program = HepProgram.builder()
-          .addRuleInstance(AggregateExpandDistinctAggregatesRule.Config.DEFAULT.toRule())
-          .build();
+      var program =
+          HepProgram.builder()
+              .addRuleInstance(AggregateExpandDistinctAggregatesRule.Config.DEFAULT.toRule())
+              .build();
       HepPlanner hepPlanner = new HepPlanner(program);
       hepPlanner.setRoot(root.rel);
       root = root.withRel(hepPlanner.findBestExp());
     }
 
-    //System.out.println(RelOptUtil.toString(root.rel));
+    // System.out.println(RelOptUtil.toString(root.rel));
     Rel pojoRel = SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION);
     FunctionLookup functionLookup = new FunctionLookup();
     RelConverter toProtoRel = new RelConverter(functionLookup);
     var protoRel = pojoRel.accept(toProtoRel);
 
-    var planRel = PlanRel.newBuilder()
-        .setRoot(
-            io.substrait.proto.RelRoot.newBuilder()
-                .setInput(protoRel)
-                .addAllNames(TypeConverter.toNamedStruct(root.validatedRowType).names()));
+    var planRel =
+        PlanRel.newBuilder()
+            .setRoot(
+                io.substrait.proto.RelRoot.newBuilder()
+                    .setInput(protoRel)
+                    .addAllNames(TypeConverter.toNamedStruct(root.validatedRowType).names()));
 
     var plan = Plan.newBuilder();
     plan.addRelations(planRel);
@@ -115,8 +123,10 @@ public class SqlToSubstrait {
   }
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
+
   static {
-    SimpleExtension.ExtensionCollection defaults = ImmutableSimpleExtension.ExtensionCollection.builder().build();
+    SimpleExtension.ExtensionCollection defaults =
+        ImmutableSimpleExtension.ExtensionCollection.builder().build();
     try {
       defaults = SimpleExtension.loadDefaults();
     } catch (IOException e) {
@@ -126,46 +136,50 @@ public class SqlToSubstrait {
     EXTENSION_COLLECTION = defaults;
   }
 
-  private List<DefinedTable> parseCreateTable(RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
-      SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY));
-      List<DefinedTable> definedTableList = new ArrayList<>();
+  private List<DefinedTable> parseCreateTable(
+      RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
+    SqlParser parser =
+        SqlParser.create(sql, SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY));
+    List<DefinedTable> definedTableList = new ArrayList<>();
 
-      SqlNodeList nodeList = parser.parseStmtList();
-      for (SqlNode parsed : nodeList) {
-        if (!(parsed instanceof SqlCreateTable)) {
-          fail("Not a valid CREATE TABLE statement.");
-        }
-
-        SqlCreateTable create = (SqlCreateTable) parsed;
-        if (create.name.names.size() > 1) {
-          fail("Only simple table names are allowed.", create.name.getParserPosition());
-        }
-
-        if (create.query != null) {
-          fail("CTAS not supported.", create.name.getParserPosition());
-        }
-
-        List<String> names = new ArrayList<>();
-        List<RelDataType> columnTypes = new ArrayList<>();
-
-        for (SqlNode node : create.columnList) {
-          if (!(node instanceof SqlColumnDeclaration)) {
-            fail("Unexpected column list construction.", node.getParserPosition());
-          }
-
-          SqlColumnDeclaration col = (SqlColumnDeclaration) node;
-          if (col.name.names.size() != 1) {
-            fail("Expected simple column names.", col.name.getParserPosition());
-          }
-
-          names.add(col.name.names.get(0));
-          columnTypes.add(col.dataType.deriveType(validator));
-        }
-
-        definedTableList.add(new DefinedTable(create.name.names.get(0), factory, factory.createStructType(columnTypes, names)));
+    SqlNodeList nodeList = parser.parseStmtList();
+    for (SqlNode parsed : nodeList) {
+      if (!(parsed instanceof SqlCreateTable)) {
+        fail("Not a valid CREATE TABLE statement.");
       }
 
-      return definedTableList;
+      SqlCreateTable create = (SqlCreateTable) parsed;
+      if (create.name.names.size() > 1) {
+        fail("Only simple table names are allowed.", create.name.getParserPosition());
+      }
+
+      if (create.query != null) {
+        fail("CTAS not supported.", create.name.getParserPosition());
+      }
+
+      List<String> names = new ArrayList<>();
+      List<RelDataType> columnTypes = new ArrayList<>();
+
+      for (SqlNode node : create.columnList) {
+        if (!(node instanceof SqlColumnDeclaration)) {
+          fail("Unexpected column list construction.", node.getParserPosition());
+        }
+
+        SqlColumnDeclaration col = (SqlColumnDeclaration) node;
+        if (col.name.names.size() != 1) {
+          fail("Expected simple column names.", col.name.getParserPosition());
+        }
+
+        names.add(col.name.names.get(0));
+        columnTypes.add(col.dataType.deriveType(validator));
+      }
+
+      definedTableList.add(
+          new DefinedTable(
+              create.name.names.get(0), factory, factory.createStructType(columnTypes, names)));
+    }
+
+    return definedTableList;
   }
 
   private static SqlParseException fail(String text, SqlParserPos pos) {
@@ -178,19 +192,21 @@ public class SqlToSubstrait {
 
   private static final class Validator extends SqlValidatorImpl {
 
-    private Validator(SqlOperatorTable opTab, SqlValidatorCatalogReader catalogReader, RelDataTypeFactory typeFactory, Config config) {
+    private Validator(
+        SqlOperatorTable opTab,
+        SqlValidatorCatalogReader catalogReader,
+        RelDataTypeFactory typeFactory,
+        Config config) {
       super(opTab, catalogReader, typeFactory, config);
     }
 
-    public static Validator create(RelDataTypeFactory factory, CalciteCatalogReader catalog, SqlValidator.Config config) {
+    public static Validator create(
+        RelDataTypeFactory factory, CalciteCatalogReader catalog, SqlValidator.Config config) {
       return new Validator(SqlStdOperatorTable.instance(), catalog, factory, config);
     }
-
   }
 
-  /**
-   * A fully defined pre-specified table.
-   */
+  /** A fully defined pre-specified table. */
   private static final class DefinedTable extends AbstractTable {
 
     private final String name;

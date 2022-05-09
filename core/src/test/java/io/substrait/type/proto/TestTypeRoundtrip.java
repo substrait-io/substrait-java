@@ -1,11 +1,11 @@
 package io.substrait.type.proto;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTypeRoundtrip {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTypeRoundtrip.class);
@@ -32,7 +32,7 @@ public class TestTypeRoundtrip {
     t(creator(n).fixedChar(25));
     t(creator(n).varChar(35));
     t(creator(n).fixedBinary(45));
-    t(creator(n).decimal(34,3));
+    t(creator(n).decimal(34, 3));
     t(creator(n).map(creator(n).I8, creator(n).I16));
     t(creator(n).list(creator(n).TIME));
     t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));
@@ -40,6 +40,7 @@ public class TestTypeRoundtrip {
 
   /**
    * Test a type pojo -> proto -> pojo roundtrip.
+   *
    * @param type
    */
   private void t(Type type) {

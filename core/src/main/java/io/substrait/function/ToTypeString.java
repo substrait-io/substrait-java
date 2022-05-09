@@ -2,7 +2,8 @@ package io.substrait.function;
 
 import io.substrait.type.Type;
 
-public class ToTypeString extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
+public class ToTypeString
+    extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
   public static ToTypeString INSTANCE = new ToTypeString();
 
@@ -168,5 +169,4 @@ public class ToTypeString extends ParameterizedTypeVisitor.ParameterizedTypeThro
       return super.visit(expr);
     }
   }
-
 }

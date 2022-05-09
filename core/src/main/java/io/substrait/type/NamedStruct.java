@@ -1,14 +1,13 @@
 package io.substrait.type;
 
-
 import io.substrait.type.proto.TypeProtoConverter;
-import org.immutables.value.Value;
-
 import java.util.List;
+import org.immutables.value.Value;
 
 @Value.Immutable
 public interface NamedStruct {
   Type.Struct struct();
+
   List<String> names();
 
   public static NamedStruct of(List<String> names, Type.Struct type) {

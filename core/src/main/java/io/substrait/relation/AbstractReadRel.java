@@ -4,7 +4,6 @@ import io.substrait.expression.Expression;
 import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-
 import java.util.Optional;
 
 public abstract class AbstractReadRel extends ZeroInputRel {
@@ -13,8 +12,8 @@ public abstract class AbstractReadRel extends ZeroInputRel {
 
   public abstract Optional<Expression> getFilter();
 
-  //TODO:
-  //public abstract Optional<MaskExpression>
+  // TODO:
+  // public abstract Optional<MaskExpression>
 
   public abstract Optional<AdvancedExtension> getGeneralExtension();
 
