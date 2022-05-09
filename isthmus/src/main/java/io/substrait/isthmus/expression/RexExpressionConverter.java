@@ -5,14 +5,14 @@ import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
-import org.apache.calcite.rex.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.calcite.rex.*;
 
 public class RexExpressionConverter implements RexVisitor<Expression> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RexExpressionConverter.class);
+  static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(RexExpressionConverter.class);
 
   private final List<CallConverter> callConverters;
 
@@ -30,7 +30,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitInputRef(RexInputRef inputRef) {
-    return FieldReference.newRootStructReference(inputRef.getIndex(), TypeConverter.convert(inputRef.getType()));
+    return FieldReference.newRootStructReference(
+        inputRef.getIndex(), TypeConverter.convert(inputRef.getType()));
   }
 
   @Override
@@ -42,11 +43,13 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       }
     }
 
-    String msg = String.format("Unable to convert call %s(%s).", call.getOperator().getName(),
-        call.getOperands()
-            .stream()
-            .map(t -> t.accept(this).getType().accept(new StringTypeVisitor()))
-            .collect(Collectors.joining(", ")));
+    String msg =
+        String.format(
+            "Unable to convert call %s(%s).",
+            call.getOperator().getName(),
+            call.getOperands().stream()
+                .map(t -> t.accept(this).getType().accept(new StringTypeVisitor()))
+                .collect(Collectors.joining(", ")));
     throw new IllegalArgumentException(msg);
   }
 
@@ -99,5 +102,4 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   public Expression visitPatternFieldRef(RexPatternFieldRef fieldRef) {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
   }
-
 }

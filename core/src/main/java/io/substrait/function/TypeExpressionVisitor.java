@@ -1,6 +1,7 @@
 package io.substrait.function;
 
-public interface TypeExpressionVisitor<R, E extends Throwable> extends ParameterizedTypeVisitor<R, E> {
+public interface TypeExpressionVisitor<R, E extends Throwable>
+    extends ParameterizedTypeVisitor<R, E> {
   R visit(TypeExpression.FixedChar expr) throws E;
 
   R visit(TypeExpression.VarChar expr) throws E;
@@ -25,7 +26,9 @@ public interface TypeExpressionVisitor<R, E extends Throwable> extends Parameter
 
   R visit(TypeExpression.ReturnProgram expr) throws E;
 
-  public static abstract class TypeExpressionThrowsVisitor<R, E extends Throwable> extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<R, E> implements TypeExpressionVisitor<R, E> {
+  public abstract static class TypeExpressionThrowsVisitor<R, E extends Throwable>
+      extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<R, E>
+      implements TypeExpressionVisitor<R, E> {
 
     protected TypeExpressionThrowsVisitor(String unsupportedMessage) {
       super(unsupportedMessage);
@@ -90,6 +93,5 @@ public interface TypeExpressionVisitor<R, E extends Throwable> extends Parameter
     public R visit(TypeExpression.ReturnProgram expr) throws E {
       throw t();
     }
-
   }
 }

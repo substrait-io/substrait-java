@@ -4,7 +4,8 @@ import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.Type;
 
 public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeProtoConverter.class);
+  static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(TypeProtoConverter.class);
 
   public static TypeExpressionVisitor<Type, RuntimeException> INSTANCE = new TypeProtoConverter();
 
@@ -12,10 +13,13 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     super("Type literals cannot contain parameters or expressions.");
   }
 
-  private static final BaseProtoTypes<Type, Integer> NULLABLE = new Types(Type.Nullability.NULLABILITY_NULLABLE);
-  private static final BaseProtoTypes<Type, Integer> REQUIRED = new Types(Type.Nullability.NULLABILITY_REQUIRED);
+  private static final BaseProtoTypes<Type, Integer> NULLABLE =
+      new Types(Type.Nullability.NULLABILITY_NULLABLE);
+  private static final BaseProtoTypes<Type, Integer> REQUIRED =
+      new Types(Type.Nullability.NULLABILITY_REQUIRED);
 
-  @Override public BaseProtoTypes<Type, Integer> typeContainer(final boolean nullable) {
+  @Override
+  public BaseProtoTypes<Type, Integer> typeContainer(final boolean nullable) {
     return nullable ? NULLABLE : REQUIRED;
   }
 
@@ -29,12 +33,16 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
       return wrap(Type.FixedChar.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
-    @Override public Type typeParam(final String name) {
-      throw new UnsupportedOperationException("It is not possible to use parameters in basic types.");
+    @Override
+    public Type typeParam(final String name) {
+      throw new UnsupportedOperationException(
+          "It is not possible to use parameters in basic types.");
     }
 
-    @Override public Integer integerParam(final String name) {
-      throw new UnsupportedOperationException("It is not possible to use parameters in basic types.");
+    @Override
+    public Integer integerParam(final String name) {
+      throw new UnsupportedOperationException(
+          "It is not possible to use parameters in basic types.");
     }
 
     public Type varChar(Integer len) {
@@ -46,7 +54,12 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     public Type decimal(Integer scale, Integer precision) {
-      return wrap(Type.Decimal.newBuilder().setScale(scale).setPrecision(precision).setNullability(nullability).build());
+      return wrap(
+          Type.Decimal.newBuilder()
+              .setScale(scale)
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
     }
 
     public Type struct(Iterable<Type> types) {
@@ -58,12 +71,14 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     public Type map(Type key, Type value) {
-      return wrap(Type.Map.newBuilder().setKey(key).setValue(value).setNullability(nullability).build());
+      return wrap(
+          Type.Map.newBuilder().setKey(key).setValue(value).setNullability(nullability).build());
     }
 
-    @Override protected Type wrap(final Object o) {
+    @Override
+    protected Type wrap(final Object o) {
       var bldr = Type.newBuilder();
-      return switch(o) {
+      return switch (o) {
         case Type.Boolean t -> bldr.setBool(t).build();
         case Type.I8 t -> bldr.setI8(t).build();
         case Type.I16 t -> bldr.setI16(t).build();
@@ -87,13 +102,14 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         case Type.List t -> bldr.setList(t).build();
         case Type.Map t -> bldr.setMap(t).build();
         case Type.UUID t -> bldr.setUuid(t).build();
-        default -> throw new UnsupportedOperationException("Unable to wrap type of " + o.getClass());
+        default -> throw new UnsupportedOperationException(
+            "Unable to wrap type of " + o.getClass());
       };
     }
 
-    @Override protected Integer i(final int integerValue) {
+    @Override
+    protected Integer i(final int integerValue) {
       return integerValue;
     }
   }
-
 }

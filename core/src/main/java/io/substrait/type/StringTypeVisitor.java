@@ -111,7 +111,9 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
 
   @Override
   public String visit(Type.Struct type) throws RuntimeException {
-    return String.format("struct<%s>%s", type.fields().stream().map(t -> t.accept(this)).collect(Collectors.joining(", ")), n(type));
+    return String.format(
+        "struct<%s>%s",
+        type.fields().stream().map(t -> t.accept(this)).collect(Collectors.joining(", ")), n(type));
   }
 
   @Override
@@ -121,6 +123,7 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
 
   @Override
   public String visit(Type.Map type) throws RuntimeException {
-    return String.format("map<%s,%s>%s", type.key().accept(this), type.value().accept(this), n(type));
+    return String.format(
+        "map<%s,%s>%s", type.key().accept(this), type.value().accept(this), n(type));
   }
 }

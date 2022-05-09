@@ -1,10 +1,9 @@
 package io.substrait.relation;
 
 import io.substrait.io.substrait.extension.AdvancedExtension;
-import org.immutables.value.Value;
-
 import java.util.List;
 import java.util.Optional;
+import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class NamedScan extends AbstractReadRel {

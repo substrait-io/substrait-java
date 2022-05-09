@@ -3,10 +3,9 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import org.immutables.value.Value;
-
 import java.util.List;
 import java.util.stream.Stream;
+import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class Project extends SingleInputRel {
@@ -19,10 +18,8 @@ public abstract class Project extends SingleInputRel {
     Type.Struct initial = getInput().getRecordType();
     return TypeCreator.of(initial.nullable())
         .struct(
-        Stream.concat(
-            initial.fields().stream(),
-            getExpressions().stream().map(Expression::getType)));
-
+            Stream.concat(
+                initial.fields().stream(), getExpressions().stream().map(Expression::getType)));
   }
 
   @Override

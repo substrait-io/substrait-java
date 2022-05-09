@@ -47,8 +47,8 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Map type) throws E;
 
-
-  public static abstract class TypeThrowsVisitor<R, E extends Throwable> implements TypeVisitor<R, E> {
+  public abstract static class TypeThrowsVisitor<R, E extends Throwable>
+      implements TypeVisitor<R, E> {
 
     private final String unsupportedMessage;
 
@@ -59,7 +59,7 @@ public interface TypeVisitor<R, E extends Throwable> {
     protected final UnsupportedOperationException t() {
       throw new UnsupportedOperationException(unsupportedMessage);
     }
-    
+
     @Override
     public R visit(Type.Bool type) throws E {
       throw t();
