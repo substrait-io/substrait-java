@@ -7,15 +7,16 @@ import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(
-      SubstraitTypeSystem.class);
+  static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(SubstraitTypeSystem.class);
 
   public static final RelDataTypeSystem TYPE_SYSTEM = new SubstraitTypeSystem();
 
   private SubstraitTypeSystem() {}
 
-  @Override public int getMaxPrecision(final SqlTypeName typeName) {
-    switch (typeName){
+  @Override
+  public int getMaxPrecision(final SqlTypeName typeName) {
+    switch (typeName) {
       case INTERVAL_DAY:
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
@@ -28,11 +29,13 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
     return super.getMaxPrecision(typeName);
   }
 
-  @Override public int getMaxNumericScale() {
+  @Override
+  public int getMaxNumericScale() {
     return 38;
   }
 
-  @Override public int getMaxNumericPrecision() {
+  @Override
+  public int getMaxNumericPrecision() {
     return 38;
   }
 

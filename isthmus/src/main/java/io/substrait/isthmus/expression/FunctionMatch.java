@@ -8,31 +8,24 @@ public class FunctionMatch {
 
   public static void load() {
 
-    Matcher m = new Matcher() {
+    Matcher m =
+        new Matcher() {
 
-
-      {
-
-
-        m("add",SqlStdOperatorTable.SUM);
-        m("avg",SqlStdOperatorTable.AVG);
-        m("count",SqlStdOperatorTable.COUNT);
-        m("+",SqlStdOperatorTable.PLUS);
-        m("+",SqlStdOperatorTable.DATETIME_PLUS);
-        m("-",SqlStdOperatorTable.MINUS);
-        m("*",SqlStdOperatorTable.MULTIPLY);
-        m("/",SqlStdOperatorTable.DIVIDE);
-      }
-    };
+          {
+            m("add", SqlStdOperatorTable.SUM);
+            m("avg", SqlStdOperatorTable.AVG);
+            m("count", SqlStdOperatorTable.COUNT);
+            m("+", SqlStdOperatorTable.PLUS);
+            m("+", SqlStdOperatorTable.DATETIME_PLUS);
+            m("-", SqlStdOperatorTable.MINUS);
+            m("*", SqlStdOperatorTable.MULTIPLY);
+            m("/", SqlStdOperatorTable.DIVIDE);
+          }
+        };
   }
 
   static class Matcher {
 
-
-
-    void m(String functionName, SqlOperator calciteOperator) {
-
-    }
+    void m(String functionName, SqlOperator calciteOperator) {}
   }
-
 }

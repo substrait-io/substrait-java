@@ -1,12 +1,12 @@
 package io.substrait.isthmus;
 
+import static picocli.CommandLine.*;
+
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.proto.Plan;
-import picocli.CommandLine;
-
 import java.util.List;
 import java.util.concurrent.Callable;
-import static picocli.CommandLine.*;
+import picocli.CommandLine;
 
 @Command(
     name = "isthmus",
@@ -18,8 +18,10 @@ public class PlanEntryPoint implements Callable<Integer> {
   @Parameters(index = "0", description = "The sql we should parse.")
   private String sql;
 
-  @Option(names = {"-c", "--create"},
-          description = "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
+  @Option(
+      names = {"-c", "--create"},
+      description =
+          "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
   private List<String> createStatements;
 
   @Override

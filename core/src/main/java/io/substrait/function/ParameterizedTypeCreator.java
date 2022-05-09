@@ -2,7 +2,8 @@ package io.substrait.function;
 
 import io.substrait.type.TypeCreator;
 
-public class ParameterizedTypeCreator extends TypeCreator implements ExtendedTypeCreator<ParameterizedType, String> {
+public class ParameterizedTypeCreator extends TypeCreator
+    implements ExtendedTypeCreator<ParameterizedType, String> {
 
   public static final ParameterizedTypeCreator REQUIRED = new ParameterizedTypeCreator(false);
   public static final ParameterizedTypeCreator NULLABLE = new ParameterizedTypeCreator(true);
@@ -24,11 +25,18 @@ public class ParameterizedTypeCreator extends TypeCreator implements ExtendedTyp
   }
 
   public ParameterizedType fixedBinaryE(String len) {
-    return ParameterizedType.FixedBinary.builder().nullable(nullable).length(parameter(len)).build();
+    return ParameterizedType.FixedBinary.builder()
+        .nullable(nullable)
+        .length(parameter(len))
+        .build();
   }
 
   public ParameterizedType decimalE(String precision, String scale) {
-    return ParameterizedType.Decimal.builder().nullable(nullable).precision(parameter(precision)).scale(parameter(scale)).build();
+    return ParameterizedType.Decimal.builder()
+        .nullable(nullable)
+        .precision(parameter(precision))
+        .scale(parameter(scale))
+        .build();
   }
 
   public ParameterizedType structE(ParameterizedType... types) {

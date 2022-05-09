@@ -4,7 +4,8 @@ import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeVisitor;
 import io.substrait.type.Type;
 
-public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boolean, RuntimeException> {
+public class IgnoreNullableAndParameters
+    implements ParameterizedTypeVisitor<Boolean, RuntimeException> {
 
   private final ParameterizedType typeToMatch;
 
@@ -94,7 +95,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(Type.FixedChar type) {
-    return typeToMatch instanceof Type.FixedChar || typeToMatch instanceof ParameterizedType.FixedChar;
+    return typeToMatch instanceof Type.FixedChar
+        || typeToMatch instanceof ParameterizedType.FixedChar;
   }
 
   @Override
@@ -104,7 +106,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(Type.FixedBinary type) {
-    return typeToMatch instanceof Type.FixedBinary || typeToMatch instanceof ParameterizedType.FixedBinary;
+    return typeToMatch instanceof Type.FixedBinary
+        || typeToMatch instanceof ParameterizedType.FixedBinary;
   }
 
   @Override
@@ -119,7 +122,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(Type.ListType type) {
-    return typeToMatch instanceof Type.ListType || typeToMatch instanceof ParameterizedType.ListType;
+    return typeToMatch instanceof Type.ListType
+        || typeToMatch instanceof ParameterizedType.ListType;
   }
 
   @Override
@@ -129,7 +133,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(ParameterizedType.FixedChar expr) throws RuntimeException {
-    return typeToMatch instanceof Type.FixedChar || typeToMatch instanceof ParameterizedType.FixedChar;
+    return typeToMatch instanceof Type.FixedChar
+        || typeToMatch instanceof ParameterizedType.FixedChar;
   }
 
   @Override
@@ -139,7 +144,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(ParameterizedType.FixedBinary expr) throws RuntimeException {
-    return typeToMatch instanceof Type.FixedBinary || typeToMatch instanceof ParameterizedType.FixedBinary;
+    return typeToMatch instanceof Type.FixedBinary
+        || typeToMatch instanceof ParameterizedType.FixedBinary;
   }
 
   @Override
@@ -154,7 +160,8 @@ public class IgnoreNullableAndParameters implements ParameterizedTypeVisitor<Boo
 
   @Override
   public Boolean visit(ParameterizedType.ListType expr) throws RuntimeException {
-    return typeToMatch instanceof Type.ListType || typeToMatch instanceof ParameterizedType.ListType;
+    return typeToMatch instanceof Type.ListType
+        || typeToMatch instanceof ParameterizedType.ListType;
   }
 
   @Override

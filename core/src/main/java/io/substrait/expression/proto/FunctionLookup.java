@@ -1,16 +1,15 @@
 package io.substrait.expression.proto;
 
 import io.substrait.function.SimpleExtension;
-import io.substrait.proto.Capabilities;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURI;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Maintains a mapping between function anchors and function references. Generates references for new anchors.
+ * Maintains a mapping between function anchors and function references. Generates references for
+ * new anchors.
  */
 public class FunctionLookup {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionLookup.class);
@@ -30,19 +29,23 @@ public class FunctionLookup {
     return counter;
   }
 
-  public SimpleExtension.ScalarFunctionVariant getScalarFunction(int reference, SimpleExtension.ExtensionCollection extensions) {
+  public SimpleExtension.ScalarFunctionVariant getScalarFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions) {
     var anchor = map.get(reference);
     if (anchor == null) {
-      throw new IllegalArgumentException("Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
+      throw new IllegalArgumentException(
+          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
     }
 
     return extensions.getScalarFunction(anchor);
   }
 
-  public SimpleExtension.AggregateFunctionVariant getAggregateFunction(int reference, SimpleExtension.ExtensionCollection extensions) {
+  public SimpleExtension.AggregateFunctionVariant getAggregateFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions) {
     var anchor = map.get(reference);
     if (anchor == null) {
-      throw new IllegalArgumentException("Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
+      throw new IllegalArgumentException(
+          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
     }
 
     return extensions.getAggregateFunction(anchor);
@@ -53,15 +56,23 @@ public class FunctionLookup {
     var uris = new HashMap<String, SimpleExtensionURI>();
 
     var extensionList = new ArrayList<SimpleExtensionDeclaration>();
-    for(var e : map.forwardMap.entrySet()) {
-      SimpleExtensionURI uri = uris.computeIfAbsent(e.getValue().namespace(),
-          k -> SimpleExtensionURI.newBuilder().setExtensionUriAnchor(uriPos.getAndIncrement()).setUri(k).build());
-      var decl = SimpleExtensionDeclaration.newBuilder().setExtensionFunction(
-          SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
-              .setFunctionAnchor(e.getKey())
-              .setName(e.getValue().key())
-              .setExtensionUriReference(uri.getExtensionUriAnchor()))
-          .build();
+    for (var e : map.forwardMap.entrySet()) {
+      SimpleExtensionURI uri =
+          uris.computeIfAbsent(
+              e.getValue().namespace(),
+              k ->
+                  SimpleExtensionURI.newBuilder()
+                      .setExtensionUriAnchor(uriPos.getAndIncrement())
+                      .setUri(k)
+                      .build());
+      var decl =
+          SimpleExtensionDeclaration.newBuilder()
+              .setExtensionFunction(
+                  SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
+                      .setFunctionAnchor(e.getKey())
+                      .setName(e.getValue().key())
+                      .setExtensionUriReference(uri.getExtensionUriAnchor()))
+              .build();
       extensionList.add(decl);
     }
 
@@ -69,9 +80,7 @@ public class FunctionLookup {
     builder.addAllExtensions(extensionList);
   }
 
-  /**
-   * We don't depend on guava...
-   */
+  /** We don't depend on guava... */
   private static class BidiMap<T1, T2> {
 
     private final Map<T1, T2> forwardMap = new HashMap<>();

@@ -4,13 +4,12 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import org.immutables.value.Value;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class Aggregate extends SingleInputRel {
@@ -23,16 +22,16 @@ public abstract class Aggregate extends SingleInputRel {
   @Override
   protected Type.Struct deriveRecordType() {
     return TypeCreator.REQUIRED.struct(
-      Stream.concat(
-          // unique grouping expressions
-          getGroupings().stream()
-              .flatMap(g -> g.getExpressions().stream())
-              .collect(Collectors.toCollection(LinkedHashSet::new))
-              .stream().map(Expression::getType),
+        Stream.concat(
+            // unique grouping expressions
+            getGroupings().stream()
+                .flatMap(g -> g.getExpressions().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                .stream()
+                .map(Expression::getType),
 
-          // measures
-          getMeasures().stream().map(t -> t.getFunction().getType())
-          ));
+            // measures
+            getMeasures().stream().map(t -> t.getFunction().getType())));
   }
 
   @Override
@@ -41,7 +40,7 @@ public abstract class Aggregate extends SingleInputRel {
   }
 
   @Value.Immutable
-  public static abstract class Grouping {
+  public abstract static class Grouping {
     public abstract List<Expression> getExpressions();
 
     public static ImmutableGrouping.Builder builder() {
@@ -50,8 +49,9 @@ public abstract class Aggregate extends SingleInputRel {
   }
 
   @Value.Immutable
-  public static abstract class Measure {
+  public abstract static class Measure {
     public abstract AggregateFunctionInvocation getFunction();
+
     public abstract Optional<Expression> getPreMeasureFilter();
 
     public static ImmutableMeasure.Builder builder() {

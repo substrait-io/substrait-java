@@ -1,5 +1,3 @@
 package io.substrait.isthmus;
 
-public class InitializeAtBuildTime {
-
-}
+public class InitializeAtBuildTime {}

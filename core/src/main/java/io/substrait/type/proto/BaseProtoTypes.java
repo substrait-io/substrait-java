@@ -1,11 +1,10 @@
 package io.substrait.type.proto;
 
 import io.substrait.proto.Type;
-
 import java.util.Arrays;
 
 abstract class BaseProtoTypes<T, I> {
-  
+
   protected final Type.Nullability nullability;
   public final T BOOLEAN;
   public final T I8;

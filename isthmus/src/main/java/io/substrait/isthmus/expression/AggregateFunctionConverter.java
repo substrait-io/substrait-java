@@ -7,6 +7,11 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.type.Type;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
@@ -14,21 +19,19 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 public class AggregateFunctionConverter
-    extends FunctionConverter<SimpleExtension.AggregateFunctionVariant, AggregateFunctionInvocation, AggregateFunctionConverter.WrappedAggregateCall> {
+    extends FunctionConverter<
+        SimpleExtension.AggregateFunctionVariant,
+        AggregateFunctionInvocation,
+        AggregateFunctionConverter.WrappedAggregateCall> {
 
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.AGGREGATE_SIGS;
   }
 
-  public AggregateFunctionConverter(List<SimpleExtension.AggregateFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+  public AggregateFunctionConverter(
+      List<SimpleExtension.AggregateFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
@@ -47,10 +50,14 @@ public class AggregateFunctionConverter
       Type outputType) {
     AggregateCall agg = call.getUnderlying();
 
-    List<Expression.SortField> sorts = agg.getCollation() != null ?
-        agg.getCollation().getFieldCollations().stream().map(r -> SubstraitRelVisitor.toSortField(r, call.inputType)).toList()
-        : Collections.emptyList();
-    return ExpressionCreator.aggregateFunction(function, outputType, Expression.AggregationPhase.INITIAL_TO_RESULT, sorts, arguments);
+    List<Expression.SortField> sorts =
+        agg.getCollation() != null
+            ? agg.getCollation().getFieldCollations().stream()
+                .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
+                .toList()
+            : Collections.emptyList();
+    return ExpressionCreator.aggregateFunction(
+        function, outputType, Expression.AggregationPhase.INITIAL_TO_RESULT, sorts, arguments);
   }
 
   public Optional<AggregateFunctionInvocation> convert(
@@ -58,7 +65,6 @@ public class AggregateFunctionConverter
       Type.Struct inputType,
       AggregateCall call,
       Function<RexNode, Expression> topLevelConverter) {
-
 
     FunctionFinder m = signatures.get(call.getAggregation());
     if (m == null) {
@@ -78,7 +84,8 @@ public class AggregateFunctionConverter
     private final RexBuilder rexBuilder;
     private final Type.Struct inputType;
 
-    private WrappedAggregateCall(AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
+    private WrappedAggregateCall(
+        AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
       this.call = call;
       this.input = input;
       this.rexBuilder = rexBuilder;

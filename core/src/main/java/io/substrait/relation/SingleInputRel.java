@@ -11,5 +11,4 @@ public abstract class SingleInputRel extends AbstractRel {
   public final List<Rel> getInputs() {
     return Collections.singletonList(getInput());
   }
-
 }

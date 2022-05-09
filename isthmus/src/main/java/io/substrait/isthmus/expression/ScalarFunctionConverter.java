@@ -5,25 +5,31 @@ import io.substrait.expression.Expression;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.type.Type;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 public class ScalarFunctionConverter
-    extends FunctionConverter<SimpleExtension.ScalarFunctionVariant, Expression, ScalarFunctionConverter.WrappedScalarCall>
+    extends FunctionConverter<
+        SimpleExtension.ScalarFunctionVariant,
+        Expression,
+        ScalarFunctionConverter.WrappedScalarCall>
     implements CallConverter {
 
-  public ScalarFunctionConverter(List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+  public ScalarFunctionConverter(
+      List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
-  public ScalarFunctionConverter(List<SimpleExtension.ScalarFunctionVariant> functions, List<FunctionMappings.Sig> additionalSignatures, RelDataTypeFactory typeFactory) {
+  public ScalarFunctionConverter(
+      List<SimpleExtension.ScalarFunctionVariant> functions,
+      List<FunctionMappings.Sig> additionalSignatures,
+      RelDataTypeFactory typeFactory) {
     super(functions, additionalSignatures, typeFactory);
   }
 
@@ -33,7 +39,8 @@ public class ScalarFunctionConverter
   }
 
   @Override
-  public Optional<Expression> convert(RexCall call, Function<RexNode, Expression> topLevelConverter) {
+  public Optional<Expression> convert(
+      RexCall call, Function<RexNode, Expression> topLevelConverter) {
     FunctionFinder m = signatures.get(call.op);
     if (m == null) {
       return Optional.empty();
@@ -50,7 +57,8 @@ public class ScalarFunctionConverter
   protected Expression generateBinding(
       WrappedScalarCall call,
       SimpleExtension.ScalarFunctionVariant function,
-      List<Expression> arguments, Type outputType) {
+      List<Expression> arguments,
+      Type outputType) {
     return Expression.ScalarFunctionInvocation.builder()
         .outputType(outputType)
         .declaration(function)

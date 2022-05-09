@@ -3,11 +3,10 @@ package io.substrait.type.proto;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 
-
 public class FromProto {
 
   public static Type from(io.substrait.proto.Type type) {
-    return switch(type.getKindCase()) {
+    return switch (type.getKindCase()) {
       case BOOL -> n(type.getBool().getNullability()).BOOLEAN;
       case I8 -> n(type.getI8().getNullability()).I8;
       case I16 -> n(type.getI16().getNullability()).I16;
@@ -24,18 +23,25 @@ public class FromProto {
       case INTERVAL_DAY -> n(type.getIntervalDay().getNullability()).INTERVAL_DAY;
       case TIMESTAMP_TZ -> n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;
       case UUID -> n(type.getUuid().getNullability()).UUID;
-      case FIXED_CHAR -> n(type.getFixedChar().getNullability()).fixedChar(type.getFixedChar().getLength());
+      case FIXED_CHAR -> n(type.getFixedChar().getNullability())
+          .fixedChar(type.getFixedChar().getLength());
       case VARCHAR -> n(type.getVarchar().getNullability()).varChar(type.getVarchar().getLength());
-      case FIXED_BINARY -> n(type.getFixedBinary().getNullability()).fixedBinary(type.getFixedBinary().getLength());
-      case DECIMAL -> n(type.getDecimal().getNullability()).decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
-      case STRUCT -> n(type.getStruct().getNullability()).struct(type.getStruct().getTypesList().stream().map(FromProto::from).toList());
+      case FIXED_BINARY -> n(type.getFixedBinary().getNullability())
+          .fixedBinary(type.getFixedBinary().getLength());
+      case DECIMAL -> n(type.getDecimal().getNullability())
+          .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
+      case STRUCT -> n(type.getStruct().getNullability())
+          .struct(type.getStruct().getTypesList().stream().map(FromProto::from).toList());
       case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
-      case MAP -> n(type.getMap().getNullability()).map(from(type.getMap().getKey()), from(type.getMap().getValue()));
+      case MAP -> n(type.getMap().getNullability())
+          .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
       case USER_DEFINED_TYPE_REFERENCE, KIND_NOT_SET -> throw new UnsupportedOperationException();
     };
   }
 
   private static TypeCreator n(io.substrait.proto.Type.Nullability n) {
-    return n == io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
+    return n == io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE
+        ? TypeCreator.NULLABLE
+        : TypeCreator.REQUIRED;
   }
 }
