@@ -26,7 +26,6 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -94,10 +93,7 @@ public class SqlToSubstrait {
             converterConfig);
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
-      var program =
-          HepProgram.builder()
-              .addRuleInstance(AggregateExpandDistinctAggregatesRule.Config.DEFAULT.toRule())
-              .build();
+      var program = HepProgram.builder().build();
       HepPlanner hepPlanner = new HepPlanner(program);
       hepPlanner.setRoot(root.rel);
       root = root.withRel(hepPlanner.findBestExp());
