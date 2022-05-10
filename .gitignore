@@ -3,3 +3,5 @@
 **/.idea
 **/build
 gen
+**/.DS_Store
+*.iml
