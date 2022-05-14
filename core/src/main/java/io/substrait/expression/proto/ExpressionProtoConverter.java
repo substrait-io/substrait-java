@@ -2,9 +2,9 @@ package io.substrait.expression.proto;
 
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
-import io.substrait.expression.FunctionLookup;
 import io.substrait.proto.Expression;
-import io.substrait.relation.RelConverter;
+import io.substrait.proto.Rel;
+import io.substrait.relation.RelVisitor;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
 import java.util.function.Consumer;
@@ -13,12 +13,14 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
-  private final FunctionLookup lookup;
-  private final RelConverter relConverter;
+  private final FunctionCollector functionCollector;
+  ;
+  private final RelVisitor<Rel, RuntimeException> relVisitor;
 
-  public ExpressionProtoConverter(FunctionLookup lookup, RelConverter relConverter) {
-    this.lookup = lookup;
-    this.relConverter = relConverter;
+  public ExpressionProtoConverter(
+      FunctionCollector functionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
+    this.functionCollector = functionCollector;
+    this.relVisitor = relVisitor;
   }
 
   @Override
@@ -361,7 +363,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .setSetPredicate(
                     Expression.Subquery.SetPredicate.newBuilder()
                         .setPredicateOp(expr.predicateOp().toProto())
-                        .setTuples(expr.tuples().accept(this.relConverter))
+                        .setTuples(expr.tuples().accept(this.relVisitor))
                         .build())
                 .build())
         .build();
@@ -375,7 +377,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
             Expression.Subquery.newBuilder()
                 .setScalar(
                     Expression.Subquery.Scalar.newBuilder()
-                        .setInput(expr.input().accept(this.relConverter))
+                        .setInput(expr.input().accept(this.relVisitor))
                         .build())
                 .build())
         .build();
@@ -389,7 +391,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
             Expression.Subquery.newBuilder()
                 .setInPredicate(
                     Expression.Subquery.InPredicate.newBuilder()
-                        .setHaystack(expr.haystack().accept(this.relConverter))
+                        .setHaystack(expr.haystack().accept(this.relVisitor))
                         .addAllNeedles(from(expr.needles()))
                         .build())
                 .build())

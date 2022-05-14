@@ -2,14 +2,11 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
-import io.substrait.function.ImmutableSimpleExtension;
-import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.StringTypeVisitor;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +37,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   public RexExpressionConverter() {
     this.callConverters = CallConverters.DEFAULTS;
-    this.relVisitor = null; // TODO
+    this.relVisitor =
+        null; // this RexExpressionConverter is only for Rex expression without any subquery.
   }
 
   @Override
@@ -109,7 +107,6 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitSubQuery(RexSubQuery subQuery) {
-    // Rel rel = SubstraitRelVisitor.convert(subQuery.rel, EXTENSION_COLLECTION);
     Rel rel = relVisitor.apply(subQuery.rel);
 
     if (subQuery.getOperator() == SqlStdOperatorTable.EXISTS) {
@@ -155,19 +152,5 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   @Override
   public Expression visitPatternFieldRef(RexPatternFieldRef fieldRef) {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
-  }
-
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
-
-  static {
-    SimpleExtension.ExtensionCollection defaults =
-        ImmutableSimpleExtension.ExtensionCollection.builder().build();
-    try {
-      defaults = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException("Failure while loading defaults.", e);
-    }
-
-    EXTENSION_COLLECTION = defaults;
   }
 }

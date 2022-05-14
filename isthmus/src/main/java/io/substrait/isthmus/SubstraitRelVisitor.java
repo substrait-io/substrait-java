@@ -34,7 +34,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   private final RexVisitor<Expression> converter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
 
-  Map<RexFieldAccess, Integer> fieldAccessDepthMap;
+  private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {

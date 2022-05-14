@@ -1,14 +1,18 @@
 package io.substrait.isthmus;
 
+import static org.apache.calcite.rex.RexUtil.SubQueryFinder.containsSubQuery;
+
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.*;
 
 /** Resolve correlated variable and get Depth map for RexFieldAccess */
+// See OuterReferenceResolver.md for explanation how the Depth map is computed.
 public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeException> {
 
   private Map<CorrelationId, Integer> nestedDepth;
@@ -44,12 +48,21 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return super.visit(filter);
   }
 
-  @Override // FIXME: join / project with expressions (possible contain subquery)
+  @Override
   public RelNode visitOther(RelNode other) throws RuntimeException {
     for (RelNode child : other.getInputs()) {
       apply(child);
     }
     return other;
+  }
+
+  @Override
+  public RelNode visit(LogicalProject project) throws RuntimeException {
+    if (containsSubQuery(project)) {
+      throw new UnsupportedOperationException(
+          "Unsupported subquery nested in Project relational operator : " + project);
+    }
+    return super.visit(project);
   }
 
   private class RexVisitor extends RexShuttle {
