@@ -5,6 +5,8 @@ import io.substrait.type.TypeCreator;
 
 public class FromProto {
 
+  private FromProto() {}
+
   public static Type from(io.substrait.proto.Type type) {
     return switch (type.getKindCase()) {
       case BOOL -> n(type.getBool().getNullability()).BOOLEAN;
@@ -37,6 +39,10 @@ public class FromProto {
           .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
       case USER_DEFINED_TYPE_REFERENCE, KIND_NOT_SET -> throw new UnsupportedOperationException();
     };
+  }
+
+  public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {
+    return io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE == nullability;
   }
 
   private static TypeCreator n(io.substrait.proto.Type.Nullability n) {

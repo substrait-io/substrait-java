@@ -3,8 +3,17 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.proto.*;
+import io.substrait.proto.AggregateFunction;
+import io.substrait.proto.AggregateRel;
+import io.substrait.proto.FetchRel;
+import io.substrait.proto.FilterRel;
+import io.substrait.proto.JoinRel;
+import io.substrait.proto.ProjectRel;
+import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
+import io.substrait.proto.RelCommon;
+import io.substrait.proto.SortField;
+import io.substrait.proto.SortRel;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -27,7 +36,7 @@ public class RelConverter implements RelVisitor<Rel, RuntimeException> {
     return expression.accept(protoConverter);
   }
 
-  private io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
+  public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
     return rel.accept(this);
   }
 
