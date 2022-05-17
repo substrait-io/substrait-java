@@ -126,11 +126,6 @@ abstract class FunctionConverter<
       List<SingularArgumentMatcher> matchers = new ArrayList<>();
       for (var f : functions) {
 
-        // no need to do optional requirements since singular input only supports value arguments.
-        if (f.getRange().getStartInclusive() < 2) {
-          continue;
-        }
-
         ParameterizedType firstType = null;
 
         // determine if all the required arguments are the of the same type. If so,

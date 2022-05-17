@@ -192,6 +192,7 @@ public class ProtoRelConverter {
                           lookup.getAggregateFunction(func.getFunctionReference(), extensions))
                       .outputType(FromProto.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
+                      .invocation(func.getInvocation())
                       .build())
               .preMeasureFilter(
                   Optional.ofNullable(

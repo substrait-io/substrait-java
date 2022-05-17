@@ -35,7 +35,7 @@ public class ProtoRelConverterTest extends PlanTestBase {
 
   @Test
   public void aggregate() throws IOException, SqlParseException {
-    assertProtoRelRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
+    assertProtoRelRoundrip("select count(DISTINCT L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
   }
 
   @Test
