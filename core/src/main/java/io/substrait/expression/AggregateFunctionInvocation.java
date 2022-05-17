@@ -1,6 +1,7 @@
 package io.substrait.expression;
 
 import io.substrait.function.SimpleExtension;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.util.List;
 import org.immutables.value.Value;
@@ -20,6 +21,8 @@ public abstract class AggregateFunctionInvocation {
   public Type getType() {
     return outputType();
   }
+
+  public abstract AggregateFunction.AggregationInvocation invocation();
 
   public static ImmutableAggregateFunctionInvocation.Builder builder() {
     return ImmutableAggregateFunctionInvocation.builder();
