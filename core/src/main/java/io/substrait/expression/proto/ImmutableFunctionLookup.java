@@ -3,7 +3,9 @@ package io.substrait.expression.proto;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Maintains a mapping between function anchors and function references. Generates references for

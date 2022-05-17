@@ -9,11 +9,15 @@ import io.substrait.function.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.proto.FromProto;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ProtoExpressionConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ProtoExpressionConverter.class);
+
+  public static final Type EMPTY_TYPE =
+      ImmutableExpression.StructLiteral.builder().build().getType();
 
   private final FunctionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
@@ -23,7 +27,7 @@ public class ProtoExpressionConverter {
       FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
-    this.rootType = rootType;
+    this.rootType = Objects.requireNonNull(rootType, "rootType");
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
@@ -32,7 +36,7 @@ public class ProtoExpressionConverter {
         io.substrait.proto.Expression.ReferenceSegment segment = reference.getDirectReference();
 
         var segments = new ArrayList<FieldReference.ReferenceSegment>();
-        while (segment != null) {
+        while (segment != io.substrait.proto.Expression.ReferenceSegment.getDefaultInstance()) {
           segments.add(
               switch (segment.getReferenceTypeCase()) {
                 case MAP_KEY -> {
@@ -143,7 +147,7 @@ public class ProtoExpressionConverter {
     return FromProto.from(type);
   }
 
-  private static Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
+  public static Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
     return switch (literal.getLiteralTypeCase()) {
       case BOOLEAN -> ExpressionCreator.bool(literal.getNullable(), literal.getBoolean());
       case I8 -> ExpressionCreator.i8(literal.getNullable(), literal.getI8());
