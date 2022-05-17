@@ -6,6 +6,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.util.Collections;
 import java.util.List;
@@ -56,8 +57,17 @@ public class AggregateFunctionConverter
                 .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
                 .toList()
             : Collections.emptyList();
+    AggregateFunction.AggregationInvocation invocation =
+        agg.isDistinct()
+            ? AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT
+            : AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL;
     return ExpressionCreator.aggregateFunction(
-        function, outputType, Expression.AggregationPhase.INITIAL_TO_RESULT, sorts, arguments);
+        function,
+        outputType,
+        Expression.AggregationPhase.INITIAL_TO_RESULT,
+        sorts,
+        invocation,
+        arguments);
   }
 
   public Optional<AggregateFunctionInvocation> convert(

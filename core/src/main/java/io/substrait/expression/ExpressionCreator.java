@@ -2,6 +2,7 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.function.SimpleExtension;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -274,12 +275,14 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
+      AggregateFunction.AggregationInvocation invocation,
       Iterable<? extends Expression> arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
+        .invocation(invocation)
         .addAllArguments(arguments)
         .build();
   }
