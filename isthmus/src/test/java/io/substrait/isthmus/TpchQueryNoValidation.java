@@ -9,7 +9,7 @@ public class TpchQueryNoValidation extends PlanTestBase {
 
   @ParameterizedTest
   // @ValueSource(ints = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22})
-  @ValueSource(ints = {1, 3, 5, 6, 10, 14, 19})
+  @ValueSource(ints = {1, 3, 4, 5, 6, 10, 11, 14, 17, 18, 19, 20, 21})
   public void tpch(int query) throws Exception {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");

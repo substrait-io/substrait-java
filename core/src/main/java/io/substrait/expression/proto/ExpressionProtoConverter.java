@@ -3,6 +3,8 @@ package io.substrait.expression.proto;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.proto.Expression;
+import io.substrait.proto.Rel;
+import io.substrait.relation.RelVisitor;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
 import java.util.function.Consumer;
@@ -12,9 +14,13 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
   private final FunctionCollector functionCollector;
+  ;
+  private final RelVisitor<Rel, RuntimeException> relVisitor;
 
-  public ExpressionProtoConverter(FunctionCollector functionCollector) {
+  public ExpressionProtoConverter(
+      FunctionCollector functionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
     this.functionCollector = functionCollector;
+    this.relVisitor = relVisitor;
   }
 
   @Override
@@ -337,10 +343,58 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     var out = Expression.FieldReference.newBuilder().setDirectReference(top);
     if (expr.inputExpression().isPresent()) {
       out.setExpression(from(expr.inputExpression().get()));
+    } else if (expr.outerReferenceStepsOut().isPresent()) {
+      out.setOuterReference(
+          io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
+              .setStepsOut(expr.outerReferenceStepsOut().get()));
     } else {
       out.setRootReference(Expression.FieldReference.RootReference.getDefaultInstance());
     }
 
     return Expression.newBuilder().setSelection(out).build();
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.SetPredicate expr)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setSubquery(
+            Expression.Subquery.newBuilder()
+                .setSetPredicate(
+                    Expression.Subquery.SetPredicate.newBuilder()
+                        .setPredicateOp(expr.predicateOp().toProto())
+                        .setTuples(expr.tuples().accept(this.relVisitor))
+                        .build())
+                .build())
+        .build();
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.ScalarSubquery expr)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setSubquery(
+            Expression.Subquery.newBuilder()
+                .setScalar(
+                    Expression.Subquery.Scalar.newBuilder()
+                        .setInput(expr.input().accept(this.relVisitor))
+                        .build())
+                .build())
+        .build();
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.InPredicate expr)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setSubquery(
+            Expression.Subquery.newBuilder()
+                .setInPredicate(
+                    Expression.Subquery.InPredicate.newBuilder()
+                        .setHaystack(expr.haystack().accept(this.relVisitor))
+                        .addAllNeedles(from(expr.needles()))
+                        .build())
+                .build())
+        .build();
   }
 }

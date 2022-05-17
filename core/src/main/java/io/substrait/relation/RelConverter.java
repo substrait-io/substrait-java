@@ -16,7 +16,7 @@ public class RelConverter implements RelVisitor<Rel, RuntimeException> {
 
   public RelConverter(FunctionCollector functionCollector) {
     this.functionCollector = functionCollector;
-    this.protoConverter = new ExpressionProtoConverter(functionCollector);
+    this.protoConverter = new ExpressionProtoConverter(functionCollector, this);
   }
 
   private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {

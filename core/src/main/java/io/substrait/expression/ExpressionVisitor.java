@@ -64,4 +64,10 @@ public interface ExpressionVisitor<R, E extends Throwable> {
   R visit(Expression.MultiOrList expr) throws E;
 
   R visit(FieldReference expr) throws E;
+
+  R visit(Expression.SetPredicate expr) throws E;
+
+  R visit(Expression.ScalarSubquery expr) throws E;
+
+  R visit(Expression.InPredicate expr) throws E;
 }
