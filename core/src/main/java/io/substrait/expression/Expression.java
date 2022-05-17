@@ -2,6 +2,7 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.function.SimpleExtension;
+import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -608,6 +609,85 @@ public interface Expression {
 
     public static ImmutableExpression.SortField.Builder builder() {
       return ImmutableExpression.SortField.builder();
+    }
+  }
+
+  interface Subquery extends Expression {}
+
+  @Value.Immutable
+  abstract static class SetPredicate implements Subquery {
+    public abstract PredicateOp predicateOp();
+
+    public abstract Rel tuples();
+
+    public Type getType() {
+      return Type.REQUIRED.BOOLEAN;
+    }
+
+    public static ImmutableExpression.SetPredicate.Builder builder() {
+      return ImmutableExpression.SetPredicate.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class ScalarSubquery implements Subquery {
+    public abstract Rel input();
+
+    public static ImmutableExpression.ScalarSubquery.Builder builder() {
+      return ImmutableExpression.ScalarSubquery.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class InPredicate implements Subquery {
+    public abstract Rel haystack();
+
+    public abstract List<Expression> needles();
+
+    public static ImmutableExpression.InPredicate.Builder builder() {
+      return ImmutableExpression.InPredicate.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  enum PredicateOp {
+    PREDICATE_OP_UNSPECIFIED(
+        io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNSPECIFIED),
+    PREDICATE_OP_EXISTS(
+        io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_EXISTS),
+    PREDICATE_OP_UNIQUE(
+        io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNIQUE);
+
+    private final io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto;
+
+    PredicateOp(io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
+      this.proto = proto;
+    }
+
+    public io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp toProto() {
+      return proto;
+    }
+
+    public static PredicateOp fromProto(
+        io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
+      for (var v : values()) {
+        if (v.proto == proto) {
+          return v;
+        }
+      }
+
+      throw new IllegalArgumentException("Unknown type: " + proto);
     }
   }
 

@@ -15,7 +15,7 @@ public class LiteralRoundtripTest {
   @Test
   void decimal() {
     var val = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    var to = new ExpressionProtoConverter(null);
+    var to = new ExpressionProtoConverter(null, null);
     var from = new ProtoExpressionConverter(null, null, null);
     assertEquals(val, from.from(val.accept(to)));
   }
