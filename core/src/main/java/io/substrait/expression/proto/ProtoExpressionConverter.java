@@ -6,6 +6,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.function.SimpleExtension;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
 import io.substrait.type.proto.FromProto;
 import java.util.ArrayList;
@@ -64,8 +65,10 @@ public class ProtoExpressionConverter {
               case EXPRESSION -> FieldReference.ofExpression(
                   from(reference.getExpression()), segments);
               case ROOT_REFERENCE -> FieldReference.ofRoot(rootType, segments);
-              case OUTER_REFERENCE -> throw new IllegalArgumentException(
-                  "Subqueries not yet handled.");
+              case OUTER_REFERENCE -> FieldReference.newRootStructOuterReference(
+                  reference.getDirectReference().getStructField().getField(),
+                  rootType,
+                  reference.getOuterReference().getStepsOut());
               case ROOTTYPE_NOT_SET -> throw new IllegalArgumentException(
                   "Unhandled type: " + reference.getRootTypeCase());
             };
@@ -135,9 +138,55 @@ public class ProtoExpressionConverter {
       }
       case CAST -> ExpressionCreator.cast(
           FromProto.from(expr.getCast().getType()), from(expr.getCast().getInput()));
+      case SUBQUERY -> {
+        switch (expr.getSubquery().getSubqueryTypeCase()) {
+          case SET_PREDICATE -> {
+            var rel =
+                new ProtoRelConverter(lookup, extensions)
+                    .from(expr.getSubquery().getSetPredicate().getTuples());
+            yield ImmutableExpression.SetPredicate.builder()
+                .tuples(rel)
+                .predicateOp(
+                    Expression.PredicateOp.fromProto(
+                        expr.getSubquery().getSetPredicate().getPredicateOp()))
+                .build();
+          }
+          case SCALAR -> {
+            var rel =
+                new ProtoRelConverter(lookup, extensions)
+                    .from(expr.getSubquery().getScalar().getInput());
+            yield ImmutableExpression.ScalarSubquery.builder()
+                .input(rel)
+                .type(rel.getRecordType())
+                .build();
+          }
+          case IN_PREDICATE -> {
+            var rel =
+                new ProtoRelConverter(lookup, extensions)
+                    .from(expr.getSubquery().getInPredicate().getHaystack());
+            var needles =
+                expr.getSubquery().getInPredicate().getNeedlesList().stream()
+                    .map(e -> this.from(e))
+                    .toList();
+            yield ImmutableExpression.InPredicate.builder()
+                .haystack(rel)
+                .needles(needles)
+                .type(rel.getRecordType())
+                .build();
+          }
+          case SET_COMPARISON -> {
+            throw new UnsupportedOperationException(
+                "Unsupported subquery type: " + expr.getSubquery().getSubqueryTypeCase());
+          }
+          default -> {
+            throw new IllegalArgumentException(
+                "Unknown subquery type: " + expr.getSubquery().getSubqueryTypeCase());
+          }
+        }
+      }
 
         // TODO window, enum.
-      case WINDOW_FUNCTION, ENUM -> throw new IllegalArgumentException(
+      case WINDOW_FUNCTION, ENUM -> throw new UnsupportedOperationException(
           "Unsupported type: " + expr.getRexTypeCase());
       default -> throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     };
