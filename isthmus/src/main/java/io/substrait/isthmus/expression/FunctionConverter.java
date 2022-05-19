@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.SimpleExtension;
+import io.substrait.function.ToTypeString;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
@@ -26,6 +27,8 @@ abstract class FunctionConverter<
   protected final RelDataTypeFactory typeFactory;
   protected final RexBuilder rexBuilder;
 
+  protected final Multimap<String, SqlOperator> substraitFuncKeyToSqlOperatorMap;
+
   public FunctionConverter(List<F> functions, RelDataTypeFactory typeFactory) {
     this(functions, Collections.EMPTY_LIST, typeFactory);
   }
@@ -40,6 +43,7 @@ abstract class FunctionConverter<
     signatures.addAll(additionalSignatures);
     signatures.addAll(getSigs());
     this.typeFactory = typeFactory;
+    this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.<String, SqlOperator>create();
 
     var alm = ArrayListMultimap.<String, F>create();
     for (var f : functions) {
@@ -69,8 +73,47 @@ abstract class FunctionConverter<
       }
     }
 
+    for (var entry : alm.entries()) {
+      String key = entry.getKey();
+      var func = entry.getValue();
+      for (FunctionMappings.Sig sig : calciteOperators.get(key)) {
+        substraitFuncKeyToSqlOperatorMap.put(func.key(), sig.operator());
+      }
+    }
+
     this.signatures = matcherMap;
   }
+
+  protected Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+      Expression.ScalarFunctionInvocation expr) {
+    var resolver = getTypeBasedResolver();
+    if (substraitFuncKeyToSqlOperatorMap.containsKey(expr.declaration().key())) {
+      var operators = substraitFuncKeyToSqlOperatorMap.get(expr.declaration().key());
+      // only one SqlOperator is possible
+      if (operators.size() == 1) {
+        return Optional.of(operators.iterator().next());
+      }
+      // at least 2 operators. Use output type to resolve SqlOperator.
+      String outputTypeStr = expr.outputType().accept(ToTypeString.INSTANCE);
+      var resolvedOperators =
+          operators.stream()
+              .filter(
+                  operator ->
+                      resolver.containsKey(operator)
+                          && resolver.get(operator).types().contains(outputTypeStr))
+              .toList();
+      // only one SqlOperator is possible
+      if (resolvedOperators.size() == 1) {
+        return Optional.of(resolvedOperators.get(0));
+      } else if (resolvedOperators.size() > 1) {
+        throw new RuntimeException(
+            "Found two SqlOperators: " + resolvedOperators + " for ScalarFunction : " + expr);
+      }
+    }
+    return Optional.empty();
+  }
+
+  protected abstract Map<SqlOperator, FunctionMappings.TypeBasedResolver> getTypeBasedResolver();
 
   protected abstract ImmutableList<FunctionMappings.Sig> getSigs();
 

@@ -2,6 +2,8 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
@@ -10,6 +12,9 @@ public class FunctionMappings {
   // names.
   public static final ImmutableList<Sig> SCALAR_SIGS;
   public static final ImmutableList<Sig> AGGREGATE_SIGS;
+
+  public static final Map<SqlOperator, TypeBasedResolver> SCALAR_RESOLVER;
+  public static final Map<SqlOperator, TypeBasedResolver> AGGREGATE_RESOLVER;
 
   static {
     SCALAR_SIGS =
@@ -41,6 +46,24 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.COUNT, "count"),
                 s(SqlStdOperatorTable.AVG, "avg"))
             .build();
+
+    SCALAR_RESOLVER =
+        Map.of(
+            SqlStdOperatorTable.PLUS,
+                resolver(
+                    SqlStdOperatorTable.PLUS,
+                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "decimal")),
+            SqlStdOperatorTable.DATETIME_PLUS,
+                resolver(SqlStdOperatorTable.PLUS, Set.of("date", "time", "timestamp")),
+            SqlStdOperatorTable.MINUS,
+                resolver(
+                    SqlStdOperatorTable.MINUS,
+                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "decimal")),
+            SqlStdOperatorTable.MINUS_DATE,
+                resolver(
+                    SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
+
+    AGGREGATE_RESOLVER = Map.of();
   }
 
   public static void main(String[] args) {
@@ -56,4 +79,10 @@ public class FunctionMappings {
   }
 
   record Sig(SqlOperator operator, String name) {}
+
+  public static TypeBasedResolver resolver(SqlOperator operator, Set<String> outTypes) {
+    return new TypeBasedResolver(operator, outTypes);
+  }
+
+  record TypeBasedResolver(SqlOperator operator, Set<String> types) {}
 }

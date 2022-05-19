@@ -1,11 +1,14 @@
 package io.substrait.isthmus;
 
 import static io.substrait.expression.ExpressionCreator.*;
+import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
+import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +27,12 @@ public class CalciteLiteralTest extends CalciteObjs {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(CalciteLiteralTest.class);
 
+  private final ScalarFunctionConverter scalarFunctionConverter =
+      new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);
+
+  private final ExpressionRexConverter expressionRexConverter =
+      new ExpressionRexConverter(type, scalarFunctionConverter);
+
   @Test
   void nullLiteral() {
     test(typedNull(Type.NULLABLE.varChar(10)), rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
@@ -31,41 +40,43 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tI8() {
-    test(i8(false, 4), c(4, SqlTypeName.TINYINT));
+    bitest(i8(false, 4), c(4, SqlTypeName.TINYINT));
   }
 
   @Test
   void tI16() {
-    test(i16(false, 4), c(4, SqlTypeName.SMALLINT));
+    bitest(i16(false, 4), c(4, SqlTypeName.SMALLINT));
   }
 
   @Test
   void tI32() {
-    test(i32(false, 4), c(4, SqlTypeName.INTEGER));
+    bitest(i32(false, 4), c(4, SqlTypeName.INTEGER));
   }
 
   @Test
   void tI64() {
-    test(i64(false, 1234L), c(1234L, SqlTypeName.BIGINT));
+    bitest(i64(false, 1234L), c(1234L, SqlTypeName.BIGINT));
   }
 
   @Test
   void tFP32() {
-    test(fp32(false, 4.44F), c(4.44F, SqlTypeName.FLOAT));
+    bitest(fp32(false, 4.44F), c(4.44F, SqlTypeName.FLOAT));
   }
 
   @Test
   void tFP64() {
-    test(fp64(false, 4.45F), c(4.45F, SqlTypeName.DOUBLE));
+    bitest(fp64(false, 4.45F), c(4.45F, SqlTypeName.DOUBLE));
   }
 
   @Test
   void tStr() {
+    // TODO: varchar vs fixed length char
     test(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
   }
 
   @Test
   void tBinary() {
+    // TODO: varbinary vs fixed length binary
     var val = "my test".getBytes(StandardCharsets.UTF_8);
     test(
         binary(false, val),
@@ -74,14 +85,14 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTime() {
-    test(
+    bitest(
         time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000),
         rex.makeTimeLiteral(new TimeString(14, 22, 47), 6));
   }
 
   @Test
   void tDate() {
-    test(
+    bitest(
         date(false, (int) LocalDate.of(2002, 2, 14).toEpochDay()),
         rex.makeDateLiteral(new DateString(2002, 2, 14)));
   }
@@ -91,7 +102,7 @@ public class CalciteLiteralTest extends CalciteObjs {
     var ts = timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
     var nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
     var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
-    test(ts, rex.makeTimestampLiteral(tsx, 6));
+    bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
   @Disabled("Not clear what the right literal mapping is.")
@@ -171,5 +182,13 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   public void test(Expression expression, RexNode rex) {
     assertEquals(expression, rex.accept(new RexExpressionConverter()));
+  }
+
+  // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
+  public void bitest(Expression expression, RexNode rex) {
+    assertEquals(expression, rex.accept(new RexExpressionConverter()));
+
+    RexNode convertedRex = expression.accept(expressionRexConverter);
+    assertEquals(rex, convertedRex);
   }
 }

@@ -6,6 +6,7 @@ import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -13,6 +14,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 
 public class ScalarFunctionConverter
     extends FunctionConverter<
@@ -36,6 +38,11 @@ public class ScalarFunctionConverter
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.SCALAR_SIGS;
+  }
+
+  @Override
+  protected Map<SqlOperator, FunctionMappings.TypeBasedResolver> getTypeBasedResolver() {
+    return FunctionMappings.SCALAR_RESOLVER;
   }
 
   @Override
