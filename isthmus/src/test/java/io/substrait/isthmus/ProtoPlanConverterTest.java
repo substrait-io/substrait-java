@@ -2,35 +2,23 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.expression.FunctionLookup;
-import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.expression.proto.ImmutableFunctionLookup;
-import io.substrait.function.SimpleExtension;
+import io.substrait.plan.PlanProtoConverter;
+import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.Plan;
-import io.substrait.proto.PlanRel;
-import io.substrait.relation.ProtoRelConverter;
-import io.substrait.relation.Rel;
-import io.substrait.relation.RelConverter;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class ProtoRelConverterTest extends PlanTestBase {
+public class ProtoPlanConverterTest extends PlanTestBase {
   private void assertProtoRelRoundrip(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
     var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
-    Plan p = s.execute(query, creates);
-    SimpleExtension.ExtensionCollection extensionCollection = SimpleExtension.loadDefaults();
-    FunctionLookup functionLookup = ImmutableFunctionLookup.builder().from(p).build();
-    ProtoRelConverter relConverter = new ProtoRelConverter(functionLookup, extensionCollection);
-    for (PlanRel planRel : p.getRelationsList()) {
-      io.substrait.proto.Rel protoRel1 = planRel.getRoot().getInput();
-      Rel rel = relConverter.from(protoRel1);
-      io.substrait.proto.Rel protoRel2 = new RelConverter(new FunctionCollector()).toProto(rel);
-      assertEquals(protoRel1, protoRel2);
-    }
+    Plan protoPlan1 = s.execute(query, creates);
+    io.substrait.plan.Plan plan = new ProtoPlanConverter().from(protoPlan1);
+    Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
+    assertEquals(protoPlan1, protoPlan2);
   }
 
   @Test
