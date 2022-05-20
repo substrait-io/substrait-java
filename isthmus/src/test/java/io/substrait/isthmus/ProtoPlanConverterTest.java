@@ -61,4 +61,50 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             + "  o.o_orderdate\n"
             + "limit 10");
   }
+
+  @Test
+  public void existsCorrelatedSubquery() throws IOException, SqlParseException {
+    assertProtoRelRoundrip(
+        "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)");
+  }
+
+  @Test
+  public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
+    assertProtoRelRoundrip(
+        "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)");
+  }
+
+  @Test
+  public void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
+    assertProtoRelRoundrip(
+        "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)");
+  }
+
+  @Test
+  public void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
+    assertProtoRelRoundrip(
+        "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)");
+  }
+
+  @Test
+  public void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
+    String sql =
+        "SELECT p_partkey\n"
+            + "FROM part p\n"
+            + "WHERE EXISTS\n"
+            + "    (SELECT *\n"
+            + "     FROM lineitem l\n"
+            + "     WHERE l.l_partkey = p.p_partkey\n"
+            + "       AND UNIQUE\n"
+            + "         (SELECT *\n"
+            + "          FROM partsupp ps\n"
+            + "          WHERE ps.ps_partkey = p.p_partkey\n"
+            + "          AND   PS.ps_suppkey = l.l_suppkey))";
+    assertProtoRelRoundrip(sql);
+  }
+
+  @Test
+  public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
+    assertProtoRelRoundrip(asString("subquery/nested_scalar_subquery_in_filter.sql"));
+  }
 }
