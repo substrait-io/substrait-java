@@ -18,12 +18,12 @@ import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
 
-public class RelConverter implements RelVisitor<Rel, RuntimeException> {
+public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   private final ExpressionProtoConverter protoConverter;
   private final FunctionCollector functionCollector;
 
-  public RelConverter(FunctionCollector functionCollector) {
+  public RelProtoConverter(FunctionCollector functionCollector) {
     this.functionCollector = functionCollector;
     this.protoConverter = new ExpressionProtoConverter(functionCollector, this);
   }
