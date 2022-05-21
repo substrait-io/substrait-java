@@ -4,7 +4,7 @@ import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
-import io.substrait.relation.RelConverter;
+import io.substrait.relation.RelProtoConverter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +15,7 @@ public class PlanProtoConverter {
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();
     for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
-      Rel input = new RelConverter(new FunctionCollector()).toProto(root.getInput());
+      Rel input = new RelProtoConverter(new FunctionCollector()).toProto(root.getInput());
       planRels.add(
           PlanRel.newBuilder()
               .setRoot(

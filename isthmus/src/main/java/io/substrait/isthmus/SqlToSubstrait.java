@@ -6,7 +6,7 @@ import io.substrait.function.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelConverter;
+import io.substrait.relation.RelProtoConverter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,7 +102,7 @@ public class SqlToSubstrait {
     // System.out.println(RelOptUtil.toString(root.rel));
     Rel pojoRel = SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION);
     FunctionCollector functionCollector = new FunctionCollector();
-    RelConverter toProtoRel = new RelConverter(functionCollector);
+    RelProtoConverter toProtoRel = new RelProtoConverter(functionCollector);
     var protoRel = pojoRel.accept(toProtoRel);
 
     var planRel =
