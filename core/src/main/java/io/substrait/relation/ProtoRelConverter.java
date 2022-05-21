@@ -19,6 +19,7 @@ import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.FromProto;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,10 @@ public class ProtoRelConverter {
 
   private final FunctionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
+
+  public ProtoRelConverter(FunctionLookup lookup) throws IOException {
+    this(lookup, SimpleExtension.loadDefaults());
+  }
 
   public ProtoRelConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
@@ -78,8 +83,6 @@ public class ProtoRelConverter {
 
   private Filter newFilter(FilterRel rel) {
     var input = from(rel.getInput());
-    // TODO: For case of subquery, we'll need to pass in ProtoRelConverter to
-    //       ProtoExpressionConverter with nested structure of Rel/Expression.
     return Filter.builder()
         .input(input)
         .condition(
@@ -142,7 +145,7 @@ public class ProtoRelConverter {
     }
     var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     return VirtualTableScan.builder()
-        .filter(converter.from(rel.getFilter()))
+        .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
         .remap(optionalRelmap(rel.getCommon()))
         .rows(structLiterals)
         .build();
