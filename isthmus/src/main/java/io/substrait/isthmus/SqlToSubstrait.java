@@ -56,7 +56,6 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait {
 
-
   public Plan execute(String sql, Function<List<String>, Map<String, Type>> tableLookup)
       throws SqlParseException {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
@@ -65,8 +64,7 @@ public class SqlToSubstrait {
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator =
-        Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
     var parsed = parser.parseQuery();
     Set<SqlIdentifier> ids = new HashSet<>();
@@ -107,8 +105,7 @@ public class SqlToSubstrait {
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator =
-        Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
         List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
@@ -123,7 +120,11 @@ public class SqlToSubstrait {
     return executeInner(parsed, validator, factory, catalogReader);
   }
 
-  private Plan executeInner(SqlNode parsed, SqlValidator validator, RelDataTypeFactory factory, CalciteCatalogReader catalogReader) {
+  private Plan executeInner(
+      SqlNode parsed,
+      SqlValidator validator,
+      RelDataTypeFactory factory,
+      CalciteCatalogReader catalogReader) {
     SqlToRelConverter.Config converterConfig =
         SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
     validator.validate(parsed);
