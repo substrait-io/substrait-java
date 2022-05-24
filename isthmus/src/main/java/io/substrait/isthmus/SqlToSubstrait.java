@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import com.google.common.collect.Lists;
 import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.function.SimpleExtension;
@@ -8,12 +7,12 @@ import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
-import io.substrait.type.Type;
+import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -54,24 +53,21 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait {
 
-  public Plan execute(String sql, Function<List<String>, Map<String, Type>> tableLookup)
+  public Plan execute(String sql, Function<List<String>, NamedStruct> tableLookup)
       throws SqlParseException {
     RelDataTypeFactory factory = new JavaTypeFactoryImpl();
     Function<List<String>, Table> lookup =
         id -> {
-          Map<String, Type> table = tableLookup.apply(id);
+          NamedStruct table = tableLookup.apply(id);
           if (table == null) {
             return null;
           }
-          List<RelDataType> types = Lists.newArrayList();
-          List<String> names = Lists.newArrayList();
-          table.forEach(
-              (k, v) -> {
-                names.add(k);
-                types.add(TypeConverter.convert(factory, v));
-              });
+          List<RelDataType> types =
+              table.struct().fields().stream()
+                  .map(f -> TypeConverter.convert(factory, f))
+                  .collect(Collectors.toList());
           return new DefinedTable(
-              id.get(id.size() - 1), factory, factory.createStructType(types, names));
+              id.get(id.size() - 1), factory, factory.createStructType(types, table.names()));
         };
 
     CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);

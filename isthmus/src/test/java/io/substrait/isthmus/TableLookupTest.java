@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
@@ -35,6 +37,14 @@ public class TableLookupTest extends PlanTestBase {
 
   @Test
   void compareProto() throws SqlParseException, IOException {
+    var names = Lists.<String>newArrayList();
+    var types = Lists.<Type>newArrayList();
+    lineitem.forEach(
+        (k, v) -> {
+          names.add(k);
+          types.add(v);
+        });
+    var struct = NamedStruct.of(names, Type.Struct.builder().fields(types).nullable(true).build());
     SqlToSubstrait s2s1 = new SqlToSubstrait();
     SqlToSubstrait s2s2 = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
@@ -46,7 +56,7 @@ public class TableLookupTest extends PlanTestBase {
             query,
             (tn) -> {
               if (tn.size() == 1 && Objects.equals(tn.get(0), "LINEITEM")) {
-                return lineitem;
+                return struct;
               }
               return null;
             });
