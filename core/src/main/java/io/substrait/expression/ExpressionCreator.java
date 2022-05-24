@@ -292,12 +292,14 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
+      AggregateFunction.AggregationInvocation invocation,
       Expression... arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
+        .invocation(invocation)
         .addArguments(arguments)
         .build();
   }
