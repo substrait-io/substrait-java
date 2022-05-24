@@ -23,6 +23,13 @@ public class LookupCalciteSchema extends SimpleCalciteSchema {
   }
 
   @Override
+  public CalciteSchema add(String name, Schema schema) {
+    final CalciteSchema calciteSchema = new LookupCalciteSchema(this, schema, name, lookup);
+    subSchemaMap.put(name, calciteSchema);
+    return calciteSchema;
+  }
+
+  @Override
   protected @Nullable CalciteSchema getImplicitSubSchema(String schemaName, boolean caseSensitive) {
     if (cache.computeIfAbsent(path(schemaName), lookup) != null) {
       return null;

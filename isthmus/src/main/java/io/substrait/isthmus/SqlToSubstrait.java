@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -62,12 +61,10 @@ public class SqlToSubstrait {
           if (table == null) {
             return null;
           }
-          List<RelDataType> types =
-              table.struct().fields().stream()
-                  .map(f -> TypeConverter.convert(factory, f))
-                  .collect(Collectors.toList());
           return new DefinedTable(
-              id.get(id.size() - 1), factory, factory.createStructType(types, table.names()));
+              id.get(id.size() - 1),
+              factory,
+              TypeConverter.convert(factory, table.struct(), table.names()));
         };
 
     CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
