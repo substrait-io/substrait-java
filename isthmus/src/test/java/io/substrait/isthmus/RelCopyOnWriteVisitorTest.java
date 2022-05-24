@@ -10,14 +10,14 @@ import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
-import io.substrait.relation.RelChildVisitor;
+import io.substrait.relation.RelCopyOnWriteVisitor;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class RelChildVisitorTest {
+public class RelCopyOnWriteVisitorTest {
   private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
@@ -91,7 +91,7 @@ public class RelChildVisitorTest {
     return (visitor.hasTableReference());
   }
 
-  private static class HasTableReference extends RelChildVisitor {
+  private static class HasTableReference extends RelCopyOnWriteVisitor {
     private boolean hasTableReference;
     private final List<String> tableName;
 
@@ -110,7 +110,7 @@ public class RelChildVisitorTest {
     }
   }
 
-  private static class CountCountDistinct extends RelChildVisitor {
+  private static class CountCountDistinct extends RelCopyOnWriteVisitor {
     private int countDistincts;
 
     public int getCountDistincts() {

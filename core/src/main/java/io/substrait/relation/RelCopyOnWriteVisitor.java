@@ -8,7 +8,7 @@ import io.substrait.expression.FieldReference;
  * Class used to visit all child relations from a root relation. The traversal will include
  * relations inside of subquery expressions.
  */
-public class RelChildVisitor implements RelVisitor<Rel, RuntimeException> {
+public class RelCopyOnWriteVisitor implements RelVisitor<Rel, RuntimeException> {
   @Override
   public Aggregate visit(Aggregate aggregate) {
     aggregate.getInput().accept(this);
@@ -261,19 +261,19 @@ public class RelChildVisitor implements RelVisitor<Rel, RuntimeException> {
 
           @Override
           public Expression.SetPredicate visit(Expression.SetPredicate expr) {
-            expr.tuples().accept(RelChildVisitor.this);
+            expr.tuples().accept(RelCopyOnWriteVisitor.this);
             return expr;
           }
 
           @Override
           public Expression.ScalarSubquery visit(Expression.ScalarSubquery expr) {
-            expr.input().accept(RelChildVisitor.this);
+            expr.input().accept(RelCopyOnWriteVisitor.this);
             return expr;
           }
 
           @Override
           public Expression.InPredicate visit(Expression.InPredicate expr) {
-            expr.haystack().accept(RelChildVisitor.this);
+            expr.haystack().accept(RelCopyOnWriteVisitor.this);
             return expr;
           }
         };
