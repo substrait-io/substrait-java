@@ -11,15 +11,14 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -34,8 +33,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -46,7 +45,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
-import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
@@ -56,51 +54,44 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait {
 
-  private final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-  private final RelDataTypeFactory factory = new JavaTypeFactoryImpl();
-  private final CalciteConnectionConfig config =
-      CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-  private final CalciteCatalogReader catalogReader =
-      new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-  private final SqlValidator validator =
-      Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-
   public Plan execute(String sql, Function<List<String>, Map<String, Type>> tableLookup)
       throws SqlParseException {
-    SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
-    var parsed = parser.parseQuery();
-    Set<SqlIdentifier> ids = new HashSet<>();
-
-    parsed.accept(
-        new SqlBasicVisitor<>() {
-          @Override
-          public Object visit(SqlIdentifier id) {
-            ids.add(id);
-            return super.visit(id);
+    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
+    Function<List<String>, Table> lookup =
+        id -> {
+          Map<String, Type> table = tableLookup.apply(id);
+          if (table == null) {
+            return null;
           }
-        });
+          List<RelDataType> types = Lists.newArrayList();
+          List<String> names = Lists.newArrayList();
+          table.forEach(
+              (k, v) -> {
+                names.add(k);
+                types.add(TypeConverter.convert(factory, v));
+              });
+          return new DefinedTable(
+              id.get(id.size() - 1), factory, factory.createStructType(types, names));
+        };
 
-    for (SqlIdentifier id : ids) {
-      Map<String, Type> table = tableLookup.apply(id.names);
-      if (table == null) {
-        continue;
-      }
-      List<RelDataType> types = Lists.newArrayList();
-      List<String> names = Lists.newArrayList();
-      table.forEach(
-          (k, v) -> {
-            names.add(k);
-            types.add(TypeConverter.convert(factory, v));
-          });
-      DefinedTable dt =
-          new DefinedTable(id.getSimple(), factory, factory.createStructType(types, names));
-      rootSchema.add(dt.getName(), dt);
-    }
+    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
+    CalciteConnectionConfig config =
+        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
 
-    return executeInner(parsed);
+    return executeInner(sql, factory, validator, catalogReader);
   }
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
+    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
+    CalciteConnectionConfig config =
+        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
         List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
@@ -110,12 +101,17 @@ public class SqlToSubstrait {
       }
     }
 
-    SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
-    var parsed = parser.parseQuery();
-    return executeInner(parsed);
+    return executeInner(sql, factory, validator, catalogReader);
   }
 
-  private Plan executeInner(SqlNode parsed) {
+  private Plan executeInner(
+      String sql,
+      RelDataTypeFactory factory,
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader)
+      throws SqlParseException {
+    SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
+    var parsed = parser.parseQuery();
     SqlToRelConverter.Config converterConfig =
         SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
 
