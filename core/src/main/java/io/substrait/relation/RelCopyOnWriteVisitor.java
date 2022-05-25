@@ -1,280 +1,270 @@
 package io.substrait.relation;
 
+import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableFieldReference;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 /**
- * Class used to visit all child relations from a root relation. The traversal will include
- * relations inside of subquery expressions.
+ * Class used to visit all child relations from a root relation and optionally replace subtrees by
+ * overriding a visitor method. The traversal will include relations inside of subquery expressions.
+ * By default, no subtree substitution will be performed. However, if a visit method is overridden
+ * to return a non-empty optional value, then that value will replace the relation in the tree.
  */
-public class RelCopyOnWriteVisitor implements RelVisitor<Rel, RuntimeException> {
-  @Override
-  public Aggregate visit(Aggregate aggregate) {
-    aggregate.getInput().accept(this);
-    return aggregate;
-  }
+public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, RuntimeException> {
 
-  @Override
-  public EmptyScan visit(EmptyScan emptyScan) {
-    return emptyScan;
-  }
-
-  @Override
-  public Fetch visit(Fetch fetch) {
-    fetch.getInput().accept(this);
-    return fetch;
-  }
-
-  @Override
-  public Filter visit(Filter filter) {
-    filter.getInput().accept(this);
-    visitExpression(filter.getCondition());
-    return filter;
-  }
-
-  @Override
-  public Join visit(Join join) {
-    join.getLeft().accept(this);
-    join.getRight().accept(this);
-    if (join.getCondition().isPresent()) {
-      visitExpression(join.getCondition().get());
+  public static <T> Optional<List<T>> transformList(
+      List<T> items, Function<T, Optional<T>> transform) {
+    List<T> transformedItems = items;
+    for (int i = 0; i < items.size(); i++) {
+      var item = items.get(i);
+      var transformedItem = transform.apply(item);
+      if (transformedItem.isPresent()) {
+        if (transformedItems == items) {
+          transformedItems = new ArrayList<>(items);
+        }
+        transformedItems.set(i, transformedItem.get());
+      }
     }
-    if (join.getPostJoinFilter().isPresent()) {
-      visitExpression(join.getPostJoinFilter().get());
+    return transformedItems == items ? Optional.empty() : Optional.of(transformedItems);
+  }
+
+  private Optional<List<Expression>> transformExpressions(List<Expression> oldExpressions) {
+    return transformList(oldExpressions, t -> this.visitExpression(t));
+  }
+
+  private static boolean allEmpty(Optional<?>... optionals) {
+    for (Optional<?> optional : optionals) {
+      if (optional.isPresent()) {
+        return false;
+      }
     }
-    return join;
+    return true;
   }
 
   @Override
-  public NamedScan visit(NamedScan namedScan) {
-    return namedScan;
+  public Optional<Rel> visitFallback(Rel rel) {
+    return Optional.empty();
   }
 
   @Override
-  public Project visit(Project project) {
-    project.getInput().accept(this);
-    for (var expr : project.getExpressions()) {
-      visitExpression(expr);
+  public Optional<Rel> visit(Aggregate aggregate) throws RuntimeException {
+    return aggregate
+        .getInput()
+        .accept(this)
+        .map(input -> ImmutableAggregate.builder().from(aggregate).input(input).build());
+  }
+
+  @Override
+  public Optional<Rel> visit(Fetch fetch) throws RuntimeException {
+    return fetch
+        .getInput()
+        .accept(this)
+        .map(input -> ImmutableFetch.builder().from(fetch).input(input).build());
+  }
+
+  @Override
+  public Optional<Rel> visit(Filter filter) throws RuntimeException {
+    var input = filter.getInput().accept(this);
+    var condition = visitExpression(filter.getCondition());
+    if (allEmpty(input, condition)) {
+      return Optional.empty();
     }
-    return project;
+    return Optional.of(
+        ImmutableFilter.builder()
+            .from(filter)
+            .input(input.orElse(filter.getInput()))
+            .condition(condition.orElse(filter.getCondition()))
+            .build());
   }
 
   @Override
-  public Sort visit(Sort sort) {
-    sort.getInput().accept(this);
-    return sort;
+  public Optional<Rel> visit(Join join) throws RuntimeException {
+    var left = join.getLeft().accept(this);
+    var right = join.getRight().accept(this);
+    var condition = join.getCondition().flatMap(t -> visitExpression(t));
+    var postFilter = join.getPostJoinFilter().flatMap(t -> visitExpression(t));
+    if (allEmpty(left, right, condition, postFilter)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableJoin.builder()
+            .from(join)
+            .left(left.orElse(join.getLeft()))
+            .right(right.orElse(join.getRight()))
+            .condition(condition.or(() -> join.getCondition()))
+            .postJoinFilter(postFilter.or(() -> join.getPostJoinFilter()))
+            .build());
   }
 
   @Override
-  public VirtualTableScan visit(VirtualTableScan virtualTableScan) {
-    return virtualTableScan;
+  public Optional<Rel> visit(Project project) throws RuntimeException {
+    var input = project.getInput().accept(this);
+    Optional<List<Expression>> expressions = transformExpressions(project.getExpressions());
+    if (allEmpty(input, expressions)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableProject.builder()
+            .from(project)
+            .input(input.orElse(project.getInput()))
+            .expressions(expressions.orElse(project.getExpressions()))
+            .build());
   }
 
-  private Expression visitExpression(Expression expression) {
-    ExpressionVisitor<Expression, RuntimeException> visitor =
-        new ExpressionVisitor<Expression, RuntimeException>() {
+  @Override
+  public Optional<Rel> visit(Sort sort) throws RuntimeException {
+    return sort.getInput()
+        .accept(this)
+        .map(input -> ImmutableSort.builder().from(sort).input(input).build());
+  }
+
+  private Optional<Expression> visitExpression(Expression expression) {
+    ExpressionVisitor<Optional<Expression>, RuntimeException> visitor =
+        new AbstractExpressionVisitor<>() {
           @Override
-          public Expression.NullLiteral visit(Expression.NullLiteral expr) {
-            return expr;
+          public Optional<Expression> visitFallback(Expression expr) {
+            return Optional.empty();
           }
 
           @Override
-          public Expression.BoolLiteral visit(Expression.BoolLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.I8Literal visit(Expression.I8Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.I16Literal visit(Expression.I16Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.I32Literal visit(Expression.I32Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.I64Literal visit(Expression.I64Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.FP32Literal visit(Expression.FP32Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.FP64Literal visit(Expression.FP64Literal expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.StrLiteral visit(Expression.StrLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.BinaryLiteral visit(Expression.BinaryLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.TimeLiteral visit(Expression.TimeLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.DateLiteral visit(Expression.DateLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.TimestampLiteral visit(Expression.TimestampLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.TimestampTZLiteral visit(Expression.TimestampTZLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.IntervalYearLiteral visit(Expression.IntervalYearLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.IntervalDayLiteral visit(Expression.IntervalDayLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.UUIDLiteral visit(Expression.UUIDLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.FixedCharLiteral visit(Expression.FixedCharLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.VarCharLiteral visit(Expression.VarCharLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.FixedBinaryLiteral visit(Expression.FixedBinaryLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.DecimalLiteral visit(Expression.DecimalLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.MapLiteral visit(Expression.MapLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.ListLiteral visit(Expression.ListLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.StructLiteral visit(Expression.StructLiteral expr) {
-            return expr;
-          }
-
-          @Override
-          public Expression.Switch visit(Expression.Switch expr) {
-            expr.defaultClause().accept(this);
-            for (var clause : expr.switchClauses()) {
-              clause.then().accept(this);
+          public Optional<Expression> visit(Expression.Switch expr) throws RuntimeException {
+            var defaultClause = expr.defaultClause().accept(this);
+            var switchClauses =
+                transformList(
+                    expr.switchClauses(),
+                    t ->
+                        t.then()
+                            .accept(this)
+                            .map(u -> Expression.SwitchClause.builder().from(t).then(u).build()));
+            if (allEmpty(defaultClause, switchClauses)) {
+              return Optional.empty();
             }
-            return expr;
+            return Optional.of(
+                Expression.Switch.builder()
+                    .from(expr)
+                    .defaultClause(defaultClause.orElse(expr.defaultClause()))
+                    .switchClauses(switchClauses.orElse(expr.switchClauses()))
+                    .build());
           }
 
           @Override
-          public Expression.IfThen visit(Expression.IfThen expr) {
-            for (var clause : expr.ifClauses()) {
-              clause.condition().accept(this);
-              clause.then().accept(this);
+          public Optional<Expression> visit(Expression.IfThen expr) throws RuntimeException {
+            var ifClauses =
+                transformList(
+                    expr.ifClauses(),
+                    t ->
+                        t.condition()
+                            .accept(this)
+                            .map(u -> Expression.IfClause.builder().from(t).condition(u).build()));
+            var ifThenClauses =
+                transformList(
+                    ifClauses.orElse(expr.ifClauses()),
+                    t ->
+                        t.then()
+                            .accept(this)
+                            .map(u -> Expression.IfClause.builder().from(t).then(u).build()));
+            var elseClause = expr.elseClause().accept(this);
+            if (allEmpty(ifClauses, ifThenClauses, elseClause)) {
+              return Optional.empty();
             }
-            expr.elseClause().accept(this);
-            return expr;
+            return Optional.of(
+                Expression.IfThen.builder()
+                    .from(expr)
+                    .ifClauses(ifThenClauses.orElse(expr.ifClauses()))
+                    .elseClause(elseClause.orElse(expr.elseClause()))
+                    .build());
           }
 
           @Override
-          public Expression.ScalarFunctionInvocation visit(
-              Expression.ScalarFunctionInvocation expr) {
-            for (var arg : expr.arguments()) {
-              arg.accept(this);
+          public Optional<Expression> visit(Expression.ScalarFunctionInvocation expr)
+              throws RuntimeException {
+            return transformExpressions(expr.arguments())
+                .map(
+                    t ->
+                        Expression.ScalarFunctionInvocation.builder()
+                            .from(expr)
+                            .arguments(t)
+                            .build());
+          }
+
+          @Override
+          public Optional<Expression> visit(Expression.Cast expr) throws RuntimeException {
+            return expr.input()
+                .accept(this)
+                .map(t -> Expression.Cast.builder().from(expr).input(t).build());
+          }
+
+          @Override
+          public Optional<Expression> visit(Expression.SingleOrList expr) throws RuntimeException {
+            var condition = expr.condition().accept(this);
+            var options = transformExpressions(expr.options());
+            if (allEmpty(condition, options)) {
+              return Optional.empty();
             }
-            return expr;
+            return Optional.of(
+                Expression.SingleOrList.builder()
+                    .from(expr)
+                    .condition(condition.orElse(expr.condition()))
+                    .options(options.orElse(expr.options()))
+                    .build());
           }
 
           @Override
-          public Expression.Cast visit(Expression.Cast expr) {
-            expr.input().accept(this);
-            return expr;
-          }
-
-          @Override
-          public Expression.SingleOrList visit(Expression.SingleOrList expr) {
-            expr.condition().accept(this);
-            for (var option : expr.options()) {
-              option.accept(this);
+          public Optional<Expression> visit(Expression.MultiOrList expr) throws RuntimeException {
+            var options = transformExpressions(expr.conditions());
+            var multiOrListRecords =
+                transformList(
+                    expr.optionCombinations(),
+                    t ->
+                        transformExpressions(t.values())
+                            .map(u -> Expression.MultiOrListRecord.builder().values(u).build()));
+            if (allEmpty(options, multiOrListRecords)) {
+              return Optional.empty();
             }
-            return expr;
+            return Optional.of(
+                Expression.MultiOrList.builder()
+                    .from(expr)
+                    .optionCombinations(multiOrListRecords.orElse(expr.optionCombinations()))
+                    .build());
           }
 
           @Override
-          public Expression.MultiOrList visit(Expression.MultiOrList expr) {
-            for (var condition : expr.conditions()) {
-              condition.accept(this);
-            }
-            for (var optionCombos : expr.optionCombinations()) {
-              for (var option : optionCombos.values()) {
-                option.accept(this);
-              }
-            }
-            return expr;
+          public Optional<Expression> visit(FieldReference expr) throws RuntimeException {
+            return expr.inputExpression()
+                .flatMap(t -> t.accept(this))
+                .map(
+                    t ->
+                        ImmutableFieldReference.builder()
+                            .inputExpression(Optional.ofNullable(t))
+                            .build());
           }
 
           @Override
-          public FieldReference visit(FieldReference expr) {
-            if (expr.inputExpression().isPresent()) {
-              expr.inputExpression().get().accept(this);
-            }
-            // TODO: other children to traverse?
-            return expr;
+          public Optional<Expression> visit(Expression.SetPredicate expr) throws RuntimeException {
+            return expr.tuples()
+                .accept(RelCopyOnWriteVisitor.this)
+                .map(t -> Expression.SetPredicate.builder().from(expr).tuples(t).build());
           }
 
           @Override
-          public Expression.SetPredicate visit(Expression.SetPredicate expr) {
-            expr.tuples().accept(RelCopyOnWriteVisitor.this);
-            return expr;
+          public Optional<Expression> visit(Expression.ScalarSubquery expr)
+              throws RuntimeException {
+            return expr.input()
+                .accept(RelCopyOnWriteVisitor.this)
+                .map(t -> Expression.ScalarSubquery.builder().from(expr).input(t).build());
           }
 
           @Override
-          public Expression.ScalarSubquery visit(Expression.ScalarSubquery expr) {
-            expr.input().accept(RelCopyOnWriteVisitor.this);
-            return expr;
-          }
-
-          @Override
-          public Expression.InPredicate visit(Expression.InPredicate expr) {
-            expr.haystack().accept(RelCopyOnWriteVisitor.this);
-            return expr;
+          public Optional<Expression> visit(Expression.InPredicate expr) throws RuntimeException {
+            return expr.haystack()
+                .accept(RelCopyOnWriteVisitor.this)
+                .map(t -> Expression.InPredicate.builder().from(expr).haystack(t).build());
           }
         };
     return expression.accept(visitor);
