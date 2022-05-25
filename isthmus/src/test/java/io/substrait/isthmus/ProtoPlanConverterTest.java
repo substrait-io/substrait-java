@@ -2,9 +2,10 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
-import io.substrait.proto.Plan;
+import io.substrait.proto.AggregateFunction;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -15,15 +16,46 @@ public class ProtoPlanConverterTest extends PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
     var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
-    Plan protoPlan1 = s.execute(query, creates);
-    io.substrait.plan.Plan plan = new ProtoPlanConverter().from(protoPlan1);
-    Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
+    io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
+    String planStr1 = protoPlan1.toString();
+    Plan plan = new ProtoPlanConverter().from(protoPlan1);
+    io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
+  }
+
+  private io.substrait.proto.Plan getProtoPlan(String query1)
+      throws IOException, SqlParseException {
+    SqlToSubstrait s = new SqlToSubstrait();
+    String[] values = asString("tpch/schema.sql").split(";");
+    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    return s.execute(query1, creates);
   }
 
   @Test
   public void aggregate() throws IOException, SqlParseException {
-    assertProtoRelRoundrip("select count(DISTINCT L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
+    assertProtoRelRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
+  }
+
+  private static void assertAggregateInvocationDistinct(io.substrait.proto.Plan plan) {
+    assertEquals(
+        AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT,
+        plan.getRelations(0)
+            .getRoot()
+            .getInput()
+            .getAggregate()
+            .getMeasuresList()
+            .get(0)
+            .getMeasure()
+            .getInvocation());
+  }
+
+  @Test
+  public void distinctCount() throws IOException, SqlParseException {
+    String distinctQuery = "select count(DISTINCT L_ORDERKEY) from lineitem";
+    io.substrait.proto.Plan protoPlan = getProtoPlan(distinctQuery);
+    assertAggregateInvocationDistinct(protoPlan);
+    assertAggregateInvocationDistinct(
+        new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan)));
   }
 
   @Test
