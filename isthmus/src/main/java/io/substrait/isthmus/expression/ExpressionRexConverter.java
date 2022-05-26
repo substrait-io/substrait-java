@@ -1,7 +1,7 @@
 package io.substrait.isthmus.expression;
 
+import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.TypeConverter;
 import java.util.Optional;
@@ -15,8 +15,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
-public class ExpressionRexConverter implements ExpressionVisitor<RexNode, RuntimeException> {
-
+public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException> {
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
@@ -115,133 +114,20 @@ public class ExpressionRexConverter implements ExpressionVisitor<RexNode, Runtim
   }
 
   @Override
-  public RexNode visit(Expression.IntervalYearLiteral expr) throws RuntimeException {
-    // return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory,
-    // expr.getType()));
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.IntervalDayLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.UUIDLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.FixedCharLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.VarCharLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.FixedBinaryLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.DecimalLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.MapLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.ListLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.StructLiteral expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.Switch expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.IfThen expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
   public RexNode visit(Expression.ScalarFunctionInvocation expr) throws RuntimeException {
     var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
     Optional<SqlOperator> operator = scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(expr);
     if (operator.isPresent()) {
       return rexBuilder.makeCall(operator.get(), args);
     }
-    throw new RuntimeException("Could not resolve scalar function " + expr);
+
+    return visitFallback(expr);
   }
 
   @Override
   public RexNode visit(Expression.Cast expr) throws RuntimeException {
     return rexBuilder.makeAbstractCast(
         TypeConverter.convert(typeFactory, expr.getType()), expr.input().accept(this));
-  }
-
-  @Override
-  public RexNode visit(Expression.SingleOrList expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.MultiOrList expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
   }
 
   @Override
@@ -260,30 +146,14 @@ public class ExpressionRexConverter implements ExpressionVisitor<RexNode, Runtim
       return rexInputRef;
     }
 
-    throw new UnsupportedOperationException("Unsupported FieldReference " + expr);
+    return visitFallback(expr);
   }
 
   @Override
-  public RexNode visit(Expression.SetPredicate expr) throws RuntimeException {
+  public RexNode visitFallback(Expression expr) {
     throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.ScalarSubquery expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
-  }
-
-  @Override
-  public RexNode visit(Expression.InPredicate expr) throws RuntimeException {
-    throw new UnsupportedOperationException(
-        this.getClass().getCanonicalName()
-            + " does not support "
-            + expr.getClass().getCanonicalName());
+        String.format(
+            "Rel of type %s not handled by visitor type %s.",
+            expr.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 }

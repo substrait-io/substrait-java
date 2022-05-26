@@ -5,9 +5,21 @@ import io.substrait.function.SimpleExtension;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.config.CalciteConnectionProperty;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.plan.Contexts;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCostImpl;
+import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -22,8 +34,29 @@ import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
+import org.apache.calcite.util.Pair;
 
 public class SqlConverterBase {
+  protected final RelDataTypeFactory factory;
+  protected final RelOptCluster relOptCluster;
+  protected final CalciteConnectionConfig config;
+  protected final SqlToRelConverter.Config converterConfig;
+
+  protected SqlConverterBase() {
+    this.factory = new JavaTypeFactoryImpl();
+    this.config =
+        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
+    this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
+    VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
+    this.relOptCluster = RelOptCluster.create(planner, new RexBuilder(factory));
+    relOptCluster.setMetadataQuerySupplier(
+        () -> {
+          ProxyingMetadataHandlerProvider handler =
+              new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
+          return new RelMetadataQuery(handler);
+        });
+  }
 
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
 
@@ -37,6 +70,23 @@ public class SqlConverterBase {
     }
 
     EXTENSION_COLLECTION = defaults;
+  }
+
+  protected Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
+      throws SqlParseException {
+    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    if (tables != null) {
+      for (String tableDef : tables) {
+        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
+        for (DefinedTable t : tList) {
+          rootSchema.add(t.getName(), t);
+        }
+      }
+    }
+    return Pair.of(validator, catalogReader);
   }
 
   protected List<DefinedTable> parseCreateTable(
@@ -124,9 +174,9 @@ public class SqlConverterBase {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-      if (factory != typeFactory) {
-        throw new IllegalStateException("Different type factory than previously used.");
-      }
+      //      if (factory != typeFactory) {
+      //        throw new IllegalStateException("Different type factory than previously used.");
+      //      }
       return type;
     }
 

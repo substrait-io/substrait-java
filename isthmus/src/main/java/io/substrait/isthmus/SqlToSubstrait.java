@@ -8,24 +8,13 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.function.Function;
-import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.jdbc.LookupCalciteSchema;
-import org.apache.calcite.plan.Contexts;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
-import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
-import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -38,7 +27,6 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   public Plan execute(String sql, Function<List<String>, NamedStruct> tableLookup)
       throws SqlParseException {
-    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
     Function<List<String>, Table> lookup =
         id -> {
           NamedStruct table = tableLookup.apply(id);
@@ -52,8 +40,6 @@ public class SqlToSubstrait extends SqlConverterBase {
         };
 
     CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
-    CalciteConnectionConfig config =
-        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
@@ -62,42 +48,13 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
-    CalciteConnectionConfig config =
-        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-    CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-    if (tables != null) {
-      for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
-          rootSchema.add(t.getName(), t);
-        }
-      }
-    }
-
-    return executeInner(sql, factory, validator, catalogReader);
+    var pair = registerCreateTables(tables);
+    return executeInner(sql, factory, pair.left, pair.right);
   }
 
   public RelRoot sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
-    CalciteConnectionConfig config =
-        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-    CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-    if (tables != null) {
-      for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
-          rootSchema.add(t.getName(), t);
-        }
-      }
-    }
-    return sqlToRelNode(sql, factory, validator, catalogReader);
+    var pair = registerCreateTables(tables);
+    return sqlToRelNode(sql, factory, pair.left, pair.right);
   }
 
   private Plan executeInner(
@@ -135,25 +92,13 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
     var parsed = parser.parseQuery();
-    SqlToRelConverter.Config converterConfig =
-        SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
-
-    VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
-    RelOptCluster cluster = RelOptCluster.create(planner, new RexBuilder(factory));
-
-    cluster.setMetadataQuerySupplier(
-        () -> {
-          ProxyingMetadataHandlerProvider handler =
-              new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
-          return new RelMetadataQuery(handler);
-        });
 
     SqlToRelConverter converter =
         new SqlToRelConverter(
             null,
             validator,
             catalogReader,
-            cluster,
+            relOptCluster,
             StandardConvertletTable.INSTANCE,
             converterConfig);
     RelRoot root = converter.convertQuery(parsed, true, true);
