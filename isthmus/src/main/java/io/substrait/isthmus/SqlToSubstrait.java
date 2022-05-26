@@ -7,14 +7,16 @@ import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
+import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -29,6 +31,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -49,18 +52,39 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait {
 
+  public Plan execute(String sql, Function<List<String>, NamedStruct> tableLookup)
+      throws SqlParseException {
+    RelDataTypeFactory factory = new JavaTypeFactoryImpl();
+    Function<List<String>, Table> lookup =
+        id -> {
+          NamedStruct table = tableLookup.apply(id);
+          if (table == null) {
+            return null;
+          }
+          return new DefinedTable(
+              id.get(id.size() - 1),
+              factory,
+              TypeConverter.convert(factory, table.struct(), table.names()));
+        };
+
+    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
+    CalciteConnectionConfig config =
+        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+
+    return executeInner(sql, factory, validator, catalogReader);
+  }
+
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    SqlToRelConverter.Config converterConfig =
-        SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
-
     RelDataTypeFactory factory = new JavaTypeFactoryImpl();
     CalciteConnectionConfig config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, Arrays.asList(), factory, config);
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-
     if (tables != null) {
       for (String tableDef : tables) {
         List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
@@ -70,8 +94,19 @@ public class SqlToSubstrait {
       }
     }
 
+    return executeInner(sql, factory, validator, catalogReader);
+  }
+
+  private Plan executeInner(
+      String sql,
+      RelDataTypeFactory factory,
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader)
+      throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
     var parsed = parser.parseQuery();
+    SqlToRelConverter.Config converterConfig =
+        SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
 
     VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
     RelOptCluster cluster = RelOptCluster.create(planner, new RexBuilder(factory));
