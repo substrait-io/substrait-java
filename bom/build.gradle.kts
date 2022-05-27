@@ -15,6 +15,7 @@
 * limitations under the License.
 */
 plugins {
+    `maven-publish`
     `java-platform`
 }
 

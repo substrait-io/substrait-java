@@ -3,11 +3,14 @@ import com.diffplug.gradle.spotless.SpotlessPlugin
 import com.github.vlsi.gradle.dsl.configureEach
 
 plugins {
+  `maven-publish`
   id("java")
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.5.1"
 }
+
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
 
 repositories { mavenCentral() }
 
