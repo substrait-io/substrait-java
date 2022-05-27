@@ -3,12 +3,15 @@ import com.google.protobuf.gradle.protoc
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
+  `maven-publish`
   id("java")
   id("idea")
   id("antlr")
   id("com.google.protobuf") version "0.8.17"
   id("com.diffplug.spotless") version "6.5.1"
 }
+
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
 
 dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
