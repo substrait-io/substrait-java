@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.AggregateFunction;
@@ -12,16 +11,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 public class ProtoPlanConverterTest extends PlanTestBase {
-  private void assertProtoRelRoundrip(String query) throws IOException, SqlParseException {
-    SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
-    io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
-    String planStr1 = protoPlan1.toString();
-    Plan plan = new ProtoPlanConverter().from(protoPlan1);
-    io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
-    assertEquals(protoPlan1, protoPlan2);
-  }
 
   private io.substrait.proto.Plan getProtoPlan(String query1)
       throws IOException, SqlParseException {
@@ -33,7 +22,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   public void aggregate() throws IOException, SqlParseException {
-    assertProtoRelRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
+    assertProtoPlanRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
   }
 
   private static void assertAggregateInvocationDistinct(io.substrait.proto.Plan plan) {
@@ -60,12 +49,12 @@ public class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   public void filter() throws IOException, SqlParseException {
-    assertProtoRelRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY + 1 > 10");
+    assertProtoPlanRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY + 1 > 10");
   }
 
   @Test
   public void joinAggSortLimit() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(
+    assertProtoPlanRoundrip(
         "select\n"
             + "  l.l_orderkey,\n"
             + "  sum(l.l_extendedprice * (1 - l.l_discount)) as revenue,\n"
@@ -96,25 +85,25 @@ public class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   public void existsCorrelatedSubquery() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(
+    assertProtoPlanRoundrip(
         "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)");
   }
 
   @Test
   public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(
+    assertProtoPlanRoundrip(
         "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)");
   }
 
   @Test
   public void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(
+    assertProtoPlanRoundrip(
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)");
   }
 
   @Test
   public void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(
+    assertProtoPlanRoundrip(
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)");
   }
 
@@ -132,11 +121,11 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             + "          FROM partsupp ps\n"
             + "          WHERE ps.ps_partkey = p.p_partkey\n"
             + "          AND   PS.ps_suppkey = l.l_suppkey))";
-    assertProtoRelRoundrip(sql);
+    assertProtoPlanRoundrip(sql);
   }
 
   @Test
   public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
-    assertProtoRelRoundrip(asString("subquery/nested_scalar_subquery_in_filter.sql"));
+    assertProtoPlanRoundrip(asString("subquery/nested_scalar_subquery_in_filter.sql"));
   }
 }
