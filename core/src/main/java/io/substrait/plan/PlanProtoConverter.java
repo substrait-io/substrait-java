@@ -14,8 +14,9 @@ public class PlanProtoConverter {
 
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();
+    FunctionCollector functionCollector = new FunctionCollector();
     for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
-      Rel input = new RelProtoConverter(new FunctionCollector()).toProto(root.getInput());
+      Rel input = new RelProtoConverter(functionCollector).toProto(root.getInput());
       planRels.add(
           PlanRel.newBuilder()
               .setRoot(
@@ -26,10 +27,9 @@ public class PlanProtoConverter {
     }
     Plan.Builder builder =
         Plan.newBuilder()
-            .addAllExtensionUris(plan.getExtensionUris())
-            .addAllExtensions(plan.getExtensionDeclarations())
-            .addAllExpectedTypeUrls(plan.getExpectedTypeUrls())
-            .addAllRelations(planRels);
+            .addAllRelations(planRels)
+            .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
+    functionCollector.addFunctionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
     }
