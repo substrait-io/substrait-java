@@ -37,8 +37,6 @@ public class ProtoPlanConverter {
     return ImmutablePlan.builder()
         .roots(roots)
         .expectedTypeUrls(plan.getExpectedTypeUrlsList())
-        .extensionDeclarations(plan.getExtensionsList())
-        .extensionUris(plan.getExtensionUrisList())
         .advancedExtension(
             Optional.ofNullable(plan.hasAdvancedExtensions() ? plan.getAdvancedExtensions() : null))
         .build();
