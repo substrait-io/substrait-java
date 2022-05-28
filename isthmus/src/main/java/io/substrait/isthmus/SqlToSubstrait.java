@@ -90,7 +90,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       SqlValidator validator,
       CalciteCatalogReader catalogReader)
       throws SqlParseException {
-    SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
+    SqlParser parser = SqlParser.create(sql, parserConfig);
     var parsed = parser.parseQuery();
 
     SqlToRelConverter converter =

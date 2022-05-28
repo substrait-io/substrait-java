@@ -37,11 +37,13 @@ import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.util.Pair;
 
-public class SqlConverterBase {
-  protected final RelDataTypeFactory factory;
-  protected final RelOptCluster relOptCluster;
-  protected final CalciteConnectionConfig config;
-  protected final SqlToRelConverter.Config converterConfig;
+class SqlConverterBase {
+  final RelDataTypeFactory factory;
+  final RelOptCluster relOptCluster;
+  final CalciteConnectionConfig config;
+  final SqlToRelConverter.Config converterConfig;
+
+  final SqlParser.Config parserConfig;
 
   protected SqlConverterBase() {
     this.factory = new JavaTypeFactoryImpl();
@@ -56,6 +58,7 @@ public class SqlConverterBase {
               new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
           return new RelMetadataQuery(handler);
         });
+    parserConfig = SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY);
   }
 
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
@@ -91,8 +94,7 @@ public class SqlConverterBase {
 
   protected List<DefinedTable> parseCreateTable(
       RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
-    SqlParser parser =
-        SqlParser.create(sql, SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY));
+    SqlParser parser = SqlParser.create(sql, parserConfig);
     List<DefinedTable> definedTableList = new ArrayList<>();
 
     SqlNodeList nodeList = parser.parseStmtList();

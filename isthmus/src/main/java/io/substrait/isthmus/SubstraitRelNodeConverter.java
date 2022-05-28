@@ -20,6 +20,10 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 
+/**
+ * RelVisitor to convert Substrait Rel plan to Calcite RelNode plan. Unsupported Rel node will call
+ * visitFallback and throw UnsupportedOperationException.
+ */
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
   private final RelOptCluster relOptCluster;
@@ -34,7 +38,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelOptCluster relOptCluster,
-      CalciteCatalogReader catalogReader) {
+      CalciteCatalogReader catalogReader,
+      SqlParser.Config parserConfig) {
     this.relOptCluster = relOptCluster;
     this.catalogReader = catalogReader;
     this.extensions = extensions;
@@ -42,7 +47,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     this.relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
-                .parserConfig(SqlParser.Config.DEFAULT)
+                .parserConfig(parserConfig)
                 .defaultSchema(catalogReader.getRootSchema().plus())
                 .traitDefs((List<RelTraitDef>) null)
                 .programs()
@@ -54,9 +59,13 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   public static RelNode convert(
-      Rel relRoot, RelOptCluster relOptCluster, CalciteCatalogReader calciteCatalogReader) {
+      Rel relRoot,
+      RelOptCluster relOptCluster,
+      CalciteCatalogReader calciteCatalogReader,
+      SqlParser.Config parserConfig) {
     return relRoot.accept(
-        new SubstraitRelNodeConverter(EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader));
+        new SubstraitRelNodeConverter(
+            EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader, parserConfig));
   }
 
   @Override
@@ -69,8 +78,6 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 new ExpressionRexConverter(
                     relOptCluster.getTypeFactory(), scalarFunctionConverter));
     return relBuilder.push(input).filter(filterCondition).build();
-
-    // return LogicalFilter.create(input, filterCondition);
   }
 
   @Override
@@ -97,7 +104,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public RelNode visitFallback(Rel rel) throws RuntimeException {
     throw new UnsupportedOperationException(
         String.format(
-            "Rel of type %s not handled by visitor type %s.",
-            rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+            "Rel $ of type %s not handled by visitor type %s.",
+            rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 }

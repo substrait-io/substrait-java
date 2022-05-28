@@ -4,17 +4,21 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.TypeConverter;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.apache.calcite.avatica.util.ByteString;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
+/**
+ * ExpressionVisitor that converts Substrait Expression into Calcite Rex. Unsupported Expression
+ * node will call visitFallback and throw UnsupportedOperationException.
+ */
 public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException> {
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
@@ -82,12 +86,18 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.TimeLiteral expr) throws RuntimeException {
-    // Expression.TimeLiteral is Micros, while RexLiteral assumes Milliseconds for time type
-    int milliS = (int) (TimeUnit.MICROSECONDS.toMillis(expr.value()));
-    int nanoS =
-        (int) (TimeUnit.MICROSECONDS.toNanos(expr.value()) - TimeUnit.MILLISECONDS.toNanos(milliS));
-
-    TimeString timeString = TimeString.fromMillisOfDay(milliS).withNanos(nanoS);
+    // Expression.TimeLiteral is Microseconds
+    // Construct a TimeString :
+    // 1. Truncate microseconds to seconds
+    // 2. Get the fraction seconds in precision of nanoseconds.
+    // 3. Construct TimeString :  seconds  + fraction_seconds part.
+    long microSec = expr.value();
+    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
+    int fracSecondsInNano =
+        (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
+    TimeString timeString =
+        TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
+            .withNanos(fracSecondsInNano);
     return rexBuilder.makeLiteral(timeString, TypeConverter.convert(typeFactory, expr.getType()));
   }
 
@@ -98,19 +108,20 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.TimestampLiteral expr) throws RuntimeException {
-    // Expression.TimestampLiteral is Micros, while RexLiteral assumes Milliseconds for timestamp
-    // type
-    long milliS = TimeUnit.MICROSECONDS.toMillis(expr.value());
-    int nanoS =
-        (int) (TimeUnit.MICROSECONDS.toNanos(expr.value()) - TimeUnit.MILLISECONDS.toNanos(milliS));
+    // Expression.TimestampLiteral is microseconds
+    // Construct a TimeStampString :
+    // 1. Truncate microseconds to seconds
+    // 2. Get the fraction seconds in precision of nanoseconds.
+    // 3. Construct TimeStampString :  seconds  + fraction_seconds part.
+    long microSec = expr.value();
+    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
+    int fracSecondsInNano =
+        (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
 
-    TimestampString tsString = TimestampString.fromMillisSinceEpoch(milliS).withNanos(nanoS);
+    TimestampString tsString =
+        TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
+            .withNanos(fracSecondsInNano);
     return rexBuilder.makeLiteral(tsString, TypeConverter.convert(typeFactory, expr.getType()));
-  }
-
-  @Override
-  public RexNode visit(Expression.TimestampTZLiteral expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
   }
 
   @Override
@@ -118,7 +129,11 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
     Optional<SqlOperator> operator = scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(expr);
     if (operator.isPresent()) {
-      return rexBuilder.makeCall(operator.get(), args);
+      RexNode rexCall = rexBuilder.makeCall(operator.get(), args);
+      RexCallBinding binding = new RexCallBinding(typeFactory, operator.get(), args, List.of());
+      RelDataType relDataType = operator.get().getReturnTypeInference().inferReturnType(binding);
+      assert (relDataType.equals(TypeConverter.convert(typeFactory, expr.getType())));
+      return rexCall;
     }
 
     return visitFallback(expr);
@@ -153,7 +168,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public RexNode visitFallback(Expression expr) {
     throw new UnsupportedOperationException(
         String.format(
-            "Rel of type %s not handled by visitor type %s.",
-            expr.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+            "Expression %s of type %s not handled by visitor type %s.",
+            expr, expr.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 }

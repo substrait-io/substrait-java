@@ -36,7 +36,7 @@ public class SubstraitToSql extends SqlConverterBase {
       }
     }
 
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalogReader);
+    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalogReader, parserConfig);
   }
 
   public static String toSql(RelNode root, SqlDialect dialect) {

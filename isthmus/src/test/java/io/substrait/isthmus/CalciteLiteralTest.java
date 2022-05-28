@@ -91,6 +91,29 @@ public class CalciteLiteralTest extends CalciteObjs {
   }
 
   @Test
+  void tTimeWithMicroSecond() {
+    long microSec = (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456;
+    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
+    int fracSecondsInNano =
+        (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
+    assertEquals(
+        TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
+            .withNanos(fracSecondsInNano),
+        new TimeString("14:22:47.123456"));
+
+    bitest(
+        time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456),
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
+  }
+
+  @Test
+  void tTimeWithNanoSecond() {
+    assertEquals(
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9),
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
+  }
+
+  @Test
   void tDate() {
     bitest(
         date(false, (int) LocalDate.of(2002, 2, 14).toEpochDay()),
@@ -101,6 +124,14 @@ public class CalciteLiteralTest extends CalciteObjs {
   void tTimestamp() {
     var ts = timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
     var nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
+    var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
+    bitest(ts, rex.makeTimestampLiteral(tsx, 6));
+  }
+
+  @Test
+  void tTimestampWithMilliMacroSeconds() {
+    var ts = timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
+    var nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
     var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
