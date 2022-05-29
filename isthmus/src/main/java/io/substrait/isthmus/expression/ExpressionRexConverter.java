@@ -5,13 +5,17 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
+import io.substrait.util.DecimalUtil;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.*;
+import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
@@ -23,6 +27,14 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
+
+  private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
+      new SqlIntervalQualifier(
+          org.apache.calcite.avatica.util.TimeUnit.YEAR,
+          -1,
+          org.apache.calcite.avatica.util.TimeUnit.MONTH,
+          -1,
+          SqlParserPos.QUOTED_ZERO);
 
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory, ScalarFunctionConverter scalarFunctionConverter) {
@@ -122,6 +134,19 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
             .withNanos(fracSecondsInNano);
     return rexBuilder.makeLiteral(tsString, TypeConverter.convert(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(Expression.IntervalYearLiteral expr) throws RuntimeException {
+    return rexBuilder.makeIntervalLiteral(
+        new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
+  }
+
+  @Override
+  public RexNode visit(Expression.DecimalLiteral expr) throws RuntimeException {
+    byte[] value = expr.value().toByteArray();
+    BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
+    return rexBuilder.makeLiteral(decimal, TypeConverter.convert(typeFactory, expr.getType()));
   }
 
   @Override
