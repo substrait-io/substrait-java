@@ -434,6 +434,7 @@ public class SimpleExtension {
         Arrays.asList(
                 "boolean",
                 "aggregate_generic",
+                "aggregate_approx",
                 "arithmetic_decimal",
                 "arithmetic",
                 "comparison",
