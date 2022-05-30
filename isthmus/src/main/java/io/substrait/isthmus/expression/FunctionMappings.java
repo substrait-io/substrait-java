@@ -13,8 +13,7 @@ public class FunctionMappings {
   public static final ImmutableList<Sig> SCALAR_SIGS;
   public static final ImmutableList<Sig> AGGREGATE_SIGS;
 
-  public static final Map<SqlOperator, TypeBasedResolver> SCALAR_RESOLVER;
-  public static final Map<SqlOperator, TypeBasedResolver> AGGREGATE_RESOLVER;
+  public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER;
 
   static {
     SCALAR_SIGS =
@@ -47,7 +46,8 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.AVG, "avg"))
             .build();
 
-    SCALAR_RESOLVER =
+    // contains return-type based resolver for both scalar and aggregator operator
+    OPERATOR_RESOLVER =
         Map.of(
             SqlStdOperatorTable.PLUS,
                 resolver(
@@ -62,8 +62,6 @@ public class FunctionMappings {
             SqlStdOperatorTable.MINUS_DATE,
                 resolver(
                     SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
-
-    AGGREGATE_RESOLVER = Map.of();
   }
 
   public static void main(String[] args) {

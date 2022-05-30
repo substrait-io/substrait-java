@@ -4,11 +4,11 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.TypeConverter;
-import java.util.List;
+import io.substrait.type.StringTypeVisitor;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.calcite.avatica.util.ByteString;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlOperator;
@@ -33,7 +33,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.NullLiteral expr) throws RuntimeException {
-    return null;
+    return rexBuilder.makeLiteral(null, TypeConverter.convert(typeFactory, expr.getType()));
   }
 
   @Override
@@ -129,14 +129,17 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
     Optional<SqlOperator> operator = scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(expr);
     if (operator.isPresent()) {
-      RexNode rexCall = rexBuilder.makeCall(operator.get(), args);
-      RexCallBinding binding = new RexCallBinding(typeFactory, operator.get(), args, List.of());
-      RelDataType relDataType = operator.get().getReturnTypeInference().inferReturnType(binding);
-      assert (relDataType.equals(TypeConverter.convert(typeFactory, expr.getType())));
-      return rexCall;
+      return rexBuilder.makeCall(operator.get(), args);
+    } else {
+      String msg =
+          String.format(
+              "Unable to convert scalar function %s(%s).",
+              expr.declaration().name(),
+              expr.arguments().stream()
+                  .map(t -> t.getType().accept(new StringTypeVisitor()))
+                  .collect(Collectors.joining(", ")));
+      throw new IllegalArgumentException(msg);
     }
-
-    return visitFallback(expr);
   }
 
   @Override

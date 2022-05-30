@@ -35,7 +35,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void nullLiteral() {
-    test(typedNull(Type.NULLABLE.varChar(10)), rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
+    bitest(typedNull(Type.NULLABLE.varChar(10)), rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
   }
 
   @Test

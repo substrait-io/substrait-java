@@ -116,7 +116,9 @@ abstract class FunctionConverter<
     return Optional.empty();
   }
 
-  protected abstract Map<SqlOperator, FunctionMappings.TypeBasedResolver> getTypeBasedResolver();
+  private Map<SqlOperator, FunctionMappings.TypeBasedResolver> getTypeBasedResolver() {
+    return FunctionMappings.OPERATOR_RESOLVER;
+  }
 
   protected abstract ImmutableList<FunctionMappings.Sig> getSigs();
 
