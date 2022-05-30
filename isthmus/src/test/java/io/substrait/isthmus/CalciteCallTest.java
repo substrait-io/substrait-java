@@ -8,6 +8,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.function.SimpleExtension;
+import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.Type;
@@ -23,7 +24,11 @@ public class CalciteCallTest extends CalciteObjs {
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
   private final ScalarFunctionConverter functionConverter =
       new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);
-  private final RexExpressionConverter converter = new RexExpressionConverter(functionConverter);
+  private final RexExpressionConverter rexExpressionConverter =
+      new RexExpressionConverter(functionConverter);
+
+  private final ExpressionRexConverter expressionRexConverter =
+      new ExpressionRexConverter(type, functionConverter);
 
   static {
     SimpleExtension.ExtensionCollection defaults =
@@ -41,13 +46,14 @@ public class CalciteCallTest extends CalciteObjs {
   public void coerceNumericOp() {
     test(
         "add:opt_i64_i64",
-        rex.makeCall(PLUS, c(4, SqlTypeName.INTEGER), c(4, SqlTypeName.BIGINT)),
+        rex.makeCall(PLUS, c(20, SqlTypeName.INTEGER), c(4, SqlTypeName.BIGINT)),
         func -> {
           // check that there is a cast for the incorrect argument type.
           assertEquals(
-              ExpressionCreator.cast(Type.REQUIRED.I64, ExpressionCreator.i32(false, 4)),
+              ExpressionCreator.cast(Type.REQUIRED.I64, ExpressionCreator.i32(false, 20)),
               func.arguments().get(0));
-        });
+        },
+        false); // TODO: implicit calcite cast
   }
 
   @Test
@@ -60,7 +66,8 @@ public class CalciteCallTest extends CalciteObjs {
           // ensure both literals are included directly.
           assertTrue(func.arguments().get(0) instanceof Expression.I64Literal);
           assertTrue(func.arguments().get(1) instanceof Expression.I64Literal);
-        });
+        },
+        true);
   }
 
   @Test
@@ -79,15 +86,23 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   private void test(String expectedName, RexNode call) {
-    test(expectedName, call, c -> {});
+    test(expectedName, call, c -> {}, true);
   }
 
   private void test(
-      String expectedName, RexNode call, Consumer<Expression.ScalarFunctionInvocation> consumer) {
-    var expression = call.accept(converter);
+      String expectedName,
+      RexNode call,
+      Consumer<Expression.ScalarFunctionInvocation> consumer,
+      boolean bidirectional) {
+    var expression = call.accept(rexExpressionConverter);
     assertTrue(expression instanceof Expression.ScalarFunctionInvocation);
     Expression.ScalarFunctionInvocation func = (Expression.ScalarFunctionInvocation) expression;
     assertEquals(expectedName, func.declaration().key());
     consumer.accept(func);
+
+    if (bidirectional) {
+      RexNode convertedCall = expression.accept(expressionRexConverter);
+      assertEquals(call, convertedCall);
+    }
   }
 }
