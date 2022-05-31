@@ -135,29 +135,18 @@ public class LiteralConverter {
         LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
         yield time(n, NANOSECONDS.toMicros(localTime.toNanoOfDay()));
       }
-
       case TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE -> {
         TimestampString timestamp = literal.getValueAs(TimestampString.class);
         LocalDateTime ldt =
             LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
         yield timestamp(n, ldt);
       }
-
-      case INTERVAL_YEAR -> {
+      case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> {
         var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
         var years = intervalLength / 12;
         var months = intervalLength - years * 12;
         yield intervalYear(n, (int) years, (int) months);
       }
-      case INTERVAL_MONTH -> {
-        var months = literal.getValueAs(BigDecimal.class).longValue();
-        yield intervalYear(n, 0, (int) months);
-      }
-
-      case INTERVAL_YEAR_MONTH -> {
-        throw new UnsupportedOperationException("Need to implement IntervalYear");
-      }
-
       case INTERVAL_DAY -> {
         // we need to convert to microseconds.
         int precision = literal.getType().getPrecision();

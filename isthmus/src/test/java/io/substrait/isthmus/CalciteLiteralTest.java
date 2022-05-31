@@ -10,12 +10,17 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.Type;
+import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
@@ -32,6 +37,8 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   private final ExpressionRexConverter expressionRexConverter =
       new ExpressionRexConverter(type, scalarFunctionConverter);
+
+  private final RexExpressionConverter rexExpressionConverter = new RexExpressionConverter();
 
   @Test
   void nullLiteral() {
@@ -144,9 +151,98 @@ public class CalciteLiteralTest extends CalciteObjs {
     // (Doesn't exist in SqlTypeName.)
   }
 
-  @Disabled("NYI")
   @Test
-  void tIntervalYear() {}
+  void tIntervalYearMonth() {
+    BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
+    RexLiteral intervalYearMonth =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.YEAR,
+                -1,
+                org.apache.calcite.avatica.util.TimeUnit.MONTH,
+                -1,
+                SqlParserPos.QUOTED_ZERO));
+    var intervalYearMonthExpr = intervalYear(false, 3, 5);
+    bitest(intervalYearMonthExpr, intervalYearMonth);
+  }
+
+  @Test
+  void tIntervalYearMonthWithPrecision() {
+    BigDecimal bd = new BigDecimal(123 * 12 + 5); // '123-5' year to month
+    RexLiteral intervalYearMonth =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.YEAR,
+                3,
+                org.apache.calcite.avatica.util.TimeUnit.MONTH,
+                -1,
+                SqlParserPos.QUOTED_ZERO));
+    var intervalYearMonthExpr = intervalYear(false, 123, 5);
+
+    // rex --> expression
+    assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
+
+    // expression -> rex
+    RexLiteral convertedRex = (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter);
+
+    // Compare value only. Ignore the precision in SqlIntervalQualifier (which is used to parse
+    // input string).
+    assertEquals(
+        intervalYearMonth.getValueAs(BigDecimal.class).longValue(),
+        convertedRex.getValueAs(BigDecimal.class).longValue());
+  }
+
+  @Test
+  void tIntervalYear() {
+    BigDecimal bd = new BigDecimal(123 * 12); // '123' year(3)
+    RexLiteral intervalYear =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.YEAR,
+                3,
+                null,
+                -1,
+                SqlParserPos.QUOTED_ZERO));
+    var intervalYearExpr = intervalYear(false, 123, 0);
+    // rex --> expression
+    assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
+
+    // expression -> rex
+    RexLiteral convertedRex = (RexLiteral) intervalYearExpr.accept(expressionRexConverter);
+
+    // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
+    assertEquals(
+        intervalYear.getValueAs(BigDecimal.class).longValue(),
+        convertedRex.getValueAs(BigDecimal.class).longValue());
+  }
+
+  @Test
+  void tIntervalMonth() {
+    BigDecimal bd = new BigDecimal(123); // '123' month(3)
+    RexLiteral intervalMonth =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.MONTH,
+                3,
+                null,
+                -1,
+                SqlParserPos.QUOTED_ZERO));
+    var intervalMonthExpr = intervalYear(false, 123 / 12, 123 % 12);
+    // rex --> expression
+    assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
+
+    // expression -> rex
+    RexLiteral convertedRex = (RexLiteral) intervalMonthExpr.accept(expressionRexConverter);
+
+    // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
+    assertEquals(
+        intervalMonth.getValueAs(BigDecimal.class).longValue(),
+        convertedRex.getValueAs(BigDecimal.class).longValue());
+  }
 
   @Disabled("NYI")
   @Test
@@ -164,8 +260,40 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tDecimalLiteral() {
-    BigDecimal bd = BigDecimal.valueOf(-123.45789);
-    test(decimal(false, bd, 32, 10), c(bd, SqlTypeName.DECIMAL, 32, 10));
+    List<BigDecimal> decimalList =
+        List.of(
+            new BigDecimal("-123.457890"),
+            new BigDecimal("123.457890"),
+            new BigDecimal("123.450000"),
+            new BigDecimal("-123.450000"));
+    for (BigDecimal bd : decimalList) {
+      bitest(decimal(false, bd, 32, 6), c(bd, SqlTypeName.DECIMAL, 32, 6));
+    }
+  }
+
+  @Test
+  void tDecimalLiteral2() {
+    List<BigDecimal> decimalList =
+        List.of(
+            new BigDecimal("-99.123456789123456789123456789123456789"), // scale = 36, precision =38
+            new BigDecimal("99.123456789123456789123456789123456789") // scale = 36, precision = 38
+            );
+    for (BigDecimal bd : decimalList) {
+      bitest(decimal(false, bd, 38, 36), c(bd, SqlTypeName.DECIMAL, 38, 36));
+    }
+  }
+
+  @Test
+  void tDecimalUtil() {
+    long[] values =
+        new long[] {Long.MIN_VALUE, Integer.MIN_VALUE, 0, Integer.MAX_VALUE, Long.MAX_VALUE};
+    for (long value : values) {
+      BigDecimal bd = BigDecimal.valueOf(value);
+      byte[] encoded = DecimalUtil.encodeDecimalIntoBytes(bd, 0, 16);
+      BigDecimal bd2 = DecimalUtil.getBigDecimalFromBytes(encoded, 0, 16);
+      System.out.println(bd2);
+      assertEquals(bd, bd2);
+    }
   }
 
   @Test
@@ -217,8 +345,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
   public void bitest(Expression expression, RexNode rex) {
-    assertEquals(expression, rex.accept(new RexExpressionConverter()));
-
+    assertEquals(expression, rex.accept(rexExpressionConverter));
     RexNode convertedRex = expression.accept(expressionRexConverter);
     assertEquals(rex, convertedRex);
   }
