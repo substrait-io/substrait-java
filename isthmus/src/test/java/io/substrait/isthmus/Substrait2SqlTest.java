@@ -6,7 +6,6 @@ import io.substrait.relation.Rel;
 import java.util.Arrays;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -59,12 +58,8 @@ public class Substrait2SqlTest extends PlanTestBase {
     Rel pojoRel2 =
         SubstraitRelVisitor.convert(RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-    //        System.out.println("original " + pojoRel);
-    //        System.out.println("converted " + pojoRel2);
-
     Assertions.assertEquals(pojoRel, pojoRel2);
     // 4. Calcite Rel -> sql
-    System.out.println(
-        SubstraitToSql.toSql(relnodeRoot, SqlDialect.DatabaseProduct.SNOWFLAKE.getDialect()));
+    System.out.println(SubstraitToSql.toSql(relnodeRoot));
   }
 }

@@ -57,6 +57,27 @@ public class SqlToSubstrait extends SqlConverterBase {
     return sqlToRelNode(sql, factory, pair.left, pair.right);
   }
 
+  public RelRoot sqlToRelNode(String sql, Function<List<String>, NamedStruct> tableLookup)
+      throws SqlParseException {
+    Function<List<String>, Table> lookup =
+        id -> {
+          NamedStruct table = tableLookup.apply(id);
+          if (table == null) {
+            return null;
+          }
+          return new DefinedTable(
+              id.get(id.size() - 1),
+              factory,
+              TypeConverter.convert(factory, table.struct(), table.names()));
+        };
+
+    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return sqlToRelNode(sql, factory, validator, catalogReader);
+  }
+
   private Plan executeInner(
       String sql,
       RelDataTypeFactory factory,

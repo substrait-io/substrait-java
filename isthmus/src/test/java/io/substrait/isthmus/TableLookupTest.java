@@ -1,16 +1,24 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+import io.substrait.relation.Rel;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -109,5 +117,46 @@ public class TableLookupTest extends PlanTestBase {
               return null;
             });
     System.out.println(JsonFormat.printer().includingDefaultValueFields().print(plan));
+  }
+
+  @Test
+  void testSubstrait2SqlWithTableLookup() throws SqlParseException, InvalidProtocolBufferException {
+    var names = Lists.<String>newArrayList();
+    var types = Lists.<Type>newArrayList();
+    lineitem.forEach(
+        (k, v) -> {
+          names.add(k);
+          types.add(v);
+        });
+    var struct = NamedStruct.of(names, Type.Struct.builder().fields(types).nullable(false).build());
+    Function<List<String>, NamedStruct> tableLookup =
+        (tn) -> {
+          if (tn.size() == 3 && Objects.equals(tn.get(2), "LINEITEM")) {
+            return struct;
+          }
+          return null;
+        };
+
+    test("SELECT l_partkey, l_orderkey from foobar.tpch.lineitem", tableLookup);
+  }
+
+  private void test(String sql, Function<List<String>, NamedStruct> tableLookup)
+      throws SqlParseException {
+    // 1. sql -> substrait rel
+    SqlToSubstrait s = new SqlToSubstrait();
+    RelRoot relRoot = s.sqlToRelNode(sql, tableLookup);
+    Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+
+    // 2. substrait rel -> Calcite Rel
+    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, tableLookup);
+
+    // 3. Calcite Rel -> substrait rel
+    Rel pojoRel2 =
+        SubstraitRelVisitor.convert(RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
+
+    Assertions.assertEquals(pojoRel, pojoRel2);
+    // 4. Calcite Rel -> sql
+    String convertedSql = SubstraitToSql.toSql(relnodeRoot);
+    System.out.println(String.format("Converted SQL:\n%s", convertedSql));
   }
 }
