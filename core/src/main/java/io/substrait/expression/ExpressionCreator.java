@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
+import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -168,12 +169,11 @@ public class ExpressionCreator {
 
   public static Expression.DecimalLiteral decimal(
       boolean nullable, BigDecimal value, int precision, int scale) {
-    var twosComplement =
-        padLeftIfNeeded(
-            value.multiply(BigDecimal.valueOf(scale * 10L)).toBigInteger().toByteArray(), 38);
+    var twosComplement = DecimalUtil.encodeDecimalIntoBytes(value, scale, 16);
+
     return Expression.DecimalLiteral.builder()
         .nullable(nullable)
-        .value(twosComplement)
+        .value(ByteString.copyFrom(twosComplement))
         .precision(precision)
         .scale(scale)
         .build();

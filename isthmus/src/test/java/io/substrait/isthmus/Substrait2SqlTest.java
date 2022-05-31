@@ -26,10 +26,21 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTest3() throws Exception {
-    String query =
-        "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' ";
-    test(query);
+  public void simpleTestDateInterval() throws Exception {
+    test(
+        "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' ");
+    test(
+        "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '3' month ");
+    test(
+        "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '1' year");
+    test(
+        "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '1-3' year to month");
+  }
+
+  @Test
+  public void simpleTestDecimal() throws Exception {
+    test(
+        "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0 from lineitem where l_shipdate < date '1998-01-01' ");
   }
 
   private void test(String query) throws Exception {
