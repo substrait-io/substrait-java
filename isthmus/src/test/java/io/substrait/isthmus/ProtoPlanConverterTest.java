@@ -25,6 +25,11 @@ public class ProtoPlanConverterTest extends PlanTestBase {
     assertProtoPlanRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
   }
 
+  @Test
+  public void simpleSelect() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("select l_orderkey,l_extendedprice from lineitem");
+  }
+
   private static void assertAggregateInvocationDistinct(io.substrait.proto.Plan plan) {
     assertEquals(
         AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT,

@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.base.Charsets;
@@ -7,6 +8,7 @@ import com.google.common.io.Resources;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
+import io.substrait.relation.Rel;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -29,9 +31,11 @@ public class PlanTestBase {
     String[] values = asString("tpch/schema.sql").split(";");
     var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
     io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
-    Plan plan = new ProtoPlanConverter().from(protoPlan1);
+    Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
+    Rel rootRel = SubstraitRelVisitor.convert(s.sqlToRelNode(query, creates), EXTENSION_COLLECTION);
+    assertEquals(rootRel.getRecordType(), plan.getRoots().get(0).getInput().getRecordType());
   }
 
   protected void assertPlanRoundrip(Plan plan) throws IOException, SqlParseException {
