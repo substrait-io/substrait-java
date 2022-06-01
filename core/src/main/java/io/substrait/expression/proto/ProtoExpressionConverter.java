@@ -17,15 +17,14 @@ public class ProtoExpressionConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ProtoExpressionConverter.class);
 
-  public static final Type EMPTY_TYPE =
-      ImmutableExpression.StructLiteral.builder().build().getType();
+  public static final Type.Struct EMPTY_TYPE = Type.Struct.builder().nullable(false).build();
 
   private final FunctionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
-  private final Type rootType;
+  private final Type.Struct rootType;
 
   public ProtoExpressionConverter(
-      FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type rootType) {
+      FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type.Struct rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
