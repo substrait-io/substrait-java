@@ -126,7 +126,7 @@ public abstract class FieldReference implements Expression {
 
     FieldReference constructOnExpression(Expression expr);
 
-    FieldReference constructOnRoot(Type type);
+    FieldReference constructOnRoot(Type.Struct struct);
   }
 
   @Value.Immutable
@@ -148,13 +148,14 @@ public abstract class FieldReference implements Expression {
     }
 
     @Override
-    public FieldReference constructOnRoot(Type type) {
-      if (!(type instanceof Type.Struct)) {
+    public FieldReference constructOnRoot(Type.Struct struct) {
+      if (offset() >= struct.fields().size()) {
         throw new IllegalArgumentException(
-            "Root type expected to be Type.Struct but is " + type.getClass());
+            String.format(
+                "Field reference offset (%s) must be less than number of fields in struct (%s)",
+                offset(), struct.fields().size()));
       }
-      return FieldReference.newRootStructReference(
-          offset(), ((Type.Struct) type).fields().get((offset())));
+      return FieldReference.newRootStructReference(offset(), struct.fields().get((offset())));
     }
   }
 
@@ -177,7 +178,7 @@ public abstract class FieldReference implements Expression {
     }
 
     @Override
-    public FieldReference constructOnRoot(Type type) {
+    public FieldReference constructOnRoot(Type.Struct struct) {
       throw new UnsupportedOperationException();
     }
   }
@@ -201,7 +202,7 @@ public abstract class FieldReference implements Expression {
     }
 
     @Override
-    public FieldReference constructOnRoot(Type type) {
+    public FieldReference constructOnRoot(Type.Struct struct) {
       throw new UnsupportedOperationException();
     }
   }
@@ -212,14 +213,14 @@ public abstract class FieldReference implements Expression {
   }
 
   private static FieldReference of(
-      Type type, Expression expression, List<ReferenceSegment> segments) {
+      Type.Struct struct, Expression expression, List<ReferenceSegment> segments) {
     FieldReference reference = null;
     Collections.reverse(segments);
     for (int i = 0; i < segments.size(); i++) {
       if (i == 0) {
         var last = segments.get(0);
         reference =
-            type == null ? last.constructOnExpression(expression) : last.constructOnRoot(type);
+            struct == null ? last.constructOnExpression(expression) : last.constructOnRoot(struct);
       } else {
         reference = segments.get(i).apply(reference);
       }
@@ -228,8 +229,8 @@ public abstract class FieldReference implements Expression {
     return reference;
   }
 
-  public static FieldReference ofRoot(Type type, List<ReferenceSegment> segments) {
-    return of(type, null, segments);
+  public static FieldReference ofRoot(Type.Struct struct, List<ReferenceSegment> segments) {
+    return of(struct, null, segments);
   }
 
   private static class StructFieldFinder
