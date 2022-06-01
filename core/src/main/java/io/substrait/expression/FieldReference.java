@@ -149,7 +149,12 @@ public abstract class FieldReference implements Expression {
 
     @Override
     public FieldReference constructOnRoot(Type type) {
-      return FieldReference.newRootStructReference(offset(), type);
+      if (!(type instanceof Type.Struct)) {
+        throw new IllegalArgumentException(
+            "Root type expected to be Type.Struct but is " + type.getClass());
+      }
+      return FieldReference.newRootStructReference(
+          offset(), ((Type.Struct) type).fields().get((offset())));
     }
   }
 
