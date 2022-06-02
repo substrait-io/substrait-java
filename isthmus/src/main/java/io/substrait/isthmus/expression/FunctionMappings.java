@@ -41,6 +41,8 @@ public class FunctionMappings {
     AGGREGATE_SIGS =
         ImmutableList.<Sig>builder()
             .add(
+                s(SqlStdOperatorTable.MIN, "min"),
+                s(SqlStdOperatorTable.MAX, "max"),
                 s(SqlStdOperatorTable.SUM, "sum"),
                 s(SqlStdOperatorTable.COUNT, "count"),
                 s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
