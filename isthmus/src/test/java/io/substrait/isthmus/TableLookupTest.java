@@ -144,19 +144,21 @@ public class TableLookupTest extends PlanTestBase {
       throws SqlParseException {
     // 1. sql -> substrait rel
     SqlToSubstrait s = new SqlToSubstrait();
-    RelRoot relRoot = s.sqlToRelNode(sql, tableLookup);
-    Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+    for (RelRoot relRoot : s.sqlToRelNode(sql, tableLookup)) {
+      Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
-    // 2. substrait rel -> Calcite Rel
-    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, tableLookup);
+      // 2. substrait rel -> Calcite Rel
+      RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, tableLookup);
 
-    // 3. Calcite Rel -> substrait rel
-    Rel pojoRel2 =
-        SubstraitRelVisitor.convert(RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
+      // 3. Calcite Rel -> substrait rel
+      Rel pojoRel2 =
+          SubstraitRelVisitor.convert(
+              RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-    Assertions.assertEquals(pojoRel, pojoRel2);
-    // 4. Calcite Rel -> sql
-    String convertedSql = SubstraitToSql.toSql(relnodeRoot);
-    System.out.println(String.format("Converted SQL:\n%s", convertedSql));
+      Assertions.assertEquals(pojoRel, pojoRel2);
+      // 4. Calcite Rel -> sql
+      String convertedSql = SubstraitToSql.toSql(relnodeRoot);
+      System.out.println(String.format("Converted SQL:\n%s", convertedSql));
+    }
   }
 }

@@ -134,19 +134,20 @@ public class Substrait2SqlTest extends PlanTestBase {
 
     // 1. sql -> substrait rel
     SqlToSubstrait s = new SqlToSubstrait();
-    RelRoot relRoot = s.sqlToRelNode(query, creates);
-    Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+    for (RelRoot relRoot : s.sqlToRelNode(query, creates)) {
+      Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
-    // 2. substrait rel -> Calcite Rel
-    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
+      // 2. substrait rel -> Calcite Rel
+      RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
 
-    // 3. Calcite Rel -> substrait rel
-    Rel pojoRel2 =
-        SubstraitRelVisitor.convert(RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
+      // 3. Calcite Rel -> substrait rel
+      Rel pojoRel2 =
+          SubstraitRelVisitor.convert(
+              RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-    Assertions.assertEquals(pojoRel, pojoRel2);
-
-    // 4. Calcite Rel -> sql
-    System.out.println(SubstraitToSql.toSql(relnodeRoot));
+      Assertions.assertEquals(pojoRel, pojoRel2);
+      // 4. Calcite Rel -> sql
+      System.out.println(SubstraitToSql.toSql(relnodeRoot));
+    }
   }
 }
