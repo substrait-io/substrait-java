@@ -8,7 +8,6 @@ import com.google.common.io.Resources;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
-import io.substrait.relation.Rel;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -27,15 +26,23 @@ public class PlanTestBase {
   }
 
   protected void assertProtoPlanRoundrip(String query) throws IOException, SqlParseException {
-    SqlToSubstrait s = new SqlToSubstrait();
+    assertProtoPlanRoundrip(query, new SqlToSubstrait());
+  }
+
+  protected void assertProtoPlanRoundrip(String query, SqlToSubstrait s)
+      throws IOException, SqlParseException {
     String[] values = asString("tpch/schema.sql").split(";");
     var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
     io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
     Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
-    Rel rootRel = SubstraitRelVisitor.convert(s.sqlToRelNode(query, creates), EXTENSION_COLLECTION);
-    assertEquals(rootRel.getRecordType(), plan.getRoots().get(0).getInput().getRecordType());
+    var rootRels = s.sqlToRelNode(query, creates);
+    assertEquals(rootRels.size(), plan.getRoots().size());
+    for (int i = 0; i < rootRels.size(); i++) {
+      var rootRel = SubstraitRelVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
+      assertEquals(rootRel.getRecordType(), plan.getRoots().get(i).getInput().getRecordType());
+    }
   }
 
   protected void assertPlanRoundrip(Plan plan) throws IOException, SqlParseException {
