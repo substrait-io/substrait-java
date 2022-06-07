@@ -28,6 +28,8 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
 
+  private final AggregateFunctionConverter aggregateFunctionConverter;
+
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
           org.apache.calcite.avatica.util.TimeUnit.YEAR,
@@ -37,10 +39,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
           SqlParserPos.QUOTED_ZERO);
 
   public ExpressionRexConverter(
-      RelDataTypeFactory typeFactory, ScalarFunctionConverter scalarFunctionConverter) {
+      RelDataTypeFactory typeFactory,
+      ScalarFunctionConverter scalarFunctionConverter,
+      AggregateFunctionConverter aggregateFunctionConverter) {
     this.typeFactory = typeFactory;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
+    this.aggregateFunctionConverter = aggregateFunctionConverter;
   }
 
   @Override
@@ -152,7 +157,9 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   @Override
   public RexNode visit(Expression.ScalarFunctionInvocation expr) throws RuntimeException {
     var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
-    Optional<SqlOperator> operator = scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(expr);
+    Optional<SqlOperator> operator =
+        scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(
+            expr.declaration().key(), expr.outputType());
     if (operator.isPresent()) {
       return rexBuilder.makeCall(operator.get(), args);
     } else {
