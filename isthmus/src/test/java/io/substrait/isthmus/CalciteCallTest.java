@@ -28,7 +28,7 @@ public class CalciteCallTest extends CalciteObjs {
       new RexExpressionConverter(functionConverter);
 
   private final ExpressionRexConverter expressionRexConverter =
-      new ExpressionRexConverter(type, functionConverter);
+      new ExpressionRexConverter(type, functionConverter, null);
 
   static {
     SimpleExtension.ExtensionCollection defaults =
