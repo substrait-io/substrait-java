@@ -48,4 +48,8 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   public OUTPUT visit(VirtualTableScan virtualTableScan) throws EXCEPTION {
     return visitFallback(virtualTableScan);
   }
+
+  public OUTPUT visit(Cross cross) throws EXCEPTION {
+    return visitFallback(cross);
+  }
 }

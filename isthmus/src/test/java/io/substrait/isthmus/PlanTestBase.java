@@ -32,11 +32,11 @@ public class PlanTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  protected void assertProtoPlanRoundrip(String query) throws IOException, SqlParseException {
-    assertProtoPlanRoundrip(query, new SqlToSubstrait());
+  protected Plan assertProtoPlanRoundrip(String query) throws IOException, SqlParseException {
+    return assertProtoPlanRoundrip(query, new SqlToSubstrait());
   }
 
-  protected void assertProtoPlanRoundrip(String query, SqlToSubstrait s)
+  protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s)
       throws IOException, SqlParseException {
     String[] values = asString("tpch/schema.sql").split(";");
     var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
@@ -50,6 +50,7 @@ public class PlanTestBase {
       var rootRel = SubstraitRelVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
       assertEquals(rootRel.getRecordType(), plan.getRoots().get(i).getInput().getRecordType());
     }
+    return plan;
   }
 
   protected void assertPlanRoundrip(Plan plan) throws IOException, SqlParseException {

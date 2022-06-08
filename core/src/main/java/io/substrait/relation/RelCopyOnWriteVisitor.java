@@ -6,6 +6,7 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -134,6 +135,27 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
     return sort.getInput()
         .accept(this)
         .map(input -> ImmutableSort.builder().from(sort).input(input).build());
+  }
+
+  @Override
+  public Optional<Rel> visit(Cross cross) throws RuntimeException {
+    var left = cross.getLeft().accept(this);
+    var right = cross.getRight().accept(this);
+    if (allEmpty(left, right)) {
+      return Optional.empty();
+    }
+    Type.Struct unionedStruct =
+        Type.Struct.builder()
+            .from(left.orElse(cross.getLeft()).getRecordType())
+            .from(right.orElse(cross.getRight()).getRecordType())
+            .build();
+    return Optional.of(
+        ImmutableCross.builder()
+            .from(cross)
+            .left(left.orElse(cross.getLeft()))
+            .right(right.orElse(cross.getRight()))
+            .deriveRecordType(unionedStruct)
+            .build());
   }
 
   private Optional<Expression> visitExpression(Expression expression) {
