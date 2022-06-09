@@ -1,12 +1,13 @@
 package io.substrait.type;
 
+import io.substrait.expression.FunctionArg;
 import io.substrait.function.NullableType;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
 import org.immutables.value.Value;
 
 @Value.Enclosing
-public interface Type extends TypeExpression, ParameterizedType, NullableType {
+public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Type.class);
 
   public static final TypeCreator REQUIRED = TypeCreator.REQUIRED;
@@ -17,6 +18,11 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType {
   }
 
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
+
+  @Override
+  default <R, E extends Throwable> R acceptFuncArgVis(FuncArgVisitor<R, E> fnArgVisitor) throws E {
+    return fnArgVisitor.visitType(this);
+  }
 
   @Value.Immutable
   abstract static class Bool implements Type {

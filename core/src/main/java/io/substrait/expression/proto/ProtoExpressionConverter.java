@@ -1,10 +1,6 @@
 package io.substrait.expression.proto;
 
-import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.FieldReference;
-import io.substrait.expression.FunctionLookup;
-import io.substrait.expression.ImmutableExpression;
+import io.substrait.expression.*;
 import io.substrait.function.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
@@ -12,6 +8,7 @@ import io.substrait.type.proto.FromProto;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ProtoExpressionConverter {
   static final org.slf4j.Logger logger =
@@ -87,9 +84,13 @@ public class ProtoExpressionConverter {
       case SELECTION -> from(expr.getSelection());
       case SCALAR_FUNCTION -> {
         var scalarFunction = expr.getScalarFunction();
-        var args = scalarFunction.getArgsList().stream().map(this::from).toList();
         var functionReference = scalarFunction.getFunctionReference();
         var declaration = lookup.getScalarFunction(functionReference, extensions);
+        var pF = new FunctionArg.ProtoFrom(this);
+        var args =
+            IntStream.range(0, scalarFunction.getArgumentsCount())
+                .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
+                .toList();
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)

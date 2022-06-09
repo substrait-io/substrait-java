@@ -1,19 +1,11 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.proto.AggregateFunction;
-import io.substrait.proto.AggregateRel;
-import io.substrait.proto.FetchRel;
-import io.substrait.proto.FilterRel;
-import io.substrait.proto.JoinRel;
-import io.substrait.proto.ProjectRel;
-import io.substrait.proto.ReadRel;
+import io.substrait.proto.*;
 import io.substrait.proto.Rel;
-import io.substrait.proto.RelCommon;
-import io.substrait.proto.SortField;
-import io.substrait.proto.SortRel;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -69,12 +61,26 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
+    FunctionArg.FuncArgVisitor<FunctionArgument, RuntimeException> argVisitor =
+        FunctionArg.createFuncArgVisitor(
+            TypeProtoConverter.INSTANCE,
+            typ -> FunctionArgument.newBuilder().setType(typ).build(),
+            protoConverter,
+            pE -> FunctionArgument.newBuilder().setValue(pE).build(),
+            ea ->
+                FunctionArgument.newBuilder()
+                    .setEnum(FunctionArgument.Enum.newBuilder().setSpecified(ea.option()).build())
+                    .build());
     var func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation())
             .setOutputType(toProto(measure.getFunction().getType()))
-            .addAllArgs(toProto(measure.getFunction().arguments()))
+            // .addAllArgs(toProto(measure.getFunction().exprArguments()))
+            .addAllArguments(
+                measure.getFunction().exprArguments().stream()
+                    .map(a -> a.acceptFuncArgVis(argVisitor))
+                    .toList())
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
                 functionCollector.getFunctionReference(measure.getFunction().declaration()));

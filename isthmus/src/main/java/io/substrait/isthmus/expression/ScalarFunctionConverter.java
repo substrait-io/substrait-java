@@ -2,6 +2,7 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionArg;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.type.Type;
@@ -57,7 +58,7 @@ public class ScalarFunctionConverter
   protected Expression generateBinding(
       WrappedScalarCall call,
       SimpleExtension.ScalarFunctionVariant function,
-      List<Expression> arguments,
+      List<FunctionArg> arguments,
       Type outputType) {
     return Expression.ScalarFunctionInvocation.builder()
         .outputType(outputType)

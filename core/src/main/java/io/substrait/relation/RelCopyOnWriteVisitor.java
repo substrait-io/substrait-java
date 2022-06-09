@@ -184,7 +184,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
           @Override
           public Optional<Expression> visit(Expression.ScalarFunctionInvocation expr)
               throws RuntimeException {
-            return transformExpressions(expr.arguments())
+            return transformExpressions(expr.exprArguments())
                 .map(
                     t ->
                         Expression.ScalarFunctionInvocation.builder()

@@ -1,10 +1,9 @@
 package io.substrait.isthmus.expression;
 
-import io.substrait.expression.AbstractExpressionVisitor;
-import io.substrait.expression.Expression;
-import io.substrait.expression.FieldReference;
+import io.substrait.expression.*;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
+import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -23,7 +22,8 @@ import org.apache.calcite.util.TimestampString;
  * ExpressionVisitor that converts Substrait Expression into Calcite Rex. Unsupported Expression
  * node will call visitFallback and throw UnsupportedOperationException.
  */
-public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException> {
+public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException>
+    implements FunctionArg.FuncArgVisitor<RexNode, RuntimeException> {
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
@@ -156,7 +156,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.ScalarFunctionInvocation expr) throws RuntimeException {
-    var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
+    var args = expr.arguments().stream().map(a -> a.acceptFuncArgVis(this)).toList();
     Optional<SqlOperator> operator =
         scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(
             expr.declaration().key(), expr.outputType());
@@ -167,7 +167,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
           String.format(
               "Unable to convert scalar function %s(%s).",
               expr.declaration().name(),
-              expr.arguments().stream()
+              expr.exprArguments().stream()
                   .map(t -> t.getType().accept(new StringTypeVisitor()))
                   .collect(Collectors.joining(", ")));
       throw new IllegalArgumentException(msg);
@@ -205,5 +205,30 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         String.format(
             "Expression %s of type %s not handled by visitor type %s.",
             expr, expr.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  @Override
+  public RexNode visitExpr(Expression e) throws RuntimeException {
+    return e.accept(this);
+  }
+
+  @Override
+  public RexNode visitType(Type t) throws RuntimeException {
+    throw new UnsupportedOperationException(
+        String.format(
+            "FunctionArg %s not handled by visitor type %s.",
+            t, this.getClass().getCanonicalName()));
+  }
+
+  @Override
+  public RexNode visitEnumArg(EnumArg e) throws RuntimeException {
+
+    return EnumConverter.convert(rexBuilder, e)
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    String.format(
+                        "EnumArg(name=%s, option=%s) not handled by visitor type %s.",
+                        e.enumArg().name(), e.option(), this.getClass().getCanonicalName())));
   }
 }
