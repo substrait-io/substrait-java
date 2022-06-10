@@ -173,4 +173,9 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   public OUTPUT visit(Expression.InPredicate expr) throws EXCEPTION {
     return visitFallback(expr);
   }
+
+  @Override
+  public OUTPUT visit(Expression.Window expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
 }

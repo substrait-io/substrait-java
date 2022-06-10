@@ -7,12 +7,13 @@ import java.util.List;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class AggregateFunctionInvocation
+public abstract class WindowFunctionInvocation
     extends AbstractFunctionInvocation<
-        SimpleExtension.AggregateFunctionVariant, AggregateFunction.AggregationInvocation> {
-  public abstract SimpleExtension.AggregateFunctionVariant declaration();
+        SimpleExtension.WindowFunctionVariant, AggregateFunction.AggregationInvocation> {
 
-  public abstract List<FunctionArg> arguments();
+  public abstract SimpleExtension.WindowFunctionVariant declaration();
+
+  public abstract List<Expression> arguments();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 
@@ -26,7 +27,7 @@ public abstract class AggregateFunctionInvocation
 
   public abstract AggregateFunction.AggregationInvocation invocation();
 
-  public static ImmutableAggregateFunctionInvocation.Builder builder() {
-    return ImmutableAggregateFunctionInvocation.builder();
+  public static ImmutableWindowFunctionInvocation.Builder builder() {
+    return ImmutableWindowFunctionInvocation.builder();
   }
 }

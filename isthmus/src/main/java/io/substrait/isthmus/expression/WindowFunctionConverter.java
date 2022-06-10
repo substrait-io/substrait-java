@@ -1,10 +1,9 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
-import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.FunctionArg;
+import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.proto.AggregateFunction;
@@ -20,38 +19,36 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
-public class AggregateFunctionConverter
+public class WindowFunctionConverter
     extends FunctionConverter<
-        SimpleExtension.AggregateFunctionVariant,
-        AggregateFunctionInvocation,
-        AggregateFunctionConverter.WrappedAggregateCall>
-    implements NonScalarFuncConverter<AggregateFunctionInvocation, RexNode, Expression> {
+        SimpleExtension.WindowFunctionVariant,
+        WindowFunctionInvocation,
+        WindowFunctionConverter.WrappedAggregateCall>
+    implements NonScalarFuncConverter<WindowFunctionInvocation, RexNode, Expression> {
 
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
-    return FunctionMappings.AGGREGATE_SIGS;
+    return FunctionMappings.WINDOW_SIGS;
   }
 
-  public AggregateFunctionConverter(
-      List<SimpleExtension.AggregateFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+  public WindowFunctionConverter(
+      List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
-  public AggregateFunctionConverter(
-      List<SimpleExtension.AggregateFunctionVariant> functions,
+  public WindowFunctionConverter(
+      List<SimpleExtension.WindowFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
       RelDataTypeFactory typeFactory) {
     super(functions, additionalSignatures, typeFactory);
   }
 
   @Override
-  protected AggregateFunctionInvocation generateBinding(
+  protected WindowFunctionInvocation generateBinding(
       WrappedAggregateCall call,
-      SimpleExtension.AggregateFunctionVariant function,
-      List<FunctionArg> arguments,
+      SimpleExtension.WindowFunctionVariant function,
+      List<Expression> arguments,
       Type outputType) {
     AggregateCall agg = call.getUnderlying();
 
@@ -65,7 +62,7 @@ public class AggregateFunctionConverter
         agg.isDistinct()
             ? AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT
             : AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL;
-    return ExpressionCreator.aggregateFunction(
+    return ExpressionCreator.windowFunction(
         function,
         outputType,
         Expression.AggregationPhase.INITIAL_TO_RESULT,
@@ -74,19 +71,13 @@ public class AggregateFunctionConverter
         arguments);
   }
 
-  public Optional<AggregateFunctionInvocation> convert(
+  public Optional<WindowFunctionInvocation> convert(
       RelNode input,
       Type.Struct inputType,
       AggregateCall call,
       Function<RexNode, Expression> topLevelConverter) {
 
-    // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
-    // before converting into substrait function
-    SqlAggFunction aggFunction = call.getAggregation();
-    if (aggFunction == SqlStdOperatorTable.COUNT && call.isDistinct() && call.isApproximate()) {
-      aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
-    }
-    FunctionFinder m = signatures.get(aggFunction);
+    FunctionFinder m = signatures.get(call.getAggregation());
     if (m == null) {
       return Optional.empty();
     }
@@ -98,7 +89,7 @@ public class AggregateFunctionConverter
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
-  static class WrappedAggregateCall implements GenericCall {
+  static class WrappedAggregateCall implements FunctionConverter.GenericCall {
     private final AggregateCall call;
     private final RelNode input;
     private final RexBuilder rexBuilder;

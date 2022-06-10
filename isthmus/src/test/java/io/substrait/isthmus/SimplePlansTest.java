@@ -48,5 +48,5 @@ public class SimplePlansTest extends PlanTestBase {
         "select l_orderkey from lineitem; select l_partkey from lineitem WHERE L_ORDERKEY > 20;",
         new SqlToSubstrait(
             new SqlToSubstrait.Options(SqlToSubstrait.StatementBatching.MULTI_STATEMENT)));
-  }
+    }
 }
