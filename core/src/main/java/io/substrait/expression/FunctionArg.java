@@ -2,47 +2,59 @@ package io.substrait.expression;
 
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.function.SimpleExtension;
+import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.type.Type;
-import io.substrait.type.TypeVisitor;
 import io.substrait.type.proto.FromProto;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.IntStream;
 
+/**
+ * FunctionArg is a marker interface that represents an argument of a {@link
+ * SimpleExtension.Function} invocation. Subtypes are {@link Expression}, {@link Type}, and {@link
+ * EnumArg}. Methods processing/visiting FunctionArg instances should be passed the {@link
+ * SimpleExtension.Function} and the <i>argument index</i>.
+ */
 public interface FunctionArg {
 
-  <R, E extends Throwable> R acceptFuncArgVis(FuncArgVisitor<R, E> fnArgVisitor) throws E;
+  <R, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E;
 
   interface FuncArgVisitor<R, E extends Throwable> {
-    R visitExpr(Expression e) throws E;
+    R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e) throws E;
 
-    R visitType(Type t) throws E;
+    R visitType(SimpleExtension.Function fnDef, int argIdx, Type t) throws E;
 
-    R visitEnumArg(EnumArg e) throws E;
+    R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e) throws E;
   }
 
-  static <R, ER, TR, E extends Throwable> FuncArgVisitor<R, E> createFuncArgVisitor(
-      TypeVisitor<TR, E> typeVisitor,
-      Function<TR, R> convertTyp,
-      ExpressionVisitor<ER, E> expressionVisitor,
-      Function<ER, R> convertExpr,
-      Function<EnumArg, R> convertEnum) {
-    return new FuncArgVisitor<R, E>() {
+  static FuncArgVisitor<FunctionArgument, RuntimeException> toProto(
+      TypeExpressionVisitor<io.substrait.proto.Type, RuntimeException> typeVisitor,
+      ExpressionVisitor<io.substrait.proto.Expression, RuntimeException> expressionVisitor) {
 
-      public R visitExpr(Expression e) throws E {
-        return convertExpr.apply(e.accept(expressionVisitor));
+    return new FuncArgVisitor<>() {
+
+      @Override
+      public FunctionArgument visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e)
+          throws RuntimeException {
+        var pE = e.accept(expressionVisitor);
+        return FunctionArgument.newBuilder().setValue(pE).build();
       }
 
       @Override
-      public R visitType(Type t) throws E {
-        return convertTyp.apply(t.accept(typeVisitor));
+      public FunctionArgument visitType(SimpleExtension.Function fnDef, int argIdx, Type t)
+          throws RuntimeException {
+        var pTyp = t.accept(typeVisitor);
+        return FunctionArgument.newBuilder().setType(pTyp).build();
       }
 
       @Override
-      public R visitEnumArg(EnumArg e) throws E {
-        return convertEnum.apply(e);
+      public FunctionArgument visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg ea)
+          throws RuntimeException {
+        var enumBldr = FunctionArgument.Enum.newBuilder();
+
+        if (ea.value().isPresent()) {
+          enumBldr = enumBldr.setSpecified(ea.value().get());
+        }
+        return FunctionArgument.newBuilder().setEnum(enumBldr.build()).build();
       }
     };
   }
@@ -59,43 +71,17 @@ public interface FunctionArg {
       return switch (fArg.getArgTypeCase()) {
         case TYPE -> FromProto.from(fArg.getType());
         case VALUE -> exprBuilder.from(fArg.getValue());
-        case ENUM -> convert(funcDef, argIdx, fArg.getEnum());
+        case ENUM -> {
+          SimpleExtension.EnumArgument enumArgDef =
+              (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
+          var optionValue = fArg.getEnum().getSpecified();
+          yield optionValue == null
+              ? EnumArg.UNSPECIFIED_ENUM_ARG
+              : EnumArg.of(enumArgDef, optionValue);
+        }
         default -> throw new UnsupportedOperationException(
             String.format("Unable to convert FunctionArgument %s.", fArg));
       };
-    }
-
-    /**
-     * Account for optional arguments before argument position. For example for `(opt, req, opt,
-     * req)`: - for `(v1)` `v1` can be `arg0 or arg1` - for `(v1, v2)` `v2` can be `arg1, arg2,
-     * arg3`
-     *
-     * <p>TODO: move this to `SimpleExtension.Function`, or at least an inner function in
-     * `possiblePositions`
-     *
-     * @param args
-     * @param argIdx
-     * @return
-     */
-    private int possiblePositions(List<SimpleExtension.Argument> args, int argIdx) {
-      int possiblePos =
-          (int) IntStream.range(0, argIdx + 1).filter(i -> !args.get(i).required()).count();
-      return Math.max(possiblePos, args.size() - argIdx);
-    }
-
-    private FunctionArg convert(
-        SimpleExtension.Function funcDef, int argIdx, FunctionArgument.Enum pEnum) {
-      List<SimpleExtension.Argument> args = funcDef.args();
-      int possibleRange = possiblePositions(args, argIdx);
-
-      Optional<SimpleExtension.EnumArgument> enumArgOp =
-          args.subList(argIdx, argIdx + possibleRange).stream()
-              .filter(a -> a instanceof SimpleExtension.EnumArgument)
-              .map(SimpleExtension.EnumArgument.class::cast)
-              .filter(e -> e.options().contains(pEnum.getSpecified()))
-              .findFirst();
-
-      return enumArgOp.map(ea -> EnumArg.of(ea, pEnum.getSpecified())).orElseThrow();
     }
   }
 }

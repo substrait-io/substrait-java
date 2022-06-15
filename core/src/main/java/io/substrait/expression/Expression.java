@@ -8,7 +8,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.immutables.value.Value;
 
 @Value.Enclosing
@@ -17,8 +16,9 @@ public interface Expression extends FunctionArg {
   Type getType();
 
   @Override
-  default <R, E extends Throwable> R acceptFuncArgVis(FuncArgVisitor<R, E> fnArgVisitor) throws E {
-    return fnArgVisitor.visitExpr(this);
+  default <R, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
+    return fnArgVisitor.visitExpr(fnDef, argIdx, this);
   }
 
   interface Literal extends Expression {
@@ -544,13 +544,6 @@ public interface Expression extends FunctionArg {
     public abstract SimpleExtension.ScalarFunctionVariant declaration();
 
     public abstract List<FunctionArg> arguments();
-
-    public final List<Expression> exprArguments() {
-      return arguments().stream()
-          .filter(f -> f instanceof Expression)
-          .map(f -> Expression.class.cast(f))
-          .collect(Collectors.toList());
-    }
 
     public abstract Type outputType();
 

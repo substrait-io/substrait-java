@@ -66,7 +66,7 @@ public class CalciteCallTest extends CalciteObjs {
           // check that there is a cast for the incorrect argument type.
           assertEquals(
               ExpressionCreator.cast(Type.REQUIRED.I64, ExpressionCreator.i32(false, 20)),
-              func.exprArguments().get(0));
+              func.arguments().get(0));
         },
         false); // TODO: implicit calcite cast
   }
@@ -79,8 +79,8 @@ public class CalciteCallTest extends CalciteObjs {
         func -> {
 
           // ensure both literals are included directly.
-          assertTrue(func.exprArguments().get(0) instanceof Expression.I64Literal);
-          assertTrue(func.exprArguments().get(1) instanceof Expression.I64Literal);
+          assertTrue(func.arguments().get(0) instanceof Expression.I64Literal);
+          assertTrue(func.arguments().get(1) instanceof Expression.I64Literal);
         },
         true);
   }

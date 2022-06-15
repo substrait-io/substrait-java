@@ -299,7 +299,7 @@ abstract class FunctionConverter<
                     operands.stream(),
                     (r, o) -> {
                       if (EnumConverter.isEnumValue(r)) {
-                        return EnumConverter.convert(variant, (RexLiteral) r).orElseGet(() -> null);
+                        return EnumConverter.fromRex(variant, (RexLiteral) r).orElseGet(() -> null);
                       } else {
                         return o;
                       }

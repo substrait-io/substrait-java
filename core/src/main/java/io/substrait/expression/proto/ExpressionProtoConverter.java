@@ -3,7 +3,8 @@ package io.substrait.expression.proto;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
-import io.substrait.proto.*;
+import io.substrait.proto.Expression;
+import io.substrait.proto.Rel;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
@@ -247,25 +248,17 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   @Override
   public Expression visit(io.substrait.expression.Expression.ScalarFunctionInvocation expr) {
 
-    FunctionArg.FuncArgVisitor<FunctionArgument, RuntimeException> argVisitor =
-        FunctionArg.createFuncArgVisitor(
-            TypeProtoConverter.INSTANCE,
-            typ -> FunctionArgument.newBuilder().setType(typ).build(),
-            this,
-            pE -> FunctionArgument.newBuilder().setValue(pE).build(),
-            ea ->
-                FunctionArgument.newBuilder()
-                    .setEnum(FunctionArgument.Enum.newBuilder().setSpecified(ea.option()).build())
-                    .build());
+    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
 
     return Expression.newBuilder()
         .setScalarFunction(
             Expression.ScalarFunction.newBuilder()
                 .setOutputType(expr.getType().accept(TypeProtoConverter.INSTANCE))
                 .setFunctionReference(functionCollector.getFunctionReference(expr.declaration()))
-                // .addAllArgs(expr.exprArguments().stream().map(a -> a.accept(this)).toList())
                 .addAllArguments(
-                    expr.arguments().stream().map(a -> a.acceptFuncArgVis(argVisitor)).toList()))
+                    expr.arguments().stream()
+                        .map(a -> a.accept(expr.declaration(), 0, argVisitor))
+                        .toList()))
         .build();
   }
 

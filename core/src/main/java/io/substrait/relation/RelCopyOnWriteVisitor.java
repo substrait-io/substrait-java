@@ -4,6 +4,7 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableFieldReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,17 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   private Optional<List<Expression>> transformExpressions(List<Expression> oldExpressions) {
     return transformList(oldExpressions, t -> this.visitExpression(t));
+  }
+
+  private Optional<List<FunctionArg>> transformFuncArgs(List<FunctionArg> oldExpressions) {
+    return transformList(
+        oldExpressions,
+        t ->
+            switch (t) {
+              case Expression e -> this.visitExpression(e)
+                  .flatMap(ex -> Optional.<FunctionArg>of(ex));
+              default -> Optional.of(t);
+            });
   }
 
   private static boolean allEmpty(Optional<?>... optionals) {
@@ -184,7 +196,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
           @Override
           public Optional<Expression> visit(Expression.ScalarFunctionInvocation expr)
               throws RuntimeException {
-            return transformExpressions(expr.exprArguments())
+            return transformFuncArgs(expr.arguments())
                 .map(
                     t ->
                         Expression.ScalarFunctionInvocation.builder()

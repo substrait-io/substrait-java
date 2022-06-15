@@ -3,6 +3,7 @@ package io.substrait.type;
 import io.substrait.expression.FunctionArg;
 import io.substrait.function.NullableType;
 import io.substrait.function.ParameterizedType;
+import io.substrait.function.SimpleExtension;
 import io.substrait.function.TypeExpression;
 import org.immutables.value.Value;
 
@@ -20,8 +21,9 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
   @Override
-  default <R, E extends Throwable> R acceptFuncArgVis(FuncArgVisitor<R, E> fnArgVisitor) throws E {
-    return fnArgVisitor.visitType(this);
+  default <R, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
+    return fnArgVisitor.visitType(fnDef, argIdx, this);
   }
 
   @Value.Immutable

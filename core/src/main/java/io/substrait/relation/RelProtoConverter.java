@@ -9,6 +9,7 @@ import io.substrait.proto.Rel;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
@@ -61,25 +62,18 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    FunctionArg.FuncArgVisitor<FunctionArgument, RuntimeException> argVisitor =
-        FunctionArg.createFuncArgVisitor(
-            TypeProtoConverter.INSTANCE,
-            typ -> FunctionArgument.newBuilder().setType(typ).build(),
-            protoConverter,
-            pE -> FunctionArgument.newBuilder().setValue(pE).build(),
-            ea ->
-                FunctionArgument.newBuilder()
-                    .setEnum(FunctionArgument.Enum.newBuilder().setSpecified(ea.option()).build())
-                    .build());
+    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, protoConverter);
+    var args = measure.getFunction().arguments();
+    var aggFuncDef = measure.getFunction().declaration();
+
     var func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation())
             .setOutputType(toProto(measure.getFunction().getType()))
-            // .addAllArgs(toProto(measure.getFunction().exprArguments()))
             .addAllArguments(
-                measure.getFunction().exprArguments().stream()
-                    .map(a -> a.acceptFuncArgVis(argVisitor))
+                IntStream.range(0, args.size())
+                    .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
                     .toList())
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
