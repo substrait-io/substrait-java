@@ -119,8 +119,8 @@ class SqlConverterBase {
       for (SqlNode node : create.columnList) {
         if (!(node instanceof SqlColumnDeclaration)) {
           if (node instanceof SqlKeyConstraint) {
-            // key constraints declarations, like primary key declaration, are valid and should not result in parse
-            // exceptions. Ignore the constraint declaration.
+            // key constraints declarations, like primary key declaration, are valid and should not
+            // result in parse exceptions. Ignore the constraint declaration.
             continue;
           }
 
