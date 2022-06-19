@@ -2,13 +2,17 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
+import io.substrait.isthmus.utils.Utils;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Set;
 import java.util.Arrays;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class Substrait2SqlTest extends PlanTestBase {
   @Test
@@ -102,6 +106,12 @@ public class Substrait2SqlTest extends PlanTestBase {
   public void simpleTestAgg3() throws Exception {
     test(
         "select l_partkey, sum(l_extendedprice * (1.0 - l_discount)) from lineitem group by l_partkey");
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
+  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+    test(Utils.getSetQuery(op, multi));
   }
 
   @Test

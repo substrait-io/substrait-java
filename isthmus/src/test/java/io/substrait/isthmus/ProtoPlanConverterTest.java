@@ -2,13 +2,17 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.isthmus.utils.Utils;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.AggregateFunction;
+import io.substrait.relation.Set;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class ProtoPlanConverterTest extends PlanTestBase {
 
@@ -86,6 +90,12 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             + "  revenue desc,\n"
             + "  o.o_orderdate\n"
             + "limit 10");
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
+  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+      assertProtoPlanRoundrip(Utils.getSetQuery(op, multi));
   }
 
   @Test

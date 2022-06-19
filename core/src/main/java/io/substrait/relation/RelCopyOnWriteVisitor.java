@@ -103,6 +103,23 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   }
 
   @Override
+  public Optional<Rel> visit(Set set) throws RuntimeException {
+    var inputs = set.getInputs()
+            .stream()
+            .map(inputRel -> inputRel.accept(this))
+            .flatMap(Optional::stream)
+            .toList();
+    if (inputs.isEmpty()) {
+        return Optional.empty();
+    }
+    return Optional.of(ImmutableSet.builder()
+            .from(set)
+            .inputs(inputs)
+            .setOp(set.getSetOp())
+            .build());
+  }
+
+  @Override
   public Optional<Rel> visit(Project project) throws RuntimeException {
     var input = project.getInput().accept(this);
     Optional<List<Expression>> expressions = transformExpressions(project.getExpressions());

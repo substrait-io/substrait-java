@@ -12,6 +12,7 @@ import io.substrait.proto.AggregateRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.SetRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SortRel;
@@ -24,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** Converts from proto to pojo rel representation TODO: AdvancedExtension, CrossJoin, Set */
+/** Converts from proto to pojo rel representation TODO: AdvancedExtension, CrossJoin */
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
@@ -60,6 +61,9 @@ public class ProtoRelConverter {
       }
       case JOIN -> {
         return newJoin(rel.getJoin());
+      }
+      case SET -> {
+        return newSet(rel.getSet());
       }
       case PROJECT -> {
         return newProject(rel.getProject());
@@ -245,6 +249,18 @@ public class ProtoRelConverter {
             Optional.ofNullable(
                 rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
         .build();
+  }
+
+  private Set newSet(SetRel rel) {
+    List<Rel> inputs = rel.getInputsList()
+            .stream()
+            .map(inputRel -> from(inputRel))
+            .toList();
+    return Set.builder()
+            .inputs(inputs)
+            .setOp(Set.SetOp.fromProto(rel.getOp()))
+            .remap(optionalRelmap(rel.getCommon()))
+            .build();
   }
 
   private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
