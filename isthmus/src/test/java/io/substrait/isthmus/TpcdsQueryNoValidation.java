@@ -1,10 +1,9 @@
 package io.substrait.isthmus;
 
 import com.google.protobuf.util.JsonFormat;
+import java.util.Arrays;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.Arrays;
 
 public class TpcdsQueryNoValidation extends PlanTestBase {
 
