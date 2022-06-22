@@ -10,10 +10,10 @@ import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
-import io.substrait.relation.Set;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Set;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -138,11 +138,11 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   @Override
   public RelNode visit(Set set) throws RuntimeException {
     int numInputs = set.getInputs().size();
-    set.getInputs().forEach(
-        input -> {
-          relBuilder.push(input.accept(this));
-        }
-    );
+    set.getInputs()
+        .forEach(
+            input -> {
+              relBuilder.push(input.accept(this));
+            });
     var builder =
         switch (set.getSetOp()) {
           case MINUS_PRIMARY -> relBuilder.minus(false, numInputs);
@@ -152,7 +152,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
           case UNION_DISTINCT -> relBuilder.union(false, numInputs);
           case UNION_ALL -> relBuilder.union(true, numInputs);
           case UNKNOWN -> throw new UnsupportedOperationException(
-                  "Unknown set operation is not supported");
+              "Unknown set operation is not supported");
         };
     return builder.build();
   }

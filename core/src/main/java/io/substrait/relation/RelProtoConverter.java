@@ -8,11 +8,11 @@ import io.substrait.proto.AggregateRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
-import io.substrait.proto.SetRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
 import io.substrait.proto.RelCommon;
+import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
 import io.substrait.type.proto.TypeProtoConverter;
@@ -143,14 +143,12 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Set set) throws RuntimeException {
-    var builder = SetRel.newBuilder()
-            .setCommon(common(set))
-            .setOp(set.getSetOp().toProto());
-    set.getInputs().forEach(
-      inputRel -> {
-        builder.addInputs(toProto(inputRel));
-      }
-    );
+    var builder = SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
+    set.getInputs()
+        .forEach(
+            inputRel -> {
+              builder.addInputs(toProto(inputRel));
+            });
     return Rel.newBuilder().setSet(builder).build();
   }
 

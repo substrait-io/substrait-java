@@ -12,9 +12,9 @@ import io.substrait.proto.AggregateRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
-import io.substrait.proto.SetRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
+import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
@@ -252,15 +252,12 @@ public class ProtoRelConverter {
   }
 
   private Set newSet(SetRel rel) {
-    List<Rel> inputs = rel.getInputsList()
-            .stream()
-            .map(inputRel -> from(inputRel))
-            .toList();
+    List<Rel> inputs = rel.getInputsList().stream().map(inputRel -> from(inputRel)).toList();
     return Set.builder()
-            .inputs(inputs)
-            .setOp(Set.SetOp.fromProto(rel.getOp()))
-            .remap(optionalRelmap(rel.getCommon()))
-            .build();
+        .inputs(inputs)
+        .setOp(Set.SetOp.fromProto(rel.getOp()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .build();
   }
 
   private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {

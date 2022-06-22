@@ -95,7 +95,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
   public void setTest(Set.SetOp op, boolean multi) throws Exception {
-      assertProtoPlanRoundrip(Utils.getSetQuery(op, multi));
+    assertProtoPlanRoundrip(Utils.getSetQuery(op, multi));
   }
 
   @Test
