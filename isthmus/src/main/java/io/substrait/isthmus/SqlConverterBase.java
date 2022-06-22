@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
+import org.apache.calcite.sql.ddl.SqlKeyConstraint;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -117,6 +118,12 @@ class SqlConverterBase {
 
       for (SqlNode node : create.columnList) {
         if (!(node instanceof SqlColumnDeclaration)) {
+          if (node instanceof SqlKeyConstraint) {
+            // key constraints declarations, like primary key declaration, are valid and should not
+            // result in parse exceptions. Ignore the constraint declaration.
+            continue;
+          }
+
           fail("Unexpected column list construction.", node.getParserPosition());
         }
 
