@@ -4,6 +4,7 @@ import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 /** Converts from proto to pojo rel representation TODO: AdvancedExtension, CrossJoin, Set */
 public class ProtoRelConverter {
@@ -183,16 +185,20 @@ public class ProtoRelConverter {
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
+    var pF = new FunctionArg.ProtoFrom(converter);
     for (var measure : rel.getMeasuresList()) {
       var func = measure.getMeasure();
+      var funcDecl = lookup.getAggregateFunction(func.getFunctionReference(), extensions);
+      var args =
+          IntStream.range(0, measure.getMeasure().getArgumentsCount())
+              .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
+              .toList();
       measures.add(
           Aggregate.Measure.builder()
               .function(
                   AggregateFunctionInvocation.builder()
-                      .arguments(
-                          measure.getMeasure().getArgsList().stream().map(converter::from).toList())
-                      .declaration(
-                          lookup.getAggregateFunction(func.getFunctionReference(), extensions))
+                      .arguments(args)
+                      .declaration(funcDecl)
                       .outputType(FromProto.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
                       .invocation(func.getInvocation())

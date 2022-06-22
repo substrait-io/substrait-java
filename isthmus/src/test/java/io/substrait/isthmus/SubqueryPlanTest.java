@@ -51,7 +51,8 @@ public class SubqueryPlanTest {
         setPredicateFilter
             .getCondition()
             .getScalarFunction()
-            .getArgs(1)
+            .getArguments(1)
+            .getValue()
             .getSelection(); // l_orderkey
 
     assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 0);
@@ -96,7 +97,8 @@ public class SubqueryPlanTest {
         setPredicateFilter
             .getCondition()
             .getScalarFunction()
-            .getArgs(1)
+            .getArguments(1)
+            .getValue()
             .getSelection(); // l_orderkey
 
     assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 0);
@@ -132,7 +134,12 @@ public class SubqueryPlanTest {
             .getFilter(); // p_partkey = l_partkey
 
     Expression.FieldReference correlatedCol =
-        insubqueryFilter.getCondition().getScalarFunction().getArgs(1).getSelection(); // l_partkey
+        insubqueryFilter
+            .getCondition()
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // l_partkey
 
     assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 1);
     assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
@@ -155,7 +162,8 @@ public class SubqueryPlanTest {
             .getFilter()
             .getCondition()
             .getScalarFunction()
-            .getArgs(0)
+            .getArguments(0)
+            .getValue()
             .getCast()
             .getInput()
             .getSubquery();
@@ -170,7 +178,12 @@ public class SubqueryPlanTest {
             .getFilter(); // p_partkey = l_partkey
 
     Expression.FieldReference correlatedCol =
-        insubqueryFilter.getCondition().getScalarFunction().getArgs(1).getSelection(); // l_partkey
+        insubqueryFilter
+            .getCondition()
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // l_partkey
 
     assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 1);
     assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
@@ -217,7 +230,7 @@ public class SubqueryPlanTest {
             .getFilter(); // l.l_partkey = p.p_partkey and unique (...)
 
     Expression.Subquery inner_subquery =
-        exists_filter.getCondition().getScalarFunction().getArgs(1).getSubquery();
+        exists_filter.getCondition().getScalarFunction().getArguments(1).getValue().getSubquery();
     assertTrue(inner_subquery.hasSetPredicate());
 
     assertTrue(
@@ -234,17 +247,31 @@ public class SubqueryPlanTest {
             .getCondition();
 
     Expression inner_subquery_cond1 =
-        inner_subquery_condition.getScalarFunction().getArgs(0); // ps.ps_partkey = p.p_partkey
+        inner_subquery_condition
+            .getScalarFunction()
+            .getArguments(0)
+            .getValue(); // ps.ps_partkey = p.p_partkey
     Expression inner_subquery_cond2 =
-        inner_subquery_condition.getScalarFunction().getArgs(1); // PS.ps_suppkey = l.l_suppkey
+        inner_subquery_condition
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue(); // PS.ps_suppkey = l.l_suppkey
 
     Expression.FieldReference correlatedCol1 =
-        inner_subquery_cond1.getScalarFunction().getArgs(1).getSelection(); // p.p_partkey
+        inner_subquery_cond1
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // p.p_partkey
     assertTrue(correlatedCol1.getDirectReference().getStructField().getField() == 0);
     assertTrue(correlatedCol1.getOuterReference().getStepsOut() == 2);
 
     Expression.FieldReference correlatedCol2 =
-        inner_subquery_cond2.getScalarFunction().getArgs(1).getSelection(); // l.l_suppkey
+        inner_subquery_cond2
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // l.l_suppkey
     assertTrue(correlatedCol2.getDirectReference().getStructField().getField() == 2);
     assertTrue(correlatedCol2.getOuterReference().getStepsOut() == 1);
   }
@@ -269,7 +296,8 @@ public class SubqueryPlanTest {
             .getFilter()
             .getCondition() // p_size < ( select ...)
             .getScalarFunction()
-            .getArgs(1)
+            .getArguments(1)
+            .getValue()
             .getSubquery();
 
     assertTrue(outer_subquery.hasScalar());
@@ -285,26 +313,42 @@ public class SubqueryPlanTest {
             .getFilter()
             .getCondition()
             .getScalarFunction()
-            .getArgs(1)
+            .getArguments(1)
+            .getValue()
             .getScalarFunction()
-            .getArgs(1)
+            .getArguments(1)
+            .getValue()
             .getSubquery();
 
     Expression inner_subquery_condition =
         inner_subquery.getScalar().getInput().getAggregate().getInput().getFilter().getCondition();
 
     Expression inner_subquery_cond1 =
-        inner_subquery_condition.getScalarFunction().getArgs(0); // ps.ps_partkey = p.p_partkey
+        inner_subquery_condition
+            .getScalarFunction()
+            .getArguments(0)
+            .getValue(); // ps.ps_partkey = p.p_partkey
     Expression inner_subquery_cond2 =
-        inner_subquery_condition.getScalarFunction().getArgs(1); // PS.ps_suppkey = l.l_suppkey
+        inner_subquery_condition
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue(); // PS.ps_suppkey = l.l_suppkey
 
     Expression.FieldReference correlatedCol1 =
-        inner_subquery_cond1.getScalarFunction().getArgs(1).getSelection(); // p.p_partkey
+        inner_subquery_cond1
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // p.p_partkey
     assertTrue(correlatedCol1.getDirectReference().getStructField().getField() == 0);
     assertTrue(correlatedCol1.getOuterReference().getStepsOut() == 2);
 
     Expression.FieldReference correlatedCol2 =
-        inner_subquery_cond2.getScalarFunction().getArgs(1).getSelection(); // l.l_suppkey
+        inner_subquery_cond2
+            .getScalarFunction()
+            .getArguments(1)
+            .getValue()
+            .getSelection(); // l.l_suppkey
     assertTrue(correlatedCol2.getDirectReference().getStructField().getField() == 2);
     assertTrue(correlatedCol2.getOuterReference().getStepsOut() == 1);
   }

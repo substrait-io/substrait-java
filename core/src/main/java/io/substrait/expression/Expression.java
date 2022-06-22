@@ -11,9 +11,15 @@ import java.util.UUID;
 import org.immutables.value.Value;
 
 @Value.Enclosing
-public interface Expression {
+public interface Expression extends FunctionArg {
 
   Type getType();
+
+  @Override
+  default <R, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
+    return fnArgVisitor.visitExpr(fnDef, argIdx, this);
+  }
 
   interface Literal extends Expression {
     @Value.Default
@@ -537,7 +543,7 @@ public interface Expression {
   abstract static class ScalarFunctionInvocation implements Expression {
     public abstract SimpleExtension.ScalarFunctionVariant declaration();
 
-    public abstract List<Expression> arguments();
+    public abstract List<FunctionArg> arguments();
 
     public abstract Type outputType();
 

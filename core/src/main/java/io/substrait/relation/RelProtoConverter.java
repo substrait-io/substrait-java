@@ -1,22 +1,15 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.proto.AggregateFunction;
-import io.substrait.proto.AggregateRel;
-import io.substrait.proto.FetchRel;
-import io.substrait.proto.FilterRel;
-import io.substrait.proto.JoinRel;
-import io.substrait.proto.ProjectRel;
-import io.substrait.proto.ReadRel;
+import io.substrait.proto.*;
 import io.substrait.proto.Rel;
-import io.substrait.proto.RelCommon;
-import io.substrait.proto.SortField;
-import io.substrait.proto.SortRel;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
@@ -69,12 +62,19 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
+    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, protoConverter);
+    var args = measure.getFunction().arguments();
+    var aggFuncDef = measure.getFunction().declaration();
+
     var func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation())
             .setOutputType(toProto(measure.getFunction().getType()))
-            .addAllArgs(toProto(measure.getFunction().arguments()))
+            .addAllArguments(
+                IntStream.range(0, args.size())
+                    .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
+                    .toList())
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
                 functionCollector.getFunctionReference(measure.getFunction().declaration()));
