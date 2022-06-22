@@ -5,7 +5,6 @@ import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
@@ -33,16 +32,21 @@ public class SubstraitToSql extends SqlConverterBase {
     return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, pair.right, parserConfig);
   }
 
-  private static final SqlDialect DEFAULT_DIALECT =
-      new SqlDialect(
-          SqlDialect.EMPTY_CONTEXT
-              .withDatabaseProduct(SqlDialect.DatabaseProduct.SNOWFLAKE)
-              .withDatabaseProductName("SNOWFLAKE")
-              .withIdentifierQuoteString(null)
-              .withNullCollation(NullCollation.HIGH));
+  // DEFAULT_SQL_DIALECT uses Calcite's EMPTY_CONTEXT with setting:
+  //   identifierQuoteString : null, identifierEscapeQuoteString : null
+  //   quotedCasing : UNCHANGED, unquotedCasing : TO_UPPER
+  //   caseSensitive: true
+  //   supportsApproxCountDistinct is true
+  private static final SqlDialect DEFAULT_SQL_DIALECT =
+      new SqlDialect(SqlDialect.EMPTY_CONTEXT) {
+        @Override
+        public boolean supportsApproxCountDistinct() {
+          return true;
+        }
+      };
 
   public static String toSql(RelNode root) {
-    return toSql(root, DEFAULT_DIALECT);
+    return toSql(root, DEFAULT_SQL_DIALECT);
   }
 
   public static String toSql(RelNode root, SqlDialect dialect) {

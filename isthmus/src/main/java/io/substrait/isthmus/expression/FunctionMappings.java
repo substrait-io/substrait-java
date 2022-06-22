@@ -12,7 +12,6 @@ public class FunctionMappings {
   // names.
   public static final ImmutableList<Sig> SCALAR_SIGS;
   public static final ImmutableList<Sig> AGGREGATE_SIGS;
-
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER;
 
   static {
@@ -43,6 +42,7 @@ public class FunctionMappings {
             .add(
                 s(SqlStdOperatorTable.SUM, "sum"),
                 s(SqlStdOperatorTable.COUNT, "count"),
+                s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
                 s(SqlStdOperatorTable.AVG, "avg"))
             .build();
 
