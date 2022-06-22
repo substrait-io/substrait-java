@@ -2,9 +2,9 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import io.substrait.isthmus.utils.Utils;
 import io.substrait.relation.Set;
-import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
