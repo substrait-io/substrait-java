@@ -4,6 +4,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.function.ImmutableSimpleExtension;
@@ -14,7 +15,9 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.Type;
 import java.io.IOException;
 import java.util.function.Consumer;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +43,18 @@ public class CalciteCallTest extends CalciteObjs {
     }
 
     EXTENSION_COLLECTION = defaults;
+  }
+
+  @Test
+  public void extract() {
+    test(
+        "extract:req_ts",
+        rex.makeCall(
+            t(SqlTypeName.INTEGER),
+            SqlStdOperatorTable.EXTRACT,
+            ImmutableList.of(rex.makeFlag(TimeUnitRange.MONTH), c(10L, SqlTypeName.TIMESTAMP, 10))),
+        func -> {},
+        false);
   }
 
   @Test

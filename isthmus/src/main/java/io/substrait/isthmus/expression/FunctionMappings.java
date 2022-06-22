@@ -34,6 +34,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.NOT_EQUALS, "not_equal"),
                 s(SqlStdOperatorTable.MINUS_DATE, "subtract"),
                 s(SqlStdOperatorTable.DATETIME_PLUS, "add"),
+                s(SqlStdOperatorTable.EXTRACT, "extract"),
                 s(SqlStdOperatorTable.LIKE))
             .build();
 

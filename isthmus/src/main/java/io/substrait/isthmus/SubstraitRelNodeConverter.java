@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -155,9 +156,14 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   private AggregateCall fromMeasure(Aggregate.Measure measure) {
+    var eArgs = measure.getFunction().arguments();
     var arguments =
-        measure.getFunction().arguments().stream()
-            .map(expr -> expr.accept(expressionRexConverter))
+        IntStream.range(0, measure.getFunction().arguments().size())
+            .mapToObj(
+                i ->
+                    eArgs
+                        .get(i)
+                        .accept(measure.getFunction().declaration(), i, expressionRexConverter))
             .toList();
     var operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(

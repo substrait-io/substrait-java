@@ -1,15 +1,16 @@
 package io.substrait.isthmus.expression;
 
-import io.substrait.expression.AbstractExpressionVisitor;
-import io.substrait.expression.Expression;
-import io.substrait.expression.FieldReference;
+import io.substrait.expression.*;
+import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
+import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.*;
@@ -23,7 +24,8 @@ import org.apache.calcite.util.TimestampString;
  * ExpressionVisitor that converts Substrait Expression into Calcite Rex. Unsupported Expression
  * node will call visitFallback and throw UnsupportedOperationException.
  */
-public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException> {
+public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException>
+    implements FunctionArg.FuncArgVisitor<RexNode, RuntimeException> {
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
@@ -156,7 +158,12 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.ScalarFunctionInvocation expr) throws RuntimeException {
-    var args = expr.arguments().stream().map(a -> a.accept(this)).toList();
+    var eArgs = expr.arguments();
+    var args =
+        IntStream.range(0, expr.arguments().size())
+            .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
+            .toList();
+
     Optional<SqlOperator> operator =
         scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(
             expr.declaration().key(), expr.outputType());
@@ -168,7 +175,14 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
               "Unable to convert scalar function %s(%s).",
               expr.declaration().name(),
               expr.arguments().stream()
-                  .map(t -> t.getType().accept(new StringTypeVisitor()))
+                  .map(
+                      a ->
+                          switch (a) {
+                            case EnumArg ea -> ea.value().toString();
+                            case Expression e -> e.getType().accept(new StringTypeVisitor());
+                            case Type t -> t.accept(new StringTypeVisitor());
+                            default -> throw new IllegalStateException("Unexpected value: " + a);
+                          })
                   .collect(Collectors.joining(", ")));
       throw new IllegalArgumentException(msg);
     }
@@ -205,5 +219,33 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         String.format(
             "Expression %s of type %s not handled by visitor type %s.",
             expr, expr.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  @Override
+  public RexNode visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e)
+      throws RuntimeException {
+    return e.accept(this);
+  }
+
+  @Override
+  public RexNode visitType(SimpleExtension.Function fnDef, int argIdx, Type t)
+      throws RuntimeException {
+    throw new UnsupportedOperationException(
+        String.format(
+            "FunctionArg %s not handled by visitor type %s.",
+            t, this.getClass().getCanonicalName()));
+  }
+
+  @Override
+  public RexNode visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e)
+      throws RuntimeException {
+
+    return EnumConverter.toRex(rexBuilder, fnDef, argIdx, e)
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    String.format(
+                        "EnumArg(value=%s) not handled by visitor type %s.",
+                        e.value(), this.getClass().getCanonicalName())));
   }
 }

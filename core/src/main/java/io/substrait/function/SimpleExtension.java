@@ -85,6 +85,19 @@ public class SimpleExtension {
     }
   }
 
+  /**
+   * An enum argument is required to be known within the plan (no field references can be used).
+   * These are distinct from <i>Enum data types</i>; which are just like any other type and could be
+   * reasonably expressed by referencing a preexisting column that contains those values.
+   *
+   * <p>For more details see <a
+   * href="https://github.com/substrait-io/substrait-java/pull/55#issuecomment-1154484254">comments
+   * in this issue</a>
+   *
+   * @param options
+   * @param name
+   * @param required
+   */
   public record EnumArgument(List<String> options, String name, boolean required)
       implements Argument {
     public String toTypeString() {
