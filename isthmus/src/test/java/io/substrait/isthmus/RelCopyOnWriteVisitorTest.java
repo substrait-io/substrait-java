@@ -59,15 +59,15 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
           + "limit 10";
 
   private static final String UNION_DISTINCT_COUNT_QUERY =
-          "select\n"
-                  + "  count(distinct l.l_orderkey) as cnt\n"
-                  + "from\n"
-                  + "  \"lineitem\" l\n"
+      "select\n"
+          + "  count(distinct l.l_orderkey) as cnt\n"
+          + "from\n"
+          + "  \"lineitem\" l\n"
           + "union\n"
           + "select\n"
-                  + "  count(distinct o.o_orderkey) as cnt\n"
-                  + "from\n"
-                  + "  \"orders\" o\n";
+          + "  count(distinct o.o_orderkey) as cnt\n"
+          + "from\n"
+          + "  \"orders\" o\n";
 
   private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
