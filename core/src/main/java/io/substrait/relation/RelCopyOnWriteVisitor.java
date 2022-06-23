@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 /**
  * Class used to visit all child relations from a root relation and optionally replace subtrees by
@@ -118,17 +117,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   @Override
   public Optional<Rel> visit(Set set) throws RuntimeException {
-    var visitedInputs = set.getInputs().stream().map(inputRel -> inputRel.accept(this)).toList();
-    if (visitedInputs.stream().noneMatch(visitedInput -> visitedInput.isPresent())) {
-      return Optional.empty();
-    }
-    // replace all optional values with the input values
-    var setInputs =
-        IntStream.range(0, set.getInputs().size())
-            .mapToObj(i -> visitedInputs.get(i).orElse(set.getInputs().get(i)))
-            .toList();
-    return Optional.of(
-        ImmutableSet.builder().from(set).inputs(setInputs).setOp(set.getSetOp()).build());
+    return transformList(set.getInputs(), t -> t.accept(this))
+        .map(u -> ImmutableSet.builder().from(set).inputs(u).setOp(set.getSetOp()).build());
   }
 
   @Override
