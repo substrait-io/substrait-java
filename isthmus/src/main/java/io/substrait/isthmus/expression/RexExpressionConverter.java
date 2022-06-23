@@ -163,22 +163,22 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       return ImmutableWindowBound.CurrentRowWindowBound.builder().build();
     }
     if (rexWindowBound.isUnbounded()) {
-      var direction =
-          rexWindowBound.isFollowing()
-              ? WindowBound.Direction.FOLLOWING
-              : WindowBound.Direction.PRECEDING;
+      var direction = findWindowBoundDirection(rexWindowBound);
       return ImmutableWindowBound.UnboundedWindowBound.builder().direction(direction).build();
     } else {
-      var direction =
-          rexWindowBound.isFollowing()
-              ? WindowBound.Direction.FOLLOWING
-              : WindowBound.Direction.PRECEDING;
+      var direction = findWindowBoundDirection(rexWindowBound);
       var offset = rexWindowBound.getOffset().accept(this);
       return ImmutableWindowBound.BoundedWindowBound.builder()
           .direction(direction)
           .offset(offset)
           .build();
     }
+  }
+
+  private WindowBound.Direction findWindowBoundDirection(RexWindowBound rexWindowBound) {
+    return rexWindowBound.isFollowing()
+        ? WindowBound.Direction.FOLLOWING
+        : WindowBound.Direction.PRECEDING;
   }
 
   private Expression.SortField toSortField(RexFieldCollation rexFieldCollation) {
@@ -194,7 +194,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
                   == RelFieldCollation.NullDirection.LAST
               ? Expression.SortDirection.DESC_NULLS_LAST
               : Expression.SortDirection.DESC_NULLS_FIRST;
-          default -> throw new RuntimeException(
+          default -> throw new IllegalArgumentException(
               String.format(
                   "Unexpected RelFieldCollation.Direction:%s enum at the RexFieldCollation!",
                   rexDirection));
@@ -281,16 +281,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
   }
 
-  public RelNode getInputRel() {
-    return inputRel;
-  }
-
   public void setInputRel(RelNode inputRel) {
     this.inputRel = inputRel;
-  }
-
-  public Type.Struct getInputType() {
-    return inputType;
   }
 
   public void setInputType(Type.Struct inputType) {

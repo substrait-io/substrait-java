@@ -4,11 +4,10 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.proto.Plan;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.apache.calcite.sql.parser.SqlParseException;
+import org.junit.jupiter.api.Test;
 
 public class OneWaySimpleTest extends PlanTestBase {
   @Test

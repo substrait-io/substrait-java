@@ -13,7 +13,7 @@ public abstract class WindowFunctionInvocation
 
   public abstract SimpleExtension.WindowFunctionVariant declaration();
 
-  public abstract List<Expression> arguments();
+  public abstract List<FunctionArg> arguments();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 

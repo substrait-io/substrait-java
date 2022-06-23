@@ -8,7 +8,7 @@ public abstract class AbstractFunctionInvocation<T extends SimpleExtension.Funct
 
   public abstract T declaration();
 
-  public abstract List<Expression> arguments();
+  public abstract List<FunctionArg> arguments();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 

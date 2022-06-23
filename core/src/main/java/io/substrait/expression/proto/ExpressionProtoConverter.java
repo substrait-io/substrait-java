@@ -5,7 +5,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.proto.Expression;
-import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
 import io.substrait.relation.RelVisitor;
@@ -425,9 +424,10 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       var windowFunc = expr.windowFunction().getFunction();
       var funcReference = functionCollector.getFunctionReference(windowFunc.declaration());
       var ordinal = windowFunc.aggregationPhase().ordinal();
+      var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
       var args =
           windowFunc.arguments().stream()
-              .map(e -> FunctionArgument.newBuilder().setValue(e.accept(this)).build())
+              .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
               .toList();
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     }

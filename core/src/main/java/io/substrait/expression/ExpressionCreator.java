@@ -312,7 +312,7 @@ public class ExpressionCreator {
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       AggregateFunction.AggregationInvocation invocation,
-      Iterable<? extends Expression> arguments) {
+      Iterable<? extends FunctionArg> arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -329,7 +329,7 @@ public class ExpressionCreator {
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       AggregateFunction.AggregationInvocation invocation,
-      Expression... arguments) {
+      FunctionArg... arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
