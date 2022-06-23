@@ -8,6 +8,7 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.Cross;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
@@ -111,6 +112,18 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         project.getExpressions().stream().map(expr -> expr.accept(expressionRexConverter)).toList();
 
     return relBuilder.push(child).project(rexList).build();
+  }
+
+  @Override
+  public RelNode visit(Cross cross) throws RuntimeException {
+    var left = cross.getLeft().accept(this);
+    var right = cross.getRight().accept(this);
+    // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
+    return relBuilder
+        .push(left)
+        .push(right)
+        .join(JoinRelType.INNER, relBuilder.literal(true))
+        .build();
   }
 
   @Override

@@ -1,5 +1,7 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
+
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
@@ -25,10 +27,15 @@ import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.immutables.value.Value;
 
+@SuppressWarnings("UnstableApiUsage")
+@Value.Enclosing
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(SubstraitRelVisitor.class);
+  public static final Options OPTIONS = new Options();
+  private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
   private final SimpleExtension.ExtensionCollection extensions;
   private final RexVisitor<Expression> converter;
@@ -36,8 +43,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
+  private final Options options;
+
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
+    this(typeFactory, extensions, OPTIONS);
+  }
+
+  public SubstraitRelVisitor(
+      RelDataTypeFactory typeFactory,
+      SimpleExtension.ExtensionCollection extensions,
+      Options options) {
     this.extensions = extensions;
     var converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.DEFAULTS);
@@ -45,6 +61,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.converter = new RexExpressionConverter(this, converters);
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
+    this.options = options;
   }
 
   private Expression toExpression(RexNode node) {
@@ -125,6 +142,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           case ANTI -> Join.JoinType.ANTI;
         };
 
+    if (joinType == Join.JoinType.INNER
+        && TRUE.equals(condition)
+        && options.getCrossJoinPolicy() == KEEP_AS_CROSS_JOIN) {
+      return Cross.builder()
+          .left(left)
+          .right(right)
+          .deriveRecordType(
+              Type.Struct.builder().from(left.getRecordType()).from(right.getRecordType()).build())
+          .build();
+    }
     return Join.builder().condition(condition).joinType(joinType).left(left).right(right).build();
   }
 
@@ -279,13 +306,44 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {
-    return convert(root.rel, extensions);
+    return convert(root.rel, extensions, OPTIONS);
   }
 
-  public static Rel convert(RelNode rel, SimpleExtension.ExtensionCollection extensions) {
+  public static Rel convert(
+      RelRoot root, SimpleExtension.ExtensionCollection extensions, Options options) {
+    return convert(root.rel, extensions, options);
+  }
+
+  private static Rel convert(
+      RelNode rel, SimpleExtension.ExtensionCollection extensions, Options options) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions);
+        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions, options);
     visitor.popFieldAccessDepthMap(rel);
     return visitor.apply(rel);
+  }
+
+  public enum CrossJoinPolicy {
+    KEEP_AS_CROSS_JOIN,
+    CONVERT_TO_INNER_JOIN
+  };
+
+  public static class Options {
+    private final CrossJoinPolicy crossJoinPolicy;
+
+    public Options() {
+      this(CrossJoinPolicy.CONVERT_TO_INNER_JOIN);
+    }
+
+    public Options(CrossJoinPolicy crossJoinPolicy) {
+      this.crossJoinPolicy = crossJoinPolicy;
+    }
+
+    /**
+     * Returns the {@code crossJoinAsInnerJoin} option. Controls whether to cross joins are
+     * represented as inner joins with a true condition.
+     */
+    public CrossJoinPolicy getCrossJoinPolicy() {
+      return crossJoinPolicy;
+    }
   }
 }

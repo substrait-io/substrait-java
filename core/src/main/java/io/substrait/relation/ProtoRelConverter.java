@@ -10,6 +10,7 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.AggregateRel;
+import io.substrait.proto.CrossRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -26,7 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-/** Converts from proto to pojo rel representation TODO: AdvancedExtension, CrossJoin, Set */
+/** Converts from proto to pojo rel representation TODO: AdvancedExtension, Set */
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
@@ -66,8 +67,11 @@ public class ProtoRelConverter {
       case PROJECT -> {
         return newProject(rel.getProject());
       }
+      case CROSS -> {
+        return newCross(rel.getCross());
+      }
       default -> {
-        // TODO: add support for SET, EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF, CROSS
+        // TODO: add support for SET, EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
     }
@@ -250,6 +254,20 @@ public class ProtoRelConverter {
         .postJoinFilter(
             Optional.ofNullable(
                 rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
+        .build();
+  }
+
+  private Rel newCross(CrossRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    return Cross.builder()
+        .left(left)
+        .right(right)
+        .deriveRecordType(unionedStruct)
+        .remap(optionalRelmap(rel.getCommon()))
         .build();
   }
 

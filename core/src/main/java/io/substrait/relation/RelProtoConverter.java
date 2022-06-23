@@ -4,8 +4,18 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.proto.*;
+import io.substrait.proto.AggregateFunction;
+import io.substrait.proto.AggregateRel;
+import io.substrait.proto.CrossRel;
+import io.substrait.proto.FetchRel;
+import io.substrait.proto.FilterRel;
+import io.substrait.proto.JoinRel;
+import io.substrait.proto.ProjectRel;
+import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
+import io.substrait.proto.RelCommon;
+import io.substrait.proto.SortField;
+import io.substrait.proto.SortRel;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -171,6 +181,16 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setInput(toProto(sort.getInput()))
             .addAllSorts(toProtoS(sort.getSortFields()));
     return Rel.newBuilder().setSort(builder).build();
+  }
+
+  @Override
+  public Rel visit(Cross cross) throws RuntimeException {
+    var builder =
+        CrossRel.newBuilder()
+            .setCommon(common(cross))
+            .setLeft(toProto(cross.getLeft()))
+            .setRight(toProto(cross.getRight()));
+    return Rel.newBuilder().setCross(builder).build();
   }
 
   @Override
