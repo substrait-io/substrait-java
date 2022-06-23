@@ -17,5 +17,7 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(Sort sort) throws EXCEPTION;
 
+  OUTPUT visit(Cross cross) throws EXCEPTION;
+
   OUTPUT visit(VirtualTableScan virtualTableScan) throws EXCEPTION;
 }

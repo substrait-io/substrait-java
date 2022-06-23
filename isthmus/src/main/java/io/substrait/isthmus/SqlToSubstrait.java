@@ -20,6 +20,7 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
+  private static final Options OPTIONS = new Options();
 
   public enum StatementBatching {
     SINGLE_STATEMENT,
@@ -29,7 +30,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   private final Options options;
 
   public SqlToSubstrait() {
-    this.options = new Options();
+    this(OPTIONS);
   }
 
   public SqlToSubstrait(Options options) {
@@ -38,17 +39,33 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   public static class Options {
     private final StatementBatching statementBatching;
+    private final SubstraitRelVisitor.Options relToSubstraitOptions;
 
     public Options() {
-      statementBatching = StatementBatching.SINGLE_STATEMENT;
+      this(StatementBatching.SINGLE_STATEMENT, SubstraitRelVisitor.OPTIONS);
     }
 
     public Options(StatementBatching statementBatching) {
+      this(statementBatching, SubstraitRelVisitor.OPTIONS);
+    }
+
+    public Options(SubstraitRelVisitor.Options relToSubstraitOptions) {
+      this.statementBatching = StatementBatching.SINGLE_STATEMENT;
+      this.relToSubstraitOptions = relToSubstraitOptions;
+    }
+
+    public Options(
+        StatementBatching statementBatching, SubstraitRelVisitor.Options relToSubstraitOptions) {
       this.statementBatching = statementBatching;
+      this.relToSubstraitOptions = relToSubstraitOptions;
     }
 
     public StatementBatching getStatementBatching() {
       return this.statementBatching;
+    }
+
+    public SubstraitRelVisitor.Options getRelToSubstraitOptions() {
+      return this.relToSubstraitOptions;
     }
   }
 
@@ -94,7 +111,10 @@ public class SqlToSubstrait extends SqlConverterBase {
                       .setRoot(
                           io.substrait.proto.RelRoot.newBuilder()
                               .setInput(
-                                  SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION)
+                                  SubstraitRelVisitor.convert(
+                                          root,
+                                          EXTENSION_COLLECTION,
+                                          options.getRelToSubstraitOptions())
                                       .accept(relProtoConverter))
                               .addAllNames(
                                   TypeConverter.toNamedStruct(root.validatedRowType).names())));
