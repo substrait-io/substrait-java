@@ -110,7 +110,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @ParameterizedTest
-  @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
+  @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
   public void setTest(Set.SetOp op, boolean multi) throws Exception {
     assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
   }
