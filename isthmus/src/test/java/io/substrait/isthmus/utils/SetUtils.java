@@ -31,16 +31,18 @@ public class SetUtils {
         };
 
     StringBuilder query = new StringBuilder();
-    query.append("select p_partkey as partkey from part where p_partkey > cast(100 as bigint)\n");
+    query.append("select p_partkey as partkey, p_name as str, (p_partkey + p_partkey) as expr\n" +
+            "from part where p_partkey > cast(100 as bigint)\n");
     query.append(opString + "\n");
     query.append(
-        "select l_partkey as partkey from lineitem where l_orderkey > cast(100 as bigint)\n");
+        "select l_partkey as partkey, l_shipinstruct as str, (l_partkey + l_partkey) as expr\n" +
+                "from lineitem where l_orderkey > cast(100 as bigint)\n");
     if (!multi) {
       return query.toString();
     } else {
       // check with 3 relations
       query.append(opString + "\n");
-      query.append("select ps_partkey as partkey from partsupp");
+      query.append("select ps_partkey as partkey, ps_comment as str, (ps_partkey + ps_partkey) as expr from partsupp");
       return query.toString();
     }
   }
