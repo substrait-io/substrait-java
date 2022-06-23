@@ -8,6 +8,7 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.Cross;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -114,6 +116,18 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
+  public RelNode visit(Cross cross) throws RuntimeException {
+    var left = cross.getLeft().accept(this);
+    var right = cross.getRight().accept(this);
+    // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
+    return relBuilder
+        .push(left)
+        .push(right)
+        .join(JoinRelType.INNER, relBuilder.literal(true))
+        .build();
+  }
+
+  @Override
   public RelNode visit(Join join) throws RuntimeException {
     var left = join.getLeft().accept(this);
     var right = join.getRight().accept(this);
@@ -178,9 +192,14 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   private AggregateCall fromMeasure(Aggregate.Measure measure) {
+    var eArgs = measure.getFunction().arguments();
     var arguments =
-        measure.getFunction().arguments().stream()
-            .map(expr -> expr.accept(expressionRexConverter))
+        IntStream.range(0, measure.getFunction().arguments().size())
+            .mapToObj(
+                i ->
+                    eArgs
+                        .get(i)
+                        .accept(measure.getFunction().declaration(), i, expressionRexConverter))
             .toList();
     var operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(

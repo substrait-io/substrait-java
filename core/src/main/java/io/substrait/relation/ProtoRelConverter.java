@@ -4,11 +4,13 @@ import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.AggregateRel;
+import io.substrait.proto.CrossRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -24,8 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
-/** Converts from proto to pojo rel representation TODO: AdvancedExtension, CrossJoin */
+/** Converts from proto to pojo rel representation TODO: AdvancedExtension */
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
@@ -68,8 +71,11 @@ public class ProtoRelConverter {
       case PROJECT -> {
         return newProject(rel.getProject());
       }
+      case CROSS -> {
+        return newCross(rel.getCross());
+      }
       default -> {
-        // TODO: add support for SET, EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF, CROSS
+        // TODO: add support for EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
     }
@@ -187,16 +193,20 @@ public class ProtoRelConverter {
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
+    var pF = new FunctionArg.ProtoFrom(converter);
     for (var measure : rel.getMeasuresList()) {
       var func = measure.getMeasure();
+      var funcDecl = lookup.getAggregateFunction(func.getFunctionReference(), extensions);
+      var args =
+          IntStream.range(0, measure.getMeasure().getArgumentsCount())
+              .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
+              .toList();
       measures.add(
           Aggregate.Measure.builder()
               .function(
                   AggregateFunctionInvocation.builder()
-                      .arguments(
-                          measure.getMeasure().getArgsList().stream().map(converter::from).toList())
-                      .declaration(
-                          lookup.getAggregateFunction(func.getFunctionReference(), extensions))
+                      .arguments(args)
+                      .declaration(funcDecl)
                       .outputType(FromProto.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
                       .invocation(func.getInvocation())
@@ -248,6 +258,20 @@ public class ProtoRelConverter {
         .postJoinFilter(
             Optional.ofNullable(
                 rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
+        .build();
+  }
+
+  private Rel newCross(CrossRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    return Cross.builder()
+        .left(left)
+        .right(right)
+        .deriveRecordType(unionedStruct)
+        .remap(optionalRelmap(rel.getCommon()))
         .build();
   }
 

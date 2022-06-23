@@ -1,14 +1,20 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.isthmus.utils.Utils;
+import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.AggregateFunction;
+import io.substrait.relation.Cross;
+import io.substrait.relation.Rel;
+import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.relation.Set;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,6 +65,42 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   @Test
   public void filter() throws IOException, SqlParseException {
     assertProtoPlanRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY + 1 > 10");
+  }
+
+  @Test
+  public void crossJoin() throws IOException, SqlParseException {
+    int[] counter = new int[1];
+    var visitor =
+        new RelCopyOnWriteVisitor() {
+          public Optional<Rel> visit(Cross cross) throws RuntimeException {
+            counter[0]++;
+            return super.visit(cross);
+          }
+        };
+    Plan plan1 =
+        assertProtoPlanRoundrip(
+            "select\n"
+                + "  c.c_custKey,\n"
+                + "  o.o_custkey\n"
+                + "from\n"
+                + "  \"customer\" c cross join\n"
+                + "  \"orders\" o",
+            new SqlToSubstrait(
+                new SqlToSubstrait.Options(new SubstraitRelVisitor.Options(KEEP_AS_CROSS_JOIN))));
+    plan1.getRoots().forEach(t -> t.getInput().accept(visitor));
+    assertEquals(1, counter[0]);
+    Plan plan2 =
+        assertProtoPlanRoundrip(
+            "select\n"
+                + "  c.c_custKey,\n"
+                + "  o.o_custkey\n"
+                + "from\n"
+                + "  \"customer\" c,\n"
+                + "  \"orders\" o",
+            new SqlToSubstrait(
+                new SqlToSubstrait.Options(new SubstraitRelVisitor.Options(KEEP_AS_CROSS_JOIN))));
+    plan2.getRoots().forEach(t -> t.getInput().accept(visitor));
+    assertEquals(2, counter[0]);
   }
 
   @Test

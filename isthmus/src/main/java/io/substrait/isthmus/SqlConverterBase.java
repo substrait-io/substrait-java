@@ -2,13 +2,16 @@ package io.substrait.isthmus;
 
 import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.function.SimpleExtension;
+import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -20,12 +23,14 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
+import org.apache.calcite.sql.ddl.SqlKeyConstraint;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -75,7 +80,7 @@ class SqlConverterBase {
     EXTENSION_COLLECTION = defaults;
   }
 
-  protected Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
+  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
       throws SqlParseException {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
@@ -89,6 +94,27 @@ class SqlConverterBase {
         }
       }
     }
+    return Pair.of(validator, catalogReader);
+  }
+
+  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(
+      Function<List<String>, NamedStruct> tableLookup) throws SqlParseException {
+    Function<List<String>, Table> lookup =
+        id -> {
+          NamedStruct table = tableLookup.apply(id);
+          if (table == null) {
+            return null;
+          }
+          return new DefinedTable(
+              id.get(id.size() - 1),
+              factory,
+              TypeConverter.convert(factory, table.struct(), table.names()));
+        };
+
+    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     return Pair.of(validator, catalogReader);
   }
 
@@ -117,6 +143,12 @@ class SqlConverterBase {
 
       for (SqlNode node : create.columnList) {
         if (!(node instanceof SqlColumnDeclaration)) {
+          if (node instanceof SqlKeyConstraint) {
+            // key constraints declarations, like primary key declaration, are valid and should not
+            // result in parse exceptions. Ignore the constraint declaration.
+            continue;
+          }
+
           fail("Unexpected column list construction.", node.getParserPosition());
         }
 

@@ -4,7 +4,9 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +38,17 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   private Optional<List<Expression>> transformExpressions(List<Expression> oldExpressions) {
     return transformList(oldExpressions, t -> this.visitExpression(t));
+  }
+
+  private Optional<List<FunctionArg>> transformFuncArgs(List<FunctionArg> oldExpressions) {
+    return transformList(
+        oldExpressions,
+        t ->
+            switch (t) {
+              case Expression e -> this.visitExpression(e)
+                  .flatMap(ex -> Optional.<FunctionArg>of(ex));
+              default -> Optional.of(t);
+            });
   }
 
   private static boolean allEmpty(Optional<?>... optionals) {
@@ -138,6 +151,27 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
         .map(input -> ImmutableSort.builder().from(sort).input(input).build());
   }
 
+  @Override
+  public Optional<Rel> visit(Cross cross) throws RuntimeException {
+    var left = cross.getLeft().accept(this);
+    var right = cross.getRight().accept(this);
+    if (allEmpty(left, right)) {
+      return Optional.empty();
+    }
+    Type.Struct unionedStruct =
+        Type.Struct.builder()
+            .from(left.orElse(cross.getLeft()).getRecordType())
+            .from(right.orElse(cross.getRight()).getRecordType())
+            .build();
+    return Optional.of(
+        ImmutableCross.builder()
+            .from(cross)
+            .left(left.orElse(cross.getLeft()))
+            .right(right.orElse(cross.getRight()))
+            .deriveRecordType(unionedStruct)
+            .build());
+  }
+
   private Optional<Expression> visitExpression(Expression expression) {
     ExpressionVisitor<Optional<Expression>, RuntimeException> visitor =
         new AbstractExpressionVisitor<>() {
@@ -198,7 +232,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
           @Override
           public Optional<Expression> visit(Expression.ScalarFunctionInvocation expr)
               throws RuntimeException {
-            return transformExpressions(expr.arguments())
+            return transformFuncArgs(expr.arguments())
                 .map(
                     t ->
                         Expression.ScalarFunctionInvocation.builder()

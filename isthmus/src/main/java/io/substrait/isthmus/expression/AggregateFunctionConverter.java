@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FunctionArg;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.proto.AggregateFunction;
@@ -49,7 +50,7 @@ public class AggregateFunctionConverter
   protected AggregateFunctionInvocation generateBinding(
       WrappedAggregateCall call,
       SimpleExtension.AggregateFunctionVariant function,
-      List<Expression> arguments,
+      List<FunctionArg> arguments,
       Type outputType) {
     AggregateCall agg = call.getUnderlying();
 

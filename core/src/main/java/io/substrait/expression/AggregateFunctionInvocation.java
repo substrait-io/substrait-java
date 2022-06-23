@@ -10,7 +10,7 @@ import org.immutables.value.Value;
 public abstract class AggregateFunctionInvocation {
   public abstract SimpleExtension.AggregateFunctionVariant declaration();
 
-  public abstract List<Expression> arguments();
+  public abstract List<FunctionArg> arguments();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 

@@ -15,8 +15,8 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.*;
@@ -121,7 +121,13 @@ public class LiteralConverter {
         Object value = literal.getValue();
         yield switch (value) {
           case NlsString s -> string(n, s.getValue());
-          case TimeUnitRange tur -> string(n, tur.name());
+          case Enum v -> {
+            Optional<Expression.Literal> r =
+                EnumConverter.canConvert(v) ? Optional.of(string(n, v.name())) : Optional.empty();
+            yield r.orElseThrow(
+                () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
+          }
+            // case TimeUnitRange tur -> string(n, tur.name());
           default -> throw new UnsupportedOperationException("Unable to handle symbol: " + value);
         };
       }

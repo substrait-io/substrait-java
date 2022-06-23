@@ -3,18 +3,22 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.*;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FunctionArg;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.SimpleExtension;
 import io.substrait.function.ToTypeString;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.isthmus.Utils;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 
@@ -231,19 +235,82 @@ abstract class FunctionConverter<
       };
     }
 
+    /*
+     * In case of a `RexLiteral` of an Enum value try both `req` and `op` signatures
+     * for that argument position.
+     */
+    private Stream<String> matchKeys(List<RexNode> rexOperands, List<String> opTypes) {
+
+      assert (rexOperands.size() == opTypes.size());
+
+      if (rexOperands.size() == 0) {
+        return Stream.of("");
+      } else {
+        List<List<String>> argTypeLists =
+            Streams.zip(
+                    rexOperands.stream(),
+                    opTypes.stream(),
+                    (rexArg, opType) -> {
+                      boolean isOption = false;
+                      if (rexArg instanceof RexLiteral) {
+                        isOption = ((RexLiteral) rexArg).getValue() instanceof Enum;
+                      }
+                      return isOption ? List.of("req", "opt") : List.of(opType);
+                    })
+                .toList();
+
+        return Utils.crossProduct(argTypeLists)
+            .map(typList -> typList.stream().collect(Collectors.joining("_")));
+      }
+    }
+
     public Optional<T> attemptMatch(C call, Function<RexNode, Expression> topLevelConverter) {
 
+      /*
+       * Here the RexLiteral with an Enum value is mapped to String Literal.
+       * Not enough context here to construct a substrait EnumArg.
+       * Once a FunctionVariant is resolved we can map the String Literal
+       * to a EnumArg.
+       */
       var operands = call.getOperands().map(topLevelConverter).toList();
       var opTypes = operands.stream().map(Expression::getType).toList();
 
       var outputType = TypeConverter.convert(call.getType());
 
       // try to do a direct match
-      var directMatchkey = F.constructKeyFromTypes(name, opTypes);
-      var variant = directMap.get(directMatchkey);
-      if (variant != null) {
+      var possibleKeys =
+          matchKeys(
+              call.getOperands().toList(),
+              opTypes.stream().map(t -> t.accept(ToTypeString.INSTANCE)).toList());
+
+      var directMatchKey =
+          possibleKeys
+              .map(argList -> name + ":" + argList)
+              .filter(k -> directMap.containsKey(k))
+              .findFirst();
+
+      if (directMatchKey.isPresent()) {
+        var variant = directMap.get(directMatchKey.get());
         variant.validateOutputType(operands, outputType);
-        return Optional.of(generateBinding(call, variant, operands, outputType));
+
+        List<FunctionArg> funcArgs =
+            Streams.zip(
+                    call.getOperands(),
+                    operands.stream(),
+                    (r, o) -> {
+                      if (EnumConverter.isEnumValue(r)) {
+                        return EnumConverter.fromRex(variant, (RexLiteral) r).orElseGet(() -> null);
+                      } else {
+                        return o;
+                      }
+                    })
+                .toList();
+        var allArgsMapped = funcArgs.stream().filter(e -> e == null).findFirst().isEmpty();
+        if (allArgsMapped) {
+          return Optional.of(generateBinding(call, variant, funcArgs, outputType));
+        } else {
+          return Optional.empty();
+        }
       }
 
       if (singularInputType.isPresent()) {
@@ -259,7 +326,12 @@ abstract class FunctionConverter<
           var declaration = out.get();
           var coercedArgs = coerceArguments(operands, type);
           declaration.validateOutputType(coercedArgs, outputType);
-          return Optional.of(generateBinding(call, out.get(), coercedArgs, outputType));
+          return Optional.of(
+              generateBinding(
+                  call,
+                  out.get(),
+                  coercedArgs.stream().map(FunctionArg.class::cast).toList(),
+                  outputType));
         }
       }
       return Optional.empty();
@@ -291,7 +363,7 @@ abstract class FunctionConverter<
   }
 
   protected abstract T generateBinding(
-      C call, F function, List<Expression> arguments, Type outputType);
+      C call, F function, List<FunctionArg> arguments, Type outputType);
 
   public interface SingularArgumentMatcher<F> {
     Optional<F> tryMatch(Type type, Type outputType);
