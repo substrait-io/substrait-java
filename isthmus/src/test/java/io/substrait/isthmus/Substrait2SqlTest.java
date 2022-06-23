@@ -2,7 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.substrait.isthmus.utils.Utils;
+import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.relation.Set;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
@@ -112,7 +112,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
   public void setTest(Set.SetOp op, boolean multi) throws Exception {
-    assertSqlSubstraitRelRoundTrip(Utils.getSetQuery(op, multi));
+    assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test

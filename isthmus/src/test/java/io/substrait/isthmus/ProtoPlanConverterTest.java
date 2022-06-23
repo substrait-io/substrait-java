@@ -3,7 +3,7 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.isthmus.utils.Utils;
+import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -137,7 +137,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.Utils#setTestConfig")
   public void setTest(Set.SetOp op, boolean multi) throws Exception {
-    assertProtoPlanRoundrip(Utils.getSetQuery(op, multi));
+    assertProtoPlanRoundrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test
