@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
+import io.substrait.expression.Expression;
 import io.substrait.function.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -9,14 +10,17 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
+import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
+import io.substrait.relation.Sort;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -24,12 +28,14 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
@@ -258,6 +264,59 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         RelCollations.EMPTY,
         returnType,
         null);
+  }
+
+  @Override
+  public RelNode visit(Sort sort) throws RuntimeException {
+    RelNode child = sort.getInput().accept(this);
+    List<RelFieldCollation> relFieldCollations =
+        sort.getSortFields().stream().map(sortField -> toRelFieldCollation(sortField)).toList();
+    if (relFieldCollations.isEmpty()) {
+      return relBuilder.push(child).sort(Collections.EMPTY_LIST).build();
+    }
+    return relBuilder.push(child).sort(RelCollations.of(relFieldCollations)).build();
+  }
+
+  @Override
+  public RelNode visit(Fetch fetch) throws RuntimeException {
+    RelNode child = fetch.getInput().accept(this);
+    var optCount = fetch.getCount();
+    long count = optCount.orElse(-1L);
+    var offset = fetch.getOffset();
+    if (offset > Integer.MAX_VALUE) {
+      throw new RuntimeException(String.format("offset is overflowed as an integer: %d", offset));
+    }
+    if (count > Integer.MAX_VALUE) {
+      throw new RuntimeException(String.format("count is overflowed as an integer: %d", count));
+    }
+    return relBuilder.push(child).limit((int) offset, (int) count).build();
+  }
+
+  private RelFieldCollation toRelFieldCollation(Expression.SortField sortField) {
+    var expression = sortField.expr();
+    var rex = expression.accept(expressionRexConverter);
+    var sortDirection = sortField.direction();
+    RexSlot rexSlot = (RexSlot) rex;
+    int fieldIndex = rexSlot.getIndex();
+    var fieldDirection = RelFieldCollation.Direction.ASCENDING;
+    var nullDirection = RelFieldCollation.NullDirection.UNSPECIFIED;
+    switch (sortDirection) {
+      case ASC_NULLS_FIRST -> nullDirection = RelFieldCollation.NullDirection.FIRST;
+      case ASC_NULLS_LAST -> nullDirection = RelFieldCollation.NullDirection.LAST;
+      case DESC_NULLS_FIRST -> {
+        nullDirection = RelFieldCollation.NullDirection.FIRST;
+        fieldDirection = RelFieldCollation.Direction.DESCENDING;
+      }
+      case DESC_NULLS_LAST -> {
+        nullDirection = RelFieldCollation.NullDirection.LAST;
+        fieldDirection = RelFieldCollation.Direction.DESCENDING;
+      }
+      case CLUSTERED -> fieldDirection = RelFieldCollation.Direction.CLUSTERED;
+
+      default -> throw new RuntimeException(
+          String.format("Unexpected Expression.SortDirection enum: %s !", sortDirection));
+    }
+    return new RelFieldCollation(fieldIndex, fieldDirection, nullDirection);
   }
 
   @Override
