@@ -216,7 +216,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   @Override
   public RexNode visit(Expression.Window expr) throws RuntimeException {
     // todo:to construct the RexOver
-    return null;
+    return visitFallback(expr);
   }
 
   @Override
