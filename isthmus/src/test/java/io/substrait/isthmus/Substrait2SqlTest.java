@@ -142,4 +142,22 @@ public class Substrait2SqlTest extends PlanTestBase {
         aggregate.getAggCallList().get(0).getAggregation()
             == SqlStdOperatorTable.APPROX_COUNT_DISTINCT);
   }
+
+  @Test
+  public void simpleOrderByClause() throws Exception {
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate, l_discount");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc limit 100 offset 1000");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc limit 100");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' limit 100");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc nulls first");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc nulls last");
+  }
 }
