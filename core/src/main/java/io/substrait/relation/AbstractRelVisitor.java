@@ -30,6 +30,11 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   }
 
   @Override
+  public OUTPUT visit(Set set) throws EXCEPTION {
+    return visitFallback(set);
+  }
+
+  @Override
   public OUTPUT visit(NamedScan namedScan) throws EXCEPTION {
     return visitFallback(namedScan);
   }

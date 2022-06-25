@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -10,11 +11,14 @@ import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Cross;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
+import io.substrait.relation.Set;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class ProtoPlanConverterTest extends PlanTestBase {
 
@@ -128,6 +132,12 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             + "  revenue desc,\n"
             + "  o.o_orderdate\n"
             + "limit 10");
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
+  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+    assertProtoPlanRoundrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test

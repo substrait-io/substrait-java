@@ -162,17 +162,23 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(LogicalUnion union) {
-    return super.visit(union);
+    var inputs = apply(union.getInputs());
+    var setOp = union.all ? Set.SetOp.UNION_ALL : Set.SetOp.UNION_DISTINCT;
+    return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(LogicalIntersect intersect) {
-    return super.visit(intersect);
+    var inputs = apply(intersect.getInputs());
+    var setOp = intersect.all ? Set.SetOp.INTERSECTION_MULTISET : Set.SetOp.INTERSECTION_PRIMARY;
+    return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(LogicalMinus minus) {
-    return super.visit(minus);
+    var inputs = apply(minus.getInputs());
+    var setOp = minus.all ? Set.SetOp.MINUS_MULTISET : Set.SetOp.MINUS_PRIMARY;
+    return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
@@ -303,6 +309,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   public Rel apply(RelNode r) {
     return reverseAccept(r);
+  }
+
+  public List<Rel> apply(List<RelNode> inputs) {
+    return inputs.stream().map(inputRel -> apply(inputRel)).toList();
   }
 
   public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {

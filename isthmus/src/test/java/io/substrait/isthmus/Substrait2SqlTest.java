@@ -2,11 +2,15 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.isthmus.utils.SetUtils;
+import io.substrait.relation.Set;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class Substrait2SqlTest extends PlanTestBase {
 
@@ -103,6 +107,12 @@ public class Substrait2SqlTest extends PlanTestBase {
   public void simpleTestAgg3() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey, sum(l_extendedprice * (1.0 - l_discount)) from lineitem group by l_partkey");
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
+  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+    assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test

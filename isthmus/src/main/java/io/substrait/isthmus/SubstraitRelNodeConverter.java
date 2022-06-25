@@ -16,6 +16,7 @@ import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -152,6 +153,28 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
               "Unknown join type is not supported");
         };
     return relBuilder.push(left).push(right).join(joinType, condition).build();
+  }
+
+  @Override
+  public RelNode visit(Set set) throws RuntimeException {
+    int numInputs = set.getInputs().size();
+    set.getInputs()
+        .forEach(
+            input -> {
+              relBuilder.push(input.accept(this));
+            });
+    var builder =
+        switch (set.getSetOp()) {
+          case MINUS_PRIMARY -> relBuilder.minus(false, numInputs);
+          case MINUS_MULTISET -> relBuilder.minus(true, numInputs);
+          case INTERSECTION_PRIMARY -> relBuilder.intersect(false, numInputs);
+          case INTERSECTION_MULTISET -> relBuilder.intersect(true, numInputs);
+          case UNION_DISTINCT -> relBuilder.union(false, numInputs);
+          case UNION_ALL -> relBuilder.union(true, numInputs);
+          case UNKNOWN -> throw new UnsupportedOperationException(
+              "Unknown set operation is not supported");
+        };
+    return builder.build();
   }
 
   @Override

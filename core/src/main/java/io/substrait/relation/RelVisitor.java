@@ -11,6 +11,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(Join join) throws EXCEPTION;
 
+  OUTPUT visit(Set set) throws EXCEPTION;
+
   OUTPUT visit(NamedScan namedScan) throws EXCEPTION;
 
   OUTPUT visit(Project project) throws EXCEPTION;
