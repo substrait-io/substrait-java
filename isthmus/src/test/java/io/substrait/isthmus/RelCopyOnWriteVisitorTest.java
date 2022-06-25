@@ -58,6 +58,17 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
           + "  o.o_orderdate\n"
           + "limit 10";
 
+  private static final String UNION_DISTINCT_COUNT_QUERY =
+      "select\n"
+          + "  count(distinct l.l_orderkey) as cnt\n"
+          + "from\n"
+          + "  \"lineitem\" l\n"
+          + "union\n"
+          + "select\n"
+          + "  count(distinct o.o_orderkey) as cnt\n"
+          + "from\n"
+          + "  \"orders\" o\n";
+
   private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
@@ -126,6 +137,24 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
     String newSql = SubstraitToSql.toSql(relnodeRoot);
     assertTrue(newSql.toUpperCase().contains("APPROX_COUNT_DISTINCT"));
+  }
+
+  @Test
+  public void countCountDistinctsUnion() throws IOException, SqlParseException {
+    Plan plan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
+    assertEquals(2, new CountCountDistinct().getCountDistincts(plan));
+  }
+
+  @Test
+  public void replaceCountDistinctsInUnion() throws IOException, SqlParseException {
+    Plan oldPlan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
+    assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
+    assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));
+    ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
+    Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
+    assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
+    assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
+    assertPlanRoundrip(newPlan);
   }
 
   private static class HasTableReference {

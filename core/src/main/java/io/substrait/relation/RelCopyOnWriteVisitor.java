@@ -116,6 +116,12 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   }
 
   @Override
+  public Optional<Rel> visit(Set set) throws RuntimeException {
+    return transformList(set.getInputs(), t -> t.accept(this))
+        .map(u -> ImmutableSet.builder().from(set).inputs(u).setOp(set.getSetOp()).build());
+  }
+
+  @Override
   public Optional<Rel> visit(Project project) throws RuntimeException {
     var input = project.getInput().accept(this);
     Optional<List<Expression>> expressions = transformExpressions(project.getExpressions());
