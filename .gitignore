@@ -5,3 +5,5 @@
 gen
 **/.DS_Store
 *.iml
+out/**
+*.iws
