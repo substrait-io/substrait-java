@@ -37,7 +37,9 @@ public class FromProto {
       case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
       case MAP -> n(type.getMap().getNullability())
           .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
-      case USER_DEFINED_TYPE_REFERENCE, KIND_NOT_SET -> throw new UnsupportedOperationException();
+      case USER_DEFINED_TYPE_REFERENCE,
+          USER_DEFINED,
+          KIND_NOT_SET -> throw new UnsupportedOperationException();
     };
   }
 
