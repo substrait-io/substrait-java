@@ -143,8 +143,6 @@ public interface TypeExpression {
       GTE,
       AND,
       OR,
-      IS_NULL,
-      IS_NOT_NULL,
       EQ,
       NOT_EQ,
       COVERS
