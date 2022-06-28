@@ -35,7 +35,9 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.MINUS_DATE, "subtract"),
                 s(SqlStdOperatorTable.DATETIME_PLUS, "add"),
                 s(SqlStdOperatorTable.EXTRACT, "extract"),
-                s(SqlStdOperatorTable.LIKE))
+                s(SqlStdOperatorTable.LIKE),
+                s(SqlStdOperatorTable.SUBSTRING, "substring"),
+                s(SqlStdOperatorTable.CONCAT, "concat"))
             .build();
 
     AGGREGATE_SIGS =
