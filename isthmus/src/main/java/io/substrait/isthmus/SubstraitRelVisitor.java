@@ -56,12 +56,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.DEFAULTS);
     converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
-    var functionConverters = new ArrayList<NonScalarFuncConverter>();
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-    functionConverters.add(aggregateFunctionConverter);
-    functionConverters.add(new WindowFunctionConverter(extensions.windowFunctions(), typeFactory));
-    this.converter = new RexExpressionConverter(this, converters, functionConverters);
+    var windowFunctionConverter =
+        new WindowFunctionConverter(
+            extensions.windowFunctions(), typeFactory, aggregateFunctionConverter);
+    this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
     this.options = options;
   }
 

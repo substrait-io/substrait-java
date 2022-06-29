@@ -7,9 +7,7 @@ import java.util.List;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class AggregateFunctionInvocation
-    extends AbstractFunctionInvocation<
-        SimpleExtension.AggregateFunctionVariant, AggregateFunction.AggregationInvocation> {
+public abstract class AggregateFunctionInvocation {
   public abstract SimpleExtension.AggregateFunctionVariant declaration();
 
   public abstract List<FunctionArg> arguments();

@@ -7,9 +7,7 @@ import java.util.List;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class WindowFunctionInvocation
-    extends AbstractFunctionInvocation<
-        SimpleExtension.WindowFunctionVariant, AggregateFunction.AggregationInvocation> {
+public abstract class WindowFunctionInvocation {
 
   public abstract SimpleExtension.WindowFunctionVariant declaration();
 
