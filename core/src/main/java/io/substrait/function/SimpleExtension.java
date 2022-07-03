@@ -49,6 +49,11 @@ public class SimpleExtension {
     MANY
   }
 
+  enum WindowType {
+    PARTITION,
+    STREAMING
+  }
+
   private SimpleExtension() {}
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
@@ -307,6 +312,23 @@ public class SimpleExtension {
     }
   }
 
+  @JsonDeserialize(as = ImmutableSimpleExtension.WindowFunction.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.WindowFunction.class)
+  @Value.Immutable
+  public abstract static class WindowFunction {
+    @Nullable
+    public abstract String name();
+
+    @Nullable
+    public abstract String description();
+
+    public abstract List<WindowFunctionVariant> impls();
+
+    public Stream<WindowFunctionVariant> resolve(String uri) {
+      return impls().stream().map(f -> f.resolve(uri, name(), description()));
+    }
+  }
+
   @JsonDeserialize(as = ImmutableSimpleExtension.AggregateFunctionVariant.class)
   @JsonSerialize(as = ImmutableSimpleExtension.AggregateFunctionVariant.class)
   @Value.Immutable
@@ -339,6 +361,46 @@ public class SimpleExtension {
     }
   }
 
+  @JsonDeserialize(as = ImmutableSimpleExtension.WindowFunctionVariant.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.WindowFunctionVariant.class)
+  @Value.Immutable
+  public abstract static class WindowFunctionVariant extends Function {
+
+    @Value.Default
+    @JsonProperty("decomposable")
+    public Decomposability decomposability() {
+      return Decomposability.NONE;
+    }
+
+    public abstract TypeExpression intermediate();
+
+    @Value.Default
+    @JsonProperty("window_type")
+    public WindowType windowType() {
+      return WindowType.PARTITION;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString();
+    }
+
+    WindowFunctionVariant resolve(String uri, String name, String description) {
+      return ImmutableSimpleExtension.WindowFunctionVariant.builder()
+          .uri(uri)
+          .name(name)
+          .description(description)
+          .nullability(nullability())
+          .args(args())
+          .variadic(variadic())
+          .decomposability(decomposability())
+          .intermediate(intermediate())
+          .returnType(returnType())
+          .windowType(windowType())
+          .build();
+    }
+  }
+
   @JsonDeserialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
   @JsonSerialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
   @Value.Immutable
@@ -349,15 +411,23 @@ public class SimpleExtension {
     @JsonProperty("aggregate_functions")
     public abstract List<AggregateFunction> aggregates();
 
+    @JsonProperty("window_functions")
+    public abstract List<WindowFunction> windows();
+
     public int size() {
       return (scalars() == null ? 0 : scalars().size())
-          + (aggregates() == null ? 0 : aggregates().size());
+          + (aggregates() == null ? 0 : aggregates().size())
+          + (windows() == null ? 0 : windows().size());
     }
 
     public Stream<SimpleExtension.Function> resolve(String uri) {
       return Stream.concat(
-          scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(uri)),
-          aggregates() == null ? Stream.of() : aggregates().stream().flatMap(f -> f.resolve(uri)));
+          Stream.concat(
+              scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(uri)),
+              aggregates() == null
+                  ? Stream.of()
+                  : aggregates().stream().flatMap(f -> f.resolve(uri))),
+          windows() == null ? Stream.of() : windows().stream().flatMap(f -> f.resolve(uri)));
     }
   }
 
@@ -367,12 +437,16 @@ public class SimpleExtension {
 
     public abstract List<AggregateFunctionVariant> aggregateFunctions();
 
+    public abstract List<WindowFunctionVariant> windowFunctions();
+
     private final Supplier<Set<String>> namespaceSupplier =
         Util.memoize(
             () -> {
               return Stream.concat(
-                      scalarFunctions().stream().map(Function::uri),
-                      aggregateFunctions().stream().map(Function::uri))
+                      Stream.concat(
+                          scalarFunctions().stream().map(Function::uri),
+                          aggregateFunctions().stream().map(Function::uri)),
+                      windowFunctions().stream().map(Function::uri))
                   .collect(Collectors.toSet());
             });
     private final Supplier<Map<FunctionAnchor, ScalarFunctionVariant>> scalarFunctionsLookup =
@@ -388,6 +462,15 @@ public class SimpleExtension {
         Util.memoize(
             () -> {
               return aggregateFunctions().stream()
+                  .collect(
+                      Collectors.toMap(
+                          Function::getAnchor, java.util.function.Function.identity()));
+            });
+
+    private final Supplier<Map<FunctionAnchor, WindowFunctionVariant>> windowFunctionsLookup =
+        Util.memoize(
+            () -> {
+              return windowFunctions().stream()
                   .collect(
                       Collectors.toMap(
                           Function::getAnchor, java.util.function.Function.identity()));
@@ -432,12 +515,27 @@ public class SimpleExtension {
               anchor.key(), anchor.namespace()));
     }
 
+    public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
+      var variant = windowFunctionsLookup.get().get(anchor);
+      if (variant != null) {
+        return variant;
+      }
+      checkNamespace(anchor.namespace());
+      throw new IllegalArgumentException(
+          String.format(
+              "Unexpected window aggregate function with key %s. The namespace %s is loaded "
+                  + "but no window aggregate function with this key was found.",
+              anchor.key(), anchor.namespace()));
+    }
+
     public ExtensionCollection merge(ExtensionCollection extensionCollection) {
       return ImmutableSimpleExtension.ExtensionCollection.builder()
           .addAllAggregateFunctions(aggregateFunctions())
           .addAllAggregateFunctions(extensionCollection.aggregateFunctions())
           .addAllScalarFunctions(scalarFunctions())
           .addAllScalarFunctions(extensionCollection.scalarFunctions())
+          .addAllWindowFunctions(windowFunctions())
+          .addAllWindowFunctions(extensionCollection.windowFunctions())
           .build();
     }
   }
@@ -492,6 +590,8 @@ public class SimpleExtension {
                   doc.aggregates().stream().flatMap(t -> t.resolve(namespace)).toList())
               .addAllScalarFunctions(
                   doc.scalars().stream().flatMap(t -> t.resolve(namespace)).toList())
+              .addAllWindowFunctions(
+                  doc.windows().stream().flatMap(t -> t.resolve(namespace)).toList())
               .build();
       logger.debug(
           "Loaded {} aggregate functions and {} scalar functions from {}.",
