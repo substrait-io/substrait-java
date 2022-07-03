@@ -2,12 +2,15 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.function.SimpleExtension;
+import io.substrait.relation.Aggregate;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import org.immutables.value.Value;
 
 @Value.Enclosing
@@ -665,6 +668,41 @@ public interface Expression extends FunctionArg {
     public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
       return visitor.visit(this);
     }
+  }
+
+  @Value.Immutable
+  abstract static class Window implements Expression {
+    @Nullable
+    public abstract Aggregate.Measure aggregateFunction();
+
+    @Nullable
+    public abstract WindowFunction windowFunction();
+
+    public abstract List<Expression> partitionBy();
+
+    public abstract List<SortField> orderBy();
+
+    public abstract WindowBound lowerBound();
+
+    public abstract WindowBound upperBound();
+
+    public abstract boolean hasNormalAggregateFunction();
+
+    public static ImmutableExpression.Window.Builder builder() {
+      return ImmutableExpression.Window.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  public abstract static class WindowFunction {
+    public abstract WindowFunctionInvocation getFunction();
+
+    public abstract Optional<Expression> getPreMeasureFilter();
+    /** public static ImmutableMeasure.Builder builder() { return ImmutableMeasure.builder(); } */
   }
 
   enum PredicateOp {

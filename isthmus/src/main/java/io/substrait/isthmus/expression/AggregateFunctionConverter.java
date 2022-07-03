@@ -39,13 +39,6 @@ public class AggregateFunctionConverter
     super(functions, typeFactory);
   }
 
-  public AggregateFunctionConverter(
-      List<SimpleExtension.AggregateFunctionVariant> functions,
-      List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory) {
-    super(functions, additionalSignatures, typeFactory);
-  }
-
   @Override
   protected AggregateFunctionInvocation generateBinding(
       WrappedAggregateCall call,
