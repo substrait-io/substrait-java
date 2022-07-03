@@ -306,6 +306,40 @@ public class ExpressionCreator {
         .build();
   }
 
+  public static WindowFunctionInvocation windowFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      List<Expression.SortField> sort,
+      AggregateFunction.AggregationInvocation invocation,
+      Iterable<? extends FunctionArg> arguments) {
+    return WindowFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(phase)
+        .sort(sort)
+        .invocation(invocation)
+        .addAllArguments(arguments)
+        .build();
+  }
+
+  public static WindowFunctionInvocation windowFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      List<Expression.SortField> sort,
+      AggregateFunction.AggregationInvocation invocation,
+      FunctionArg... arguments) {
+    return WindowFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(phase)
+        .sort(sort)
+        .invocation(invocation)
+        .addArguments(arguments)
+        .build();
+  }
+
   public static Expression cast(Type type, Expression expression) {
     return Expression.Cast.builder().type(type).input(expression).build();
   }

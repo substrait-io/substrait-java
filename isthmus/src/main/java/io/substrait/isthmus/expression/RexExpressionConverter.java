@@ -7,10 +7,12 @@ import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.StringTypeVisitor;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
@@ -20,19 +22,26 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   private final List<CallConverter> callConverters;
   private final SubstraitRelVisitor relVisitor;
+  private WindowFunctionConverter windowFunctionConverter;
+
+  private RelNode inputRel;
+  private Type.Struct inputType;
 
   public RexExpressionConverter(SubstraitRelVisitor relVisitor, CallConverter... callConverters) {
-    this(relVisitor, Arrays.asList(callConverters));
+    this(relVisitor, Arrays.asList(callConverters), null);
   }
 
   public RexExpressionConverter(CallConverter... callConverters) {
-    this(null, Arrays.asList(callConverters));
+    this(null, Arrays.asList(callConverters), null);
   }
 
   public RexExpressionConverter(
-      SubstraitRelVisitor relVisitor, List<CallConverter> callConverters) {
+      SubstraitRelVisitor relVisitor,
+      List<CallConverter> callConverters,
+      WindowFunctionConverter windowFunctionConverter) {
     this.callConverters = callConverters;
     this.relVisitor = relVisitor;
+    this.windowFunctionConverter = windowFunctionConverter;
   }
 
   public RexExpressionConverter() {
@@ -73,7 +82,19 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitOver(RexOver over) {
-    throw new UnsupportedOperationException("RexOver not supported");
+    // maybe a aggregate function or a window function
+    var exp =
+        windowFunctionConverter.convert(
+            inputRel,
+            inputType,
+            over,
+            t -> {
+              RexNode r = (RexNode) t;
+              return r.accept(this);
+            },
+            this);
+
+    return exp;
   }
 
   @Override
@@ -152,5 +173,13 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   @Override
   public Expression visitPatternFieldRef(RexPatternFieldRef fieldRef) {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
+  }
+
+  public void setInputRel(RelNode inputRel) {
+    this.inputRel = inputRel;
+  }
+
+  public void setInputType(Type.Struct inputType) {
+    this.inputType = inputType;
   }
 }
