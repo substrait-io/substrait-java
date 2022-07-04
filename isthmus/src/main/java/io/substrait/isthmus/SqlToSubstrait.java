@@ -12,6 +12,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -77,6 +78,11 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
     var pair = registerCreateTables(tables);
+    return executeInner(sql, factory, pair.left, pair.right);
+  }
+
+  public Plan execute(String sql, String name, Schema schema) throws SqlParseException {
+    var pair = registerSchema(name, schema);
     return executeInner(sql, factory, pair.left, pair.right);
   }
 

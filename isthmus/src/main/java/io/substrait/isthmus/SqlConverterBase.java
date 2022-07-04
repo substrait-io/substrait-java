@@ -23,6 +23,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
@@ -115,6 +116,19 @@ class SqlConverterBase {
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return Pair.of(validator, catalogReader);
+  }
+
+  Pair<SqlValidator, CalciteCatalogReader> registerSchema(String name, Schema schema) {
+    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    if (schema != null) {
+      rootSchema.add(name, schema);
+      rootSchema = rootSchema.getSubSchema(name, false);
+    }
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+
     return Pair.of(validator, catalogReader);
   }
 
