@@ -74,13 +74,13 @@ public class FunctionMappings {
             SqlStdOperatorTable.PLUS,
                 resolver(
                     SqlStdOperatorTable.PLUS,
-                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "decimal")),
+                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "dec")),
             SqlStdOperatorTable.DATETIME_PLUS,
                 resolver(SqlStdOperatorTable.PLUS, Set.of("date", "time", "timestamp")),
             SqlStdOperatorTable.MINUS,
                 resolver(
                     SqlStdOperatorTable.MINUS,
-                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "decimal")),
+                    Set.of("i8", "i16", "i32", "i64", "f32", "f64", "dec")),
             SqlStdOperatorTable.MINUS_DATE,
                 resolver(
                     SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
