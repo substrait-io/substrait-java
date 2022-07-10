@@ -348,12 +348,9 @@ public class ParseToPojo {
             case "/" -> TypeExpression.BinaryOperation.OpType.DIVIDE;
             case ">" -> TypeExpression.BinaryOperation.OpType.GT;
             case "<" -> TypeExpression.BinaryOperation.OpType.LT;
-            case ">=" -> TypeExpression.BinaryOperation.OpType.GTE;
-            case "<=" -> TypeExpression.BinaryOperation.OpType.LTE;
             case "AND" -> TypeExpression.BinaryOperation.OpType.AND;
             case "OR" -> TypeExpression.BinaryOperation.OpType.OR;
             case "=" -> TypeExpression.BinaryOperation.OpType.EQ;
-            case "!=" -> TypeExpression.BinaryOperation.OpType.NOT_EQ;
             case ":=" -> TypeExpression.BinaryOperation.OpType.COVERS;
             default -> throw new IllegalStateException();
           };
