@@ -12,6 +12,7 @@ public class FunctionMappings {
   // names.
   public static final ImmutableList<Sig> SCALAR_SIGS;
   public static final ImmutableList<Sig> AGGREGATE_SIGS;
+  public static final ImmutableList<Sig> WINDOW_SIGS;
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER;
 
   static {
@@ -37,7 +38,9 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.MINUS_DATE, "subtract"),
                 s(SqlStdOperatorTable.DATETIME_PLUS, "add"),
                 s(SqlStdOperatorTable.EXTRACT, "extract"),
-                s(SqlStdOperatorTable.LIKE))
+                s(SqlStdOperatorTable.LIKE),
+                s(SqlStdOperatorTable.SUBSTRING, "substring"),
+                s(SqlStdOperatorTable.CONCAT, "concat"))
             .build();
 
     AGGREGATE_SIGS =
@@ -49,6 +52,22 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.COUNT, "count"),
                 s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
                 s(SqlStdOperatorTable.AVG, "avg"))
+            .build();
+
+    WINDOW_SIGS =
+        ImmutableList.<Sig>builder()
+            .add(
+                s(SqlStdOperatorTable.ROW_NUMBER, "row_number"),
+                s(SqlStdOperatorTable.LAG, "lag"),
+                s(SqlStdOperatorTable.LEAD, "lead"),
+                s(SqlStdOperatorTable.RANK, "rank"),
+                s(SqlStdOperatorTable.DENSE_RANK, "dense_rank"),
+                s(SqlStdOperatorTable.PERCENT_RANK, "percent_rank"),
+                s(SqlStdOperatorTable.CUME_DIST, "cume_dist"),
+                s(SqlStdOperatorTable.NTILE, "ntile"),
+                s(SqlStdOperatorTable.FIRST_VALUE, "first_value"),
+                s(SqlStdOperatorTable.LAST_VALUE, "last_value"),
+                s(SqlStdOperatorTable.NTH_VALUE, "nth_value"))
             .build();
 
     // contains return-type based resolver for both scalar and aggregator operator
