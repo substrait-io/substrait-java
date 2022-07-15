@@ -70,4 +70,6 @@ public interface ExpressionVisitor<R, E extends Throwable> {
   R visit(Expression.ScalarSubquery expr) throws E;
 
   R visit(Expression.InPredicate expr) throws E;
+
+  R visit(Expression.Window expr) throws E;
 }

@@ -11,7 +11,13 @@ import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,7 +28,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 
-abstract class FunctionConverter<
+public abstract class FunctionConverter<
     F extends SimpleExtension.Function, T, C extends FunctionConverter.GenericCall> {
 
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionConverter.class);
