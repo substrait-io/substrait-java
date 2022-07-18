@@ -108,7 +108,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.Decimal expr) {
-    return "decimal";
+    return "dec";
   }
 
   @Override
@@ -143,7 +143,7 @@ public class ToTypeString
 
   @Override
   public String visit(ParameterizedType.Decimal expr) throws RuntimeException {
-    return "decimal";
+    return "dec";
   }
 
   @Override
@@ -164,7 +164,7 @@ public class ToTypeString
   @Override
   public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
     if (expr.value().toLowerCase().startsWith("any")) {
-      return expr.value();
+      return "any";
     } else {
       return super.visit(expr);
     }
