@@ -36,6 +36,16 @@ public class SimplePlansTest extends PlanTestBase {
   }
 
   @Test
+  public void isNotNull() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY is not null;");
+  }
+
+  @Test
+  public void isNull() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY is null;");
+  }
+
+  @Test
   public void multiStatement() throws IOException, SqlParseException {
     assertThrows(
         UnsupportedOperationException.class,
