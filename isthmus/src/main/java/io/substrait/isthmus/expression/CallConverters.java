@@ -10,8 +10,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nullable;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 
 public class CallConverters {
@@ -64,6 +67,23 @@ public class CallConverters {
         var defaultResult = caseArgs.get(last);
         return ExpressionCreator.ifThenStatement(defaultResult, caseConditions);
       };
+
+  /**
+   * Expand {@link org.apache.calcite.util.Sarg} values in a calcite `SqlSearchOperator` into
+   * simpler expressions. The expansion logic is encoded in {@link RexUtil#expandSearch(RexBuilder,
+   * RexProgram, RexNode)}
+   */
+  public static Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
+      (RexBuilder rexBuilder) ->
+          (RexCall call, Function<RexNode, Expression> visitor) -> {
+            if (call.getKind() != SqlKind.SEARCH) {
+              return null;
+            } else {
+              var expandSearch = RexUtil.expandSearch(rexBuilder, null, call);
+              // if no expansion happened, avoid infinite recursion.
+              return expandSearch.equals(call) ? null : visitor.apply(expandSearch);
+            }
+          };
 
   public static final List<CallConverter> DEFAULTS =
       ImmutableList.of(
