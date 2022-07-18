@@ -49,4 +49,11 @@ public class SimplePlansTest extends PlanTestBase {
         new SqlToSubstrait(
             new SqlToSubstrait.Options(SqlToSubstrait.StatementBatching.MULTI_STATEMENT)));
   }
+
+  @Test
+  public void virtualTable() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("SELECT  1");
+    assertProtoPlanRoundrip(
+        "SELECT  * FROM    ( " + "        VALUES (1), (3) " + "        ) AS q (col1)");
+  }
 }

@@ -153,10 +153,12 @@ public class ProtoRelConverter {
               .fields(struct.getFieldsList().stream().map(ProtoExpressionConverter::from).toList())
               .build());
     }
+    var fieldNames = rel.getBaseSchema().getNamesList().stream().toList();
     var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     return VirtualTableScan.builder()
         .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
         .remap(optionalRelmap(rel.getCommon()))
+        .addAllDfsNames(fieldNames)
         .rows(structLiterals)
         .build();
   }
