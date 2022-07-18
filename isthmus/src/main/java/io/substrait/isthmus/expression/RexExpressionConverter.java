@@ -44,6 +44,9 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     this.windowFunctionConverter = windowFunctionConverter;
   }
 
+  /**
+   * Only used for testing. Missing `ScalarFunctionConverter`, `CallConverters.CREATE_SEARCH_CONV`
+   */
   public RexExpressionConverter() {
     this.callConverters = CallConverters.DEFAULTS;
     this.relVisitor =

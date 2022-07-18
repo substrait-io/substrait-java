@@ -23,6 +23,7 @@ import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.*;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -56,6 +57,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.DEFAULTS);
     converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+    converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
     var windowFunctionConverter =

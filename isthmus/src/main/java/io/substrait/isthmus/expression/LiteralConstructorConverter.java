@@ -25,13 +25,13 @@ public class LiteralConstructorConverter implements CallConverter {
           ExpressionCreator.list(
               false,
               call.operands.stream()
-                  .map(t -> ((Expression.Literal) t.accept(new RexExpressionConverter())))
+                  .map(t -> ((Expression.Literal) topLevelConverter.apply(t)))
                   .toList()));
 
       case SqlMapValueConstructor map -> {
         List<Expression.Literal> literals =
             call.operands.stream()
-                .map(t -> ((Expression.Literal) t.accept(new RexExpressionConverter())))
+                .map(t -> ((Expression.Literal) topLevelConverter.apply(t)))
                 .toList();
         Map<Expression.Literal, Expression.Literal> items = new HashMap<>();
         assert literals.size() % 2 == 0;
