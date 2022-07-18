@@ -32,6 +32,8 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, "gte"),
                 s(SqlStdOperatorTable.EQUALS, "equal"),
                 s(SqlStdOperatorTable.BIT_XOR, "xor"),
+                s(SqlStdOperatorTable.IS_NULL, "is_null"),
+                s(SqlStdOperatorTable.IS_NOT_NULL, "is_not_null"),
                 s(SqlStdOperatorTable.NOT_EQUALS, "not_equal"),
                 s(SqlStdOperatorTable.MINUS_DATE, "subtract"),
                 s(SqlStdOperatorTable.DATETIME_PLUS, "add"),
