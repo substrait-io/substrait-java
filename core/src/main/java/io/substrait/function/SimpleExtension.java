@@ -65,11 +65,17 @@ public class SimpleExtension {
   public interface Argument {
     String toTypeString();
 
+    @Nullable
+    String description();
+
     boolean required();
   }
 
   public record ValueArgument(
-      @JsonProperty(required = true) ParameterizedType value, String name, boolean constant)
+      @JsonProperty(required = true) ParameterizedType value,
+      String name,
+      boolean constant,
+      String description)
       implements Argument {
     public String toTypeString() {
       return value.accept(ToTypeString.INSTANCE);
@@ -80,7 +86,8 @@ public class SimpleExtension {
     }
   }
 
-  public record TypeArgument(ParameterizedType type, String name) implements Argument {
+  public record TypeArgument(ParameterizedType type, String name, String description)
+      implements Argument {
     public String toTypeString() {
       return "type";
     }
@@ -103,8 +110,8 @@ public class SimpleExtension {
    * @param name
    * @param required
    */
-  public record EnumArgument(List<String> options, String name, boolean required)
-      implements Argument {
+  public record EnumArgument(
+      List<String> options, String name, boolean required, String description) implements Argument {
     public String toTypeString() {
       return required ? "req" : "opt";
     }
@@ -344,6 +351,7 @@ public class SimpleExtension {
       return super.toString();
     }
 
+    @Nullable
     public abstract TypeExpression intermediate();
 
     AggregateFunctionVariant resolve(String uri, String name, String description) {
@@ -372,6 +380,7 @@ public class SimpleExtension {
       return Decomposability.NONE;
     }
 
+    @Nullable
     public abstract TypeExpression intermediate();
 
     @Value.Default
