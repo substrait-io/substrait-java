@@ -1,3 +1,4 @@
+-- converted to CTE since DDL is not part of Substrait.
 with revenue0(supplier_no, total_revenue) as (
   select
     l_suppkey,
