@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.ProtocolMessageEnum;
@@ -26,6 +27,9 @@ public class RegisterAtRuntime implements Feature {
       Reflections substrait = new Reflections("io.substrait");
       // cli picocli
       register(PlanEntryPoint.class);
+
+      // Empty class
+      register(Empty.class);
 
       // protobuf items
       registerByParent(substrait, GeneratedMessageV3.class);
