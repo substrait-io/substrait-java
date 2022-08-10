@@ -9,7 +9,8 @@ DDL=`cat ${TPCH}/schema.sql`
 QUERY_FOLDER="${TPCH}/queries"
 
 ##for QUERYNUM in {1..22}; do
-QUERY_TO_RUN=(1 3 4 5 6 10 11 14 17 18 19 20 21)
+# TODO: failed query: 8 12 15. 15 failed due to comments
+QUERY_TO_RUN=(1 2 3 4 5 6 7 9 10 11 13 14 16 17 18 19 20 21 22)
 for QUERY_NUM in "${QUERY_TO_RUN[@]}"; do
      if [ $QUERY_NUM -lt 10 ]; then
        QUERY=`cat ${QUERY_FOLDER}/0${QUERY_NUM}.sql`
