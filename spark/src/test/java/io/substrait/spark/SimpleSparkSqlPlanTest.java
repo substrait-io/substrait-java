@@ -7,8 +7,7 @@ public class SimpleSparkSqlPlanTest extends BaseSparkSqlPlanTest {
 
   @Test
   public void testSimpleProject() {
-    LogicalPlan plan = plan(
-        "select lower(l_comment) from lineitem");
+    LogicalPlan plan = plan("select lower(l_comment) from lineitem");
     System.out.println(plan.treeString());
   }
 }

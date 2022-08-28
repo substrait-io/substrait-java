@@ -19,13 +19,19 @@ public class BaseSparkSqlPlanTest {
 
   @BeforeAll
   public static void beforeAll() throws IOException {
-    spark = SparkSession.builder().master("local[2]")
-        .config("spark.sql.legacy.createHiveTableByDefault", "false").getOrCreate();
+    spark =
+        SparkSession.builder()
+            .master("local[2]")
+            .config("spark.sql.legacy.createHiveTableByDefault", "false")
+            .getOrCreate();
     spark.sql("CREATE DATABASE IF NOT EXISTS tpch");
     spark.sql("use tpch");
-    String tpchCreateTableString = FileUtils.readFileToString(
-        new File("src/test/resources/tpch_schema.sql"), StandardCharsets.UTF_8);
-    Arrays.stream(tpchCreateTableString.split(";")).filter(StringUtils::isNotBlank).toList()
+    String tpchCreateTableString =
+        FileUtils.readFileToString(
+            new File("src/test/resources/tpch_schema.sql"), StandardCharsets.UTF_8);
+    Arrays.stream(tpchCreateTableString.split(";"))
+        .filter(StringUtils::isNotBlank)
+        .toList()
         .forEach(spark::sql);
     spark.sql("show tables").show();
   }
