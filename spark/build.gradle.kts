@@ -23,6 +23,10 @@ dependencies {
   testImplementation("org.apache.spark:spark-core_2.12:3.3.0:tests")
   testImplementation("org.apache.spark:spark-catalyst_2.12:3.3.0:tests")
 
+  // iceberg-spark
+  testImplementation("org.apache.iceberg:iceberg-core:0.14.0")
+  testImplementation("org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:0.14.0")
+
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:29.0-jre")
