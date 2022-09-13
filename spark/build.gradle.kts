@@ -16,15 +16,20 @@ dependencies {
     exclude("org.slf4j", "slf4j-jdk14")
     exclude("org.antlr", "antlr4")
   }
+  // spark
   implementation("org.scala-lang:scala-library:2.12.16")
   testImplementation("org.scalatest:scalatest_2.12:3.3.0-SNAP3")
+
   implementation("org.apache.spark:spark-sql_2.12:3.3.0")
-  testImplementation("org.apache.spark:spark-sql_2.12:3.3.0:tests")
-  testImplementation("org.apache.spark:spark-core_2.12:3.3.0:tests")
-  testImplementation("org.apache.spark:spark-catalyst_2.12:3.3.0:tests")
+  testImplementation("org.apache.spark:spark-hive_2.12:3.3.0")
+
+  //    testImplementation("org.apache.spark:spark-sql_2.12:3.3.0:tests")
+  //    testImplementation("org.apache.spark:spark-core_2.12:3.3.0:tests")
+  //    testImplementation("org.apache.spark:spark-catalyst_2.12:3.3.0:tests")
 
   // iceberg-spark
-  testImplementation("org.apache.iceberg:iceberg-core:0.14.0")
+  testImplementation("org.testcontainers:testcontainers:1.17.3")
+  testImplementation("org.testcontainers:junit-jupiter:1.17.3")
   testImplementation("org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:0.14.0")
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
@@ -32,9 +37,6 @@ dependencies {
   implementation("com.google.guava:guava:29.0-jre")
   //    implementation("org.graalvm.sdk:graal-sdk:22.0.0.2")
   //    implementation("info.picocli:picocli:4.6.1")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.12.4")
   implementation("com.google.protobuf:protobuf-java-util:3.17.3") {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
