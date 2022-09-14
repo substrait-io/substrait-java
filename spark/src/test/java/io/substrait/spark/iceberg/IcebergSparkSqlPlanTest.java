@@ -29,6 +29,15 @@ public class IcebergSparkSqlPlanTest extends BaseSparkSqlPlanTest {
   static final String WARE_HOUSE_DIR = "/tmp/hive/warehouse";
 
   static {
+    try {
+      File localWareHouseDir = new File(WARE_HOUSE_DIR);
+      if (localWareHouseDir.exists()) {
+        FileUtils.deleteDirectory(localWareHouseDir);
+      }
+      FileUtils.forceMkdir(localWareHouseDir);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
     if (IS_START_HIVE_METASTORE_CONTAINER) {
       // for fast development,use cmd ` docker-compose -f
       // spark/src/test/resources/hive-standalone-metastore/docker-compose.yml up -d `
@@ -55,11 +64,6 @@ public class IcebergSparkSqlPlanTest extends BaseSparkSqlPlanTest {
   }
 
   public static void prepareSparkTables(SparkSession spark) throws IOException {
-    File localWareHouseDir = new File(WARE_HOUSE_DIR);
-    if (localWareHouseDir.exists()) {
-      FileUtils.deleteDirectory(localWareHouseDir);
-    }
-    FileUtils.forceMkdir(localWareHouseDir);
     spark.sql("DROP DATABASE IF EXISTS iceberg_tpch CASCADE");
     spark.sql("CREATE DATABASE IF NOT EXISTS iceberg_tpch");
     spark.sql("use iceberg_tpch");
