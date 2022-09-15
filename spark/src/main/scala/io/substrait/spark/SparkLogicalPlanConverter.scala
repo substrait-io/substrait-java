@@ -38,6 +38,12 @@ object SparkLogicalPlanConverter {
       projectRel
   }
 
+  def buildNamedScan(schema: StructType, tableNames: List[String]): NamedScan = {
+    val namedStruct = SparkTypeConverter.toNamedStruct(schema)
+    val namedScan = NamedScan.builder.initialSchema(namedStruct).addAllNames(tableNames.asJava).build
+    namedScan
+  }
+
   /**
    * Read Operator: https://substrait.io/relations/logical_relations/#read-operator
    *
@@ -51,22 +57,24 @@ object SparkLogicalPlanConverter {
       case logicalRelation: LogicalRelation =>
         schema = logicalRelation.schema
         tableNames = logicalRelation.catalogTable.get.identifier.unquotedString.split("\\.").toList
+        buildNamedScan(schema, tableNames)
       case dataSourceV2ScanRelation: DataSourceV2ScanRelation =>
         schema = dataSourceV2ScanRelation.schema
         tableNames = dataSourceV2ScanRelation.relation.identifier.get.toString.split("\\.").toList
+        buildNamedScan(schema, tableNames)
       case dataSourceV2Relation: DataSourceV2Relation =>
         schema = dataSourceV2Relation.schema
         tableNames = dataSourceV2Relation.identifier.get.toString.split("\\.").toList
+        buildNamedScan(schema, tableNames)
       case hiveTableRelation: HiveTableRelation =>
         schema = hiveTableRelation.schema
         tableNames = hiveTableRelation.tableMeta.identifier.unquotedString.split("\\.").toList
+        buildNamedScan(schema, tableNames)
       //TODO: LocalRelation,Range=>Virtual Table,LogicalRelation(HadoopFsRelation)=>LocalFiles
 
       case _ =>
         throw new UnsupportedOperationException(String.format("Unable to convert the plan to a substrait NamedScan: " + plan))
     }
-    val namedStruct = SparkTypeConverter.toNamedStruct(schema)
-    val namedScan = NamedScan.builder.initialSchema(namedStruct).addAllNames(tableNames.asJava).build
-    namedScan
+
   }
 }

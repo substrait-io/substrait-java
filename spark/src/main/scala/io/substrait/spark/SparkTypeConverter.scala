@@ -45,7 +45,7 @@ object SparkTypeConverter {
       case MapType(keyType, valueType, valueContainsNull) =>
         creator.map(convert(keyType, nullable = false), convert(valueType, valueContainsNull))
       case StructType(fields) =>
-        // TODO: now we miss the nested StructType's field names,do we need them?
+        // TODO: now we lost the nested StructType's field names,do we need them?
         //val names = new java.util.ArrayList[String]
         val children = new java.util.ArrayList[Type]
         fields.foreach(field => {
