@@ -175,5 +175,9 @@ public class Substrait2SqlTest extends PlanTestBase {
   public void simpleTestSingleOrList() throws Exception {
     assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_PARTKEY in (1,2,3)");
     assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_PARTKEY = 1 or L_PARTKEY = 2 or L_PARTKEY = 3 ");
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_COMMENT in ('0000', '1111', '2222') ");
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_COMMENT = '0000' or L_COMMENT = '1111' or L_COMMENT = '2222' ");
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where SUBSTRING(L_COMMENT, 0, 3) in ('0000', '1111', '2222') ");
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where SUBSTRING(L_COMMENT, 0, 3) = '0000' or SUBSTRING(L_COMMENT, 0, 3) = '1111' or SUBSTRING(L_COMMENT, 0, 3) = '2222' ");
   }
 }
