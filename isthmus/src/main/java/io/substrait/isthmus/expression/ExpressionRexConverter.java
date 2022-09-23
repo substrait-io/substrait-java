@@ -7,6 +7,7 @@ import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
@@ -217,6 +219,26 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public RexNode visit(Expression.Window expr) throws RuntimeException {
     // todo:to construct the RexOver
     return visitFallback(expr);
+  }
+
+  @Override
+  public RexNode visit(Expression.SingleOrList expr) throws RuntimeException {
+    if (expr.options().isEmpty()) {
+      return visitFallback(expr);
+    }
+    if (expr.options().size() == 1) {
+      RexNode rexNode = expr.options().get(0).accept(this);
+      return rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, expr.condition().accept(this),rexNode);
+    } else {
+      List<RexNode> rexNodes = expr.options()
+              .stream()
+              .map(option -> rexBuilder.makeCall(
+                              SqlStdOperatorTable.EQUALS,
+                              expr.condition().accept(this),
+                              option.accept(this)
+              )).toList();
+      return rexBuilder.makeCall(SqlStdOperatorTable.OR, rexNodes);
+    }
   }
 
   @Override

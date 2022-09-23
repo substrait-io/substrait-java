@@ -170,4 +170,10 @@ public class Substrait2SqlTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc nulls last");
   }
+
+  @Test
+  public void simpleTestSingleOrList() throws Exception {
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_PARTKEY in (1,2,3)");
+    assertSqlSubstraitRelRoundTrip("select l_partkey from lineitem where L_PARTKEY = 1 or L_PARTKEY = 2 or L_PARTKEY = 3 ");
+  }
 }

@@ -68,6 +68,43 @@ public class CallConverters {
         return ExpressionCreator.ifThenStatement(defaultResult, caseConditions);
       };
 
+    /**
+     * Convert 'or' call to substrait singleOrList in case of calcite optimize the in expression as or expression.
+     */
+    public static SimpleCallConverter SINGLE_OR_LIST = (call, visitor) -> {
+        if (call.getKind() != SqlKind.OR) {
+          return null;
+        }
+
+        List<RexNode> options = new ArrayList<>();
+        RexNode condition = null;
+        for (RexNode operand : call.getOperands()) {
+          if (!operand.isA(SqlKind.EQUALS)) {
+            return null;
+          }
+          assert operand instanceof RexCall;
+          RexCall leftEQCall = (RexCall) operand;
+          assert leftEQCall.getOperands().size() == 2;
+
+          RexNode eqCallLeft = leftEQCall.getOperands().get(0);
+          RexNode eqCallRight = leftEQCall.getOperands().get(1);
+          if (condition == null) {
+            condition = eqCallLeft;
+          } else {
+            if (!condition.equals(eqCallLeft)) {
+              return null;
+            }
+          }
+          options.add(eqCallRight);
+        }
+
+        return Expression.SingleOrList
+                .builder()
+                .condition(visitor.apply(condition))
+                .options(options.stream().map(visitor::apply).toList())
+                .build();
+    };
+
   /**
    * Expand {@link org.apache.calcite.util.Sarg} values in a calcite `SqlSearchOperator` into
    * simpler expressions. The expansion logic is encoded in {@link RexUtil#expandSearch(RexBuilder,
@@ -90,6 +127,7 @@ public class CallConverters {
           new FieldSelectionConverter(),
           CallConverters.CASE,
           CallConverters.CAST,
+          CallConverters.SINGLE_OR_LIST,
           new LiteralConstructorConverter());
 
   public interface SimpleCallConverter extends CallConverter {
