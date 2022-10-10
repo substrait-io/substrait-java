@@ -17,7 +17,7 @@ object SparkLogicalPlanConverter {
     case _: LogicalRelation | _: DataSourceV2ScanRelation | _: HiveTableRelation =>
       convertReadOperator(plan)
     case _ =>
-      throw new UnsupportedOperationException(String.format("Unable to convert the plan to a substrait rel: " + plan))
+      throw new UnsupportedOperationException("Unable to convert the plan to a substrait rel: " + plan)
 
   }
 
@@ -73,7 +73,7 @@ object SparkLogicalPlanConverter {
       //TODO: LocalRelation,Range=>Virtual Table,LogicalRelation(HadoopFsRelation)=>LocalFiles
 
       case _ =>
-        throw new UnsupportedOperationException(String.format("Unable to convert the plan to a substrait NamedScan: " + plan))
+        throw new UnsupportedOperationException("Unable to convert the plan to a substrait AbstractReadRel: " + plan)
     }
 
   }

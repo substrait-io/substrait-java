@@ -55,7 +55,7 @@ object SparkTypeConverter {
         val struct = creator.struct(children)
         struct
       case _ =>
-        throw new UnsupportedOperationException(String.format("Unable to convert the type " + field.toString))
+        throw new UnsupportedOperationException("Unable to convert the type " + field.toString)
     }
   }
 

@@ -9,6 +9,6 @@ object SparkExpressionConverter {
               inputPlan: LogicalPlan,
               inputRecordType: io.substrait.`type`.Type.Struct): io.substrait.expression.Expression = expr match {
     case _ =>
-      throw new UnsupportedOperationException(String.format("Unable to convert the expr to a substrait Expression: " + expr))
+      throw new UnsupportedOperationException("Unable to convert the expr to a substrait Expression: " + expr)
   }
 }
