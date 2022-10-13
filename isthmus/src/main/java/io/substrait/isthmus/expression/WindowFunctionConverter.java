@@ -65,7 +65,7 @@ public class WindowFunctionConverter
         agg.getCollation() != null
             ? agg.getCollation().getFieldCollations().stream()
                 .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
-                .toList()
+                .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
     AggregateFunction.AggregationInvocation invocation =
         agg.isDistinct()
@@ -90,7 +90,10 @@ public class WindowFunctionConverter
     var lowerBound = toWindowBound(over.getWindow().getLowerBound(), rexExpressionConverter);
     var upperBound = toWindowBound(over.getWindow().getUpperBound(), rexExpressionConverter);
     var sqlAggFunction = over.getAggOperator();
-    var argList = over.getOperands().stream().map(r -> ((RexSlot) r).getIndex()).toList();
+    var argList =
+        over.getOperands().stream()
+            .map(r -> ((RexSlot) r).getIndex())
+            .collect(java.util.stream.Collectors.toList());
     boolean approximate = false;
     int filterArg = -1;
     var call =
@@ -134,9 +137,13 @@ public class WindowFunctionConverter
     }
     var window = over.getWindow();
     var partitionExps =
-        window.partitionKeys.stream().map(r -> r.accept(rexExpressionConverter)).toList();
+        window.partitionKeys.stream()
+            .map(r -> r.accept(rexExpressionConverter))
+            .collect(java.util.stream.Collectors.toList());
     var sortFields =
-        window.orderKeys.stream().map(r -> toSortField(r, rexExpressionConverter)).toList();
+        window.orderKeys.stream()
+            .map(r -> toSortField(r, rexExpressionConverter))
+            .collect(java.util.stream.Collectors.toList());
 
     return windowBuilder
         .addAllOrderBy(sortFields)

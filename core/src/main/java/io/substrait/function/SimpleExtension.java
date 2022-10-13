@@ -1,5 +1,6 @@
 package io.substrait.function;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -71,12 +72,38 @@ public class SimpleExtension {
     boolean required();
   }
 
-  public record ValueArgument(
-      @JsonProperty(required = true) ParameterizedType value,
-      String name,
-      boolean constant,
-      String description)
-      implements Argument {
+  public static class ValueArgument implements Argument {
+
+    @JsonCreator
+    public ValueArgument(
+        @JsonProperty("value") ParameterizedType value,
+        @JsonProperty("name") String name,
+        @JsonProperty("constant") boolean constant,
+        @JsonProperty("description") String description) {
+      this.value = value;
+      this.constant = constant;
+      this.name = name;
+      this.description = description;
+    }
+
+    @JsonProperty(required = true)
+    ParameterizedType value;
+
+    String name;
+
+    boolean constant;
+
+    String description;
+
+    public ParameterizedType value() {
+      return value;
+    }
+
+    public String description() {
+      return description;
+    }
+
+    @Override
     public String toTypeString() {
       return value.accept(ToTypeString.INSTANCE);
     }
@@ -86,8 +113,34 @@ public class SimpleExtension {
     }
   }
 
-  public record TypeArgument(ParameterizedType type, String name, String description)
-      implements Argument {
+  public static class TypeArgument implements Argument {
+
+    @JsonCreator
+    public TypeArgument(
+        @JsonProperty("type") ParameterizedType type,
+        @JsonProperty("name") String name,
+        @JsonProperty("description") String description) {
+      this.type = type;
+      this.name = name;
+      this.description = description;
+    }
+
+    private ParameterizedType type;
+    private String name;
+    private String description;
+
+    public ParameterizedType getType() {
+      return type;
+    }
+
+    public void setType(final ParameterizedType type) {
+      this.type = type;
+    }
+
+    public String description() {
+      return description;
+    }
+
     public String toTypeString() {
       return "type";
     }
@@ -105,13 +158,39 @@ public class SimpleExtension {
    * <p>For more details see <a
    * href="https://github.com/substrait-io/substrait-java/pull/55#issuecomment-1154484254">comments
    * in this issue</a>
-   *
-   * @param options
-   * @param name
-   * @param required
    */
-  public record EnumArgument(
-      List<String> options, String name, boolean required, String description) implements Argument {
+  public static class EnumArgument implements Argument {
+
+    @JsonCreator
+    public EnumArgument(
+        @JsonProperty("options") List<String> options,
+        @JsonProperty("name") String name,
+        @JsonProperty("required") boolean required,
+        @JsonProperty("description") String description) {
+      this.options = options;
+      this.required = required;
+      this.name = name;
+      this.description = description;
+    }
+
+    private final List<String> options;
+    private final String name;
+    private final boolean required;
+    private final String description;
+
+    public List<String> options() {
+      return options;
+    }
+
+    public String description() {
+      return description;
+    }
+
+    @Override
+    public boolean required() {
+      return required;
+    }
+
     public String toTypeString() {
       return required ? "req" : "opt";
     }
@@ -200,7 +279,9 @@ public class SimpleExtension {
     private final Supplier<List<Argument>> requiredArgsSupplier =
         Util.memoize(
             () -> {
-              return args().stream().filter(Argument::required).toList();
+              return args().stream()
+                  .filter(Argument::required)
+                  .collect(java.util.stream.Collectors.toList());
             });
 
     public static String constructKeyFromTypes(String name, List<Type> arguments) {
@@ -562,7 +643,7 @@ public class SimpleExtension {
                 "string")
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
 
     return load(defaultFiles);
   }
@@ -582,7 +663,7 @@ public class SimpleExtension {
                     throw new RuntimeException(e);
                   }
                 })
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     ExtensionCollection complete = extensions.get(0);
     for (int i = 1; i < extensions.size(); i++) {
       complete = complete.merge(extensions.get(i));
@@ -596,11 +677,17 @@ public class SimpleExtension {
       var collection =
           ImmutableSimpleExtension.ExtensionCollection.builder()
               .addAllAggregateFunctions(
-                  doc.aggregates().stream().flatMap(t -> t.resolve(namespace)).toList())
+                  doc.aggregates().stream()
+                      .flatMap(t -> t.resolve(namespace))
+                      .collect(java.util.stream.Collectors.toList()))
               .addAllScalarFunctions(
-                  doc.scalars().stream().flatMap(t -> t.resolve(namespace)).toList())
+                  doc.scalars().stream()
+                      .flatMap(t -> t.resolve(namespace))
+                      .collect(java.util.stream.Collectors.toList()))
               .addAllWindowFunctions(
-                  doc.windows().stream().flatMap(t -> t.resolve(namespace)).toList())
+                  doc.windows().stream()
+                      .flatMap(t -> t.resolve(namespace))
+                      .collect(java.util.stream.Collectors.toList()))
               .build();
       logger.debug(
           "Loaded {} aggregate functions and {} scalar functions from {}.",

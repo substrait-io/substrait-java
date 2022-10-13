@@ -28,7 +28,10 @@ public interface Rel {
     }
 
     public static Remap offset(int start, int length) {
-      return of(IntStream.range(start, start + length).mapToObj(i -> i).toList());
+      return of(
+          IntStream.range(start, start + length)
+              .mapToObj(i -> i)
+              .collect(java.util.stream.Collectors.toList()));
     }
   }
 

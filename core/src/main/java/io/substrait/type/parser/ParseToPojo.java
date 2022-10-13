@@ -213,14 +213,23 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitStruct(final SubstraitTypeParser.StructContext ctx) {
-      var types = ctx.expr().stream().map(t -> t.accept(this)).toList();
+      var types =
+          ctx.expr().stream()
+              .map(t -> t.accept(this))
+              .collect(java.util.stream.Collectors.toList());
       if (types.stream().allMatch(t -> t instanceof Type)) {
-        return withNull(ctx).struct(types.stream().map(t -> ((Type) t)).toList());
+        return withNull(ctx)
+            .struct(
+                types.stream().map(t -> ((Type) t)).collect(java.util.stream.Collectors.toList()));
       }
 
       if (types.stream().allMatch(t -> t instanceof ParameterizedType)) {
         checkParameterizedOrExpression();
-        return withNullP(ctx).structE(types.stream().map(t -> ((ParameterizedType) t)).toList());
+        return withNullP(ctx)
+            .structE(
+                types.stream()
+                    .map(t -> ((ParameterizedType) t))
+                    .collect(java.util.stream.Collectors.toList()));
       }
 
       checkExpression();
@@ -320,8 +329,14 @@ public class ParseToPojo {
     public TypeExpression visitMultilineDefinition(
         final SubstraitTypeParser.MultilineDefinitionContext ctx) {
       checkExpression();
-      var exprs = ctx.expr().stream().map(t -> t.accept(this)).toList();
-      var identifiers = ctx.Identifier().stream().map(t -> t.getText()).toList();
+      var exprs =
+          ctx.expr().stream()
+              .map(t -> t.accept(this))
+              .collect(java.util.stream.Collectors.toList());
+      var identifiers =
+          ctx.Identifier().stream()
+              .map(t -> t.getText())
+              .collect(java.util.stream.Collectors.toList());
       var finalExpr = ctx.finalType.accept(this);
 
       var bldr = TypeExpression.ReturnProgram.builder();

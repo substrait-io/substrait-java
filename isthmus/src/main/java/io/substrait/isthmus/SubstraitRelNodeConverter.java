@@ -116,7 +116,9 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public RelNode visit(Project project) throws RuntimeException {
     RelNode child = project.getInput().accept(this);
     List<RexNode> rexList =
-        project.getExpressions().stream().map(expr -> expr.accept(expressionRexConverter)).toList();
+        project.getExpressions().stream()
+            .map(expr -> expr.accept(expressionRexConverter))
+            .collect(java.util.stream.Collectors.toList());
 
     return relBuilder.push(child).project(rexList).build();
   }
@@ -186,14 +188,16 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 gr ->
                     gr.getExpressions().stream()
                         .map(expr -> expr.accept(expressionRexConverter))
-                        .toList())
-            .toList();
+                        .collect(java.util.stream.Collectors.toList()))
+            .collect(java.util.stream.Collectors.toList());
     List<RexNode> groupExprs =
         groupExprLists.stream().flatMap(Collection::stream).collect(Collectors.toList());
     RelBuilder.GroupKey groupKey = relBuilder.groupKey(groupExprs, groupExprLists);
 
     List<AggregateCall> aggregateCalls =
-        aggregate.getMeasures().stream().map(this::fromMeasure).toList();
+        aggregate.getMeasures().stream()
+            .map(this::fromMeasure)
+            .collect(java.util.stream.Collectors.toList());
     return relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
   }
 
@@ -206,7 +210,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                     eArgs
                         .get(i)
                         .accept(measure.getFunction().declaration(), i, expressionRexConverter))
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     var operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
             measure.getFunction().declaration().key(), measure.getFunction().outputType());
@@ -270,7 +274,9 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public RelNode visit(Sort sort) throws RuntimeException {
     RelNode child = sort.getInput().accept(this);
     List<RelFieldCollation> relFieldCollations =
-        sort.getSortFields().stream().map(sortField -> toRelFieldCollation(sortField)).toList();
+        sort.getSortFields().stream()
+            .map(sortField -> toRelFieldCollation(sortField))
+            .collect(java.util.stream.Collectors.toList());
     if (relFieldCollations.isEmpty()) {
       return relBuilder.push(child).sort(Collections.EMPTY_LIST).build();
     }

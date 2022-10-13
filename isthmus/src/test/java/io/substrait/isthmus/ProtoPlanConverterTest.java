@@ -26,7 +26,10 @@ public class ProtoPlanConverterTest extends PlanTestBase {
       throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     return s.execute(query1, creates);
   }
 

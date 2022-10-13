@@ -20,7 +20,10 @@ public class SubqueryPlanTest {
   public void existsCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan =
         s.execute(
             "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)",
@@ -63,7 +66,10 @@ public class SubqueryPlanTest {
   public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan =
         s.execute(
             "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)",
@@ -111,7 +117,10 @@ public class SubqueryPlanTest {
     String[] values = asString("tpch/schema.sql").split(";");
     String sql =
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)";
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan = s.execute(sql, creates);
 
     Expression.Subquery subquery =
@@ -151,7 +160,10 @@ public class SubqueryPlanTest {
     String[] values = asString("tpch/schema.sql").split(";");
     String sql =
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)";
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan = s.execute(sql, creates);
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -205,7 +217,10 @@ public class SubqueryPlanTest {
             + "          FROM partsupp ps\n"
             + "          WHERE ps.ps_partkey = p.p_partkey\n"
             + "          AND   PS.ps_suppkey = l.l_suppkey))";
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan = s.execute(sql, creates);
 
     Expression.Subquery outer_subquery =
@@ -281,7 +296,10 @@ public class SubqueryPlanTest {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
     String sql = asString("subquery/nested_scalar_subquery_in_filter.sql");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Plan plan = s.execute(sql, creates);
     String planText = JsonFormat.printer().includingDefaultValueFields().print(plan);
 
@@ -358,7 +376,10 @@ public class SubqueryPlanTest {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
     String sql = asString("subquery/nested_scalar_subquery_in_select.sql");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> {

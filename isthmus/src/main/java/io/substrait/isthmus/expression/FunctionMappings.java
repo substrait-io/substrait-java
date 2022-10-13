@@ -100,11 +100,44 @@ public class FunctionMappings {
     return s(operator, operator.getName().toLowerCase(Locale.ROOT));
   }
 
-  record Sig(SqlOperator operator, String name) {}
+  public static class Sig {
+    public final SqlOperator operator;
+    public final String name;
+
+    public Sig(final SqlOperator operator, final String name) {
+      this.operator = operator;
+      this.name = name;
+    }
+
+    public String name() {
+      return name;
+    }
+
+    public SqlOperator operator() {
+      return operator;
+    }
+  }
 
   public static TypeBasedResolver resolver(SqlOperator operator, Set<String> outTypes) {
     return new TypeBasedResolver(operator, outTypes);
   }
 
-  record TypeBasedResolver(SqlOperator operator, Set<String> types) {}
+  public static class TypeBasedResolver {
+
+    public final SqlOperator operator;
+    public final Set<String> types;
+
+    public TypeBasedResolver(final SqlOperator operator, final Set<String> types) {
+      this.operator = operator;
+      this.types = types;
+    }
+
+    public SqlOperator operator() {
+      return operator;
+    }
+
+    public Set<String> types() {
+      return types;
+    }
+  }
 }

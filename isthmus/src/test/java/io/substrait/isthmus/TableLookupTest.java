@@ -58,7 +58,10 @@ public class TableLookupTest extends PlanTestBase {
     SqlToSubstrait s2s1 = new SqlToSubstrait();
     SqlToSubstrait s2s2 = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     String query = asString("tpch/queries/01.sql");
     var plan1 = s2s1.execute(query, creates);
     var plan2 =

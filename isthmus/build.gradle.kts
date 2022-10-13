@@ -3,7 +3,7 @@ plugins {
   id("java")
   id("idea")
   id("com.palantir.graal") version "0.10.0"
-  id("com.diffplug.spotless") version "6.5.1"
+  id("com.diffplug.spotless") version "6.11.0"
 }
 
 publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
@@ -19,9 +19,9 @@ dependencies {
   implementation("com.google.guava:guava:29.0-jre")
   implementation("org.graalvm.sdk:graal-sdk:22.0.0.2")
   implementation("info.picocli:picocli:4.6.1")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.12.4")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.13.4")
   implementation("com.google.protobuf:protobuf-java-util:3.17.3") {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
@@ -30,6 +30,8 @@ dependencies {
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
   implementation("org.immutables:value-annotations:2.8.8")
   testImplementation("org.apache.calcite:calcite-plus:1.28.0")
+  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
 graal {
