@@ -14,7 +14,10 @@ public class TpchQueryNoValidation extends PlanTestBase {
   public void tpch(int query) throws Exception {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     var plan = s.execute(asString(String.format("tpch/queries/%02d.sql", query)), creates);
     System.out.println(JsonFormat.printer().print(plan));
   }

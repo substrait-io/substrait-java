@@ -33,7 +33,10 @@ public class FromProto {
       case DECIMAL -> n(type.getDecimal().getNullability())
           .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
       case STRUCT -> n(type.getStruct().getNullability())
-          .struct(type.getStruct().getTypesList().stream().map(FromProto::from).toList());
+          .struct(
+              type.getStruct().getTypesList().stream()
+                  .map(FromProto::from)
+                  .collect(java.util.stream.Collectors.toList()));
       case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
       case MAP -> n(type.getMap().getNullability())
           .map(from(type.getMap().getKey()), from(type.getMap().getValue()));

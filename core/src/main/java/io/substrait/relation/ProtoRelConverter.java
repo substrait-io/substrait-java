@@ -109,7 +109,10 @@ public class ProtoRelConverter {
         .names(namedStruct.getNamesList())
         .struct(
             Type.Struct.builder()
-                .fields(struct.getTypesList().stream().map(FromProto::from).toList())
+                .fields(
+                    struct.getTypesList().stream()
+                        .map(FromProto::from)
+                        .collect(java.util.stream.Collectors.toList()))
                 .nullable(FromProto.isNullable(struct.getNullability()))
                 .build())
         .build();
@@ -150,10 +153,14 @@ public class ProtoRelConverter {
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
-              .fields(struct.getFieldsList().stream().map(ProtoExpressionConverter::from).toList())
+              .fields(
+                  struct.getFieldsList().stream()
+                      .map(ProtoExpressionConverter::from)
+                      .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    var fieldNames = rel.getBaseSchema().getNamesList().stream().toList();
+    var fieldNames =
+        rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
     var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     return VirtualTableScan.builder()
         .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
@@ -179,7 +186,10 @@ public class ProtoRelConverter {
     return Project.builder()
         .input(input)
         .remap(optionalRelmap(rel.getCommon()))
-        .expressions(rel.getExpressionsList().stream().map(converter::from).toList())
+        .expressions(
+            rel.getExpressionsList().stream()
+                .map(converter::from)
+                .collect(java.util.stream.Collectors.toList()))
         .build();
   }
 
@@ -191,7 +201,9 @@ public class ProtoRelConverter {
       groupings.add(
           Aggregate.Grouping.builder()
               .expressions(
-                  grouping.getGroupingExpressionsList().stream().map(converter::from).toList())
+                  grouping.getGroupingExpressionsList().stream()
+                      .map(converter::from)
+                      .collect(java.util.stream.Collectors.toList()))
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
@@ -202,7 +214,7 @@ public class ProtoRelConverter {
       var args =
           IntStream.range(0, measure.getMeasure().getArgumentsCount())
               .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
-              .toList();
+              .collect(java.util.stream.Collectors.toList());
       measures.add(
           Aggregate.Measure.builder()
               .function(
@@ -240,7 +252,7 @@ public class ProtoRelConverter {
                             .direction(Expression.SortDirection.fromProto(field.getDirection()))
                             .expr(converter.from(field.getExpr()))
                             .build())
-                .toList())
+                .collect(java.util.stream.Collectors.toList()))
         .build();
   }
 
@@ -278,7 +290,10 @@ public class ProtoRelConverter {
   }
 
   private Set newSet(SetRel rel) {
-    List<Rel> inputs = rel.getInputsList().stream().map(inputRel -> from(inputRel)).toList();
+    List<Rel> inputs =
+        rel.getInputsList().stream()
+            .map(inputRel -> from(inputRel))
+            .collect(java.util.stream.Collectors.toList());
     return Set.builder()
         .inputs(inputs)
         .setOp(Set.SetOp.fromProto(rel.getOp()))

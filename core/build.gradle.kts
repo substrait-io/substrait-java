@@ -8,7 +8,7 @@ plugins {
   id("idea")
   id("antlr")
   id("com.google.protobuf") version "0.8.17"
-  id("com.diffplug.spotless") version "6.5.1"
+  id("com.diffplug.spotless") version "6.11.0"
 }
 
 publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
@@ -18,10 +18,10 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.0")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
   implementation("com.google.protobuf:protobuf-java:3.17.3")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.12.4")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.4")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.13.4")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.4")
   implementation("com.google.code.findbugs:jsr305:3.0.2")
 
   antlr("org.antlr:antlr4:4.9.2")
@@ -29,6 +29,8 @@ dependencies {
   implementation("org.antlr:antlr4:4.9.2")
   annotationProcessor("org.immutables:value:2.8.8")
   compileOnly("org.immutables:value-annotations:2.8.8")
+  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }

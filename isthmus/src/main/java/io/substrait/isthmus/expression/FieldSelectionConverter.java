@@ -87,16 +87,17 @@ public class FieldSelectionConverter implements CallConverter {
   }
 
   private Optional<Integer> toInt(Expression.Literal l) {
-    return switch (l) {
-      case Expression.I8Literal i8 -> Optional.of(i8.value());
-      case Expression.I16Literal i16 -> Optional.of(i16.value());
-      case Expression.I32Literal i32 -> Optional.of(i32.value());
-      case Expression.I64Literal i64 -> Optional.of((int) i64.value());
-      default -> {
-        logger.warn("Literal expected to be int type but was not. {}.", l);
-        yield Optional.empty();
-      }
-    };
+    if (l instanceof Expression.I8Literal i8) {
+      return Optional.of(i8.value());
+    } else if (l instanceof Expression.I16Literal i16) {
+      return Optional.of(i16.value());
+    } else if (l instanceof Expression.I32Literal i32) {
+      return Optional.of(i32.value());
+    } else if (l instanceof Expression.I64Literal i64) {
+      return Optional.of((int) i64.value());
+    }
+    logger.warn("Literal expected to be int type but was not. {}.", l);
+    return Optional.empty();
   }
 
   public Optional<String> toString(Expression.Literal l) {

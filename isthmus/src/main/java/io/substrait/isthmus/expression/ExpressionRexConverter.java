@@ -162,7 +162,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     var args =
         IntStream.range(0, expr.arguments().size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
 
     Optional<SqlOperator> operator =
         scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(
@@ -174,18 +174,23 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
           String.format(
               "Unable to convert scalar function %s(%s).",
               expr.declaration().name(),
-              expr.arguments().stream()
-                  .map(
-                      a ->
-                          switch (a) {
-                            case EnumArg ea -> ea.value().toString();
-                            case Expression e -> e.getType().accept(new StringTypeVisitor());
-                            case Type t -> t.accept(new StringTypeVisitor());
-                            default -> throw new IllegalStateException("Unexpected value: " + a);
-                          })
-                  .collect(Collectors.joining(", ")));
+              expr.arguments().stream().map(this::convert).collect(Collectors.joining(", ")));
       throw new IllegalArgumentException(msg);
     }
+  }
+
+  private String convert(FunctionArg a) {
+    String v;
+    if (a instanceof EnumArg ea) {
+      v = ea.value().toString();
+    } else if (a instanceof Expression e) {
+      v = e.getType().accept(new StringTypeVisitor());
+    } else if (a instanceof Type t) {
+      v = t.accept(new StringTypeVisitor());
+    } else {
+      throw new IllegalStateException("Unexpected value: " + a);
+    }
+    return v;
   }
 
   @Override
@@ -199,13 +204,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     if (expr.isSimpleRootReference()) {
       var segment = expr.segments().get(0);
 
-      RexInputRef rexInputRef =
-          switch (segment) {
-            case FieldReference.StructField f -> {
-              yield new RexInputRef(f.offset(), TypeConverter.convert(typeFactory, expr.getType()));
-            }
-            default -> throw new IllegalArgumentException("Unhandled type: " + segment);
-          };
+      RexInputRef rexInputRef;
+      if (segment instanceof FieldReference.StructField f) {
+        rexInputRef =
+            new RexInputRef(f.offset(), TypeConverter.convert(typeFactory, expr.getType()));
+      } else {
+        throw new IllegalArgumentException("Unhandled type: " + segment);
+      }
 
       return rexInputRef;
     }

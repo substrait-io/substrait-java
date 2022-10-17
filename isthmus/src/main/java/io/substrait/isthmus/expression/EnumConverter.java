@@ -69,10 +69,11 @@ public class EnumConverter {
         return Optional.empty();
       }
       var arg = args.get(enumAnchor.argIdx);
-      return switch (arg) {
-        case SimpleExtension.EnumArgument ea -> Optional.of(ea);
-        default -> Optional.empty();
-      };
+      if (arg instanceof SimpleExtension.EnumArgument ea) {
+        return Optional.of(ea);
+      } else {
+        return Optional.empty();
+      }
     }
   }
 
@@ -105,7 +106,15 @@ public class EnumConverter {
         && value.getType().getSqlTypeName() == SqlTypeName.SYMBOL;
   }
 
-  private record ArgAnchor(SimpleExtension.FunctionAnchor fn, int argIdx) {}
+  private static class ArgAnchor {
+    public final SimpleExtension.FunctionAnchor fn;
+    public final int argIdx;
+
+    public ArgAnchor(final SimpleExtension.FunctionAnchor fn, final int argIdx) {
+      this.fn = fn;
+      this.argIdx = argIdx;
+    }
+  }
 
   private static ArgAnchor argAnchor(String fnNS, String fnSig, int argIdx) {
     return new ArgAnchor(SimpleExtension.FunctionAnchor.of(fnNS, fnSig), argIdx);

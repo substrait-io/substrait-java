@@ -122,7 +122,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var input = apply(project.getInput());
     this.converter.setInputRel(project.getInput());
     this.converter.setInputType(input.getRecordType());
-    var expressions = project.getProjects().stream().map(this::toExpression).toList();
+    var expressions =
+        project.getProjects().stream()
+            .map(this::toExpression)
+            .collect(java.util.stream.Collectors.toList());
     this.converter.setInputRel(null);
     this.converter.setInputType(null);
 
@@ -246,7 +249,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var fields =
         sort.getCollation().getFieldCollations().stream()
             .map(t -> toSortField(t, input.getRecordType()))
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     var convertedSort = Sort.builder().addAllSortFields(fields).input(input).build();
     if (sort.fetch == null && sort.offset == null) {
       return convertedSort;
@@ -262,11 +265,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private long asLong(RexNode rex) {
     var expr = toExpression(rex);
-    return switch (expr) {
-      case Expression.I64Literal i -> i.value();
-      case Expression.I32Literal i -> i.value();
-      default -> throw new UnsupportedOperationException("Unknown type: " + rex);
-    };
+    if (expr instanceof Expression.I64Literal i) {
+      return i.value();
+    } else if (expr instanceof Expression.I32Literal i) {
+      return i.value();
+    }
+    throw new UnsupportedOperationException("Unknown type: " + rex);
   }
 
   public static Expression.SortField toSortField(
@@ -320,7 +324,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public List<Rel> apply(List<RelNode> inputs) {
-    return inputs.stream().map(inputRel -> apply(inputRel)).toList();
+    return inputs.stream()
+        .map(inputRel -> apply(inputRel))
+        .collect(java.util.stream.Collectors.toList());
   }
 
   public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {

@@ -89,7 +89,7 @@ public class TypeExpressionProtoVisitor
                         .setName(a.name())
                         .setExpression(a.expr().accept(this))
                         .build())
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     var finalExpr = expr.finalExpression().accept(this);
     return DerivationExpression.newBuilder()
         .setReturnProgram(
@@ -122,7 +122,11 @@ public class TypeExpressionProtoVisitor
 
   @Override
   public DerivationExpression visit(ParameterizedType.Struct expr) {
-    return typeContainer(expr).struct(expr.fields().stream().map(f -> f.accept(this)).toList());
+    return typeContainer(expr)
+        .struct(
+            expr.fields().stream()
+                .map(f -> f.accept(this))
+                .collect(java.util.stream.Collectors.toList()));
   }
 
   @Override
@@ -162,7 +166,11 @@ public class TypeExpressionProtoVisitor
 
   @Override
   public DerivationExpression visit(TypeExpression.Struct expr) {
-    return typeContainer(expr).struct(expr.fields().stream().map(f -> f.accept(this)).toList());
+    return typeContainer(expr)
+        .struct(
+            expr.fields().stream()
+                .map(f -> f.accept(this))
+                .collect(java.util.stream.Collectors.toList()));
   }
 
   @Override
@@ -258,33 +266,54 @@ public class TypeExpressionProtoVisitor
     @Override
     protected DerivationExpression wrap(final Object o) {
       var bldr = DerivationExpression.newBuilder();
-      return switch (o) {
-        case Type.Boolean t -> bldr.setBool(t).build();
-        case Type.I8 t -> bldr.setI8(t).build();
-        case Type.I16 t -> bldr.setI16(t).build();
-        case Type.I32 t -> bldr.setI32(t).build();
-        case Type.I64 t -> bldr.setI64(t).build();
-        case Type.FP32 t -> bldr.setFp32(t).build();
-        case Type.FP64 t -> bldr.setFp64(t).build();
-        case Type.String t -> bldr.setString(t).build();
-        case Type.Binary t -> bldr.setBinary(t).build();
-        case Type.Timestamp t -> bldr.setTimestamp(t).build();
-        case Type.Date t -> bldr.setDate(t).build();
-        case Type.Time t -> bldr.setTime(t).build();
-        case Type.TimestampTZ t -> bldr.setTimestampTz(t).build();
-        case Type.IntervalYear t -> bldr.setIntervalYear(t).build();
-        case Type.IntervalDay t -> bldr.setIntervalDay(t).build();
-        case DerivationExpression.ExpressionFixedChar t -> bldr.setFixedChar(t).build();
-        case DerivationExpression.ExpressionVarChar t -> bldr.setVarchar(t).build();
-        case DerivationExpression.ExpressionFixedBinary t -> bldr.setFixedBinary(t).build();
-        case DerivationExpression.ExpressionDecimal t -> bldr.setDecimal(t).build();
-        case DerivationExpression.ExpressionStruct t -> bldr.setStruct(t).build();
-        case DerivationExpression.ExpressionList t -> bldr.setList(t).build();
-        case DerivationExpression.ExpressionMap t -> bldr.setMap(t).build();
-        case Type.UUID t -> bldr.setUuid(t).build();
-        default -> throw new UnsupportedOperationException(
-            "Unable to wrap type of " + o.getClass());
-      };
+      if (o instanceof Type.Boolean t) {
+        return bldr.setBool(t).build();
+      } else if (o instanceof Type.I8 t) {
+        return bldr.setI8(t).build();
+      } else if (o instanceof Type.I16 t) {
+        return bldr.setI16(t).build();
+      } else if (o instanceof Type.I32 t) {
+        return bldr.setI32(t).build();
+      } else if (o instanceof Type.I64 t) {
+        return bldr.setI64(t).build();
+      } else if (o instanceof Type.FP32 t) {
+        return bldr.setFp32(t).build();
+      } else if (o instanceof Type.FP64 t) {
+        return bldr.setFp64(t).build();
+      } else if (o instanceof Type.String t) {
+        return bldr.setString(t).build();
+      } else if (o instanceof Type.Binary t) {
+        return bldr.setBinary(t).build();
+      } else if (o instanceof Type.Timestamp t) {
+        return bldr.setTimestamp(t).build();
+      } else if (o instanceof Type.Date t) {
+        return bldr.setDate(t).build();
+      } else if (o instanceof Type.Time t) {
+        return bldr.setTime(t).build();
+      } else if (o instanceof Type.TimestampTZ t) {
+        return bldr.setTimestampTz(t).build();
+      } else if (o instanceof Type.IntervalYear t) {
+        return bldr.setIntervalYear(t).build();
+      } else if (o instanceof Type.IntervalDay t) {
+        return bldr.setIntervalDay(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionFixedChar t) {
+        return bldr.setFixedChar(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionVarChar t) {
+        return bldr.setVarchar(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionFixedBinary t) {
+        return bldr.setFixedBinary(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionDecimal t) {
+        return bldr.setDecimal(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionStruct t) {
+        return bldr.setStruct(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionList t) {
+        return bldr.setList(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionMap t) {
+        return bldr.setMap(t).build();
+      } else if (o instanceof Type.UUID t) {
+        return bldr.setUuid(t).build();
+      }
+      throw new UnsupportedOperationException("Unable to wrap type of " + o.getClass());
     }
 
     @Override

@@ -159,7 +159,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                   }
                   return root;
                 })
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     return roots;
   }
 }

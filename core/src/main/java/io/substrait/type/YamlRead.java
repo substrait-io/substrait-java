@@ -38,7 +38,7 @@ public class YamlRead {
     return loadFunctions(
         FUNCTIONS.stream()
             .map(c -> String.format("/src/substrait/extensions/functions_%s.yaml", c))
-            .toList());
+            .collect(java.util.stream.Collectors.toList()));
   }
 
   public static List<SimpleExtension.Function> loadFunctions(List<String> files) {

@@ -451,7 +451,10 @@ public interface Expression extends FunctionArg {
 
     public Type getType() {
       return Type.withNullability(nullable())
-          .struct(fields().stream().map(Literal::getType).toList());
+          .struct(
+              fields().stream()
+                  .map(Literal::getType)
+                  .collect(java.util.stream.Collectors.toList()));
     }
 
     public static ImmutableExpression.StructLiteral.Builder builder() {

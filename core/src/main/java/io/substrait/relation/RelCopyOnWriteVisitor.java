@@ -43,12 +43,12 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   private Optional<List<FunctionArg>> transformFuncArgs(List<FunctionArg> oldExpressions) {
     return transformList(
         oldExpressions,
-        t ->
-            switch (t) {
-              case Expression e -> this.visitExpression(e)
-                  .flatMap(ex -> Optional.<FunctionArg>of(ex));
-              default -> Optional.of(t);
-            });
+        t -> {
+          if (t instanceof Expression) {
+            return this.visitExpression((Expression) t).flatMap(ex -> Optional.<FunctionArg>of(ex));
+          }
+          return Optional.of(t);
+        });
   }
 
   private static boolean allEmpty(Optional<?>... optionals) {

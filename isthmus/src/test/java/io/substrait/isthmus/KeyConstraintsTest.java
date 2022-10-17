@@ -12,7 +12,10 @@ public class KeyConstraintsTest extends PlanTestBase {
   public void tpcds(int query) throws Exception {
     SqlToSubstrait s = new SqlToSubstrait();
     String[] values = asString("keyconstraints_schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     var plan = s.execute(asString(String.format("tpcds/queries/%02d.sql", query)), creates);
     System.out.println(JsonFormat.printer().print(plan));
   }
