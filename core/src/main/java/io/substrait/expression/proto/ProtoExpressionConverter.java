@@ -95,7 +95,7 @@ public class ProtoExpressionConverter {
         var args =
             IntStream.range(0, scalarFunction.getArgumentsCount())
                 .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
@@ -107,7 +107,7 @@ public class ProtoExpressionConverter {
         var clauses =
             ifThen.getIfsList().stream()
                 .map(t -> ExpressionCreator.ifThenClause(from(t.getIf()), from(t.getThen())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         yield ExpressionCreator.ifThenStatement(from(ifThen.getElse()), clauses);
       }
       case SWITCH_EXPRESSION -> {
@@ -115,12 +115,15 @@ public class ProtoExpressionConverter {
         var clauses =
             switchExpr.getIfsList().stream()
                 .map(t -> ExpressionCreator.switchClause(from(t.getIf()), from(t.getThen())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         yield ExpressionCreator.switchStatement(from(switchExpr.getElse()), clauses);
       }
       case SINGULAR_OR_LIST -> {
         var orList = expr.getSingularOrList();
-        var values = orList.getOptionsList().stream().map(this::from).toList();
+        var values =
+            orList.getOptionsList().stream()
+                .map(this::from)
+                .collect(java.util.stream.Collectors.toList());
         yield ImmutableExpression.SingleOrList.builder()
             .condition(from(orList.getValue()))
             .addAllOptions(values)
@@ -133,12 +136,18 @@ public class ProtoExpressionConverter {
                 .map(
                     t ->
                         ImmutableExpression.MultiOrListRecord.builder()
-                            .addAllValues(t.getFieldsList().stream().map(this::from).toList())
+                            .addAllValues(
+                                t.getFieldsList().stream()
+                                    .map(this::from)
+                                    .collect(java.util.stream.Collectors.toList()))
                             .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         yield ImmutableExpression.MultiOrList.builder()
             .addAllOptionCombinations(values)
-            .addAllConditions(multiOrList.getValueList().stream().map(this::from).toList())
+            .addAllConditions(
+                multiOrList.getValueList().stream()
+                    .map(this::from)
+                    .collect(java.util.stream.Collectors.toList()))
             .build();
       }
       case CAST -> ExpressionCreator.cast(
@@ -172,7 +181,7 @@ public class ProtoExpressionConverter {
             var needles =
                 expr.getSubquery().getInPredicate().getNeedlesList().stream()
                     .map(e -> this.from(e))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             yield ImmutableExpression.InPredicate.builder()
                 .haystack(rel)
                 .needles(needles)
@@ -237,7 +246,7 @@ public class ProtoExpressionConverter {
           literal.getNullable(),
           literal.getStruct().getFieldsList().stream()
               .map(ProtoExpressionConverter::from)
-              .toList());
+              .collect(java.util.stream.Collectors.toList()));
       case MAP -> ExpressionCreator.map(
           literal.getNullable(),
           literal.getMap().getKeyValuesList().stream()
@@ -248,7 +257,9 @@ public class ProtoExpressionConverter {
       case NULL -> ExpressionCreator.typedNull(from(literal.getNull()));
       case LIST -> ExpressionCreator.list(
           literal.getNullable(),
-          literal.getList().getValuesList().stream().map(ProtoExpressionConverter::from).toList());
+          literal.getList().getValuesList().stream()
+              .map(ProtoExpressionConverter::from)
+              .collect(java.util.stream.Collectors.toList()));
       default -> throw new IllegalStateException(
           "Unexpected value: " + literal.getLiteralTypeCase());
     };

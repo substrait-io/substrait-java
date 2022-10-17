@@ -51,7 +51,7 @@ public class AggregateFunctionConverter
         agg.getCollation() != null
             ? agg.getCollation().getFieldCollations().stream()
                 .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
-                .toList()
+                .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
     AggregateFunction.AggregationInvocation invocation =
         agg.isDistinct()

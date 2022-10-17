@@ -51,7 +51,26 @@ public class TypeExpressionCreator extends TypeCreator
     return TypeExpression.Map.builder().nullable(nullable).key(key).value(value).build();
   }
 
-  public record Assign(String name, TypeExpression expr) {}
+  public static class Assign {
+
+    public Assign() {}
+
+    public Assign(final String name, final TypeExpression expr) {
+      this.name = name;
+      this.expr = expr;
+    }
+
+    String name;
+    TypeExpression expr;
+
+    public String name() {
+      return name;
+    }
+
+    public TypeExpression expr() {
+      return expr;
+    }
+  }
   ;
 
   public static TypeExpression program(TypeExpression finalExpr, Assign... assignments) {
@@ -65,7 +84,7 @@ public class TypeExpressionCreator extends TypeCreator
                             .name(a.name())
                             .expr(a.expr())
                             .build())
-                .toList())
+                .collect(java.util.stream.Collectors.toList()))
         .build();
   }
 

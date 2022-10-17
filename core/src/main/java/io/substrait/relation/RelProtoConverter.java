@@ -33,7 +33,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
-    return expressions.stream().map(this::toProto).toList();
+    return expressions.stream().map(this::toProto).collect(java.util.stream.Collectors.toList());
   }
 
   private io.substrait.proto.Expression toProto(Expression expression) {
@@ -57,7 +57,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .setExpr(toProto(s.expr()))
                   .build();
             })
-        .toList();
+        .collect(java.util.stream.Collectors.toList());
   }
 
   @Override
@@ -66,8 +66,14 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
-            .addAllGroupings(aggregate.getGroupings().stream().map(this::toProto).toList())
-            .addAllMeasures(aggregate.getMeasures().stream().map(this::toProto).toList());
+            .addAllGroupings(
+                aggregate.getGroupings().stream()
+                    .map(this::toProto)
+                    .collect(java.util.stream.Collectors.toList()))
+            .addAllMeasures(
+                aggregate.getMeasures().stream()
+                    .map(this::toProto)
+                    .collect(java.util.stream.Collectors.toList()));
 
     return Rel.newBuilder().setAggregate(builder).build();
   }
@@ -85,7 +91,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .addAllArguments(
                 IntStream.range(0, args.size())
                     .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
-                    .toList())
+                    .collect(java.util.stream.Collectors.toList()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
                 functionCollector.getFunctionReference(measure.getFunction().declaration()));
@@ -180,7 +186,10 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         ProjectRel.newBuilder()
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
-            .addAllExpressions(project.getExpressions().stream().map(this::toProto).toList());
+            .addAllExpressions(
+                project.getExpressions().stream()
+                    .map(this::toProto)
+                    .collect(java.util.stream.Collectors.toList()));
 
     return Rel.newBuilder().setProject(builder).build();
   }
@@ -217,7 +226,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                             virtualTableScan.getRows().stream()
                                 .map(this::toProto)
                                 .map(t -> t.getLiteral().getStruct())
-                                .toList())
+                                .collect(java.util.stream.Collectors.toList()))
                         .build())
                 .setBaseSchema(virtualTableScan.getInitialSchema().toProto())
                 .build())

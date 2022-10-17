@@ -91,10 +91,10 @@ public class LiteralConverter {
       case BOOLEAN -> bool(n, (Boolean) literal.getValue());
       case CHAR -> {
         var val = literal.getValue();
-        yield switch (val) {
-          case NlsString nls -> fixedChar(n, nls.getValue());
-          default -> throw new UnsupportedOperationException("Unable to handle char type: " + val);
-        };
+        if (val instanceof NlsString nls) {
+          yield fixedChar(n, nls.getValue());
+        }
+        throw new UnsupportedOperationException("Unable to handle char type: " + val);
       }
       case DOUBLE -> fp64(n, bd(literal).doubleValue());
       case FLOAT -> fp32(n, bd(literal).floatValue());
@@ -119,17 +119,17 @@ public class LiteralConverter {
       case VARBINARY -> binary(n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
       case SYMBOL -> {
         Object value = literal.getValue();
-        yield switch (value) {
-          case NlsString s -> string(n, s.getValue());
-          case Enum v -> {
-            Optional<Expression.Literal> r =
-                EnumConverter.canConvert(v) ? Optional.of(string(n, v.name())) : Optional.empty();
-            yield r.orElseThrow(
-                () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
-          }
-            // case TimeUnitRange tur -> string(n, tur.name());
-          default -> throw new UnsupportedOperationException("Unable to handle symbol: " + value);
-        };
+        // case TimeUnitRange tur -> string(n, tur.name());
+        if (value instanceof NlsString s) {
+          yield string(n, s.getValue());
+        } else if (value instanceof Enum v) {
+          Optional<Expression.Literal> r =
+              EnumConverter.canConvert(v) ? Optional.of(string(n, v.name())) : Optional.empty();
+          yield r.orElseThrow(
+              () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
+        } else {
+          throw new UnsupportedOperationException("Unable to handle symbol: " + value);
+        }
       }
       case DATE -> {
         DateString date = literal.getValueAs(DateString.class);
@@ -180,12 +180,20 @@ public class LiteralConverter {
 
       case ROW -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield struct(n, literals.stream().map(LiteralConverter::convert).toList());
+        yield struct(
+            n,
+            literals.stream()
+                .map(LiteralConverter::convert)
+                .collect(java.util.stream.Collectors.toList()));
       }
 
       case ARRAY -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield list(n, literals.stream().map(LiteralConverter::convert).toList());
+        yield list(
+            n,
+            literals.stream()
+                .map(LiteralConverter::convert)
+                .collect(java.util.stream.Collectors.toList()));
       }
 
       default -> throw new UnsupportedOperationException(

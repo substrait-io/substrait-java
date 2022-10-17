@@ -177,7 +177,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                             .setValue(value)
                             .build();
                       })
-                  .toList();
+                  .collect(java.util.stream.Collectors.toList());
           bldr.setNullable(expr.nullable())
               .setMap(Expression.Literal.Map.newBuilder().addAllKeyValues(keyValues));
         });
@@ -187,7 +187,10 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.ListLiteral expr) {
     return lit(
         bldr -> {
-          var values = expr.values().stream().map(this::toLiteral).toList();
+          var values =
+              expr.values().stream()
+                  .map(this::toLiteral)
+                  .collect(java.util.stream.Collectors.toList());
           bldr.setNullable(expr.nullable())
               .setList(Expression.Literal.List.newBuilder().addAllValues(values));
         });
@@ -197,7 +200,10 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.StructLiteral expr) {
     return lit(
         bldr -> {
-          var values = expr.fields().stream().map(this::toLiteral).toList();
+          var values =
+              expr.fields().stream()
+                  .map(this::toLiteral)
+                  .collect(java.util.stream.Collectors.toList());
           bldr.setNullable(expr.nullable())
               .setStruct(Expression.Literal.Struct.newBuilder().addAllFields(values));
         });
@@ -219,7 +225,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                         .setIf(toLiteral(s.condition()))
                         .setThen(s.then().accept(this))
                         .build())
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     return Expression.newBuilder()
         .setSwitchExpression(
             Expression.SwitchExpression.newBuilder()
@@ -238,7 +244,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                         .setIf(s.condition().accept(this))
                         .setThen(s.then().accept(this))
                         .build())
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     return Expression.newBuilder()
         .setIfThen(
             Expression.IfThen.newBuilder()
@@ -260,7 +266,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .addAllArguments(
                     expr.arguments().stream()
                         .map(a -> a.accept(expr.declaration(), 0, argVisitor))
-                        .toList()))
+                        .collect(java.util.stream.Collectors.toList())))
         .build();
   }
 
@@ -279,7 +285,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   private List<Expression> from(List<io.substrait.expression.Expression> expr) {
-    return expr.stream().map(this::from).toList();
+    return expr.stream().map(this::from).collect(java.util.stream.Collectors.toList());
   }
 
   @Override
@@ -307,7 +313,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                                 Expression.MultiOrList.Record.newBuilder()
                                     .addAllFields(from(r.values()))
                                     .build())
-                        .toList()))
+                        .collect(java.util.stream.Collectors.toList())))
         .build();
   }
 
@@ -316,32 +322,28 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     Expression.ReferenceSegment top = null;
     Expression.ReferenceSegment seg = null;
     for (var segment : expr.segments()) {
-      var protoSegment =
-          switch (segment) {
-            case FieldReference.StructField f -> {
-              var bldr = Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
-              if (seg != null) {
-                bldr.setChild(seg);
-              }
-              yield Expression.ReferenceSegment.newBuilder().setStructField(bldr);
-            }
-            case FieldReference.ListElement f -> {
-              var bldr = Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
-              if (seg != null) {
-                bldr.setChild(seg);
-              }
-              yield Expression.ReferenceSegment.newBuilder().setListElement(bldr);
-            }
-            case FieldReference.MapKey f -> {
-              var bldr =
-                  Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
-              if (seg != null) {
-                bldr.setChild(seg);
-              }
-              yield Expression.ReferenceSegment.newBuilder().setMapKey(bldr);
-            }
-            default -> throw new IllegalArgumentException("Unhandled type: " + segment);
-          };
+      Expression.ReferenceSegment.Builder protoSegment;
+      if (segment instanceof FieldReference.StructField f) {
+        var bldr = Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
+        if (seg != null) {
+          bldr.setChild(seg);
+        }
+        protoSegment = Expression.ReferenceSegment.newBuilder().setStructField(bldr);
+      } else if (segment instanceof FieldReference.ListElement f) {
+        var bldr = Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
+        if (seg != null) {
+          bldr.setChild(seg);
+        }
+        protoSegment = Expression.ReferenceSegment.newBuilder().setListElement(bldr);
+      } else if (segment instanceof FieldReference.MapKey f) {
+        var bldr = Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
+        if (seg != null) {
+          bldr.setChild(seg);
+        }
+        protoSegment = Expression.ReferenceSegment.newBuilder().setMapKey(bldr);
+      } else {
+        throw new IllegalArgumentException("Unhandled type: " + segment);
+      }
       var builtSegment = protoSegment.build();
       if (top == null) {
         top = builtSegment;
@@ -408,7 +410,10 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   public Expression visit(io.substrait.expression.Expression.Window expr) throws RuntimeException {
-    var partExps = expr.partitionBy().stream().map(e -> e.accept(this)).toList();
+    var partExps =
+        expr.partitionBy().stream()
+            .map(e -> e.accept(this))
+            .collect(java.util.stream.Collectors.toList());
     var builder = Expression.WindowFunction.newBuilder();
     if (expr.hasNormalAggregateFunction()) {
       var aggMeasureFunc = expr.aggregateFunction().getFunction();
@@ -417,7 +422,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       var args =
           aggMeasureFunc.arguments().stream()
               .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
-              .toList();
+              .collect(java.util.stream.Collectors.toList());
       var ordinal = aggMeasureFunc.aggregationPhase().ordinal();
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     } else {
@@ -428,7 +433,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       var args =
           windowFunc.arguments().stream()
               .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
-              .toList();
+              .collect(java.util.stream.Collectors.toList());
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     }
     var sortFields =
@@ -440,7 +445,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                       .setExpr(s.expr().accept(this))
                       .build();
                 })
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     var upperBound = toBound(expr.upperBound());
     var lowerBound = toBound(expr.lowerBound());
     return Expression.newBuilder()

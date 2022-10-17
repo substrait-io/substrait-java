@@ -121,7 +121,11 @@ abstract class BaseProtoConverter<T, I>
 
   @Override
   public final T visit(final Type.Struct expr) {
-    return typeContainer(expr).struct(expr.fields().stream().map(t -> t.accept(this)).toList());
+    return typeContainer(expr)
+        .struct(
+            expr.fields().stream()
+                .map(t -> t.accept(this))
+                .collect(java.util.stream.Collectors.toList()));
   }
 
   @Override

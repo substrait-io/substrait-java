@@ -7,7 +7,7 @@ plugins {
   id("java")
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
-  id("com.diffplug.spotless") version "6.5.1"
+  id("com.diffplug.spotless") version "6.11.0"
 }
 
 publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
@@ -22,6 +22,8 @@ dependencies {
   implementation("org.slf4j:slf4j-jdk14:1.7.30")
   annotationProcessor("org.immutables:value:2.8.8")
   compileOnly("org.immutables:value-annotations:2.8.8")
+  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
 val submodulesUpdate by
@@ -34,12 +36,17 @@ val submodulesUpdate by
 allprojects {
   repositories { mavenCentral() }
 
-  tasks.configureEach<Test> { useJUnitPlatform() }
-  tasks.withType<JavaCompile> { dependsOn(submodulesUpdate) }
+  tasks.configureEach<Test> {
+    val javaToolchains = project.extensions.getByType<JavaToolchainService>()
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
+  }
+  tasks.withType<JavaCompile> {
+    sourceCompatibility = "17"
+    options.release.set(11)
 
-  tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("--enable-preview") }
-
-  tasks.withType<Test>().configureEach { jvmArgs("--enable-preview") }
+    dependsOn(submodulesUpdate)
+  }
 
   group = "io.substrait"
   version = "1.0-SNAPSHOT"
@@ -51,9 +58,7 @@ allprojects {
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        targetExclude(
-          "**/build*/**",
-        )
+        targetExclude("**/build/**")
       }
     }
   }

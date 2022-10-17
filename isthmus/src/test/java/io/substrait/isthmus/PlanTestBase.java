@@ -39,7 +39,10 @@ public class PlanTestBase {
   protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s)
       throws IOException, SqlParseException {
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
     Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
@@ -65,7 +68,10 @@ public class PlanTestBase {
     // Assert (sql -> substrait) and (sql -> substrait -> calcite rel -> substrait) are same.
     // Return list of sql -> substrait rel -> Calcite rel.
     String[] values = asString("tpch/schema.sql").split(";");
-    var creates = Arrays.stream(values).filter(t -> !t.trim().isBlank()).toList();
+    var creates =
+        Arrays.stream(values)
+            .filter(t -> !t.trim().isBlank())
+            .collect(java.util.stream.Collectors.toList());
     List<RelNode> relNodeList = new ArrayList<>();
 
     // 1. sql -> substrait rel

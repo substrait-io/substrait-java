@@ -51,7 +51,8 @@ public class CallConverters {
         // else)
         assert call.getOperands().size() % 2 == 1;
 
-        var caseArgs = call.getOperands().stream().map(visitor).toList();
+        var caseArgs =
+            call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
 
         var last = caseArgs.size() - 1;
         // for if/else, process in reverse to maintain query order

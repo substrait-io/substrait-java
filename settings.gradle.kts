@@ -11,7 +11,8 @@ pluginManagement {
     idv("org.jetbrains.gradle.plugin.idea-ext")
     kotlin("jvm") version "kotlin".v()
   }
-  if (extra.has("enableMavenLocal") &&
+  if (
+    extra.has("enableMavenLocal") &&
       extra["enableMavenLocal"].toString().ifBlank { "true" }.toBoolean()
   ) {
     repositories {

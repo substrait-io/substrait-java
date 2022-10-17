@@ -112,7 +112,7 @@ public abstract class FunctionConverter<
                 operator ->
                     resolver.containsKey(operator)
                         && resolver.get(operator).types().contains(outputTypeStr))
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     // only one SqlOperator is possible
     if (resolvedOperators.size() == 1) {
       return Optional.of(resolvedOperators.get(0));
@@ -263,7 +263,7 @@ public abstract class FunctionConverter<
                       }
                       return isOption ? List.of("req", "opt") : List.of(opType);
                     })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         return Utils.crossProduct(argTypeLists)
             .map(typList -> typList.stream().collect(Collectors.joining("_")));
@@ -278,16 +278,20 @@ public abstract class FunctionConverter<
        * Once a FunctionVariant is resolved we can map the String Literal
        * to a EnumArg.
        */
-      var operands = call.getOperands().map(topLevelConverter).toList();
-      var opTypes = operands.stream().map(Expression::getType).toList();
+      var operands =
+          call.getOperands().map(topLevelConverter).collect(java.util.stream.Collectors.toList());
+      var opTypes =
+          operands.stream().map(Expression::getType).collect(java.util.stream.Collectors.toList());
 
       var outputType = TypeConverter.convert(call.getType());
 
       // try to do a direct match
       var possibleKeys =
           matchKeys(
-              call.getOperands().toList(),
-              opTypes.stream().map(t -> t.accept(ToTypeString.INSTANCE)).toList());
+              call.getOperands().collect(java.util.stream.Collectors.toList()),
+              opTypes.stream()
+                  .map(t -> t.accept(ToTypeString.INSTANCE))
+                  .collect(java.util.stream.Collectors.toList()));
 
       var directMatchKey =
           possibleKeys
@@ -310,7 +314,7 @@ public abstract class FunctionConverter<
                         return o;
                       }
                     })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         var allArgsMapped = funcArgs.stream().filter(e -> e == null).findFirst().isEmpty();
         if (allArgsMapped) {
           return Optional.of(generateBinding(call, variant, funcArgs, outputType));
@@ -321,7 +325,10 @@ public abstract class FunctionConverter<
 
       if (singularInputType.isPresent()) {
         RelDataType leastRestrictive =
-            typeFactory.leastRestrictive(call.getOperands().map(RexNode::getType).toList());
+            typeFactory.leastRestrictive(
+                call.getOperands()
+                    .map(RexNode::getType)
+                    .collect(java.util.stream.Collectors.toList()));
         if (leastRestrictive == null) {
           return Optional.empty();
         }
@@ -336,7 +343,9 @@ public abstract class FunctionConverter<
               generateBinding(
                   call,
                   out.get(),
-                  coercedArgs.stream().map(FunctionArg.class::cast).toList(),
+                  coercedArgs.stream()
+                      .map(FunctionArg.class::cast)
+                      .collect(java.util.stream.Collectors.toList()),
                   outputType));
         }
       }
@@ -365,7 +374,7 @@ public abstract class FunctionConverter<
               }
               return a;
             })
-        .toList();
+        .collect(java.util.stream.Collectors.toList());
   }
 
   protected abstract T generateBinding(
