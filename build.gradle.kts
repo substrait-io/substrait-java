@@ -42,9 +42,12 @@ allprojects {
     javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
   }
   tasks.withType<JavaCompile> {
-    sourceCompatibility = "17"
-    options.release.set(11)
-
+    if (project.name != "core") {
+      sourceCompatibility = "17"
+      options.release.set(11)
+    } else {
+      sourceCompatibility = "8"
+    }
     dependsOn(submodulesUpdate)
   }
 

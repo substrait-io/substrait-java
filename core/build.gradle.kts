@@ -33,7 +33,7 @@ dependencies {
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
-java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+java { toolchain { languageVersion.set(JavaLanguageVersion.of(11)) } }
 
 sourceSets {
   main {
