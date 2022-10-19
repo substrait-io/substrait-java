@@ -592,7 +592,7 @@ public class SimpleExtension {
     }
 
     public AggregateFunctionVariant getAggregateFunction(FunctionAnchor anchor) {
-      var variant = aggregateFunctionsLookup.get().get(anchor);
+      AggregateFunctionVariant variant = aggregateFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -606,7 +606,7 @@ public class SimpleExtension {
     }
 
     public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
-      var variant = windowFunctionsLookup.get().get(anchor);
+      WindowFunctionVariant variant = windowFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -631,8 +631,8 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() throws IOException {
-    var defaultFiles =
-        Arrays.asList(
+    List<String> defaultFiles =
+        Stream.of(
                 "boolean",
                 "aggregate_generic",
                 "aggregate_approx",
@@ -641,7 +641,6 @@ public class SimpleExtension {
                 "comparison",
                 "datetime",
                 "string")
-            .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
             .collect(java.util.stream.Collectors.toList());
 
@@ -653,11 +652,11 @@ public class SimpleExtension {
       throw new IllegalArgumentException("Require at least one resource path.");
     }
 
-    var extensions =
+    List<ExtensionCollection> extensions =
         resourcePaths.stream()
             .map(
                 path -> {
-                  try (var stream = ExtensionCollection.class.getResourceAsStream(path)) {
+                  try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
                     return load(path, stream);
                   } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -673,8 +672,9 @@ public class SimpleExtension {
 
   private static ExtensionCollection load(String namespace, InputStream stream) {
     try {
-      var doc = MAPPER.readValue(stream, SimpleExtension.FunctionSignatures.class);
-      var collection =
+      SimpleExtension.FunctionSignatures doc =
+          MAPPER.readValue(stream, SimpleExtension.FunctionSignatures.class);
+      ImmutableSimpleExtension.ExtensionCollection collection =
           ImmutableSimpleExtension.ExtensionCollection.builder()
               .addAllAggregateFunctions(
                   doc.aggregates().stream()

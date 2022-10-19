@@ -41,7 +41,7 @@ public class Deserializers {
     @Override
     public T deserialize(final JsonParser p, final DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
-      var typeString = p.getValueAsString();
+      String typeString = p.getValueAsString();
       try {
         return TypeStringParser.parse(typeString, converter);
       } catch (Exception ex) {

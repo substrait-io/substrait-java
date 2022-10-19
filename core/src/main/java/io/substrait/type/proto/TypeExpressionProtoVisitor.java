@@ -4,6 +4,7 @@ import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
 import io.substrait.proto.DerivationExpression;
 import io.substrait.proto.Type;
+import java.util.List;
 
 public class TypeExpressionProtoVisitor
     extends BaseProtoConverter<DerivationExpression, DerivationExpression> {
@@ -98,7 +99,7 @@ public class TypeExpressionProtoVisitor
 
   @Override
   public DerivationExpression visit(final TypeExpression.ReturnProgram expr) {
-    var assignments =
+    List<DerivationExpression.ReturnProgram.Assignment> assignments =
         expr.assignments().stream()
             .map(
                 a ->
@@ -107,7 +108,7 @@ public class TypeExpressionProtoVisitor
                         .setExpression(a.expr().accept(this))
                         .build())
             .collect(java.util.stream.Collectors.toList());
-    var finalExpr = expr.finalExpression().accept(this);
+    DerivationExpression finalExpr = expr.finalExpression().accept(this);
     return DerivationExpression.newBuilder()
         .setReturnProgram(
             DerivationExpression.ReturnProgram.newBuilder()
@@ -282,7 +283,7 @@ public class TypeExpressionProtoVisitor
 
     @Override
     protected DerivationExpression wrap(final Object o) {
-      var bldr = DerivationExpression.newBuilder();
+      DerivationExpression.Builder bldr = DerivationExpression.newBuilder();
       if (o instanceof Type.Boolean) {
         return bldr.setBool((Type.Boolean) o).build();
       } else if (o instanceof Type.I8) {

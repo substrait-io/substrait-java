@@ -30,11 +30,11 @@ public class ImmutableFunctionLookup extends AbstractFunctionLookup {
 
     public Builder from(Plan p) {
       Map<Integer, String> namespaceMap = new HashMap<>();
-      for (var extension : p.getExtensionUrisList()) {
+      for (io.substrait.proto.SimpleExtensionURI extension : p.getExtensionUrisList()) {
         namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());
       }
 
-      for (var extension : p.getExtensionsList()) {
+      for (io.substrait.proto.SimpleExtensionDeclaration extension : p.getExtensionsList()) {
         SimpleExtensionDeclaration.ExtensionFunction func = extension.getExtensionFunction();
         int reference = func.getFunctionAnchor();
         String namespace = namespaceMap.get(func.getExtensionUriReference());

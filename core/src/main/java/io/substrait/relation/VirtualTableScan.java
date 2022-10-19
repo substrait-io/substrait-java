@@ -22,8 +22,8 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    */
   @Value.Check
   protected void check() {
-    var names = getDfsNames();
-    var rows = getRows();
+    List<String> names = getDfsNames();
+    List<Expression.StructLiteral> rows = getRows();
 
     assert rows.size() > 0
         && names.stream().noneMatch(s -> s == null)

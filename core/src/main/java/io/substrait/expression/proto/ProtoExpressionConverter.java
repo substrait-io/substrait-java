@@ -8,9 +8,11 @@ import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.function.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
+import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.proto.FromProto;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -38,27 +40,30 @@ public class ProtoExpressionConverter {
         {
           io.substrait.proto.Expression.ReferenceSegment segment = reference.getDirectReference();
 
-          var segments = new ArrayList<FieldReference.ReferenceSegment>();
+          ArrayList<FieldReference.ReferenceSegment> segments = new ArrayList<>();
           while (segment != io.substrait.proto.Expression.ReferenceSegment.getDefaultInstance()) {
             FieldReference.ReferenceSegment seg = null;
             switch (segment.getReferenceTypeCase()) {
               case MAP_KEY:
                 {
-                  var mapKey = segment.getMapKey();
+                  io.substrait.proto.Expression.ReferenceSegment.MapKey mapKey =
+                      segment.getMapKey();
                   segment = mapKey.getChild();
                   seg = FieldReference.MapKey.of(from(mapKey.getMapKey()));
                   break;
                 }
               case STRUCT_FIELD:
                 {
-                  var structField = segment.getStructField();
+                  io.substrait.proto.Expression.ReferenceSegment.StructField structField =
+                      segment.getStructField();
                   segment = structField.getChild();
                   seg = FieldReference.StructField.of(structField.getField());
                   break;
                 }
               case LIST_ELEMENT:
                 {
-                  var listElement = segment.getListElement();
+                  io.substrait.proto.Expression.ReferenceSegment.ListElement listElement =
+                      segment.getListElement();
                   segment = listElement.getChild();
                   seg = FieldReference.ListElement.of(listElement.getOffset());
                   break;
@@ -107,11 +112,12 @@ public class ProtoExpressionConverter {
         return from(expr.getSelection());
       case SCALAR_FUNCTION:
         {
-          var scalarFunction = expr.getScalarFunction();
-          var functionReference = scalarFunction.getFunctionReference();
-          var declaration = lookup.getScalarFunction(functionReference, extensions);
-          var pF = new FunctionArg.ProtoFrom(this);
-          var args =
+          io.substrait.proto.Expression.ScalarFunction scalarFunction = expr.getScalarFunction();
+          int functionReference = scalarFunction.getFunctionReference();
+          SimpleExtension.ScalarFunctionVariant declaration =
+              lookup.getScalarFunction(functionReference, extensions);
+          FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(this);
+          List<FunctionArg> args =
               IntStream.range(0, scalarFunction.getArgumentsCount())
                   .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
                   .collect(java.util.stream.Collectors.toList());
@@ -123,8 +129,8 @@ public class ProtoExpressionConverter {
         }
       case IF_THEN:
         {
-          var ifThen = expr.getIfThen();
-          var clauses =
+          io.substrait.proto.Expression.IfThen ifThen = expr.getIfThen();
+          List<Expression.IfClause> clauses =
               ifThen.getIfsList().stream()
                   .map(t -> ExpressionCreator.ifThenClause(from(t.getIf()), from(t.getThen())))
                   .collect(java.util.stream.Collectors.toList());
@@ -132,8 +138,8 @@ public class ProtoExpressionConverter {
         }
       case SWITCH_EXPRESSION:
         {
-          var switchExpr = expr.getSwitchExpression();
-          var clauses =
+          io.substrait.proto.Expression.SwitchExpression switchExpr = expr.getSwitchExpression();
+          List<Expression.SwitchClause> clauses =
               switchExpr.getIfsList().stream()
                   .map(t -> ExpressionCreator.switchClause(from(t.getIf()), from(t.getThen())))
                   .collect(java.util.stream.Collectors.toList());
@@ -141,8 +147,8 @@ public class ProtoExpressionConverter {
         }
       case SINGULAR_OR_LIST:
         {
-          var orList = expr.getSingularOrList();
-          var values =
+          io.substrait.proto.Expression.SingularOrList orList = expr.getSingularOrList();
+          List<Expression> values =
               orList.getOptionsList().stream()
                   .map(this::from)
                   .collect(java.util.stream.Collectors.toList());
@@ -153,8 +159,8 @@ public class ProtoExpressionConverter {
         }
       case MULTI_OR_LIST:
         {
-          var multiOrList = expr.getMultiOrList();
-          var values =
+          io.substrait.proto.Expression.MultiOrList multiOrList = expr.getMultiOrList();
+          List<Expression.MultiOrListRecord> values =
               multiOrList.getOptionsList().stream()
                   .map(
                       t ->
@@ -181,7 +187,7 @@ public class ProtoExpressionConverter {
           switch (expr.getSubquery().getSubqueryTypeCase()) {
             case SET_PREDICATE:
               {
-                var rel =
+                Rel rel =
                     new ProtoRelConverter(lookup, extensions)
                         .from(expr.getSubquery().getSetPredicate().getTuples());
                 return ImmutableExpression.SetPredicate.builder()
@@ -193,7 +199,7 @@ public class ProtoExpressionConverter {
               }
             case SCALAR:
               {
-                var rel =
+                Rel rel =
                     new ProtoRelConverter(lookup, extensions)
                         .from(expr.getSubquery().getScalar().getInput());
                 return ImmutableExpression.ScalarSubquery.builder()
@@ -203,10 +209,10 @@ public class ProtoExpressionConverter {
               }
             case IN_PREDICATE:
               {
-                var rel =
+                Rel rel =
                     new ProtoRelConverter(lookup, extensions)
                         .from(expr.getSubquery().getInPredicate().getHaystack());
-                var needles =
+                List<Expression> needles =
                     expr.getSubquery().getInPredicate().getNeedlesList().stream()
                         .map(this::from)
                         .collect(java.util.stream.Collectors.toList());

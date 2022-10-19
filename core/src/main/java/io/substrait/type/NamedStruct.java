@@ -15,7 +15,7 @@ public interface NamedStruct {
   }
 
   default io.substrait.proto.NamedStruct toProto() {
-    var type = struct().accept(TypeProtoConverter.INSTANCE);
+    io.substrait.proto.Type type = struct().accept(TypeProtoConverter.INSTANCE);
     return io.substrait.proto.NamedStruct.newBuilder()
         .setStruct(type.getStruct())
         .addAllNames(names())

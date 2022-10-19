@@ -77,7 +77,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
 
     @Override
     protected Type wrap(final Object o) {
-      var bldr = Type.newBuilder();
+      Type.Builder bldr = Type.newBuilder();
       if (o instanceof Type.Boolean) {
         return bldr.setBool((Type.Boolean) o).build();
       } else if (o instanceof Type.I8) {

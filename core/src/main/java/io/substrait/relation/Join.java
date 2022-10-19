@@ -37,7 +37,7 @@ public abstract class Join extends BiRel {
     }
 
     public static JoinType fromProto(JoinRel.JoinType proto) {
-      for (var v : values()) {
+      for (JoinType v : values()) {
         if (v.proto == proto) {
           return v;
         }

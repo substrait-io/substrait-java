@@ -32,7 +32,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   private Expression lit(Consumer<Expression.Literal.Builder> consumer) {
-    var builder = Expression.Literal.newBuilder();
+    Expression.Literal.Builder builder = Expression.Literal.newBuilder();
     consumer.accept(builder);
     return Expression.newBuilder().setLiteral(builder).build();
   }
@@ -166,12 +166,12 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.MapLiteral expr) {
     return lit(
         bldr -> {
-          var keyValues =
+          List<Expression.Literal.Map.KeyValue> keyValues =
               expr.values().entrySet().stream()
                   .map(
                       e -> {
-                        var key = toLiteral(e.getKey());
-                        var value = toLiteral(e.getValue());
+                        Expression.Literal key = toLiteral(e.getKey());
+                        Expression.Literal value = toLiteral(e.getValue());
                         return Expression.Literal.Map.KeyValue.newBuilder()
                             .setKey(key)
                             .setValue(value)
@@ -187,7 +187,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.ListLiteral expr) {
     return lit(
         bldr -> {
-          var values =
+          List<Expression.Literal> values =
               expr.values().stream()
                   .map(this::toLiteral)
                   .collect(java.util.stream.Collectors.toList());
@@ -200,7 +200,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.StructLiteral expr) {
     return lit(
         bldr -> {
-          var values =
+          List<Expression.Literal> values =
               expr.fields().stream()
                   .map(this::toLiteral)
                   .collect(java.util.stream.Collectors.toList());
@@ -210,14 +210,14 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   private Expression.Literal toLiteral(io.substrait.expression.Expression expression) {
-    var e = expression.accept(this);
+    Expression e = expression.accept(this);
     assert e.getRexTypeCase() == Expression.RexTypeCase.LITERAL;
     return e.getLiteral();
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.Switch expr) {
-    var clauses =
+    List<Expression.SwitchExpression.IfValue> clauses =
         expr.switchClauses().stream()
             .map(
                 s ->
@@ -236,7 +236,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
 
   @Override
   public Expression visit(io.substrait.expression.Expression.IfThen expr) {
-    var clauses =
+    List<Expression.IfThen.IfClause> clauses =
         expr.ifClauses().stream()
             .map(
                 s ->
@@ -256,7 +256,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   @Override
   public Expression visit(io.substrait.expression.Expression.ScalarFunctionInvocation expr) {
 
-    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+    FunctionArg.FuncArgVisitor<io.substrait.proto.FunctionArgument, RuntimeException> argVisitor =
+        FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
 
     return Expression.newBuilder()
         .setScalarFunction(
@@ -321,25 +322,28 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(FieldReference expr) {
     Expression.ReferenceSegment top = null;
     Expression.ReferenceSegment seg = null;
-    for (var segment : expr.segments()) {
+    for (FieldReference.ReferenceSegment segment : expr.segments()) {
       Expression.ReferenceSegment.Builder protoSegment;
       if (segment instanceof FieldReference.StructField) {
         FieldReference.StructField f = (FieldReference.StructField) segment;
-        var bldr = Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
+        Expression.ReferenceSegment.StructField.Builder bldr =
+            Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setStructField(bldr);
       } else if (segment instanceof FieldReference.ListElement) {
         FieldReference.ListElement f = (FieldReference.ListElement) segment;
-        var bldr = Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
+        Expression.ReferenceSegment.ListElement.Builder bldr =
+            Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setListElement(bldr);
       } else if (segment instanceof FieldReference.MapKey) {
         FieldReference.MapKey f = (FieldReference.MapKey) segment;
-        var bldr = Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
+        Expression.ReferenceSegment.MapKey.Builder bldr =
+            Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
         if (seg != null) {
           bldr.setChild(seg);
         }
@@ -347,14 +351,15 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
-      var builtSegment = protoSegment.build();
+      Expression.ReferenceSegment builtSegment = protoSegment.build();
       if (top == null) {
         top = builtSegment;
       }
       seg = builtSegment;
     }
 
-    var out = Expression.FieldReference.newBuilder().setDirectReference(top);
+    Expression.FieldReference.Builder out =
+        Expression.FieldReference.newBuilder().setDirectReference(top);
     if (expr.inputExpression().isPresent()) {
       out.setExpression(from(expr.inputExpression().get()));
     } else if (expr.outerReferenceStepsOut().isPresent()) {
@@ -413,33 +418,37 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   public Expression visit(io.substrait.expression.Expression.Window expr) throws RuntimeException {
-    var partExps =
+    List<Expression> partExps =
         expr.partitionBy().stream()
             .map(e -> e.accept(this))
             .collect(java.util.stream.Collectors.toList());
-    var builder = Expression.WindowFunction.newBuilder();
+    Expression.WindowFunction.Builder builder = Expression.WindowFunction.newBuilder();
     if (expr.hasNormalAggregateFunction()) {
-      var aggMeasureFunc = expr.aggregateFunction().getFunction();
-      var funcReference = functionCollector.getFunctionReference(aggMeasureFunc.declaration());
-      var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
-      var args =
+      io.substrait.expression.AggregateFunctionInvocation aggMeasureFunc =
+          expr.aggregateFunction().getFunction();
+      int funcReference = functionCollector.getFunctionReference(aggMeasureFunc.declaration());
+      FunctionArg.FuncArgVisitor<io.substrait.proto.FunctionArgument, RuntimeException> argVisitor =
+          FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+      List<io.substrait.proto.FunctionArgument> args =
           aggMeasureFunc.arguments().stream()
               .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
               .collect(java.util.stream.Collectors.toList());
-      var ordinal = aggMeasureFunc.aggregationPhase().ordinal();
+      int ordinal = aggMeasureFunc.aggregationPhase().ordinal();
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     } else {
-      var windowFunc = expr.windowFunction().getFunction();
-      var funcReference = functionCollector.getFunctionReference(windowFunc.declaration());
-      var ordinal = windowFunc.aggregationPhase().ordinal();
-      var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
-      var args =
+      io.substrait.expression.WindowFunctionInvocation windowFunc =
+          expr.windowFunction().getFunction();
+      int funcReference = functionCollector.getFunctionReference(windowFunc.declaration());
+      int ordinal = windowFunc.aggregationPhase().ordinal();
+      FunctionArg.FuncArgVisitor<io.substrait.proto.FunctionArgument, RuntimeException> argVisitor =
+          FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+      List<io.substrait.proto.FunctionArgument> args =
           windowFunc.arguments().stream()
               .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
               .collect(java.util.stream.Collectors.toList());
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     }
-    var sortFields =
+    List<SortField> sortFields =
         expr.orderBy().stream()
             .map(
                 s -> {
@@ -449,8 +458,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                       .build();
                 })
             .collect(java.util.stream.Collectors.toList());
-    var upperBound = toBound(expr.upperBound());
-    var lowerBound = toBound(expr.lowerBound());
+    Expression.WindowFunction.Bound upperBound = toBound(expr.upperBound());
+    Expression.WindowFunction.Bound lowerBound = toBound(expr.lowerBound());
     return Expression.newBuilder()
         .setWindowFunction(
             builder
@@ -463,7 +472,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   private Expression.WindowFunction.Bound toBound(io.substrait.expression.WindowBound windowBound) {
-    var boundedKind = windowBound.boundedKind();
+    WindowBound.BoundedKind boundedKind = windowBound.boundedKind();
     Expression.WindowFunction.Bound bound = null;
     switch (boundedKind) {
       case CURRENT_ROW:
@@ -476,18 +485,19 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         {
           WindowBound.BoundedWindowBound boundedWindowBound =
               (WindowBound.BoundedWindowBound) windowBound;
-          var offset = boundedWindowBound.offset();
+          io.substrait.expression.Expression offset = boundedWindowBound.offset();
           boolean isPreceding = boundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
           io.substrait.expression.Expression.I32Literal offsetLiteral =
               (io.substrait.expression.Expression.I32Literal) offset;
-          var offsetVal = offsetLiteral.value();
-          var boundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
+          int offsetVal = offsetLiteral.value();
+          Expression.WindowFunction.Bound.Unbounded boundedProto =
+              Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
           if (isPreceding) {
-            var offsetProto =
+            Expression.WindowFunction.Bound.Preceding offsetProto =
                 Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offsetVal).build();
             bound = Expression.WindowFunction.Bound.newBuilder().setPreceding(offsetProto).build();
           } else {
-            var offsetProto =
+            Expression.WindowFunction.Bound.Following offsetProto =
                 Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offsetVal).build();
             bound = Expression.WindowFunction.Bound.newBuilder().setFollowing(offsetProto).build();
           }
@@ -498,16 +508,19 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
           WindowBound.UnboundedWindowBound unboundedWindowBound =
               (WindowBound.UnboundedWindowBound) windowBound;
           boolean isPreceding = unboundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
-          var unboundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
+          Expression.WindowFunction.Bound.Unbounded unboundedProto =
+              Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
           if (isPreceding) {
-            var preceding = Expression.WindowFunction.Bound.Preceding.newBuilder().build();
+            Expression.WindowFunction.Bound.Preceding preceding =
+                Expression.WindowFunction.Bound.Preceding.newBuilder().build();
             bound =
                 Expression.WindowFunction.Bound.newBuilder()
                     .setUnbounded(unboundedProto)
                     .setPreceding(preceding)
                     .build();
           } else {
-            var following = Expression.WindowFunction.Bound.Following.newBuilder().build();
+            Expression.WindowFunction.Bound.Following following =
+                Expression.WindowFunction.Bound.Following.newBuilder().build();
             bound =
                 Expression.WindowFunction.Bound.newBuilder()
                     .setUnbounded(unboundedProto)

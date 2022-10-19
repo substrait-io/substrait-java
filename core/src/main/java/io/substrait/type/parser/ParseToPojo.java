@@ -1,5 +1,6 @@
 package io.substrait.type.parser;
 
+import io.substrait.function.ImmutableTypeExpression;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
@@ -8,6 +9,7 @@ import io.substrait.type.SubstraitTypeParser;
 import io.substrait.type.SubstraitTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.IntFunction;
@@ -213,7 +215,7 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitStruct(final SubstraitTypeParser.StructContext ctx) {
-      var types =
+      List<TypeExpression> types =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
@@ -329,17 +331,17 @@ public class ParseToPojo {
     public TypeExpression visitMultilineDefinition(
         final SubstraitTypeParser.MultilineDefinitionContext ctx) {
       checkExpression();
-      var exprs =
+      List<TypeExpression> exprs =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
-      var identifiers =
+      List<String> identifiers =
           ctx.Identifier().stream()
-              .map(t -> t.getText())
+              .map(ParseTree::getText)
               .collect(java.util.stream.Collectors.toList());
-      var finalExpr = ctx.finalType.accept(this);
+      TypeExpression finalExpr = ctx.finalType.accept(this);
 
-      var bldr = TypeExpression.ReturnProgram.builder();
+      ImmutableTypeExpression.ReturnProgram.Builder bldr = TypeExpression.ReturnProgram.builder();
       for (int i = 0; i < exprs.size(); i++) {
         bldr.addAssignments(
             TypeExpression.ReturnProgram.Assignment.builder()
@@ -421,7 +423,7 @@ public class ParseToPojo {
       if (ctx.expr().size() != 2) {
         throw new IllegalStateException("Only two argument functions exist for type expressions.");
       }
-      var name = ctx.Identifier().getSymbol().getText().toUpperCase(Locale.ROOT);
+      String name = ctx.Identifier().getSymbol().getText().toUpperCase(Locale.ROOT);
       TypeExpression.BinaryOperation.OpType type;
       switch (name) {
         case "MIN":

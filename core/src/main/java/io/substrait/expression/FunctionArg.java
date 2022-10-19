@@ -30,26 +30,24 @@ public interface FunctionArg {
       TypeExpressionVisitor<io.substrait.proto.Type, RuntimeException> typeVisitor,
       ExpressionVisitor<io.substrait.proto.Expression, RuntimeException> expressionVisitor) {
 
-    return new FuncArgVisitor<>() {
+    return new FuncArgVisitor<FunctionArgument, RuntimeException>() {
 
       @Override
       public FunctionArgument visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e)
           throws RuntimeException {
-        var pE = e.accept(expressionVisitor);
-        return FunctionArgument.newBuilder().setValue(pE).build();
+        return FunctionArgument.newBuilder().setValue(e.accept(expressionVisitor)).build();
       }
 
       @Override
       public FunctionArgument visitType(SimpleExtension.Function fnDef, int argIdx, Type t)
           throws RuntimeException {
-        var pTyp = t.accept(typeVisitor);
-        return FunctionArgument.newBuilder().setType(pTyp).build();
+        return FunctionArgument.newBuilder().setType(t.accept(typeVisitor)).build();
       }
 
       @Override
       public FunctionArgument visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg ea)
           throws RuntimeException {
-        var enumBldr = FunctionArgument.Enum.newBuilder();
+        FunctionArgument.Enum.Builder enumBldr = FunctionArgument.Enum.newBuilder();
 
         if (ea.value().isPresent()) {
           enumBldr = enumBldr.setSpecified(ea.value().get());
@@ -78,7 +76,7 @@ public interface FunctionArg {
           {
             SimpleExtension.EnumArgument enumArgDef =
                 (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
-            var optionValue = fArg.getEnum().getSpecified();
+            String optionValue = fArg.getEnum().getSpecified();
             return optionValue == null
                 ? EnumArg.UNSPECIFIED_ENUM_ARG
                 : EnumArg.of(enumArgDef, optionValue);

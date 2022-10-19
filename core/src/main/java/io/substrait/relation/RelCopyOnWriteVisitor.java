@@ -24,8 +24,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
       List<T> items, Function<T, Optional<T>> transform) {
     List<T> transformedItems = items;
     for (int i = 0; i < items.size(); i++) {
-      var item = items.get(i);
-      var transformedItem = transform.apply(item);
+      T item = items.get(i);
+      Optional<T> transformedItem = transform.apply(item);
       if (transformedItem.isPresent()) {
         if (transformedItems == items) {
           transformedItems = new ArrayList<>(items);
@@ -83,8 +83,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   @Override
   public Optional<Rel> visit(Filter filter) throws RuntimeException {
-    var input = filter.getInput().accept(this);
-    var condition = visitExpression(filter.getCondition());
+    Optional<Rel> input = filter.getInput().accept(this);
+    Optional<Expression> condition = visitExpression(filter.getCondition());
     if (allEmpty(input, condition)) {
       return Optional.empty();
     }
@@ -98,10 +98,10 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   @Override
   public Optional<Rel> visit(Join join) throws RuntimeException {
-    var left = join.getLeft().accept(this);
-    var right = join.getRight().accept(this);
-    var condition = join.getCondition().flatMap(t -> visitExpression(t));
-    var postFilter = join.getPostJoinFilter().flatMap(t -> visitExpression(t));
+    Optional<Rel> left = join.getLeft().accept(this);
+    Optional<Rel> right = join.getRight().accept(this);
+    Optional<Expression> condition = join.getCondition().flatMap(this::visitExpression);
+    Optional<Expression> postFilter = join.getPostJoinFilter().flatMap(this::visitExpression);
     if (allEmpty(left, right, condition, postFilter)) {
       return Optional.empty();
     }
@@ -123,7 +123,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   @Override
   public Optional<Rel> visit(Project project) throws RuntimeException {
-    var input = project.getInput().accept(this);
+    Optional<Rel> input = project.getInput().accept(this);
     Optional<List<Expression>> expressions = transformExpressions(project.getExpressions());
     if (allEmpty(input, expressions)) {
       return Optional.empty();
@@ -145,8 +145,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   @Override
   public Optional<Rel> visit(Cross cross) throws RuntimeException {
-    var left = cross.getLeft().accept(this);
-    var right = cross.getRight().accept(this);
+    Optional<Rel> left = cross.getLeft().accept(this);
+    Optional<Rel> right = cross.getRight().accept(this);
     if (allEmpty(left, right)) {
       return Optional.empty();
     }
@@ -166,7 +166,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
   private Optional<Expression> visitExpression(Expression expression) {
     ExpressionVisitor<Optional<Expression>, RuntimeException> visitor =
-        new AbstractExpressionVisitor<>() {
+        new AbstractExpressionVisitor<Optional<Expression>, RuntimeException>() {
           @Override
           public Optional<Expression> visitFallback(Expression expr) {
             return Optional.empty();
@@ -174,8 +174,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
           @Override
           public Optional<Expression> visit(Expression.Switch expr) throws RuntimeException {
-            var defaultClause = expr.defaultClause().accept(this);
-            var switchClauses =
+            Optional<Expression> defaultClause = expr.defaultClause().accept(this);
+            Optional<List<Expression.SwitchClause>> switchClauses =
                 transformList(
                     expr.switchClauses(),
                     t ->
@@ -195,21 +195,21 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
           @Override
           public Optional<Expression> visit(Expression.IfThen expr) throws RuntimeException {
-            var ifClauses =
+            Optional<List<Expression.IfClause>> ifClauses =
                 transformList(
                     expr.ifClauses(),
                     t ->
                         t.condition()
                             .accept(this)
                             .map(u -> Expression.IfClause.builder().from(t).condition(u).build()));
-            var ifThenClauses =
+            Optional<List<Expression.IfClause>> ifThenClauses =
                 transformList(
                     ifClauses.orElse(expr.ifClauses()),
                     t ->
                         t.then()
                             .accept(this)
                             .map(u -> Expression.IfClause.builder().from(t).then(u).build()));
-            var elseClause = expr.elseClause().accept(this);
+            Optional<Expression> elseClause = expr.elseClause().accept(this);
             if (allEmpty(ifClauses, ifThenClauses, elseClause)) {
               return Optional.empty();
             }
@@ -242,8 +242,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
           @Override
           public Optional<Expression> visit(Expression.SingleOrList expr) throws RuntimeException {
-            var condition = expr.condition().accept(this);
-            var options = transformExpressions(expr.options());
+            Optional<Expression> condition = expr.condition().accept(this);
+            Optional<List<Expression>> options = transformExpressions(expr.options());
             if (allEmpty(condition, options)) {
               return Optional.empty();
             }
@@ -257,8 +257,8 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
           @Override
           public Optional<Expression> visit(Expression.MultiOrList expr) throws RuntimeException {
-            var options = transformExpressions(expr.conditions());
-            var multiOrListRecords =
+            Optional<List<Expression>> options = transformExpressions(expr.conditions());
+            Optional<List<Expression.MultiOrListRecord>> multiOrListRecords =
                 transformList(
                     expr.optionCombinations(),
                     t ->

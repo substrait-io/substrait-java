@@ -28,7 +28,7 @@ public abstract class Set extends AbstractRel {
     }
 
     public static Set.SetOp fromProto(SetRel.SetOp proto) {
-      for (var v : values()) {
+      for (SetOp v : values()) {
         if (v.proto == proto) {
           return v;
         }

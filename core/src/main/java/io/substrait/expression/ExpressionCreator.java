@@ -6,6 +6,7 @@ import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -77,7 +78,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
-    var epochMicro =
+    long epochMicro =
         TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
             + TimeUnit.NANOSECONDS.toMicros(value.toLocalTime().getNano());
     return timestamp(nullable, epochMicro);
@@ -103,7 +104,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, Instant value) {
-    var epochMicro =
+    long epochMicro =
         TimeUnit.SECONDS.toMicros(value.getEpochSecond())
             + TimeUnit.NANOSECONDS.toMicros(value.getNano());
     return timestampTZ(nullable, epochMicro);
@@ -127,7 +128,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.UUIDLiteral uuid(boolean nullable, ByteString uuid) {
-    var bb = uuid.asReadOnlyByteBuffer();
+    ByteBuffer bb = uuid.asReadOnlyByteBuffer();
     return Expression.UUIDLiteral.builder()
         .nullable(nullable)
         .value(new UUID(bb.getLong(), bb.getLong()))
@@ -169,7 +170,7 @@ public class ExpressionCreator {
 
   public static Expression.DecimalLiteral decimal(
       boolean nullable, BigDecimal value, int precision, int scale) {
-    var twosComplement = DecimalUtil.encodeDecimalIntoBytes(value, scale, 16);
+    byte[] twosComplement = DecimalUtil.encodeDecimalIntoBytes(value, scale, 16);
 
     return Expression.DecimalLiteral.builder()
         .nullable(nullable)

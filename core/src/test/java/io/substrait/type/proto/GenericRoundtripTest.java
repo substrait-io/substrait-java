@@ -49,8 +49,8 @@ public class GenericRoundtripTest {
     // roundtrip to protobuff and back and check equality
     Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
 
-    var to = new ExpressionProtoConverter(null, null);
-    var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE);
+    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
+    ProtoExpressionConverter from = new ProtoExpressionConverter(null, null, EMPTY_TYPE);
     assertEquals(val, from.from(val.accept(to)));
   }
 

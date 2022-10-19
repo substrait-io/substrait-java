@@ -13,7 +13,7 @@ public abstract class AbstractFunctionLookup implements FunctionLookup {
 
   public SimpleExtension.ScalarFunctionVariant getScalarFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
-    var anchor = map.get(reference);
+    SimpleExtension.FunctionAnchor anchor = map.get(reference);
     if (anchor == null) {
       throw new IllegalArgumentException(
           "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
@@ -24,7 +24,7 @@ public abstract class AbstractFunctionLookup implements FunctionLookup {
 
   public SimpleExtension.AggregateFunctionVariant getAggregateFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
-    var anchor = map.get(reference);
+    SimpleExtension.FunctionAnchor anchor = map.get(reference);
     if (anchor == null) {
       throw new IllegalArgumentException(
           "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");

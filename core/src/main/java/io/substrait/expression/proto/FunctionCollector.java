@@ -36,11 +36,11 @@ public class FunctionCollector extends AbstractFunctionLookup {
   }
 
   public void addFunctionsToPlan(Plan.Builder builder) {
-    var uriPos = new AtomicInteger(1);
-    var uris = new HashMap<String, SimpleExtensionURI>();
+    AtomicInteger uriPos = new AtomicInteger(1);
+    HashMap<String, SimpleExtensionURI> uris = new HashMap<>();
 
-    var extensionList = new ArrayList<SimpleExtensionDeclaration>();
-    for (var e : funcMap.forwardMap.entrySet()) {
+    ArrayList<SimpleExtensionDeclaration> extensionList = new ArrayList<>();
+    for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardMap.entrySet()) {
       SimpleExtensionURI uri =
           uris.computeIfAbsent(
               e.getValue().namespace(),
@@ -49,7 +49,7 @@ public class FunctionCollector extends AbstractFunctionLookup {
                       .setExtensionUriAnchor(uriPos.getAndIncrement())
                       .setUri(k)
                       .build());
-      var decl =
+      SimpleExtensionDeclaration decl =
           SimpleExtensionDeclaration.newBuilder()
               .setExtensionFunction(
                   SimpleExtensionDeclaration.ExtensionFunction.newBuilder()

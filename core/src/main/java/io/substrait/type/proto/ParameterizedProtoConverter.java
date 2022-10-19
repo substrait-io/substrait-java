@@ -200,7 +200,7 @@ public class ParameterizedProtoConverter
 
     @Override
     protected ParameterizedType wrap(final Object o) {
-      var bldr = ParameterizedType.newBuilder();
+      ParameterizedType.Builder bldr = ParameterizedType.newBuilder();
       if (o instanceof Type.Boolean) {
         return bldr.setBool((Type.Boolean) o).build();
       } else if (o instanceof Type.I8) {

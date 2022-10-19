@@ -45,7 +45,7 @@ public class ProtoRelConverter {
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
-    var relType = rel.getRelTypeCase();
+    io.substrait.proto.Rel.RelTypeCase relType = rel.getRelTypeCase();
     switch (relType) {
       case READ:
         {
@@ -102,7 +102,7 @@ public class ProtoRelConverter {
   }
 
   private Filter newFilter(FilterRel rel) {
-    var input = from(rel.getInput());
+    Rel input = from(rel.getInput());
     return Filter.builder()
         .input(input)
         .condition(
@@ -113,8 +113,8 @@ public class ProtoRelConverter {
   }
 
   private NamedStruct newNamedStruct(ReadRel rel) {
-    var namedStruct = rel.getBaseSchema();
-    var struct = namedStruct.getStruct();
+    io.substrait.proto.NamedStruct namedStruct = rel.getBaseSchema();
+    io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
         .names(namedStruct.getNamesList())
         .struct(
@@ -129,7 +129,7 @@ public class ProtoRelConverter {
   }
 
   private EmptyScan newEmptyScan(ReadRel rel) {
-    var namedStruct = newNamedStruct(rel);
+    NamedStruct namedStruct = newNamedStruct(rel);
     return EmptyScan.builder()
         .initialSchema(namedStruct)
         .remap(optionalRelmap(rel.getCommon()))
@@ -143,7 +143,7 @@ public class ProtoRelConverter {
   }
 
   private NamedScan newNamedScan(ReadRel rel) {
-    var namedStruct = newNamedStruct(rel);
+    NamedStruct namedStruct = newNamedStruct(rel);
     return NamedScan.builder()
         .initialSchema(namedStruct)
         .names(rel.getNamedTable().getNamesList())
@@ -158,9 +158,9 @@ public class ProtoRelConverter {
   }
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
-    var virtualTable = rel.getVirtualTable();
+    ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
-    for (var struct : virtualTable.getValuesList()) {
+    for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
               .fields(
@@ -169,8 +169,9 @@ public class ProtoRelConverter {
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    var fieldNames = new ArrayList<>(rel.getBaseSchema().getNamesList());
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
+    ArrayList<String> fieldNames = new ArrayList<>(rel.getBaseSchema().getNamesList());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     return VirtualTableScan.builder()
         .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
         .remap(optionalRelmap(rel.getCommon()))
@@ -180,7 +181,7 @@ public class ProtoRelConverter {
   }
 
   private Fetch newFetch(FetchRel rel) {
-    var input = from(rel.getInput());
+    Rel input = from(rel.getInput());
     return Fetch.builder()
         .input(input)
         .remap(optionalRelmap(rel.getCommon()))
@@ -190,8 +191,9 @@ public class ProtoRelConverter {
   }
 
   private Project newProject(ProjectRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
     return Project.builder()
         .input(input)
         .remap(optionalRelmap(rel.getCommon()))
@@ -203,10 +205,11 @@ public class ProtoRelConverter {
   }
 
   private Aggregate newAggregate(AggregateRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
-    for (var grouping : rel.getGroupingsList()) {
+    for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
       groupings.add(
           Aggregate.Grouping.builder()
               .expressions(
@@ -216,11 +219,12 @@ public class ProtoRelConverter {
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
-    var pF = new FunctionArg.ProtoFrom(converter);
-    for (var measure : rel.getMeasuresList()) {
-      var func = measure.getMeasure();
-      var funcDecl = lookup.getAggregateFunction(func.getFunctionReference(), extensions);
-      var args =
+    FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(converter);
+    for (AggregateRel.Measure measure : rel.getMeasuresList()) {
+      io.substrait.proto.AggregateFunction func = measure.getMeasure();
+      SimpleExtension.AggregateFunctionVariant funcDecl =
+          lookup.getAggregateFunction(func.getFunctionReference(), extensions);
+      List<FunctionArg> args =
           IntStream.range(0, measure.getMeasure().getArgumentsCount())
               .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
               .collect(java.util.stream.Collectors.toList());
@@ -248,8 +252,9 @@ public class ProtoRelConverter {
   }
 
   private Sort newSort(SortRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
     return Sort.builder()
         .input(input)
         .remap(optionalRelmap(rel.getCommon()))
@@ -271,7 +276,8 @@ public class ProtoRelConverter {
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct);
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct);
     return Join.builder()
         .condition(converter.from(rel.getExpression()))
         .joinType(Join.JoinType.fromProto(rel.getType()))

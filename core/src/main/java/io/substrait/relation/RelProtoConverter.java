@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.function.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
@@ -62,7 +63,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Aggregate aggregate) throws RuntimeException {
-    var builder =
+    AggregateRel.Builder builder =
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
@@ -79,11 +80,12 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, protoConverter);
-    var args = measure.getFunction().arguments();
-    var aggFuncDef = measure.getFunction().declaration();
+    FunctionArg.FuncArgVisitor<io.substrait.proto.FunctionArgument, RuntimeException> argVisitor =
+        FunctionArg.toProto(TypeProtoConverter.INSTANCE, protoConverter);
+    List<FunctionArg> args = measure.getFunction().arguments();
+    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
 
-    var func =
+    AggregateFunction.Builder func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation())
@@ -96,7 +98,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setFunctionReference(
                 functionCollector.getFunctionReference(measure.getFunction().declaration()));
 
-    var builder = AggregateRel.Measure.newBuilder().setMeasure(func);
+    AggregateRel.Measure.Builder builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 
     measure.getPreMeasureFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     return builder.build();
@@ -122,19 +124,19 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Fetch fetch) throws RuntimeException {
-    var builder =
+    FetchRel.Builder builder =
         FetchRel.newBuilder()
             .setCommon(common(fetch))
             .setInput(toProto(fetch.getInput()))
             .setOffset(fetch.getOffset());
 
-    fetch.getCount().ifPresent(f -> builder.setCount(f));
+    fetch.getCount().ifPresent(builder::setCount);
     return Rel.newBuilder().setFetch(builder).build();
   }
 
   @Override
   public Rel visit(Filter filter) throws RuntimeException {
-    var builder =
+    FilterRel.Builder builder =
         FilterRel.newBuilder()
             .setCommon(common(filter))
             .setInput(toProto(filter.getInput()))
@@ -145,7 +147,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Join join) throws RuntimeException {
-    var builder =
+    JoinRel.Builder builder =
         JoinRel.newBuilder()
             .setCommon(common(join))
             .setLeft(toProto(join.getLeft()))
@@ -159,7 +161,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Set set) throws RuntimeException {
-    var builder = SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
+    SetRel.Builder builder =
+        SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
     set.getInputs()
         .forEach(
             inputRel -> {
@@ -182,7 +185,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Project project) throws RuntimeException {
-    var builder =
+    ProjectRel.Builder builder =
         ProjectRel.newBuilder()
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
@@ -196,7 +199,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Sort sort) throws RuntimeException {
-    var builder =
+    SortRel.Builder builder =
         SortRel.newBuilder()
             .setCommon(common(sort))
             .setInput(toProto(sort.getInput()))
@@ -206,7 +209,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(Cross cross) throws RuntimeException {
-    var builder =
+    CrossRel.Builder builder =
         CrossRel.newBuilder()
             .setCommon(common(cross))
             .setLeft(toProto(cross.getLeft()))
@@ -234,7 +237,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private RelCommon common(io.substrait.relation.Rel rel) {
-    var builder = RelCommon.newBuilder();
+    RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getRemap()
         .ifPresentOrElse(
             r -> builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(r.indices())),

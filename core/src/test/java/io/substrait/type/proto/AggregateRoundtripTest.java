@@ -27,16 +27,17 @@ public class AggregateRoundtripTest {
 
   private void assertAggregateRoundtrip(AggregateFunction.AggregationInvocation invocation)
       throws IOException {
-    var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
+    Expression.DecimalLiteral expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
         ImmutableExpression.StructLiteral.builder().from(expression).build();
-    var input = VirtualTableScan.builder().addRows(literal).build();
+    io.substrait.relation.ImmutableVirtualTableScan input =
+        VirtualTableScan.builder().addRows(literal).build();
     FunctionCollector functionCollector = new FunctionCollector();
-    var to = new RelProtoConverter(functionCollector);
-    var extensions = SimpleExtension.loadDefaults();
-    var from = new ProtoRelConverter(functionCollector, extensions);
+    RelProtoConverter to = new RelProtoConverter(functionCollector);
+    SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
+    ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 
-    var measure =
+    io.substrait.relation.ImmutableMeasure measure =
         Aggregate.Measure.builder()
             .function(
                 AggregateFunctionInvocation.builder()
@@ -48,8 +49,9 @@ public class AggregateRoundtripTest {
                     .build())
             .build();
 
-    var aggRel = ImmutableAggregate.builder().input(input).measures(Arrays.asList(measure)).build();
-    var protoAggRel = to.toProto(aggRel);
+    ImmutableAggregate aggRel =
+        ImmutableAggregate.builder().input(input).measures(Arrays.asList(measure)).build();
+    io.substrait.proto.Rel protoAggRel = to.toProto(aggRel);
     assertEquals(
         protoAggRel.getAggregate().getMeasuresList().get(0).getMeasure().getInvocation(),
         invocation);
@@ -58,7 +60,8 @@ public class AggregateRoundtripTest {
 
   @Test
   void aggregateInvocationRoundtrip() throws IOException {
-    for (var invocation : AggregateFunction.AggregationInvocation.values()) {
+    for (AggregateFunction.AggregationInvocation invocation :
+        AggregateFunction.AggregationInvocation.values()) {
       if (invocation != AggregateFunction.AggregationInvocation.UNRECOGNIZED) {
         assertAggregateRoundtrip(invocation);
       }
