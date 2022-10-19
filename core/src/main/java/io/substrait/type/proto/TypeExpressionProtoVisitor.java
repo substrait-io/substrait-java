@@ -27,21 +27,38 @@ public class TypeExpressionProtoVisitor
 
   @Override
   public DerivationExpression visit(final TypeExpression.BinaryOperation expr) {
-    var opType =
-        switch (expr.opType()) {
-          case ADD -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_PLUS;
-          case SUBTRACT -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MINUS;
-          case MIN -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MIN;
-          case MAX -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MAX;
-          case LT -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_LESS_THAN;
-            // case LTE -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_LESS_THAN;
-          case GT -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_GREATER_THAN;
-            // case GTE -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MINUS;
-            // case NOT_EQ -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_EQ;
-          case EQ -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_EQUALS;
-          case COVERS -> DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_COVERS;
-          default -> throw new IllegalStateException("Unexpected value: " + expr.opType());
-        };
+    DerivationExpression.BinaryOp.BinaryOpType opType;
+    switch (expr.opType()) {
+      case ADD:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_PLUS;
+        break;
+      case SUBTRACT:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MINUS;
+        break;
+      case MIN:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MIN;
+        break;
+      case MAX:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MAX;
+        break;
+      case LT:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_LESS_THAN;
+        break;
+        // case LTE : opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_LESS_THAN;
+      case GT:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_GREATER_THAN;
+        break;
+        // case GTE : opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_MINUS;
+        // case NOT_EQ : opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_EQ;
+      case EQ:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_EQUALS;
+        break;
+      case COVERS:
+        opType = DerivationExpression.BinaryOp.BinaryOpType.BINARY_OP_TYPE_COVERS;
+        break;
+      default:
+        throw new IllegalStateException("Unexpected value: " + expr.opType());
+    }
     return DerivationExpression.newBuilder()
         .setBinaryOp(
             DerivationExpression.BinaryOp.newBuilder()
@@ -266,52 +283,52 @@ public class TypeExpressionProtoVisitor
     @Override
     protected DerivationExpression wrap(final Object o) {
       var bldr = DerivationExpression.newBuilder();
-      if (o instanceof Type.Boolean t) {
-        return bldr.setBool(t).build();
-      } else if (o instanceof Type.I8 t) {
-        return bldr.setI8(t).build();
-      } else if (o instanceof Type.I16 t) {
-        return bldr.setI16(t).build();
-      } else if (o instanceof Type.I32 t) {
-        return bldr.setI32(t).build();
-      } else if (o instanceof Type.I64 t) {
-        return bldr.setI64(t).build();
-      } else if (o instanceof Type.FP32 t) {
-        return bldr.setFp32(t).build();
-      } else if (o instanceof Type.FP64 t) {
-        return bldr.setFp64(t).build();
-      } else if (o instanceof Type.String t) {
-        return bldr.setString(t).build();
-      } else if (o instanceof Type.Binary t) {
-        return bldr.setBinary(t).build();
-      } else if (o instanceof Type.Timestamp t) {
-        return bldr.setTimestamp(t).build();
-      } else if (o instanceof Type.Date t) {
-        return bldr.setDate(t).build();
-      } else if (o instanceof Type.Time t) {
-        return bldr.setTime(t).build();
-      } else if (o instanceof Type.TimestampTZ t) {
-        return bldr.setTimestampTz(t).build();
-      } else if (o instanceof Type.IntervalYear t) {
-        return bldr.setIntervalYear(t).build();
-      } else if (o instanceof Type.IntervalDay t) {
-        return bldr.setIntervalDay(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionFixedChar t) {
-        return bldr.setFixedChar(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionVarChar t) {
-        return bldr.setVarchar(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionFixedBinary t) {
-        return bldr.setFixedBinary(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionDecimal t) {
-        return bldr.setDecimal(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionStruct t) {
-        return bldr.setStruct(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionList t) {
-        return bldr.setList(t).build();
-      } else if (o instanceof DerivationExpression.ExpressionMap t) {
-        return bldr.setMap(t).build();
-      } else if (o instanceof Type.UUID t) {
-        return bldr.setUuid(t).build();
+      if (o instanceof Type.Boolean) {
+        return bldr.setBool((Type.Boolean) o).build();
+      } else if (o instanceof Type.I8) {
+        return bldr.setI8((Type.I8) o).build();
+      } else if (o instanceof Type.I16) {
+        return bldr.setI16((Type.I16) o).build();
+      } else if (o instanceof Type.I32) {
+        return bldr.setI32((Type.I32) o).build();
+      } else if (o instanceof Type.I64) {
+        return bldr.setI64((Type.I64) o).build();
+      } else if (o instanceof Type.FP32) {
+        return bldr.setFp32((Type.FP32) o).build();
+      } else if (o instanceof Type.FP64) {
+        return bldr.setFp64((Type.FP64) o).build();
+      } else if (o instanceof Type.String) {
+        return bldr.setString((Type.String) o).build();
+      } else if (o instanceof Type.Binary) {
+        return bldr.setBinary((Type.Binary) o).build();
+      } else if (o instanceof Type.Timestamp) {
+        return bldr.setTimestamp((Type.Timestamp) o).build();
+      } else if (o instanceof Type.Date) {
+        return bldr.setDate((Type.Date) o).build();
+      } else if (o instanceof Type.Time) {
+        return bldr.setTime((Type.Time) o).build();
+      } else if (o instanceof Type.TimestampTZ) {
+        return bldr.setTimestampTz((Type.TimestampTZ) o).build();
+      } else if (o instanceof Type.IntervalYear) {
+        return bldr.setIntervalYear((Type.IntervalYear) o).build();
+      } else if (o instanceof Type.IntervalDay) {
+        return bldr.setIntervalDay((Type.IntervalDay) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionFixedChar) {
+        return bldr.setFixedChar((DerivationExpression.ExpressionFixedChar) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionVarChar) {
+        return bldr.setVarchar((DerivationExpression.ExpressionVarChar) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionFixedBinary) {
+        return bldr.setFixedBinary((DerivationExpression.ExpressionFixedBinary) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionDecimal) {
+        return bldr.setDecimal((DerivationExpression.ExpressionDecimal) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionStruct) {
+        return bldr.setStruct((DerivationExpression.ExpressionStruct) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionList) {
+        return bldr.setList((DerivationExpression.ExpressionList) o).build();
+      } else if (o instanceof DerivationExpression.ExpressionMap) {
+        return bldr.setMap((DerivationExpression.ExpressionMap) o).build();
+      } else if (o instanceof Type.UUID) {
+        return bldr.setUuid((Type.UUID) o).build();
       }
       throw new UnsupportedOperationException("Unable to wrap type of " + o.getClass());
     }

@@ -355,20 +355,41 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitBinaryExpr(final SubstraitTypeParser.BinaryExprContext ctx) {
       checkExpression();
-      TypeExpression.BinaryOperation.OpType type =
-          switch (ctx.op.getText().toUpperCase(Locale.ROOT)) {
-            case "+" -> TypeExpression.BinaryOperation.OpType.ADD;
-            case "-" -> TypeExpression.BinaryOperation.OpType.SUBTRACT;
-            case "*" -> TypeExpression.BinaryOperation.OpType.MULTIPLY;
-            case "/" -> TypeExpression.BinaryOperation.OpType.DIVIDE;
-            case ">" -> TypeExpression.BinaryOperation.OpType.GT;
-            case "<" -> TypeExpression.BinaryOperation.OpType.LT;
-            case "AND" -> TypeExpression.BinaryOperation.OpType.AND;
-            case "OR" -> TypeExpression.BinaryOperation.OpType.OR;
-            case "=" -> TypeExpression.BinaryOperation.OpType.EQ;
-            case ":=" -> TypeExpression.BinaryOperation.OpType.COVERS;
-            default -> throw new IllegalStateException();
-          };
+      TypeExpression.BinaryOperation.OpType type;
+      switch (ctx.op.getText().toUpperCase(Locale.ROOT)) {
+        case "+":
+          type = TypeExpression.BinaryOperation.OpType.ADD;
+          break;
+        case "-":
+          type = TypeExpression.BinaryOperation.OpType.SUBTRACT;
+          break;
+        case "*":
+          type = TypeExpression.BinaryOperation.OpType.MULTIPLY;
+          break;
+        case "/":
+          type = TypeExpression.BinaryOperation.OpType.DIVIDE;
+          break;
+        case ">":
+          type = TypeExpression.BinaryOperation.OpType.GT;
+          break;
+        case "<":
+          type = TypeExpression.BinaryOperation.OpType.LT;
+          break;
+        case "AND":
+          type = TypeExpression.BinaryOperation.OpType.AND;
+          break;
+        case "OR":
+          type = TypeExpression.BinaryOperation.OpType.OR;
+          break;
+        case "=":
+          type = TypeExpression.BinaryOperation.OpType.EQ;
+          break;
+        case ":=":
+          type = TypeExpression.BinaryOperation.OpType.COVERS;
+          break;
+        default:
+          throw new IllegalStateException();
+      }
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.left.accept(this))
@@ -401,13 +422,17 @@ public class ParseToPojo {
         throw new IllegalStateException("Only two argument functions exist for type expressions.");
       }
       var name = ctx.Identifier().getSymbol().getText().toUpperCase(Locale.ROOT);
-      TypeExpression.BinaryOperation.OpType type =
-          switch (name) {
-            case "MIN" -> TypeExpression.BinaryOperation.OpType.MIN;
-            case "MAX" -> TypeExpression.BinaryOperation.OpType.MAX;
-            default -> throw new IllegalStateException(
-                "The following operation was unrecognized: " + name);
-          };
+      TypeExpression.BinaryOperation.OpType type;
+      switch (name) {
+        case "MIN":
+          type = TypeExpression.BinaryOperation.OpType.MIN;
+          break;
+        case "MAX":
+          type = TypeExpression.BinaryOperation.OpType.MAX;
+          break;
+        default:
+          throw new IllegalStateException("The following operation was unrecognized: " + name);
+      }
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.expr(0).accept(this))

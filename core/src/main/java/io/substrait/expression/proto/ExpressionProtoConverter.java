@@ -323,19 +323,22 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     Expression.ReferenceSegment seg = null;
     for (var segment : expr.segments()) {
       Expression.ReferenceSegment.Builder protoSegment;
-      if (segment instanceof FieldReference.StructField f) {
+      if (segment instanceof FieldReference.StructField) {
+        FieldReference.StructField f = (FieldReference.StructField) segment;
         var bldr = Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setStructField(bldr);
-      } else if (segment instanceof FieldReference.ListElement f) {
+      } else if (segment instanceof FieldReference.ListElement) {
+        FieldReference.ListElement f = (FieldReference.ListElement) segment;
         var bldr = Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setListElement(bldr);
-      } else if (segment instanceof FieldReference.MapKey f) {
+      } else if (segment instanceof FieldReference.MapKey) {
+        FieldReference.MapKey f = (FieldReference.MapKey) segment;
         var bldr = Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
         if (seg != null) {
           bldr.setChild(seg);
@@ -463,52 +466,59 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     var boundedKind = windowBound.boundedKind();
     Expression.WindowFunction.Bound bound = null;
     switch (boundedKind) {
-      case CURRENT_ROW -> bound =
-          Expression.WindowFunction.Bound.newBuilder()
-              .setCurrentRow(Expression.WindowFunction.Bound.CurrentRow.getDefaultInstance())
-              .build();
-      case BOUNDED -> {
-        WindowBound.BoundedWindowBound boundedWindowBound =
-            (WindowBound.BoundedWindowBound) windowBound;
-        var offset = boundedWindowBound.offset();
-        boolean isPreceding = boundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
-        io.substrait.expression.Expression.I32Literal offsetLiteral =
-            (io.substrait.expression.Expression.I32Literal) offset;
-        var offsetVal = offsetLiteral.value();
-        var boundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
-        if (isPreceding) {
-          var offsetProto =
-              Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offsetVal).build();
-          bound = Expression.WindowFunction.Bound.newBuilder().setPreceding(offsetProto).build();
-        } else {
-          var offsetProto =
-              Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offsetVal).build();
-          bound = Expression.WindowFunction.Bound.newBuilder().setFollowing(offsetProto).build();
+      case CURRENT_ROW:
+        bound =
+            Expression.WindowFunction.Bound.newBuilder()
+                .setCurrentRow(Expression.WindowFunction.Bound.CurrentRow.getDefaultInstance())
+                .build();
+        break;
+      case BOUNDED:
+        {
+          WindowBound.BoundedWindowBound boundedWindowBound =
+              (WindowBound.BoundedWindowBound) windowBound;
+          var offset = boundedWindowBound.offset();
+          boolean isPreceding = boundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
+          io.substrait.expression.Expression.I32Literal offsetLiteral =
+              (io.substrait.expression.Expression.I32Literal) offset;
+          var offsetVal = offsetLiteral.value();
+          var boundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
+          if (isPreceding) {
+            var offsetProto =
+                Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offsetVal).build();
+            bound = Expression.WindowFunction.Bound.newBuilder().setPreceding(offsetProto).build();
+          } else {
+            var offsetProto =
+                Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offsetVal).build();
+            bound = Expression.WindowFunction.Bound.newBuilder().setFollowing(offsetProto).build();
+          }
+          break;
         }
-      }
-      case UNBOUNDED -> {
-        WindowBound.UnboundedWindowBound unboundedWindowBound =
-            (WindowBound.UnboundedWindowBound) windowBound;
-        boolean isPreceding = unboundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
-        var unboundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
-        if (isPreceding) {
-          var preceding = Expression.WindowFunction.Bound.Preceding.newBuilder().build();
-          bound =
-              Expression.WindowFunction.Bound.newBuilder()
-                  .setUnbounded(unboundedProto)
-                  .setPreceding(preceding)
-                  .build();
-        } else {
-          var following = Expression.WindowFunction.Bound.Following.newBuilder().build();
-          bound =
-              Expression.WindowFunction.Bound.newBuilder()
-                  .setUnbounded(unboundedProto)
-                  .setFollowing(following)
-                  .build();
+      case UNBOUNDED:
+        {
+          WindowBound.UnboundedWindowBound unboundedWindowBound =
+              (WindowBound.UnboundedWindowBound) windowBound;
+          boolean isPreceding = unboundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
+          var unboundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
+          if (isPreceding) {
+            var preceding = Expression.WindowFunction.Bound.Preceding.newBuilder().build();
+            bound =
+                Expression.WindowFunction.Bound.newBuilder()
+                    .setUnbounded(unboundedProto)
+                    .setPreceding(preceding)
+                    .build();
+          } else {
+            var following = Expression.WindowFunction.Bound.Following.newBuilder().build();
+            bound =
+                Expression.WindowFunction.Bound.newBuilder()
+                    .setUnbounded(unboundedProto)
+                    .setFollowing(following)
+                    .build();
+          }
+          break;
         }
-      }
-      default -> throw new RuntimeException(
-          String.format("Unexpected Expression.WindowFunction.Bound enum:%s", boundedKind));
+      default:
+        throw new RuntimeException(
+            String.format("Unexpected Expression.WindowFunction.Bound enum:%s", boundedKind));
     }
     return bound;
   }

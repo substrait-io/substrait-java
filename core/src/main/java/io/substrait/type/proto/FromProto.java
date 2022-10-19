@@ -8,42 +8,66 @@ public class FromProto {
   private FromProto() {}
 
   public static Type from(io.substrait.proto.Type type) {
-    return switch (type.getKindCase()) {
-      case BOOL -> n(type.getBool().getNullability()).BOOLEAN;
-      case I8 -> n(type.getI8().getNullability()).I8;
-      case I16 -> n(type.getI16().getNullability()).I16;
-      case I32 -> n(type.getI32().getNullability()).I32;
-      case I64 -> n(type.getI64().getNullability()).I64;
-      case FP32 -> n(type.getFp32().getNullability()).FP32;
-      case FP64 -> n(type.getFp64().getNullability()).FP64;
-      case STRING -> n(type.getString().getNullability()).STRING;
-      case BINARY -> n(type.getBinary().getNullability()).BINARY;
-      case TIMESTAMP -> n(type.getTimestamp().getNullability()).TIMESTAMP;
-      case DATE -> n(type.getDate().getNullability()).DATE;
-      case TIME -> n(type.getTime().getNullability()).TIME;
-      case INTERVAL_YEAR -> n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
-      case INTERVAL_DAY -> n(type.getIntervalDay().getNullability()).INTERVAL_DAY;
-      case TIMESTAMP_TZ -> n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;
-      case UUID -> n(type.getUuid().getNullability()).UUID;
-      case FIXED_CHAR -> n(type.getFixedChar().getNullability())
-          .fixedChar(type.getFixedChar().getLength());
-      case VARCHAR -> n(type.getVarchar().getNullability()).varChar(type.getVarchar().getLength());
-      case FIXED_BINARY -> n(type.getFixedBinary().getNullability())
-          .fixedBinary(type.getFixedBinary().getLength());
-      case DECIMAL -> n(type.getDecimal().getNullability())
-          .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
-      case STRUCT -> n(type.getStruct().getNullability())
-          .struct(
-              type.getStruct().getTypesList().stream()
-                  .map(FromProto::from)
-                  .collect(java.util.stream.Collectors.toList()));
-      case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
-      case MAP -> n(type.getMap().getNullability())
-          .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
-      case USER_DEFINED_TYPE_REFERENCE,
-          USER_DEFINED,
-          KIND_NOT_SET -> throw new UnsupportedOperationException();
-    };
+    switch (type.getKindCase()) {
+      case BOOL:
+        return n(type.getBool().getNullability()).BOOLEAN;
+      case I8:
+        return n(type.getI8().getNullability()).I8;
+      case I16:
+        return n(type.getI16().getNullability()).I16;
+      case I32:
+        return n(type.getI32().getNullability()).I32;
+      case I64:
+        return n(type.getI64().getNullability()).I64;
+      case FP32:
+        return n(type.getFp32().getNullability()).FP32;
+      case FP64:
+        return n(type.getFp64().getNullability()).FP64;
+      case STRING:
+        return n(type.getString().getNullability()).STRING;
+      case BINARY:
+        return n(type.getBinary().getNullability()).BINARY;
+      case TIMESTAMP:
+        return n(type.getTimestamp().getNullability()).TIMESTAMP;
+      case DATE:
+        return n(type.getDate().getNullability()).DATE;
+      case TIME:
+        return n(type.getTime().getNullability()).TIME;
+      case INTERVAL_YEAR:
+        return n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
+      case INTERVAL_DAY:
+        return n(type.getIntervalDay().getNullability()).INTERVAL_DAY;
+      case TIMESTAMP_TZ:
+        return n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;
+      case UUID:
+        return n(type.getUuid().getNullability()).UUID;
+      case FIXED_CHAR:
+        return n(type.getFixedChar().getNullability()).fixedChar(type.getFixedChar().getLength());
+      case VARCHAR:
+        return n(type.getVarchar().getNullability()).varChar(type.getVarchar().getLength());
+      case FIXED_BINARY:
+        return n(type.getFixedBinary().getNullability())
+            .fixedBinary(type.getFixedBinary().getLength());
+      case DECIMAL:
+        return n(type.getDecimal().getNullability())
+            .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
+      case STRUCT:
+        return n(type.getStruct().getNullability())
+            .struct(
+                type.getStruct().getTypesList().stream()
+                    .map(FromProto::from)
+                    .collect(java.util.stream.Collectors.toList()));
+      case LIST:
+        return n(type.getList().getNullability()).list(from(type.getList().getType()));
+      case MAP:
+        return n(type.getMap().getNullability())
+            .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
+      case USER_DEFINED_TYPE_REFERENCE:
+      case USER_DEFINED:
+      case KIND_NOT_SET:
+      default:
+        throw new UnsupportedOperationException();
+    }
   }
 
   public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {

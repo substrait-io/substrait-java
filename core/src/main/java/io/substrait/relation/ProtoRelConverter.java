@@ -47,37 +47,47 @@ public class ProtoRelConverter {
   public Rel from(io.substrait.proto.Rel rel) {
     var relType = rel.getRelTypeCase();
     switch (relType) {
-      case READ -> {
-        return newRead(rel.getRead());
-      }
-      case FILTER -> {
-        return newFilter(rel.getFilter());
-      }
-      case FETCH -> {
-        return newFetch(rel.getFetch());
-      }
-      case AGGREGATE -> {
-        return newAggregate(rel.getAggregate());
-      }
-      case SORT -> {
-        return newSort(rel.getSort());
-      }
-      case JOIN -> {
-        return newJoin(rel.getJoin());
-      }
-      case SET -> {
-        return newSet(rel.getSet());
-      }
-      case PROJECT -> {
-        return newProject(rel.getProject());
-      }
-      case CROSS -> {
-        return newCross(rel.getCross());
-      }
-      default -> {
-        // TODO: add support for EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
-        throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
-      }
+      case READ:
+        {
+          return newRead(rel.getRead());
+        }
+      case FILTER:
+        {
+          return newFilter(rel.getFilter());
+        }
+      case FETCH:
+        {
+          return newFetch(rel.getFetch());
+        }
+      case AGGREGATE:
+        {
+          return newAggregate(rel.getAggregate());
+        }
+      case SORT:
+        {
+          return newSort(rel.getSort());
+        }
+      case JOIN:
+        {
+          return newJoin(rel.getJoin());
+        }
+      case SET:
+        {
+          return newSet(rel.getSet());
+        }
+      case PROJECT:
+        {
+          return newProject(rel.getProject());
+        }
+      case CROSS:
+        {
+          return newCross(rel.getCross());
+        }
+      default:
+        {
+          // TODO: add support for EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
+          throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
+        }
     }
   }
 
@@ -159,8 +169,7 @@ public class ProtoRelConverter {
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    var fieldNames =
-        rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
+    var fieldNames = new ArrayList<>(rel.getBaseSchema().getNamesList());
     var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     return VirtualTableScan.builder()
         .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))

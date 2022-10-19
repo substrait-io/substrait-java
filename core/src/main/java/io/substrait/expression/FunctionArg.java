@@ -68,20 +68,25 @@ public interface FunctionArg {
 
     public FunctionArg convert(
         SimpleExtension.Function funcDef, int argIdx, FunctionArgument fArg) {
-      return switch (fArg.getArgTypeCase()) {
-        case TYPE -> FromProto.from(fArg.getType());
-        case VALUE -> exprBuilder.from(fArg.getValue());
-        case ENUM -> {
-          SimpleExtension.EnumArgument enumArgDef =
-              (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
-          var optionValue = fArg.getEnum().getSpecified();
-          yield optionValue == null
-              ? EnumArg.UNSPECIFIED_ENUM_ARG
-              : EnumArg.of(enumArgDef, optionValue);
-        }
-        default -> throw new UnsupportedOperationException(
-            String.format("Unable to convert FunctionArgument %s.", fArg));
-      };
+
+      switch (fArg.getArgTypeCase()) {
+        case TYPE:
+          return FromProto.from(fArg.getType());
+        case VALUE:
+          return exprBuilder.from(fArg.getValue());
+        case ENUM:
+          {
+            SimpleExtension.EnumArgument enumArgDef =
+                (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
+            var optionValue = fArg.getEnum().getSpecified();
+            return optionValue == null
+                ? EnumArg.UNSPECIFIED_ENUM_ARG
+                : EnumArg.of(enumArgDef, optionValue);
+          }
+        default:
+          throw new UnsupportedOperationException(
+              String.format("Unable to convert FunctionArgument %s.", fArg));
+      }
     }
   }
 }
