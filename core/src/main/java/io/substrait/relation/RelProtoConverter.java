@@ -238,10 +238,12 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   private RelCommon common(io.substrait.relation.Rel rel) {
     RelCommon.Builder builder = RelCommon.newBuilder();
-    rel.getRemap()
-        .ifPresentOrElse(
-            r -> builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(r.indices())),
-            () -> builder.setDirect(RelCommon.Direct.getDefaultInstance()));
+    io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
+    if (remap != null) {
+      builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(remap.indices()));
+    } else {
+      builder.setDirect(RelCommon.Direct.getDefaultInstance());
+    }
     return builder.build();
   }
 }

@@ -29,7 +29,7 @@ public abstract class FieldReference implements Expression {
   }
 
   public boolean isSimpleRootReference() {
-    return segments().size() == 1 && inputExpression().isEmpty();
+    return segments().size() == 1 && !inputExpression().isPresent();
   }
 
   public FieldReference dereferenceStruct(int index) {

@@ -110,8 +110,11 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             .from(join)
             .left(left.orElse(join.getLeft()))
             .right(right.orElse(join.getRight()))
-            .condition(condition.or(() -> join.getCondition()))
-            .postJoinFilter(postFilter.or(() -> join.getPostJoinFilter()))
+            .condition(
+                Optional.ofNullable(condition.orElseGet(() -> join.getCondition().orElse(null))))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    postFilter.orElseGet(() -> join.getPostJoinFilter().orElse(null))))
             .build());
   }
 
