@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.immutables.value.Value;
@@ -315,11 +316,17 @@ public class SimpleExtension {
       int max =
           variadic()
               .map(
-                  t ->
-                      t.getMax().stream()
-                          .map(x -> args().size() - 1 + x + 1)
-                          .findFirst()
-                          .orElse(Integer.MAX_VALUE))
+                  t -> {
+                    OptionalInt optionalMax = t.getMax();
+                    IntStream stream =
+                        optionalMax.isPresent()
+                            ? IntStream.of(optionalMax.getAsInt())
+                            : IntStream.empty();
+                    return stream
+                        .map(x -> args().size() - 1 + x + 1)
+                        .findFirst()
+                        .orElse(Integer.MAX_VALUE);
+                  })
               .orElse(args().size() + 1);
       int min =
           variadic().map(t -> args().size() - 1 + t.getMin()).orElse(requiredArguments().size());
