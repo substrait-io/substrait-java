@@ -73,7 +73,7 @@ jobs:
         with:
           arguments: publish -Pversion=${{ needs.semantic-release.outputs.new-release-version }}
         env:
-          GITHUB_URL: https://maven.pkg.github.com/davisusanibar/gradle-kts-artifacts
+          GITHUB_URL: https://maven.pkg.github.com/substrait/substrait-java
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish package to GitHub & Nexus Packages
         if: ${{ github.event.inputs.github_nexus_package == '1' }}
@@ -81,7 +81,7 @@ jobs:
         with:
           arguments: publish -Pversion=${{ needs.semantic-release.outputs.new-release-version }}
         env:
-          GITHUB_URL: https://maven.pkg.github.com/davisusanibar/gradle-kts-artifacts
+          GITHUB_URL: https://maven.pkg.github.com/substrait/substrait-java
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXUS_URL: https://f59f-191-97-56-158.ngrok.io/repository
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}

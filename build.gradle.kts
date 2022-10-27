@@ -92,7 +92,7 @@ allprojects {
   }
 
   group = "io.substrait"
-  version = "1.0-SNAPSHOT"
+  version = "${version}"
 
   plugins.withType<SpotlessPlugin>().configureEach {
     configure<SpotlessExtension> {
