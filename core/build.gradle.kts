@@ -11,8 +11,6 @@ plugins {
   id("com.diffplug.spotless") version "6.11.0"
 }
 
-publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
-
 dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
   testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.0")

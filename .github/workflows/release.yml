@@ -1,0 +1,89 @@
+name: Release
+
+on:
+#  TODO: Review with the team a time proposal to schedule a release
+#  schedule:
+#    # 2 AM on Sunday
+#    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      nexus_package:
+        description: Publish to Nexus Packages
+        required: false
+        default: '0'
+      github_package:
+        description: Publish to GitHub Packages
+        required: false
+        default: '0'
+      github_nexus_package:
+        description: Publish to GitHub & Nexus Packages
+        required: false
+        default: '0'
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  semantic-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: run semantic-release
+        run: ./ci/release/run.sh
+        id: semanticrelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      new-release-version: ${{ steps.semanticrelease.outputs.new-release-version }}
+  release-artifacts:
+    runs-on: ubuntu-latest
+    needs: semantic-release
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Print branch version
+        run: echo v${{ needs.semantic-release.outputs.new-release-version }}
+      - uses: actions/checkout@v3
+        with:
+          ref: v${{ needs.semantic-release.outputs.new-release-version }}
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b
+      - name: Publish package to Nexus Packages
+        if: ${{ github.event.inputs.nexus_package == '1' }}
+        uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+        with:
+          arguments: publish -Pversion=${{ needs.semantic-release.outputs.new-release-version }}
+        env:
+          NEXUS_URL: https://f59f-191-97-56-158.ngrok.io/repository
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NEXUS_INSECURE: false
+      - name: Publish package to GitHub Packages
+        if: ${{ github.event.inputs.github_package == '1' }}
+        uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+        with:
+          arguments: publish -Pversion=${{ needs.semantic-release.outputs.new-release-version }}
+        env:
+          GITHUB_URL: https://maven.pkg.github.com/davisusanibar/gradle-kts-artifacts
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish package to GitHub & Nexus Packages
+        if: ${{ github.event.inputs.github_nexus_package == '1' }}
+        uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+        with:
+          arguments: publish -Pversion=${{ needs.semantic-release.outputs.new-release-version }}
+        env:
+          GITHUB_URL: https://maven.pkg.github.com/davisusanibar/gradle-kts-artifacts
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXUS_URL: https://f59f-191-97-56-158.ngrok.io/repository
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NEXUS_INSECURE: false

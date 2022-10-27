@@ -6,8 +6,6 @@ plugins {
   id("com.diffplug.spotless") version "6.11.0"
 }
 
-publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
-
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 
 dependencies {

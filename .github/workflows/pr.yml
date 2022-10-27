@@ -1,10 +1,28 @@
 name: PR Build Check
 
 on:
-  pull_request: 
+  pull_request:
 jobs:
+  editorconfig-checker:
+    name: Check editorconfig
+    runs-on: ubuntu-latest
+    steps:
+      - uses: editorconfig-checker/action-editorconfig-checker@v1
+  commitlint:
+    name: Lint commits for semantic-release
+    needs: editorconfig-checker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+      - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
   java:
     name: Build and Test Java
+    needs: commitlint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -19,8 +37,10 @@ jobs:
         uses: gradle/gradle-build-action@v2
       - name: Build with Gradle
         run: gradle build
+      - run: ./ci/release/dry_run.sh
   isthmus-native-image-mac-linux:
     name: Build Isthmus Native Image
+    needs: java
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -28,7 +48,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: recursive      
+        submodules: recursive
     - uses: DeLaGuardo/setup-graalvm@5.0
       with:
         graalvm: '22.0.0.2'

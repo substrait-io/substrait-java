@@ -1,0 +1,41 @@
+{
+  "branches": ["main"],
+  "preset": "conventionalcommits",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "releaseRules": [
+          {"breaking": true, "release": "minor"}
+        ]
+      }
+    ],
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogTitle": "Release Notes\n---",
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "publishCmd": "echo ::set-output name=new-release-version::${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md"],
+        "message": "chore(release): ${nextRelease.version}"
+      }
+    ]
+  ]
+}
