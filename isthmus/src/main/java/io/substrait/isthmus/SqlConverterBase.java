@@ -51,7 +51,10 @@ class SqlConverterBase {
 
   final SqlParser.Config parserConfig;
 
-  protected SqlConverterBase() {
+  protected static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
+  final FeatureBoard featureBoard;
+
+  protected SqlConverterBase(FeatureBoard features) {
     this.factory = new JavaTypeFactoryImpl();
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
@@ -65,6 +68,7 @@ class SqlConverterBase {
           return new RelMetadataQuery(handler);
         });
     parserConfig = SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY);
+    featureBoard = features == null ? FEATURES_DEFAULT : features;
   }
 
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
@@ -207,7 +211,9 @@ class SqlConverterBase {
     }
   }
 
-  /** A fully defined pre-specified table. */
+  /**
+   * A fully defined pre-specified table.
+   */
   protected static final class DefinedTable extends AbstractTable {
 
     private final String name;

@@ -29,6 +29,7 @@ dependencies {
   implementation("com.google.code.findbugs:jsr305:3.0.2")
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
   implementation("org.immutables:value-annotations:2.8.8")
+  annotationProcessor("org.immutables:value:2.8.8")
   testImplementation("org.apache.calcite:calcite-plus:1.28.0")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
