@@ -1,26 +1,23 @@
 {
-  "branches": ["main"],
+  "branches": [
+    { "name": "+([0-9])?(.{+([0-9]),x}).x" },
+    { "name": "main" },
+    { "name": "next" },
+    { "name": "next-major" },
+    { "name": "beta", "prerelease": true },
+    { "name": "alpha", "prerelease": true }
+  ],
   "preset": "conventionalcommits",
   "plugins": [
-    [
-      "@semantic-release/commit-analyzer",
-      {
-        "releaseRules": [
-          {"breaking": true, "release": "minor"}
-        ]
-      }
-    ],
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/exec",
     "@semantic-release/release-notes-generator",
+    "gradle-semantic-release-plugin",
     [
       "@semantic-release/changelog",
       {
         "changelogTitle": "Release Notes\n---",
         "changelogFile": "CHANGELOG.md"
-      }
-    ],
-    [
-      "@semantic-release/exec",
-      {
       }
     ],
     [
