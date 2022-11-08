@@ -13,9 +13,7 @@ import picocli.CommandLine.ParameterException;
 
 class PlanEntryPointTest {
 
-  /**
-   * Test that the default values are set correctly into the {@link FeatureBoard}.
-   */
+  /** Test that the default values are set correctly into the {@link FeatureBoard}. */
   @Test
   void defaultFeatureBoard() {
     PlanEntryPoint planEntryPoint = new PlanEntryPoint();
@@ -26,15 +24,16 @@ class PlanEntryPointTest {
     assertEquals(CrossJoinPolicy.KEEP_AS_CROSS_JOIN, features.crossJoinPolicy());
   }
 
-  /**
-   * Test that the command line options are correctly parsed into the {@link FeatureBoard}.
-   */
+  /** Test that the command line options are correctly parsed into the {@link FeatureBoard}. */
   @Test
   void customFeatureBoard() {
     PlanEntryPoint planEntryPoint = new PlanEntryPoint();
-    new CommandLine(planEntryPoint).parseArgs("--multistatement",
-        "--sqlconformancemode=SQL_SERVER_2008", "--crossjoinpolicy=CONVERT_TO_INNER_JOIN",
-        "SELECT * FROM foo");
+    new CommandLine(planEntryPoint)
+        .parseArgs(
+            "--multistatement",
+            "--sqlconformancemode=SQL_SERVER_2008",
+            "--crossjoinpolicy=CONVERT_TO_INNER_JOIN",
+            "SELECT * FROM foo");
     FeatureBoard features = planEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
     assertEquals(SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
@@ -47,8 +46,12 @@ class PlanEntryPointTest {
   @Test
   void invalidCmdOptions() {
     PlanEntryPoint planEntryPoint = new PlanEntryPoint();
-    assertThrows(ParameterException.class,
-        () -> new CommandLine(planEntryPoint).parseArgs("--sqlconformancemode=SQL_SERVER_2008",
-            "--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
+    assertThrows(
+        ParameterException.class,
+        () ->
+            new CommandLine(planEntryPoint)
+                .parseArgs(
+                    "--sqlconformancemode=SQL_SERVER_2008",
+                    "--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
   }
 }

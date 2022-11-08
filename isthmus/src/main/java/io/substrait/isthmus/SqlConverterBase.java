@@ -211,9 +211,7 @@ class SqlConverterBase {
     }
   }
 
-  /**
-   * A fully defined pre-specified table.
-   */
+  /** A fully defined pre-specified table. */
   protected static final class DefinedTable extends AbstractTable {
 
     private final String name;

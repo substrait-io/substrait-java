@@ -94,7 +94,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
     this.featureBoard = features;
   }
-  
+
   private Expression toExpression(RexNode node) {
     return node.accept(converter);
   }

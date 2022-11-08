@@ -20,9 +20,11 @@ public abstract class FeatureBoard {
   }
 
   /**
-   * @return the selected built-in Calcite SQL compatibility mode. For e.g. APPLY is only supported
-   * in SQL Server mode. Calcite parser will throw an exception if the SQL statement contains
-   * operators that are not supported by the selected mode.
+   * Returns Calcite's SQL conformance mode used for the current request. For e.g. APPLY is only
+   * supported in SQL Server mode. Calcite's parser will throw an exception if the selected mode is
+   * not SQL Server and the SQL statement contains APPLY.
+   *
+   * @return the selected built-in Calcite SQL compatibility mode.
    */
   @Value.Default
   public SqlConformanceEnum sqlConformanceMode() {

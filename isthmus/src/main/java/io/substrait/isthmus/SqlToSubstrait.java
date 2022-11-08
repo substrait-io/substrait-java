@@ -19,9 +19,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
-/**
- * Take a SQL statement and a set of table definitions and return a substrait plan.
- */
+/** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
 
   public SqlToSubstrait() {
@@ -80,9 +78,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                           io.substrait.proto.RelRoot.newBuilder()
                               .setInput(
                                   SubstraitRelVisitor.convert(
-                                          root,
-                                          EXTENSION_COLLECTION,
-                                          featureBoard)
+                                          root, EXTENSION_COLLECTION, featureBoard)
                                       .accept(relProtoConverter))
                               .addAllNames(
                                   TypeConverter.toNamedStruct(root.validatedRowType).names())));

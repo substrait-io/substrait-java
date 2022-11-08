@@ -80,8 +80,8 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             return super.visit(cross);
           }
         };
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().crossJoinPolicy(KEEP_AS_CROSS_JOIN)
-        .build();
+    FeatureBoard featureBoard =
+        ImmutableFeatureBoard.builder().crossJoinPolicy(KEEP_AS_CROSS_JOIN).build();
     Plan plan1 =
         assertProtoPlanRoundrip(
             "select\n"
