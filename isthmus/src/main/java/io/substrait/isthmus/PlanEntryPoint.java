@@ -12,12 +12,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import picocli.CommandLine;
-import picocli.CommandLine.PropertiesDefaultProvider;
 
 @Command(
     name = "isthmus",
     version = "isthmus 0.1",
-    defaultValueProvider = PropertiesDefaultProvider.class,
     description = "Converts a SQL query to a Substrait Plan")
 public class PlanEntryPoint implements Callable<Integer> {
 
