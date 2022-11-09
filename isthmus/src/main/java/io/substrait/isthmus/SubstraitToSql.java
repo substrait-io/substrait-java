@@ -16,6 +16,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
 public class SubstraitToSql extends SqlConverterBase {
 
   public SubstraitToSql() {
+    super(FEATURES_DEFAULT);
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
   }
 

@@ -80,6 +80,8 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             return super.visit(cross);
           }
         };
+    FeatureBoard featureBoard =
+        ImmutableFeatureBoard.builder().crossJoinPolicy(KEEP_AS_CROSS_JOIN).build();
     Plan plan1 =
         assertProtoPlanRoundrip(
             "select\n"
@@ -88,8 +90,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
                 + "from\n"
                 + "  \"customer\" c cross join\n"
                 + "  \"orders\" o",
-            new SqlToSubstrait(
-                new SqlToSubstrait.Options(new SubstraitRelVisitor.Options(KEEP_AS_CROSS_JOIN))));
+            new SqlToSubstrait(featureBoard));
     plan1.getRoots().forEach(t -> t.getInput().accept(visitor));
     assertEquals(1, counter[0]);
     Plan plan2 =
@@ -100,8 +101,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
                 + "from\n"
                 + "  \"customer\" c,\n"
                 + "  \"orders\" o",
-            new SqlToSubstrait(
-                new SqlToSubstrait.Options(new SubstraitRelVisitor.Options(KEEP_AS_CROSS_JOIN))));
+            new SqlToSubstrait(featureBoard));
     plan2.getRoots().forEach(t -> t.getInput().accept(visitor));
     assertEquals(2, counter[0]);
   }
