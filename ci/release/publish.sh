@@ -4,4 +4,4 @@
 set -euo pipefail
 
 gradle wrapper
-./gradlew clean :core:publishToSonatype :isthmus:publishToSonatype closeSonatypeStagingRepository closeSonatypeStagingRepository
+./gradlew clean :core:publishToSonatype :isthmus:publishToSonatype closeSonatypeStagingRepository
