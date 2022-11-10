@@ -8,97 +8,7 @@ plugins {
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.11.0"
-}
-
-publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
-
-allprojects {
-    publishing {
-        publications {
-            create<MavenPublication>("mavendavisusanibar") {
-                from(components["java"])
-
-                pom {
-                    name.set("Java Gradle Semantic Release")
-                    description.set("Implement semantic release for Java projects")
-                    url.set("https://github.com/davisusanibar/poc-semantic-release-use-cases")
-                    properties.set(mapOf(
-                        "country" to "PE",
-                        "dsusanibar.type.of" to "Java"
-                    ))
-                    licenses {
-                        license {
-                            name.set("The Apache License, Version 2.0")
-                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        }
-                    }
-                    developers {
-                        developer {
-                            id.set("davisusanibar")
-                            name.set("david dali susanibar arce")
-                            email.set("dsusanibara@uni.pe")
-                        }
-                    }
-                    scm {
-                        connection.set("scm:git:git://github.com:davisusanibar/poc-semantic-release-use-cases.git")
-                        developerConnection.set("scm:git:ssh://github.com:davisusanibar/poc-semantic-release-use-cases")
-                        url.set("https://github.com/davisusanibar/poc-semantic-release-use-cases/")
-                    }
-                }
-            }
-        }
-        repositories {
-            maven {
-                name = "local"
-                val releasesRepoUrl = "$buildDir/repos/releases"
-                val snapshotsRepoUrl = "$buildDir/repos/snapshots"
-                url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-            }
-//            maven {
-//                name = "github"
-//                url = uri("https://github.com/davisusanibar/poc-semantic-release-use-cases")
-//                credentials {
-//                    username = System.getenv("GITHUB_ACTOR").takeUnless { it.isNullOrEmpty() } ?: extra["GITHUB_ACTOR"].toString()
-//                    password = System.getenv("GITHUB_TOKEN").takeUnless { it.isNullOrEmpty() } ?: extra["GITHUB_TOKEN"].toString()
-//                }
-//            }
-            maven {
-                name = "sonatypeLocal"
-                val sonatypeUser = System.getenv("sonatype_user").takeUnless { it.isNullOrEmpty() } ?: extra["sonatype_user"].toString()
-                val sonatypePassword = System.getenv("sonatype_password").takeUnless { it.isNullOrEmpty() } ?: extra["sonatype_password"].toString()
-                val releasesRepoUrl = "http://localhost:8081/repository/maven-releases/"
-                val snapshotsRepoUrl = "http://localhost:8081/repository/maven-snapshots/"
-                isAllowInsecureProtocol = true
-                url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-                credentials {
-                    username = sonatypeUser
-                    password = sonatypePassword
-                }
-            }
-        }
-    }
-//    nexusPublishing {
-//        repositories {
-//            create("sonatype") {
-//                val sonatypeUser = System.getenv("sonatype_user").takeUnless { it.isNullOrEmpty() } ?: extra["sonatype_user"].toString()
-//                val sonatypePassword = System.getenv("sonatype_password").takeUnless { it.isNullOrEmpty() } ?: extra["sonatype_password"].toString()
-//                nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//                snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//                username.set(sonatypeUser)
-//                password.set(sonatypePassword)
-//            }
-//        }
-//    }
-    java {
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
-        }
-        withJavadocJar()
-        withSourcesJar()
-    }
-//    signing {
-//        sign(publishing.publications["mavendavisusanibar"])
-//    }
+  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
 repositories { mavenCentral() }
@@ -152,6 +62,24 @@ allprojects {
         trimTrailingWhitespace()
         targetExclude("**/build/**")
       }
+    }
+  }
+}
+
+nexusPublishing {
+  repositories {
+    create("sonatype") {
+      val sonatypeUser =
+        System.getenv("SONATYPE_USER").takeUnless { it.isNullOrEmpty() }
+          ?: extra["SONATYPE_USER"].toString()
+      val sonatypePassword =
+        System.getenv("SONATYPE_PASSWORD").takeUnless { it.isNullOrEmpty() }
+          ?: extra["SONATYPE_PASSWORD"].toString()
+      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+
+      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+      username.set(sonatypeUser)
+      password.set(sonatypePassword)
     }
   }
 }

@@ -10,9 +10,15 @@
   "preset": "conventionalcommits",
   "plugins": [
     "@semantic-release/commit-analyzer",
-    "@semantic-release/exec",
     "@semantic-release/release-notes-generator",
-    "gradle-semantic-release-plugin",
+    [
+      "@semantic-release/exec",
+      {
+        "verifyConditionsCmd": "ci/release/verify.sh",
+        "prepareCmd": "ci/release/prepare.sh ${nextRelease.version}",
+        "publishCmd": "ci/release/publish.sh"
+      }
+    ],
     [
       "@semantic-release/changelog",
       {
@@ -23,13 +29,20 @@
     [
       "@semantic-release/github",
       {
+        "assets": [
+          {"path": "isthmus/build/graal/isthmus-macOS-latest-${nextRelease.version}.zip", "label": "macOS"},
+          {"path": "isthmus/build/graal/isthmus-ubuntu-latest-${nextRelease.version}.zip", "label": "Ubuntu"}
+        ],
         "successComment": false
       }
     ],
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md"],
+        "assets": [
+          "gradle.properties",
+          "CHANGELOG.md"
+        ],
         "message": "chore(release): ${nextRelease.version}"
       }
     ]

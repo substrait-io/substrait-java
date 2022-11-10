@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: "16"
       - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
+  security:
+    name: Security validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: gradle/wrapper-validation-action@v1
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
@@ -47,33 +53,33 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - uses: DeLaGuardo/setup-graalvm@5.0
-      with:
-        graalvm: '22.0.0.2'
-        java: 'java17'
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-    - name: Report Java Version
-      run: java -version
-    - name: Install GraalVM native image
-      run: gu install native-image
-    - name: Build with Gradle
-      run: gradle nativeImage
-    - name: Smoke Test
-      run: ./isthmus/src/test/script/smoke.sh
-        ./isthmus/src/test/script/tpch_smoke.sh
-    - name: Rename the artifact to OS-unique name
-      shell: bash
-      run: |
-        value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
-    - name: Publish artifact
-      uses: actions/upload-artifact@master
-      with:
-        name: isthmus-${{ matrix.os }}
-        path: isthmus/build/graal/isthmus-${{ matrix.os }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: DeLaGuardo/setup-graalvm@5.0
+        with:
+          graalvm: '22.0.0.2'
+          java: 'java17'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Report Java Version
+        run: java -version
+      - name: Install GraalVM native image
+        run: gu install native-image
+      - name: Build with Gradle
+        run: gradle nativeImage
+      - name: Smoke Test
+        run: ./isthmus/src/test/script/smoke.sh
+          ./isthmus/src/test/script/tpch_smoke.sh
+      - name: Rename the artifact to OS-unique name
+        shell: bash
+        run: |
+          value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
+      - name: Publish artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: isthmus-${{ matrix.os }}
+          path: isthmus/build/graal/isthmus-${{ matrix.os }}
   dry-run-release:
     name: Dry-run release
     runs-on: ubuntu-latest
