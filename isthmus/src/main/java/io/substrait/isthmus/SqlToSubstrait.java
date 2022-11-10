@@ -21,53 +21,13 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
-  private static final Options OPTIONS = new Options();
-
-  public enum StatementBatching {
-    SINGLE_STATEMENT,
-    MULTI_STATEMENT
-  }
-
-  private final Options options;
 
   public SqlToSubstrait() {
-    this(OPTIONS);
+    this(null);
   }
 
-  public SqlToSubstrait(Options options) {
-    this.options = options;
-  }
-
-  public static class Options {
-    private final StatementBatching statementBatching;
-    private final SubstraitRelVisitor.Options relToSubstraitOptions;
-
-    public Options() {
-      this(StatementBatching.SINGLE_STATEMENT, SubstraitRelVisitor.OPTIONS);
-    }
-
-    public Options(StatementBatching statementBatching) {
-      this(statementBatching, SubstraitRelVisitor.OPTIONS);
-    }
-
-    public Options(SubstraitRelVisitor.Options relToSubstraitOptions) {
-      this.statementBatching = StatementBatching.SINGLE_STATEMENT;
-      this.relToSubstraitOptions = relToSubstraitOptions;
-    }
-
-    public Options(
-        StatementBatching statementBatching, SubstraitRelVisitor.Options relToSubstraitOptions) {
-      this.statementBatching = statementBatching;
-      this.relToSubstraitOptions = relToSubstraitOptions;
-    }
-
-    public StatementBatching getStatementBatching() {
-      return this.statementBatching;
-    }
-
-    public SubstraitRelVisitor.Options getRelToSubstraitOptions() {
-      return this.relToSubstraitOptions;
-    }
+  public SqlToSubstrait(FeatureBoard features) {
+    super(features);
   }
 
   public Plan execute(String sql, Function<List<String>, NamedStruct> tableLookup)
@@ -118,9 +78,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                           io.substrait.proto.RelRoot.newBuilder()
                               .setInput(
                                   SubstraitRelVisitor.convert(
-                                          root,
-                                          EXTENSION_COLLECTION,
-                                          options.getRelToSubstraitOptions())
+                                          root, EXTENSION_COLLECTION, featureBoard)
                                       .accept(relProtoConverter))
                               .addAllNames(
                                   TypeConverter.toNamedStruct(root.validatedRowType).names())));
@@ -134,8 +92,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     var parsedList = parser.parseStmtList();
-    if (options.getStatementBatching() == StatementBatching.SINGLE_STATEMENT
-        && parsedList.size() > 1) {
+    if (!featureBoard.allowsSqlBatch() && parsedList.size() > 1) {
       throw new UnsupportedOperationException("SQL must contain only a single statement: " + sql);
     }
     SqlToRelConverter converter =

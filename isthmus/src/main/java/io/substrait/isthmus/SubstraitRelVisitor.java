@@ -6,8 +6,24 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.function.SimpleExtension;
-import io.substrait.isthmus.expression.*;
-import io.substrait.relation.*;
+import io.substrait.isthmus.expression.AggregateFunctionConverter;
+import io.substrait.isthmus.expression.CallConverters;
+import io.substrait.isthmus.expression.LiteralConverter;
+import io.substrait.isthmus.expression.RexExpressionConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.relation.Aggregate;
+import io.substrait.relation.Cross;
+import io.substrait.relation.EmptyScan;
+import io.substrait.relation.Fetch;
+import io.substrait.relation.Filter;
+import io.substrait.relation.Join;
+import io.substrait.relation.NamedScan;
+import io.substrait.relation.Project;
+import io.substrait.relation.Rel;
+import io.substrait.relation.Set;
+import io.substrait.relation.Sort;
+import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +37,20 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.logical.*;
+import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.rel.logical.LogicalCalc;
+import org.apache.calcite.rel.logical.LogicalCorrelate;
+import org.apache.calcite.rel.logical.LogicalExchange;
+import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalIntersect;
+import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.rel.logical.LogicalMatch;
+import org.apache.calcite.rel.logical.LogicalMinus;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.rel.logical.LogicalUnion;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -34,25 +63,24 @@ import org.immutables.value.Value;
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(SubstraitRelVisitor.class);
-  public static final Options OPTIONS = new Options();
+  private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
   private final SimpleExtension.ExtensionCollection extensions;
   private final RexExpressionConverter converter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
+  private final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
-
-  private final Options options;
 
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
-    this(typeFactory, extensions, OPTIONS);
+    this(typeFactory, extensions, FEATURES_DEFAULT);
   }
 
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
-      Options options) {
+      FeatureBoard features) {
     this.extensions = extensions;
     var converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.DEFAULTS);
@@ -64,7 +92,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         new WindowFunctionConverter(
             extensions.windowFunctions(), typeFactory, aggregateFunctionConverter);
     this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
-    this.options = options;
+    this.featureBoard = features;
   }
 
   private Expression toExpression(RexNode node) {
@@ -155,7 +183,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     if (joinType == Join.JoinType.INNER
         && TRUE.equals(condition)
-        && options.getCrossJoinPolicy() == KEEP_AS_CROSS_JOIN) {
+        && featureBoard.crossJoinPolicy().equals(KEEP_AS_CROSS_JOIN)) {
       return Cross.builder()
           .left(left)
           .right(right)
@@ -330,18 +358,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {
-    return convert(root.rel, extensions, OPTIONS);
+    return convert(root.rel, extensions, FEATURES_DEFAULT);
   }
 
   public static Rel convert(
-      RelRoot root, SimpleExtension.ExtensionCollection extensions, Options options) {
-    return convert(root.rel, extensions, options);
+      RelRoot root, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    return convert(root.rel, extensions, features);
   }
 
   private static Rel convert(
-      RelNode rel, SimpleExtension.ExtensionCollection extensions, Options options) {
+      RelNode rel, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions, options);
+        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(rel);
     return visitor.apply(rel);
   }
