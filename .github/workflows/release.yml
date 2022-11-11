@@ -68,12 +68,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: isthmus-ubuntu-latest
-          path: isthmus/build/graal/
+          path: native/libs
       - name: Download isthmus-macOS-latest binary
         uses: actions/download-artifact@v3
         with:
           name: isthmus-macOS-latest
-          path: isthmus/build/graal/
+          path: native/libs
       - name: Run semantic-release
         run: ./ci/release/run.sh
         env:

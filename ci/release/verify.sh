@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-ls -latr isthmus/build/graal
+ls -latr native/libs
