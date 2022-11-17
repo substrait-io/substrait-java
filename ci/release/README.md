@@ -2,22 +2,28 @@
 
 ## Introduction
 
-- `Semantic release` help us to automates the whole package release workflow including:
+- `Semantic release` helps us to automate the whole package release workflow including:
   - Determining the next version number,
   - Generating the release notes,
   - Publishing the package.
-- New features and fixes are `immediately` available to users on Staging repository.
+- New features and fixes are `immediately` available to users on the Staging repository.
 - Use formalized `commit message convention` to document changes in the codebase.
 
 ## Credentials
 
+Semantic release requires several credentials in order to automate publishing actions.
+
 ### Github Token
+
+Git credentials are needed to push tags.  Currently, this is configured to use a github token.  Configure a github token with the following scopes.
 
 ![github_token](img/github_token.png)
 
 Then, this environment variable is ready to use `${{ secrets.GITHUB_TOKEN }}`.
 
 ### Public/Private Key
+
+GPG keys are used to sign the release artifacts.
 
 ```shell
 $ gpg --full-gen-key
@@ -52,16 +58,18 @@ These are the repositories availables:
 
 ## Release Process
 
-- Every push to pre-release branches `beta` deploy an artifact to `snapshots repository` and it's ready to be used.
-- Every push to release branches `main`, `maintenance` deploy an artifact to `staging repository` and it's ready to be used.
-- If there are no restrictions/problems/impediments next step is release the artifact to `maven central`.
-- There is needed a `manual release` to send the libraries to `maven central`.
-- In case of issues/problems/errors there is a `Drop` options available to delete the release version.
+- Every push to pre-release branches `beta` deploys an artifact to the `snapshots repository` and it's ready to be used.
+- Every push to release branches `main`, `maintenance` deploys an artifact to the `staging repository` and it's ready to be used.
+- If there are no restrictions/problems/impediments then the next step is to release the artifact to `maven central`.
+- There is a `manual release` process to send the libraries to `maven central`.
+- In case of issues/problems/errors there is also a `drop` option available to delete the release version.
 - Once a component has been released and published to the Central Repository, it cannot be altered.
 
 ![release](img/release_process.png)
 
 ## Artifacts
+
+Once published, the artifacts can be downloaded from the following locations:
 
 - Github Artifacts:
   - https://github.com/substrait/sustrait-java/releases
@@ -71,26 +79,20 @@ These are the repositories availables:
 
 ## Branches Configuration
 
-- In case of new features or breaking changes create a branch with any format name.
-  Example:
-  ```shell
-  # Current version on production: 2.5.7
-  $ git checkout -b new_feature_1234 main
-  ```
-  After your PR is merged to main branch, you could see the new libraries available at Sonatype staging environment.
+- Regular development of new features and functionality is done by creating PRs into the `main` branch
+
+  After your PR is merged to main branch, you could see the new libraries available in the Sonatype staging environment.
 
 
-- In case of maintenances please create a branch name with this pattern `+([0-9])?(.{+([0-9]),x}).x`.
+- To create a maintenance release please create a branch name with this pattern `+([0-9])?(.{+([0-9]),x}).x`.
   Example:
   ```shell
   # Current version on production: 2.5.7, version planned to use for maintenance: 2.1.7
   $ git checkout -b 2.1.x v2.1.7 # for fix
   $ git checkout -b 2.x v2.1.7 # for maintenance
-  ```
-  After your PR is merged to main branch, you could see the new libraries available at Sonatype staging environment.
 
 
-- In case you need to experiment with breaking change functionalities for new feature, take a look at pre-release branch.
+- In case you need to experiment with breaking changes for a new feature, you can use a pre-release branch.
   Example:
   ```shell
   # Current version on production: 2.5.7, version planned to use for maintenance: 2.1.7
@@ -119,7 +121,7 @@ Branches configuration:
 
 #### 1. What will be happened if I merge something on `main` branch and finalize with errors?
 
-CICD has a token configure with granted access to create issues as needed:
+The CI process will automatically create a Github issue to track the failure.
 
 ```shell
 [10:30:55 PM] [semantic-release] [@semantic-release/github] › ℹ  Created issue #3: https://github.com/substrait/sustrait-java/issues/3.
@@ -127,7 +129,7 @@ CICD has a token configure with granted access to create issues as needed:
 
 ![release_failing](img/automate_release_is_failing.png)
 
-#### 2. Could be possible to implement a process to deliver a library with custom version (i.e.: 3.2.9.RC1, 5.0.0.M1)?
+#### 2. Is it possible to release a library with a custom version (i.e.: 3.2.9.RC1, 5.0.0.M1)?
 
 We are using Sonatype OSSRH and there are repositories for `snapshots` / `staging` / `release`:
 - If your library finalize with `1.4.3-XXXXX-SNAPSHOT` -> it is going to be deployed to Snapshots repository
