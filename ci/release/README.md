@@ -15,11 +15,8 @@ Semantic release requires several credentials in order to automate publishing ac
 
 ### Github Token
 
-Git credentials are needed to push tags.  Currently, this is configured to use a github token.  Configure a github token with the following scopes.
-
-![github_token](img/github_token.png)
-
-Then, this environment variable is ready to use `${{ secrets.GITHUB_TOKEN }}`.
+Github workflow use this environment variable `${{ secrets.GITHUB_TOKEN }}` for [Automatic token authentication](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#about-the-github_token-secret
+).
 
 ### Public/Private Key
 
@@ -98,7 +95,7 @@ Once published, the artifacts can be downloaded from the following locations:
   # Current version on production: 2.5.7, version planned to use for maintenance: 2.1.7
   $ git checkout -b new_feature_lots_changes beta
   ```
-  After your PR is merged to main branch, you could see the new libraries available at Sonatype snapshots environment.
+  After your PR is merged to beta branch, you could see the new libraries available at Sonatype snapshots environment.
 
 
 Branches configuration:
@@ -119,7 +116,7 @@ Branches configuration:
 
 ## Q&A
 
-#### 1. What will be happened if I merge something on `main` branch and finalize with errors?
+#### 1. What will be happened if I merge something on main branch and for some reason the process has finished with errors or the Job has been completed with failures messages?
 
 The CI process will automatically create a Github issue to track the failure.
 
@@ -131,12 +128,13 @@ The CI process will automatically create a Github issue to track the failure.
 
 #### 2. Is it possible to release a library with a custom version (i.e.: 3.2.9.RC1, 5.0.0.M1)?
 
-We are using Sonatype OSSRH and there are repositories for `snapshots` / `staging` / `release`:
-- If your library finalize with `1.4.3-XXXXX-SNAPSHOT` -> it is going to be deployed to Snapshots repository
-- If your library finalize with `1.4.3-XXXXX-SNAPSHOT.YYYY` -> it is going to be deployed to Staging/Releases repository
-- If your library finalize with `1.4.3-XXXXX` -> it is going to be deployed to Staging/Releases repository
-- If your library finalize with `1.4.3` -> it is going to be deployed to Staging/Releases repository
+We are using Sonatype OSSRH, the destination repository (`snapshots / staging / release`) is based on the name of the artifacts:
+
+- For a library name as `1.4.3-XXXXX-SNAPSHOT` -> it is going to be deployed to Snapshots repository
+- For a library name as `1.4.3-XXXXX-SNAPSHOT.YYYY` -> it is going to be deployed to Staging/Releases repository
+- For a library name as `1.4.3-XXXXX` -> it is going to be deployed to Staging/Releases repository
+- For a library name as `1.4.3` -> it is going to be deployed to Staging/Releases repository
 
 #### 2. How many days do I have to approve the artifacts on the Staging repository?
 
-Please review [OSSRH-24751](https://issues.sonatype.org/browse/OSSRH-24751)
+Please review [OSSRH-86341](https://issues.sonatype.org/browse/OSSRH-86341) and [OSSRH-24751](https://issues.sonatype.org/browse/OSSRH-24751).

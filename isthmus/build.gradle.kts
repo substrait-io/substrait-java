@@ -21,7 +21,6 @@ publishing {
           "Create a well-defined, cross-language specification for data compute operations"
         )
         url.set("https://github.com/substrait-io/substrait-java")
-        properties.set(mapOf("country" to "PE", "dsusanibar.type.of" to "Java"))
         licenses {
           license {
             name.set("The Apache License, Version 2.0")
