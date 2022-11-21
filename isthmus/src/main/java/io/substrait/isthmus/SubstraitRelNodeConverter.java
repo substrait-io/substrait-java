@@ -115,7 +115,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   @Override
   public RelNode visit(LocalFiles localFiles) throws RuntimeException {
-    throw new UnsupportedOperationException("LocalFiles is not supported");
+    return visitFallback(localFiles);
   }
 
   @Override
