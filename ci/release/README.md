@@ -25,15 +25,15 @@ GPG keys are used to sign the release artifacts.
 ```shell
 $ gpg --full-gen-key
 $ gpg --list-keys
-$ gpg --keyserver keyserver.ubuntu.com --send-keys 193EAE47
-$ gpg --export-secret-keys 193EAE47 | base64
+$ gpg --keyserver keyserver.ubuntu.com --send-keys 103EEE97
+$ gpg --export-secret-keys 103EEE97 | base64
 ```
 
 Configure values for:
 ```properties
-SIGNING_KEY_ID = 193EAE47
+SIGNING_KEY_ID = 103EEE97
 SIGNING_PASSWORD = password
-SIGNING_KEY = gpg --export-secret-keys 193EAE47 | base64
+SIGNING_KEY = gpg --export-secret-keys 103EEE97 | base64
 ```
 
 ### Actions Secrets
@@ -112,6 +112,140 @@ Branches configuration:
     { "name": "beta", "prerelease": true },
     { "name": "alpha", "prerelease": true }
   ],
+```
+
+## Release Validation
+
+### GPG Signatures
+
+#### Getting Signature
+
+The ID of the key used to sign the artifacts is 103EEE97. The long-form ID is 0x9B445A3D103EEE97.
+
+You can download and import it with:
+
+````shell
+$ gpg --keyserver keyserver.ubuntu.com --recv-keys 103EEE97
+gpg: key 9B445A3D103EEE97: "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+````
+
+#### Verifying the Signature
+
+Download Java JAR/POM files and validate the signature of them:
+
+```shell
+# Staging Environment - 1.0.0 version
+# JAR
+$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.jar
+$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.jar.asc
+$ gpg --verify /Users/substrait/core-1.0.0.jar.asc
+gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
+gpg: Signature made Fri Nov 18 08:52:19 2022 -05
+gpg:                using RSA key 9B445A3D103EEE97
+gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+# POM
+$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom
+$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom.asc
+$ gpg --verify /Users/substrait/core-1.0.0.pom.asc
+gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
+gpg: Signature made Fri Nov 18 08:52:18 2022 -05
+gpg:                using RSA key 9B445A3D103EEE97
+gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+
+
+# Maven Central - 1.0.0 version
+# JAR
+$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.jar
+$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.jar.asc
+$ gpg --verify /Users/substrait/core-1.0.0.jar.asc
+gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
+gpg: Signature made Fri Nov 18 08:52:19 2022 -05
+gpg:                using RSA key 9B445A3D103EEE97
+gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+# POM
+$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom
+$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom.asc
+$ gpg --verify /Users/substrait/core-1.0.0.pom.asc
+gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
+gpg: Signature made Fri Nov 18 08:52:18 2022 -05
+gpg:                using RSA key 9B445A3D103EEE97
+gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+```
+
+### How to use Artifacts
+
+#### Staging Environment
+
+Maven:
+```xml
+    <repositories>
+        <repository>
+            <id>sonatype-staging</id>
+            <url>https://s01.oss.sonatype.org/content/groups/staging</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+      ...
+      <dependency>
+          <groupId>io.substrait</groupId>
+          <artifactId>core</artifactId>
+          <version>1.0.0</version>
+      </dependency>
+      <dependency>
+          <groupId>io.substrait</groupId>
+          <artifactId>isthmus</artifactId>
+          <version>1.0.0</version>
+      </dependency>
+      ...
+    </dependencies>
+```
+
+Gradle
+```groovy
+repositories {
+    maven {
+        url = uri("https://s01.oss.sonatype.org/content/groups/staging")
+    }
+}
+dependencies {
+    ...
+    implementation 'io.substrait:core:1.0.0'
+    implementation 'io.substrait:isthmus:1.0.0'
+    ...
+}
+```
+
+#### Maven Central
+
+Maven:
+```xml
+    <dependencies>
+      ...
+      <dependency>
+          <groupId>io.substrait</groupId>
+          <artifactId>core</artifactId>
+          <version>1.0.0</version>
+      </dependency>
+      <dependency>
+          <groupId>io.substrait</groupId>
+          <artifactId>isthmus</artifactId>
+          <version>1.0.0</version>
+      </dependency>
+      ...
+    </dependencies>
+```
+
+Gradle
+```groovy
+dependencies {
+    ...
+    implementation 'io.substrait:core:1.0.0'
+    implementation 'io.substrait:isthmus:1.0.0'
+    ...
+}
 ```
 
 ## Q&A
