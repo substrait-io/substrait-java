@@ -176,9 +176,11 @@ public class Substrait2SqlTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip("select substring(l_comment, 1, 5) from lineitem");
 
     assertSqlSubstraitRelRoundTrip("select lower(l_comment) from lineitem");
-    assertSqlSubstraitRelRoundTrip("select l_comment from lineitem where lower(l_comment) <> l_comment");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_comment from lineitem where lower(l_comment) <> l_comment");
 
     assertSqlSubstraitRelRoundTrip("select upper(l_comment) from lineitem");
-    assertSqlSubstraitRelRoundTrip("select l_comment from lineitem where upper(l_comment) <> l_comment");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_comment from lineitem where upper(l_comment) <> l_comment");
   }
 }
