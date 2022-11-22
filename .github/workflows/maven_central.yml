@@ -1,0 +1,27 @@
+name: Promote to Maven Central
+
+on:
+  schedule:
+    # at at 02:00:00 every day
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      days_to_promote:
+        description: Number of days after a package is ready to promote.
+        required: false
+        default: 14
+jobs:
+  promote-staging-to-maven-central:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Promote package from staging to Maven Central
+        run: ./ci/release/promote.sh
+        env:
+          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          PACKAGE: io.substrait:substrait
+          DAYS_TO_PROMOTE: ${{ github.event.inputs.days_to_promote || 14 }}
