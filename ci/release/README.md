@@ -246,6 +246,29 @@ dependencies {
     ...
 }
 ```
+#### Isthmus Binary Packages
+
+Download Isthmus binary packages from the Release/Github Assets.
+
+```shell
+$ ./isthmus-macOS-1.0.0  -c "CREATE TABLE Persons ( firstName VARCHAR, lastName VARCHAR, zip INT )" "SELECT lastName, firstName FROM Persons WHERE zip = 90210"
+
+{
+  "extensionUris": [{
+    "extensionUriAnchor": 1,
+    "uri": "/functions_comparison.yaml"
+  }],
+  "extensions": [{
+    "extensionFunction": {
+      "extensionUriReference": 1,
+      "functionAnchor": 0,
+      "name": "equal:any_any"
+    }
+  }],
+  "relations": [{
+    "root": {
+...
+```
 
 ## Q&A
 
