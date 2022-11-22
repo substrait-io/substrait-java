@@ -25,15 +25,15 @@ GPG keys are used to sign the release artifacts.
 ```shell
 $ gpg --full-gen-key
 $ gpg --list-keys
-$ gpg --keyserver keyserver.ubuntu.com --send-keys 103EEE97
-$ gpg --export-secret-keys 103EEE97 | base64
+$ gpg --keyserver keyserver.ubuntu.com --send-keys C8BA52B3
+$ gpg --export-secret-keys C8BA52B3 | base64
 ```
 
 Configure values for:
 ```properties
-SIGNING_KEY_ID = 103EEE97
+SIGNING_KEY_ID = C8BA52B3
 SIGNING_PASSWORD = password
-SIGNING_KEY = gpg --export-secret-keys 103EEE97 | base64
+SIGNING_KEY = gpg --export-secret-keys C8BA52B3 | base64
 ```
 
 ### Actions Secrets
@@ -120,13 +120,13 @@ Branches configuration:
 
 #### Getting Signature
 
-The ID of the key used to sign the artifacts is 103EEE97. The long-form ID is 0x9B445A3D103EEE97.
+The ID of the key used to sign the artifacts is C8BA52B3. The long-form ID is 0xF4A1E652C8BA52B3.
 
 You can download and import it with:
 
 ````shell
-$ gpg --keyserver keyserver.ubuntu.com --recv-keys 103EEE97
-gpg: key 9B445A3D103EEE97: "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" imported
+$ gpg --keyserver keyserver.ubuntu.com --recv-keys C8BA52B3
+gpg: key F4A1E652C8BA52B3: public key "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>" imported
 gpg: Total number processed: 1
 gpg:               imported: 1
 ````
@@ -143,17 +143,16 @@ $ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/co
 $ gpg --verify /Users/substrait/core-1.0.0.jar.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
 gpg: Signature made Fri Nov 18 08:52:19 2022 -05
-gpg:                using RSA key 9B445A3D103EEE97
-gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+gpg:                using RSA key F4A1E652C8BA52B3
+gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
 # POM
 $ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom
 $ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom.asc
 $ gpg --verify /Users/substrait/core-1.0.0.pom.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
 gpg: Signature made Fri Nov 18 08:52:18 2022 -05
-gpg:                using RSA key 9B445A3D103EEE97
-gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
-
+gpg:                using RSA key F4A1E652C8BA52B3
+gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
 
 # Maven Central - 1.0.0 version
 # JAR
@@ -162,16 +161,16 @@ $ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/co
 $ gpg --verify /Users/substrait/core-1.0.0.jar.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
 gpg: Signature made Fri Nov 18 08:52:19 2022 -05
-gpg:                using RSA key 9B445A3D103EEE97
-gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+gpg:                using RSA key F4A1E652C8BA52B3
+gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
 # POM
 $ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom
 $ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom.asc
 $ gpg --verify /Users/substrait/core-1.0.0.pom.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
 gpg: Signature made Fri Nov 18 08:52:18 2022 -05
-gpg:                using RSA key 9B445A3D103EEE97
-gpg: Good signature from "Subsrait Java (Key to sign Java artifacts) <subsrait@io.com>" [ultimate]
+gpg:                using RSA key F4A1E652C8BA52B3
+gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
 ```
 
 ### How to use Artifacts
