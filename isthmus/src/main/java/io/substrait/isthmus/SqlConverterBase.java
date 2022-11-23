@@ -67,8 +67,11 @@ class SqlConverterBase {
               new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
           return new RelMetadataQuery(handler);
         });
-    parserConfig = SqlParser.Config.DEFAULT.withParserFactory(SqlDdlParserImpl.FACTORY);
     featureBoard = features == null ? FEATURES_DEFAULT : features;
+    parserConfig =
+        SqlParser.Config.DEFAULT
+            .withParserFactory(SqlDdlParserImpl.FACTORY)
+            .withConformance(featureBoard.sqlConformanceMode());
   }
 
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;

@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.*;
@@ -46,6 +47,32 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     }
     filter.getCondition().accept(rexVisitor);
     return super.visit(filter);
+  }
+
+  @Override
+  public RelNode visit(LogicalCorrelate correlate) throws RuntimeException {
+    for (CorrelationId id : correlate.getVariablesSet()) {
+      if (!nestedDepth.containsKey(id)) {
+        nestedDepth.put(id, 0);
+      }
+    }
+
+    apply(correlate.getLeft());
+
+    // Correlated join is a special case. The right-rel is a correlated sub-query but not a REX. So,
+    // the RexVisitor cannot be applied to it to correctly compute the depth map. Hence, we need to
+    // manually compute the depth map for the right-rel.
+    for (Map.Entry<CorrelationId, Integer> entry : nestedDepth.entrySet()) {
+      nestedDepth.put(entry.getKey(), entry.getValue() + 1);
+    }
+
+    apply(correlate.getRight()); // look inside sub-queries
+
+    for (Map.Entry<CorrelationId, Integer> entry : nestedDepth.entrySet()) {
+      nestedDepth.put(entry.getKey(), entry.getValue() - 1);
+    }
+
+    return correlate;
   }
 
   @Override
