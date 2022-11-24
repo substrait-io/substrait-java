@@ -12,7 +12,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Validate credentials for Sonatype and Signing
-        run: ./ci/release/sanity_check.sh
+        run: ./ci/release/sanity.sh
         env:
           SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
