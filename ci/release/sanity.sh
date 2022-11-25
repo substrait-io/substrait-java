@@ -13,7 +13,7 @@ else
 fi
 
 echo "Validate Signing Private/Public Key."
-echo $SIGNING_KEY | base64 --decode | gpg --batch --import
+echo "$SIGNING_KEY" | base64 --decode | gpg --batch --import
 KEYGRIP=`gpg --with-keygrip --list-secret-keys $SIGNING_KEY_ID | sed -e '/^ *Keygrip  *=  */!d;s///;q'`
 echo "allow-preset-passphrase"  >> ~/.gnupg/gpg-agent.conf
 gpgconf --reload gpg-agent
