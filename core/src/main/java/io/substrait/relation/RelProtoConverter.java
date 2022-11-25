@@ -17,6 +17,7 @@ import io.substrait.proto.RelCommon;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
+import io.substrait.relation.files.FileOrFiles;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -178,6 +179,24 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                 .setBaseSchema(namedScan.getInitialSchema().toProto())
                 .build())
         .build();
+  }
+
+  @Override
+  public Rel visit(LocalFiles localFiles) throws RuntimeException {
+    var builder =
+        ReadRel.newBuilder()
+            .setCommon(common(localFiles))
+            .setLocalFiles(
+                ReadRel.LocalFiles.newBuilder()
+                    .addAllItems(
+                        localFiles.getItems().stream()
+                            .map(FileOrFiles::toProto)
+                            .collect(java.util.stream.Collectors.toList()))
+                    .build())
+            .setBaseSchema(localFiles.getInitialSchema().toProto());
+    localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
+
+    return Rel.newBuilder().setRead(builder.build()).build();
   }
 
   @Override

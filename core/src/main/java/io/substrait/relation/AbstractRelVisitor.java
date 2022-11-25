@@ -40,6 +40,11 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   }
 
   @Override
+  public OUTPUT visit(LocalFiles localFiles) throws EXCEPTION {
+    return visitFallback(localFiles);
+  }
+
+  @Override
   public OUTPUT visit(Project project) throws EXCEPTION {
     return visitFallback(project);
   }
