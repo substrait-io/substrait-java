@@ -16,7 +16,7 @@ public class Utils {
    *
    * <p>Based on <a
    * href="https://thomas.preissler.me/blog/2020/12/29/permutations-using-java-streams">Soln by
-   * Thomas Preissler</a></a>
+   * Thomas Preissler</a>
    */
   public static <T> Stream<List<T>> crossProduct(List<List<T>> lists) {
 
