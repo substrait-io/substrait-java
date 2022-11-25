@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.1.1](https://github.com/substrait-io/substrait-java/compare/v0.1.0...v0.1.1) (2022-11-25)
+
+
+### Bug Fixes
+
+* release build failing [#108](https://github.com/substrait-io/substrait-java/issues/108) ([#109](https://github.com/substrait-io/substrait-java/issues/109)) ([c0d7a7d](https://github.com/substrait-io/substrait-java/commit/c0d7a7d5889b483cf6e6e57d87379e5474011048))
+
 ## [0.1.0](https://github.com/substrait-io/substrait-java/compare/v0.0.0...v0.1.0) (2022-11-25)
 
 
