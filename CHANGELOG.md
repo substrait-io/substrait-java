@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.1.3](https://github.com/substrait-io/substrait-java/compare/v0.1.2...v0.1.3) (2022-11-25)
+
+
+### Bug Fixes
+
+* quote signing key in sanity script ([#111](https://github.com/substrait-io/substrait-java/issues/111)) ([36ff257](https://github.com/substrait-io/substrait-java/commit/36ff2570497ed51360d286fee945641b8bc9b87d))
+
 ## [0.1.2](https://github.com/substrait-io/substrait-java/compare/v0.1.1...v0.1.2) (2022-11-25)
 
 
