@@ -18,6 +18,9 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.files.ImmutableFileFormat;
+import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -86,6 +89,8 @@ public class ProtoRelConverter {
       return newVirtualTable(rel);
     } else if (rel.hasNamedTable()) {
       return newNamedScan(rel);
+    } else if (rel.hasLocalFiles()) {
+      return newLocalFiles(rel);
     } else {
       return newEmptyScan(rel);
     }
@@ -138,6 +143,57 @@ public class ProtoRelConverter {
         .initialSchema(namedStruct)
         .names(rel.getNamedTable().getNamesList())
         .remap(optionalRelmap(rel.getCommon()))
+        .filter(
+            Optional.ofNullable(
+                rel.hasFilter()
+                    ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                        .from(rel.getFilter())
+                    : null))
+        .build();
+  }
+
+  private LocalFiles newLocalFiles(ReadRel rel) {
+    var namedStruct = newNamedStruct(rel);
+
+    return LocalFiles.builder()
+        .initialSchema(namedStruct)
+        .remap(optionalRelmap(rel.getCommon()))
+        .addAllItems(
+            rel.getLocalFiles().getItemsList().stream()
+                .map(
+                    file -> {
+                      ImmutableFileOrFiles.Builder builder =
+                          ImmutableFileOrFiles.builder()
+                              .partitionIndex(file.getPartitionIndex())
+                              .start(file.getStart())
+                              .length(file.getLength());
+                      if (file.hasParquet()) {
+                        builder.fileFormat(
+                            ImmutableFileFormat.ParquetReadOptions.builder().build());
+                      } else if (file.hasOrc()) {
+                        builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
+                      } else if (file.hasArrow()) {
+                        builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
+                      } else if (file.hasExtension()) {
+                        builder.fileFormat(
+                            ImmutableFileFormat.Extension.builder()
+                                .extension(file.getExtension())
+                                .build());
+                      }
+                      if (file.hasUriFile()) {
+                        builder.pathType(FileOrFiles.PathType.URI_FILE).path(file.getUriFile());
+                      } else if (file.hasUriFolder()) {
+                        builder.pathType(FileOrFiles.PathType.URI_FOLDER).path(file.getUriFolder());
+                      } else if (file.hasUriPath()) {
+                        builder.pathType(FileOrFiles.PathType.URI_PATH).path(file.getUriPath());
+                      } else if (file.hasUriPathGlob()) {
+                        builder
+                            .pathType(FileOrFiles.PathType.URI_PATH_GLOB)
+                            .path(file.getUriPathGlob());
+                      }
+                      return builder.build();
+                    })
+                .collect(java.util.stream.Collectors.toList()))
         .filter(
             Optional.ofNullable(
                 rel.hasFilter()
