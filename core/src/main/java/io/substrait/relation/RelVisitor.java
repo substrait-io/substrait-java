@@ -15,6 +15,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(NamedScan namedScan) throws EXCEPTION;
 
+  OUTPUT visit(LocalFiles localFiles) throws EXCEPTION;
+
   OUTPUT visit(Project project) throws EXCEPTION;
 
   OUTPUT visit(Sort sort) throws EXCEPTION;
