@@ -1,13 +1,9 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
-      - next
-      - next-major
-      - beta
-      - alpha
+  schedule:
+    # 2 AM on Sunday
+    - cron: "0 2 * * 0"
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +13,7 @@ concurrency:
 jobs:
   isthmus-native-image-mac-linux:
     name: Build Isthmus Native Image
+    if: github.repository == 'substrait-io/substrait-java'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -50,6 +47,7 @@ jobs:
           name: isthmus-${{ matrix.os }}
           path: isthmus/build/graal/isthmus-${{ matrix.os }}
   semantic-release:
+    if: github.repository == 'substrait-io/substrait-java'
     runs-on: ubuntu-latest
     needs: isthmus-native-image-mac-linux
     steps:
