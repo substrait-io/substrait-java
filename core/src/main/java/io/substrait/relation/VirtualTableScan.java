@@ -15,10 +15,13 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
   /**
    *
-   * <li>non-empty rowset
-   * <li>non-null field-names
-   * <li>no null rows
-   * <li>row shape must match field-list
+   *
+   * <ul>
+   *   <li>non-empty rowset
+   *   <li>non-null field-names
+   *   <li>no null rows
+   *   <li>row shape must match field-list
+   * </ul>
    */
   @Value.Check
   protected void check() {

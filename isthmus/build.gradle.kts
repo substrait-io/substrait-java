@@ -1,14 +1,75 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
   `maven-publish`
   id("java")
   id("idea")
   id("com.palantir.graal") version "0.10.0"
   id("com.diffplug.spotless") version "6.11.0"
+  id("com.github.johnrengelman.shadow") version "7.1.2"
+  signing
 }
 
-publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
+publishing {
+  publications {
+    create<MavenPublication>("maven-publish") {
+      from(components["java"])
 
-java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+      pom {
+        name.set("Substrait Java")
+        description.set(
+          "Create a well-defined, cross-language specification for data compute operations"
+        )
+        url.set("https://github.com/substrait-io/substrait-java")
+        licenses {
+          license {
+            name.set("The Apache License, Version 2.0")
+            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+          }
+        }
+        developers {
+          developer {
+            // TBD Get the list of
+          }
+        }
+        scm {
+          connection.set("scm:git:git://github.com:substrait-io/substrait-java.git")
+          developerConnection.set("scm:git:ssh://github.com:substrait-io/substrait-java")
+          url.set("https://github.com/substrait-io/substrait-java/")
+        }
+      }
+    }
+  }
+  repositories {
+    maven {
+      name = "local"
+      val releasesRepoUrl = "$buildDir/repos/releases"
+      val snapshotsRepoUrl = "$buildDir/repos/snapshots"
+      url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
+    }
+  }
+}
+
+signing {
+  setRequired({ gradle.taskGraph.hasTask("publishToSonatype") })
+  val signingKeyId =
+    System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY_ID"].toString()
+  val signingPassword =
+    System.getenv("SIGNING_PASSWORD").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_PASSWORD"].toString()
+  val signingKey =
+    System.getenv("SIGNING_KEY").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY"].toString()
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign(publishing.publications["maven-publish"])
+}
+
+java {
+  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  withJavadocJar()
+  withSourcesJar()
+}
 
 dependencies {
   implementation(project(":core"))
@@ -51,3 +112,12 @@ graal {
   option("--features=io.substrait.isthmus.RegisterAtRuntime")
   option("-J--enable-preview")
 }
+
+tasks {
+  named<ShadowJar>("shadowJar") {
+    archiveBaseName.set("isthmus")
+    manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
+  }
+}
+
+tasks { build { dependsOn(shadowJar) } }

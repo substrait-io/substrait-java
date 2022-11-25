@@ -1,7 +1,15 @@
 {
-  "branches": ["main"],
+  "branches": [
+    { "name": "+([0-9])?(.{+([0-9]),x}).x" },
+    { "name": "main" },
+    { "name": "next" },
+    { "name": "next-major" },
+    { "name": "beta", "prerelease": true },
+    { "name": "alpha", "prerelease": true }
+  ],
   "preset": "conventionalcommits",
   "plugins": [
+    "@semantic-release/release-notes-generator",
     [
       "@semantic-release/commit-analyzer",
       {
@@ -10,7 +18,14 @@
         ]
       }
     ],
-    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "verifyConditionsCmd": "ci/release/verify.sh",
+        "prepareCmd": "ci/release/prepare.sh ${nextRelease.version}",
+        "publishCmd": "ci/release/publish.sh"
+      }
+    ],
     [
       "@semantic-release/changelog",
       {
@@ -19,20 +34,30 @@
       }
     ],
     [
-      "@semantic-release/exec",
-      {
-      }
-    ],
-    [
       "@semantic-release/github",
       {
+        "assets": [
+          {
+            "path": "native/libs/isthmus-macOS-latest",
+            "name": "isthmus-macOS-${nextRelease.version}",
+            "label": "Isthmus Native Image - macOS"
+          },
+          {
+            "path": "native/libs/isthmus-ubuntu-latest",
+            "name": "isthmus-ubuntu-${nextRelease.version}",
+            "label": "Isthmus Native Image - Linux"
+          }
+        ],
         "successComment": false
       }
     ],
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md"],
+        "assets": [
+          "gradle.properties",
+          "CHANGELOG.md"
+        ],
         "message": "chore(release): ${nextRelease.version}"
       }
     ]

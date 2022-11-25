@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: "16"
       - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
+  security:
+    name: Security validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: gradle/wrapper-validation-action@v1
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest

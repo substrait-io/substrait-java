@@ -8,9 +8,8 @@ plugins {
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.11.0"
+  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
-
-publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
 
 repositories { mavenCentral() }
 
@@ -52,7 +51,7 @@ allprojects {
   }
 
   group = "io.substrait"
-  version = "1.0-SNAPSHOT"
+  version = "${version}"
 
   plugins.withType<SpotlessPlugin>().configureEach {
     configure<SpotlessExtension> {
@@ -63,6 +62,24 @@ allprojects {
         trimTrailingWhitespace()
         targetExclude("**/build/**")
       }
+    }
+  }
+}
+
+nexusPublishing {
+  repositories {
+    create("sonatype") {
+      val sonatypeUser =
+        System.getenv("SONATYPE_USER").takeUnless { it.isNullOrEmpty() }
+          ?: extra["SONATYPE_USER"].toString()
+      val sonatypePassword =
+        System.getenv("SONATYPE_PASSWORD").takeUnless { it.isNullOrEmpty() }
+          ?: extra["SONATYPE_PASSWORD"].toString()
+      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+
+      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+      username.set(sonatypeUser)
+      password.set(sonatypePassword)
     }
   }
 }
