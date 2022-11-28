@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.function.SimpleExtension;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
@@ -77,8 +76,7 @@ class SqlConverterBase {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
 
   static {
-    SimpleExtension.ExtensionCollection defaults =
-        ImmutableSimpleExtension.ExtensionCollection.builder().build();
+    SimpleExtension.ExtensionCollection defaults;
     try {
       defaults = SimpleExtension.loadDefaults();
     } catch (IOException e) {
