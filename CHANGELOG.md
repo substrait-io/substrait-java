@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.1.4](https://github.com/substrait-io/substrait-java/compare/v0.1.3...v0.1.4) (2022-11-30)
+
+
+### Bug Fixes
+
+* open, close and promote from staging to maven ([#112](https://github.com/substrait-io/substrait-java/issues/112)) ([565e340](https://github.com/substrait-io/substrait-java/commit/565e340594f4576c3ab186f79c465378c3dc75ba))
+
 ## [0.1.3](https://github.com/substrait-io/substrait-java/compare/v0.1.2...v0.1.3) (2022-11-25)
 
 
