@@ -61,6 +61,7 @@ import org.immutables.value.Value;
 @SuppressWarnings("UnstableApiUsage")
 @Value.Enclosing
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
+
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(SubstraitRelVisitor.class);
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
@@ -196,6 +197,19 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(LogicalCorrelate correlate) {
+    // left input of correlated-join is similar to the left input of a logical join
+    apply(correlate.getLeft());
+
+    // right input of correlated-join is similar to a correlated sub-query
+    apply(correlate.getRight());
+
+    var joinType =
+        switch (correlate.getJoinType()) {
+          case INNER -> Join.JoinType.INNER; // corresponds to CROSS APPLY join
+          case LEFT -> Join.JoinType.LEFT; // corresponds to OUTER APPLY join
+          default -> throw new IllegalArgumentException(
+              "Invalid correlated join type: " + correlate.getJoinType());
+        };
     return super.visit(correlate);
   }
 

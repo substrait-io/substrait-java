@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
@@ -13,6 +14,7 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Schema;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -95,6 +97,17 @@ public class SqlToSubstrait extends SqlConverterBase {
     if (!featureBoard.allowsSqlBatch() && parsedList.size() > 1) {
       throw new UnsupportedOperationException("SQL must contain only a single statement: " + sql);
     }
+    SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
+    List<RelRoot> roots =
+        parsedList.stream()
+            .map(parsed -> getBestExpRelRoot(converter, parsed))
+            .collect(java.util.stream.Collectors.toList());
+    return roots;
+  }
+
+  @VisibleForTesting
+  SqlToRelConverter createSqlToRelConverter(
+      SqlValidator validator, CalciteCatalogReader catalogReader) {
     SqlToRelConverter converter =
         new SqlToRelConverter(
             null,
@@ -103,20 +116,18 @@ public class SqlToSubstrait extends SqlConverterBase {
             relOptCluster,
             StandardConvertletTable.INSTANCE,
             converterConfig);
-    List<RelRoot> roots =
-        parsedList.stream()
-            .map(
-                parsed -> {
-                  RelRoot root = converter.convertQuery(parsed, true, true);
-                  {
-                    var program = HepProgram.builder().build();
-                    HepPlanner hepPlanner = new HepPlanner(program);
-                    hepPlanner.setRoot(root.rel);
-                    root = root.withRel(hepPlanner.findBestExp());
-                  }
-                  return root;
-                })
-            .collect(java.util.stream.Collectors.toList());
-    return roots;
+    return converter;
+  }
+
+  @VisibleForTesting
+  static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
+    RelRoot root = converter.convertQuery(parsed, true, true);
+    {
+      var program = HepProgram.builder().build();
+      HepPlanner hepPlanner = new HepPlanner(program);
+      hepPlanner.setRoot(root.rel);
+      root = root.withRel(hepPlanner.findBestExp());
+    }
+    return root;
   }
 }
