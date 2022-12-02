@@ -14,7 +14,7 @@ WHERE p_size <
                 AND   PS.ps_suppkey = l.l_suppkey))
 
 
-          Filter     ---  $coor0
+          Filter     ---  $corr0
           /      \ condition
          /  p_size <  RexSubquery
        Scan(P)            |
@@ -23,7 +23,7 @@ WHERE p_size <
                           |
                       Project
                           |
-                        Filter   --- $coor2
+                        Filter   --- $corr2
                         /      \
                        /        \
                 Scan (L)         \
