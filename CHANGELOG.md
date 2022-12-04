@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.2.0](https://github.com/substrait-io/substrait-java/compare/v0.1.4...v0.2.0) (2022-12-04)
+
+
+### Features
+
+* support parsing of SQL queries with APPLY ([#106](https://github.com/substrait-io/substrait-java/issues/106)) ([4c81833](https://github.com/substrait-io/substrait-java/commit/4c81833688e71929c74a9a80e013174db88ad3ef))
+
 ## [0.1.4](https://github.com/substrait-io/substrait-java/compare/v0.1.3...v0.1.4) (2022-11-30)
 
 
