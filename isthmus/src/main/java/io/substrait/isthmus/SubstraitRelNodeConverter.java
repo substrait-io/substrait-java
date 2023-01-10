@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -49,7 +49,7 @@ import org.apache.calcite.tools.RelBuilder;
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
   private final RelOptCluster relOptCluster;
-  private final CalciteCatalogReader catalogReader;
+  private final Prepare.CatalogReader catalogReader;
 
   private final SimpleExtension.ExtensionCollection extensions;
 
@@ -63,7 +63,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelOptCluster relOptCluster,
-      CalciteCatalogReader catalogReader,
+      Prepare.CatalogReader catalogReader,
       RelBuilder relBuilder) {
     this.relOptCluster = relOptCluster;
     this.catalogReader = catalogReader;
@@ -87,7 +87,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelOptCluster relOptCluster,
-      CalciteCatalogReader catalogReader,
+      Prepare.CatalogReader catalogReader,
       SqlParser.Config parserConfig) {
     this.relOptCluster = relOptCluster;
     this.catalogReader = catalogReader;
@@ -118,20 +118,20 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
-      CalciteCatalogReader calciteCatalogReader,
+      Prepare.CatalogReader catalogReader,
       SqlParser.Config parserConfig) {
     var relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
                 .parserConfig(parserConfig)
-                .defaultSchema(calciteCatalogReader.getRootSchema().plus())
+                .defaultSchema(catalogReader.getRootSchema().plus())
                 .traitDefs((List<RelTraitDef>) null)
                 .programs()
                 .build());
 
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader, relBuilder));
+            EXTENSION_COLLECTION, relOptCluster, catalogReader, relBuilder));
   }
 
   @Override
