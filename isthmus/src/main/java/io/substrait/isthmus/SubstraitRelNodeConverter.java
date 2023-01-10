@@ -75,34 +75,6 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
             typeFactory, scalarFunctionConverter, aggregateFunctionConverter);
   }
 
-  @Deprecated
-  public SubstraitRelNodeConverter(
-      SimpleExtension.ExtensionCollection extensions,
-      RelOptCluster relOptCluster,
-      Prepare.CatalogReader catalogReader,
-      SqlParser.Config parserConfig) {
-    this.typeFactory = relOptCluster.getTypeFactory();
-
-    this.relBuilder =
-        RelBuilder.create(
-            Frameworks.newConfigBuilder()
-                .parserConfig(parserConfig)
-                .defaultSchema(catalogReader.getRootSchema().plus())
-                .traitDefs((List<RelTraitDef>) null)
-                .programs()
-                .build());
-
-    this.scalarFunctionConverter =
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
-
-    this.aggregateFunctionConverter =
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-
-    this.expressionRexConverter =
-        new ExpressionRexConverter(
-            typeFactory, scalarFunctionConverter, aggregateFunctionConverter);
-  }
-
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
