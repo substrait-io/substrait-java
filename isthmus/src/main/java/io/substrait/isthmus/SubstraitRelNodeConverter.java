@@ -50,12 +50,8 @@ import org.apache.calcite.tools.RelBuilder;
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
   private final RelDataTypeFactory typeFactory;
-  private final Prepare.CatalogReader catalogReader;
-
-  private final SimpleExtension.ExtensionCollection extensions;
 
   private final ScalarFunctionConverter scalarFunctionConverter;
-
   private final AggregateFunctionConverter aggregateFunctionConverter;
   private final ExpressionRexConverter expressionRexConverter;
 
@@ -64,15 +60,12 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
-      Prepare.CatalogReader catalogReader,
       RelBuilder relBuilder) {
     this.typeFactory = typeFactory;
-    this.catalogReader = catalogReader;
-    this.extensions = extensions;
     this.relBuilder = relBuilder;
 
     this.scalarFunctionConverter =
-        new ScalarFunctionConverter(this.extensions.scalarFunctions(), typeFactory);
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
 
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
@@ -89,8 +82,6 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       Prepare.CatalogReader catalogReader,
       SqlParser.Config parserConfig) {
     this.typeFactory = relOptCluster.getTypeFactory();
-    this.catalogReader = catalogReader;
-    this.extensions = extensions;
 
     this.relBuilder =
         RelBuilder.create(
@@ -102,7 +93,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 .build());
 
     this.scalarFunctionConverter =
-        new ScalarFunctionConverter(this.extensions.scalarFunctions(), typeFactory);
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
 
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
@@ -128,7 +119,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), catalogReader, relBuilder));
+            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder));
   }
 
   @Override
