@@ -64,6 +64,30 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       SimpleExtension.ExtensionCollection extensions,
       RelOptCluster relOptCluster,
       CalciteCatalogReader catalogReader,
+      RelBuilder relBuilder) {
+    this.relOptCluster = relOptCluster;
+    this.catalogReader = catalogReader;
+    this.extensions = extensions;
+    this.relBuilder = relBuilder;
+
+    this.scalarFunctionConverter =
+        new ScalarFunctionConverter(
+            this.extensions.scalarFunctions(), relOptCluster.getTypeFactory());
+
+    this.aggregateFunctionConverter =
+        new AggregateFunctionConverter(
+            extensions.aggregateFunctions(), relOptCluster.getTypeFactory());
+
+    this.expressionRexConverter =
+        new ExpressionRexConverter(
+            relOptCluster.getTypeFactory(), scalarFunctionConverter, aggregateFunctionConverter);
+  }
+
+  @Deprecated
+  public SubstraitRelNodeConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelOptCluster relOptCluster,
+      CalciteCatalogReader catalogReader,
       SqlParser.Config parserConfig) {
     this.relOptCluster = relOptCluster;
     this.catalogReader = catalogReader;
@@ -96,9 +120,18 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       RelOptCluster relOptCluster,
       CalciteCatalogReader calciteCatalogReader,
       SqlParser.Config parserConfig) {
+    var relBuilder =
+        RelBuilder.create(
+            Frameworks.newConfigBuilder()
+                .parserConfig(parserConfig)
+                .defaultSchema(calciteCatalogReader.getRootSchema().plus())
+                .traitDefs((List<RelTraitDef>) null)
+                .programs()
+                .build());
+
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader, parserConfig));
+            EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader, relBuilder));
   }
 
   @Override
