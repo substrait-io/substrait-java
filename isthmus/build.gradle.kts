@@ -71,10 +71,12 @@ java {
   withSourcesJar()
 }
 
+var CALCITE_VERSION = "1.32.0"
+
 dependencies {
   implementation(project(":core"))
-  implementation("org.apache.calcite:calcite-core:1.30.0")
-  implementation("org.apache.calcite:calcite-server:1.28.0")
+  implementation("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
+  implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
   implementation("org.junit.jupiter:junit-jupiter:5.7.0")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:29.0-jre")
@@ -91,7 +93,7 @@ dependencies {
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
   implementation("org.immutables:value-annotations:2.8.8")
   annotationProcessor("org.immutables:value:2.8.8")
-  testImplementation("org.apache.calcite:calcite-plus:1.28.0")
+  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
