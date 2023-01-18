@@ -27,13 +27,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
@@ -48,13 +49,9 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
-  private final RelOptCluster relOptCluster;
-  private final CalciteCatalogReader catalogReader;
-
-  private final SimpleExtension.ExtensionCollection extensions;
+  private final RelDataTypeFactory typeFactory;
 
   private final ScalarFunctionConverter scalarFunctionConverter;
-
   private final AggregateFunctionConverter aggregateFunctionConverter;
   private final ExpressionRexConverter expressionRexConverter;
 
@@ -62,14 +59,28 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
-      RelOptCluster relOptCluster,
-      CalciteCatalogReader catalogReader,
-      SqlParser.Config parserConfig) {
-    this.relOptCluster = relOptCluster;
-    this.catalogReader = catalogReader;
-    this.extensions = extensions;
+      RelDataTypeFactory typeFactory,
+      RelBuilder relBuilder) {
+    this.typeFactory = typeFactory;
+    this.relBuilder = relBuilder;
 
-    this.relBuilder =
+    this.scalarFunctionConverter =
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
+
+    this.aggregateFunctionConverter =
+        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
+
+    this.expressionRexConverter =
+        new ExpressionRexConverter(
+            typeFactory, scalarFunctionConverter, aggregateFunctionConverter);
+  }
+
+  public static RelNode convert(
+      Rel relRoot,
+      RelOptCluster relOptCluster,
+      Prepare.CatalogReader catalogReader,
+      SqlParser.Config parserConfig) {
+    var relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
                 .parserConfig(parserConfig)
@@ -78,27 +89,9 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 .programs()
                 .build());
 
-    this.scalarFunctionConverter =
-        new ScalarFunctionConverter(
-            this.extensions.scalarFunctions(), relOptCluster.getTypeFactory());
-
-    this.aggregateFunctionConverter =
-        new AggregateFunctionConverter(
-            extensions.aggregateFunctions(), relOptCluster.getTypeFactory());
-
-    this.expressionRexConverter =
-        new ExpressionRexConverter(
-            relOptCluster.getTypeFactory(), scalarFunctionConverter, aggregateFunctionConverter);
-  }
-
-  public static RelNode convert(
-      Rel relRoot,
-      RelOptCluster relOptCluster,
-      CalciteCatalogReader calciteCatalogReader,
-      SqlParser.Config parserConfig) {
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster, calciteCatalogReader, parserConfig));
+            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder));
   }
 
   @Override
@@ -241,8 +234,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         };
 
     SqlAggFunction aggFunction;
-    RelDataType returnType =
-        TypeConverter.convert(relOptCluster.getTypeFactory(), measure.getFunction().getType());
+    RelDataType returnType = TypeConverter.convert(typeFactory, measure.getFunction().getType());
 
     if (operator.get() instanceof SqlAggFunction) {
       aggFunction = (SqlAggFunction) operator.get();
