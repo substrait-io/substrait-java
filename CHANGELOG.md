@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.3.0](https://github.com/substrait-io/substrait-java/compare/v0.2.0...v0.3.0) (2023-01-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* SubstraitRelNodeConverter constructor has changed
+
+### Features
+
+* Set RelBuilder directly in SubstraitRelNodeConverter ([#117](https://github.com/substrait-io/substrait-java/issues/117)) ([5c84515](https://github.com/substrait-io/substrait-java/commit/5c84515ac0cdde0e08a9d320c310bc26c82aad2e))
+
 ## [0.2.0](https://github.com/substrait-io/substrait-java/compare/v0.1.4...v0.2.0) (2022-12-04)
 
 
