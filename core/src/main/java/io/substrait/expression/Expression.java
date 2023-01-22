@@ -551,6 +551,8 @@ public interface Expression extends FunctionArg {
 
     public abstract List<FunctionArg> arguments();
 
+    public abstract Map<String, FunctionOption> options();
+
     public abstract Type outputType();
 
     public Type getType() {

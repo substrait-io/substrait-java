@@ -73,6 +73,15 @@ public class SimpleExtension {
     boolean required();
   }
 
+  @JsonDeserialize(as = ImmutableSimpleExtension.Option.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.Option.class)
+  @Value.Immutable
+  public interface Option {
+    Optional<String> getDescription();
+
+    List<String> getValues();
+  }
+
   public static class ValueArgument implements Argument {
 
     @JsonCreator
@@ -166,17 +175,14 @@ public class SimpleExtension {
     public EnumArgument(
         @JsonProperty("options") List<String> options,
         @JsonProperty("name") String name,
-        @JsonProperty("required") boolean required,
         @JsonProperty("description") String description) {
       this.options = options;
-      this.required = required;
       this.name = name;
       this.description = description;
     }
 
     private final List<String> options;
     private final String name;
-    private final boolean required;
     private final String description;
 
     public List<String> options() {
@@ -189,11 +195,11 @@ public class SimpleExtension {
 
     @Override
     public boolean required() {
-      return required;
+      return true;
     }
 
     public String toTypeString() {
-      return required ? "req" : "opt";
+      return "req";
     }
   }
 
@@ -253,6 +259,8 @@ public class SimpleExtension {
 
     public abstract List<Argument> args();
 
+    public abstract Map<String, Option> options();
+
     public List<Argument> requiredArguments() {
       return requiredArgsSupplier.get();
     }
@@ -266,6 +274,9 @@ public class SimpleExtension {
     public Nullability nullability() {
       return Nullability.MIRROR;
     }
+
+    @Nullable
+    public abstract Boolean ordered();
 
     public FunctionAnchor getAnchor() {
       return anchorSupplier.get();
@@ -384,6 +395,8 @@ public class SimpleExtension {
           .description(description)
           .nullability(nullability())
           .args(args())
+          .options(options())
+          .ordered(ordered())
           .variadic(variadic())
           .returnType(returnType())
           .build();
@@ -449,6 +462,8 @@ public class SimpleExtension {
           .description(description)
           .nullability(nullability())
           .args(args())
+          .options(options())
+          .ordered(ordered())
           .variadic(variadic())
           .decomposability(decomposability())
           .intermediate(intermediate())
@@ -489,6 +504,8 @@ public class SimpleExtension {
           .description(description)
           .nullability(nullability())
           .args(args())
+          .options(options())
+          .ordered(ordered())
           .variadic(variadic())
           .decomposability(decomposability())
           .intermediate(intermediate())

@@ -15,6 +15,9 @@ public interface FileFormat {
   abstract static class OrcReadOptions implements FileFormat {}
 
   @Value.Immutable
+  abstract static class DwrfReadOptions implements FileFormat {}
+
+  @Value.Immutable
   abstract static class Extension implements FileFormat {
     public abstract com.google.protobuf.Any getExtension();
   }
