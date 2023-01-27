@@ -170,4 +170,17 @@ public class Substrait2SqlTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate asc, l_discount desc nulls last");
   }
+
+  @Test
+  public void simpleStringOpTest() throws Exception {
+    assertSqlSubstraitRelRoundTrip("select substring(l_comment, 1, 5) from lineitem");
+
+    assertSqlSubstraitRelRoundTrip("select lower(l_comment) from lineitem");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_comment from lineitem where lower(l_comment) <> l_comment");
+
+    assertSqlSubstraitRelRoundTrip("select upper(l_comment) from lineitem");
+    assertSqlSubstraitRelRoundTrip(
+        "select l_comment from lineitem where upper(l_comment) <> l_comment");
+  }
 }

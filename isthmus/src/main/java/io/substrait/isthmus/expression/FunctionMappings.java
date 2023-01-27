@@ -40,7 +40,9 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.EXTRACT, "extract"),
                 s(SqlStdOperatorTable.LIKE),
                 s(SqlStdOperatorTable.SUBSTRING, "substring"),
-                s(SqlStdOperatorTable.CONCAT, "concat"))
+                s(SqlStdOperatorTable.CONCAT, "concat"),
+                s(SqlStdOperatorTable.LOWER, "lower"),
+                s(SqlStdOperatorTable.UPPER, "upper"))
             .build();
 
     AGGREGATE_SIGS =
