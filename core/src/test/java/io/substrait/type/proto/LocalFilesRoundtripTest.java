@@ -90,7 +90,7 @@ public class LocalFilesRoundtripTest {
           ImmutableFileFormat.Extension.builder()
               .extension(com.google.protobuf.Any.newBuilder().build())
               .build());
-      case FILEFORMAT_NOT_SET -> builder;
+      case FILEFORMAT_NOT_SET, DWRF -> builder;
     };
   }
 
