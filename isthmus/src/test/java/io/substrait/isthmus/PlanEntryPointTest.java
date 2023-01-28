@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
+import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -36,7 +37,8 @@ class PlanEntryPointTest {
             "SELECT * FROM foo");
     FeatureBoard features = planEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
-    assertEquals(SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
+    assertEquals(
+        (SqlConformance) SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
     assertEquals(CrossJoinPolicy.CONVERT_TO_INNER_JOIN, features.crossJoinPolicy());
   }
 

@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
+import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.immutables.value.Value;
 
@@ -27,7 +28,7 @@ public abstract class FeatureBoard {
    * @return the selected built-in Calcite SQL compatibility mode.
    */
   @Value.Default
-  public SqlConformanceEnum sqlConformanceMode() {
+  public SqlConformance sqlConformanceMode() {
     return SqlConformanceEnum.DEFAULT;
   }
 
