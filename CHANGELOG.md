@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.4.0](https://github.com/substrait-io/substrait-java/compare/v0.3.0...v0.4.0) (2023-01-29)
+
+
+### Features
+
+* registered `upper` & `lower` in function mapping ([#103](https://github.com/substrait-io/substrait-java/issues/103)) ([c4f94db](https://github.com/substrait-io/substrait-java/commit/c4f94db24ba89ae653017c0f94bb0cc6a8fe9a96))
+
 ## [0.3.0](https://github.com/substrait-io/substrait-java/compare/v0.2.0...v0.3.0) (2023-01-19)
 
 
