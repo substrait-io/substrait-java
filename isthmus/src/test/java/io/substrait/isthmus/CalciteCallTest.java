@@ -60,7 +60,7 @@ public class CalciteCallTest extends CalciteObjs {
   @Test
   public void coerceNumericOp() {
     test(
-        "add:opt_i64_i64",
+        "add:i64_i64",
         rex.makeCall(PLUS, c(20, SqlTypeName.INTEGER), c(4, SqlTypeName.BIGINT)),
         func -> {
           // check that there is a cast for the incorrect argument type.
@@ -74,7 +74,7 @@ public class CalciteCallTest extends CalciteObjs {
   @Test
   public void directMatchPlus() {
     test(
-        "add:opt_i64_i64",
+        "add:i64_i64",
         rex.makeCall(PLUS, c(4, SqlTypeName.BIGINT), c(4, SqlTypeName.BIGINT)),
         func -> {
 

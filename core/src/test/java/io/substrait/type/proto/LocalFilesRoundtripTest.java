@@ -86,11 +86,12 @@ public class LocalFilesRoundtripTest {
       case PARQUET -> builder.fileFormat(ImmutableFileFormat.ParquetReadOptions.builder().build());
       case ARROW -> builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
       case ORC -> builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
+      case DWRF -> builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
       case EXTENSION -> builder.fileFormat(
           ImmutableFileFormat.Extension.builder()
               .extension(com.google.protobuf.Any.newBuilder().build())
               .build());
-      case FILEFORMAT_NOT_SET, DWRF -> builder;
+      case FILEFORMAT_NOT_SET -> builder;
     };
   }
 
