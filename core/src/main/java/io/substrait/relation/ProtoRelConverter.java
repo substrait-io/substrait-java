@@ -174,6 +174,8 @@ public class ProtoRelConverter {
                         builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
                       } else if (file.hasArrow()) {
                         builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
+                      } else if (file.hasDwrf()) {
+                        builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
                       } else if (file.hasExtension()) {
                         builder.fileFormat(
                             ImmutableFileFormat.Extension.builder()

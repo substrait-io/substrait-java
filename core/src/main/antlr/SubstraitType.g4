@@ -58,6 +58,7 @@ Struct   : S T R U C T;
 NStruct  : N S T R U C T;
 List     : L I S T;
 Map      : M A P;
+ANY      : A N Y;
 
 
 // OPERATIONS
@@ -140,7 +141,7 @@ fragment Digit
 
 start: expr EOF;
 
-requiredType
+scalarType
 	: Boolean #Boolean
 	| I8 #i8
 	| I16 #i16
@@ -157,14 +158,17 @@ requiredType
 	| IntervalDay #intervalDay
 	| IntervalYear #intervalYear
 	| UUID #uuid
-	| FixedChar Lt len=numericParameter Gt #fixedChar
-	| VarChar Lt len=numericParameter Gt #varChar
-	| FixedBinary Lt len=numericParameter Gt #fixedBinary
-	| Decimal Lt scale=numericParameter Comma precision=numericParameter Gt #decimal
-	| Struct Lt expr (Comma expr)* Gt #struct
-	| NStruct Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
-	| List Lt expr Gt #list
-	| Map Lt key=expr Comma value=expr Gt #map
+	;
+
+parameterizedType
+	: FixedChar isnull='?'? Lt len=numericParameter Gt #fixedChar
+	| VarChar isnull='?'? Lt len=numericParameter Gt #varChar
+	| FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
+	| Decimal isnull='?'? Lt scale=numericParameter Comma precision=numericParameter Gt #decimal
+	| Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
+	| NStruct isnull='?'? Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
+	| List isnull='?'? Lt expr Gt #list
+	| Map isnull='?'? Lt key=expr Comma value=expr Gt #map
 	;
 
 numericParameter
@@ -173,8 +177,12 @@ numericParameter
   | expr #numericExpression
   ;
 
+anyType: ANY;
+
 type
-  : requiredType isnull='?'?
+  : scalarType isnull='?'?
+  | parameterizedType
+  | anyType isnull='?'?
   ;
 
 //  : (OParen innerExpr CParen | innerExpr)

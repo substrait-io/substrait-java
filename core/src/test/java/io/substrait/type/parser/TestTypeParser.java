@@ -62,12 +62,15 @@ public class TestTypeParser {
     test(v, n.I32, "I32?");
     test(v, n.I32, "i32?");
     test(v, r.I8, "I8");
-    test(v, n.list(n.I8), "List<I8?>?");
   }
 
   private <T> void parameterizedTests(ParseToPojo.Visitor v) {
-    test(v, pn.listE(pr.parameter("K")), "List<K>?");
+    test(v, pn.listE(pr.parameter("K")), "List?<K>");
     test(v, pr.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT<i8, i16, i8?, K>");
+    test(v, pn.parameter("any"), "any");
+    test(v, pn.listE(pr.parameter("any")), "list?<any>");
+    test(v, pn.listE(pn.parameter("any")), "list?<any?>");
+    test(v, pn.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT?<i8, i16, i8?, K>");
   }
 
   private static void test(ParseToPojo.Visitor visitor, TypeExpression expected, String toParse) {

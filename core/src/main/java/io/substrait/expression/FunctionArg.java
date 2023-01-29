@@ -49,12 +49,12 @@ public interface FunctionArg {
       @Override
       public FunctionArgument visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg ea)
           throws RuntimeException {
-        var enumBldr = FunctionArgument.Enum.newBuilder();
+        var enumBldr = FunctionArgument.newBuilder();
 
         if (ea.value().isPresent()) {
-          enumBldr = enumBldr.setSpecified(ea.value().get());
+          enumBldr = enumBldr.setEnum(ea.value().get());
         }
-        return FunctionArgument.newBuilder().setEnum(enumBldr.build()).build();
+        return enumBldr.build();
       }
     };
   }
@@ -74,10 +74,8 @@ public interface FunctionArg {
         case ENUM -> {
           SimpleExtension.EnumArgument enumArgDef =
               (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
-          var optionValue = fArg.getEnum().getSpecified();
-          yield optionValue == null
-              ? EnumArg.UNSPECIFIED_ENUM_ARG
-              : EnumArg.of(enumArgDef, optionValue);
+          var optionValue = fArg.getEnum();
+          yield EnumArg.of(enumArgDef, optionValue);
         }
         default -> throw new UnsupportedOperationException(
             String.format("Unable to convert FunctionArgument %s.", fArg));

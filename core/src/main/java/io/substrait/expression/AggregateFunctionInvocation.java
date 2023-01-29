@@ -4,6 +4,7 @@ import io.substrait.function.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -11,6 +12,8 @@ public abstract class AggregateFunctionInvocation {
   public abstract SimpleExtension.AggregateFunctionVariant declaration();
 
   public abstract List<FunctionArg> arguments();
+
+  public abstract Map<String, FunctionOption> options();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 

@@ -40,6 +40,9 @@ public interface FileOrFiles {
                     ReadRel.LocalFiles.FileOrFiles.ArrowReadOptions.newBuilder().build());
               } else if (fileFormat instanceof FileFormat.OrcReadOptions options) {
                 builder.setOrc(ReadRel.LocalFiles.FileOrFiles.OrcReadOptions.newBuilder().build());
+              } else if (fileFormat instanceof FileFormat.DwrfReadOptions options) {
+                builder.setDwrf(
+                    ReadRel.LocalFiles.FileOrFiles.DwrfReadOptions.newBuilder().build());
               } else if (fileFormat instanceof FileFormat.Extension options) {
                 builder.setExtension(options.getExtension());
               } else {
