@@ -164,7 +164,7 @@ parameterizedType
 	: FixedChar isnull='?'? Lt len=numericParameter Gt #fixedChar
 	| VarChar isnull='?'? Lt len=numericParameter Gt #varChar
 	| FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
-	| Decimal isnull='?'? Lt scale=numericParameter Comma precision=numericParameter Gt #decimal
+	| Decimal isnull='?'? Lt precision=numericParameter Comma scale=numericParameter Gt #decimal
 	| Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
 	| NStruct isnull='?'? Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
 	| List isnull='?'? Lt expr Gt #list
