@@ -26,8 +26,18 @@ public class TestTypeParser {
   }
 
   @Test
+  public void compound() {
+    compoundTests(ParseToPojo.Visitor.SIMPLE);
+  }
+
+  @Test
   public void parameterizedSimple() {
     simpleTests(ParseToPojo.Visitor.PARAMETERIZED);
+  }
+
+  @Test
+  public void parameterizedCompound() {
+    compoundTests(ParseToPojo.Visitor.PARAMETERIZED);
   }
 
   @Test
@@ -38,6 +48,11 @@ public class TestTypeParser {
   @Test
   public void derivationSimple() {
     simpleTests(ParseToPojo.Visitor.EXPRESSION);
+  }
+
+  @Test
+  public void derivationCompound() {
+    compoundTests(ParseToPojo.Visitor.EXPRESSION);
   }
 
   @Test
@@ -58,10 +73,39 @@ public class TestTypeParser {
   }
 
   private <T> void simpleTests(ParseToPojo.Visitor v) {
-    test(v, n.I8, "I8?");
-    test(v, n.I32, "I32?");
-    test(v, n.I32, "i32?");
     test(v, r.I8, "I8");
+    test(v, r.I16, "I16");
+    test(v, r.I32, "I32");
+    test(v, r.I64, "I64");
+    test(v, r.FP32, "FP32");
+    test(v, r.FP64, "FP64");
+
+    // Nullable
+    test(v, n.I8, "I8?");
+    test(v, n.I16, "I16?");
+    test(v, n.I32, "i32?");
+    test(v, n.I64, "i64?");
+    test(v, n.FP32, "FP32?");
+    test(v, n.FP64, "FP64?");
+  }
+
+  private void compoundTests(ParseToPojo.Visitor v) {
+    test(v, r.fixedChar(1), "FIXEDCHAR<1>");
+    test(v, r.varChar(2), "VARCHAR<2>");
+    test(v, r.fixedBinary(3), "FIXEDBINARY<3>");
+    test(v, r.decimal(1, 2), "DECIMAL<1, 2>");
+    test(v, r.struct(r.I8, r.I16), "STRUCT<i8, i16>");
+    test(v, r.list(r.I8), "LIST<i8>");
+    test(v, r.map(r.I16, r.I8), "MAP<i16, i8>");
+
+    // Nullable
+    test(v, n.fixedChar(1), "FIXEDCHAR?<1>");
+    test(v, n.varChar(2), "VARCHAR?<2>");
+    test(v, n.fixedBinary(3), "FIXEDBINARY?<3>");
+    test(v, n.decimal(1, 2), "DECIMAL?<1, 2>");
+    test(v, n.struct(r.I8, n.I16), "STRUCT?<i8, i16?>");
+    test(v, n.list(n.I8), "LIST?<i8?>");
+    test(v, n.map(r.I16, n.I8), "MAP?<i16, i8?>");
   }
 
   private <T> void parameterizedTests(ParseToPojo.Visitor v) {
