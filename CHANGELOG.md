@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.5.0](https://github.com/substrait-io/substrait-java/compare/v0.4.0...v0.5.0) (2023-02-05)
+
+
+### Features
+
+* upgrade substrait to 0.23.0 ([#124](https://github.com/substrait-io/substrait-java/issues/124)) ([63cfcb3](https://github.com/substrait-io/substrait-java/commit/63cfcb33fa7818e91303d79317c12b8489a9014f))
+
+
+### Bug Fixes
+
+* decimal parsing reversed ([#126](https://github.com/substrait-io/substrait-java/issues/126)) ([35aa306](https://github.com/substrait-io/substrait-java/commit/35aa306c4fda4ec5f24eb1fc83f295c49aea26d6))
+
 ## [0.4.0](https://github.com/substrait-io/substrait-java/compare/v0.3.0...v0.4.0) (2023-01-29)
 
 
