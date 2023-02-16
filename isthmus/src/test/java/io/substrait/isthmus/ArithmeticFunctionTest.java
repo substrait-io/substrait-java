@@ -30,6 +30,13 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void mod(String c) throws Exception {
+    String query = String.format("SELECT mod(%s, %s) FROM ints", c, c);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
   @Test
   void negation() throws Exception {
     assertSqlSubstraitRelRoundTrip("SELECT -i8, -i16, -i32, -i64 FROM ints", CREATES);

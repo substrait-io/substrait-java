@@ -24,6 +24,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.UNARY_MINUS, "negate"),
                 s(SqlStdOperatorTable.MULTIPLY, "multiply"),
                 s(SqlStdOperatorTable.DIVIDE, "divide"),
+                s(SqlStdOperatorTable.MOD, "modulus"),
                 s(SqlStdOperatorTable.AND),
                 s(SqlStdOperatorTable.OR),
                 s(SqlStdOperatorTable.NOT),
