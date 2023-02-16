@@ -21,6 +21,7 @@ public class FunctionMappings {
             .add(
                 s(SqlStdOperatorTable.PLUS, "add"),
                 s(SqlStdOperatorTable.MINUS, "subtract"),
+                s(SqlStdOperatorTable.UNARY_MINUS, "negate"),
                 s(SqlStdOperatorTable.MULTIPLY, "multiply"),
                 s(SqlStdOperatorTable.DIVIDE, "divide"),
                 s(SqlStdOperatorTable.AND),

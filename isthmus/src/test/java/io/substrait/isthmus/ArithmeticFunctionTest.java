@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -27,5 +28,11 @@ public class ArithmeticFunctionTest extends PlanTestBase {
         String.format(
             "SELECT %s + %s, %s - %s, %s * %s, %s / %s FROM floats", c, c, c, c, c, c, c, c);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @Test
+  void negation() throws Exception {
+    assertSqlSubstraitRelRoundTrip("SELECT -i8, -i16, -i32, -i64 FROM ints", CREATES);
+    assertSqlSubstraitRelRoundTrip("SELECT -fp32, -fp64 FROM floats", CREATES);
   }
 }
