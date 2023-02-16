@@ -68,4 +68,11 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT %s(fp32), %s(fp64) FROM floats", fname, fname);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
+
+  @Test
+  void sign() throws Exception {
+    assertSqlSubstraitRelRoundTrip(
+        "SELECT sign(i8), sign(i16), sign(i32), sign(i64) FROM ints", CREATES);
+    assertSqlSubstraitRelRoundTrip("SELECT sign(fp32), sign(fp64) FROM floats", CREATES);
+  }
 }

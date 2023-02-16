@@ -34,6 +34,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.ASIN, "asin"),
                 s(SqlStdOperatorTable.ACOS, "acos"),
                 s(SqlStdOperatorTable.ATAN, "atan"),
+                s(SqlStdOperatorTable.SIGN, "sign"),
                 s(SqlStdOperatorTable.AND),
                 s(SqlStdOperatorTable.OR),
                 s(SqlStdOperatorTable.NOT),
