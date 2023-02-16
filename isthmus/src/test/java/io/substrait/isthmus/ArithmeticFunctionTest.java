@@ -31,6 +31,13 @@ public class ArithmeticFunctionTest extends PlanTestBase {
   }
 
   @Test
+  void abs() throws Exception {
+    assertSqlSubstraitRelRoundTrip(
+        "SELECT abs(i8), abs(i16), abs(i32), abs(i64) FROM ints", CREATES);
+    assertSqlSubstraitRelRoundTrip("SELECT abs(fp32), abs(fp64) FROM floats", CREATES);
+  }
+
+  @Test
   void exponential() throws Exception {
     assertSqlSubstraitRelRoundTrip("SELECT exp(fp32), exp(fp64) FROM floats", CREATES);
   }
