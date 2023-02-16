@@ -54,4 +54,11 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(
         "SELECT power(fp32, fp32), power(fp64, fp64) FROM floats", CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"sin", "cos", "tan", "asin", "acos", "atan"})
+  void trigonometric(String fname) throws Exception {
+    String query = String.format("SELECT %s(fp32), %s(fp64) FROM floats", fname, fname);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
 }
