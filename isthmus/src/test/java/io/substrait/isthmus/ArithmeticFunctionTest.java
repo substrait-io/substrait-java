@@ -42,4 +42,11 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip("SELECT -i8, -i16, -i32, -i64 FROM ints", CREATES);
     assertSqlSubstraitRelRoundTrip("SELECT -fp32, -fp64 FROM floats", CREATES);
   }
+
+  @Test
+  void power() throws Exception {
+    assertSqlSubstraitRelRoundTrip("SELECT  power(i64, i64) FROM ints", CREATES);
+    assertSqlSubstraitRelRoundTrip(
+        "SELECT power(fp32, fp32), power(fp64, fp64) FROM floats", CREATES);
+  }
 }
