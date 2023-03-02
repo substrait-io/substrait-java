@@ -276,7 +276,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .setCast(
             Expression.Cast.newBuilder()
                 .setInput(expr.input().accept(this))
-                .setType(expr.getType().accept(TypeProtoConverter.INSTANCE)))
+                .setType(expr.getType().accept(TypeProtoConverter.INSTANCE))
+                .setFailureBehavior(expr.failureBehavior().toProto()))
         .build();
   }
 
