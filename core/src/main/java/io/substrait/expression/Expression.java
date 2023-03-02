@@ -532,6 +532,8 @@ public interface Expression extends FunctionArg {
 
     public abstract Expression input();
 
+    public abstract FailureBehavior failureBehavior();
+
     public Type getType() {
       return type();
     }
@@ -770,7 +772,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
-  public enum SortDirection {
+  enum SortDirection {
     ASC_NULLS_FIRST(io.substrait.proto.SortField.SortDirection.SORT_DIRECTION_ASC_NULLS_FIRST),
     ASC_NULLS_LAST(io.substrait.proto.SortField.SortDirection.SORT_DIRECTION_ASC_NULLS_LAST),
     DESC_NULLS_FIRST(io.substrait.proto.SortField.SortDirection.SORT_DIRECTION_DESC_NULLS_FIRST),
@@ -788,6 +790,34 @@ public interface Expression extends FunctionArg {
     }
 
     public static SortDirection fromProto(io.substrait.proto.SortField.SortDirection proto) {
+      for (var v : values()) {
+        if (v.proto == proto) {
+          return v;
+        }
+      }
+
+      throw new IllegalArgumentException("Unknown type: " + proto);
+    }
+  }
+
+  enum FailureBehavior {
+    UNSPECIFIED(io.substrait.proto.Expression.Cast.FailureBehavior.FAILURE_BEHAVIOR_UNSPECIFIED),
+    RETURN_NULL(io.substrait.proto.Expression.Cast.FailureBehavior.FAILURE_BEHAVIOR_RETURN_NULL),
+    THROW_EXCEPTION(
+        io.substrait.proto.Expression.Cast.FailureBehavior.FAILURE_BEHAVIOR_THROW_EXCEPTION);
+
+    private final io.substrait.proto.Expression.Cast.FailureBehavior proto;
+
+    FailureBehavior(io.substrait.proto.Expression.Cast.FailureBehavior proto) {
+      this.proto = proto;
+    }
+
+    public io.substrait.proto.Expression.Cast.FailureBehavior toProto() {
+      return proto;
+    }
+
+    public static FailureBehavior fromProto(
+        io.substrait.proto.Expression.Cast.FailureBehavior proto) {
       for (var v : values()) {
         if (v.proto == proto) {
           return v;

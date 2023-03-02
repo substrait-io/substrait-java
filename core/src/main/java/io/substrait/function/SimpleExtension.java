@@ -379,7 +379,7 @@ public class SimpleExtension {
 
     public abstract List<ScalarFunctionVariant> impls();
 
-    Stream<ScalarFunctionVariant> resolve(String uri) {
+    public Stream<ScalarFunctionVariant> resolve(String uri) {
       return impls().stream().map(f -> f.resolve(uri, name(), description()));
     }
   }

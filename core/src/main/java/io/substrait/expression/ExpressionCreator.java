@@ -9,7 +9,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class ExpressionCreator {
@@ -341,7 +343,16 @@ public class ExpressionCreator {
   }
 
   public static Expression cast(Type type, Expression expression) {
-    return Expression.Cast.builder().type(type).input(expression).build();
+    return cast(type, expression, Expression.FailureBehavior.UNSPECIFIED);
+  }
+
+  public static Expression cast(
+      Type type, Expression expression, Expression.FailureBehavior failureBehavior) {
+    return Expression.Cast.builder()
+        .type(type)
+        .input(expression)
+        .failureBehavior(failureBehavior)
+        .build();
   }
 
   private static ByteString padLeftIfNeeded(byte[] value, int length) {
