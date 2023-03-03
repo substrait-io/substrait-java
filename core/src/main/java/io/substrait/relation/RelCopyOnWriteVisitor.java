@@ -163,7 +163,6 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             .from(cross)
             .left(left.orElse(cross.getLeft()))
             .right(right.orElse(cross.getRight()))
-            .deriveRecordType(unionedStruct)
             .build());
   }
 
