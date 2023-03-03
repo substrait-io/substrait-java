@@ -49,13 +49,13 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
-  private final RelDataTypeFactory typeFactory;
+  protected final RelDataTypeFactory typeFactory;
 
-  private final ScalarFunctionConverter scalarFunctionConverter;
-  private final AggregateFunctionConverter aggregateFunctionConverter;
-  private final ExpressionRexConverter expressionRexConverter;
+  protected final ScalarFunctionConverter scalarFunctionConverter;
+  protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final ExpressionRexConverter expressionRexConverter;
 
-  private final RelBuilder relBuilder;
+  protected final RelBuilder relBuilder;
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
