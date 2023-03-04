@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import io.substrait.function.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -23,10 +24,20 @@ import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Assertions;
 
 public class PlanTestBase {
+  final SimpleExtension.ExtensionCollection extensions;
+
+  {
+    try {
+      extensions = SimpleExtension.loadDefaults();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RexBuilder rex = creator.rex();
-  protected final RelDataTypeFactory type = creator.type();
+  protected final RelDataTypeFactory typeFactory = creator.typeFactory();
 
   public static String asString(String resource) throws IOException {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
