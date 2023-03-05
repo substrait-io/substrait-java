@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.6.0](https://github.com/substrait-io/substrait-java/compare/v0.5.0...v0.6.0) (2023-03-05)
+
+
+### Features
+
+* add FailureBehavior enum to Cast immutable ([#115](https://github.com/substrait-io/substrait-java/issues/115)) ([fd7cd5f](https://github.com/substrait-io/substrait-java/commit/fd7cd5f112c96a2bd4d41a3b4ea4522a7a372ce4))
+
+
+### Bug Fixes
+
+* incorrect mapping of floating point + and - ops ([#131](https://github.com/substrait-io/substrait-java/issues/131)) ([963c72f](https://github.com/substrait-io/substrait-java/commit/963c72f8bd403c6d8d2b6f6e095c788ff9627f13))
+
 ## [0.5.0](https://github.com/substrait-io/substrait-java/compare/v0.4.0...v0.5.0) (2023-02-05)
 
 
