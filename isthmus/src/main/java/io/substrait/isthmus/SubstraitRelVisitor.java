@@ -185,12 +185,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (joinType == Join.JoinType.INNER
         && TRUE.equals(condition)
         && featureBoard.crossJoinPolicy().equals(KEEP_AS_CROSS_JOIN)) {
-      return Cross.builder()
-          .left(left)
-          .right(right)
-          .deriveRecordType(
-              Type.Struct.builder().from(left.getRecordType()).from(right.getRecordType()).build())
-          .build();
+      return Cross.builder().left(left).right(right).build();
     }
     return Join.builder().condition(condition).joinType(joinType).left(left).right(right).build();
   }
