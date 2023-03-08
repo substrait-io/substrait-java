@@ -23,8 +23,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
@@ -35,6 +37,8 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
@@ -49,13 +53,14 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
 
-  private final RelDataTypeFactory typeFactory;
+  protected final RelDataTypeFactory typeFactory;
 
-  private final ScalarFunctionConverter scalarFunctionConverter;
-  private final AggregateFunctionConverter aggregateFunctionConverter;
-  private final ExpressionRexConverter expressionRexConverter;
+  protected final ScalarFunctionConverter scalarFunctionConverter;
+  protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final ExpressionRexConverter expressionRexConverter;
 
-  private final RelBuilder relBuilder;
+  protected final RelBuilder relBuilder;
+  protected final RexBuilder rexBuilder;
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
@@ -63,6 +68,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       RelBuilder relBuilder) {
     this.typeFactory = typeFactory;
     this.relBuilder = relBuilder;
+    this.rexBuilder = new RexBuilder(typeFactory);
 
     this.scalarFunctionConverter =
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
@@ -98,12 +104,14 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   public RelNode visit(Filter filter) throws RuntimeException {
     RelNode input = filter.getInput().accept(this);
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter);
-    return relBuilder.push(input).filter(filterCondition).build();
+    RelNode node = relBuilder.push(input).filter(filterCondition).build();
+    return applyRemap(node, filter.getRemap());
   }
 
   @Override
   public RelNode visit(NamedScan namedScan) throws RuntimeException {
-    return relBuilder.scan(namedScan.getNames()).build();
+    RelNode node = relBuilder.scan(namedScan.getNames()).build();
+    return applyRemap(node, namedScan.getRemap());
   }
 
   @Override
@@ -114,24 +122,29 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   @Override
   public RelNode visit(Project project) throws RuntimeException {
     RelNode child = project.getInput().accept(this);
-    List<RexNode> rexList =
-        project.getExpressions().stream()
-            .map(expr -> expr.accept(expressionRexConverter))
-            .collect(java.util.stream.Collectors.toList());
 
-    return relBuilder.push(child).project(rexList).build();
+    Stream<RexNode> directOutputs =
+        IntStream.range(0, child.getRowType().getFieldCount())
+            .mapToObj(fieldIndex -> rexBuilder.makeInputRef(child, fieldIndex));
+
+    Stream<RexNode> exprs =
+        project.getExpressions().stream().map(expr -> expr.accept(expressionRexConverter));
+
+    List<RexNode> rexExprs =
+        Stream.concat(directOutputs, exprs).collect(java.util.stream.Collectors.toList());
+
+    RelNode node = relBuilder.push(child).project(rexExprs).build();
+    return applyRemap(node, project.getRemap());
   }
 
   @Override
   public RelNode visit(Cross cross) throws RuntimeException {
-    var left = cross.getLeft().accept(this);
-    var right = cross.getRight().accept(this);
+    RelNode left = cross.getLeft().accept(this);
+    RelNode right = cross.getRight().accept(this);
     // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
-    return relBuilder
-        .push(left)
-        .push(right)
-        .join(JoinRelType.INNER, relBuilder.literal(true))
-        .build();
+    RelNode node =
+        relBuilder.push(left).push(right).join(JoinRelType.INNER, relBuilder.literal(true)).build();
+    return applyRemap(node, cross.getRemap());
   }
 
   @Override
@@ -153,7 +166,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
           case UNKNOWN -> throw new UnsupportedOperationException(
               "Unknown join type is not supported");
         };
-    return relBuilder.push(left).push(right).join(joinType, condition).build();
+    RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
+    return applyRemap(node, join.getRemap());
   }
 
   @Override
@@ -175,7 +189,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
           case UNKNOWN -> throw new UnsupportedOperationException(
               "Unknown set operation is not supported");
         };
-    return builder.build();
+    RelNode node = builder.build();
+    return applyRemap(node, set.getRemap());
   }
 
   @Override
@@ -197,7 +212,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         aggregate.getMeasures().stream()
             .map(this::fromMeasure)
             .collect(java.util.stream.Collectors.toList());
-    return relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
+    RelNode node = relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
+    return applyRemap(node, aggregate.getRemap());
   }
 
   private AggregateCall fromMeasure(Aggregate.Measure measure) {
@@ -278,7 +294,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     if (relFieldCollations.isEmpty()) {
       return relBuilder.push(child).sort(Collections.EMPTY_LIST).build();
     }
-    return relBuilder.push(child).sort(RelCollations.of(relFieldCollations)).build();
+    RelNode node = relBuilder.push(child).sort(RelCollations.of(relFieldCollations)).build();
+    return applyRemap(node, sort.getRemap());
   }
 
   @Override
@@ -293,7 +310,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     if (count > Integer.MAX_VALUE) {
       throw new RuntimeException(String.format("count is overflowed as an integer: %d", count));
     }
-    return relBuilder.push(child).limit((int) offset, (int) count).build();
+    RelNode node = relBuilder.push(child).limit((int) offset, (int) count).build();
+    return applyRemap(node, fetch.getRemap());
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField) {
@@ -329,6 +347,27 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  private RelNode applyRemap(RelNode relNode, Optional<Rel.Remap> remap) {
+    if (remap.isPresent()) {
+      return applyRemap(relNode, remap.get());
+    }
+    return relNode;
+  }
+
+  private RelNode applyRemap(RelNode relNode, Rel.Remap remap) {
+    var rowType = relNode.getRowType();
+    var fieldNames = rowType.getFieldNames();
+    List<RexNode> rexList =
+        remap.indices().stream()
+            .map(
+                index -> {
+                  RelDataTypeField t = rowType.getField(fieldNames.get(index), true, false);
+                  return new RexInputRef(index, t.getValue());
+                })
+            .collect(java.util.stream.Collectors.toList());
+    return relBuilder.push(relNode).project(rexList).build();
   }
 
   private void checkRexInputRefOnly(RexNode rexNode, String context, String aggName) {

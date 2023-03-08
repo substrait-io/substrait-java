@@ -77,7 +77,7 @@ dependencies {
   implementation(project(":core"))
   implementation("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
-  implementation("org.junit.jupiter:junit-jupiter:5.7.0")
+  implementation("org.junit.jupiter:junit-jupiter:5.9.2")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:29.0-jre")
   implementation("org.graalvm.sdk:graal-sdk:22.0.0.2")

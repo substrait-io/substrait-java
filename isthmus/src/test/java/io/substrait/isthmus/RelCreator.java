@@ -74,7 +74,7 @@ public class RelCreator {
     return cluster.getRexBuilder();
   }
 
-  public RelDataTypeFactory type() {
+  public RelDataTypeFactory typeFactory() {
     return cluster.getTypeFactory();
   }
 

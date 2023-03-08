@@ -336,15 +336,7 @@ public class ProtoRelConverter {
   private Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    Type.Struct leftStruct = left.getRecordType();
-    Type.Struct rightStruct = right.getRecordType();
-    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    return Cross.builder()
-        .left(left)
-        .right(right)
-        .deriveRecordType(unionedStruct)
-        .remap(optionalRelmap(rel.getCommon()))
-        .build();
+    return Cross.builder().left(left).right(right).remap(optionalRelmap(rel.getCommon())).build();
   }
 
   private Set newSet(SetRel rel) {

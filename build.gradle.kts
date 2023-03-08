@@ -16,7 +16,7 @@ repositories { mavenCentral() }
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
   implementation("org.slf4j:slf4j-jdk14:1.7.30")
   annotationProcessor("org.immutables:value:2.8.8")
