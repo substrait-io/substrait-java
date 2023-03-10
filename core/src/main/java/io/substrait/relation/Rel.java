@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
@@ -9,6 +10,8 @@ import org.immutables.value.Value;
 
 public interface Rel {
   Optional<Remap> getRemap();
+
+  Optional<AdvancedExtension> getExtension();
 
   Type.Struct getRecordType();
 

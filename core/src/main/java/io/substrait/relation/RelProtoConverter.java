@@ -7,6 +7,7 @@ import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -200,6 +201,22 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   @Override
+  public Rel visit(ExtensionTable extensionTable) throws RuntimeException {
+    ReadRel.ExtensionTable.Builder extensionTableBuilder = ReadRel.ExtensionTable.newBuilder();
+    extensionTable
+        .getDetail()
+        .ifPresent(detail -> extensionTableBuilder.setDetail(detail.toProto()));
+
+    var builder =
+        ReadRel.newBuilder()
+            .setCommon(common(extensionTable))
+            .setExtensionTable(extensionTableBuilder)
+            .setBaseSchema(extensionTable.getInitialSchema().toProto());
+
+    return Rel.newBuilder().setRead(builder).build();
+  }
+
+  @Override
   public Rel visit(Project project) throws RuntimeException {
     var builder =
         ProjectRel.newBuilder()
@@ -252,14 +269,28 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         .build();
   }
 
+  @Override
+  public Rel visit(ExtensionSingleInput extensionSingleInput) throws RuntimeException {
+    var builder =
+        ExtensionSingleRel.newBuilder()
+            .setCommon(common(extensionSingleInput))
+            .setInput(toProto(extensionSingleInput.getInput()));
+    extensionSingleInput.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+    return Rel.newBuilder().setExtensionSingle(builder.build()).build();
+  }
+
   private RelCommon common(io.substrait.relation.Rel rel) {
     var builder = RelCommon.newBuilder();
+
     var remap = rel.getRemap().orElse(null);
     if (remap != null) {
       builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(remap.indices()));
     } else {
       builder.setDirect(RelCommon.Direct.getDefaultInstance());
     }
+
+    rel.getExtension().ifPresent(extension -> builder.setAdvancedExtension(extension.toProto()));
+
     return builder.build();
   }
 }

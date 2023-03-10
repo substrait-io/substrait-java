@@ -2,6 +2,7 @@ package io.substrait.relation;
 
 import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 
+import com.google.protobuf.Any;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
@@ -9,8 +10,10 @@ import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.function.SimpleExtension;
+import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -18,6 +21,8 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.relation.extensions.EmptyDetail;
+import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
@@ -77,8 +82,11 @@ public class ProtoRelConverter {
       case CROSS -> {
         return newCross(rel.getCross());
       }
+      case EXTENSION_SINGLE -> {
+        return newExtensionSingle(rel.getExtensionSingle());
+      }
       default -> {
-        // TODO: add support for EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
+        // TODO: add support for EXTENSION_MULTI, EXTENSION_LEAF
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
     }
@@ -91,6 +99,8 @@ public class ProtoRelConverter {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
       return newLocalFiles(rel);
+    } else if (rel.hasExtensionTable()) {
+      return newExtensionTable(rel);
     } else {
       return newEmptyScan(rel);
     }
@@ -137,12 +147,26 @@ public class ProtoRelConverter {
         .build();
   }
 
+  private ExtensionSingleInput newExtensionSingle(ExtensionSingleRel rel) {
+    var input = from(rel.getInput());
+    var builder =
+        ExtensionSingleInput.builder()
+            .input(input)
+            .remap(optionalRelmap(rel.getCommon()))
+            .extension(optionalAdvancedExtension(rel.getCommon()));
+    if (rel.hasDetail()) {
+      builder.detail(detailFromExtensionSingleRel(rel.getDetail()));
+    }
+    return builder.build();
+  }
+
   private NamedScan newNamedScan(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
     return NamedScan.builder()
         .initialSchema(namedStruct)
         .names(rel.getNamedTable().getNamesList())
         .remap(optionalRelmap(rel.getCommon()))
+        .extension(optionalAdvancedExtension(rel.getCommon()))
         .filter(
             Optional.ofNullable(
                 rel.hasFilter()
@@ -150,6 +174,22 @@ public class ProtoRelConverter {
                         .from(rel.getFilter())
                     : null))
         .build();
+  }
+
+  private ExtensionTable newExtensionTable(ReadRel rel) {
+    var namedStruct = newNamedStruct(rel);
+    ReadRel.ExtensionTable extensionTable = rel.getExtensionTable();
+
+    var builder =
+        ExtensionTable.builder().initialSchema(namedStruct).remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    if (extensionTable.hasDetail()) {
+      builder.detail(detailFromExtensionTable(extensionTable.getDetail()));
+    }
+
+    return builder.build();
   }
 
   private LocalFiles newLocalFiles(ReadRel rel) {
@@ -354,5 +394,54 @@ public class ProtoRelConverter {
   private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasEmit() ? Rel.Remap.of(relCommon.getEmit().getOutputMappingList()) : null);
+  }
+
+  private Optional<AdvancedExtension> optionalAdvancedExtension(
+      io.substrait.proto.RelCommon relCommon) {
+    if (!relCommon.hasAdvancedExtension()) {
+      return Optional.empty();
+    }
+    return Optional.of(advancedExtension(relCommon.getAdvancedExtension()));
+  }
+
+  private AdvancedExtension advancedExtension(
+      io.substrait.proto.AdvancedExtension advancedExtension) {
+    var builder = AdvancedExtension.builder();
+    if (advancedExtension.hasEnhancement()) {
+      builder.enhancement(enhancementFromAdvancedExtension(advancedExtension.getEnhancement()));
+    }
+    if (advancedExtension.hasOptimization()) {
+      builder.optimization(optimizationFromAdvancedExtension(advancedExtension.getOptimization()));
+    }
+    return builder.build();
+  }
+
+  // Override the following methods to provide custom handling for Any types.
+  protected Extension.Optimization optimizationFromAdvancedExtension(com.google.protobuf.Any any) {
+    return new EmptyOptimization();
+  }
+
+  protected Extension.Enhancement enhancementFromAdvancedExtension(com.google.protobuf.Any any) {
+    throw new RuntimeException("enhancements cannot be ignored by consumers");
+  }
+
+  protected Extension.MultiRelDetail detailFromExtensionMultiRel(com.google.protobuf.Any any) {
+    return detail(any);
+  }
+
+  protected Extension.SingleRelDetail detailFromExtensionSingleRel(com.google.protobuf.Any any) {
+    return detail(any);
+  }
+
+  protected Extension.LeafRelDetail detailFromLeafRel(com.google.protobuf.Any any) {
+    return detail(any);
+  }
+
+  protected Extension.ExtensionTableDetail detailFromExtensionTable(Any any) {
+    return detail(any);
+  }
+
+  private EmptyDetail detail(com.google.protobuf.Any any) {
+    return new EmptyDetail();
   }
 }
