@@ -4,16 +4,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.function.SimpleExtension;
+import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
+import io.substrait.relation.extensions.EmptyEnhancement;
+import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -234,6 +241,60 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       var relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
+    }
+  }
+
+  @Nested
+  class AdvancedExtensions {
+
+    AdvancedExtension advancedExtension =
+        AdvancedExtension.builder()
+            .optimization(new EmptyOptimization())
+            .enhancement(new EmptyEnhancement())
+            .build();
+
+    class CustomSubstraitRelNodeConverter extends SubstraitRelNodeConverter {
+
+      public CustomSubstraitRelNodeConverter(
+          SimpleExtension.ExtensionCollection extensions,
+          RelDataTypeFactory typeFactory,
+          RelBuilder relBuilder) {
+        super(extensions, typeFactory, relBuilder);
+      }
+
+      @Override
+      public RelNode visit(io.substrait.relation.NamedScan namedScan) throws RuntimeException {
+        RelNode relNode = super.visit(namedScan);
+
+        // optimization and enhancements that are set explictily are propagated
+        assertInstanceOf(
+            EmptyEnhancement.class, namedScan.getExtension().get().getEnhancement().get());
+        assertInstanceOf(
+            EmptyOptimization.class, namedScan.getExtension().get().getOptimization().get());
+
+        return relNode;
+      }
+    }
+
+    class CustomSubstraitToCalcite extends SubstraitToCalcite {
+
+      public CustomSubstraitToCalcite(
+          SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+        super(extensions, typeFactory);
+      }
+
+      @Override
+      protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
+        return new CustomSubstraitRelNodeConverter(extensions, typeFactory, relBuilder);
+      }
+    }
+
+    @Test
+    public void defaultValue() {
+      Plan.Root root = b.root(b.namedScan(List.of("foo"), List.of(), List.of(), advancedExtension));
+
+      var customConverter = new CustomSubstraitToCalcite(extensions, typeFactory);
+      var relNode = customConverter.convert(root.getInput());
     }
   }
 }

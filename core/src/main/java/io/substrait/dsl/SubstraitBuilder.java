@@ -6,6 +6,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.function.SimpleExtension;
+import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
@@ -158,7 +159,7 @@ public class SubstraitBuilder {
 
   public NamedScan namedScan(
       Iterable<String> tableName, Iterable<String> columnNames, Iterable<Type> types) {
-    return namedScan(tableName, columnNames, types, Optional.empty());
+    return namedScan(tableName, columnNames, types, Optional.empty(), Optional.empty());
   }
 
   public NamedScan namedScan(
@@ -166,17 +167,32 @@ public class SubstraitBuilder {
       Iterable<String> columnNames,
       Iterable<Type> types,
       Rel.Remap remap) {
-    return namedScan(tableName, columnNames, types, Optional.of(remap));
+    return namedScan(tableName, columnNames, types, Optional.of(remap), Optional.empty());
+  }
+
+  public NamedScan namedScan(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      Iterable<Type> types,
+      AdvancedExtension advancedExtension) {
+    return namedScan(
+        tableName, columnNames, types, Optional.empty(), Optional.of(advancedExtension));
   }
 
   private NamedScan namedScan(
       Iterable<String> tableName,
       Iterable<String> columnNames,
       Iterable<Type> types,
-      Optional<Rel.Remap> remap) {
+      Optional<Rel.Remap> remap,
+      Optional<AdvancedExtension> advancedExtension) {
     var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
     var namedStruct = NamedStruct.of(columnNames, struct);
-    return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
+    return NamedScan.builder()
+        .names(tableName)
+        .initialSchema(namedStruct)
+        .remap(remap)
+        .extension(advancedExtension)
+        .build();
   }
 
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
