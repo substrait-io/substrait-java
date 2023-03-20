@@ -16,4 +16,6 @@ public class Extension {
   public interface SingleRelDetail extends ToProto {}
 
   public interface MultiRelDetail extends ToProto {}
+
+  public interface ExtensionTableDetail extends ToProto {}
 }

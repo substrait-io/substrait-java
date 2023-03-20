@@ -78,4 +78,9 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   public OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION {
     return visitFallback(extensionMulti);
   }
+
+  @Override
+  public OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION {
+    return visitFallback(extensionTable);
+  }
 }

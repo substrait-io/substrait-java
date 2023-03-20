@@ -30,4 +30,6 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(ExtensionSingle extensionSingle) throws EXCEPTION;
 
   OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION;
 }

@@ -106,6 +106,8 @@ public class ProtoRelConverter {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
       return newLocalFiles(rel);
+    } else if (rel.hasExtensionTable()) {
+      return newExtensionTable(rel);
     } else {
       return newEmptyScan(rel);
     }
@@ -205,6 +207,22 @@ public class ProtoRelConverter {
                         .from(rel.getFilter())
                     : null))
         .build();
+  }
+
+  private ExtensionTable newExtensionTable(ReadRel rel) {
+    NamedStruct namedStruct = newNamedStruct(rel);
+    var builder =
+        ExtensionTable.builder()
+            .initialSchema(namedStruct)
+            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()));
+
+    ReadRel.ExtensionTable extensionTable = rel.getExtensionTable();
+    if (extensionTable.hasDetail()) {
+      builder.detail(detailFromExtensionTable(extensionTable.getDetail()));
+    }
+
+    return builder.build();
   }
 
   private LocalFiles newLocalFiles(ReadRel rel) {
@@ -458,6 +476,10 @@ public class ProtoRelConverter {
   }
 
   protected Extension.MultiRelDetail detailFromExtensionMultiRel(com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  protected Extension.ExtensionTableDetail detailFromExtensionTable(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 

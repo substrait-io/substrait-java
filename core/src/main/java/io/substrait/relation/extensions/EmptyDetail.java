@@ -4,7 +4,10 @@ import com.google.protobuf.Any;
 import io.substrait.relation.Extension;
 
 public class EmptyDetail
-    implements Extension.LeafRelDetail, Extension.MultiRelDetail, Extension.SingleRelDetail {
+    implements Extension.LeafRelDetail,
+        Extension.MultiRelDetail,
+        Extension.SingleRelDetail,
+        Extension.ExtensionTableDetail {
 
   @Override
   public Any toProto() {
