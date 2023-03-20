@@ -12,6 +12,9 @@ import io.substrait.function.SimpleExtension;
 import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExtensionLeafRel;
+import io.substrait.proto.ExtensionMultiRel;
+import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -19,6 +22,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
@@ -31,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /** Converts from proto to pojo rel representation TODO: AdvancedExtension */
@@ -79,8 +84,16 @@ public class ProtoRelConverter {
       case CROSS -> {
         return newCross(rel.getCross());
       }
+      case EXTENSION_LEAF -> {
+        return newExtensionLeaf(rel.getExtensionLeaf());
+      }
+      case EXTENSION_SINGLE -> {
+        return newExtensionSingle(rel.getExtensionSingle());
+      }
+      case EXTENSION_MULTI -> {
+        return newExtensionMulti(rel.getExtensionMulti());
+      }
       default -> {
-        // TODO: add support for EXTENSION_SINGLE, EXTENSION_MULTI, EXTENSION_LEAF
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
     }
@@ -139,6 +152,43 @@ public class ProtoRelConverter {
                         .from(rel.getFilter())
                     : null))
         .build();
+  }
+
+  private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
+    var builder =
+        ExtensionLeaf.builder()
+            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasDetail()) {
+      builder.detail(detailFromExtensionLeafRel(rel.getDetail()));
+    }
+    return builder.build();
+  }
+
+  private ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
+    Rel input = from(rel.getInput());
+    var builder =
+        ExtensionSingle.builder()
+            .input(input)
+            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasDetail()) {
+      builder.detail(detailFromExtensionSingleRel(rel.getDetail()));
+    }
+    return builder.build();
+  }
+
+  private ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
+    List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
+    var builder =
+        ExtensionMulti.builder()
+            .addAllInputs(inputs)
+            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasDetail()) {
+      builder.detail(detailFromExtensionMultiRel(rel.getDetail()));
+    }
+    return builder.build();
   }
 
   private NamedScan newNamedScan(ReadRel rel) {
@@ -397,5 +447,21 @@ public class ProtoRelConverter {
 
   protected Extension.Enhancement enhancementFromAdvancedExtension(com.google.protobuf.Any any) {
     throw new RuntimeException("enhancements cannot be ignored by consumers");
+  }
+
+  protected Extension.LeafRelDetail detailFromExtensionLeafRel(com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  protected Extension.SingleRelDetail detailFromExtensionSingleRel(com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  protected Extension.MultiRelDetail detailFromExtensionMultiRel(com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  private EmptyDetail emptyDetail() {
+    return new EmptyDetail();
   }
 }

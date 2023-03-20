@@ -24,4 +24,10 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(Cross cross) throws EXCEPTION;
 
   OUTPUT visit(VirtualTableScan virtualTableScan) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionLeaf extensionLeaf) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionSingle extensionSingle) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION;
 }

@@ -10,4 +10,10 @@ public class Extension {
   public interface Optimization extends ToProto {}
 
   public interface Enhancement extends ToProto {}
+
+  public interface LeafRelDetail extends ToProto {}
+
+  public interface SingleRelDetail extends ToProto {}
+
+  public interface MultiRelDetail extends ToProto {}
 }

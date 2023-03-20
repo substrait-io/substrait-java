@@ -7,6 +7,9 @@ import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExtensionLeafRel;
+import io.substrait.proto.ExtensionMultiRel;
+import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.JoinRel;
@@ -21,6 +24,7 @@ import io.substrait.relation.files.FileOrFiles;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
@@ -250,6 +254,33 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                 .setBaseSchema(virtualTableScan.getInitialSchema().toProto())
                 .build())
         .build();
+  }
+
+  @Override
+  public Rel visit(ExtensionLeaf extensionLeaf) throws RuntimeException {
+    var builder = ExtensionLeafRel.newBuilder().setCommon(common(extensionLeaf));
+    extensionLeaf.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+    return Rel.newBuilder().setExtensionLeaf(builder).build();
+  }
+
+  @Override
+  public Rel visit(ExtensionSingle extensionSingle) throws RuntimeException {
+    var builder =
+        ExtensionSingleRel.newBuilder()
+            .setCommon(common(extensionSingle))
+            .setInput(toProto(extensionSingle.getInput()));
+    extensionSingle.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+    return Rel.newBuilder().setExtensionSingle(builder).build();
+  }
+
+  @Override
+  public Rel visit(ExtensionMulti extensionMulti) throws RuntimeException {
+    List<Rel> inputs =
+        extensionMulti.getInputs().stream().map(this::toProto).collect(Collectors.toList());
+    var builder =
+        ExtensionMultiRel.newBuilder().setCommon(common(extensionMulti)).addAllInputs(inputs);
+    extensionMulti.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+    return Rel.newBuilder().setExtensionMulti(builder).build();
   }
 
   private RelCommon common(io.substrait.relation.Rel rel) {
