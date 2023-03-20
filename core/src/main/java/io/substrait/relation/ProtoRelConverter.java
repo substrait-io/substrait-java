@@ -160,41 +160,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .addAllItems(
             rel.getLocalFiles().getItemsList().stream()
-                .map(
-                    file -> {
-                      ImmutableFileOrFiles.Builder builder =
-                          ImmutableFileOrFiles.builder()
-                              .partitionIndex(file.getPartitionIndex())
-                              .start(file.getStart())
-                              .length(file.getLength());
-                      if (file.hasParquet()) {
-                        builder.fileFormat(
-                            ImmutableFileFormat.ParquetReadOptions.builder().build());
-                      } else if (file.hasOrc()) {
-                        builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
-                      } else if (file.hasArrow()) {
-                        builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
-                      } else if (file.hasDwrf()) {
-                        builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
-                      } else if (file.hasExtension()) {
-                        builder.fileFormat(
-                            ImmutableFileFormat.Extension.builder()
-                                .extension(file.getExtension())
-                                .build());
-                      }
-                      if (file.hasUriFile()) {
-                        builder.pathType(FileOrFiles.PathType.URI_FILE).path(file.getUriFile());
-                      } else if (file.hasUriFolder()) {
-                        builder.pathType(FileOrFiles.PathType.URI_FOLDER).path(file.getUriFolder());
-                      } else if (file.hasUriPath()) {
-                        builder.pathType(FileOrFiles.PathType.URI_PATH).path(file.getUriPath());
-                      } else if (file.hasUriPathGlob()) {
-                        builder
-                            .pathType(FileOrFiles.PathType.URI_PATH_GLOB)
-                            .path(file.getUriPathGlob());
-                      }
-                      return builder.build();
-                    })
+                .map(this::newFileOrFiles)
                 .collect(java.util.stream.Collectors.toList()))
         .filter(
             Optional.ofNullable(
@@ -203,6 +169,36 @@ public class ProtoRelConverter {
                         .from(rel.getFilter())
                     : null))
         .build();
+  }
+
+  private FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
+    ImmutableFileOrFiles.Builder builder =
+        ImmutableFileOrFiles.builder()
+            .partitionIndex(file.getPartitionIndex())
+            .start(file.getStart())
+            .length(file.getLength());
+    if (file.hasParquet()) {
+      builder.fileFormat(ImmutableFileFormat.ParquetReadOptions.builder().build());
+    } else if (file.hasOrc()) {
+      builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
+    } else if (file.hasArrow()) {
+      builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
+    } else if (file.hasDwrf()) {
+      builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
+    } else if (file.hasExtension()) {
+      builder.fileFormat(
+          ImmutableFileFormat.Extension.builder().extension(file.getExtension()).build());
+    }
+    if (file.hasUriFile()) {
+      builder.pathType(FileOrFiles.PathType.URI_FILE).path(file.getUriFile());
+    } else if (file.hasUriFolder()) {
+      builder.pathType(FileOrFiles.PathType.URI_FOLDER).path(file.getUriFolder());
+    } else if (file.hasUriPath()) {
+      builder.pathType(FileOrFiles.PathType.URI_PATH).path(file.getUriPath());
+    } else if (file.hasUriPathGlob()) {
+      builder.pathType(FileOrFiles.PathType.URI_PATH_GLOB).path(file.getUriPathGlob());
+    }
+    return builder.build();
   }
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
