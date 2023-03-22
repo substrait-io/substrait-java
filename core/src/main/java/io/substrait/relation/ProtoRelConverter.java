@@ -42,8 +42,8 @@ import java.util.stream.IntStream;
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
-  private final FunctionLookup lookup;
-  private final SimpleExtension.ExtensionCollection extensions;
+  protected final FunctionLookup lookup;
+  protected final SimpleExtension.ExtensionCollection extensions;
 
   public ProtoRelConverter(FunctionLookup lookup) throws IOException {
     this(lookup, SimpleExtension.loadDefaults());
