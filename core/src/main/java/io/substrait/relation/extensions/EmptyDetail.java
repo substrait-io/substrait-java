@@ -3,8 +3,10 @@ package io.substrait.relation.extensions;
 import com.google.protobuf.Any;
 import io.substrait.relation.Extension;
 import io.substrait.relation.Rel;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.Collections;
 
 public class EmptyDetail
     implements Extension.LeafRelDetail,
@@ -30,6 +32,11 @@ public class EmptyDetail
   @Override
   public Type.Struct deriveRecordType(Rel... inputs) {
     return TypeCreator.NULLABLE.struct();
+  }
+
+  @Override
+  public NamedStruct deriveSchema() {
+    return NamedStruct.of(Collections.emptyList(), Type.Struct.builder().nullable(true).build());
   }
 
   @Override

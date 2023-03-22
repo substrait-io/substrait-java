@@ -13,7 +13,7 @@ public abstract class ExtensionTable extends AbstractReadRel {
     return visitor.visit(this);
   }
 
-  public static ImmutableExtensionTable.Builder builder() {
-    return ImmutableExtensionTable.builder();
+  public static ImmutableExtensionTable.Builder from(Extension.ExtensionTableDetail detail) {
+    return ImmutableExtensionTable.builder().initialSchema(detail.deriveSchema()).detail(detail);
   }
 }

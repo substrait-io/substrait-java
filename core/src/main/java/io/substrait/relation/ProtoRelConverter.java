@@ -226,13 +226,9 @@ public class ProtoRelConverter {
   }
 
   private ExtensionTable newExtensionTable(ReadRel rel) {
-    NamedStruct namedStruct = newNamedStruct(rel);
-    var builder = ExtensionTable.builder().initialSchema(namedStruct);
-
-    ReadRel.ExtensionTable extensionTable = rel.getExtensionTable();
-    if (extensionTable.hasDetail()) {
-      builder.detail(detailFromExtensionTable(extensionTable.getDetail()));
-    }
+    Extension.ExtensionTableDetail detail =
+        detailFromExtensionTable(rel.getExtensionTable().getDetail());
+    var builder = ExtensionTable.from(detail);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

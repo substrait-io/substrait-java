@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 
 /** Contains tag interfaces for handling {@link com.google.protobuf.Any} types within Substrait. */
@@ -14,7 +15,6 @@ public class Extension {
   public interface Enhancement extends ToProto {}
 
   public interface LeafRelDetail extends ToProto {
-
     Type.Struct deriveRecordType();
   }
 
@@ -26,5 +26,7 @@ public class Extension {
     Type.Struct deriveRecordType(Rel... inputs);
   }
 
-  public interface ExtensionTableDetail extends ToProto {}
+  public interface ExtensionTableDetail extends ToProto {
+    NamedStruct deriveSchema();
+  }
 }
