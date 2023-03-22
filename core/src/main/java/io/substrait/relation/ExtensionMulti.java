@@ -1,5 +1,8 @@
 package io.substrait.relation;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -14,13 +17,14 @@ public abstract class ExtensionMulti extends AbstractRel {
 
   public static ImmutableExtensionMulti.Builder from(
       Extension.MultiRelDetail detail, Rel... inputs) {
-    return ImmutableExtensionMulti.builder()
-        .addInputs(inputs)
-        .detail(detail)
-        .deriveRecordType(detail.deriveRecordType(inputs));
+    return from(detail, Arrays.stream(inputs).collect(Collectors.toList()));
   }
 
-  public static ImmutableExtensionMulti.Builder builder() {
-    return ImmutableExtensionMulti.builder();
+  public static ImmutableExtensionMulti.Builder from(
+      Extension.MultiRelDetail detail, List<Rel> inputs) {
+    return ImmutableExtensionMulti.builder()
+        .addAllInputs(inputs)
+        .detail(detail)
+        .deriveRecordType(detail.deriveRecordType(inputs));
   }
 }

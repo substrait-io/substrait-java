@@ -2,6 +2,7 @@ package io.substrait.relation;
 
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
+import java.util.List;
 
 /** Contains tag interfaces for handling {@link com.google.protobuf.Any} types within Substrait. */
 public class Extension {
@@ -23,7 +24,7 @@ public class Extension {
   }
 
   public interface MultiRelDetail extends ToProto {
-    Type.Struct deriveRecordType(Rel... inputs);
+    Type.Struct deriveRecordType(List<Rel> inputs);
   }
 
   public interface ExtensionTableDetail extends ToProto {

@@ -193,8 +193,7 @@ public class ProtoRelConverter {
     Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
     var builder =
-        ExtensionMulti.builder()
-            .addAllInputs(inputs)
+        ExtensionMulti.from(detail, inputs)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasDetail()) {

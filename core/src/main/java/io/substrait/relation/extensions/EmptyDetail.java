@@ -7,6 +7,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Collections;
+import java.util.List;
 
 public class EmptyDetail
     implements Extension.LeafRelDetail,
@@ -30,7 +31,7 @@ public class EmptyDetail
   }
 
   @Override
-  public Type.Struct deriveRecordType(Rel... inputs) {
+  public Type.Struct deriveRecordType(List<Rel> inputs) {
     return TypeCreator.NULLABLE.struct();
   }
 
