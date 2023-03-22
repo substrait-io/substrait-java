@@ -115,14 +115,20 @@ public class ProtoRelConverter {
 
   private Filter newFilter(FilterRel rel) {
     var input = from(rel.getInput());
-    return Filter.builder()
-        .input(input)
+    var builder =
+        Filter.builder()
+            .input(input)
+            .condition(
+                new ProtoExpressionConverter(lookup, extensions, input.getRecordType())
+                    .from(rel.getCondition()));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .condition(
-            new ProtoExpressionConverter(lookup, extensions, input.getRecordType())
-                .from(rel.getCondition()))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private NamedStruct newNamedStruct(ReadRel rel) {
@@ -143,17 +149,23 @@ public class ProtoRelConverter {
 
   private EmptyScan newEmptyScan(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
-    return EmptyScan.builder()
-        .initialSchema(namedStruct)
+    var builder =
+        EmptyScan.builder()
+            .initialSchema(namedStruct)
+            .filter(
+                Optional.ofNullable(
+                    rel.hasFilter()
+                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                            .from(rel.getFilter())
+                        : null));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .filter(
-            Optional.ofNullable(
-                rel.hasFilter()
-                    ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
-                        .from(rel.getFilter())
-                    : null))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
@@ -195,54 +207,68 @@ public class ProtoRelConverter {
 
   private NamedScan newNamedScan(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
-    return NamedScan.builder()
-        .initialSchema(namedStruct)
+    var builder =
+        NamedScan.builder()
+            .initialSchema(namedStruct)
+            .names(rel.getNamedTable().getNamesList())
+            .filter(
+                Optional.ofNullable(
+                    rel.hasFilter()
+                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                            .from(rel.getFilter())
+                        : null));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .names(rel.getNamedTable().getNamesList())
-        .filter(
-            Optional.ofNullable(
-                rel.hasFilter()
-                    ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
-                        .from(rel.getFilter())
-                    : null))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private ExtensionTable newExtensionTable(ReadRel rel) {
     NamedStruct namedStruct = newNamedStruct(rel);
-    var builder =
-        ExtensionTable.builder()
-            .initialSchema(namedStruct)
-            .extension(optionalAdvancedExtension(rel.getCommon()))
-            .remap(optionalRelmap(rel.getCommon()));
+    var builder = ExtensionTable.builder().initialSchema(namedStruct);
 
     ReadRel.ExtensionTable extensionTable = rel.getExtensionTable();
     if (extensionTable.hasDetail()) {
       builder.detail(detailFromExtensionTable(extensionTable.getDetail()));
     }
 
+    builder
+        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
     return builder.build();
   }
 
   private LocalFiles newLocalFiles(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
 
-    return LocalFiles.builder()
-        .initialSchema(namedStruct)
+    var builder =
+        LocalFiles.builder()
+            .initialSchema(namedStruct)
+            .addAllItems(
+                rel.getLocalFiles().getItemsList().stream()
+                    .map(this::newFileOrFiles)
+                    .collect(java.util.stream.Collectors.toList()))
+            .filter(
+                Optional.ofNullable(
+                    rel.hasFilter()
+                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                            .from(rel.getFilter())
+                        : null));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .addAllItems(
-            rel.getLocalFiles().getItemsList().stream()
-                .map(this::newFileOrFiles)
-                .collect(java.util.stream.Collectors.toList()))
-        .filter(
-            Optional.ofNullable(
-                rel.hasFilter()
-                    ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
-                        .from(rel.getFilter())
-                    : null))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
@@ -290,38 +316,52 @@ public class ProtoRelConverter {
     var fieldNames =
         rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
     var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
-    return VirtualTableScan.builder()
+    var builder =
+        VirtualTableScan.builder()
+            .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
+            .addAllDfsNames(fieldNames)
+            .rows(structLiterals);
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
-        .addAllDfsNames(fieldNames)
-        .rows(structLiterals)
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Fetch newFetch(FetchRel rel) {
     var input = from(rel.getInput());
-    return Fetch.builder()
-        .input(input)
+    var builder = Fetch.builder().input(input).count(rel.getCount()).offset(rel.getOffset());
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .count(rel.getCount())
-        .offset(rel.getOffset())
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Project newProject(ProjectRel rel) {
     var input = from(rel.getInput());
     var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
-    return Project.builder()
-        .input(input)
+    var builder =
+        Project.builder()
+            .input(input)
+            .expressions(
+                rel.getExpressionsList().stream()
+                    .map(converter::from)
+                    .collect(java.util.stream.Collectors.toList()));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .expressions(
-            rel.getExpressionsList().stream()
-                .map(converter::from)
-                .collect(java.util.stream.Collectors.toList()))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Aggregate newAggregate(AggregateRel rel) {
@@ -361,32 +401,40 @@ public class ProtoRelConverter {
                       measure.hasFilter() ? converter.from(measure.getFilter()) : null))
               .build());
     }
-    return Aggregate.builder()
-        .input(input)
+    var builder = Aggregate.builder().input(input).groupings(groupings).measures(measures);
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .groupings(groupings)
-        .measures(measures)
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Sort newSort(SortRel rel) {
     var input = from(rel.getInput());
     var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
-    return Sort.builder()
-        .input(input)
+    var builder =
+        Sort.builder()
+            .input(input)
+            .sortFields(
+                rel.getSortsList().stream()
+                    .map(
+                        field ->
+                            Expression.SortField.builder()
+                                .direction(Expression.SortDirection.fromProto(field.getDirection()))
+                                .expr(converter.from(field.getExpr()))
+                                .build())
+                    .collect(java.util.stream.Collectors.toList()));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .sortFields(
-            rel.getSortsList().stream()
-                .map(
-                    field ->
-                        Expression.SortField.builder()
-                            .direction(Expression.SortDirection.fromProto(field.getDirection()))
-                            .expr(converter.from(field.getExpr()))
-                            .build())
-                .collect(java.util.stream.Collectors.toList()))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Join newJoin(JoinRel rel) {
@@ -396,28 +444,37 @@ public class ProtoRelConverter {
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
     var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct);
-    return Join.builder()
-        .left(left)
-        .right(right)
+    var builder =
+        Join.builder()
+            .left(left)
+            .right(right)
+            .condition(converter.from(rel.getExpression()))
+            .joinType(Join.JoinType.fromProto(rel.getType()))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .condition(converter.from(rel.getExpression()))
-        .joinType(Join.JoinType.fromProto(rel.getType()))
-        .postJoinFilter(
-            Optional.ofNullable(
-                rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    return Cross.builder()
-        .left(left)
-        .right(right)
+    var builder = Cross.builder().left(left).right(right);
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private Set newSet(SetRel rel) {
@@ -425,12 +482,15 @@ public class ProtoRelConverter {
         rel.getInputsList().stream()
             .map(inputRel -> from(inputRel))
             .collect(java.util.stream.Collectors.toList());
-    return Set.builder()
-        .inputs(inputs)
+    var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
+
+    builder
         .extension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .setOp(Set.SetOp.fromProto(rel.getOp()))
-        .build();
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
