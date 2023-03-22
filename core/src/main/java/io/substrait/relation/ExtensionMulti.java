@@ -13,6 +13,14 @@ public abstract class ExtensionMulti extends AbstractRel {
     return visitor.visit(this);
   }
 
+  public static ImmutableExtensionMulti.Builder from(
+      Extension.MultiRelDetail detail, Rel... inputs) {
+    return ImmutableExtensionMulti.builder()
+        .addInputs(inputs)
+        .detail(detail)
+        .deriveRecordType(detail.deriveRecordType(inputs));
+  }
+
   public static ImmutableExtensionMulti.Builder builder() {
     return ImmutableExtensionMulti.builder();
   }

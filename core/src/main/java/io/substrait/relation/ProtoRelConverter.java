@@ -169,30 +169,29 @@ public class ProtoRelConverter {
   }
 
   private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
+    assert rel.hasDetail();
+    Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
     var builder =
-        ExtensionLeaf.builder()
+        ExtensionLeaf.from(detail)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
-    if (rel.hasDetail()) {
-      builder.detail(detailFromExtensionLeafRel(rel.getDetail()));
-    }
     return builder.build();
   }
 
   private ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
+    assert rel.hasDetail();
+    Extension.SingleRelDetail detail = detailFromExtensionSingleRel(rel.getDetail());
     Rel input = from(rel.getInput());
     var builder =
-        ExtensionSingle.builder()
-            .input(input)
+        ExtensionSingle.from(detail, input)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
-    if (rel.hasDetail()) {
-      builder.detail(detailFromExtensionSingleRel(rel.getDetail()));
-    }
     return builder.build();
   }
 
   private ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
+    assert rel.hasDetail();
+    Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
     var builder =
         ExtensionMulti.builder()

@@ -13,7 +13,10 @@ public abstract class ExtensionSingle extends SingleInputRel {
     return visitor.visit(this);
   }
 
-  public static ImmutableExtensionSingle.Builder builder() {
-    return ImmutableExtensionSingle.builder();
+  public static ImmutableExtensionSingle.Builder from(Extension.SingleRelDetail detail, Rel input) {
+    return ImmutableExtensionSingle.builder()
+        .input(input)
+        .detail(detail)
+        .deriveRecordType(detail.deriveRecordType(input));
   }
 }

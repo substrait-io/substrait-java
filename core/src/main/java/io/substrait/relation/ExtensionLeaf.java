@@ -13,7 +13,9 @@ public abstract class ExtensionLeaf extends ZeroInputRel {
     return visitor.visit(this);
   }
 
-  public static ImmutableExtensionLeaf.Builder builder() {
-    return ImmutableExtensionLeaf.builder();
+  public static ImmutableExtensionLeaf.Builder from(Extension.LeafRelDetail detail) {
+    return ImmutableExtensionLeaf.builder()
+        .detail(detail)
+        .deriveRecordType(detail.deriveRecordType());
   }
 }
