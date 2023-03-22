@@ -14,14 +14,13 @@ import io.substrait.relation.ProtoRelConverter;
  *
  * <p>Used to verify serde of {@link com.google.protobuf.Any} fields in the spec
  */
-public class StringHolderHandlingProtoRelConvert extends ProtoRelConverter {
-  public StringHolderHandlingProtoRelConvert(
+public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
+  public StringHolderHandlingProtoRelConverter(
       FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     super(lookup, extensions);
   }
 
-  @Override
-  protected Extension.Enhancement enhancementFromAdvancedExtension(Any any) {
+  StringHolder asStringHolder(Any any) {
     try {
       return new StringHolder(any.unpack(StringValue.class).getValue());
     } catch (InvalidProtocolBufferException e) {
@@ -30,11 +29,32 @@ public class StringHolderHandlingProtoRelConvert extends ProtoRelConverter {
   }
 
   @Override
+  protected Extension.Enhancement enhancementFromAdvancedExtension(Any any) {
+    return asStringHolder(any);
+  }
+
+  @Override
   protected Extension.Optimization optimizationFromAdvancedExtension(Any any) {
-    try {
-      return new StringHolder(any.unpack(StringValue.class).getValue());
-    } catch (InvalidProtocolBufferException e) {
-      throw new RuntimeException(e);
-    }
+    return asStringHolder(any);
+  }
+
+  @Override
+  protected Extension.LeafRelDetail detailFromExtensionLeafRel(Any any) {
+    return asStringHolder(any);
+  }
+
+  @Override
+  protected Extension.SingleRelDetail detailFromExtensionSingleRel(Any any) {
+    return asStringHolder(any);
+  }
+
+  @Override
+  protected Extension.MultiRelDetail detailFromExtensionMultiRel(Any any) {
+    return asStringHolder(any);
+  }
+
+  @Override
+  protected Extension.ExtensionTableDetail detailFromExtensionTable(Any any) {
+    return asStringHolder(any);
   }
 }

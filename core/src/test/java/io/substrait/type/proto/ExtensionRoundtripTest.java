@@ -25,9 +25,8 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
-import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.utils.StringHolder;
-import io.substrait.relation.utils.StringHolderHandlingProtoRelConvert;
+import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -57,7 +56,7 @@ public class ExtensionRoundtripTest {
   final FunctionCollector functionCollector = new FunctionCollector();
   final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConvert(functionCollector, extensions);
+      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
 
   final Rel commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -67,6 +66,8 @@ public class ExtensionRoundtripTest {
           .enhancement(new StringHolder("COMMON ENHANCEMENT"))
           .optimization(new StringHolder("COMMON OPTIMIZATION"))
           .build();
+
+  final StringHolder detail = new StringHolder("DETAIL");
 
   final AdvancedExtension relExtension =
       AdvancedExtension.builder()
@@ -119,7 +120,7 @@ public class ExtensionRoundtripTest {
 
   @Test
   void extensionTable() {
-    Rel rel = ExtensionTable.from(new EmptyDetail()).build();
+    Rel rel = ExtensionTable.from(detail).build();
     verifyRoundTrip(rel);
   }
 
@@ -202,17 +203,14 @@ public class ExtensionRoundtripTest {
 
   @Test
   void extensionSingleRel() {
-    Rel rel =
-        ExtensionSingle.from(new EmptyDetail(), commonTable)
-            .commonExtension(commonExtension)
-            .build();
+    Rel rel = ExtensionSingle.from(detail, commonTable).commonExtension(commonExtension).build();
     verifyRoundTrip(rel);
   }
 
   @Test
   void extensionMultiRel() {
     Rel rel =
-        ExtensionMulti.from(new EmptyDetail(), commonTable, commonTable)
+        ExtensionMulti.from(detail, commonTable, commonTable)
             .commonExtension(commonExtension)
             .build();
     verifyRoundTrip(rel);
@@ -220,7 +218,7 @@ public class ExtensionRoundtripTest {
 
   @Test
   void extensionLeafRel() {
-    Rel rel = ExtensionLeaf.from(new EmptyDetail()).commonExtension(commonExtension).build();
+    Rel rel = ExtensionLeaf.from(detail).commonExtension(commonExtension).build();
     verifyRoundTrip(rel);
   }
 
