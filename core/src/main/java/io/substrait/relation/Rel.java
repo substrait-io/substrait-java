@@ -11,7 +11,7 @@ import org.immutables.value.Value;
 public interface Rel {
   Optional<Remap> getRemap();
 
-  Optional<AdvancedExtension> getExtension();
+  Optional<AdvancedExtension> getCommonExtension();
 
   Type.Struct getRecordType();
 

@@ -315,7 +315,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   private RelCommon common(io.substrait.relation.Rel rel) {
     var builder = RelCommon.newBuilder();
-    rel.getExtension().ifPresent(extension -> builder.setAdvancedExtension(extension.toProto()));
+    rel.getCommonExtension()
+        .ifPresent(extension -> builder.setAdvancedExtension(extension.toProto()));
 
     var remap = rel.getRemap().orElse(null);
     if (remap != null) {

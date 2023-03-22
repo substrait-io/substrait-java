@@ -10,7 +10,7 @@ public abstract class NamedScan extends AbstractReadRel {
 
   public abstract List<String> getNames();
 
-  public abstract Optional<AdvancedExtension> getExtension();
+  public abstract Optional<AdvancedExtension> getCommonExtension();
 
   @Override
   public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {

@@ -123,7 +123,7 @@ public class ProtoRelConverter {
                     .from(rel.getCondition()));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -160,7 +160,7 @@ public class ProtoRelConverter {
                         : null));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -171,7 +171,7 @@ public class ProtoRelConverter {
   private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
     var builder =
         ExtensionLeaf.builder()
-            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasDetail()) {
       builder.detail(detailFromExtensionLeafRel(rel.getDetail()));
@@ -184,7 +184,7 @@ public class ProtoRelConverter {
     var builder =
         ExtensionSingle.builder()
             .input(input)
-            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasDetail()) {
       builder.detail(detailFromExtensionSingleRel(rel.getDetail()));
@@ -197,7 +197,7 @@ public class ProtoRelConverter {
     var builder =
         ExtensionMulti.builder()
             .addAllInputs(inputs)
-            .extension(optionalAdvancedExtension(rel.getCommon()))
+            .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasDetail()) {
       builder.detail(detailFromExtensionMultiRel(rel.getDetail()));
@@ -219,7 +219,7 @@ public class ProtoRelConverter {
                         : null));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -237,7 +237,7 @@ public class ProtoRelConverter {
     }
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -263,7 +263,7 @@ public class ProtoRelConverter {
                         : null));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -323,7 +323,7 @@ public class ProtoRelConverter {
             .rows(structLiterals);
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -336,7 +336,7 @@ public class ProtoRelConverter {
     var builder = Fetch.builder().input(input).count(rel.getCount()).offset(rel.getOffset());
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -356,7 +356,7 @@ public class ProtoRelConverter {
                     .collect(java.util.stream.Collectors.toList()));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -404,7 +404,7 @@ public class ProtoRelConverter {
     var builder = Aggregate.builder().input(input).groupings(groupings).measures(measures);
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -429,7 +429,7 @@ public class ProtoRelConverter {
                     .collect(java.util.stream.Collectors.toList()));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -455,7 +455,7 @@ public class ProtoRelConverter {
                     rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -469,7 +469,7 @@ public class ProtoRelConverter {
     var builder = Cross.builder().left(left).right(right);
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
@@ -485,7 +485,7 @@ public class ProtoRelConverter {
     var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
 
     builder
-        .extension(optionalAdvancedExtension(rel.getCommon()))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
