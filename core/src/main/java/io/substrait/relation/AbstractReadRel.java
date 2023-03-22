@@ -5,7 +5,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.Optional;
 
-public abstract class AbstractReadRel extends ZeroInputRel {
+public abstract class AbstractReadRel extends ZeroInputRel implements HasExtension {
 
   public abstract NamedStruct getInitialSchema();
 

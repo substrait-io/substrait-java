@@ -5,7 +5,7 @@ import java.util.OptionalLong;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Fetch extends SingleInputRel {
+public abstract class Fetch extends SingleInputRel implements HasExtension {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Fetch.class);
 
   public abstract long getOffset();

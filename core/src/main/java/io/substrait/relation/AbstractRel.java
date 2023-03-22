@@ -1,14 +1,10 @@
 package io.substrait.relation;
 
-import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 public abstract class AbstractRel implements Rel {
-
-  public abstract Optional<AdvancedExtension> getGeneralExtension();
 
   private Supplier<Type.Struct> recordType =
       Util.memoize(

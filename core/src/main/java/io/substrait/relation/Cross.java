@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Cross extends BiRel {
+public abstract class Cross extends BiRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
