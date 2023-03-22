@@ -10,5 +10,5 @@ import java.util.Optional;
  * extensions. See {@link ExtensionLeaf}, {@link ExtensionSingle}, {@link ExtensionMulti}).
  */
 public interface HasExtension {
-  Optional<AdvancedExtension> getGeneralExtension();
+  Optional<AdvancedExtension> getRelExtension();
 }

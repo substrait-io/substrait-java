@@ -126,7 +126,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -163,7 +163,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -222,7 +222,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -240,7 +240,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -266,7 +266,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -326,7 +326,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -339,7 +339,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -359,7 +359,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -407,7 +407,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -432,7 +432,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -458,7 +458,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -472,7 +472,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -488,7 +488,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.generalExtension(advancedExtension(rel.getAdvancedExtension()));
+      builder.relExtension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
