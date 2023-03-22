@@ -213,11 +213,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(ExtensionTable extensionTable) throws RuntimeException {
-    ReadRel.ExtensionTable.Builder extensionTableBuilder = ReadRel.ExtensionTable.newBuilder();
-    extensionTable
-        .getDetail()
-        .ifPresent(detail -> extensionTableBuilder.setDetail(detail.toProto()));
-
+    ReadRel.ExtensionTable.Builder extensionTableBuilder =
+        ReadRel.ExtensionTable.newBuilder().setDetail(extensionTable.getDetail().toProto());
     var builder =
         ReadRel.newBuilder()
             .setCommon(common(extensionTable))
