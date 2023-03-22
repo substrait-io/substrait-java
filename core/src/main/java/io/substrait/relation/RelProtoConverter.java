@@ -288,8 +288,10 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(ExtensionLeaf extensionLeaf) throws RuntimeException {
-    var builder = ExtensionLeafRel.newBuilder().setCommon(common(extensionLeaf));
-    extensionLeaf.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+    var builder =
+        ExtensionLeafRel.newBuilder()
+            .setCommon(common(extensionLeaf))
+            .setDetail(extensionLeaf.getDetail().toProto());
     return Rel.newBuilder().setExtensionLeaf(builder).build();
   }
 
@@ -298,8 +300,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     var builder =
         ExtensionSingleRel.newBuilder()
             .setCommon(common(extensionSingle))
-            .setInput(toProto(extensionSingle.getInput()));
-    extensionSingle.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+            .setInput(toProto(extensionSingle.getInput()))
+            .setDetail(extensionSingle.getDetail().toProto());
     return Rel.newBuilder().setExtensionSingle(builder).build();
   }
 
@@ -308,8 +310,10 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     List<Rel> inputs =
         extensionMulti.getInputs().stream().map(this::toProto).collect(Collectors.toList());
     var builder =
-        ExtensionMultiRel.newBuilder().setCommon(common(extensionMulti)).addAllInputs(inputs);
-    extensionMulti.getDetail().ifPresent(detail -> builder.setDetail(detail.toProto()));
+        ExtensionMultiRel.newBuilder()
+            .setCommon(common(extensionMulti))
+            .addAllInputs(inputs)
+            .setDetail(extensionMulti.getDetail().toProto());
     return Rel.newBuilder().setExtensionMulti(builder).build();
   }
 

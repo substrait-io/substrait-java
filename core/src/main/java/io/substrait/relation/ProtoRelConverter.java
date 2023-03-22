@@ -169,7 +169,6 @@ public class ProtoRelConverter {
   }
 
   private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
-    assert rel.hasDetail();
     Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
     var builder =
         ExtensionLeaf.from(detail)

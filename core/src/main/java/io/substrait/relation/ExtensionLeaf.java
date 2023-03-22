@@ -1,12 +1,11 @@
 package io.substrait.relation;
 
-import java.util.Optional;
 import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class ExtensionLeaf extends ZeroInputRel {
 
-  public abstract Optional<Extension.LeafRelDetail> getDetail();
+  public abstract Extension.LeafRelDetail getDetail();
 
   @Override
   public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
