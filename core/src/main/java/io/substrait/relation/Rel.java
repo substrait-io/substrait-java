@@ -11,6 +11,10 @@ import org.immutables.value.Value;
 public interface Rel {
   Optional<Remap> getRemap();
 
+  /**
+   * @return the {@link AdvancedExtension} associated with a {@link io.substrait.proto.RelCommon}
+   *     message, if present
+   */
   Optional<AdvancedExtension> getCommonExtension();
 
   Type.Struct getRecordType();

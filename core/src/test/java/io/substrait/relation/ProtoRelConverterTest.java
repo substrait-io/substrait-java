@@ -31,9 +31,12 @@ public class ProtoRelConverterTest {
   final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   final ProtoRelConverter protoRelConverter = new ProtoRelConverter(functionCollector, extensions);
 
+  final NamedScan commonTable =
+      b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
   /**
    * Verify default behaviour of {@link ProtoRelConverter} in the presence of {@link
-   * AdvancedExtension} data
+   * AdvancedExtension} data.
    */
   @Nested
   class DefaultAdvancedExtensionTests {
@@ -43,9 +46,7 @@ public class ProtoRelConverterTest {
 
     Rel relWithExtension(AdvancedExtension advancedExtension) {
       return NamedScan.builder()
-          .from(
-              b.namedScan(
-                  Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+          .from(commonTable)
           .commonExtension(advancedExtension)
           .relExtension(advancedExtension)
           .build();
@@ -54,10 +55,8 @@ public class ProtoRelConverterTest {
     Rel emptyAdvancedExtension = relWithExtension(AdvancedExtension.builder().build());
     Rel advancedExtensionWithOptimization =
         relWithExtension(AdvancedExtension.builder().optimization(OPTIMIZED).build());
-
     Rel advancedExtensionWithEnhancement =
         relWithExtension(AdvancedExtension.builder().enhancement(ENHANCED).build());
-
     Rel advancedExtensionWithEnhancementAndOptimization =
         relWithExtension(
             AdvancedExtension.builder().enhancement(ENHANCED).optimization(OPTIMIZED).build());
@@ -99,11 +98,12 @@ public class ProtoRelConverterTest {
     }
   }
 
-  /** Verify behaviour of {@link ProtoRelConverter} in the presence of Detail data */
+  /**
+   * Verify default behaviour of {@link ProtoRelConverter} in the presence of Detail data. Messages
+   * do NOT round trip because the default ProtoRelConverter does not handle custom Detail data.
+   */
   @Nested
   class DetailsTest {
-    final Rel commonTable =
-        b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
     @Test
     void extensionLeaf() {

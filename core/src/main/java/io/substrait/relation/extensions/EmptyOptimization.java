@@ -4,11 +4,8 @@ import com.google.protobuf.Any;
 import io.substrait.relation.Extension;
 
 /**
- * Default type to which AdvancedExtension.optimization are converted to.
- *
- * <p>Provide your own implementation of {@link
- * io.substrait.relation.ProtoRelConverter#enhancementFromAdvancedExtension(Any)} if you have
- * optimizations you wish to process.
+ * Default type to which {@link io.substrait.proto.AdvancedExtension#getOptimization()} data is
+ * converted to by the {@link io.substrait.relation.ProtoRelConverter}
  */
 public class EmptyOptimization implements Extension.Optimization {
   @Override

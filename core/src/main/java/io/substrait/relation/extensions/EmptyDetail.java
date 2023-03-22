@@ -9,6 +9,10 @@ import io.substrait.type.TypeCreator;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Default type to which google.protobuf.Any detail messages are converted to by the {@link
+ * io.substrait.relation.ProtoRelConverter}
+ */
 public class EmptyDetail
     implements Extension.LeafRelDetail,
         Extension.MultiRelDetail,

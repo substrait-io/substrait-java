@@ -38,7 +38,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-/** Converts from proto to pojo rel representation TODO: AdvancedExtension */
+/** Converts from proto to pojo rel representation */
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
@@ -178,7 +178,6 @@ public class ProtoRelConverter {
   }
 
   private ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
-    assert rel.hasDetail();
     Extension.SingleRelDetail detail = detailFromExtensionSingleRel(rel.getDetail());
     Rel input = from(rel.getInput());
     var builder =
@@ -189,7 +188,6 @@ public class ProtoRelConverter {
   }
 
   private ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
-    assert rel.hasDetail();
     Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
     var builder =
@@ -511,27 +509,41 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  // Override the following methods to provide custom handling for Any types.
+  /**
+   * Override to provide a custom converter for {@link
+   * io.substrait.proto.AdvancedExtension#getOptimization()} data
+   */
   protected Extension.Optimization optimizationFromAdvancedExtension(com.google.protobuf.Any any) {
     return new EmptyOptimization();
   }
 
+  /**
+   * Override to provide a custom converter for {@link
+   * io.substrait.proto.AdvancedExtension#getEnhancement()} data
+   */
   protected Extension.Enhancement enhancementFromAdvancedExtension(com.google.protobuf.Any any) {
     throw new RuntimeException("enhancements cannot be ignored by consumers");
   }
 
+  /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */
   protected Extension.LeafRelDetail detailFromExtensionLeafRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
+  /** Override to provide a custom converter for {@link ExtensionSingleRel#getDetail()} data */
   protected Extension.SingleRelDetail detailFromExtensionSingleRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
+  /** Override to provide a custom converter for {@link ExtensionMultiRel#getDetail()} data */
   protected Extension.MultiRelDetail detailFromExtensionMultiRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
+  /**
+   * Override to provide a custom converter for {@link
+   * io.substrait.proto.ReadRel.ExtensionTable#getDetail()} data
+   */
   protected Extension.ExtensionTableDetail detailFromExtensionTable(com.google.protobuf.Any any) {
     return emptyDetail();
   }

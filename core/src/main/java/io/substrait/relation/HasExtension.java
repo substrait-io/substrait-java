@@ -10,5 +10,8 @@ import java.util.Optional;
  * extensions. See {@link ExtensionLeaf}, {@link ExtensionSingle}, {@link ExtensionMulti}).
  */
 public interface HasExtension {
+  /**
+   * @return the {@link AdvancedExtension} associated directly with the relation, if present
+   */
   Optional<AdvancedExtension> getRelExtension();
 }

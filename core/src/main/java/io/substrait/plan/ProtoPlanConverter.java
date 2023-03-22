@@ -25,6 +25,7 @@ public class ProtoPlanConverter {
     this.extensionCollection = extensionCollection;
   }
 
+  /** Override hook for providing custom {@link ProtoRelConverter} implementations */
   protected ProtoRelConverter getProtoRelConverter(FunctionLookup functionLookup) {
     return new ProtoRelConverter(functionLookup, this.extensionCollection);
   }

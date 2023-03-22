@@ -16,18 +16,32 @@ public class Extension {
   public interface Enhancement extends ToProto {}
 
   public interface LeafRelDetail extends ToProto {
+    /**
+     * @return the record layout for the associated {@link ExtensionLeaf} relation
+     */
     Type.Struct deriveRecordType();
   }
 
   public interface SingleRelDetail extends ToProto {
+    /**
+     * @param input to the associated {@link ExtensionSingle} relation
+     * @return the record layout for the associated {@link ExtensionSingle} relation
+     */
     Type.Struct deriveRecordType(Rel input);
   }
 
   public interface MultiRelDetail extends ToProto {
+    /**
+     * @param inputs to the associated {@link ExtensionMulti} relation
+     * @return the record layout for the associated {@link ExtensionMulti} relation
+     */
     Type.Struct deriveRecordType(List<Rel> inputs);
   }
 
   public interface ExtensionTableDetail extends ToProto {
+    /**
+     * @return the table schema for the associated {@link ExtensionTable} relation
+     */
     NamedStruct deriveSchema();
   }
 }
