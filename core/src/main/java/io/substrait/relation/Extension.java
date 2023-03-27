@@ -11,8 +11,18 @@ public class Extension {
     com.google.protobuf.Any toProto();
   }
 
+  /**
+   * Optimization associated with an {@link io.substrait.proto.AdvancedExtension}
+   *
+   * <p>An enhancement alter semantics. Cannot be ignored by a consumer.
+   */
   public interface Optimization extends ToProto {}
 
+  /**
+   * Enhancement associated with an {@link io.substrait.proto.AdvancedExtension}
+   *
+   * <p>An enhancement alter semantics. Cannot be ignored by a consumer.
+   */
   public interface Enhancement extends ToProto {}
 
   public interface LeafRelDetail extends ToProto {
