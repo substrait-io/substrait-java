@@ -14,7 +14,8 @@ public class Extension {
   /**
    * Optimization associated with an {@link io.substrait.proto.AdvancedExtension}
    *
-   * <p>An enhancement alter semantics. Cannot be ignored by a consumer.
+   * <p>An optimization is helpful information that don't influence semantics. May be ignored by a
+   * consumer.
    */
   public interface Optimization extends ToProto {}
 
