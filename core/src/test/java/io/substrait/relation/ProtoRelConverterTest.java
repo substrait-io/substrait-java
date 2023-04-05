@@ -48,7 +48,7 @@ public class ProtoRelConverterTest {
       return NamedScan.builder()
           .from(commonTable)
           .commonExtension(advancedExtension)
-          .relExtension(advancedExtension)
+          .extension(advancedExtension)
           .build();
     }
 

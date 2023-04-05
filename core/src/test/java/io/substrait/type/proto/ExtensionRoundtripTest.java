@@ -87,7 +87,7 @@ public class ExtensionRoundtripTest {
         VirtualTableScan.builder()
             .addRows(Expression.StructLiteral.builder().fields(Collections.emptyList()).build())
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -100,7 +100,7 @@ public class ExtensionRoundtripTest {
                 NamedStruct.of(
                     Collections.emptyList(), Type.Struct.builder().nullable(false).build()))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -113,7 +113,7 @@ public class ExtensionRoundtripTest {
                 b.namedScan(
                     Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -130,7 +130,7 @@ public class ExtensionRoundtripTest {
         Filter.builder()
             .from(b.filter(__ -> b.bool(true), commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -141,7 +141,7 @@ public class ExtensionRoundtripTest {
         Fetch.builder()
             .from(b.fetch(1, 2, commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -152,7 +152,7 @@ public class ExtensionRoundtripTest {
         Aggregate.builder()
             .from(b.aggregate(b::grouping, __ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -163,7 +163,7 @@ public class ExtensionRoundtripTest {
         Sort.builder()
             .from(b.sort(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -174,7 +174,7 @@ public class ExtensionRoundtripTest {
         Join.builder()
             .from(b.innerJoin(__ -> b.bool(true), commonTable, commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -185,7 +185,7 @@ public class ExtensionRoundtripTest {
         Project.builder()
             .from(b.project(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -196,7 +196,7 @@ public class ExtensionRoundtripTest {
         Set.builder()
             .from(b.set(Set.SetOp.UNION_ALL, commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
@@ -228,7 +228,7 @@ public class ExtensionRoundtripTest {
         Cross.builder()
             .from(b.cross(commonTable, commonTable))
             .commonExtension(commonExtension)
-            .relExtension(relExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }
