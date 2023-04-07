@@ -9,7 +9,7 @@ import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Join extends BiRel {
+public abstract class Join extends BiRel implements HasExtension {
 
   public abstract Optional<Expression> getCondition();
 

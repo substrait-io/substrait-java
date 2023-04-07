@@ -5,7 +5,7 @@ import io.substrait.type.Type;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Filter extends SingleInputRel {
+public abstract class Filter extends SingleInputRel implements HasExtension {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Filter.class);
 
   public abstract Expression getCondition();

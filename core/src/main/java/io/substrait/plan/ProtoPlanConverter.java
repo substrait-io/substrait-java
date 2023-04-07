@@ -15,7 +15,7 @@ public class ProtoPlanConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(io.substrait.plan.ProtoPlanConverter.class);
 
-  private final SimpleExtension.ExtensionCollection extensionCollection;
+  protected final SimpleExtension.ExtensionCollection extensionCollection;
 
   public ProtoPlanConverter() throws IOException {
     this(SimpleExtension.loadDefaults());
@@ -25,9 +25,14 @@ public class ProtoPlanConverter {
     this.extensionCollection = extensionCollection;
   }
 
+  /** Override hook for providing custom {@link ProtoRelConverter} implementations */
+  protected ProtoRelConverter getProtoRelConverter(FunctionLookup functionLookup) {
+    return new ProtoRelConverter(functionLookup, this.extensionCollection);
+  }
+
   public Plan from(io.substrait.proto.Plan plan) {
     FunctionLookup functionLookup = ImmutableFunctionLookup.builder().from(plan).build();
-    ProtoRelConverter relConverter = new ProtoRelConverter(functionLookup, extensionCollection);
+    ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
       io.substrait.proto.RelRoot root = planRel.getRoot();
