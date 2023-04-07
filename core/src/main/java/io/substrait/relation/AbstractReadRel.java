@@ -1,12 +1,11 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
-import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.Optional;
 
-public abstract class AbstractReadRel extends ZeroInputRel {
+public abstract class AbstractReadRel extends ZeroInputRel implements HasExtension {
 
   public abstract NamedStruct getInitialSchema();
 
@@ -14,8 +13,6 @@ public abstract class AbstractReadRel extends ZeroInputRel {
 
   // TODO:
   // public abstract Optional<MaskExpression>
-
-  public abstract Optional<AdvancedExtension> getGeneralExtension();
 
   @Override
   protected final Type.Struct deriveRecordType() {

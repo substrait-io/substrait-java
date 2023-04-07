@@ -5,7 +5,7 @@ import io.substrait.type.Type;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Set extends AbstractRel {
+public abstract class Set extends AbstractRel implements HasExtension {
   public abstract Set.SetOp getSetOp();
 
   public static enum SetOp {
