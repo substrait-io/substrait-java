@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [0.8.0](https://github.com/substrait-io/substrait-java/compare/v0.7.0...v0.8.0) (2023-04-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* Use commonExtension to indicate that these extensions
+are associated with the RelCommon message
+* Use relExtension to indicate that these extensions
+are associated directly with Rels
+
+### Features
+
+* google.protobuf.Any handling ([#135](https://github.com/substrait-io/substrait-java/issues/135)) ([f7b7c3d](https://github.com/substrait-io/substrait-java/commit/f7b7c3d5286d4716f908d765fa43a893ad97a4fe))
+
 ## [0.7.0](https://github.com/substrait-io/substrait-java/compare/v0.6.0...v0.7.0) (2023-03-12)
 
 
