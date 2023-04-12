@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -672,7 +673,7 @@ public class SimpleExtension {
     return load(defaultFiles);
   }
 
-  public static ExtensionCollection load(List<String> resourcePaths) throws IOException {
+  public static ExtensionCollection load(List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {
       throw new IllegalArgumentException("Require at least one resource path.");
     }
@@ -695,34 +696,48 @@ public class SimpleExtension {
     return complete;
   }
 
-  private static ExtensionCollection load(String namespace, InputStream stream) {
+  public static ExtensionCollection load(String namespace, String str) {
+    try {
+      var doc = MAPPER.readValue(str, FunctionSignatures.class);
+      return buildExtensionCollection(namespace, doc);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ExtensionCollection load(String namespace, InputStream stream) {
     try {
       var doc = MAPPER.readValue(stream, SimpleExtension.FunctionSignatures.class);
-      var collection =
-          ImmutableSimpleExtension.ExtensionCollection.builder()
-              .addAllAggregateFunctions(
-                  doc.aggregates().stream()
-                      .flatMap(t -> t.resolve(namespace))
-                      .collect(java.util.stream.Collectors.toList()))
-              .addAllScalarFunctions(
-                  doc.scalars().stream()
-                      .flatMap(t -> t.resolve(namespace))
-                      .collect(java.util.stream.Collectors.toList()))
-              .addAllWindowFunctions(
-                  doc.windows().stream()
-                      .flatMap(t -> t.resolve(namespace))
-                      .collect(java.util.stream.Collectors.toList()))
-              .build();
-      logger.debug(
-          "Loaded {} aggregate functions and {} scalar functions from {}.",
-          collection.aggregateFunctions().size(),
-          collection.scalarFunctions().size(),
-          namespace);
-      return collection;
+      return buildExtensionCollection(namespace, doc);
     } catch (RuntimeException ex) {
       throw ex;
     } catch (Exception ex) {
       throw new RuntimeException("Failure while parsing " + namespace, ex);
     }
+  }
+
+  public static ExtensionCollection buildExtensionCollection(
+      String namespace, SimpleExtension.FunctionSignatures functionSignatures) {
+    var collection =
+        ImmutableSimpleExtension.ExtensionCollection.builder()
+            .addAllAggregateFunctions(
+                functionSignatures.aggregates().stream()
+                    .flatMap(t -> t.resolve(namespace))
+                    .collect(java.util.stream.Collectors.toList()))
+            .addAllScalarFunctions(
+                functionSignatures.scalars().stream()
+                    .flatMap(t -> t.resolve(namespace))
+                    .collect(java.util.stream.Collectors.toList()))
+            .addAllWindowFunctions(
+                functionSignatures.windows().stream()
+                    .flatMap(t -> t.resolve(namespace))
+                    .collect(java.util.stream.Collectors.toList()))
+            .build();
+    logger.debug(
+        "Loaded {} aggregate functions and {} scalar functions from {}.",
+        collection.aggregateFunctions().size(),
+        collection.scalarFunctions().size(),
+        namespace);
+    return collection;
   }
 }
