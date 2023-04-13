@@ -1,9 +1,22 @@
 package io.substrait.isthmus;
 
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.Correlate;
+import org.apache.calcite.rel.core.Exchange;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Intersect;
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.Match;
+import org.apache.calcite.rel.core.Minus;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableFunctionScan;
+import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.logical.*;
+import org.apache.calcite.rel.core.Union;
+import org.apache.calcite.rel.core.Values;
 
 /** A more generic version of RelShuttle that allows an alternative return value. */
 public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
@@ -16,59 +29,59 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
     return visitOther(scan);
   }
 
-  public OUTPUT visit(LogicalValues values) throws EXCEPTION {
+  public OUTPUT visit(Values values) throws EXCEPTION {
     return visitOther(values);
   }
 
-  public OUTPUT visit(LogicalFilter filter) throws EXCEPTION {
+  public OUTPUT visit(Filter filter) throws EXCEPTION {
     return visitOther(filter);
   }
 
-  public OUTPUT visit(LogicalCalc calc) throws EXCEPTION {
+  public OUTPUT visit(Calc calc) throws EXCEPTION {
     return visitOther(calc);
   }
 
-  public OUTPUT visit(LogicalProject project) throws EXCEPTION {
+  public OUTPUT visit(Project project) throws EXCEPTION {
     return visitOther(project);
   }
 
-  public OUTPUT visit(LogicalJoin join) throws EXCEPTION {
+  public OUTPUT visit(Join join) throws EXCEPTION {
     return visitOther(join);
   }
 
-  public OUTPUT visit(LogicalCorrelate correlate) throws EXCEPTION {
+  public OUTPUT visit(Correlate correlate) throws EXCEPTION {
     return visitOther(correlate);
   }
 
-  public OUTPUT visit(LogicalUnion union) throws EXCEPTION {
+  public OUTPUT visit(Union union) throws EXCEPTION {
     return visitOther(union);
   }
 
-  public OUTPUT visit(LogicalIntersect intersect) throws EXCEPTION {
+  public OUTPUT visit(Intersect intersect) throws EXCEPTION {
     return visitOther(intersect);
   }
 
-  public OUTPUT visit(LogicalMinus minus) throws EXCEPTION {
+  public OUTPUT visit(Minus minus) throws EXCEPTION {
     return visitOther(minus);
   }
 
-  public OUTPUT visit(LogicalAggregate aggregate) throws EXCEPTION {
+  public OUTPUT visit(Aggregate aggregate) throws EXCEPTION {
     return visitOther(aggregate);
   }
 
-  public OUTPUT visit(LogicalMatch match) throws EXCEPTION {
+  public OUTPUT visit(Match match) throws EXCEPTION {
     return visitOther(match);
   }
 
-  public OUTPUT visit(LogicalSort sort) throws EXCEPTION {
+  public OUTPUT visit(Sort sort) throws EXCEPTION {
     return visitOther(sort);
   }
 
-  public OUTPUT visit(LogicalExchange exchange) throws EXCEPTION {
+  public OUTPUT visit(Exchange exchange) throws EXCEPTION {
     return visitOther(exchange);
   }
 
-  public OUTPUT visit(LogicalTableModify modify) throws EXCEPTION {
+  public OUTPUT visit(TableModify modify) throws EXCEPTION {
     return visitOther(modify);
   }
 
@@ -85,33 +98,33 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
       return this.visit(scan);
     } else if (node instanceof TableFunctionScan scan) {
       return this.visit(scan);
-    } else if (node instanceof LogicalValues values) {
+    } else if (node instanceof Values values) {
       return this.visit(values);
-    } else if (node instanceof LogicalFilter filter) {
+    } else if (node instanceof Filter filter) {
       return this.visit(filter);
-    } else if (node instanceof LogicalCalc calc) {
+    } else if (node instanceof Calc calc) {
       return this.visit(calc);
-    } else if (node instanceof LogicalProject project) {
+    } else if (node instanceof Project project) {
       return this.visit(project);
-    } else if (node instanceof LogicalJoin join) {
+    } else if (node instanceof Join join) {
       return this.visit(join);
-    } else if (node instanceof LogicalCorrelate correlate) {
+    } else if (node instanceof Correlate correlate) {
       return this.visit(correlate);
-    } else if (node instanceof LogicalUnion union) {
+    } else if (node instanceof Union union) {
       return this.visit(union);
-    } else if (node instanceof LogicalIntersect intersect) {
+    } else if (node instanceof Intersect intersect) {
       return this.visit(intersect);
-    } else if (node instanceof LogicalMinus minus) {
+    } else if (node instanceof Minus minus) {
       return this.visit(minus);
-    } else if (node instanceof LogicalMatch match) {
+    } else if (node instanceof Match match) {
       return this.visit(match);
-    } else if (node instanceof LogicalSort sort) {
+    } else if (node instanceof Sort sort) {
       return this.visit(sort);
-    } else if (node instanceof LogicalExchange exchange) {
+    } else if (node instanceof Exchange exchange) {
       return this.visit(exchange);
-    } else if (node instanceof LogicalAggregate aggregate) {
+    } else if (node instanceof Aggregate aggregate) {
       return this.visit(aggregate);
-    } else if (node instanceof LogicalTableModify modify) {
+    } else if (node instanceof TableModify modify) {
       return this.visit(modify);
     } else {
       return this.visitOther(node);
