@@ -51,10 +51,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
-  private final RexExpressionConverter rexExpressionConverter;
-  private final AggregateFunctionConverter aggregateFunctionConverter;
-  private final TypeConverter typeConverter;
-  private final FeatureBoard featureBoard;
+  protected final RexExpressionConverter rexExpressionConverter;
+  protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final TypeConverter typeConverter;
+  protected final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
   public SubstraitRelVisitor(
@@ -98,7 +98,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.featureBoard = features;
   }
 
-  private Expression toExpression(RexNode node) {
+  protected Expression toExpression(RexNode node) {
     return node.accept(rexExpressionConverter);
   }
 
