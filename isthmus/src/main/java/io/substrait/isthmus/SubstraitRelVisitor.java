@@ -51,7 +51,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
-  private final RexExpressionConverter converter;
+  private final RexExpressionConverter rexExpressionConverter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
   private final TypeConverter typeConverter;
   private final FeatureBoard featureBoard;
@@ -75,7 +75,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
     var windowFunctionConverter =
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
-    this.converter =
+    this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;
   }
@@ -92,14 +92,14 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     converters.add(scalarFunctionConverter);
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter = aggregateFunctionConverter;
-    this.converter =
+    this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.typeConverter = typeConverter;
     this.featureBoard = features;
   }
 
   private Expression toExpression(RexNode node) {
-    return node.accept(converter);
+    return node.accept(rexExpressionConverter);
   }
 
   @Override
@@ -262,7 +262,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {
     var invocation =
-        aggregateFunctionConverter.convert(input, inputType, call, t -> t.accept(converter));
+        aggregateFunctionConverter.convert(
+            input, inputType, call, t -> t.accept(rexExpressionConverter));
     if (invocation.isEmpty()) {
       throw new UnsupportedOperationException("Unable to find binding for call " + call);
     }
