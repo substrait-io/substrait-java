@@ -94,6 +94,21 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.featureBoard = features;
   }
 
+  public SubstraitRelVisitor(
+      RelDataTypeFactory typeFactory,
+      ScalarFunctionConverter scalarFunctionConverter,
+      AggregateFunctionConverter aggregateFunctionConverter,
+      WindowFunctionConverter windowFunctionConverter,
+      FeatureBoard features) {
+    var converters = new ArrayList<CallConverter>();
+    converters.addAll(CallConverters.DEFAULTS);
+    converters.add(scalarFunctionConverter);
+    converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
+    this.aggregateFunctionConverter = aggregateFunctionConverter;
+    this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
+    this.featureBoard = features;
+  }
+
   private Expression toExpression(RexNode node) {
     return node.accept(converter);
   }
