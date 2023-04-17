@@ -25,7 +25,7 @@ public class RoundingFunctionTest extends PlanTestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"fp32", "fp64"})
+  @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
   void round(String column) throws Exception {
     String query = String.format("SELECT round(%s, 2) FROM numbers", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
