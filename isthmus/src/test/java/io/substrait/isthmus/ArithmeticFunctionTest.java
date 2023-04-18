@@ -62,6 +62,13 @@ public class ArithmeticFunctionTest extends PlanTestBase {
   }
 
   @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void atan2(String column) throws Exception {
+    String query = String.format("SELECT atan2(%s, %s) FROM numbers", column, column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
   void sign(String column) throws Exception {
     String query = String.format("SELECT sign(%s) FROM numbers", column);
