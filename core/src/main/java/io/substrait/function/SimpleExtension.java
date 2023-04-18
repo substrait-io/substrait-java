@@ -664,6 +664,7 @@ public class SimpleExtension {
                 "arithmetic",
                 "comparison",
                 "datetime",
+                "rounding",
                 "string")
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
