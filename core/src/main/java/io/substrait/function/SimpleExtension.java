@@ -664,6 +664,7 @@ public class SimpleExtension {
                 "arithmetic",
                 "comparison",
                 "datetime",
+                "logarithmic",
                 "rounding",
                 "string")
             .stream()
