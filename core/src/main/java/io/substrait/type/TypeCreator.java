@@ -85,6 +85,10 @@ public class TypeCreator {
     return Type.Map.builder().nullable(nullable).key(key).value(value).build();
   }
 
+  public Type userDefined(String uri, String name) {
+    return Type.UserDefined.builder().nullable(nullable).uri(uri).name(name).build();
+  }
+
   public static TypeCreator of(boolean nullability) {
     return nullability ? NULLABLE : REQUIRED;
   }

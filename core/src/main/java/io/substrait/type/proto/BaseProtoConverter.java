@@ -1,6 +1,8 @@
 package io.substrait.type.proto;
 
+import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.function.NullableType;
+import io.substrait.function.SimpleExtension;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.type.Type;
 
@@ -9,10 +11,13 @@ abstract class BaseProtoConverter<T, I>
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(BaseProtoConverter.class);
 
+  protected final FunctionCollector extensionCollector;
+
   public abstract BaseProtoTypes<T, I> typeContainer(boolean nullable);
 
-  public BaseProtoConverter(String unsupportedMessage) {
+  public BaseProtoConverter(FunctionCollector extensionCollector, String unsupportedMessage) {
     super(unsupportedMessage);
+    this.extensionCollector = extensionCollector;
   }
 
   public final BaseProtoTypes<T, I> typeContainer(NullableType literal) {
@@ -136,5 +141,12 @@ abstract class BaseProtoConverter<T, I>
   @Override
   public final T visit(final Type.Map expr) {
     return typeContainer(expr).map(expr.key().accept(this), expr.value().accept(this));
+  }
+
+  @Override
+  public final T visit(final Type.UserDefined expr) {
+    var ref =
+        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
+    return typeContainer(expr).userDefined(ref);
   }
 }

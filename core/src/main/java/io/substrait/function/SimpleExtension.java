@@ -13,7 +13,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.substrait.expression.Expression;
 import io.substrait.type.Deserializers;
-import io.substrait.type.Type;
 import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
 import java.io.IOException;
@@ -26,12 +25,10 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.immutables.value.Value;
 
-/**
- * Classes used to deserialize YAML extension files. Currently, constrained to Function
- * deserialization.
- */
+/** Classes used to deserialize YAML extension files. Handles functions and types. */
 @Value.Enclosing
 public class SimpleExtension {
+  // TODO: Move to io.substrait.extension
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SimpleExtension.class);
 
   private static final ObjectMapper MAPPER =
@@ -204,17 +201,26 @@ public class SimpleExtension {
     }
   }
 
-  @Value.Immutable
-  public interface FunctionAnchor {
+  public interface Anchor {
     String namespace();
 
     String key();
+  }
 
+  @Value.Immutable
+  public interface FunctionAnchor extends Anchor {
     static FunctionAnchor of(String namespace, String key) {
       return ImmutableSimpleExtension.FunctionAnchor.builder()
           .namespace(namespace)
           .key(key)
           .build();
+    }
+  }
+
+  @Value.Immutable
+  public interface TypeAnchor extends Anchor {
+    static TypeAnchor of(String namespace, String name) {
+      return ImmutableSimpleExtension.TypeAnchor.builder().namespace(namespace).key(name).build();
     }
   }
 
@@ -297,7 +303,8 @@ public class SimpleExtension {
                   .collect(java.util.stream.Collectors.toList());
             });
 
-    public static String constructKeyFromTypes(String name, List<Type> arguments) {
+    public static String constructKeyFromTypes(
+        String name, List<io.substrait.type.Type> arguments) {
       try {
         return name
             + ":"
@@ -345,7 +352,8 @@ public class SimpleExtension {
       return Util.IntRange.of(min, max);
     }
 
-    public void validateOutputType(List<Expression> argumentExpressions, Type outputType) {
+    public void validateOutputType(
+        List<Expression> argumentExpressions, io.substrait.type.Type outputType) {
       // TODO: support advanced output type validation using return expressions, parameters, etc.
       // The code below was too restrictive in the case of nullability conversion.
       return;
@@ -364,7 +372,7 @@ public class SimpleExtension {
       return keySupplier.get();
     }
 
-    public Type resolveType(List<Type> argumentTypes) {
+    public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
       return TypeExpressionEvaluator.evaluateExpression(returnType(), args(), argumentTypes);
     }
   }
@@ -516,10 +524,43 @@ public class SimpleExtension {
     }
   }
 
+  @JsonDeserialize(as = ImmutableSimpleExtension.Type.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.Type.class)
+  @Value.Immutable
+  public abstract static class Type {
+    public abstract String name();
+
+    // TODO: Handle conversion of structure object to Named Struct representation
+    protected abstract Optional<Object> structure();
+
+    @Value.Default
+    public String uri() {
+      // we can't use null detection here since we initially construct this without a uri, then
+      // resolve later.
+      return "";
+    }
+
+    public Type resolve(String uri) {
+      return ImmutableSimpleExtension.Type.builder().name(name()).uri(uri).build();
+    }
+
+    public TypeAnchor getAnchor() {
+      return anchorSupplier.get();
+    }
+
+    private final Supplier<TypeAnchor> anchorSupplier =
+        Util.memoize(() -> TypeAnchor.of(uri(), name()));
+  }
+
   @JsonDeserialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
   @JsonSerialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
   @Value.Immutable
   public abstract static class FunctionSignatures {
+    // TODO: Rename to ExtensionSignatures ???
+
+    @JsonProperty("types")
+    public abstract List<Type> types();
+
     @JsonProperty("scalar_functions")
     public abstract List<ScalarFunction> scalars();
 
@@ -530,7 +571,8 @@ public class SimpleExtension {
     public abstract List<WindowFunction> windows();
 
     public int size() {
-      return (scalars() == null ? 0 : scalars().size())
+      return (types() == null ? 0 : types().size())
+          + (scalars() == null ? 0 : scalars().size())
           + (aggregates() == null ? 0 : aggregates().size())
           + (windows() == null ? 0 : windows().size());
     }
@@ -548,6 +590,9 @@ public class SimpleExtension {
 
   @Value.Immutable
   public abstract static class ExtensionCollection {
+
+    public abstract List<Type> types();
+
     public abstract List<ScalarFunctionVariant> scalarFunctions();
 
     public abstract List<AggregateFunctionVariant> aggregateFunctions();
@@ -564,6 +609,13 @@ public class SimpleExtension {
                       windowFunctions().stream().map(Function::uri))
                   .collect(Collectors.toSet());
             });
+
+    private final Supplier<Map<TypeAnchor, Type>> typeLookup =
+        Util.memoize(
+            () ->
+                types().stream()
+                    .collect(
+                        Collectors.toMap(Type::getAnchor, java.util.function.Function.identity())));
     private final Supplier<Map<FunctionAnchor, ScalarFunctionVariant>> scalarFunctionsLookup =
         Util.memoize(
             () -> {
@@ -590,6 +642,18 @@ public class SimpleExtension {
                       Collectors.toMap(
                           Function::getAnchor, java.util.function.Function.identity()));
             });
+
+    public Type getType(TypeAnchor anchor) {
+      Type type = typeLookup.get().get(anchor);
+      if (type != null) {
+        return type;
+      }
+      checkNamespace(anchor.namespace());
+      throw new IllegalArgumentException(
+          String.format(
+              "Unexpected type with name %s. The namespace %s is loaded but no type with this name found.",
+              anchor.key(), anchor.namespace()));
+    }
 
     public ScalarFunctionVariant getScalarFunction(FunctionAnchor anchor) {
       ScalarFunctionVariant variant = scalarFunctionsLookup.get().get(anchor);
@@ -718,20 +782,24 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String namespace, SimpleExtension.FunctionSignatures functionSignatures) {
+      String namespace, SimpleExtension.FunctionSignatures extensionSignatures) {
     var collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .addAllAggregateFunctions(
-                functionSignatures.aggregates().stream()
+                extensionSignatures.aggregates().stream()
                     .flatMap(t -> t.resolve(namespace))
                     .collect(java.util.stream.Collectors.toList()))
             .addAllScalarFunctions(
-                functionSignatures.scalars().stream()
+                extensionSignatures.scalars().stream()
                     .flatMap(t -> t.resolve(namespace))
                     .collect(java.util.stream.Collectors.toList()))
             .addAllWindowFunctions(
-                functionSignatures.windows().stream()
+                extensionSignatures.windows().stream()
                     .flatMap(t -> t.resolve(namespace))
+                    .collect(java.util.stream.Collectors.toList()))
+            .addAllTypes(
+                extensionSignatures.types().stream()
+                    .map(t -> t.resolve(namespace))
                     .collect(java.util.stream.Collectors.toList()))
             .build();
     logger.debug(

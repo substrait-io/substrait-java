@@ -59,18 +59,24 @@ public interface FunctionArg {
     };
   }
 
+  /**
+   * Converts from {@link io.substrait.proto.FunctionArgument} to {@link
+   * io.substrait.expression.FunctionArg}
+   */
   class ProtoFrom {
-    private final ProtoExpressionConverter exprBuilder;
+    private final ProtoExpressionConverter protoExprConverter;
+    private final FromProto protoTypeConverter;
 
-    public ProtoFrom(ProtoExpressionConverter exprBuilder) {
-      this.exprBuilder = exprBuilder;
+    public ProtoFrom(ProtoExpressionConverter protoExprConverter, FromProto protoTypeConverter) {
+      this.protoExprConverter = protoExprConverter;
+      this.protoTypeConverter = protoTypeConverter;
     }
 
     public FunctionArg convert(
         SimpleExtension.Function funcDef, int argIdx, FunctionArgument fArg) {
       return switch (fArg.getArgTypeCase()) {
-        case TYPE -> FromProto.from(fArg.getType());
-        case VALUE -> exprBuilder.from(fArg.getValue());
+        case TYPE -> protoTypeConverter.from(fArg.getType());
+        case VALUE -> protoExprConverter.from(fArg.getValue());
         case ENUM -> {
           SimpleExtension.EnumArgument enumArgDef =
               (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
