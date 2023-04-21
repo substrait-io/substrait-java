@@ -8,6 +8,7 @@ import io.substrait.relation.RelProtoConverter;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(PlanProtoConverter.class);
@@ -29,7 +30,7 @@ public class PlanProtoConverter {
         Plan.newBuilder()
             .addAllRelations(planRels)
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
-    functionCollector.addFunctionsToPlan(builder);
+    functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
     }

@@ -319,4 +319,21 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
       return typeVisitor.visit(this);
     }
   }
+
+  @Value.Immutable
+  abstract static class UserDefined implements Type {
+
+    public abstract String uri();
+
+    public abstract String name();
+
+    public static ImmutableType.UserDefined.Builder builder() {
+      return ImmutableType.UserDefined.builder();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
 }

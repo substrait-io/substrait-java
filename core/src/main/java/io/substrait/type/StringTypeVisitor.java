@@ -126,4 +126,9 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
     return String.format(
         "map<%s,%s>%s", type.key().accept(this), type.value().accept(this), n(type));
   }
+
+  @Override
+  public String visit(Type.UserDefined type) throws RuntimeException {
+    return String.format("u!%s%s", type.name(), n(type));
+  }
 }

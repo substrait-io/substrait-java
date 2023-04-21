@@ -1,5 +1,6 @@
 package io.substrait.type.proto;
 
+import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.ParameterizedType;
@@ -10,8 +11,8 @@ public class ParameterizedProtoConverter
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ParameterizedProtoConverter.class);
 
-  public ParameterizedProtoConverter() {
-    super("Parameterized types cannot include return type expressions.");
+  public ParameterizedProtoConverter(FunctionCollector extensionCollector) {
+    super(extensionCollector, "Parameterized types cannot include return type expressions.");
   }
 
   @Override
@@ -196,6 +197,12 @@ public class ParameterizedProtoConverter
               .setValue(value)
               .setNullability(Type.Nullability.NULLABILITY_NULLABLE)
               .build());
+    }
+
+    @Override
+    public ParameterizedType userDefined(int ref) {
+      throw new UnsupportedOperationException(
+          "User defined types are not supported in Parameterized Types for now");
     }
 
     @Override

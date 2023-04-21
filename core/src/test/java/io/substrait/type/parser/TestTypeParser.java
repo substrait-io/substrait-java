@@ -79,6 +79,7 @@ public class TestTypeParser {
     test(v, r.I64, "I64");
     test(v, r.FP32, "FP32");
     test(v, r.FP64, "FP64");
+    test(v, r.userDefined("", "foo"), "u!foo");
 
     // Nullable
     test(v, n.I8, "I8?");
@@ -87,6 +88,7 @@ public class TestTypeParser {
     test(v, n.I64, "i64?");
     test(v, n.FP32, "FP32?");
     test(v, n.FP64, "FP64?");
+    test(v, n.userDefined("", "foo"), "u!foo?");
   }
 
   private void compoundTests(ParseToPojo.Visitor v) {

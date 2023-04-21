@@ -8,20 +8,26 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Maintains a mapping between function anchors and function references. Generates references for
- * new anchors.
+ * Maintains a mapping between function/type anchors and function/type references. Generates
+ * references for new anchors as they are requested.
+ *
+ * <p>Used to replace instances of function and types in the POJOs with references when converting
+ * from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan}
  */
 public class FunctionCollector extends AbstractFunctionLookup {
+  // TODO: Rename to ExtensionCollector and move to io.substrait.extension
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionCollector.class);
 
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
+  private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
   private final BidiMap<Integer, String> uriMap;
 
   private int counter = -1;
 
   public FunctionCollector() {
-    super(new HashMap<>());
-    funcMap = new BidiMap<>(map);
+    super(new HashMap<>(), new HashMap<>());
+    funcMap = new BidiMap<>(functionAnchorMap);
+    typeMap = new BidiMap<>(typeAnchorMap);
     uriMap = new BidiMap<>(new HashMap<>());
   }
 
@@ -35,7 +41,17 @@ public class FunctionCollector extends AbstractFunctionLookup {
     return counter;
   }
 
-  public void addFunctionsToPlan(Plan.Builder builder) {
+  public int getTypeReference(SimpleExtension.TypeAnchor typeAnchor) {
+    Integer i = typeMap.reverseGet(typeAnchor);
+    if (i != null) {
+      return i;
+    }
+    ++counter; // prefix here to make clearer than postfixing at end.
+    typeMap.put(counter, typeAnchor);
+    return counter;
+  }
+
+  public void addExtensionsToPlan(Plan.Builder builder) {
     var uriPos = new AtomicInteger(1);
     var uris = new HashMap<String, SimpleExtensionURI>();
 
@@ -54,6 +70,25 @@ public class FunctionCollector extends AbstractFunctionLookup {
               .setExtensionFunction(
                   SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
                       .setFunctionAnchor(e.getKey())
+                      .setName(e.getValue().key())
+                      .setExtensionUriReference(uri.getExtensionUriAnchor()))
+              .build();
+      extensionList.add(decl);
+    }
+    for (var e : typeMap.forwardMap.entrySet()) {
+      SimpleExtensionURI uri =
+          uris.computeIfAbsent(
+              e.getValue().namespace(),
+              k ->
+                  SimpleExtensionURI.newBuilder()
+                      .setExtensionUriAnchor(uriPos.getAndIncrement())
+                      .setUri(k)
+                      .build());
+      var decl =
+          SimpleExtensionDeclaration.newBuilder()
+              .setExtensionType(
+                  SimpleExtensionDeclaration.ExtensionType.newBuilder()
+                      .setTypeAnchor(e.getKey())
                       .setName(e.getValue().key())
                       .setExtensionUriReference(uri.getExtensionUriAnchor()))
               .build();

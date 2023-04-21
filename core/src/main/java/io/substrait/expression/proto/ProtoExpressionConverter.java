@@ -15,6 +15,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Converts from {@link io.substrait.proto.Expression} to {@link io.substrait.expression.Expression}
+ */
 public class ProtoExpressionConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ProtoExpressionConverter.class);
@@ -24,12 +27,14 @@ public class ProtoExpressionConverter {
   private final FunctionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
   private final Type.Struct rootType;
+  private final FromProto protoTypeConverter;
 
   public ProtoExpressionConverter(
       FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type.Struct rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
+    this.protoTypeConverter = new FromProto(lookup, extensions);
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
@@ -91,7 +96,7 @@ public class ProtoExpressionConverter {
         var scalarFunction = expr.getScalarFunction();
         var functionReference = scalarFunction.getFunctionReference();
         var declaration = lookup.getScalarFunction(functionReference, extensions);
-        var pF = new FunctionArg.ProtoFrom(this);
+        var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
         var args =
             IntStream.range(0, scalarFunction.getArgumentsCount())
                 .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
@@ -99,7 +104,7 @@ public class ProtoExpressionConverter {
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
-            .outputType(from(expr.getScalarFunction().getOutputType()))
+            .outputType(protoTypeConverter.from(expr.getScalarFunction().getOutputType()))
             .build();
       }
       case IF_THEN -> {
@@ -151,7 +156,7 @@ public class ProtoExpressionConverter {
             .build();
       }
       case CAST -> ExpressionCreator.cast(
-          FromProto.from(expr.getCast().getType()), from(expr.getCast().getInput()));
+          protoTypeConverter.from(expr.getCast().getType()), from(expr.getCast().getInput()));
       case SUBQUERY -> {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {
@@ -206,11 +211,7 @@ public class ProtoExpressionConverter {
     };
   }
 
-  private static Type from(io.substrait.proto.Type type) {
-    return FromProto.from(type);
-  }
-
-  public static Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
+  public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
     return switch (literal.getLiteralTypeCase()) {
       case BOOLEAN -> ExpressionCreator.bool(literal.getNullable(), literal.getBoolean());
       case I8 -> ExpressionCreator.i8(literal.getNullable(), literal.getI8());
@@ -245,7 +246,7 @@ public class ProtoExpressionConverter {
       case STRUCT -> ExpressionCreator.struct(
           literal.getNullable(),
           literal.getStruct().getFieldsList().stream()
-              .map(ProtoExpressionConverter::from)
+              .map(this::from)
               .collect(java.util.stream.Collectors.toList()));
       case MAP -> ExpressionCreator.map(
           literal.getNullable(),
@@ -254,11 +255,11 @@ public class ProtoExpressionConverter {
       case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
           literal.getNullable(), literal.getTimestampTz());
       case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
-      case NULL -> ExpressionCreator.typedNull(from(literal.getNull()));
+      case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
       case LIST -> ExpressionCreator.list(
           literal.getNullable(),
           literal.getList().getValuesList().stream()
-              .map(ProtoExpressionConverter::from)
+              .map(this::from)
               .collect(java.util.stream.Collectors.toList()));
       default -> throw new IllegalStateException(
           "Unexpected value: " + literal.getLiteralTypeCase());

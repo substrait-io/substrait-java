@@ -94,6 +94,11 @@ public class IgnoreNullableAndParameters
   }
 
   @Override
+  public Boolean visit(Type.UserDefined type) throws RuntimeException {
+    throw new UnsupportedOperationException("cannot handle user defined types for now");
+  }
+
+  @Override
   public Boolean visit(Type.FixedChar type) {
     return typeToMatch instanceof Type.FixedChar
         || typeToMatch instanceof ParameterizedType.FixedChar;

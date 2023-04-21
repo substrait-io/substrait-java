@@ -1,5 +1,6 @@
 package io.substrait.type.proto;
 
+import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
 import io.substrait.proto.DerivationExpression;
@@ -10,8 +11,8 @@ public class TypeExpressionProtoVisitor
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(TypeExpressionProtoVisitor.class);
 
-  public TypeExpressionProtoVisitor() {
-    super("Unexpected expression type. This shouldn't happen.");
+  public TypeExpressionProtoVisitor(FunctionCollector extensionCollector) {
+    super(extensionCollector, "Unexpected expression type. This shouldn't happen.");
   }
 
   @Override
@@ -261,6 +262,12 @@ public class TypeExpressionProtoVisitor
               .setValue(value)
               .setNullability(Type.Nullability.NULLABILITY_REQUIRED)
               .build());
+    }
+
+    @Override
+    public DerivationExpression userDefined(int ref) {
+      throw new UnsupportedOperationException(
+          "User defined types are not supported in Derivation Expressions for now");
     }
 
     @Override

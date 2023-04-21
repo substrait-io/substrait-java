@@ -12,23 +12,27 @@ import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
 import java.util.function.Consumer;
 
+/**
+ * Converts from {@link io.substrait.expression.Expression} to {@link io.substrait.proto.Expression}
+ */
 public class ExpressionProtoConverter implements ExpressionVisitor<Expression, RuntimeException> {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
-  private final FunctionCollector functionCollector;
-  ;
+  private final FunctionCollector extensionCollector;
   private final RelVisitor<Rel, RuntimeException> relVisitor;
+  private final TypeProtoConverter typeProtoConverter;
 
   public ExpressionProtoConverter(
-      FunctionCollector functionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
-    this.functionCollector = functionCollector;
+      FunctionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
+    this.extensionCollector = extensionCollector;
     this.relVisitor = relVisitor;
+    this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.NullLiteral expr) {
-    return lit(bldr -> bldr.setNull(expr.type().accept(TypeProtoConverter.INSTANCE)));
+    return lit(bldr -> bldr.setNull(expr.type().accept(typeProtoConverter)));
   }
 
   private Expression lit(Consumer<Expression.Literal.Builder> consumer) {
@@ -256,13 +260,13 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   @Override
   public Expression visit(io.substrait.expression.Expression.ScalarFunctionInvocation expr) {
 
-    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
 
     return Expression.newBuilder()
         .setScalarFunction(
             Expression.ScalarFunction.newBuilder()
-                .setOutputType(expr.getType().accept(TypeProtoConverter.INSTANCE))
-                .setFunctionReference(functionCollector.getFunctionReference(expr.declaration()))
+                .setOutputType(expr.getType().accept(typeProtoConverter))
+                .setFunctionReference(extensionCollector.getFunctionReference(expr.declaration()))
                 .addAllArguments(
                     expr.arguments().stream()
                         .map(a -> a.accept(expr.declaration(), 0, argVisitor))
@@ -276,7 +280,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .setCast(
             Expression.Cast.newBuilder()
                 .setInput(expr.input().accept(this))
-                .setType(expr.getType().accept(TypeProtoConverter.INSTANCE))
+                .setType(expr.getType().accept(typeProtoConverter))
                 .setFailureBehavior(expr.failureBehavior().toProto()))
         .build();
   }
@@ -418,8 +422,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     var builder = Expression.WindowFunction.newBuilder();
     if (expr.hasNormalAggregateFunction()) {
       var aggMeasureFunc = expr.aggregateFunction().getFunction();
-      var funcReference = functionCollector.getFunctionReference(aggMeasureFunc.declaration());
-      var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+      var funcReference = extensionCollector.getFunctionReference(aggMeasureFunc.declaration());
+      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
       var args =
           aggMeasureFunc.arguments().stream()
               .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
@@ -428,9 +432,9 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
     } else {
       var windowFunc = expr.windowFunction().getFunction();
-      var funcReference = functionCollector.getFunctionReference(windowFunc.declaration());
+      var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
       var ordinal = windowFunc.aggregationPhase().ordinal();
-      var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, this);
+      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
       var args =
           windowFunc.arguments().stream()
               .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
