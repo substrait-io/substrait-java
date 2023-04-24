@@ -8,7 +8,7 @@ public class ToTypeString
   public static ToTypeString INSTANCE = new ToTypeString();
 
   private ToTypeString() {
-    super("Only type literals and parametertized types can be used in functions.");
+    super("Only type literals and parameterized types can be used in functions.");
   }
 
   @Override

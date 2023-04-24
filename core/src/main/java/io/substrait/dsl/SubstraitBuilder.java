@@ -256,6 +256,19 @@ public class SubstraitBuilder {
 
   // Aggregate Functions
 
+  public AggregateFunctionInvocation aggregateFn(
+      String namespace, String key, Type outputType, Expression... args) {
+    var declaration =
+        extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+    return AggregateFunctionInvocation.builder()
+        .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
+        .outputType(outputType)
+        .declaration(declaration)
+        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+        .invocation(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL)
+        .build();
+  }
+
   public Aggregate.Grouping grouping(Rel input, int... indexes) {
     var columns = fieldReferences(input, indexes);
     return Aggregate.Grouping.builder().addAllExpressions(columns).build();
@@ -275,6 +288,17 @@ public class SubstraitBuilder {
   }
 
   // Scalar Functions
+
+  public Expression.ScalarFunctionInvocation scalarFn(
+      String namespace, String key, Type outputType, Expression... args) {
+    var declaration =
+        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+    return Expression.ScalarFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
+        .build();
+  }
 
   // Misc
 

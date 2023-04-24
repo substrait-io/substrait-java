@@ -1,0 +1,18 @@
+%YAML 1.2
+---
+scalar_functions:
+  - name: "custom_scalar"
+    description: "a custom scalar functions"
+    impls:
+    - args:
+        - name: some_arg
+          value: string
+      return: string
+aggregate_functions:
+  - name: "custom_aggregate"
+    description: "a custom aggregate function"
+    impls:
+      - args:
+          - name: some_arg
+            value: i64
+        return: i64
