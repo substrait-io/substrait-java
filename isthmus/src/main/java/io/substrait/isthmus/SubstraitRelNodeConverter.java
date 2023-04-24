@@ -66,16 +66,23 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
+    this(
+        typeFactory,
+        relBuilder,
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory));
+  }
+
+  public SubstraitRelNodeConverter(
+      RelDataTypeFactory typeFactory,
+      RelBuilder relBuilder,
+      ScalarFunctionConverter scalarFunctionConverter,
+      AggregateFunctionConverter aggregateFunctionConverter) {
     this.typeFactory = typeFactory;
     this.relBuilder = relBuilder;
     this.rexBuilder = new RexBuilder(typeFactory);
-
-    this.scalarFunctionConverter =
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
-
-    this.aggregateFunctionConverter =
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-
+    this.scalarFunctionConverter = scalarFunctionConverter;
+    this.aggregateFunctionConverter = aggregateFunctionConverter;
     this.expressionRexConverter =
         new ExpressionRexConverter(
             typeFactory, scalarFunctionConverter, aggregateFunctionConverter);
