@@ -36,6 +36,8 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.ATAN, "atan"),
                 s(SqlStdOperatorTable.ATAN2, "atan2"),
                 s(SqlStdOperatorTable.SIGN, "sign"),
+                s(SqlStdOperatorTable.LOG10, "log10"),
+                s(SqlStdOperatorTable.LN, "ln"),
                 s(SqlStdOperatorTable.AND),
                 s(SqlStdOperatorTable.OR),
                 s(SqlStdOperatorTable.NOT),
