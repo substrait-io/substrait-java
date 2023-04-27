@@ -5,15 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
-import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.api.Test;
 
 public class TestTypeParser {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTypeParser.class);
 
-  private final TypeCreator n = Type.NULLABLE;
-  private final TypeCreator r = Type.REQUIRED;
+  private final TypeCreator n = TypeCreator.NULLABLE;
+  private final TypeCreator r = TypeCreator.REQUIRED;
 
   private final TypeExpressionCreator eo = TypeExpressionCreator.REQUIRED;
   private final TypeExpressionCreator en = TypeExpressionCreator.NULLABLE;
