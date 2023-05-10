@@ -14,8 +14,8 @@ public interface NamedStruct {
     return ImmutableNamedStruct.builder().addAllNames(names).struct(type).build();
   }
 
-  default io.substrait.proto.NamedStruct toProto() {
-    var type = struct().accept(TypeProtoConverter.INSTANCE);
+  default io.substrait.proto.NamedStruct toProto(TypeProtoConverter typeProtoConverter) {
+    var type = struct().accept(typeProtoConverter);
     return io.substrait.proto.NamedStruct.newBuilder()
         .setStruct(type.getStruct())
         .addAllNames(names())

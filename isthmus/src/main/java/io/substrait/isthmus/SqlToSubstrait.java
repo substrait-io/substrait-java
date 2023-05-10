@@ -85,7 +85,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                               .addAllNames(
                                   TypeConverter.toNamedStruct(root.validatedRowType).names())));
             });
-    functionCollector.addFunctionsToPlan(plan);
+    functionCollector.addExtensionsToPlan(plan);
     return plan.build();
   }
 

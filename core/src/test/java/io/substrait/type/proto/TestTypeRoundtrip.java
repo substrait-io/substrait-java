@@ -2,6 +2,8 @@ package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,14 +40,19 @@ public class TestTypeRoundtrip {
     t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));
   }
 
-  /**
+  private FunctionCollector lookup = new FunctionCollector();
+  private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
+
+  private FromProto protoTypeConverter =
+      new FromProto(lookup, ImmutableSimpleExtension.ExtensionCollection.builder().build());
+  /*
    * Test a type pojo -> proto -> pojo roundtrip.
    *
    * @param type
    */
   private void t(Type type) {
-    var converted = type.accept(new TypeProtoConverter());
-    assertEquals(type, FromProto.from(converted));
+    var converted = type.accept(typeProtoConverter);
+    assertEquals(type, protoTypeConverter.from(converted));
   }
 
   private TypeCreator creator(boolean nullable) {

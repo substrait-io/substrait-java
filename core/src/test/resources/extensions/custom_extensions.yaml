@@ -1,0 +1,24 @@
+%YAML 1.2
+---
+types:
+  - name: "customType1"
+  - name: "customType2"
+    structure:
+      field1: i32
+      field2: fp32
+
+scalar_functions:
+  - name: "scalar1"
+    description: "a custom scalar functions"
+    impls:
+      - args:
+          - name: arg1
+            value: u!customType1
+        return: i64
+  - name: "scalar2"
+    description: "a custom scalar functions"
+    impls:
+      - args:
+          - name: arg1
+            value: i64
+        return: u!customType2

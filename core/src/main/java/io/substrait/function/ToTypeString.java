@@ -127,6 +127,11 @@ public class ToTypeString
   }
 
   @Override
+  public String visit(final Type.UserDefined expr) {
+    return String.format("u!%s", expr.name());
+  }
+
+  @Override
   public String visit(ParameterizedType.FixedChar expr) throws RuntimeException {
     return "fchar";
   }

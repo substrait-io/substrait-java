@@ -6,6 +6,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.function.SimpleExtension;
+import io.substrait.plan.ImmutablePlan;
 import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
@@ -19,6 +20,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -300,10 +302,24 @@ public class SubstraitBuilder {
         .build();
   }
 
+  // Types
+
+  public Type.UserDefined userDefinedType(String namespace, String typeName) {
+    return ImmutableType.UserDefined.builder()
+        .uri(namespace)
+        .name(typeName)
+        .nullable(false)
+        .build();
+  }
+
   // Misc
 
   public Plan.Root root(Rel rel) {
     return ImmutableRoot.builder().input(rel).build();
+  }
+
+  public Plan plan(Plan.Root root) {
+    return ImmutablePlan.builder().addRoots(root).build();
   }
 
   public Rel.Remap remap(Integer... fields) {

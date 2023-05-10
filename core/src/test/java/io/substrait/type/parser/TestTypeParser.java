@@ -5,15 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
-import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.api.Test;
 
 public class TestTypeParser {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTypeParser.class);
 
-  private final TypeCreator n = Type.NULLABLE;
-  private final TypeCreator r = Type.REQUIRED;
+  private final TypeCreator n = TypeCreator.NULLABLE;
+  private final TypeCreator r = TypeCreator.REQUIRED;
 
   private final TypeExpressionCreator eo = TypeExpressionCreator.REQUIRED;
   private final TypeExpressionCreator en = TypeExpressionCreator.NULLABLE;
@@ -79,6 +78,7 @@ public class TestTypeParser {
     test(v, r.I64, "I64");
     test(v, r.FP32, "FP32");
     test(v, r.FP64, "FP64");
+    test(v, r.userDefined("", "foo"), "u!foo");
 
     // Nullable
     test(v, n.I8, "I8?");
@@ -87,6 +87,7 @@ public class TestTypeParser {
     test(v, n.I64, "i64?");
     test(v, n.FP32, "FP32?");
     test(v, n.FP64, "FP64?");
+    test(v, n.userDefined("", "foo"), "u!foo?");
   }
 
   private void compoundTests(ParseToPojo.Visitor v) {
