@@ -552,12 +552,10 @@ public class SimpleExtension {
         Util.memoize(() -> TypeAnchor.of(uri(), name()));
   }
 
-  @JsonDeserialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
-  @JsonSerialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
+  @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @Value.Immutable
-  public abstract static class FunctionSignatures {
-    // TODO: Rename to ExtensionSignatures ???
-
+  public abstract static class ExtensionSignatures {
     @JsonProperty("types")
     public abstract List<Type> types();
 
@@ -764,7 +762,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, String str) {
     try {
-      var doc = MAPPER.readValue(str, FunctionSignatures.class);
+      var doc = MAPPER.readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -773,7 +771,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, InputStream stream) {
     try {
-      var doc = MAPPER.readValue(stream, SimpleExtension.FunctionSignatures.class);
+      var doc = MAPPER.readValue(stream, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (RuntimeException ex) {
       throw ex;
@@ -783,7 +781,7 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String namespace, SimpleExtension.FunctionSignatures extensionSignatures) {
+      String namespace, ExtensionSignatures extensionSignatures) {
     var collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .addAllAggregateFunctions(
