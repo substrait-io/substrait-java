@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Used to replace instances of function and types in the POJOs with references when converting
  * from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan}
  */
-public class FunctionCollector extends AbstractFunctionLookup {
+public class FunctionCollector extends AbstractExtensionLookup {
   // TODO: Rename to ExtensionCollector and move to io.substrait.extension
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionCollector.class);
 

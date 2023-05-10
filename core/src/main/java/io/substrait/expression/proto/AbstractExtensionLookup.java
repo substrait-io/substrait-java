@@ -4,12 +4,12 @@ import io.substrait.expression.FunctionLookup;
 import io.substrait.function.SimpleExtension;
 import java.util.Map;
 
-public abstract class AbstractFunctionLookup implements FunctionLookup {
-  // TODO: Rename to AbstractExtensionLookup and move to io.substrait.extension
+public abstract class AbstractExtensionLookup implements FunctionLookup {
+  // TODO: Move to io.substrait.extension
   protected final Map<Integer, SimpleExtension.FunctionAnchor> functionAnchorMap;
   protected final Map<Integer, SimpleExtension.TypeAnchor> typeAnchorMap;
 
-  public AbstractFunctionLookup(
+  public AbstractExtensionLookup(
       Map<Integer, SimpleExtension.FunctionAnchor> functionAnchorMap,
       Map<Integer, SimpleExtension.TypeAnchor> typeAnchorMap) {
     this.functionAnchorMap = functionAnchorMap;

@@ -11,7 +11,7 @@ import java.util.Map;
  * Maintains a mapping between function anchors and function references. Generates references for
  * new anchors.
  */
-public class ImmutableFunctionLookup extends AbstractFunctionLookup {
+public class ImmutableFunctionLookup extends AbstractExtensionLookup {
   // TODO: Rename to ImmutableExtensionLookup and move to io.substrait.extension
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ImmutableFunctionLookup.class);
