@@ -1,6 +1,6 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.proto.ExtensionCollector;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Type;
 
 /** Convert from {@link io.substrait.type.Type} to {@link io.substrait.proto.Type} */

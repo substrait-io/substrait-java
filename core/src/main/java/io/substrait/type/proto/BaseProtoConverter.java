@@ -1,8 +1,8 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.proto.ExtensionCollector;
+import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.NullableType;
-import io.substrait.function.SimpleExtension;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.type.Type;
 

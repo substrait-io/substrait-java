@@ -3,7 +3,7 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
 import io.substrait.expression.Expression;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;

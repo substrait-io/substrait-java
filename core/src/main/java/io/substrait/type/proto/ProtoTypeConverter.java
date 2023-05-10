@@ -1,7 +1,7 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.ExtensionLookup;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 

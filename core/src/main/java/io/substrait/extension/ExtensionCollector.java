@@ -1,6 +1,5 @@
-package io.substrait.expression.proto;
+package io.substrait.extension;
 
-import io.substrait.function.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURI;
@@ -15,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan}
  */
 public class ExtensionCollector extends AbstractExtensionLookup {
-  // TODO: Move to io.substrait.extension
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ExtensionCollector.class);
 

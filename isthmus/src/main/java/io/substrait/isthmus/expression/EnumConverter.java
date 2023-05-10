@@ -3,7 +3,7 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import io.substrait.expression.EnumArg;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.calcite.avatica.util.TimeUnitRange;

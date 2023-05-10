@@ -4,11 +4,11 @@ import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
-import io.substrait.expression.ExtensionLookup;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;

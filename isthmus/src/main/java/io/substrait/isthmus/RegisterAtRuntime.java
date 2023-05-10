@@ -4,7 +4,7 @@ import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.ProtocolMessageEnum;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import org.apache.calcite.rel.metadata.*;

@@ -1,4 +1,4 @@
-package io.substrait.function;
+package io.substrait.extension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.substrait.expression.Expression;
+import io.substrait.function.ParameterizedType;
+import io.substrait.function.ToTypeString;
+import io.substrait.function.TypeExpression;
 import io.substrait.type.Deserializers;
 import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
@@ -28,7 +31,6 @@ import org.immutables.value.Value;
 /** Classes used to deserialize YAML extension files. Handles functions and types. */
 @Value.Enclosing
 public class SimpleExtension {
-  // TODO: Move to io.substrait.extension
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SimpleExtension.class);
 
   private static final ObjectMapper MAPPER =

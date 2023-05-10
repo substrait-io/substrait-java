@@ -4,6 +4,7 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;

@@ -3,7 +3,7 @@ package io.substrait.type;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;

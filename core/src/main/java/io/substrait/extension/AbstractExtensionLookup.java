@@ -1,11 +1,8 @@
-package io.substrait.expression.proto;
+package io.substrait.extension;
 
-import io.substrait.expression.ExtensionLookup;
-import io.substrait.function.SimpleExtension;
 import java.util.Map;
 
 public abstract class AbstractExtensionLookup implements ExtensionLookup {
-  // TODO: Move to io.substrait.extension
   protected final Map<Integer, SimpleExtension.FunctionAnchor> functionAnchorMap;
   protected final Map<Integer, SimpleExtension.TypeAnchor> typeAnchorMap;
 

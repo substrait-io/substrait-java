@@ -1,6 +1,6 @@
 package io.substrait.plan;
 
-import io.substrait.expression.proto.ExtensionCollector;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;

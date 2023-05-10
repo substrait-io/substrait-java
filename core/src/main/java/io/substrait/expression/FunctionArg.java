@@ -1,7 +1,7 @@
 package io.substrait.expression;
 
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.type.Type;

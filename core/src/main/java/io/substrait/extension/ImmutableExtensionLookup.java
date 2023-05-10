@@ -1,6 +1,5 @@
-package io.substrait.expression.proto;
+package io.substrait.extension;
 
-import io.substrait.function.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import java.util.Collections;
@@ -12,7 +11,6 @@ import java.util.Map;
  * new anchors.
  */
 public class ImmutableExtensionLookup extends AbstractExtensionLookup {
-  // TODO: Move to io.substrait.extension
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ImmutableExtensionLookup.class);
 

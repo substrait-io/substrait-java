@@ -1,8 +1,8 @@
 package io.substrait.plan;
 
-import io.substrait.expression.ExtensionLookup;
-import io.substrait.expression.proto.ImmutableExtensionLookup;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ImmutableExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
