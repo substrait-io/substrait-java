@@ -1,13 +1,23 @@
 package io.substrait.type.proto;
 
+import io.substrait.expression.FunctionLookup;
+import io.substrait.function.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 
+/** Converts from {@link io.substrait.proto.Type} to {@link io.substrait.type.Type} */
 public class FromProto {
+  // TODO: Rename to ProtoTypeConverter
 
-  private FromProto() {}
+  private final FunctionLookup lookup;
+  private final SimpleExtension.ExtensionCollection extensions;
 
-  public static Type from(io.substrait.proto.Type type) {
+  public FromProto(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+    this.lookup = lookup;
+    this.extensions = extensions;
+  }
+
+  public Type from(io.substrait.proto.Type type) {
     return switch (type.getKindCase()) {
       case BOOL -> n(type.getBool().getNullability()).BOOLEAN;
       case I8 -> n(type.getI8().getNullability()).I8;
@@ -35,14 +45,17 @@ public class FromProto {
       case STRUCT -> n(type.getStruct().getNullability())
           .struct(
               type.getStruct().getTypesList().stream()
-                  .map(FromProto::from)
+                  .map(this::from)
                   .collect(java.util.stream.Collectors.toList()));
       case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
       case MAP -> n(type.getMap().getNullability())
           .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
-      case USER_DEFINED_TYPE_REFERENCE,
-          USER_DEFINED,
-          KIND_NOT_SET -> throw new UnsupportedOperationException();
+      case USER_DEFINED -> {
+        var userDefined = type.getUserDefined();
+        var t = lookup.getType(userDefined.getTypeReference(), extensions);
+        yield n(userDefined.getNullability()).userDefined(t.uri(), t.name());
+      }
+      case USER_DEFINED_TYPE_REFERENCE, KIND_NOT_SET -> throw new UnsupportedOperationException();
     };
   }
 

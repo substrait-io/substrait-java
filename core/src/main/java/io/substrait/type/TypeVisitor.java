@@ -47,6 +47,8 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Map type) throws E;
 
+  R visit(Type.UserDefined type) throws E;
+
   public abstract static class TypeThrowsVisitor<R, E extends Throwable>
       implements TypeVisitor<R, E> {
 
@@ -172,6 +174,11 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.Map type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.UserDefined type) throws E {
       throw t();
     }
   }

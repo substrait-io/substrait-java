@@ -59,6 +59,7 @@ NStruct  : N S T R U C T;
 List     : L I S T;
 Map      : M A P;
 ANY      : A N Y;
+UserDefined: U '!';
 
 
 // OPERATIONS
@@ -158,6 +159,7 @@ scalarType
 	| IntervalDay #intervalDay
 	| IntervalYear #intervalYear
 	| UUID #uuid
+	| UserDefined Identifier #userDefined
 	;
 
 parameterizedType

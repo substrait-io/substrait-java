@@ -140,6 +140,14 @@ public class ParseToPojo {
     }
 
     @Override
+    public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
+      var name = ctx.Identifier().getSymbol().getText();
+      // The URI is added to the type as part of resolution when building the ExtensionCollection
+      var uri = "";
+      return withNull(ctx).userDefined(uri, name);
+    }
+
+    @Override
     public TypeExpression visitFixedChar(final SubstraitTypeParser.FixedCharContext ctx) {
       boolean nullable = ctx.isnull != null;
       return of(

@@ -27,14 +27,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/** Converts from {@link io.substrait.relation.Rel} to {@link io.substrait.proto.Rel} */
 public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
-  private final ExpressionProtoConverter protoConverter;
+  private final ExpressionProtoConverter exprProtoConverter;
+  private final TypeProtoConverter typeProtoConverter;
   private final FunctionCollector functionCollector;
 
   public RelProtoConverter(FunctionCollector functionCollector) {
     this.functionCollector = functionCollector;
-    this.protoConverter = new ExpressionProtoConverter(functionCollector, this);
+    this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, this);
+    this.typeProtoConverter = new TypeProtoConverter(functionCollector);
   }
 
   private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
@@ -42,7 +45,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private io.substrait.proto.Expression toProto(Expression expression) {
-    return expression.accept(protoConverter);
+    return expression.accept(exprProtoConverter);
   }
 
   public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
@@ -50,7 +53,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private io.substrait.proto.Type toProto(io.substrait.type.Type type) {
-    return type.accept(TypeProtoConverter.INSTANCE);
+    return type.accept(typeProtoConverter);
   }
 
   private List<SortField> toProtoS(Collection<Expression.SortField> sorts) {
@@ -85,7 +88,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    var argVisitor = FunctionArg.toProto(TypeProtoConverter.INSTANCE, protoConverter);
+    var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
     var args = measure.getFunction().arguments();
     var aggFuncDef = measure.getFunction().declaration();
 
@@ -121,7 +124,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             ReadRel.newBuilder()
                 .setCommon(common(emptyScan))
                 .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
-                .setBaseSchema(emptyScan.getInitialSchema().toProto())
+                .setBaseSchema(emptyScan.getInitialSchema().toProto(typeProtoConverter))
                 .build())
         .build();
   }
@@ -146,7 +149,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         FilterRel.newBuilder()
             .setCommon(common(filter))
             .setInput(toProto(filter.getInput()))
-            .setCondition(filter.getCondition().accept(protoConverter));
+            .setCondition(filter.getCondition().accept(exprProtoConverter));
 
     filter.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setFilter(builder).build();
@@ -186,7 +189,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         ReadRel.newBuilder()
             .setCommon(common(namedScan))
             .setNamedTable(ReadRel.NamedTable.newBuilder().addAllNames(namedScan.getNames()))
-            .setBaseSchema(namedScan.getInitialSchema().toProto());
+            .setBaseSchema(namedScan.getInitialSchema().toProto(typeProtoConverter));
 
     namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
@@ -204,7 +207,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                             .map(FileOrFiles::toProto)
                             .collect(java.util.stream.Collectors.toList()))
                     .build())
-            .setBaseSchema(localFiles.getInitialSchema().toProto());
+            .setBaseSchema(localFiles.getInitialSchema().toProto(typeProtoConverter));
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
 
     localFiles.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
@@ -218,7 +221,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     var builder =
         ReadRel.newBuilder()
             .setCommon(common(extensionTable))
-            .setBaseSchema(extensionTable.getInitialSchema().toProto())
+            .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
             .setExtensionTable(extensionTableBuilder);
 
     extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
@@ -277,7 +280,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                             .map(t -> t.getLiteral().getStruct())
                             .collect(java.util.stream.Collectors.toList()))
                     .build())
-            .setBaseSchema(virtualTableScan.getInitialSchema().toProto());
+            .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
     virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
