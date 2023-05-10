@@ -1,6 +1,6 @@
 package io.substrait.relation;
 
-import io.substrait.io.substrait.extension.AdvancedExtension;
+import io.substrait.extension.AdvancedExtension;
 import java.util.Optional;
 
 /** Used to indicate the potential presence of an {@link AdvancedExtension} */

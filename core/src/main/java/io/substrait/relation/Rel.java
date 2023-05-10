@@ -1,6 +1,6 @@
 package io.substrait.relation;
 
-import io.substrait.io.substrait.extension.AdvancedExtension;
+import io.substrait.extension.AdvancedExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;

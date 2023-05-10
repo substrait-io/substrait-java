@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.utils.StringHolder;
 import java.io.IOException;
 import java.util.Collections;
