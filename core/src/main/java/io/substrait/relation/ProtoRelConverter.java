@@ -4,8 +4,8 @@ import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExtensionLookup;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.function.SimpleExtension;
@@ -42,15 +42,15 @@ import java.util.stream.IntStream;
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
-  protected final FunctionLookup lookup;
+  protected final ExtensionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;
   private final ProtoTypeConverter protoTypeConverter;
 
-  public ProtoRelConverter(FunctionLookup lookup) throws IOException {
+  public ProtoRelConverter(ExtensionLookup lookup) throws IOException {
     this(lookup, SimpleExtension.loadDefaults());
   }
 
-  public ProtoRelConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+  public ProtoRelConverter(ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);

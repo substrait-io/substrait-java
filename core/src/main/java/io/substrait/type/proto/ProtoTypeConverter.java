@@ -1,6 +1,6 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.FunctionLookup;
+import io.substrait.expression.ExtensionLookup;
 import io.substrait.function.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -8,10 +8,11 @@ import io.substrait.type.TypeCreator;
 /** Converts from {@link io.substrait.proto.Type} to {@link io.substrait.type.Type} */
 public class ProtoTypeConverter {
 
-  private final FunctionLookup lookup;
+  private final ExtensionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
 
-  public ProtoTypeConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+  public ProtoTypeConverter(
+      ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
   }

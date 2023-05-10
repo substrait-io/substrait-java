@@ -2,9 +2,9 @@ package io.substrait.expression.proto;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.ExtensionLookup;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.function.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
@@ -24,13 +24,15 @@ public class ProtoExpressionConverter {
 
   public static final Type.Struct EMPTY_TYPE = Type.Struct.builder().nullable(false).build();
 
-  private final FunctionLookup lookup;
+  private final ExtensionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
 
   public ProtoExpressionConverter(
-      FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type.Struct rootType) {
+      ExtensionLookup lookup,
+      SimpleExtension.ExtensionCollection extensions,
+      Type.Struct rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
