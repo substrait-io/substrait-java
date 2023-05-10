@@ -1,7 +1,7 @@
 package io.substrait.plan;
 
 import io.substrait.expression.ExtensionLookup;
-import io.substrait.expression.proto.ImmutableFunctionLookup;
+import io.substrait.expression.proto.ImmutableExtensionLookup;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
@@ -32,7 +32,7 @@ public class ProtoPlanConverter {
   }
 
   public Plan from(io.substrait.proto.Plan plan) {
-    ExtensionLookup functionLookup = ImmutableFunctionLookup.builder().from(plan).build();
+    ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
