@@ -3,7 +3,7 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
@@ -32,9 +32,9 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   private final ExpressionProtoConverter exprProtoConverter;
   private final TypeProtoConverter typeProtoConverter;
-  private final FunctionCollector functionCollector;
+  private final ExtensionCollector functionCollector;
 
-  public RelProtoConverter(FunctionCollector functionCollector) {
+  public RelProtoConverter(ExtensionCollector functionCollector) {
     this.functionCollector = functionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);

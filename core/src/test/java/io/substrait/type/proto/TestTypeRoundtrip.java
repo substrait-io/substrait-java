@@ -2,7 +2,7 @@ package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.function.ImmutableSimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -40,7 +40,7 @@ public class TestTypeRoundtrip {
     t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));
   }
 
-  private FunctionCollector lookup = new FunctionCollector();
+  private ExtensionCollector lookup = new ExtensionCollector();
   private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
 
   private ProtoTypeConverter protoTypeConverter =

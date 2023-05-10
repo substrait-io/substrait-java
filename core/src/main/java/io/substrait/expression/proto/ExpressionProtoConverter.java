@@ -19,12 +19,12 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
-  private final FunctionCollector extensionCollector;
+  private final ExtensionCollector extensionCollector;
   private final RelVisitor<Rel, RuntimeException> relVisitor;
   private final TypeProtoConverter typeProtoConverter;
 
   public ExpressionProtoConverter(
-      FunctionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
+      ExtensionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
     this.extensionCollector = extensionCollector;
     this.relVisitor = relVisitor;
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);

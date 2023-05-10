@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.function.SimpleExtension;
 import io.substrait.io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.utils.StringHolder;
@@ -27,7 +27,7 @@ public class ProtoRelConverterTest {
   }
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
-  final FunctionCollector functionCollector = new FunctionCollector();
+  final ExtensionCollector functionCollector = new ExtensionCollector();
   final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   final ProtoRelConverter protoRelConverter = new ProtoRelConverter(functionCollector, extensions);
 

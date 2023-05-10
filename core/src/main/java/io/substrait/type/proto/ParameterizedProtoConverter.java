@@ -1,6 +1,6 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.ParameterizedType;
@@ -11,7 +11,7 @@ public class ParameterizedProtoConverter
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ParameterizedProtoConverter.class);
 
-  public ParameterizedProtoConverter(FunctionCollector extensionCollector) {
+  public ParameterizedProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Parameterized types cannot include return type expressions.");
   }
 

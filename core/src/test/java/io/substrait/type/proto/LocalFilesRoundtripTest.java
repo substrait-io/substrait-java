@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.function.SimpleExtension;
 import io.substrait.proto.ReadRel;
 import io.substrait.relation.LocalFiles;
@@ -29,7 +29,7 @@ public class LocalFilesRoundtripTest {
   public LocalFilesRoundtripTest() throws IOException {}
 
   private void assertLocalFilesRoundtrip(FileOrFiles file) {
-    FunctionCollector functionCollector = new FunctionCollector();
+    ExtensionCollector functionCollector = new ExtensionCollector();
     RelProtoConverter to = new RelProtoConverter(functionCollector);
     ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 

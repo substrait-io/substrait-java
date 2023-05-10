@@ -1,6 +1,6 @@
 package io.substrait.type.proto;
 
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.expression.proto.ExtensionCollector;
 import io.substrait.function.NullableType;
 import io.substrait.function.SimpleExtension;
 import io.substrait.function.TypeExpressionVisitor;
@@ -11,11 +11,11 @@ abstract class BaseProtoConverter<T, I>
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(BaseProtoConverter.class);
 
-  protected final FunctionCollector extensionCollector;
+  protected final ExtensionCollector extensionCollector;
 
   public abstract BaseProtoTypes<T, I> typeContainer(boolean nullable);
 
-  public BaseProtoConverter(FunctionCollector extensionCollector, String unsupportedMessage) {
+  public BaseProtoConverter(ExtensionCollector extensionCollector, String unsupportedMessage) {
     super(unsupportedMessage);
     this.extensionCollector = extensionCollector;
   }

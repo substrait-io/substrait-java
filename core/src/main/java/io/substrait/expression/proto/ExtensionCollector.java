@@ -14,9 +14,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Used to replace instances of function and types in the POJOs with references when converting
  * from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan}
  */
-public class FunctionCollector extends AbstractExtensionLookup {
-  // TODO: Rename to ExtensionCollector and move to io.substrait.extension
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionCollector.class);
+public class ExtensionCollector extends AbstractExtensionLookup {
+  // TODO: Move to io.substrait.extension
+  static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(ExtensionCollector.class);
 
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
@@ -24,7 +25,7 @@ public class FunctionCollector extends AbstractExtensionLookup {
 
   private int counter = -1;
 
-  public FunctionCollector() {
+  public ExtensionCollector() {
     super(new HashMap<>(), new HashMap<>());
     funcMap = new BidiMap<>(functionAnchorMap);
     typeMap = new BidiMap<>(typeAnchorMap);
