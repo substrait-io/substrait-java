@@ -30,7 +30,7 @@ import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import io.substrait.type.proto.FromProto;
+import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +44,7 @@ public class ProtoRelConverter {
 
   protected final FunctionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;
-  private final FromProto protoTypeConverter;
+  private final ProtoTypeConverter protoTypeConverter;
 
   public ProtoRelConverter(FunctionLookup lookup) throws IOException {
     this(lookup, SimpleExtension.loadDefaults());
@@ -53,7 +53,7 @@ public class ProtoRelConverter {
   public ProtoRelConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
-    this.protoTypeConverter = new FromProto(lookup, extensions);
+    this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
@@ -144,7 +144,7 @@ public class ProtoRelConverter {
                     struct.getTypesList().stream()
                         .map(protoTypeConverter::from)
                         .collect(java.util.stream.Collectors.toList()))
-                .nullable(FromProto.isNullable(struct.getNullability()))
+                .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
                 .build())
         .build();
   }

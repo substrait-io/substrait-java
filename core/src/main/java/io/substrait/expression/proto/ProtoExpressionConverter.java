@@ -9,7 +9,7 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.function.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
-import io.substrait.type.proto.FromProto;
+import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -27,14 +27,14 @@ public class ProtoExpressionConverter {
   private final FunctionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
   private final Type.Struct rootType;
-  private final FromProto protoTypeConverter;
+  private final ProtoTypeConverter protoTypeConverter;
 
   public ProtoExpressionConverter(
       FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type.Struct rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
-    this.protoTypeConverter = new FromProto(lookup, extensions);
+    this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
