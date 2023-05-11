@@ -72,7 +72,7 @@ Once published, the artifacts can be downloaded from the following locations:
   - https://github.com/substrait/sustrait-java/releases
 
 - Sonatype OSSRH Artifacts:
-  - https://s01.oss.sonatype.org/content/repositories/{snapshots,staging,releases}/substrait/substrait-java/core/1.0.0/
+  - https://s01.oss.sonatype.org/content/repositories/{snapshots,staging,releases}/io/substrait/substrait-java/core/1.0.0/
 
 ## Branches Configuration
 

@@ -38,12 +38,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-/** Converts from proto to pojo rel representation */
+/** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
   protected final FunctionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;
+  private final FromProto protoTypeConverter;
 
   public ProtoRelConverter(FunctionLookup lookup) throws IOException {
     this(lookup, SimpleExtension.loadDefaults());
@@ -52,6 +53,7 @@ public class ProtoRelConverter {
   public ProtoRelConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
+    this.protoTypeConverter = new FromProto(lookup, extensions);
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
@@ -140,7 +142,7 @@ public class ProtoRelConverter {
             Type.Struct.builder()
                 .fields(
                     struct.getTypesList().stream()
-                        .map(FromProto::from)
+                        .map(protoTypeConverter::from)
                         .collect(java.util.stream.Collectors.toList()))
                 .nullable(FromProto.isNullable(struct.getNullability()))
                 .build())
@@ -294,19 +296,19 @@ public class ProtoRelConverter {
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
+    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
               .fields(
                   struct.getFieldsList().stream()
-                      .map(ProtoExpressionConverter::from)
+                      .map(converter::from)
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
     var fieldNames =
         rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
     var builder =
         VirtualTableScan.builder()
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
@@ -357,19 +359,20 @@ public class ProtoRelConverter {
 
   private Aggregate newAggregate(AggregateRel rel) {
     var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    var protoExprConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
     for (var grouping : rel.getGroupingsList()) {
       groupings.add(
           Aggregate.Grouping.builder()
               .expressions(
                   grouping.getGroupingExpressionsList().stream()
-                      .map(converter::from)
+                      .map(protoExprConverter::from)
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
-    var pF = new FunctionArg.ProtoFrom(converter);
+    var pF = new FunctionArg.ProtoFrom(protoExprConverter, protoTypeConverter);
     for (var measure : rel.getMeasuresList()) {
       var func = measure.getMeasure();
       var funcDecl = lookup.getAggregateFunction(func.getFunctionReference(), extensions);
@@ -383,13 +386,13 @@ public class ProtoRelConverter {
                   AggregateFunctionInvocation.builder()
                       .arguments(args)
                       .declaration(funcDecl)
-                      .outputType(FromProto.from(func.getOutputType()))
+                      .outputType(protoTypeConverter.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
                       .invocation(func.getInvocation())
                       .build())
               .preMeasureFilter(
                   Optional.ofNullable(
-                      measure.hasFilter() ? converter.from(measure.getFilter()) : null))
+                      measure.hasFilter() ? protoExprConverter.from(measure.getFilter()) : null))
               .build());
     }
     var builder = Aggregate.builder().input(input).groupings(groupings).measures(measures);

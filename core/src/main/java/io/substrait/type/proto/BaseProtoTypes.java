@@ -101,6 +101,8 @@ abstract class BaseProtoTypes<T, I> {
 
   public abstract T map(T key, T value);
 
+  public abstract T userDefined(int ref);
+
   protected abstract T wrap(Object o);
 
   protected abstract I i(int integerValue);

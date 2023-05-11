@@ -1,16 +1,15 @@
 package io.substrait.type.proto;
 
-import io.substrait.function.TypeExpressionVisitor;
+import io.substrait.expression.proto.FunctionCollector;
 import io.substrait.proto.Type;
 
+/** Convert from {@link io.substrait.type.Type} to {@link io.substrait.proto.Type} */
 public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(TypeProtoConverter.class);
 
-  public static TypeExpressionVisitor<Type, RuntimeException> INSTANCE = new TypeProtoConverter();
-
-  public TypeProtoConverter() {
-    super("Type literals cannot contain parameters or expressions.");
+  public TypeProtoConverter(FunctionCollector extensionCollector) {
+    super(extensionCollector, "Type literals cannot contain parameters or expressions.");
   }
 
   private static final BaseProtoTypes<Type, Integer> NULLABLE =
@@ -76,6 +75,12 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
+    public Type userDefined(int ref) {
+      return wrap(
+          Type.UserDefined.newBuilder().setTypeReference(ref).setNullability(nullability).build());
+    }
+
+    @Override
     protected Type wrap(final Object o) {
       var bldr = Type.newBuilder();
       if (o instanceof Type.Boolean t) {
@@ -124,6 +129,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setMap(t).build();
       } else if (o instanceof Type.UUID t) {
         return bldr.setUuid(t).build();
+      } else if (o instanceof Type.UserDefined t) {
+        return bldr.setUserDefined(t).build();
       }
       throw new UnsupportedOperationException("Unable to wrap type of " + o.getClass());
     }
