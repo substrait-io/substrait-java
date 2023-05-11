@@ -71,7 +71,7 @@ java {
   withSourcesJar()
 }
 
-var CALCITE_VERSION = "1.32.0"
+var CALCITE_VERSION = "1.34.0"
 
 dependencies {
   implementation(project(":core"))
