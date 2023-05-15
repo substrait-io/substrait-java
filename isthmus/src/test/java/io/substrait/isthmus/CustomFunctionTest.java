@@ -71,16 +71,27 @@ public class CustomFunctionTest extends PlanTestBase {
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
 
+  TypeConverter typeConverter = TypeConverter.DEFAULT;
+
   // Create Function Converters that can handle the custom functions
   ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(
-          extensionCollection.scalarFunctions(), additionalScalarSignatures, typeFactory);
+          extensionCollection.scalarFunctions(),
+          additionalScalarSignatures,
+          typeFactory,
+          typeConverter);
   AggregateFunctionConverter aggregateFunctionConverter =
       new AggregateFunctionConverter(
-          extensionCollection.aggregateFunctions(), additionalAggregateSignatures, typeFactory);
+          extensionCollection.aggregateFunctions(),
+          additionalAggregateSignatures,
+          typeFactory,
+          typeConverter);
   WindowFunctionConverter windowFunctionConverter =
       new WindowFunctionConverter(
-          extensionCollection.windowFunctions(), typeFactory, aggregateFunctionConverter);
+          extensionCollection.windowFunctions(),
+          typeFactory,
+          aggregateFunctionConverter,
+          typeConverter);
 
   // Create a SubstraitToCalcite converter that has access to the custom Function Converters
   class CustomSubstraitToCalcite extends SubstraitToCalcite {
@@ -93,7 +104,11 @@ public class CustomFunctionTest extends PlanTestBase {
     @Override
     protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
       return new SubstraitRelNodeConverter(
-          typeFactory, relBuilder, scalarFunctionConverter, aggregateFunctionConverter);
+          typeFactory,
+          relBuilder,
+          scalarFunctionConverter,
+          aggregateFunctionConverter,
+          typeConverter);
     }
   }
 
@@ -107,6 +122,7 @@ public class CustomFunctionTest extends PlanTestBase {
           scalarFunctionConverter,
           aggregateFunctionConverter,
           windowFunctionConverter,
+          typeConverter,
           ImmutableFeatureBoard.builder().build());
 
   @Test

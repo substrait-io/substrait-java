@@ -114,7 +114,7 @@ class SqlConverterBase {
           return new DefinedTable(
               id.get(id.size() - 1),
               factory,
-              TypeConverter.convert(factory, table.struct(), table.names()));
+              TypeConverter.DEFAULT.toCalcite(factory, table.struct(), table.names()));
         };
 
     CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);

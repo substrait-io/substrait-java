@@ -8,6 +8,7 @@ import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -18,27 +19,55 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 public class TypeConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeConverter.class);
+  private final UserTypeMapper userTypeMapper;
+
+  // DEFAULT TypeConverter which does not handle user-defined types
+  public static TypeConverter DEFAULT =
+      new TypeConverter(
+          new UserTypeMapper() {
+            @Nullable
+            @Override
+            public Type toSubstrait(RelDataType relDataType) {
+              return null;
+            }
+
+            @Nullable
+            @Override
+            public RelDataType toCalcite(Type.UserDefined type) {
+              return null;
+            }
+          });
+
+  public TypeConverter(UserTypeMapper userTypeMapper) {
+    this.userTypeMapper = userTypeMapper;
+  }
 
   static final SqlIntervalQualifier INTERVAL_YEAR =
       new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO);
   static final SqlIntervalQualifier INTERVAL_DAY =
       new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.SECOND, SqlParserPos.ZERO);
 
-  public static Type convert(RelDataType type) {
-    return convert(type, new ArrayList<>());
+  public Type toSubstrait(RelDataType type) {
+    return toSubstrait(type, new ArrayList<>());
   }
 
-  public static NamedStruct toNamedStruct(RelDataType type) {
+  public NamedStruct toNamedStruct(RelDataType type) {
     if (type.getSqlTypeName() != SqlTypeName.ROW) {
       throw new IllegalArgumentException("Expected type of struct.");
     }
 
     var names = new ArrayList<String>();
-    var struct = (Type.Struct) convert(type, names);
+    var struct = (Type.Struct) toSubstrait(type, names);
     return NamedStruct.of(names, struct);
   }
 
-  private static Type convert(RelDataType type, List<String> names) {
+  private Type toSubstrait(RelDataType type, List<String> names) {
+    // Check for user mapped types first as they may re-use SqlTypeNames
+    var userType = userTypeMapper.toSubstrait(type);
+    if (userType != null) {
+      return userType;
+    }
+
     TypeCreator creator = Type.withNullability(type.isNullable());
     return switch (type.getSqlTypeName()) {
       case BOOLEAN -> creator.BOOLEAN;
@@ -100,43 +129,53 @@ public class TypeConverter {
       case BINARY -> creator.fixedBinary(type.getPrecision());
       case MAP -> {
         MapSqlType map = (MapSqlType) type;
-        yield creator.map(convert(map.getKeyType(), names), convert(map.getValueType(), names));
+        yield creator.map(
+            toSubstrait(map.getKeyType(), names), toSubstrait(map.getValueType(), names));
       }
       case ROW -> {
         var children = new ArrayList<Type>();
         for (var field : type.getFieldList()) {
           names.add(field.getName());
-          children.add(convert(field.getType(), names));
+          children.add(toSubstrait(field.getType(), names));
         }
         yield creator.struct(children);
       }
-      case ARRAY -> creator.list(convert(type.getComponentType(), names));
+      case ARRAY -> creator.list(toSubstrait(type.getComponentType(), names));
       default -> throw new UnsupportedOperationException(
           String.format("Unable to convert the type " + type.toString()));
     };
   }
 
-  public static RelDataType convert(RelDataTypeFactory type, TypeExpression typeExpression) {
-    return convert(type, typeExpression, null);
+  public RelDataType toCalcite(
+      RelDataTypeFactory relDataTypeFactory, TypeExpression typeExpression) {
+    return toCalcite(relDataTypeFactory, typeExpression, null);
   }
 
-  public static RelDataType convert(
-      RelDataTypeFactory type, TypeExpression typeExpression, List<String> dfsFieldNames) {
-    return typeExpression.accept(new ToRelDataType(type, dfsFieldNames, 0));
+  public RelDataType toCalcite(
+      RelDataTypeFactory relDataTypeFactory,
+      TypeExpression typeExpression,
+      List<String> dfsFieldNames) {
+    return typeExpression.accept(
+        new ToRelDataType(relDataTypeFactory, userTypeMapper, dfsFieldNames, 0));
   }
 
   private static class ToRelDataType
       extends TypeVisitor.TypeThrowsVisitor<RelDataType, RuntimeException> {
 
     private final RelDataTypeFactory typeFactory;
+    private final UserTypeMapper userTypeMapper;
     private final List<String> fieldNames;
     private int fieldNamePosition;
     private boolean withinStruct;
 
     public ToRelDataType(
-        final RelDataTypeFactory type, final List<String> fieldNames, int fieldNamePosition) {
+        final RelDataTypeFactory type,
+        final UserTypeMapper userTypeMapper,
+        final List<String> fieldNames,
+        int fieldNamePosition) {
       super("Unknown expression type.");
       this.typeFactory = type;
+      this.userTypeMapper = userTypeMapper;
       this.fieldNames = fieldNames;
       this.fieldNamePosition = fieldNamePosition;
     }
@@ -252,7 +291,7 @@ public class TypeConverter {
               fieldNames == null ? "f" + fieldNamePosition : fieldNames.get(fieldNamePosition));
           fieldNamePosition++;
           ToRelDataType childVisitor =
-              new ToRelDataType(typeFactory, fieldNames, fieldNamePosition);
+              new ToRelDataType(typeFactory, userTypeMapper, fieldNames, fieldNamePosition);
           fieldTypes.add(field.accept(childVisitor));
           fieldNamePosition = childVisitor.fieldNamePosition;
         }
@@ -272,6 +311,15 @@ public class TypeConverter {
     @Override
     public RelDataType visit(Type.Map expr) {
       return n(expr, typeFactory.createMapType(expr.key().accept(this), expr.value().accept(this)));
+    }
+
+    @Override
+    public RelDataType visit(Type.UserDefined expr) throws RuntimeException {
+      var type = userTypeMapper.toCalcite(expr);
+      if (type != null) {
+        return type;
+      }
+      throw t();
     }
 
     private boolean n(NullableType type) {

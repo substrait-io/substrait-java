@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.List;
 import java.util.Optional;
@@ -30,8 +31,9 @@ public class ScalarFunctionConverter
   public ScalarFunctionConverter(
       List<SimpleExtension.ScalarFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory) {
-    super(functions, additionalSignatures, typeFactory);
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override

@@ -22,41 +22,43 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   private final List<CallConverter> callConverters;
   private final SubstraitRelVisitor relVisitor;
+  private final TypeConverter typeConverter;
   private WindowFunctionConverter windowFunctionConverter;
 
   private RelNode inputRel;
   private Type.Struct inputType;
 
   public RexExpressionConverter(SubstraitRelVisitor relVisitor, CallConverter... callConverters) {
-    this(relVisitor, Arrays.asList(callConverters), null);
+    this(relVisitor, Arrays.asList(callConverters), null, TypeConverter.DEFAULT);
   }
 
   public RexExpressionConverter(CallConverter... callConverters) {
-    this(null, Arrays.asList(callConverters), null);
+    this(null, Arrays.asList(callConverters), null, TypeConverter.DEFAULT);
   }
 
   public RexExpressionConverter(
       SubstraitRelVisitor relVisitor,
       List<CallConverter> callConverters,
-      WindowFunctionConverter windowFunctionConverter) {
+      WindowFunctionConverter windowFunctionConverter,
+      TypeConverter typeConverter) {
     this.callConverters = callConverters;
     this.relVisitor = relVisitor;
     this.windowFunctionConverter = windowFunctionConverter;
+    this.typeConverter = typeConverter;
   }
 
   /**
    * Only used for testing. Missing `ScalarFunctionConverter`, `CallConverters.CREATE_SEARCH_CONV`
    */
   public RexExpressionConverter() {
-    this.callConverters = CallConverters.DEFAULTS;
-    this.relVisitor =
-        null; // this RexExpressionConverter is only for Rex expression without any subquery.
+    this(null, CallConverters.defaults(TypeConverter.DEFAULT), null, TypeConverter.DEFAULT);
+    // TODO: Hide this AND/OR UPDATE tests
   }
 
   @Override
   public Expression visitInputRef(RexInputRef inputRef) {
     return FieldReference.newRootStructReference(
-        inputRef.getIndex(), TypeConverter.convert(inputRef.getType()));
+        inputRef.getIndex(), typeConverter.toSubstrait(inputRef.getType()));
   }
 
   @Override
@@ -80,7 +82,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitLiteral(RexLiteral literal) {
-    return LiteralConverter.convert(literal);
+    return (new LiteralConverter(typeConverter)).convert(literal);
   }
 
   @Override
@@ -122,7 +124,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
       return FieldReference.newRootStructOuterReference(
           fieldAccess.getField().getIndex(),
-          TypeConverter.convert(fieldAccess.getType()),
+          typeConverter.toSubstrait(fieldAccess.getType()),
           stepsOut);
     }
     throw new UnsupportedOperationException(
@@ -146,7 +148,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     } else if (subQuery.getOperator() == SqlStdOperatorTable.SCALAR_QUERY) {
       return Expression.ScalarSubquery.builder()
           .input(rel)
-          .type(TypeConverter.convert(subQuery.getType()))
+          .type(typeConverter.toSubstrait(subQuery.getType()))
           .build();
     } else if (subQuery.getOperator() == SqlStdOperatorTable.IN) {
       List<Expression> needles = new ArrayList<>();
@@ -156,7 +158,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       return Expression.InPredicate.builder()
           .needles(needles)
           .haystack(rel)
-          .type(TypeConverter.convert(subQuery.rel.getRowType()))
+          .type(typeConverter.toSubstrait(subQuery.rel.getRowType()))
           .build();
     }
 
