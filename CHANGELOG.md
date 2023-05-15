@@ -1,6 +1,15 @@
 Release Notes
 ---
 
+## [0.10.0](https://github.com/substrait-io/substrait-java/compare/v0.9.0...v0.10.0) (2023-05-15)
+
+
+### Features
+
+* add comparison function mappings ([#142](https://github.com/substrait-io/substrait-java/issues/142)) ([77f2744](https://github.com/substrait-io/substrait-java/commit/77f27445828d70b3d0422518a835baf274da01f4))
+* support proto <-> pojo custom type conversion ([#144](https://github.com/substrait-io/substrait-java/issues/144)) ([9a12e60](https://github.com/substrait-io/substrait-java/commit/9a12e60e33d1cb6b8e40a691951120d850ad86d6))
+* upgrade calcite to 1.34.0 ([#146](https://github.com/substrait-io/substrait-java/issues/146)) ([02b0f17](https://github.com/substrait-io/substrait-java/commit/02b0f1781ab8e62e9fa2aace0e41813a8818a8bf))
+
 ## [0.9.0](https://github.com/substrait-io/substrait-java/compare/v0.8.0...v0.9.0) (2023-04-30)
 
 
