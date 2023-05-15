@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.function.TypeExpression;
+import io.substrait.isthmus.utils.UType;
 import io.substrait.type.Type;
 import java.util.Arrays;
 import java.util.List;
@@ -194,12 +195,15 @@ class CalciteTypeTest extends CalciteObjs {
             "topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
   }
 
-  private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable) {
-    testType(expression, type.createTypeWithNullability(type.createSqlType(typeName), nullable));
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void userDefinedType(boolean nullable) {
+    var type = Type.withNullability(nullable).userDefined(UType.URI, UType.NAME);
+    testType(UType.typeConverter, type, UType.create(nullable), null);
   }
 
-  private void testType(TypeExpression expression, RelDataType calciteType, boolean nullable) {
-    testType(expression, type.createTypeWithNullability(calciteType, nullable));
+  private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable) {
+    testType(expression, type.createTypeWithNullability(type.createSqlType(typeName), nullable));
   }
 
   private void testType(
@@ -215,13 +219,25 @@ class CalciteTypeTest extends CalciteObjs {
         type.createTypeWithNullability(type.createSqlType(typeName, prec, scale), nullable));
   }
 
-  private void testType(
-      TypeExpression expression, RelDataType calciteType, List<String> dfsFieldNames) {
-    assertEquals(expression, TypeConverter.convert(calciteType));
-    assertEquals(calciteType, TypeConverter.convert(type, expression, dfsFieldNames));
+  private void testType(TypeExpression expression, RelDataType calciteType) {
+    testType(expression, calciteType, null);
   }
 
-  private void testType(TypeExpression expression, RelDataType type) {
-    testType(expression, type, null);
+  private void testType(TypeExpression expression, RelDataType calciteType, boolean nullable) {
+    testType(expression, type.createTypeWithNullability(calciteType, nullable));
+  }
+
+  private void testType(
+      TypeExpression expression, RelDataType calciteType, List<String> dfsFieldNames) {
+    testType(TypeConverter.DEFAULT, expression, calciteType, dfsFieldNames);
+  }
+
+  private void testType(
+      TypeConverter converter,
+      TypeExpression expression,
+      RelDataType calciteType,
+      List<String> dfsFieldNames) {
+    assertEquals(expression, converter.toSubstrait(calciteType));
+    assertEquals(calciteType, converter.toCalcite(type, expression, dfsFieldNames));
   }
 }
