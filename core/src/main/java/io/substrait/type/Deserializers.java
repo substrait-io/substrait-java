@@ -6,12 +6,13 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.parser.ParseToPojo;
 import io.substrait.type.parser.TypeStringParser;
 import java.io.IOException;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 public class Deserializers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Deserializers.class);
@@ -30,10 +31,10 @@ public class Deserializers {
 
   public static class ParseDeserializer<T> extends StdDeserializer<T> {
 
-    private final Function<SubstraitTypeParser.StartContext, T> converter;
+    private final BiFunction<String, SubstraitTypeParser.StartContext, T> converter;
 
     public ParseDeserializer(
-        Class<T> clazz, Function<SubstraitTypeParser.StartContext, T> converter) {
+        Class<T> clazz, BiFunction<String, SubstraitTypeParser.StartContext, T> converter) {
       super(clazz);
       this.converter = converter;
     }
@@ -43,7 +44,9 @@ public class Deserializers {
         throws IOException, JsonProcessingException {
       var typeString = p.getValueAsString();
       try {
-        return TypeStringParser.parse(typeString, converter);
+        String namespace =
+            (String) ctxt.findInjectableValue(SimpleExtension.URI_LOCATOR_KEY, null, null);
+        return TypeStringParser.parse(typeString, namespace, converter);
       } catch (Exception ex) {
         throw JsonMappingException.from(
             p, "Unable to parse string " + typeString.replace("\n", " \\n"), ex);

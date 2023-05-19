@@ -5,7 +5,7 @@ import io.substrait.function.TypeExpression;
 import io.substrait.type.SubstraitTypeLexer;
 import io.substrait.type.SubstraitTypeParser;
 import io.substrait.type.Type;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -17,16 +17,16 @@ public class TypeStringParser {
 
   private TypeStringParser() {}
 
-  public static Type parseSimple(String str) {
-    return parse(str, ParseToPojo::type);
+  public static Type parseSimple(String str, String namespace) {
+    return parse(str, namespace, ParseToPojo::type);
   }
 
-  public static ParameterizedType parseParameterized(String str) {
-    return parse(str, ParseToPojo::parameterizedType);
+  public static ParameterizedType parseParameterized(String str, String namespace) {
+    return parse(str, namespace, ParseToPojo::parameterizedType);
   }
 
-  public static TypeExpression parseExpression(String str) {
-    return parse(str, ParseToPojo::typeExpression);
+  public static TypeExpression parseExpression(String str, String namespace) {
+    return parse(str, namespace, ParseToPojo::typeExpression);
   }
 
   private static SubstraitTypeParser.StartContext parse(String str) {
@@ -40,8 +40,9 @@ public class TypeStringParser {
     return parser.start();
   }
 
-  public static <T> T parse(String str, Function<SubstraitTypeParser.StartContext, T> func) {
-    return func.apply(parse(str));
+  public static <T> T parse(
+      String str, String namespace, BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
+    return func.apply(namespace, parse(str));
   }
 
   public static TypeExpression parse(String str, ParseToPojo.Visitor visitor) {
