@@ -8,11 +8,15 @@ import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.relation.Rel;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.Test;
 /** Verify that custom functions can convert from Substrait to Calcite and back. */
 public class CustomFunctionTest extends PlanTestBase {
   static final TypeCreator R = TypeCreator.of(false);
+  static final TypeCreator N = TypeCreator.of(true);
 
   // Define custom functions in a "functions_custom.yaml" extension
   static final String NAMESPACE = "/functions_custom";
@@ -45,15 +50,60 @@ public class CustomFunctionTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
 
+  // Create user-defined types
+  static final String aTypeName = "a_type";
+  static final String bTypeName = "b_type";
+  static final UserTypeFactory aTypeFactory = new UserTypeFactory(NAMESPACE, aTypeName);
+  static final UserTypeFactory bTypeFactory = new UserTypeFactory(NAMESPACE, bTypeName);
+
+  // Mapper for user-defined types
+  static final UserTypeMapper userTypeMapper =
+      new UserTypeMapper() {
+        @Nullable
+        @Override
+        public Type toSubstrait(RelDataType relDataType) {
+          if (aTypeFactory.isTypeFromFactory(relDataType)) {
+            return TypeCreator.of(relDataType.isNullable()).userDefined(NAMESPACE, aTypeName);
+          }
+          if (bTypeFactory.isTypeFromFactory(relDataType)) {
+            return TypeCreator.of(relDataType.isNullable()).userDefined(NAMESPACE, bTypeName);
+          }
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public RelDataType toCalcite(Type.UserDefined type) {
+          if (type.uri().equals(NAMESPACE)) {
+            if (type.name().equals(aTypeName)) {
+              return aTypeFactory.createCalcite(type.nullable());
+            }
+            if (type.name().equals(bTypeName)) {
+              return bTypeFactory.createCalcite(type.nullable());
+            }
+          }
+          return null;
+        }
+      };
+
   // Define additional mapping signatures for the custom scalar functions
   final List<FunctionMappings.Sig> additionalScalarSignatures =
-      List.of(FunctionMappings.s(customScalarFn));
+      List.of(FunctionMappings.s(customScalarFn), FunctionMappings.s(toBType));
 
   static final SqlFunction customScalarFn =
       new SqlFunction(
           "custom_scalar",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.VARCHAR),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+
+  static final SqlFunction toBType =
+      new SqlFunction(
+          "to_b_type",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(bTypeFactory.createCalcite(false)),
           null,
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
@@ -71,7 +121,7 @@ public class CustomFunctionTest extends PlanTestBase {
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
 
-  TypeConverter typeConverter = TypeConverter.DEFAULT;
+  TypeConverter typeConverter = new TypeConverter(userTypeMapper);
 
   // Create Function Converters that can handle the custom functions
   ScalarFunctionConverter scalarFunctionConverter =
@@ -98,7 +148,7 @@ public class CustomFunctionTest extends PlanTestBase {
 
     public CustomSubstraitToCalcite(
         SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-      super(extensions, typeFactory);
+      super(extensions, typeFactory, typeConverter);
     }
 
     @Override
@@ -155,6 +205,28 @@ public class CustomFunctionTest extends PlanTestBase {
                     b.aggregateFn(
                         NAMESPACE, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0))),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    var relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void customTypesInFunctionsRoundtrip() {
+    // CREATE TABLE example(a a_type)
+    // SELECT to_b_type(a) FROM example
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    b.scalarFn(
+                        NAMESPACE,
+                        "to_b_type:u!a_type",
+                        R.userDefined(NAMESPACE, "b_type"),
+                        b.fieldReference(input, 0))),
+            b.remap(1),
+            b.namedScan(
+                List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     var relReturned = calciteToSubstrait.apply(calciteRel);

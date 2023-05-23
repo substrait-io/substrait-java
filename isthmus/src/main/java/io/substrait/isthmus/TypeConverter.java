@@ -319,7 +319,8 @@ public class TypeConverter {
       if (type != null) {
         return type;
       }
-      throw t();
+      throw new UnsupportedOperationException(
+          String.format("Unable to map user-defined type: %s", expr));
     }
 
     private boolean n(NullableType type) {

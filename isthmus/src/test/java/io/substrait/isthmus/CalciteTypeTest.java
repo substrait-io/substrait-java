@@ -3,10 +3,11 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.function.TypeExpression;
-import io.substrait.isthmus.utils.UType;
+import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.type.Type;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
@@ -195,11 +196,38 @@ class CalciteTypeTest extends CalciteObjs {
             "topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
   }
 
+  // Setup for user-defined type test
+  static final String uTypeURI = "/functions_custom";
+  static final String uTypeName = "u_type";
+  UserTypeFactory uTypeFactory = new UserTypeFactory(uTypeURI, uTypeName);
+
+  public TypeConverter typeConverter =
+      new TypeConverter(
+          new UserTypeMapper() {
+            @Nullable
+            @Override
+            public Type toSubstrait(RelDataType relDataType) {
+              if (uTypeFactory.isTypeFromFactory(relDataType)) {
+                return uTypeFactory.createSubstrait(relDataType.isNullable());
+              }
+              return null;
+            }
+
+            @Nullable
+            @Override
+            public RelDataType toCalcite(Type.UserDefined type) {
+              if (type.uri().equals(uTypeURI) && type.name().equals(uTypeName)) {
+                return uTypeFactory.createCalcite(type.nullable());
+              }
+              return null;
+            }
+          });
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void userDefinedType(boolean nullable) {
-    var type = Type.withNullability(nullable).userDefined(UType.URI, UType.NAME);
-    testType(UType.typeConverter, type, UType.create(nullable), null);
+    var type = uTypeFactory.createSubstrait(nullable);
+    testType(typeConverter, type, uTypeFactory.createCalcite(nullable), null);
   }
 
   private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable) {
