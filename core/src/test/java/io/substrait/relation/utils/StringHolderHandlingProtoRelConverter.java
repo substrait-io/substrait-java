@@ -3,8 +3,8 @@ package io.substrait.relation.utils;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
-import io.substrait.expression.FunctionLookup;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Extension;
 import io.substrait.relation.ProtoRelConverter;
 
@@ -16,7 +16,7 @@ import io.substrait.relation.ProtoRelConverter;
  */
 public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
   public StringHolderHandlingProtoRelConverter(
-      FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+      ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     super(lookup, extensions);
   }
 

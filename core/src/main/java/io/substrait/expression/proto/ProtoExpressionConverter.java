@@ -4,12 +4,12 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
-import io.substrait.type.proto.FromProto;
+import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -24,17 +24,19 @@ public class ProtoExpressionConverter {
 
   public static final Type.Struct EMPTY_TYPE = Type.Struct.builder().nullable(false).build();
 
-  private final FunctionLookup lookup;
+  private final ExtensionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
   private final Type.Struct rootType;
-  private final FromProto protoTypeConverter;
+  private final ProtoTypeConverter protoTypeConverter;
 
   public ProtoExpressionConverter(
-      FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions, Type.Struct rootType) {
+      ExtensionLookup lookup,
+      SimpleExtension.ExtensionCollection extensions,
+      Type.Struct rootType) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
-    this.protoTypeConverter = new FromProto(lookup, extensions);
+    this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {

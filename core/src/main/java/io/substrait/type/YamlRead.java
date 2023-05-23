@@ -3,7 +3,7 @@ package io.substrait.type;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -52,7 +52,7 @@ public class YamlRead {
           new ObjectMapper(new YAMLFactory())
               .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
               .registerModule(Deserializers.MODULE);
-      var doc = mapper.readValue(new File(name), SimpleExtension.FunctionSignatures.class);
+      var doc = mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
 
       logger.debug(
           "Parsed {} functions in file {}.",

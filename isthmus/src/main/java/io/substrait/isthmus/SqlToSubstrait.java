@@ -1,7 +1,7 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.substrait.expression.proto.FunctionCollector;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.RelProtoConverter;
@@ -68,7 +68,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       CalciteCatalogReader catalogReader)
       throws SqlParseException {
     var plan = Plan.newBuilder();
-    FunctionCollector functionCollector = new FunctionCollector();
+    ExtensionCollector functionCollector = new ExtensionCollector();
     var relProtoConverter = new RelProtoConverter(functionCollector);
     // TODO: consider case in which one sql passes conversion while others don't
     sqlToRelNode(sql, validator, catalogReader)

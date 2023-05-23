@@ -1,4 +1,4 @@
-package io.substrait.io.substrait.extension;
+package io.substrait.extension;
 
 import io.substrait.relation.Extension;
 import java.util.Optional;

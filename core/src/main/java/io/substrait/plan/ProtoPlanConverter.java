@@ -1,8 +1,8 @@
 package io.substrait.plan;
 
-import io.substrait.expression.FunctionLookup;
-import io.substrait.expression.proto.ImmutableFunctionLookup;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ImmutableExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
@@ -27,12 +27,12 @@ public class ProtoPlanConverter {
   }
 
   /** Override hook for providing custom {@link ProtoRelConverter} implementations */
-  protected ProtoRelConverter getProtoRelConverter(FunctionLookup functionLookup) {
+  protected ProtoRelConverter getProtoRelConverter(ExtensionLookup functionLookup) {
     return new ProtoRelConverter(functionLookup, this.extensionCollection);
   }
 
   public Plan from(io.substrait.proto.Plan plan) {
-    FunctionLookup functionLookup = ImmutableFunctionLookup.builder().from(plan).build();
+    ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {

@@ -1,6 +1,6 @@
 package io.substrait.isthmus;
 
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;

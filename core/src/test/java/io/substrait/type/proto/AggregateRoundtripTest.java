@@ -6,8 +6,8 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.expression.proto.FunctionCollector;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ImmutableAggregate;
@@ -31,7 +31,7 @@ public class AggregateRoundtripTest {
     Expression.StructLiteral literal =
         ImmutableExpression.StructLiteral.builder().from(expression).build();
     var input = VirtualTableScan.builder().addRows(literal).build();
-    FunctionCollector functionCollector = new FunctionCollector();
+    ExtensionCollector functionCollector = new ExtensionCollector();
     var to = new RelProtoConverter(functionCollector);
     var extensions = SimpleExtension.loadDefaults();
     var from = new ProtoRelConverter(functionCollector, extensions);

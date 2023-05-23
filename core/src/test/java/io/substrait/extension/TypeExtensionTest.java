@@ -3,7 +3,6 @@ package io.substrait.extension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
-import io.substrait.function.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -29,7 +28,7 @@ public class TypeExtensionTest {
   static final TypeCreator R = TypeCreator.of(false);
 
   static final String NAMESPACE = "/custom_extensions";
-  final io.substrait.function.SimpleExtension.ExtensionCollection extensionCollection;
+  final SimpleExtension.ExtensionCollection extensionCollection;
 
   {
     InputStream inputStream =

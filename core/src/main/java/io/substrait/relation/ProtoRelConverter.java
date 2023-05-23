@@ -5,11 +5,11 @@ import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.FunctionLookup;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.function.SimpleExtension;
-import io.substrait.io.substrait.extension.AdvancedExtension;
+import io.substrait.extension.AdvancedExtension;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.CrossRel;
 import io.substrait.proto.ExtensionLeafRel;
@@ -30,7 +30,7 @@ import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import io.substrait.type.proto.FromProto;
+import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,18 +42,18 @@ import java.util.stream.IntStream;
 public class ProtoRelConverter {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
-  protected final FunctionLookup lookup;
+  protected final ExtensionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;
-  private final FromProto protoTypeConverter;
+  private final ProtoTypeConverter protoTypeConverter;
 
-  public ProtoRelConverter(FunctionLookup lookup) throws IOException {
+  public ProtoRelConverter(ExtensionLookup lookup) throws IOException {
     this(lookup, SimpleExtension.loadDefaults());
   }
 
-  public ProtoRelConverter(FunctionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+  public ProtoRelConverter(ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
-    this.protoTypeConverter = new FromProto(lookup, extensions);
+    this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
@@ -144,7 +144,7 @@ public class ProtoRelConverter {
                     struct.getTypesList().stream()
                         .map(protoTypeConverter::from)
                         .collect(java.util.stream.Collectors.toList()))
-                .nullable(FromProto.isNullable(struct.getNullability()))
+                .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
                 .build())
         .build();
   }

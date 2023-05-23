@@ -1,7 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import io.substrait.expression.*;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
