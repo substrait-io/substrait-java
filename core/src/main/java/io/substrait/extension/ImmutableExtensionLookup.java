@@ -1,6 +1,5 @@
-package io.substrait.expression.proto;
+package io.substrait.extension;
 
-import io.substrait.function.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import java.util.Collections;
@@ -11,14 +10,13 @@ import java.util.Map;
  * Maintains a mapping between function anchors and function references. Generates references for
  * new anchors.
  */
-public class ImmutableFunctionLookup extends AbstractFunctionLookup {
-  // TODO: Rename to ImmutableExtensionLookup and move to io.substrait.extension
+public class ImmutableExtensionLookup extends AbstractExtensionLookup {
   static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ImmutableFunctionLookup.class);
+      org.slf4j.LoggerFactory.getLogger(ImmutableExtensionLookup.class);
 
   private int counter = -1;
 
-  private ImmutableFunctionLookup(
+  private ImmutableExtensionLookup(
       Map<Integer, SimpleExtension.FunctionAnchor> functionMap,
       Map<Integer, SimpleExtension.TypeAnchor> typeMap) {
     super(functionMap, typeMap);
@@ -75,8 +73,8 @@ public class ImmutableFunctionLookup extends AbstractFunctionLookup {
       return this;
     }
 
-    public ImmutableFunctionLookup build() {
-      return new ImmutableFunctionLookup(
+    public ImmutableExtensionLookup build() {
+      return new ImmutableExtensionLookup(
           Collections.unmodifiableMap(functionMap), Collections.unmodifiableMap(typeMap));
     }
   }

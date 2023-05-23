@@ -1,14 +1,11 @@
-package io.substrait.expression;
-
-import io.substrait.function.SimpleExtension;
+package io.substrait.extension;
 
 /**
  * Interface with operations for resolving references to {@link
  * io.substrait.proto.SimpleExtensionDeclaration}s within an individual plan to their corresponding
  * functions or types.
  */
-public interface FunctionLookup {
-  // TODO: Rename to ExtensionLookup and move to io.substrait.extension
+public interface ExtensionLookup {
   SimpleExtension.ScalarFunctionVariant getScalarFunction(
       int reference, SimpleExtension.ExtensionCollection extensions);
 

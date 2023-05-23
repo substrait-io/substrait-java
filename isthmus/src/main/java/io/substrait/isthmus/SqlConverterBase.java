@@ -1,6 +1,6 @@
 package io.substrait.isthmus;
 
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;

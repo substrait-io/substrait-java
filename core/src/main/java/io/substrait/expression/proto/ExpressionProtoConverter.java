@@ -4,6 +4,7 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
@@ -19,12 +20,12 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
-  private final FunctionCollector extensionCollector;
+  private final ExtensionCollector extensionCollector;
   private final RelVisitor<Rel, RuntimeException> relVisitor;
   private final TypeProtoConverter typeProtoConverter;
 
   public ExpressionProtoConverter(
-      FunctionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
+      ExtensionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
     this.extensionCollector = extensionCollector;
     this.relVisitor = relVisitor;
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);

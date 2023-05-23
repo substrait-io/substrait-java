@@ -1,11 +1,11 @@
 package io.substrait.expression;
 
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.type.Type;
-import io.substrait.type.proto.FromProto;
+import io.substrait.type.proto.ProtoTypeConverter;
 
 /**
  * FunctionArg is a marker interface that represents an argument of a {@link
@@ -65,9 +65,10 @@ public interface FunctionArg {
    */
   class ProtoFrom {
     private final ProtoExpressionConverter protoExprConverter;
-    private final FromProto protoTypeConverter;
+    private final ProtoTypeConverter protoTypeConverter;
 
-    public ProtoFrom(ProtoExpressionConverter protoExprConverter, FromProto protoTypeConverter) {
+    public ProtoFrom(
+        ProtoExpressionConverter protoExprConverter, ProtoTypeConverter protoTypeConverter) {
       this.protoExprConverter = protoExprConverter;
       this.protoTypeConverter = protoTypeConverter;
     }

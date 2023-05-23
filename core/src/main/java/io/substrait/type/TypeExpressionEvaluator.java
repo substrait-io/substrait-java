@@ -1,6 +1,6 @@
 package io.substrait.type;
 
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.TypeExpression;
 import java.util.List;
 

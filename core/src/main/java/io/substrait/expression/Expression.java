@@ -1,7 +1,7 @@
 package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;

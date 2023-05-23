@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;

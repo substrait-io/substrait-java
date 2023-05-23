@@ -5,7 +5,7 @@ import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_C
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.LiteralConverter;

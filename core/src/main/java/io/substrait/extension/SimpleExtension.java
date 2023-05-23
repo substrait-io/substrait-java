@@ -1,4 +1,4 @@
-package io.substrait.function;
+package io.substrait.extension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.substrait.expression.Expression;
+import io.substrait.function.ParameterizedType;
+import io.substrait.function.ToTypeString;
+import io.substrait.function.TypeExpression;
 import io.substrait.type.Deserializers;
 import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
@@ -28,7 +31,6 @@ import org.immutables.value.Value;
 /** Classes used to deserialize YAML extension files. Handles functions and types. */
 @Value.Enclosing
 public class SimpleExtension {
-  // TODO: Move to io.substrait.extension
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SimpleExtension.class);
 
   private static final ObjectMapper MAPPER =
@@ -552,12 +554,10 @@ public class SimpleExtension {
         Util.memoize(() -> TypeAnchor.of(uri(), name()));
   }
 
-  @JsonDeserialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
-  @JsonSerialize(as = ImmutableSimpleExtension.FunctionSignatures.class)
+  @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @Value.Immutable
-  public abstract static class FunctionSignatures {
-    // TODO: Rename to ExtensionSignatures ???
-
+  public abstract static class ExtensionSignatures {
     @JsonProperty("types")
     public abstract List<Type> types();
 
@@ -764,7 +764,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, String str) {
     try {
-      var doc = MAPPER.readValue(str, FunctionSignatures.class);
+      var doc = MAPPER.readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -773,7 +773,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, InputStream stream) {
     try {
-      var doc = MAPPER.readValue(stream, SimpleExtension.FunctionSignatures.class);
+      var doc = MAPPER.readValue(stream, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (RuntimeException ex) {
       throw ex;
@@ -783,7 +783,7 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String namespace, SimpleExtension.FunctionSignatures extensionSignatures) {
+      String namespace, ExtensionSignatures extensionSignatures) {
     var collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .addAllAggregateFunctions(

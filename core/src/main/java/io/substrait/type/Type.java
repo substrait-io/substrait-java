@@ -1,9 +1,9 @@
 package io.substrait.type;
 
 import io.substrait.expression.FunctionArg;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.function.NullableType;
 import io.substrait.function.ParameterizedType;
-import io.substrait.function.SimpleExtension;
 import io.substrait.function.TypeExpression;
 import org.immutables.value.Value;
 

@@ -3,7 +3,7 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.type.Type;
 import java.util.List;

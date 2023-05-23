@@ -8,7 +8,7 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.expression.WindowBound;
 import io.substrait.expression.WindowFunctionInvocation;
-import io.substrait.function.SimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.proto.AggregateFunction;
