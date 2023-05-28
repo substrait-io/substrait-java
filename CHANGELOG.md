@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.11.0](https://github.com/substrait-io/substrait-java/compare/v0.10.0...v0.11.0) (2023-05-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename and move extension associated code (#148)
+
+### Code Refactoring
+
+* rename and move extension associated code ([#148](https://github.com/substrait-io/substrait-java/issues/148)) ([6f29d32](https://github.com/substrait-io/substrait-java/commit/6f29d32be0408bc3da7fe9a7a85ab3d269d1f670))
+
 ## [0.10.0](https://github.com/substrait-io/substrait-java/compare/v0.9.0...v0.10.0) (2023-05-15)
 
 
