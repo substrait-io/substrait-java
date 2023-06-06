@@ -7,15 +7,20 @@ import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.*;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
@@ -100,6 +105,11 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   }
 
   @Override
+  public RexNode visit(Expression.FixedCharLiteral expr) throws RuntimeException {
+    return rexBuilder.makeLiteral(expr.value());
+  }
+
+  @Override
   public RexNode visit(Expression.StrLiteral expr) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
@@ -165,6 +175,19 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
     return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(Expression.IfThen expr) throws RuntimeException {
+    // In Calcite, the arguments to the CASE operator are given as:
+    //   <cond1> <value1> <cond2> <value2> ... <condN> <valueN> ... <else>
+    Stream<RexNode> ifThenArgs =
+        expr.ifClauses().stream()
+            .flatMap(
+                clause -> Stream.of(clause.condition().accept(this), clause.then().accept(this)));
+    Stream<RexNode> elseArg = Stream.of(expr.elseClause().accept(this));
+    List<RexNode> args = Stream.concat(ifThenArgs, elseArg).collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.CASE, args);
   }
 
   @Override
