@@ -1,6 +1,19 @@
 Release Notes
 ---
 
+## [0.12.0](https://github.com/substrait-io/substrait-java/compare/v0.11.0...v0.12.0) (2023-06-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* TypeConverter no longer uses static methods
+* SimpleExtension.MAPPER has been replaced with SimpleExtension.objectMapper(String namespace)
+
+### Features
+
+* handle user-defined types in Isthmus ([#149](https://github.com/substrait-io/substrait-java/issues/149)) ([7d7acf8](https://github.com/substrait-io/substrait-java/commit/7d7acf8b46a8dfd6cf64079cb9d82e3bb782f4a1))
+* support IfThen translation from Substrait to Calcite ([#151](https://github.com/substrait-io/substrait-java/issues/151)) ([f505c23](https://github.com/substrait-io/substrait-java/commit/f505c23b905b45bfd069296cae3cf67a2f77e9cc))
+
 ## [0.11.0](https://github.com/substrait-io/substrait-java/compare/v0.10.0...v0.11.0) (2023-05-28)
 
 
