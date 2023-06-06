@@ -27,6 +27,7 @@ import org.apache.calcite.util.TimestampString;
 public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException>
     implements FunctionArg.FuncArgVisitor<RexNode, RuntimeException> {
   private final RelDataTypeFactory typeFactory;
+  private final TypeConverter typeConverter;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
 
@@ -43,8 +44,10 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter) {
+      AggregateFunctionConverter aggregateFunctionConverter,
+      TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
+    this.typeConverter = typeConverter;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.aggregateFunctionConverter = aggregateFunctionConverter;
@@ -52,7 +55,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.NullLiteral expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(null, TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(null, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -62,37 +65,44 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.I8Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.I16Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.I32Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.I64Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.FP32Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.FP64Literal expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.StrLiteral expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -100,7 +110,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     // Calcite RexLiteral only takes ByteString
     return rexBuilder.makeLiteral(
         new ByteString(expr.value().toByteArray()),
-        TypeConverter.convert(typeFactory, expr.getType()));
+        typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -117,12 +127,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     TimeString timeString =
         TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
             .withNanos(fracSecondsInNano);
-    return rexBuilder.makeLiteral(timeString, TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(timeString, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
   public RexNode visit(Expression.DateLiteral expr) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value(), TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -140,7 +151,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     TimestampString tsString =
         TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
             .withNanos(fracSecondsInNano);
-    return rexBuilder.makeLiteral(tsString, TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(tsString, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -153,7 +164,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public RexNode visit(Expression.DecimalLiteral expr) throws RuntimeException {
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
-    return rexBuilder.makeLiteral(decimal, TypeConverter.convert(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
@@ -196,7 +207,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   @Override
   public RexNode visit(Expression.Cast expr) throws RuntimeException {
     return rexBuilder.makeAbstractCast(
-        TypeConverter.convert(typeFactory, expr.getType()), expr.input().accept(this));
+        typeConverter.toCalcite(typeFactory, expr.getType()), expr.input().accept(this));
   }
 
   @Override
@@ -207,7 +218,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
       RexInputRef rexInputRef;
       if (segment instanceof FieldReference.StructField f) {
         rexInputRef =
-            new RexInputRef(f.offset(), TypeConverter.convert(typeFactory, expr.getType()));
+            new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }

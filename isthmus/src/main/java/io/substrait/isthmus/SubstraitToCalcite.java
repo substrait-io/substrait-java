@@ -27,11 +27,20 @@ public class SubstraitToCalcite {
 
   private final SimpleExtension.ExtensionCollection extensions;
   private final RelDataTypeFactory typeFactory;
+  private final TypeConverter typeConverter;
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+    this(extensions, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  public SubstraitToCalcite(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
     this.extensions = extensions;
     this.typeFactory = typeFactory;
+    this.typeConverter = typeConverter;
   }
 
   /**
@@ -50,7 +59,7 @@ public class SubstraitToCalcite {
           return new SqlConverterBase.DefinedTable(
               id.get(id.size() - 1),
               typeFactory,
-              TypeConverter.convert(typeFactory, table.struct(), table.names()));
+              typeConverter.toCalcite(typeFactory, table.struct(), table.names()));
         };
     return LookupCalciteSchema.createRootSchema(lookup);
   }

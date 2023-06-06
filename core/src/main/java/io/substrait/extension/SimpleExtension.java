@@ -1,11 +1,13 @@
 package io.substrait.extension;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -33,11 +35,19 @@ import org.immutables.value.Value;
 public class SimpleExtension {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SimpleExtension.class);
 
-  private static final ObjectMapper MAPPER =
-      new ObjectMapper(new YAMLFactory())
-          .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-          .registerModule(new Jdk8Module())
-          .registerModule(Deserializers.MODULE);
+  // Key for looking up URI in InjectableValues
+  public static final String URI_LOCATOR_KEY = "uri";
+
+  private static ObjectMapper objectMapper(String namespace) {
+    InjectableValues.Std iv = new InjectableValues.Std();
+    iv.addValue(URI_LOCATOR_KEY, namespace);
+
+    return new ObjectMapper(new YAMLFactory())
+        .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+        .registerModule(new Jdk8Module())
+        .registerModule(Deserializers.MODULE)
+        .setInjectableValues(iv);
+  }
 
   enum Nullability {
     MIRROR,
@@ -532,19 +542,11 @@ public class SimpleExtension {
   public abstract static class Type {
     public abstract String name();
 
+    @JacksonInject(SimpleExtension.URI_LOCATOR_KEY)
+    public abstract String uri();
+
     // TODO: Handle conversion of structure object to Named Struct representation
     protected abstract Optional<Object> structure();
-
-    @Value.Default
-    public String uri() {
-      // we can't use null detection here since we initially construct this without a uri, then
-      // resolve later.
-      return "";
-    }
-
-    public Type resolve(String uri) {
-      return ImmutableSimpleExtension.Type.builder().name(name()).uri(uri).build();
-    }
 
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
@@ -764,7 +766,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, String str) {
     try {
-      var doc = MAPPER.readValue(str, ExtensionSignatures.class);
+      var doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -773,7 +775,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, InputStream stream) {
     try {
-      var doc = MAPPER.readValue(stream, ExtensionSignatures.class);
+      var doc = objectMapper(namespace).readValue(stream, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (RuntimeException ex) {
       throw ex;
@@ -798,10 +800,7 @@ public class SimpleExtension {
                 extensionSignatures.windows().stream()
                     .flatMap(t -> t.resolve(namespace))
                     .collect(java.util.stream.Collectors.toList()))
-            .addAllTypes(
-                extensionSignatures.types().stream()
-                    .map(t -> t.resolve(namespace))
-                    .collect(java.util.stream.Collectors.toList()))
+            .addAllTypes(extensionSignatures.types())
             .build();
     logger.debug(
         "Loaded {} aggregate functions and {} scalar functions from {}.",

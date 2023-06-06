@@ -36,7 +36,7 @@ public class CalciteLiteralTest extends CalciteObjs {
       new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);
 
   private final ExpressionRexConverter expressionRexConverter =
-      new ExpressionRexConverter(type, scalarFunctionConverter, null);
+      new ExpressionRexConverter(type, scalarFunctionConverter, null, TypeConverter.DEFAULT);
 
   private final RexExpressionConverter rexExpressionConverter = new RexExpressionConverter();
 

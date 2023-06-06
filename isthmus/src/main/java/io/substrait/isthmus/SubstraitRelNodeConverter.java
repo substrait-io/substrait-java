@@ -61,6 +61,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   protected final RelBuilder relBuilder;
   protected final RexBuilder rexBuilder;
+  private final TypeConverter typeConverter;
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
@@ -70,22 +71,25 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         typeFactory,
         relBuilder,
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory));
+        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
+        TypeConverter.DEFAULT);
   }
 
   public SubstraitRelNodeConverter(
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder,
       ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter) {
+      AggregateFunctionConverter aggregateFunctionConverter,
+      TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
+    this.typeConverter = typeConverter;
     this.relBuilder = relBuilder;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.aggregateFunctionConverter = aggregateFunctionConverter;
     this.expressionRexConverter =
         new ExpressionRexConverter(
-            typeFactory, scalarFunctionConverter, aggregateFunctionConverter);
+            typeFactory, scalarFunctionConverter, aggregateFunctionConverter, typeConverter);
   }
 
   public static RelNode convert(
@@ -257,7 +261,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         };
 
     SqlAggFunction aggFunction;
-    RelDataType returnType = TypeConverter.convert(typeFactory, measure.getFunction().getType());
+    RelDataType returnType = typeConverter.toCalcite(typeFactory, measure.getFunction().getType());
 
     if (operator.get() instanceof SqlAggFunction) {
       aggFunction = (SqlAggFunction) operator.get();

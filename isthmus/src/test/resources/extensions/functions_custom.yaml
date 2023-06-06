@@ -1,5 +1,9 @@
 %YAML 1.2
 ---
+types:
+  - name: "a_type"
+  - name: "b_type"
+
 scalar_functions:
   - name: "custom_scalar"
     description: "a custom scalar functions"
@@ -8,6 +12,14 @@ scalar_functions:
         - name: some_arg
           value: string
       return: string
+  - name: "to_b_type"
+    description: "converts a nullable a_type to a b_type"
+    impls:
+      - args:
+          - name: arg1
+            value: u!a_type?
+        return: u!b_type
+
 aggregate_functions:
   - name: "custom_aggregate"
     description: "a custom aggregate function"

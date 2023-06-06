@@ -35,19 +35,22 @@ public abstract class FunctionConverter<
 
   protected final Map<SqlOperator, FunctionFinder> signatures;
   protected final RelDataTypeFactory typeFactory;
+  protected final TypeConverter typeConverter;
   protected final RexBuilder rexBuilder;
 
   protected final Multimap<String, SqlOperator> substraitFuncKeyToSqlOperatorMap;
 
   public FunctionConverter(List<F> functions, RelDataTypeFactory typeFactory) {
-    this(functions, Collections.EMPTY_LIST, typeFactory);
+    this(functions, Collections.EMPTY_LIST, typeFactory, TypeConverter.DEFAULT);
   }
 
   public FunctionConverter(
       List<F> functions,
       List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory) {
-    rexBuilder = new RexBuilder(typeFactory);
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    this.rexBuilder = new RexBuilder(typeFactory);
+    this.typeConverter = typeConverter;
     var signatures =
         new ArrayList<FunctionMappings.Sig>(getSigs().size() + additionalSignatures.size());
     signatures.addAll(additionalSignatures);
@@ -283,7 +286,7 @@ public abstract class FunctionConverter<
       var opTypes =
           operands.stream().map(Expression::getType).collect(java.util.stream.Collectors.toList());
 
-      var outputType = TypeConverter.convert(call.getType());
+      var outputType = typeConverter.toSubstrait(call.getType());
 
       // try to do a direct match
       var possibleKeys =
@@ -332,7 +335,7 @@ public abstract class FunctionConverter<
         if (leastRestrictive == null) {
           return Optional.empty();
         }
-        Type type = TypeConverter.convert(leastRestrictive);
+        Type type = typeConverter.toSubstrait(leastRestrictive);
         var out = singularInputType.get().tryMatch(type, outputType);
 
         if (out.isPresent()) {

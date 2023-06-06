@@ -69,6 +69,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private final RexExpressionConverter converter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
+  private final TypeConverter typeConverter;
   private final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
@@ -81,16 +82,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
+    this.typeConverter = TypeConverter.DEFAULT;
     var converters = new ArrayList<CallConverter>();
-    converters.addAll(CallConverters.DEFAULTS);
+    converters.addAll(CallConverters.defaults(typeConverter));
     converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
     var windowFunctionConverter =
         new WindowFunctionConverter(
-            extensions.windowFunctions(), typeFactory, aggregateFunctionConverter);
-    this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
+            extensions.windowFunctions(), typeFactory, aggregateFunctionConverter, typeConverter);
+    this.converter =
+        new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;
   }
 
@@ -99,13 +102,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
+      TypeConverter typeConverter,
       FeatureBoard features) {
     var converters = new ArrayList<CallConverter>();
-    converters.addAll(CallConverters.DEFAULTS);
+    converters.addAll(CallConverters.defaults(typeConverter));
     converters.add(scalarFunctionConverter);
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter = aggregateFunctionConverter;
-    this.converter = new RexExpressionConverter(this, converters, windowFunctionConverter);
+    this.converter =
+        new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
+    this.typeConverter = typeConverter;
     this.featureBoard = features;
   }
 
@@ -115,7 +121,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(TableScan scan) {
-    var type = TypeConverter.toNamedStruct(scan.getRowType());
+    var type = typeConverter.toNamedStruct(scan.getRowType());
     return NamedScan.builder()
         .initialSchema(type)
         .addAllNames(scan.getTable().getQualifiedName())
@@ -129,18 +135,19 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(LogicalValues values) {
-    var type = TypeConverter.toNamedStruct(values.getRowType());
+    var type = typeConverter.toNamedStruct(values.getRowType());
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
     }
 
+    LiteralConverter literalConverter = new LiteralConverter(typeConverter);
     List<Expression.StructLiteral> structs =
         values.getTuples().stream()
             .map(
                 list -> {
                   var fields =
                       list.stream()
-                          .map(l -> LiteralConverter.convert(l))
+                          .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
                   return ExpressionCreator.struct(false, fields);
                 })
