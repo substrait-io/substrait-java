@@ -183,4 +183,10 @@ public class Substrait2SqlTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(
         "select l_comment from lineitem where upper(l_comment) <> l_comment");
   }
+
+  @Test
+  public void caseWhenTest() throws Exception {
+    assertSqlSubstraitRelRoundTrip(
+        "select case when p_size > 100 then 'large' when p_size > 50 then 'medium' else 'small' end from part");
+  }
 }
