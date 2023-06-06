@@ -18,32 +18,59 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class ParseToPojo {
 
-  public static Type type(SubstraitTypeParser.StartContext ctx) {
-    return (Type) ctx.accept(Visitor.SIMPLE);
+  public static Type type(String namespace, SubstraitTypeParser.StartContext ctx) {
+    var visitor = Visitor.simple(namespace);
+    return (Type) ctx.accept(visitor);
   }
 
-  public static ParameterizedType parameterizedType(SubstraitTypeParser.StartContext ctx) {
-    return (ParameterizedType) ctx.accept(Visitor.PARAMETERIZED);
+  public static ParameterizedType parameterizedType(
+      String namespace, SubstraitTypeParser.StartContext ctx) {
+    return (ParameterizedType) ctx.accept(Visitor.parameterized(namespace));
   }
 
-  public static TypeExpression typeExpression(SubstraitTypeParser.StartContext ctx) {
-    return ctx.accept(Visitor.EXPRESSION);
+  public static TypeExpression typeExpression(
+      String namespace, SubstraitTypeParser.StartContext ctx) {
+    return ctx.accept(Visitor.expression(namespace));
   }
 
-  public static enum Visitor implements SubstraitTypeVisitor<TypeExpression> {
-    SIMPLE,
-    PARAMETERIZED,
-    EXPRESSION;
+  public static class Visitor implements SubstraitTypeVisitor<TypeExpression> {
+
+    public static Visitor simple(String namespace) {
+      return new Visitor(VisitorType.SIMPLE, namespace);
+    }
+
+    public static Visitor parameterized(String namespace) {
+      return new Visitor(VisitorType.PARAMETERIZED, namespace);
+    }
+
+    public static Visitor expression(String namespace) {
+      return new Visitor(VisitorType.EXPRESSION, namespace);
+    }
+
+    private final VisitorType expressionType;
+    private final String namespace;
+
+    private Visitor(VisitorType exprType, String namespace) {
+      this.expressionType = exprType;
+      this.namespace = namespace;
+    }
+
+    enum VisitorType {
+      SIMPLE,
+      PARAMETERIZED,
+      EXPRESSION;
+    }
 
     private void checkParameterizedOrExpression() {
-      if (this != EXPRESSION && this != PARAMETERIZED) {
+      if (this.expressionType != VisitorType.EXPRESSION
+          && this.expressionType != VisitorType.PARAMETERIZED) {
         throw new UnsupportedOperationException(
             "This construct can only be used in Parameterized Types or Type Expressions.");
       }
     }
 
     private void checkExpression() {
-      if (this != EXPRESSION) {
+      if (this.expressionType != VisitorType.EXPRESSION) {
         throw new UnsupportedOperationException(
             "This construct can only be used in Type Expressions.");
       }
@@ -142,9 +169,7 @@ public class ParseToPojo {
     @Override
     public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
       var name = ctx.Identifier().getSymbol().getText();
-      // The URI is added to the type as part of resolution when building the ExtensionCollection
-      var uri = "";
-      return withNull(ctx).userDefined(uri, name);
+      return withNull(ctx).userDefined(namespace, name);
     }
 
     @Override

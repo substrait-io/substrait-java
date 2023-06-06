@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.TypeConverter;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.calcite.rex.*;
@@ -13,9 +14,11 @@ import org.apache.calcite.sql.SqlKind;
 public class FieldSelectionConverter implements CallConverter {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(FieldSelectionConverter.class);
+  private final TypeConverter typeConverter;
 
-  public FieldSelectionConverter() {
+  public FieldSelectionConverter(TypeConverter typeConverter) {
     super();
+    this.typeConverter = typeConverter;
   }
 
   @Override
@@ -36,7 +39,7 @@ public class FieldSelectionConverter implements CallConverter {
       return Optional.empty();
     }
 
-    var literal = LiteralConverter.convert((RexLiteral) reference);
+    var literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
 
     var input = topLevelConverter.apply(toDereference);
 

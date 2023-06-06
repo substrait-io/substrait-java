@@ -39,7 +39,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   }
 
   void assertRowMatch(RelDataType actual, List<Type> expected) {
-    Type type = TypeConverter.convert(actual);
+    Type type = TypeConverter.DEFAULT.toSubstrait(actual);
     assertInstanceOf(Type.Struct.class, type);
     Type.Struct struct = (Type.Struct) type;
     assertEquals(expected, struct.fields());

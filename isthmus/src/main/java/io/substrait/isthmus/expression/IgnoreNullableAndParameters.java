@@ -95,7 +95,8 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(Type.UserDefined type) throws RuntimeException {
-    throw new UnsupportedOperationException("cannot handle user defined types for now");
+    // Two user-defined types are equal if they have the same uri AND name
+    return typeToMatch.equals(type);
   }
 
   @Override

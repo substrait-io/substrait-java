@@ -20,15 +20,17 @@ import org.apache.calcite.sql.SqlKind;
 public class CallConverters {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CallConverters.class);
 
-  public static SimpleCallConverter CAST =
-      (call, visitor) -> {
-        if (call.getKind() != SqlKind.CAST) {
-          return null;
-        }
+  public static Function<TypeConverter, SimpleCallConverter> CAST =
+      typeConverter ->
+          (call, visitor) -> {
+            if (call.getKind() != SqlKind.CAST) {
+              return null;
+            }
 
-        return ExpressionCreator.cast(
-            TypeConverter.convert(call.getType()), visitor.apply(call.getOperands().get(0)));
-      };
+            return ExpressionCreator.cast(
+                typeConverter.toSubstrait(call.getType()),
+                visitor.apply(call.getOperands().get(0)));
+          };
 
   //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
   //      return (call, visitor) -> {
@@ -86,12 +88,13 @@ public class CallConverters {
             }
           };
 
-  public static final List<CallConverter> DEFAULTS =
-      ImmutableList.of(
-          new FieldSelectionConverter(),
-          CallConverters.CASE,
-          CallConverters.CAST,
-          new LiteralConstructorConverter());
+  public static List<CallConverter> defaults(TypeConverter typeConverter) {
+    return ImmutableList.of(
+        new FieldSelectionConverter(typeConverter),
+        CallConverters.CASE,
+        CallConverters.CAST.apply(typeConverter),
+        new LiteralConstructorConverter());
+  }
 
   public interface SimpleCallConverter extends CallConverter {
 

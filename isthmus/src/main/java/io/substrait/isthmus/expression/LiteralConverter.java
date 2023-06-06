@@ -22,7 +22,14 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.*;
 
 public class LiteralConverter {
+  // TODO: Handle conversion of user-defined type literals
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LiteralConverter.class);
+
+  private final TypeConverter typeConverter;
+
+  public LiteralConverter(TypeConverter typeConverter) {
+    this.typeConverter = typeConverter;
+  }
 
   private static final long MICROS_IN_DAY = TimeUnit.DAYS.toMicros(1);
 
@@ -74,9 +81,9 @@ public class LiteralConverter {
     return (BigDecimal) literal.getValue();
   }
 
-  public static Expression.Literal convert(RexLiteral literal) {
+  public Expression.Literal convert(RexLiteral literal) {
     // convert type first to guarantee we can handle the value.
-    final Type type = TypeConverter.convert(literal.getType());
+    final Type type = typeConverter.toSubstrait(literal.getType());
     final boolean n = type.nullable();
 
     if (literal.isNull()) {
@@ -181,19 +188,13 @@ public class LiteralConverter {
       case ROW -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
         yield struct(
-            n,
-            literals.stream()
-                .map(LiteralConverter::convert)
-                .collect(java.util.stream.Collectors.toList()));
+            n, literals.stream().map(this::convert).collect(java.util.stream.Collectors.toList()));
       }
 
       case ARRAY -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
         yield list(
-            n,
-            literals.stream()
-                .map(LiteralConverter::convert)
-                .collect(java.util.stream.Collectors.toList()));
+            n, literals.stream().map(this::convert).collect(java.util.stream.Collectors.toList()));
       }
 
       default -> throw new UnsupportedOperationException(

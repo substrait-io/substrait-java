@@ -7,6 +7,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
+import io.substrait.isthmus.TypeConverter;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.util.Collections;
@@ -42,8 +43,9 @@ public class AggregateFunctionConverter
   public AggregateFunctionConverter(
       List<SimpleExtension.AggregateFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory) {
-    super(functions, additionalSignatures, typeFactory);
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override

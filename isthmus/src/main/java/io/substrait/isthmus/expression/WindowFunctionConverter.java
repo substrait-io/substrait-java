@@ -48,7 +48,8 @@ public class WindowFunctionConverter
   public WindowFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions,
       RelDataTypeFactory typeFactory,
-      AggregateFunctionConverter aggregateFunctionConverter) {
+      AggregateFunctionConverter aggregateFunctionConverter,
+      TypeConverter typeConverter) {
     super(functions, typeFactory);
     this.aggregateFunctionConverter = aggregateFunctionConverter;
   }
@@ -150,7 +151,7 @@ public class WindowFunctionConverter
         .addAllPartitionBy(partitionExps)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
-        .type(TypeConverter.convert(over.getType()))
+        .type(typeConverter.toSubstrait(over.getType()))
         .build();
   }
 
