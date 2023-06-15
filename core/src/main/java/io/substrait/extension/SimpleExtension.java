@@ -717,6 +717,8 @@ public class SimpleExtension {
           .addAllScalarFunctions(extensionCollection.scalarFunctions())
           .addAllWindowFunctions(windowFunctions())
           .addAllWindowFunctions(extensionCollection.windowFunctions())
+          .addAllTypes(types())
+          .addAllTypes(extensionCollection.types())
           .build();
     }
   }
