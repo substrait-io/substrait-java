@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.12.1](https://github.com/substrait-io/substrait-java/compare/v0.12.0...v0.12.1) (2023-06-18)
+
+
+### Bug Fixes
+
+* extension merging should include types ([#152](https://github.com/substrait-io/substrait-java/issues/152)) ([5718537](https://github.com/substrait-io/substrait-java/commit/57185375d960dc979e94581980e76eaa0d0e945c))
+
 ## [0.12.0](https://github.com/substrait-io/substrait-java/compare/v0.11.0...v0.12.0) (2023-06-06)
 
 
