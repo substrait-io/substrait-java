@@ -25,9 +25,9 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class SubstraitToCalcite {
 
-  private final SimpleExtension.ExtensionCollection extensions;
-  private final RelDataTypeFactory typeFactory;
-  private final TypeConverter typeConverter;
+  protected final SimpleExtension.ExtensionCollection extensions;
+  protected final RelDataTypeFactory typeFactory;
+  protected final TypeConverter typeConverter;
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {

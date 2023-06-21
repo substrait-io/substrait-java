@@ -147,7 +147,9 @@ public class CustomFunctionTest extends PlanTestBase {
   class CustomSubstraitToCalcite extends SubstraitToCalcite {
 
     public CustomSubstraitToCalcite(
-        SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+        SimpleExtension.ExtensionCollection extensions,
+        RelDataTypeFactory typeFactory,
+        TypeConverter typeConverter) {
       super(extensions, typeFactory, typeConverter);
     }
 
@@ -163,7 +165,7 @@ public class CustomFunctionTest extends PlanTestBase {
   }
 
   final SubstraitToCalcite substraitToCalcite =
-      new CustomSubstraitToCalcite(extensionCollection, typeFactory);
+      new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
 
   // Create a SubstraitRelVisitor that uses the custom Function Converters
   final SubstraitRelVisitor calciteToSubstrait =
