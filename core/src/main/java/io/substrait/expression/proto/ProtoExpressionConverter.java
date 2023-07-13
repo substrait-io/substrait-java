@@ -11,6 +11,7 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -67,7 +68,7 @@ public class ProtoExpressionConverter {
                     "Unhandled type: " + segment.getReferenceTypeCase());
               });
         }
-
+        Collections.reverse(segments);
         var fieldReference =
             switch (reference.getRootTypeCase()) {
               case EXPRESSION -> FieldReference.ofExpression(
