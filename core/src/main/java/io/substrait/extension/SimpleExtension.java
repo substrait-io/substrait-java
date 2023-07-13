@@ -119,6 +119,14 @@ public class SimpleExtension {
       return value;
     }
 
+    public String name() {
+      return name;
+    }
+
+    public boolean constant() {
+      return constant;
+    }
+
     public String description() {
       return description;
     }
