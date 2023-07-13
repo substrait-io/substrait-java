@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.plan.Plan;
+import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
 import io.substrait.type.Type;
@@ -149,6 +150,54 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       var relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
+    }
+
+    @Test
+    public void leftJoin() {
+      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+
+      Plan.Root root =
+          b.root(
+              b.project(
+                  r -> b.fieldReferences(r, 0, 1, 3),
+                  b.remap(6, 7, 8),
+                  b.join(ji -> b.bool(true), JoinType.LEFT, joinTable, joinTable)));
+
+      var relNode = converter.convert(root.getInput());
+      assertRowMatch(relNode.getRowType(), R.STRING, R.FP64, N.STRING);
+    }
+
+    @Test
+    public void rightJoin() {
+      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+
+      Plan.Root root =
+          b.root(
+              b.project(
+                  r -> b.fieldReferences(r, 0, 1, 3),
+                  b.remap(6, 7, 8),
+                  b.join(ji -> b.bool(true), JoinType.RIGHT, joinTable, joinTable)));
+
+      var relNode = converter.convert(root.getInput());
+      assertRowMatch(relNode.getRowType(), N.STRING, N.FP64, R.STRING);
+    }
+
+    @Test
+    public void outerJoin() {
+      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+
+      Plan.Root root =
+          b.root(
+              b.project(
+                  r -> b.fieldReferences(r, 0, 1, 3),
+                  b.remap(6, 7, 8),
+                  b.join(ji -> b.bool(true), JoinType.OUTER, joinTable, joinTable)));
+
+      var relNode = converter.convert(root.getInput());
+      assertRowMatch(relNode.getRowType(), N.STRING, N.FP64, N.STRING);
     }
   }
 
