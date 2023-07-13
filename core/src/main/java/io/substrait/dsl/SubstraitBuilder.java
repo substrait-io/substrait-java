@@ -3,7 +3,9 @@ package io.substrait.dsl;
 import com.github.bsideup.jabel.Desugar;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.ImmutablePlan;
@@ -243,6 +245,14 @@ public class SubstraitBuilder {
     return Arrays.stream(indexes)
         .mapToObj(index -> fieldReference(input, index))
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  public Expression cast(Expression input, Type type) {
+    return Cast.builder()
+        .input(input)
+        .type(type)
+        .failureBehavior(FailureBehavior.UNSPECIFIED)
+        .build();
   }
 
   public List<Expression.SortField> sortFields(Rel input, int... indexes) {
