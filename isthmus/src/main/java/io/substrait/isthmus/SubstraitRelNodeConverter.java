@@ -360,7 +360,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 
-  private RelNode applyRemap(RelNode relNode, Optional<Rel.Remap> remap) {
+  protected RelNode applyRemap(RelNode relNode, Optional<Rel.Remap> remap) {
     if (remap.isPresent()) {
       return applyRemap(relNode, remap.get());
     }
