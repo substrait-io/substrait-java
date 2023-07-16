@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.13.0](https://github.com/substrait-io/substrait-java/compare/v0.12.1...v0.13.0) (2023-07-16)
+
+
+### Features
+
+* add missing getters to ValueArgument ([#158](https://github.com/substrait-io/substrait-java/issues/158)) ([46f0b9f](https://github.com/substrait-io/substrait-java/commit/46f0b9f3007137a00f876c85fbc328e419fd1576))
+
+
+### Bug Fixes
+
+* left/right/outer joins have nullable fields ([#157](https://github.com/substrait-io/substrait-java/issues/157)) ([b987058](https://github.com/substrait-io/substrait-java/commit/b9870581ec53a54880238cd8d2cf5b377599da55))
+
 ## [0.12.1](https://github.com/substrait-io/substrait-java/compare/v0.12.0...v0.12.1) (2023-06-18)
 
 
