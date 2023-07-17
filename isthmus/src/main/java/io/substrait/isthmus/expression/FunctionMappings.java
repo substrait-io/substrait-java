@@ -63,7 +63,9 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.UPPER, "upper"),
                 s(SqlStdOperatorTable.BETWEEN),
                 s(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "is_not_distinct_from"),
-                s(SqlStdOperatorTable.COALESCE, "coalesce"))
+                s(SqlStdOperatorTable.COALESCE, "coalesce"),
+                s(SqlStdOperatorTable.CURRENT_DATE, "current_date"),
+                s(SqlStdOperatorTable.CURRENT_TIMESTAMP, "current_timestamp"))
             .build();
 
     AGGREGATE_SIGS =

@@ -1,10 +1,14 @@
 package io.substrait.isthmus;
 
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+
+import java.lang.reflect.Type;
+import java.util.function.Function;
 
 public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   static final org.slf4j.Logger logger =
@@ -14,8 +18,7 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
 
   private SubstraitTypeSystem() {}
 
-  @Override
-  public int getMaxPrecision(final SqlTypeName typeName) {
+  static private int fixedTimePrecision(final SqlTypeName typeName, final int otherwise) {
     switch (typeName) {
       case INTERVAL_DAY:
       case INTERVAL_YEAR:
@@ -25,8 +28,14 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         return 6;
+      default:
+        return otherwise;
     }
-    return super.getMaxPrecision(typeName);
+  }
+
+  @Override
+  public int getMaxPrecision(final SqlTypeName typeName) {
+    return fixedTimePrecision(typeName, super.getMaxPrecision(typeName));
   }
 
   @Override
@@ -40,6 +49,14 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   }
 
   public static RelDataTypeFactory createTypeFactory() {
-    return new JavaTypeFactoryImpl(TYPE_SYSTEM);
+    return new JavaTypeFactoryImpl(TYPE_SYSTEM) {
+      @Override public RelDataType createType(Type type) {
+        return super.createType(type);
+      }
+
+      @Override public RelDataType createSqlType(SqlTypeName typeName, int precision) {
+        return super.createSqlType(typeName, fixedTimePrecision(typeName, precision));
+      }
+    };
   }
 }

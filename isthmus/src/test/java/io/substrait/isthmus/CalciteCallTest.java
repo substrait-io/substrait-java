@@ -100,6 +100,16 @@ public class CalciteCallTest extends CalciteObjs {
     test("not:bool", rex.makeCall(NOT, c(false, SqlTypeName.BOOLEAN)));
   }
 
+  @Test
+  public void currentDate() throws IOException {
+    test("current_date:", rex.makeCall(CURRENT_DATE));
+  }
+
+  @Test
+  public void currentTimestamp() throws IOException {
+    test("current_timestamp:", rex.makeCall(CURRENT_TIMESTAMP) );
+  }
+
   private void test(String expectedName, RexNode call) {
     test(expectedName, call, c -> {}, true);
   }
