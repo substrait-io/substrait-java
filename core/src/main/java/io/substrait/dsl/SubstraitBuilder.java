@@ -6,6 +6,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableExpression.Cast;
+import io.substrait.expression.ImmutableExpression.SingleOrList;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.ImmutablePlan;
@@ -237,6 +238,10 @@ public class SubstraitBuilder {
     return Expression.BoolLiteral.builder().value(v).build();
   }
 
+  public Expression.I32Literal i32(int v) {
+    return Expression.I32Literal.builder().value(v).build();
+  }
+
   public FieldReference fieldReference(Rel input, int index) {
     return ImmutableFieldReference.newInputRelReference(index, input);
   }
@@ -264,6 +269,10 @@ public class SubstraitBuilder {
                     .direction(Expression.SortDirection.ASC_NULLS_LAST)
                     .build())
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  public Expression singleOrList(Expression condition, Expression... options) {
+    return SingleOrList.builder().condition(condition).addOptions(options).build();
   }
 
   // Aggregate Functions
