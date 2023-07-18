@@ -18,8 +18,8 @@ import java.util.List;
 import org.apache.calcite.rel.core.Filter;
 import org.junit.jupiter.api.Test;
 
-/** Tests which test that an expression round-trips correctly to and from Calcite expressions. */
-public class ExpressionRoundtripTest extends PlanTestBase {
+/** Tests which test that an expression can be converted to and from Calcite expressions. */
+public class ExpressionConvertabilityTest extends PlanTestBase {
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
 
