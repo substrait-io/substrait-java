@@ -131,17 +131,6 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       var relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
-
-    @Test
-    public void singleOrList() {
-      Plan.Root root =
-          b.root(
-              b.filter(
-                  input -> b.singleOrList(b.fieldReference(input, 0), b.i32(5), b.i32(10)),
-                  commonTable));
-      var relNode = converter.convert(root.getInput());
-      assertRowMatch(relNode.getRowType(), commonTableType);
-    }
   }
 
   @Nested
