@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import io.substrait.expression.*;
+import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
@@ -138,6 +139,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
             .withNanos(fracSecondsInNano);
     return rexBuilder.makeLiteral(timeString, typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(SingleOrList expr) throws RuntimeException {
+    var lhs = expr.condition().accept(this);
+    return rexBuilder.makeIn(
+        lhs, expr.options().stream().map(e -> e.accept(this)).collect(Collectors.toList()));
   }
 
   @Override
