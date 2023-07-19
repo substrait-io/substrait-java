@@ -25,6 +25,11 @@ public class SimplePlansTest extends PlanTestBase {
   }
 
   @Test
+  public void in() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("select * from lineitem WHERE L_ORDERKEY IN (10, 20)");
+  }
+
+  @Test
   public void joinWithMultiDDLInOneString() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select * from lineitem l, orders o WHERE o.o_orderkey = l.l_orderkey  and L_ORDERKEY > 10");
