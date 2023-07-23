@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.14.0](https://github.com/substrait-io/substrait-java/compare/v0.13.0...v0.14.0) (2023-07-23)
+
+
+### Features
+
+* Add SingleOrList support to the Isthmus converter ([#159](https://github.com/substrait-io/substrait-java/issues/159)) ([297c535](https://github.com/substrait-io/substrait-java/commit/297c535875b5084967c27d7f72639c16b9563477))
+
 ## [0.13.0](https://github.com/substrait-io/substrait-java/compare/v0.12.1...v0.13.0) (2023-07-16)
 
 
