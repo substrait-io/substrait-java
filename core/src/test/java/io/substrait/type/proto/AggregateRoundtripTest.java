@@ -2,12 +2,12 @@ package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.TestBase;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ImmutableAggregate;
@@ -21,19 +21,18 @@ import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
-public class AggregateRoundtripTest {
+public class AggregateRoundtripTest extends TestBase {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(AggregateRoundtripTest.class);
 
-  private void assertAggregateRoundtrip(AggregateFunction.AggregationInvocation invocation)
-      throws IOException {
+  private void assertAggregateRoundtrip(AggregateFunction.AggregationInvocation invocation) {
     var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
         ImmutableExpression.StructLiteral.builder().from(expression).build();
     var input = VirtualTableScan.builder().addRows(literal).build();
     ExtensionCollector functionCollector = new ExtensionCollector();
     var to = new RelProtoConverter(functionCollector);
-    var extensions = SimpleExtension.loadDefaults();
+    var extensions = defaultExtensionCollection;
     var from = new ProtoRelConverter(functionCollector, extensions);
 
     var measure =

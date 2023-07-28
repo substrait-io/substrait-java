@@ -2,6 +2,7 @@ package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.TestBase;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
@@ -30,7 +31,6 @@ import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
@@ -38,19 +38,11 @@ import org.junit.jupiter.api.Test;
  * Verify that the various extension types in {@link io.substrait.relation.Extension} roundtrip
  * correctly.
  */
-public class ExtensionRoundtripTest {
+public class ExtensionRoundtripTest extends TestBase {
 
   TypeCreator R = TypeCreator.REQUIRED;
 
-  final SimpleExtension.ExtensionCollection extensions;
-
-  {
-    try {
-      extensions = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
+  final SimpleExtension.ExtensionCollection extensions = defaultExtensionCollection;
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
   final ExtensionCollector functionCollector = new ExtensionCollector();
