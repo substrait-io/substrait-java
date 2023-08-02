@@ -189,11 +189,7 @@ public class ProtoExpressionConverter {
                 expr.getSubquery().getInPredicate().getNeedlesList().stream()
                     .map(e -> this.from(e))
                     .collect(java.util.stream.Collectors.toList());
-            yield ImmutableExpression.InPredicate.builder()
-                .haystack(rel)
-                .needles(needles)
-                .type(rel.getRecordType())
-                .build();
+            yield ImmutableExpression.InPredicate.builder().haystack(rel).needles(needles).build();
           }
           case SET_COMPARISON -> {
             throw new UnsupportedOperationException(

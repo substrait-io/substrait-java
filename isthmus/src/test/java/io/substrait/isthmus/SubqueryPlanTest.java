@@ -176,8 +176,6 @@ public class SubqueryPlanTest {
             .getScalarFunction()
             .getArguments(0)
             .getValue()
-            .getCast()
-            .getInput()
             .getSubquery();
 
     assertTrue(subquery.hasInPredicate());

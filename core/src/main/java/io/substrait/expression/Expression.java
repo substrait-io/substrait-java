@@ -668,6 +668,10 @@ public interface Expression extends FunctionArg {
 
     public abstract List<Expression> needles();
 
+    public Type getType() {
+      return Type.REQUIRED.BOOLEAN;
+    }
+
     public static ImmutableExpression.InPredicate.Builder builder() {
       return ImmutableExpression.InPredicate.builder();
     }

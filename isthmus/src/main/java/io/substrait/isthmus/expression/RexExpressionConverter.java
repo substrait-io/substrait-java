@@ -155,11 +155,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       for (RexNode inOperand : subQuery.getOperands()) {
         needles.add(inOperand.accept(this));
       }
-      return Expression.InPredicate.builder()
-          .needles(needles)
-          .haystack(rel)
-          .type(typeConverter.toSubstrait(subQuery.rel.getRowType()))
-          .build();
+      return Expression.InPredicate.builder().needles(needles).haystack(rel).build();
     }
 
     throw new UnsupportedOperationException("RexSubQuery not supported");
