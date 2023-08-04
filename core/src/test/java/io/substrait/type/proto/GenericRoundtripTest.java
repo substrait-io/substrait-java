@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.google.protobuf.ByteString;
+import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.extension.ExtensionCollector;
+import io.substrait.relation.ProtoRelConverter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,7 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class GenericRoundtripTest {
+public class GenericRoundtripTest extends TestBase {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(GenericRoundtripTest.class);
 
@@ -50,7 +53,12 @@ public class GenericRoundtripTest {
     Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
 
     var to = new ExpressionProtoConverter(null, null);
-    var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE);
+    var from =
+        new ProtoExpressionConverter(
+            null,
+            null,
+            EMPTY_TYPE,
+            new ProtoRelConverter(new ExtensionCollector(), defaultExtensionCollection));
     assertEquals(val, from.from(val.accept(to)));
   }
 

@@ -28,15 +28,18 @@ public class ProtoExpressionConverter {
   private final SimpleExtension.ExtensionCollection extensions;
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
+  private final ProtoRelConverter protoRelConverter;
 
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
       SimpleExtension.ExtensionCollection extensions,
-      Type.Struct rootType) {
+      Type.Struct rootType,
+      ProtoRelConverter relConverter) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
+    this.protoRelConverter = relConverter;
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
@@ -162,9 +165,7 @@ public class ProtoExpressionConverter {
       case SUBQUERY -> {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {
-            var rel =
-                new ProtoRelConverter(lookup, extensions)
-                    .from(expr.getSubquery().getSetPredicate().getTuples());
+            var rel = protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
             yield ImmutableExpression.SetPredicate.builder()
                 .tuples(rel)
                 .predicateOp(
@@ -173,27 +174,19 @@ public class ProtoExpressionConverter {
                 .build();
           }
           case SCALAR -> {
-            var rel =
-                new ProtoRelConverter(lookup, extensions)
-                    .from(expr.getSubquery().getScalar().getInput());
+            var rel = protoRelConverter.from(expr.getSubquery().getScalar().getInput());
             yield ImmutableExpression.ScalarSubquery.builder()
                 .input(rel)
                 .type(rel.getRecordType())
                 .build();
           }
           case IN_PREDICATE -> {
-            var rel =
-                new ProtoRelConverter(lookup, extensions)
-                    .from(expr.getSubquery().getInPredicate().getHaystack());
+            var rel = protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
             var needles =
                 expr.getSubquery().getInPredicate().getNeedlesList().stream()
                     .map(e -> this.from(e))
                     .collect(java.util.stream.Collectors.toList());
-            yield ImmutableExpression.InPredicate.builder()
-                .haystack(rel)
-                .needles(needles)
-                .type(rel.getRecordType())
-                .build();
+            yield ImmutableExpression.InPredicate.builder().haystack(rel).needles(needles).build();
           }
           case SET_COMPARISON -> {
             throw new UnsupportedOperationException(
