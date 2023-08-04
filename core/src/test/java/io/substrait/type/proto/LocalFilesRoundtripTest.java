@@ -3,6 +3,7 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.TestBase;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
@@ -22,9 +23,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-public class LocalFilesRoundtripTest {
+public class LocalFilesRoundtripTest extends TestBase {
 
-  SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
+  SimpleExtension.ExtensionCollection extensions = defaultExtensionCollection;
 
   public LocalFilesRoundtripTest() throws IOException {}
 

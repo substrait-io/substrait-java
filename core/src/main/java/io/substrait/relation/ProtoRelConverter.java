@@ -121,7 +121,7 @@ public class ProtoRelConverter {
         Filter.builder()
             .input(input)
             .condition(
-                new ProtoExpressionConverter(lookup, extensions, input.getRecordType())
+                new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this)
                     .from(rel.getCondition()));
 
     builder
@@ -157,7 +157,8 @@ public class ProtoRelConverter {
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
-                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
                         : null));
 
@@ -211,7 +212,8 @@ public class ProtoRelConverter {
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
-                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
                         : null));
 
@@ -251,7 +253,8 @@ public class ProtoRelConverter {
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
-                        ? new ProtoExpressionConverter(lookup, extensions, namedStruct.struct())
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
                         : null));
 
@@ -296,7 +299,7 @@ public class ProtoRelConverter {
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE);
+    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE, this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
@@ -339,7 +342,7 @@ public class ProtoRelConverter {
 
   private Project newProject(ProjectRel rel) {
     var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     var builder =
         Project.builder()
             .input(input)
@@ -360,7 +363,7 @@ public class ProtoRelConverter {
   private Aggregate newAggregate(AggregateRel rel) {
     var input = from(rel.getInput());
     var protoExprConverter =
-        new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
     for (var grouping : rel.getGroupingsList()) {
       groupings.add(
@@ -408,7 +411,7 @@ public class ProtoRelConverter {
 
   private Sort newSort(SortRel rel) {
     var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType());
+    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     var builder =
         Sort.builder()
             .input(input)
@@ -437,7 +440,7 @@ public class ProtoRelConverter {
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct);
+    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
     var builder =
         Join.builder()
             .left(left)

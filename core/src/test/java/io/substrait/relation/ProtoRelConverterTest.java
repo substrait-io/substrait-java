@@ -4,32 +4,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.TestBase;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.utils.StringHolder;
-import java.io.IOException;
 import java.util.Collections;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class ProtoRelConverterTest {
+public class ProtoRelConverterTest extends TestBase {
 
-  final SimpleExtension.ExtensionCollection extensions;
-
-  {
-    try {
-      extensions = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
+  final SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
   final ExtensionCollector functionCollector = new ExtensionCollector();
   final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
-  final ProtoRelConverter protoRelConverter = new ProtoRelConverter(functionCollector, extensions);
+  final ProtoRelConverter protoRelConverter =
+      new ProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   final NamedScan commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
