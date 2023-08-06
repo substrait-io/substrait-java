@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.14.1](https://github.com/substrait-io/substrait-java/compare/v0.14.0...v0.14.1) (2023-08-06)
+
+
+### Bug Fixes
+
+* handle custom extensions through expressions ([#161](https://github.com/substrait-io/substrait-java/issues/161)) ([af91dc3](https://github.com/substrait-io/substrait-java/commit/af91dc3590ed07a5f9b91a75faf07ce30a0f7218))
+
 ## [0.14.0](https://github.com/substrait-io/substrait-java/compare/v0.13.0...v0.14.0) (2023-07-23)
 
 
