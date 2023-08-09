@@ -2,7 +2,6 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
@@ -279,7 +278,7 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
-      AggregateFunction.AggregationInvocation invocation,
+      Expression.AggregationInvocation invocation,
       Iterable<? extends FunctionArg> arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
@@ -296,7 +295,7 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
-      AggregateFunction.AggregationInvocation invocation,
+      Expression.AggregationInvocation invocation,
       FunctionArg... arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
@@ -313,7 +312,7 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
-      AggregateFunction.AggregationInvocation invocation,
+      Expression.AggregationInvocation invocation,
       Iterable<? extends FunctionArg> arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)
@@ -330,7 +329,7 @@ public class ExpressionCreator {
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
-      AggregateFunction.AggregationInvocation invocation,
+      Expression.AggregationInvocation invocation,
       FunctionArg... arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)

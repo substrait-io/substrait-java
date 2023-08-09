@@ -1,13 +1,12 @@
 package io.substrait.isthmus;
 
-import static io.substrait.proto.AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL;
-import static io.substrait.proto.AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT;
 import static io.substrait.relation.RelCopyOnWriteVisitor.transformList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.AggregateFunctionInvocation;
+import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.ImmutablePlan;
 import io.substrait.plan.ImmutableRoot;
@@ -218,7 +217,9 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
                 .filter(
                     m ->
                         m.getFunction().declaration().getAnchor().equals(COUNT)
-                            && m.getFunction().invocation() == AGGREGATION_INVOCATION_DISTINCT)
+                            && m.getFunction()
+                                .invocation()
+                                .equals(Expression.AggregationInvocation.DISTINCT))
                 .count();
         return super.visit(aggregate);
       }
@@ -284,7 +285,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
         return transformList(
                 aggregate.getMeasures(),
                 m -> {
-                  if (m.getFunction().invocation() == AGGREGATION_INVOCATION_DISTINCT
+                  if (m.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT)
                       && m.getFunction().declaration().getAnchor().equals(COUNT)) {
                     return Optional.of(
                         Aggregate.Measure.builder()
@@ -293,7 +294,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
                                 AggregateFunctionInvocation.builder()
                                     .from(m.getFunction())
                                     .declaration(approxFunc)
-                                    .invocation(AGGREGATION_INVOCATION_ALL)
+                                    .invocation(Expression.AggregationInvocation.ALL)
                                     .build())
                             .build());
                   }

@@ -95,7 +95,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     var func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
-            .setInvocation(measure.getFunction().invocation())
+            .setInvocation(measure.getFunction().invocation().toProto())
             .setOutputType(toProto(measure.getFunction().getType()))
             .addAllArguments(
                 IntStream.range(0, args.size())
