@@ -33,7 +33,7 @@ public interface WindowBound {
 
     @Override
     public BoundedKind boundedKind() {
-      return BoundedKind.UNBOUNDED;
+      return BoundedKind.BOUNDED;
     }
 
     public abstract Direction direction();
