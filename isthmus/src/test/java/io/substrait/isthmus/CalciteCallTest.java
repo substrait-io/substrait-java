@@ -52,7 +52,7 @@ public class CalciteCallTest extends CalciteObjs {
         rex.makeCall(
             t(SqlTypeName.INTEGER),
             SqlStdOperatorTable.EXTRACT,
-            ImmutableList.of(rex.makeFlag(TimeUnitRange.MONTH), c(10L, SqlTypeName.TIMESTAMP, 10))),
+            ImmutableList.of(rex.makeFlag(TimeUnitRange.HOUR), c(10L, SqlTypeName.TIMESTAMP, 10))),
         func -> {},
         false);
   }
