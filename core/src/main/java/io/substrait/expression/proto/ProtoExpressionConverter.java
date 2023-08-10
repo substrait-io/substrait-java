@@ -5,7 +5,10 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
+import io.substrait.expression.WindowBound;
+import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
@@ -109,7 +112,73 @@ public class ProtoExpressionConverter {
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
-            .outputType(protoTypeConverter.from(expr.getScalarFunction().getOutputType()))
+            .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
+            .build();
+      }
+      case WINDOW_FUNCTION -> {
+        var windowFunction = expr.getWindowFunction();
+        var functionReference = windowFunction.getFunctionReference();
+        SimpleExtension.WindowFunctionVariant functionVariant;
+        try {
+          functionVariant = lookup.getWindowFunction(functionReference, extensions);
+        } catch (RuntimeException e) {
+          // TODO: Ideally we shouldn't need to catch a RuntimeException to be able to attempt our
+          // second lookup
+          var aggFunctionVariant = lookup.getAggregateFunction(functionReference, extensions);
+          functionVariant =
+              ImmutableSimpleExtension.WindowFunctionVariant.builder()
+                  // Sets all fields declared in the Function interface
+                  .from(aggFunctionVariant)
+                  // Set WindowFunctionVariant fields
+                  .decomposability(aggFunctionVariant.decomposability())
+                  .intermediate(aggFunctionVariant.intermediate())
+                  // Aggregate Functions used in Windows have WindowType Streaming
+                  .windowType(SimpleExtension.WindowType.STREAMING)
+                  .build();
+        }
+        final SimpleExtension.WindowFunctionVariant declaration = functionVariant;
+
+        var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+        var args =
+            IntStream.range(0, windowFunction.getArgumentsCount())
+                .mapToObj(i -> pF.convert(declaration, i, windowFunction.getArguments(i)))
+                .collect(java.util.stream.Collectors.toList());
+        var partitionExprs =
+            windowFunction.getPartitionsList().stream()
+                .map(this::from)
+                .collect(java.util.stream.Collectors.toList());
+        var sortFields =
+            windowFunction.getSortsList().stream()
+                .map(
+                    s ->
+                        Expression.SortField.builder()
+                            .direction(Expression.SortDirection.fromProto(s.getDirection()))
+                            .expr(from(s.getExpr()))
+                            .build())
+                .collect(java.util.stream.Collectors.toList());
+        var wfi =
+            WindowFunctionInvocation.builder()
+                .addAllArguments(args)
+                .declaration(declaration)
+                .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
+                .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
+                .addAllSort(sortFields)
+                .invocation(
+                    Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
+                .build();
+
+        WindowBound lowerBound = toLowerBound(windowFunction.getLowerBound());
+        WindowBound upperBound = toUpperBound(windowFunction.getUpperBound());
+
+        var wf = ImmutableExpression.WindowFunction.builder().function(wfi).build();
+        yield Expression.Window.builder()
+            .windowFunction(wf)
+            .hasNormalAggregateFunction(false)
+            .type(protoTypeConverter.from(windowFunction.getOutputType()))
+            .partitionBy(partitionExprs)
+            .orderBy(sortFields)
+            .lowerBound(lowerBound)
+            .upperBound(upperBound)
             .build();
       }
       case IF_THEN -> {
@@ -199,10 +268,48 @@ public class ProtoExpressionConverter {
         }
       }
 
-        // TODO window, enum.
-      case WINDOW_FUNCTION, ENUM -> throw new UnsupportedOperationException(
+        // TODO enum.
+      case ENUM -> throw new UnsupportedOperationException(
           "Unsupported type: " + expr.getRexTypeCase());
       default -> throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
+    };
+  }
+
+  private WindowBound toLowerBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
+    return toWindowBound(
+        bound,
+        WindowBound.UnboundedWindowBound.builder()
+            .direction(WindowBound.Direction.PRECEDING)
+            .build());
+  }
+
+  private WindowBound toUpperBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
+    return toWindowBound(
+        bound,
+        WindowBound.UnboundedWindowBound.builder()
+            .direction(WindowBound.Direction.FOLLOWING)
+            .build());
+  }
+
+  private WindowBound toWindowBound(
+      io.substrait.proto.Expression.WindowFunction.Bound bound, WindowBound defaultBound) {
+    return switch (bound.getKindCase()) {
+      case PRECEDING -> WindowBound.BoundedWindowBound.builder()
+          .direction(WindowBound.Direction.PRECEDING)
+          .offset(
+              Expression.Literal.I64Literal.builder()
+                  .value(bound.getPreceding().getOffset())
+                  .build())
+          .build();
+      case FOLLOWING -> WindowBound.BoundedWindowBound.builder()
+          .direction(WindowBound.Direction.FOLLOWING)
+          .offset(
+              Expression.Literal.I64Literal.builder()
+                  .value(bound.getFollowing().getOffset())
+                  .build())
+          .build();
+      case CURRENT_ROW -> WindowBound.CURRENT_ROW;
+      case UNBOUNDED, KIND_NOT_SET -> defaultBound;
     };
   }
 

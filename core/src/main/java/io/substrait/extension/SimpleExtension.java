@@ -61,7 +61,7 @@ public class SimpleExtension {
     MANY
   }
 
-  enum WindowType {
+  public enum WindowType {
     PARTITION,
     STREAMING
   }
