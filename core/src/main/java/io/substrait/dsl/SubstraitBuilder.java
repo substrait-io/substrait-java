@@ -12,7 +12,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.ImmutablePlan;
 import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.Fetch;
@@ -286,7 +285,7 @@ public class SubstraitBuilder {
         .outputType(outputType)
         .declaration(declaration)
         .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-        .invocation(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL)
+        .invocation(Expression.AggregationInvocation.ALL)
         .build();
   }
 
@@ -304,7 +303,7 @@ public class SubstraitBuilder {
         .outputType(R.I64)
         .declaration(declaration)
         .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-        .invocation(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL)
+        .invocation(Expression.AggregationInvocation.ALL)
         .build();
   }
 
