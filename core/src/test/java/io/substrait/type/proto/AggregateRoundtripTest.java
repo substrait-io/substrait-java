@@ -8,7 +8,6 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ProtoRelConverter;
@@ -25,7 +24,7 @@ public class AggregateRoundtripTest extends TestBase {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(AggregateRoundtripTest.class);
 
-  private void assertAggregateRoundtrip(AggregateFunction.AggregationInvocation invocation) {
+  private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
         ImmutableExpression.StructLiteral.builder().from(expression).build();
@@ -51,16 +50,14 @@ public class AggregateRoundtripTest extends TestBase {
     var protoAggRel = to.toProto(aggRel);
     assertEquals(
         protoAggRel.getAggregate().getMeasuresList().get(0).getMeasure().getInvocation(),
-        invocation);
+        invocation.toProto());
     assertEquals(protoAggRel, to.toProto(from.from(protoAggRel)));
   }
 
   @Test
   void aggregateInvocationRoundtrip() throws IOException {
-    for (var invocation : AggregateFunction.AggregationInvocation.values()) {
-      if (invocation != AggregateFunction.AggregationInvocation.UNRECOGNIZED) {
-        assertAggregateRoundtrip(invocation);
-      }
+    for (var invocation : Expression.AggregationInvocation.values()) {
+      assertAggregateRoundtrip(invocation);
     }
   }
 }

@@ -391,7 +391,7 @@ public class ProtoRelConverter {
                       .declaration(funcDecl)
                       .outputType(protoTypeConverter.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
-                      .invocation(func.getInvocation())
+                      .invocation(Expression.AggregationInvocation.fromProto(func.getInvocation()))
                       .build())
               .preMeasureFilter(
                   Optional.ofNullable(

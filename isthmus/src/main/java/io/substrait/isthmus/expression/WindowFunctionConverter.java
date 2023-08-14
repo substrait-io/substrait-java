@@ -11,7 +11,6 @@ import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.Type;
 import java.util.Collections;
@@ -68,10 +67,10 @@ public class WindowFunctionConverter
                 .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
-    AggregateFunction.AggregationInvocation invocation =
+    Expression.AggregationInvocation invocation =
         agg.isDistinct()
-            ? AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT
-            : AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL;
+            ? Expression.AggregationInvocation.DISTINCT
+            : Expression.AggregationInvocation.ALL;
     return ExpressionCreator.windowFunction(
         function,
         outputType,

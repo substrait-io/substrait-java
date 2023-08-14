@@ -253,12 +253,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     }
 
     boolean distinct =
-        switch (measure.getFunction().invocation()) {
-          case AGGREGATION_INVOCATION_DISTINCT:
-            yield true;
-          default:
-            yield false;
-        };
+        measure.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT);
 
     SqlAggFunction aggFunction;
     RelDataType returnType = typeConverter.toCalcite(typeFactory, measure.getFunction().getType());

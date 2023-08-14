@@ -1,7 +1,6 @@
 package io.substrait.expression;
 
 import io.substrait.extension.SimpleExtension;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.type.Type;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,7 @@ public abstract class AggregateFunctionInvocation {
     return outputType();
   }
 
-  public abstract AggregateFunction.AggregationInvocation invocation();
+  public abstract Expression.AggregationInvocation invocation();
 
   public static ImmutableAggregateFunctionInvocation.Builder builder() {
     return ImmutableAggregateFunctionInvocation.builder();

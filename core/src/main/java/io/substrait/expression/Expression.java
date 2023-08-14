@@ -2,6 +2,7 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
@@ -736,6 +737,32 @@ public interface Expression extends FunctionArg {
 
     public static PredicateOp fromProto(
         io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
+      for (var v : values()) {
+        if (v.proto == proto) {
+          return v;
+        }
+      }
+
+      throw new IllegalArgumentException("Unknown type: " + proto);
+    }
+  }
+
+  enum AggregationInvocation {
+    UNSPECIFIED(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_UNSPECIFIED),
+    ALL(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL),
+    DISTINCT(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT);
+
+    private final io.substrait.proto.AggregateFunction.AggregationInvocation proto;
+
+    AggregationInvocation(io.substrait.proto.AggregateFunction.AggregationInvocation proto) {
+      this.proto = proto;
+    }
+
+    public io.substrait.proto.AggregateFunction.AggregationInvocation toProto() {
+      return proto;
+    }
+
+    public static AggregationInvocation fromProto(AggregateFunction.AggregationInvocation proto) {
       for (var v : values()) {
         if (v.proto == proto) {
           return v;
