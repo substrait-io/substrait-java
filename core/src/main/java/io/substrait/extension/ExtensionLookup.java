@@ -9,6 +9,9 @@ public interface ExtensionLookup {
   SimpleExtension.ScalarFunctionVariant getScalarFunction(
       int reference, SimpleExtension.ExtensionCollection extensions);
 
+  SimpleExtension.WindowFunctionVariant getWindowFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions);
+
   SimpleExtension.AggregateFunctionVariant getAggregateFunction(
       int reference, SimpleExtension.ExtensionCollection extensions);
 

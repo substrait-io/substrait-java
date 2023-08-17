@@ -72,6 +72,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.MIN, "min"),
                 s(SqlStdOperatorTable.MAX, "max"),
                 s(SqlStdOperatorTable.SUM, "sum"),
+                s(SqlStdOperatorTable.SUM0, "sum0"),
                 s(SqlStdOperatorTable.COUNT, "count"),
                 s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
                 s(SqlStdOperatorTable.AVG, "avg"))

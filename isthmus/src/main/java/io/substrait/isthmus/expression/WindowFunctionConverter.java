@@ -175,7 +175,7 @@ public class WindowFunctionConverter
   private WindowBound toWindowBound(
       RexWindowBound rexWindowBound, RexExpressionConverter rexExpressionConverter) {
     if (rexWindowBound.isCurrentRow()) {
-      return ImmutableWindowBound.CurrentRowWindowBound.builder().build();
+      return WindowBound.CURRENT_ROW;
     }
     if (rexWindowBound.isUnbounded()) {
       var direction = findWindowBoundDirection(rexWindowBound);

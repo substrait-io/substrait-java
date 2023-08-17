@@ -24,6 +24,17 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     return extensions.getScalarFunction(anchor);
   }
 
+  public SimpleExtension.WindowFunctionVariant getWindowFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions) {
+    var anchor = functionAnchorMap.get(reference);
+    if (anchor == null) {
+      throw new IllegalArgumentException(
+          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
+    }
+
+    return extensions.getWindowFunction(anchor);
+  }
+
   public SimpleExtension.AggregateFunctionVariant getAggregateFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     var anchor = functionAnchorMap.get(reference);
