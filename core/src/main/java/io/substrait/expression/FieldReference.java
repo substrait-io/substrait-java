@@ -40,8 +40,8 @@ public abstract class FieldReference implements Expression {
   private FieldReference dereference(Type newType, ReferenceSegment nextSegment) {
     return ImmutableFieldReference.builder()
         .type(newType)
-        .addAllSegments(segments())
         .addSegments(nextSegment)
+        .addAllSegments(segments())
         .inputExpression(inputExpression())
         .build();
   }

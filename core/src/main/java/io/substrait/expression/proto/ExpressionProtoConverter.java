@@ -325,7 +325,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
 
   @Override
   public Expression visit(FieldReference expr) {
-    Expression.ReferenceSegment top = null;
+
     Expression.ReferenceSegment seg = null;
     for (var segment : expr.segments()) {
       Expression.ReferenceSegment.Builder protoSegment;
@@ -351,13 +351,11 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
       var builtSegment = protoSegment.build();
-      if (top == null) {
-        top = builtSegment;
-      }
       seg = builtSegment;
     }
 
-    var out = Expression.FieldReference.newBuilder().setDirectReference(top);
+    var out = Expression.FieldReference.newBuilder().setDirectReference(seg);
+
     if (expr.inputExpression().isPresent()) {
       out.setExpression(from(expr.inputExpression().get()));
     } else if (expr.outerReferenceStepsOut().isPresent()) {

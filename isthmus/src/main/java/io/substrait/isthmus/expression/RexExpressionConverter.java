@@ -14,9 +14,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.*;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 public class RexExpressionConverter implements RexVisitor<Expression> {
+
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(RexExpressionConverter.class);
 
@@ -119,16 +121,28 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitFieldAccess(RexFieldAccess fieldAccess) {
-    if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
-      int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
+    SqlKind kind = fieldAccess.getReferenceExpr().getKind();
+    switch (kind) {
+      case CORREL_VARIABLE -> {
+        int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
 
-      return FieldReference.newRootStructOuterReference(
-          fieldAccess.getField().getIndex(),
-          typeConverter.toSubstrait(fieldAccess.getType()),
-          stepsOut);
+        return FieldReference.newRootStructOuterReference(
+            fieldAccess.getField().getIndex(),
+            typeConverter.toSubstrait(fieldAccess.getType()),
+            stepsOut);
+      }
+      case ITEM, INPUT_REF, FIELD_ACCESS -> {
+        Expression expression = fieldAccess.getReferenceExpr().accept(this);
+        if (expression instanceof FieldReference) {
+          FieldReference nestedReference = (FieldReference) expression;
+          return nestedReference.dereferenceStruct(fieldAccess.getField().getIndex());
+        } else {
+          return FieldReference.newStructReference(fieldAccess.getField().getIndex(), expression);
+        }
+      }
+      default -> throw new UnsupportedOperationException(
+          String.format("RexFieldAccess for SqlKind %s not supported", kind));
     }
-    throw new UnsupportedOperationException(
-        "RexFieldAccess for other than RexCorrelVariable not supported");
   }
 
   @Override
