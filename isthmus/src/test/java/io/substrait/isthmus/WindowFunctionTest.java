@@ -47,7 +47,7 @@ public class WindowFunctionTest extends PlanTestBase {
     @Disabled
     void ntile() throws IOException, SqlParseException {
       // TODO: The WindowFunctionConverter has some assumptions about function arguments that need
-      // to be address for this to work.
+      // to be addressed for this to work.
       assertProtoPlanRoundrip("select O_ORDERKEY, ntile(4) over () from ORDERS");
     }
   }
@@ -75,9 +75,9 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS UNBOUNDED PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClaus = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
+      var overClause = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
       assertProtoPlanRoundrip(
-          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClaus));
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
 
     @Test
