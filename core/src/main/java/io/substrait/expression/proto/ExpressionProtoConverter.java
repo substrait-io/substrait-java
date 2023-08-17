@@ -1,5 +1,6 @@
 package io.substrait.expression.proto;
 
+import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -418,7 +419,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         expr.partitionBy().stream()
             .map(e -> e.accept(this))
             .collect(java.util.stream.Collectors.toList());
-    var builder = Expression.WindowFunction.newBuilder();
+    var outputType = expr.getType().accept(typeProtoConverter);
+    var builder = Expression.WindowFunction.newBuilder().setOutputType(outputType);
     if (expr.hasNormalAggregateFunction()) {
       var aggMeasureFunc = expr.aggregateFunction().getFunction();
       var funcReference = extensionCollector.getFunctionReference(aggMeasureFunc.declaration());
@@ -427,18 +429,22 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
           aggMeasureFunc.arguments().stream()
               .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
               .collect(java.util.stream.Collectors.toList());
-      var ordinal = aggMeasureFunc.aggregationPhase().ordinal();
-      builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
+      builder
+          .setFunctionReference(funcReference)
+          .setPhase(aggMeasureFunc.aggregationPhase().toProto())
+          .addAllArguments(args);
     } else {
       var windowFunc = expr.windowFunction().getFunction();
       var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
-      var ordinal = windowFunc.aggregationPhase().ordinal();
       var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
       var args =
           windowFunc.arguments().stream()
               .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
               .collect(java.util.stream.Collectors.toList());
-      builder.setFunctionReference(funcReference).setPhaseValue(ordinal).addAllArguments(args);
+      builder
+          .setFunctionReference(funcReference)
+          .setPhase(windowFunc.aggregationPhase().toProto())
+          .addAllArguments(args);
     }
     var sortFields =
         expr.orderBy().stream()
@@ -463,57 +469,68 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
+  private static class LiteralToWindowBoundOffset
+      extends AbstractExpressionVisitor<Long, RuntimeException> {
+
+    @Override
+    public Long visitFallback(io.substrait.expression.Expression expr) {
+      throw new RuntimeException(
+          String.format("Expected positive integer for Window Bound offset, received: %s", expr));
+    }
+
+    private static long offsetIsPositive(long offset) {
+      if (offset >= 1) {
+        return offset;
+      }
+      throw new RuntimeException(
+          String.format("Expected positive offset for Window Bound offset, recieved: %d", offset));
+    }
+
+    @Override
+    public Long visit(io.substrait.expression.Expression.I8Literal expr) throws RuntimeException {
+      return offsetIsPositive(expr.value());
+    }
+
+    @Override
+    public Long visit(io.substrait.expression.Expression.I16Literal expr) throws RuntimeException {
+      return offsetIsPositive(expr.value());
+    }
+
+    @Override
+    public Long visit(io.substrait.expression.Expression.I32Literal expr) throws RuntimeException {
+      return offsetIsPositive(expr.value());
+    }
+
+    @Override
+    public Long visit(io.substrait.expression.Expression.I64Literal expr) throws RuntimeException {
+      return offsetIsPositive(expr.value());
+    }
+  }
+
   private Expression.WindowFunction.Bound toBound(io.substrait.expression.WindowBound windowBound) {
     var boundedKind = windowBound.boundedKind();
-    Expression.WindowFunction.Bound bound = null;
-    switch (boundedKind) {
-      case CURRENT_ROW -> bound =
-          Expression.WindowFunction.Bound.newBuilder()
-              .setCurrentRow(Expression.WindowFunction.Bound.CurrentRow.getDefaultInstance())
-              .build();
+    return switch (boundedKind) {
+      case CURRENT_ROW -> Expression.WindowFunction.Bound.newBuilder()
+          .setCurrentRow(Expression.WindowFunction.Bound.CurrentRow.getDefaultInstance())
+          .build();
       case BOUNDED -> {
         WindowBound.BoundedWindowBound boundedWindowBound =
             (WindowBound.BoundedWindowBound) windowBound;
-        var offset = boundedWindowBound.offset();
-        boolean isPreceding = boundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
-        io.substrait.expression.Expression.I32Literal offsetLiteral =
-            (io.substrait.expression.Expression.I32Literal) offset;
-        var offsetVal = offsetLiteral.value();
-        var boundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
-        if (isPreceding) {
-          var offsetProto =
-              Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offsetVal).build();
-          bound = Expression.WindowFunction.Bound.newBuilder().setPreceding(offsetProto).build();
-        } else {
-          var offsetProto =
-              Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offsetVal).build();
-          bound = Expression.WindowFunction.Bound.newBuilder().setFollowing(offsetProto).build();
-        }
+        var offset = boundedWindowBound.offset().accept(new LiteralToWindowBoundOffset());
+        yield switch (boundedWindowBound.direction()) {
+          case PRECEDING -> Expression.WindowFunction.Bound.newBuilder()
+              .setPreceding(
+                  Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offset))
+              .build();
+          case FOLLOWING -> Expression.WindowFunction.Bound.newBuilder()
+              .setFollowing(
+                  Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offset))
+              .build();
+        };
       }
-      case UNBOUNDED -> {
-        WindowBound.UnboundedWindowBound unboundedWindowBound =
-            (WindowBound.UnboundedWindowBound) windowBound;
-        boolean isPreceding = unboundedWindowBound.direction() == WindowBound.Direction.PRECEDING;
-        var unboundedProto = Expression.WindowFunction.Bound.Unbounded.getDefaultInstance();
-        if (isPreceding) {
-          var preceding = Expression.WindowFunction.Bound.Preceding.newBuilder().build();
-          bound =
-              Expression.WindowFunction.Bound.newBuilder()
-                  .setUnbounded(unboundedProto)
-                  .setPreceding(preceding)
-                  .build();
-        } else {
-          var following = Expression.WindowFunction.Bound.Following.newBuilder().build();
-          bound =
-              Expression.WindowFunction.Bound.newBuilder()
-                  .setUnbounded(unboundedProto)
-                  .setFollowing(following)
-                  .build();
-        }
-      }
-      default -> throw new RuntimeException(
-          String.format("Unexpected Expression.WindowFunction.Bound enum:%s", boundedKind));
-    }
-    return bound;
+      case UNBOUNDED -> Expression.WindowFunction.Bound.newBuilder()
+          .setUnbounded(Expression.WindowFunction.Bound.Unbounded.getDefaultInstance())
+          .build();
+    };
   }
 }

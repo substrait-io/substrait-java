@@ -18,6 +18,9 @@ public interface WindowBound {
     FOLLOWING
   }
 
+  public static CurrentRowWindowBound CURRENT_ROW =
+      ImmutableWindowBound.CurrentRowWindowBound.builder().build();
+
   @Value.Immutable
   abstract static class UnboundedWindowBound implements WindowBound {
     @Override
@@ -26,6 +29,10 @@ public interface WindowBound {
     }
 
     public abstract Direction direction();
+
+    public static ImmutableWindowBound.UnboundedWindowBound.Builder builder() {
+      return ImmutableWindowBound.UnboundedWindowBound.builder();
+    }
   }
 
   @Value.Immutable
@@ -33,12 +40,16 @@ public interface WindowBound {
 
     @Override
     public BoundedKind boundedKind() {
-      return BoundedKind.UNBOUNDED;
+      return BoundedKind.BOUNDED;
     }
 
     public abstract Direction direction();
 
     public abstract Expression offset();
+
+    public static ImmutableWindowBound.BoundedWindowBound.Builder builder() {
+      return ImmutableWindowBound.BoundedWindowBound.builder();
+    }
   }
 
   @Value.Immutable
