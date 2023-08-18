@@ -1,5 +1,8 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SubstraitTypeSystem.DAY_SECOND_INTERVAL;
+import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
+
 import io.substrait.function.NullableType;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.NamedStruct;
@@ -9,11 +12,8 @@ import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
-import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -41,11 +41,6 @@ public class TypeConverter {
   public TypeConverter(UserTypeMapper userTypeMapper) {
     this.userTypeMapper = userTypeMapper;
   }
-
-  static final SqlIntervalQualifier INTERVAL_YEAR =
-      new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO);
-  static final SqlIntervalQualifier INTERVAL_DAY =
-      new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.SECOND, SqlParserPos.ZERO);
 
   public Type toSubstrait(RelDataType type) {
     return toSubstrait(type, new ArrayList<>());
@@ -248,13 +243,13 @@ public class TypeConverter {
     @Override
     public RelDataType visit(Type.IntervalYear expr) {
       return typeFactory.createTypeWithNullability(
-          typeFactory.createSqlIntervalType(INTERVAL_YEAR), n(expr));
+          typeFactory.createSqlIntervalType(YEAR_MONTH_INTERVAL), n(expr));
     }
 
     @Override
     public RelDataType visit(Type.IntervalDay expr) {
       return typeFactory.createTypeWithNullability(
-          typeFactory.createSqlIntervalType(INTERVAL_DAY), n(expr));
+          typeFactory.createSqlIntervalType(DAY_SECOND_INTERVAL), n(expr));
     }
 
     @Override
