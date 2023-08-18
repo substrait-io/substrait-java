@@ -297,6 +297,8 @@ public interface Expression extends FunctionArg {
 
     public abstract int seconds();
 
+    public abstract int microseconds();
+
     public Type getType() {
       return Type.withNullability(nullable()).INTERVAL_DAY;
     }
