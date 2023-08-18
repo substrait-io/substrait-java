@@ -47,6 +47,14 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
           -1,
           SqlParserPos.QUOTED_ZERO);
 
+  private static final SqlIntervalQualifier DAY_SECOND_INTERVAL =
+      new SqlIntervalQualifier(
+          org.apache.calcite.avatica.util.TimeUnit.DAY,
+          -1,
+          org.apache.calcite.avatica.util.TimeUnit.SECOND,
+          3, // Calcite only supports millisecond at the moment
+          SqlParserPos.QUOTED_ZERO);
+
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
@@ -176,6 +184,20 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public RexNode visit(Expression.IntervalYearLiteral expr) throws RuntimeException {
     return rexBuilder.makeIntervalLiteral(
         new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
+  }
+
+  private static final long MICROS_IN_DAY = TimeUnit.DAYS.toMicros(1);
+
+  @Override
+  public RexNode visit(Expression.IntervalDayLiteral expr) throws RuntimeException {
+    return rexBuilder.makeIntervalLiteral(
+        // Current Calcite behavior is to store milliseconds since Epoch
+        // microseconds version: new BigDecimal(expr.days() * MICROS_IN_DAY + expr.seconds() *
+        // 100000L + expr.microseconds()), DAY_SECOND_INTERVAL);
+        new BigDecimal(
+            (expr.days() * MICROS_IN_DAY + expr.seconds() * 1_000_000L + expr.microseconds())
+                / 1000L),
+        DAY_SECOND_INTERVAL);
   }
 
   @Override

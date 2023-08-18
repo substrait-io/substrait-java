@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.expression.ExpressionCreator.*;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
+import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
@@ -154,15 +155,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tIntervalYearMonth() {
     BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
-    RexLiteral intervalYearMonth =
-        rex.makeIntervalLiteral(
-            bd,
-            new SqlIntervalQualifier(
-                org.apache.calcite.avatica.util.TimeUnit.YEAR,
-                -1,
-                org.apache.calcite.avatica.util.TimeUnit.MONTH,
-                -1,
-                SqlParserPos.QUOTED_ZERO));
+    RexLiteral intervalYearMonth = rex.makeIntervalLiteral(bd, YEAR_MONTH_INTERVAL);
     var intervalYearMonthExpr = intervalYear(false, 3, 5);
     bitest(intervalYearMonthExpr, intervalYearMonth);
   }
@@ -192,6 +185,29 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(
         intervalYearMonth.getValueAs(BigDecimal.class).longValue(),
         convertedRex.getValueAs(BigDecimal.class).longValue());
+  }
+
+  @Test
+  void tIntervalMillisecond() {
+    // Calcite stores milliseconds since Epoch, so test only millisecond precision
+    BigDecimal bd =
+        new BigDecimal(
+            TimeUnit.DAYS.toMillis(3)
+                + TimeUnit.HOURS.toMillis(5)
+                + TimeUnit.MINUTES.toMillis(7)
+                + TimeUnit.SECONDS.toMillis(9)
+                + 500); // '3-5:7:9.500' day to second (6)
+    RexLiteral intervalDaySecond =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.DAY,
+                -1,
+                org.apache.calcite.avatica.util.TimeUnit.SECOND,
+                3,
+                SqlParserPos.ZERO));
+    var intervalDaySecondExpr = intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000);
+    bitest(intervalDaySecondExpr, intervalDaySecond);
   }
 
   @Test
@@ -243,10 +259,6 @@ public class CalciteLiteralTest extends CalciteObjs {
         intervalMonth.getValueAs(BigDecimal.class).longValue(),
         convertedRex.getValueAs(BigDecimal.class).longValue());
   }
-
-  @Disabled("NYI")
-  @Test
-  void tIntervalDay() {}
 
   @Test
   void tFixedChar() {

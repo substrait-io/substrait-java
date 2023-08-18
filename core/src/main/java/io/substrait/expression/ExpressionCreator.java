@@ -120,10 +120,16 @@ public class ExpressionCreator {
   }
 
   public static Expression.IntervalDayLiteral intervalDay(boolean nullable, int days, int seconds) {
+    return intervalDay(nullable, days, seconds, 0);
+  }
+
+  public static Expression.IntervalDayLiteral intervalDay(
+      boolean nullable, int days, int seconds, int microseconds) {
     return Expression.IntervalDayLiteral.builder()
         .nullable(nullable)
         .days(days)
         .seconds(seconds)
+        .microseconds(microseconds)
         .build();
   }
 

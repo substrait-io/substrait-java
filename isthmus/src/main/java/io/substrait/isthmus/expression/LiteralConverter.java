@@ -160,20 +160,8 @@ public class LiteralConverter {
         var months = intervalLength - years * 12;
         yield intervalYear(n, (int) years, (int) months);
       }
-      case INTERVAL_DAY -> {
-        // we need to convert to microseconds.
-        int precision = literal.getType().getPrecision();
-        var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
-        var adjustedLength =
-            precision > 6
-                ? intervalLength / ((int) Math.pow(10, precision - 6))
-                : intervalLength * ((int) Math.pow(10, 6 - precision));
-        var days = adjustedLength / MICROS_IN_DAY;
-        var microseconds = adjustedLength - days * MICROS_IN_DAY;
-        yield intervalDay(n, (int) days, (int) microseconds);
-      }
-
-      case INTERVAL_DAY_HOUR,
+      case INTERVAL_DAY,
+          INTERVAL_DAY_HOUR,
           INTERVAL_DAY_MINUTE,
           INTERVAL_DAY_SECOND,
           INTERVAL_HOUR,
@@ -182,7 +170,18 @@ public class LiteralConverter {
           INTERVAL_MINUTE,
           INTERVAL_MINUTE_SECOND,
           INTERVAL_SECOND -> {
-        throw new UnsupportedOperationException("Need to implement IntervalDay");
+        // we need to convert to microseconds.
+        int scale = literal.getType().getScale();
+        var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
+        var adjustedLength =
+            scale > 6
+                ? intervalLength / ((int) Math.pow(10, scale - 6))
+                : intervalLength * ((int) Math.pow(10, 6 - scale));
+        var days = adjustedLength / MICROS_IN_DAY;
+        var totalMicroseconds = adjustedLength - days * MICROS_IN_DAY;
+        var seconds = totalMicroseconds / 1_000_000;
+        var microseconds = totalMicroseconds - 1_000_000 * seconds;
+        yield intervalDay(n, (int) days, (int) seconds, (int) microseconds);
       }
 
       case ROW -> {

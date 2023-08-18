@@ -92,7 +92,7 @@ class CalciteTypeTest extends CalciteObjs {
   void intervalYear(boolean nullable) {
     testType(
         Type.withNullability(nullable).INTERVAL_YEAR,
-        type.createSqlIntervalType(TypeConverter.INTERVAL_YEAR),
+        type.createSqlIntervalType(SubstraitTypeSystem.YEAR_MONTH_INTERVAL),
         nullable);
   }
 
@@ -101,7 +101,7 @@ class CalciteTypeTest extends CalciteObjs {
   void intervalDay(boolean nullable) {
     testType(
         Type.withNullability(nullable).INTERVAL_DAY,
-        type.createSqlIntervalType(TypeConverter.INTERVAL_DAY),
+        type.createSqlIntervalType(SubstraitTypeSystem.DAY_SECOND_INTERVAL),
         nullable);
   }
 

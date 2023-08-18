@@ -335,7 +335,8 @@ public class ProtoExpressionConverter {
       case INTERVAL_DAY_TO_SECOND -> ExpressionCreator.intervalDay(
           literal.getNullable(),
           literal.getIntervalDayToSecond().getDays(),
-          literal.getIntervalDayToSecond().getSeconds());
+          literal.getIntervalDayToSecond().getSeconds(),
+          literal.getIntervalDayToSecond().getMicroseconds());
       case FIXED_CHAR -> ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
       case VAR_CHAR -> ExpressionCreator.varChar(
           literal.getNullable(), literal.getVarChar().getValue(), literal.getVarChar().getLength());
