@@ -195,6 +195,29 @@ public class CalciteLiteralTest extends CalciteObjs {
   }
 
   @Test
+  void tIntervalDaySecond() {
+    // Calcite stores milliseconds since Epoch, so test only millisecond precision
+    BigDecimal bd =
+        new BigDecimal(
+            TimeUnit.DAYS.toMillis(3)
+                + TimeUnit.HOURS.toMillis(5)
+                + TimeUnit.MINUTES.toMillis(7)
+                + TimeUnit.SECONDS.toMillis(9)
+                + 500); // '3-5:7:9.500' day to second (6)
+    RexLiteral intervalDaySecond =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.DAY,
+                -1,
+                org.apache.calcite.avatica.util.TimeUnit.SECOND,
+                3,
+                SqlParserPos.QUOTED_ZERO));
+    var intervalDaySecondExpr = intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000);
+    bitest(intervalDaySecondExpr, intervalDaySecond);
+  }
+
+  @Test
   void tIntervalYear() {
     BigDecimal bd = new BigDecimal(123 * 12); // '123' year(3)
     RexLiteral intervalYear =
@@ -243,10 +266,6 @@ public class CalciteLiteralTest extends CalciteObjs {
         intervalMonth.getValueAs(BigDecimal.class).longValue(),
         convertedRex.getValueAs(BigDecimal.class).longValue());
   }
-
-  @Disabled("NYI")
-  @Test
-  void tIntervalDay() {}
 
   @Test
   void tFixedChar() {
