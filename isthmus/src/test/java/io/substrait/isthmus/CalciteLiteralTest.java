@@ -195,7 +195,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   }
 
   @Test
-  void tIntervalDaySecond() {
+  void tIntervalMillisecond() {
     // Calcite stores milliseconds since Epoch, so test only millisecond precision
     BigDecimal bd =
         new BigDecimal(
