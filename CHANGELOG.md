@@ -1,6 +1,25 @@
 Release Notes
 ---
 
+## [0.15.0](https://github.com/substrait-io/substrait-java/compare/v0.14.1...v0.15.0) (2023-08-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pojos:** various public functions that took the
+AggregateFunction.AggregationInvocation proto now take the POJO
+equivalent Expression.AggregationInvocation.
+
+### Features
+
+* implement fractional second intervals ([#167](https://github.com/substrait-io/substrait-java/issues/167)) ([68aa7c4](https://github.com/substrait-io/substrait-java/commit/68aa7c4782dbede50407d6b9c2cfa739b07b73c6))
+* support reading Substrait plans with Window Functions  ([#165](https://github.com/substrait-io/substrait-java/issues/165)) ([93c6db5](https://github.com/substrait-io/substrait-java/commit/93c6db525d15a50e509ec539a3a9dbfc05d3cb91))
+
+
+### Code Refactoring
+
+* **pojos:** avoid using raw proto enums in POJO layer ([#164](https://github.com/substrait-io/substrait-java/issues/164)) ([41c8400](https://github.com/substrait-io/substrait-java/commit/41c840028c300cfdbc28ca21e68529058dbc8f05))
+
 ## [0.14.1](https://github.com/substrait-io/substrait-java/compare/v0.14.0...v0.14.1) (2023-08-06)
 
 
