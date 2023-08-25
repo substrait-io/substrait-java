@@ -119,25 +119,7 @@ public class ProtoExpressionConverter {
       case WINDOW_FUNCTION -> {
         var windowFunction = expr.getWindowFunction();
         var functionReference = windowFunction.getFunctionReference();
-        SimpleExtension.WindowFunctionVariant functionVariant;
-        try {
-          functionVariant = lookup.getWindowFunction(functionReference, extensions);
-        } catch (RuntimeException e) {
-          // TODO: Ideally we shouldn't need to catch a RuntimeException to be able to attempt our
-          // second lookup
-          var aggFunctionVariant = lookup.getAggregateFunction(functionReference, extensions);
-          functionVariant =
-              ImmutableSimpleExtension.WindowFunctionVariant.builder()
-                  // Sets all fields declared in the Function interface
-                  .from(aggFunctionVariant)
-                  // Set WindowFunctionVariant fields
-                  .decomposability(aggFunctionVariant.decomposability())
-                  .intermediate(aggFunctionVariant.intermediate())
-                  // Aggregate Functions used in Windows have WindowType Streaming
-                  .windowType(SimpleExtension.WindowType.STREAMING)
-                  .build();
-        }
-        final SimpleExtension.WindowFunctionVariant declaration = functionVariant;
+        var declaration = lookup.getWindowFunction(functionReference, extensions);
 
         var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
         var args =
