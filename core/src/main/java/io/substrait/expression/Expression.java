@@ -3,7 +3,6 @@ package io.substrait.expression;
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
-import io.substrait.relation.Aggregate;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.nio.ByteBuffer;
@@ -686,8 +685,6 @@ public interface Expression extends FunctionArg {
 
   @Value.Immutable
   abstract static class Window implements Expression {
-    @Nullable
-    public abstract Aggregate.Measure aggregateFunction();
 
     @Nullable
     public abstract WindowFunction windowFunction();
@@ -699,8 +696,6 @@ public interface Expression extends FunctionArg {
     public abstract WindowBound lowerBound();
 
     public abstract WindowBound upperBound();
-
-    public abstract boolean hasNormalAggregateFunction();
 
     public static ImmutableExpression.Window.Builder builder() {
       return ImmutableExpression.Window.builder();

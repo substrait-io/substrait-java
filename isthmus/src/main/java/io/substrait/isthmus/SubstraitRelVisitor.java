@@ -90,8 +90,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
     var windowFunctionConverter =
-        new WindowFunctionConverter(
-            extensions.windowFunctions(), typeFactory, aggregateFunctionConverter, typeConverter);
+        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
     this.converter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;

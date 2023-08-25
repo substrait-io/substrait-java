@@ -8,7 +8,6 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
 import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.ExtensionLookup;
-import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
@@ -156,7 +155,6 @@ public class ProtoExpressionConverter {
         var wf = ImmutableExpression.WindowFunction.builder().function(wfi).build();
         yield Expression.Window.builder()
             .windowFunction(wf)
-            .hasNormalAggregateFunction(false)
             .type(protoTypeConverter.from(windowFunction.getOutputType()))
             .partitionBy(partitionExprs)
             .orderBy(sortFields)

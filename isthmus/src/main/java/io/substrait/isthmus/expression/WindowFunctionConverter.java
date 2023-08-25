@@ -10,8 +10,6 @@ import io.substrait.expression.WindowBound;
 import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor;
-import io.substrait.isthmus.TypeConverter;
-import io.substrait.relation.Aggregate;
 import io.substrait.type.Type;
 import java.util.Collections;
 import java.util.List;
@@ -37,20 +35,14 @@ public class WindowFunctionConverter
         WindowFunctionInvocation,
         WindowFunctionConverter.WrappedAggregateCall> {
 
-  private AggregateFunctionConverter aggregateFunctionConverter;
-
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.WINDOW_SIGS;
   }
 
   public WindowFunctionConverter(
-      List<SimpleExtension.WindowFunctionVariant> functions,
-      RelDataTypeFactory typeFactory,
-      AggregateFunctionConverter aggregateFunctionConverter,
-      TypeConverter typeConverter) {
+      List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
-    this.aggregateFunctionConverter = aggregateFunctionConverter;
   }
 
   @Override
@@ -109,32 +101,17 @@ public class WindowFunctionConverter
             over.getType(),
             sqlAggFunction.getName());
     var windowBuilder = Expression.Window.builder();
-    var aggregateFunctionInvocation =
-        aggregateFunctionConverter.convert(input, inputType, call, topLevelConverter);
-    boolean find = false;
-    if (aggregateFunctionInvocation.isPresent()) {
-      var aggMeasure =
-          Aggregate.Measure.builder().function(aggregateFunctionInvocation.get()).build();
-      windowBuilder.aggregateFunction(aggMeasure).hasNormalAggregateFunction(true);
-      find = true;
-    } else {
-      // maybe it's a window function
-      var windowFuncInvocation =
-          findWindowFunctionInvocation(input, inputType, call, topLevelConverter);
-      if (windowFuncInvocation.isPresent()) {
-        var windowFunc =
-            ImmutableExpression.WindowFunction.builder()
-                .function(windowFuncInvocation.get())
-                .build();
-        windowBuilder.windowFunction(windowFunc).hasNormalAggregateFunction(false);
-        find = true;
-      }
-    }
-    if (!find) {
-      throw new RuntimeException(
-          String.format(
-              "Not found the corresponding window aggregate function:%s", sqlAggFunction));
-    }
+    var windowFuncInvocation =
+        findWindowFunctionInvocation(input, inputType, call, topLevelConverter)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        String.format(
+                            "Not found the corresponding window aggregate function:%s",
+                            sqlAggFunction)));
+    var windowFunc =
+        ImmutableExpression.WindowFunction.builder().function(windowFuncInvocation).build();
+    windowBuilder.windowFunction(windowFunc);
     var window = over.getWindow();
     var partitionExps =
         window.partitionKeys.stream()

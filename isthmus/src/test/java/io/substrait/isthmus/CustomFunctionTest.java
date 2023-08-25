@@ -137,11 +137,7 @@ public class CustomFunctionTest extends PlanTestBase {
           typeFactory,
           typeConverter);
   WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(
-          extensionCollection.windowFunctions(),
-          typeFactory,
-          aggregateFunctionConverter,
-          typeConverter);
+      new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
 
   // Create a SubstraitToCalcite converter that has access to the custom Function Converters
   class CustomSubstraitToCalcite extends SubstraitToCalcite {

@@ -422,40 +422,25 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
             .collect(java.util.stream.Collectors.toList());
     var outputType = expr.getType().accept(typeProtoConverter);
     var builder = Expression.WindowFunction.newBuilder().setOutputType(outputType);
-    if (expr.hasNormalAggregateFunction()) {
-      var aggMeasureFunc = expr.aggregateFunction().getFunction();
-      var funcReference = extensionCollector.getFunctionReference(aggMeasureFunc.declaration());
-      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
-      var args =
-          aggMeasureFunc.arguments().stream()
-              .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
-              .collect(java.util.stream.Collectors.toList());
-      builder
-          .setFunctionReference(funcReference)
-          .setPhase(aggMeasureFunc.aggregationPhase().toProto())
-          .addAllArguments(args);
-    } else {
-      var windowFunc = expr.windowFunction().getFunction();
-      var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
-      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
-      var args =
-          windowFunc.arguments().stream()
-              .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
-              .collect(java.util.stream.Collectors.toList());
-      builder
-          .setFunctionReference(funcReference)
-          .setPhase(windowFunc.aggregationPhase().toProto())
-          .addAllArguments(args);
-    }
+    var windowFunc = expr.windowFunction().getFunction();
+    var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
+    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
+    var args =
+        windowFunc.arguments().stream()
+            .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
+            .collect(java.util.stream.Collectors.toList());
+    builder
+        .setFunctionReference(funcReference)
+        .setPhase(windowFunc.aggregationPhase().toProto())
+        .addAllArguments(args);
     var sortFields =
         expr.orderBy().stream()
             .map(
-                s -> {
-                  return SortField.newBuilder()
-                      .setDirection(s.direction().toProto())
-                      .setExpr(s.expr().accept(this))
-                      .build();
-                })
+                s ->
+                    SortField.newBuilder()
+                        .setDirection(s.direction().toProto())
+                        .setExpr(s.expr().accept(this))
+                        .build())
             .collect(java.util.stream.Collectors.toList());
     var upperBound = toBound(expr.upperBound());
     var lowerBound = toBound(expr.lowerBound());
