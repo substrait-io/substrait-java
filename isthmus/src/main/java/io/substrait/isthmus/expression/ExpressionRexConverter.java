@@ -243,6 +243,12 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     }
   }
 
+  @Override
+  public RexNode visit(WindowFunctionInvocation expr) throws RuntimeException {
+    // todo:to construct the RexOver
+    return visitFallback(expr);
+  }
+
   private String convert(FunctionArg a) {
     String v;
     if (a instanceof EnumArg ea) {
@@ -279,12 +285,6 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
       return rexInputRef;
     }
 
-    return visitFallback(expr);
-  }
-
-  @Override
-  public RexNode visit(Expression.Window expr) throws RuntimeException {
-    // todo:to construct the RexOver
     return visitFallback(expr);
   }
 

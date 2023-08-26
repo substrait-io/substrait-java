@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,10 +43,7 @@ public class WindowFunctionTest extends PlanTestBase {
     }
 
     @Test
-    @Disabled
     void ntile() throws IOException, SqlParseException {
-      // TODO: The WindowFunctionConverter has some assumptions about function arguments that need
-      // to be addressed for this to work.
       assertProtoPlanRoundrip("select O_ORDERKEY, ntile(4) over () from ORDERS");
     }
   }

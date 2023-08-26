@@ -4,36 +4,30 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.expression.WindowBound;
 import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.type.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
-import org.apache.calcite.rex.RexSlot;
+import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.rex.RexWindowBound;
 
 public class WindowFunctionConverter
     extends FunctionConverter<
         SimpleExtension.WindowFunctionVariant,
         WindowFunctionInvocation,
-        WindowFunctionConverter.WrappedAggregateCall> {
+        WindowFunctionConverter.WrappedWindowCall> {
 
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
@@ -47,106 +41,59 @@ public class WindowFunctionConverter
 
   @Override
   protected WindowFunctionInvocation generateBinding(
-      WrappedAggregateCall call,
+      WrappedWindowCall call,
       SimpleExtension.WindowFunctionVariant function,
       List<FunctionArg> arguments,
       Type outputType) {
-    AggregateCall agg = call.getUnderlying();
+    RexOver over = call.over;
+    RexWindow window = over.getWindow();
+
+    var partitionExprs =
+        window.partitionKeys.stream()
+            .map(r -> r.accept(call.rexExpressionConverter))
+            .collect(java.util.stream.Collectors.toList());
 
     List<Expression.SortField> sorts =
-        agg.getCollation() != null
-            ? agg.getCollation().getFieldCollations().stream()
-                .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
+        window.orderKeys != null
+            ? window.orderKeys.stream()
+                .map(rfc -> toSortField(rfc, call.rexExpressionConverter))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
     Expression.AggregationInvocation invocation =
-        agg.isDistinct()
+        over.isDistinct()
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
+
+    WindowBound lowerBound = toWindowBound(window.getLowerBound(), call.rexExpressionConverter);
+    WindowBound upperBound = toWindowBound(window.getUpperBound(), call.rexExpressionConverter);
+
     return ExpressionCreator.windowFunction(
         function,
         outputType,
         Expression.AggregationPhase.INITIAL_TO_RESULT,
         sorts,
         invocation,
+        partitionExprs,
+        lowerBound,
+        upperBound,
         arguments);
   }
 
-  public Expression.Window convert(
-      RelNode input,
-      Type.Struct inputType,
+  public Optional<WindowFunctionInvocation> convert(
       RexOver over,
       Function<RexNode, Expression> topLevelConverter,
       RexExpressionConverter rexExpressionConverter) {
-
-    var lowerBound = toWindowBound(over.getWindow().getLowerBound(), rexExpressionConverter);
-    var upperBound = toWindowBound(over.getWindow().getUpperBound(), rexExpressionConverter);
-    var sqlAggFunction = over.getAggOperator();
-    var argList =
-        over.getOperands().stream()
-            .map(r -> ((RexSlot) r).getIndex())
-            .collect(java.util.stream.Collectors.toList());
-    boolean approximate = false;
-    int filterArg = -1;
-    var call =
-        AggregateCall.create(
-            sqlAggFunction,
-            over.isDistinct(),
-            approximate,
-            over.ignoreNulls(),
-            argList,
-            filterArg,
-            null,
-            RelCollations.EMPTY,
-            over.getType(),
-            sqlAggFunction.getName());
-    var windowBuilder = Expression.Window.builder();
-    var windowFuncInvocation =
-        findWindowFunctionInvocation(input, inputType, call, topLevelConverter)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        String.format(
-                            "Not found the corresponding window aggregate function:%s",
-                            sqlAggFunction)));
-    var windowFunc =
-        ImmutableExpression.WindowFunction.builder().function(windowFuncInvocation).build();
-    windowBuilder.windowFunction(windowFunc);
-    var window = over.getWindow();
-    var partitionExps =
-        window.partitionKeys.stream()
-            .map(r -> r.accept(rexExpressionConverter))
-            .collect(java.util.stream.Collectors.toList());
-    var sortFields =
-        window.orderKeys.stream()
-            .map(r -> toSortField(r, rexExpressionConverter))
-            .collect(java.util.stream.Collectors.toList());
-
-    return windowBuilder
-        .addAllOrderBy(sortFields)
-        .addAllPartitionBy(partitionExps)
-        .lowerBound(lowerBound)
-        .upperBound(upperBound)
-        .type(typeConverter.toSubstrait(over.getType()))
-        .build();
-  }
-
-  private Optional<WindowFunctionInvocation> findWindowFunctionInvocation(
-      RelNode input,
-      Type.Struct inputType,
-      AggregateCall call,
-      Function<RexNode, Expression> topLevelConverter) {
-    FunctionFinder m = signatures.get(call.getAggregation());
+    var aggFunction = over.getAggOperator();
+    FunctionFinder m = signatures.get(aggFunction);
     if (m == null) {
       return Optional.empty();
     }
-    if (!m.allowedArgCount(call.getArgList().size())) {
+    if (!m.allowedArgCount(over.getOperands().size())) {
       return Optional.empty();
     }
 
-    var wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
-    var windowFunctionInvocation = m.attemptMatch(wrapped, topLevelConverter);
-    return windowFunctionInvocation;
+    var wrapped = new WrappedWindowCall(over, rexExpressionConverter);
+    return m.attemptMatch(wrapped, topLevelConverter);
   }
 
   private WindowBound toWindowBound(
@@ -196,32 +143,23 @@ public class WindowFunctionConverter
     return Expression.SortField.builder().expr(expr).direction(direction).build();
   }
 
-  static class WrappedAggregateCall implements FunctionConverter.GenericCall {
-    private final AggregateCall call;
-    private final RelNode input;
-    private final RexBuilder rexBuilder;
-    private final Type.Struct inputType;
+  static class WrappedWindowCall implements FunctionConverter.GenericCall {
+    private final RexOver over;
+    private final RexExpressionConverter rexExpressionConverter;
 
-    private WrappedAggregateCall(
-        AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
-      this.call = call;
-      this.input = input;
-      this.rexBuilder = rexBuilder;
-      this.inputType = inputType;
+    private WrappedWindowCall(RexOver over, RexExpressionConverter rexExpressionConverter) {
+      this.over = over;
+      this.rexExpressionConverter = rexExpressionConverter;
     }
 
     @Override
     public Stream<RexNode> getOperands() {
-      return call.getArgList().stream().map(r -> rexBuilder.makeInputRef(input, r));
-    }
-
-    public AggregateCall getUnderlying() {
-      return call;
+      return over.getOperands().stream();
     }
 
     @Override
     public RelDataType getType() {
-      return call.getType();
+      return over.getType();
     }
   }
 }

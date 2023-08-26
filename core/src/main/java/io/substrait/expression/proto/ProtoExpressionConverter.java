@@ -120,10 +120,10 @@ public class ProtoExpressionConverter {
         var functionReference = windowFunction.getFunctionReference();
         var declaration = lookup.getWindowFunction(functionReference, extensions);
 
-        var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+        var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
         var args =
             IntStream.range(0, windowFunction.getArgumentsCount())
-                .mapToObj(i -> pF.convert(declaration, i, windowFunction.getArguments(i)))
+                .mapToObj(i -> argVisitor.convert(declaration, i, windowFunction.getArguments(i)))
                 .collect(java.util.stream.Collectors.toList());
         var partitionExprs =
             windowFunction.getPartitionsList().stream()
@@ -138,28 +138,20 @@ public class ProtoExpressionConverter {
                             .expr(from(s.getExpr()))
                             .build())
                 .collect(java.util.stream.Collectors.toList());
-        var wfi =
-            WindowFunctionInvocation.builder()
-                .addAllArguments(args)
-                .declaration(declaration)
-                .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
-                .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
-                .addAllSort(sortFields)
-                .invocation(
-                    Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
-                .build();
 
         WindowBound lowerBound = toLowerBound(windowFunction.getLowerBound());
         WindowBound upperBound = toUpperBound(windowFunction.getUpperBound());
 
-        var wf = ImmutableExpression.WindowFunction.builder().function(wfi).build();
-        yield Expression.Window.builder()
-            .windowFunction(wf)
-            .type(protoTypeConverter.from(windowFunction.getOutputType()))
+        yield WindowFunctionInvocation.builder()
+            .arguments(args)
+            .declaration(declaration)
+            .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
+            .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
             .partitionBy(partitionExprs)
-            .orderBy(sortFields)
+            .sort(sortFields)
             .lowerBound(lowerBound)
             .upperBound(upperBound)
+            .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
             .build();
       }
       case IF_THEN -> {

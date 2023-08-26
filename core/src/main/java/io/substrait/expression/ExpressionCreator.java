@@ -319,12 +319,18 @@ public class ExpressionCreator {
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
+      List<Expression> partitionBy,
+      WindowBound lowerBound,
+      WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
+        .partitionBy(partitionBy)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .invocation(invocation)
         .addAllArguments(arguments)
         .build();
@@ -336,6 +342,9 @@ public class ExpressionCreator {
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
+      List<Expression> partitionBy,
+      WindowBound lowerBound,
+      WindowBound upperBound,
       FunctionArg... arguments) {
     return WindowFunctionInvocation.builder()
         .declaration(declaration)
@@ -343,6 +352,9 @@ public class ExpressionCreator {
         .aggregationPhase(phase)
         .sort(sort)
         .invocation(invocation)
+        .partitionBy(partitionBy)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .addArguments(arguments)
         .build();
   }

@@ -7,8 +7,10 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Expression;
+import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
+import io.substrait.proto.Type;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
@@ -415,26 +417,22 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  public Expression visit(io.substrait.expression.Expression.Window expr) throws RuntimeException {
-    var partExps =
+  public Expression visit(io.substrait.expression.WindowFunctionInvocation expr)
+      throws RuntimeException {
+    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
+    List<FunctionArgument> args =
+        expr.arguments().stream()
+            .map(a -> a.accept(expr.declaration(), 0, argVisitor))
+            .collect(java.util.stream.Collectors.toList());
+    Type outputType = expr.getType().accept(typeProtoConverter);
+
+    List<Expression> partitionExprs =
         expr.partitionBy().stream()
             .map(e -> e.accept(this))
             .collect(java.util.stream.Collectors.toList());
-    var outputType = expr.getType().accept(typeProtoConverter);
-    var builder = Expression.WindowFunction.newBuilder().setOutputType(outputType);
-    var windowFunc = expr.windowFunction().getFunction();
-    var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
-    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
-    var args =
-        windowFunc.arguments().stream()
-            .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
-            .collect(java.util.stream.Collectors.toList());
-    builder
-        .setFunctionReference(funcReference)
-        .setPhase(windowFunc.aggregationPhase().toProto())
-        .addAllArguments(args);
-    var sortFields =
-        expr.orderBy().stream()
+
+    List<SortField> sortFields =
+        expr.sort().stream()
             .map(
                 s ->
                     SortField.newBuilder()
@@ -442,16 +440,21 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                         .setExpr(s.expr().accept(this))
                         .build())
             .collect(java.util.stream.Collectors.toList());
-    var upperBound = toBound(expr.upperBound());
-    var lowerBound = toBound(expr.lowerBound());
+
+    Expression.WindowFunction.Bound upperBound = toBound(expr.upperBound());
+    Expression.WindowFunction.Bound lowerBound = toBound(expr.lowerBound());
+
     return Expression.newBuilder()
         .setWindowFunction(
-            builder
-                .addAllPartitions(partExps)
+            Expression.WindowFunction.newBuilder()
+                .setFunctionReference(extensionCollector.getFunctionReference(expr.declaration()))
+                .addAllArguments(args)
+                .setOutputType(outputType)
+                .setPhase(expr.aggregationPhase().toProto())
                 .addAllSorts(sortFields)
+                .addAllPartitions(partitionExprs)
                 .setLowerBound(lowerBound)
-                .setUpperBound(upperBound)
-                .build())
+                .setUpperBound(upperBound))
         .build();
   }
 

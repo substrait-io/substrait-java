@@ -167,15 +167,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(LogicalProject project) {
-    var input = apply(project.getInput());
-    this.converter.setInputRel(project.getInput());
-    this.converter.setInputType(input.getRecordType());
     var expressions =
         project.getProjects().stream()
             .map(this::toExpression)
             .collect(java.util.stream.Collectors.toList());
-    this.converter.setInputRel(null);
-    this.converter.setInputType(null);
 
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()

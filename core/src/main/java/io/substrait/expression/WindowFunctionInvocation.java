@@ -7,7 +7,7 @@ import java.util.Map;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class WindowFunctionInvocation {
+public abstract class WindowFunctionInvocation implements Expression {
 
   public abstract SimpleExtension.WindowFunctionVariant declaration();
 
@@ -17,7 +17,13 @@ public abstract class WindowFunctionInvocation {
 
   public abstract Expression.AggregationPhase aggregationPhase();
 
+  public abstract List<Expression> partitionBy();
+
   public abstract List<Expression.SortField> sort();
+
+  public abstract WindowBound lowerBound();
+
+  public abstract WindowBound upperBound();
 
   public abstract Type outputType();
 
@@ -29,5 +35,9 @@ public abstract class WindowFunctionInvocation {
 
   public static ImmutableWindowFunctionInvocation.Builder builder() {
     return ImmutableWindowFunctionInvocation.builder();
+  }
+
+  public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+    return visitor.visit(this);
   }
 }
