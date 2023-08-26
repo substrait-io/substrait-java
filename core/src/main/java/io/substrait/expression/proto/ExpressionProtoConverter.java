@@ -1,6 +1,5 @@
 package io.substrait.expression.proto;
 
-import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -459,44 +458,6 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  private static class LiteralToWindowBoundOffset
-      extends AbstractExpressionVisitor<Long, RuntimeException> {
-
-    @Override
-    public Long visitFallback(io.substrait.expression.Expression expr) {
-      throw new RuntimeException(
-          String.format("Expected positive integer for Window Bound offset, received: %s", expr));
-    }
-
-    private static long offsetIsPositive(long offset) {
-      if (offset >= 1) {
-        return offset;
-      }
-      throw new RuntimeException(
-          String.format("Expected positive offset for Window Bound offset, recieved: %d", offset));
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I8Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I16Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I32Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I64Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-  }
-
   private Expression.WindowFunction.Bound toBound(io.substrait.expression.WindowBound windowBound) {
     var boundedKind = windowBound.boundedKind();
     return switch (boundedKind) {
@@ -506,7 +467,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       case BOUNDED -> {
         WindowBound.BoundedWindowBound boundedWindowBound =
             (WindowBound.BoundedWindowBound) windowBound;
-        var offset = boundedWindowBound.offset().accept(new LiteralToWindowBoundOffset());
+        var offset = boundedWindowBound.offset();
         yield switch (boundedWindowBound.direction()) {
           case PRECEDING -> Expression.WindowFunction.Bound.newBuilder()
               .setPreceding(

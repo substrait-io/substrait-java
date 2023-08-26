@@ -9,6 +9,7 @@ import io.substrait.expression.WindowBound;
 import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -18,10 +19,12 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexFieldCollation;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 public class WindowFunctionConverter
     extends FunctionConverter<
@@ -106,11 +109,18 @@ public class WindowFunctionConverter
       return ImmutableWindowBound.UnboundedWindowBound.builder().direction(direction).build();
     } else {
       var direction = findWindowBoundDirection(rexWindowBound);
-      var offset = rexWindowBound.getOffset().accept(rexExpressionConverter);
-      return ImmutableWindowBound.BoundedWindowBound.builder()
-          .direction(direction)
-          .offset(offset)
-          .build();
+      if (rexWindowBound.getOffset() instanceof RexLiteral literal
+          && SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
+        BigDecimal offset = (BigDecimal) literal.getValue4();
+        return ImmutableWindowBound.BoundedWindowBound.builder()
+            .direction(direction)
+            .offset(offset.longValue())
+            .build();
+      }
+      throw new IllegalArgumentException(
+          String.format(
+              "substrait only supports integer window offsets. Received: %",
+              rexWindowBound.getOffset().getKind()));
     }
   }
 

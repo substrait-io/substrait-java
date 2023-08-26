@@ -269,17 +269,11 @@ public class ProtoExpressionConverter {
     return switch (bound.getKindCase()) {
       case PRECEDING -> WindowBound.BoundedWindowBound.builder()
           .direction(WindowBound.Direction.PRECEDING)
-          .offset(
-              Expression.Literal.I64Literal.builder()
-                  .value(bound.getPreceding().getOffset())
-                  .build())
+          .offset(bound.getPreceding().getOffset())
           .build();
       case FOLLOWING -> WindowBound.BoundedWindowBound.builder()
           .direction(WindowBound.Direction.FOLLOWING)
-          .offset(
-              Expression.Literal.I64Literal.builder()
-                  .value(bound.getFollowing().getOffset())
-                  .build())
+          .offset(bound.getFollowing().getOffset())
           .build();
       case CURRENT_ROW -> WindowBound.CURRENT_ROW;
       case UNBOUNDED, KIND_NOT_SET -> defaultBound;
