@@ -66,8 +66,8 @@ public class WindowFunctionConverter
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
 
-    WindowBound lowerBound = toWindowBound(window.getLowerBound(), call.rexExpressionConverter);
-    WindowBound upperBound = toWindowBound(window.getUpperBound(), call.rexExpressionConverter);
+    WindowBound lowerBound = toWindowBound(window.getLowerBound());
+    WindowBound upperBound = toWindowBound(window.getUpperBound());
 
     return ExpressionCreator.windowFunction(
         function,
@@ -98,8 +98,7 @@ public class WindowFunctionConverter
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
-  private WindowBound toWindowBound(
-      RexWindowBound rexWindowBound, RexExpressionConverter rexExpressionConverter) {
+  private WindowBound toWindowBound(RexWindowBound rexWindowBound) {
     if (rexWindowBound.isCurrentRow()) {
       return WindowBound.CURRENT_ROW;
     }
