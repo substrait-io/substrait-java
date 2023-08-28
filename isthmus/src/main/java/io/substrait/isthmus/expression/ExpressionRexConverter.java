@@ -36,8 +36,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   private final TypeConverter typeConverter;
   private final RexBuilder rexBuilder;
   private final ScalarFunctionConverter scalarFunctionConverter;
-
-  private final AggregateFunctionConverter aggregateFunctionConverter;
+  private final WindowFunctionConverter windowFunctionConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
@@ -58,13 +57,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter,
+      WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
-    this.aggregateFunctionConverter = aggregateFunctionConverter;
+    this.windowFunctionConverter = windowFunctionConverter;
   }
 
   @Override
