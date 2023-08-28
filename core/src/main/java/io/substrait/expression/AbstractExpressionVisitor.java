@@ -140,7 +140,7 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
-  public OUTPUT visit(WindowFunctionInvocation expr) throws EXCEPTION {
+  public OUTPUT visit(Expression.WindowFunctionInvocation expr) throws EXCEPTION {
     return visitFallback(expr);
   }
 

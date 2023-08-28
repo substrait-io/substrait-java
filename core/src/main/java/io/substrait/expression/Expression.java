@@ -571,6 +571,42 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
+  abstract class WindowFunctionInvocation implements Expression {
+
+    public abstract SimpleExtension.WindowFunctionVariant declaration();
+
+    public abstract List<FunctionArg> arguments();
+
+    public abstract Map<String, FunctionOption> options();
+
+    public abstract AggregationPhase aggregationPhase();
+
+    public abstract List<Expression> partitionBy();
+
+    public abstract List<SortField> sort();
+
+    public abstract WindowBound lowerBound();
+
+    public abstract WindowBound upperBound();
+
+    public abstract Type outputType();
+
+    public Type getType() {
+      return outputType();
+    }
+
+    public abstract AggregationInvocation invocation();
+
+    public static ImmutableExpression.WindowFunctionInvocation.Builder builder() {
+      return ImmutableExpression.WindowFunctionInvocation.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract static class SingleOrList implements Expression {
     public abstract Expression condition();
 

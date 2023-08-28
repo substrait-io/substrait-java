@@ -6,7 +6,6 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.expression.WindowBound;
-import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
@@ -29,7 +28,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class WindowFunctionConverter
     extends FunctionConverter<
         SimpleExtension.WindowFunctionVariant,
-        WindowFunctionInvocation,
+        Expression.WindowFunctionInvocation,
         WindowFunctionConverter.WrappedWindowCall> {
 
   @Override
@@ -43,7 +42,7 @@ public class WindowFunctionConverter
   }
 
   @Override
-  protected WindowFunctionInvocation generateBinding(
+  protected Expression.WindowFunctionInvocation generateBinding(
       WrappedWindowCall call,
       SimpleExtension.WindowFunctionVariant function,
       List<FunctionArg> arguments,
@@ -82,7 +81,7 @@ public class WindowFunctionConverter
         arguments);
   }
 
-  public Optional<WindowFunctionInvocation> convert(
+  public Optional<Expression.WindowFunctionInvocation> convert(
       RexOver over,
       Function<RexNode, Expression> topLevelConverter,
       RexExpressionConverter rexExpressionConverter) {

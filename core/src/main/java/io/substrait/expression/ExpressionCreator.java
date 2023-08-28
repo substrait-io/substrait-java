@@ -313,7 +313,7 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static WindowFunctionInvocation windowFunction(
+  public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
       Expression.AggregationPhase phase,
@@ -323,7 +323,7 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
-    return WindowFunctionInvocation.builder()
+    return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
@@ -336,7 +336,7 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static WindowFunctionInvocation windowFunction(
+  public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
       Expression.AggregationPhase phase,
@@ -346,7 +346,7 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       FunctionArg... arguments) {
-    return WindowFunctionInvocation.builder()
+    return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)

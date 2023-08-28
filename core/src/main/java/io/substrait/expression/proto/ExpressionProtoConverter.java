@@ -416,7 +416,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  public Expression visit(io.substrait.expression.WindowFunctionInvocation expr)
+  public Expression visit(io.substrait.expression.Expression.WindowFunctionInvocation expr)
       throws RuntimeException {
     var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
     List<FunctionArgument> args =

@@ -6,7 +6,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
-import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
@@ -142,7 +141,7 @@ public class ProtoExpressionConverter {
         WindowBound lowerBound = toLowerBound(windowFunction.getLowerBound());
         WindowBound upperBound = toUpperBound(windowFunction.getUpperBound());
 
-        yield WindowFunctionInvocation.builder()
+        yield Expression.WindowFunctionInvocation.builder()
             .arguments(args)
             .declaration(declaration)
             .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
