@@ -1,5 +1,7 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Nested;
@@ -135,5 +137,13 @@ public class WindowFunctionTest extends PlanTestBase {
           String.format(
               "select %s(L_LINENUMBER) over (partition BY L_PARTKEY) from lineitem", aggFunction));
     }
+  }
+
+  @Test
+  void rejectQueriesWithIgnoreNulls() {
+    // IGNORE NULLS cannot be specified in the Substrait representation.
+    // Queries using it should be rejected.
+    var query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
+    assertThrows(IllegalArgumentException.class, () -> assertFullRoundTrip(query));
   }
 }

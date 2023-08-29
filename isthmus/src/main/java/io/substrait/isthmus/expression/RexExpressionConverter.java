@@ -99,6 +99,10 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitOver(RexOver over) {
+    if (over.ignoreNulls()) {
+      throw new IllegalArgumentException("IGNORE NULLS cannot be expressed in Substrait");
+    }
+
     return windowFunctionConverter
         .convert(over, rexNode -> rexNode.accept(this), this)
         .orElseThrow(() -> new IllegalArgumentException(callConversionFailureMessage(over)));
