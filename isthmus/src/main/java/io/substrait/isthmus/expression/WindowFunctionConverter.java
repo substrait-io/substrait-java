@@ -117,7 +117,7 @@ public class WindowFunctionConverter
       }
       throw new IllegalArgumentException(
           String.format(
-              "substrait only supports integer window offsets. Received: %",
+              "substrait only supports integer window offsets. Received: %s",
               rexWindowBound.getOffset().getKind()));
     }
   }
