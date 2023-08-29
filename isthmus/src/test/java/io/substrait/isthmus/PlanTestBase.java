@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.annotations.Beta;
 import com.google.common.base.Charsets;
@@ -156,8 +157,6 @@ public class PlanTestBase {
       // Verify that POJOs are the same
       assertEquals(pojo1, pojo2);
 
-      /*
-      // TODO vbarua: go all the way once window function conversions are allowed
       // Substrait POJO 2 -> Calcite 2
       RelNode calcite2 = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
       // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
@@ -165,11 +164,11 @@ public class PlanTestBase {
       assertNotNull(calcite2);
 
       // Calcite 2 -> Substrait POJO 3
-      io.substrait.relation.Rel pojo3 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
+      io.substrait.relation.Rel pojo3 =
+          SubstraitRelVisitor.convert(RelRoot.of(calcite2, calcite1.kind), EXTENSION_COLLECTION);
 
       // Verify that POJOs are the same
       assertEquals(pojo1, pojo3);
-      */
     }
   }
 }

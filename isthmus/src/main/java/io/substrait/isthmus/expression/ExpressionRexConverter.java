@@ -1,5 +1,6 @@
 package io.substrait.isthmus.expression;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.*;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.extension.SimpleExtension;
@@ -9,17 +10,23 @@ import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.avatica.util.ByteString;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.rex.RexWindowBounds;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -221,31 +228,121 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.ScalarFunctionInvocation expr) throws RuntimeException {
+    SqlOperator operator =
+        scalarFunctionConverter
+            .getSqlOperatorFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        callConversionFailureMessage(
+                            "scalar", expr.declaration().name(), expr.arguments())));
+
     var eArgs = expr.arguments();
     var args =
         IntStream.range(0, expr.arguments().size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
             .collect(java.util.stream.Collectors.toList());
 
-    Optional<SqlOperator> operator =
-        scalarFunctionConverter.getSqlOperatorFromSubstraitFunc(
-            expr.declaration().key(), expr.outputType());
-    if (operator.isPresent()) {
-      return rexBuilder.makeCall(operator.get(), args);
-    } else {
-      String msg =
-          String.format(
-              "Unable to convert scalar function %s(%s).",
-              expr.declaration().name(),
-              expr.arguments().stream().map(this::convert).collect(Collectors.joining(", ")));
-      throw new IllegalArgumentException(msg);
-    }
+    return rexBuilder.makeCall(operator, args);
+  }
+
+  private String callConversionFailureMessage(
+      String functionType, String name, List<FunctionArg> args) {
+    return String.format(
+        "Unable to convert %s function %s(%s).",
+        functionType, name, args.stream().map(this::convert).collect(Collectors.joining(", ")));
   }
 
   @Override
   public RexNode visit(Expression.WindowFunctionInvocation expr) throws RuntimeException {
-    // todo:to construct the RexOver
-    return visitFallback(expr);
+    SqlOperator operator =
+        windowFunctionConverter
+            .getSqlOperatorFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        callConversionFailureMessage(
+                            "window", expr.declaration().name(), expr.arguments())));
+
+    RelDataType outputType = typeConverter.toCalcite(typeFactory, expr.outputType());
+
+    List<FunctionArg> eArgs = expr.arguments();
+    List<RexNode> args =
+        IntStream.range(0, expr.arguments().size())
+            .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
+            .collect(java.util.stream.Collectors.toList());
+
+    List<RexNode> partitionKeys =
+        expr.partitionBy().stream().map(e -> e.accept(this)).collect(Collectors.toList());
+
+    ImmutableList<RexFieldCollation> orderKeys =
+        expr.sort().stream()
+            .map(
+                sf -> {
+                  Set<SqlKind> direction =
+                      switch (sf.direction()) {
+                        case ASC_NULLS_FIRST -> Set.of(SqlKind.NULLS_FIRST);
+                        case ASC_NULLS_LAST -> Set.of(SqlKind.NULLS_LAST);
+                        case DESC_NULLS_FIRST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
+                        case DESC_NULLS_LAST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_LAST);
+                        case CLUSTERED -> throw new IllegalArgumentException(
+                            "SORT_DIRECTION_CLUSTERED is not supported");
+                      };
+                  return new RexFieldCollation(sf.expr().accept(this), direction);
+                })
+            .collect(ImmutableList.toImmutableList());
+
+    RexWindowBound lowerBound =
+        switch (expr.lowerBound().boundedKind()) {
+          case UNBOUNDED -> RexWindowBounds.UNBOUNDED_PRECEDING;
+          case BOUNDED -> RexWindowBounds.preceding(
+              rexBuilder.makeBigintLiteral(
+                  BigDecimal.valueOf(
+                      ((WindowBound.BoundedWindowBound) expr.lowerBound()).offset())));
+          case CURRENT_ROW -> RexWindowBounds.CURRENT_ROW;
+        };
+
+    RexWindowBound upperBound =
+        switch (expr.upperBound().boundedKind()) {
+          case UNBOUNDED -> RexWindowBounds.UNBOUNDED_FOLLOWING;
+          case BOUNDED -> RexWindowBounds.following(
+              rexBuilder.makeBigintLiteral(
+                  BigDecimal.valueOf(
+                      ((WindowBound.BoundedWindowBound) expr.upperBound()).offset())));
+          case CURRENT_ROW -> RexWindowBounds.CURRENT_ROW;
+        };
+
+    // TODO: Bounds Type
+    boolean rowMode = true;
+
+    boolean distinct =
+        switch (expr.invocation()) {
+          case UNSPECIFIED, ALL -> false;
+          case DISTINCT -> true;
+        };
+
+    // For queries like: SELECT last_value() IGNORE NULLS OVER ...
+    // Substrait has no mechanism to set this, so by default it is false
+    boolean ignoreNulls = false;
+
+    // These both control a rewrite rule within rexBuilder.makeOver that rewrites the given
+    // expression into a case expression. These values are set as such to avoid this rewrite.
+    boolean nullWhenCountZero = false;
+    boolean allowPartial = true;
+
+    return rexBuilder.makeOver(
+        outputType,
+        (SqlAggFunction) operator,
+        args,
+        partitionKeys,
+        orderKeys,
+        lowerBound,
+        upperBound,
+        rowMode,
+        allowPartial,
+        nullWhenCountZero,
+        distinct,
+        ignoreNulls);
   }
 
   private String convert(FunctionArg a) {
