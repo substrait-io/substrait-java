@@ -57,6 +57,8 @@ public interface ExpressionVisitor<R, E extends Throwable> {
 
   R visit(Expression.ScalarFunctionInvocation expr) throws E;
 
+  R visit(Expression.WindowFunctionInvocation expr) throws E;
+
   R visit(Expression.Cast expr) throws E;
 
   R visit(Expression.SingleOrList expr) throws E;
@@ -70,6 +72,4 @@ public interface ExpressionVisitor<R, E extends Throwable> {
   R visit(Expression.ScalarSubquery expr) throws E;
 
   R visit(Expression.InPredicate expr) throws E;
-
-  R visit(Expression.Window expr) throws E;
 }

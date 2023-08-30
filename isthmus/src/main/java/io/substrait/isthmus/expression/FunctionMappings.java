@@ -92,6 +92,8 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.FIRST_VALUE, "first_value"),
                 s(SqlStdOperatorTable.LAST_VALUE, "last_value"),
                 s(SqlStdOperatorTable.NTH_VALUE, "nth_value"))
+            // Aggregate Functions can be used in Windows
+            .addAll(AGGREGATE_SIGS)
             .build();
 
     // contains return-type based resolver for both scalar and aggregator operator

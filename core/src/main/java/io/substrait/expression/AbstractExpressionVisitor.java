@@ -140,6 +140,11 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
+  public OUTPUT visit(Expression.WindowFunctionInvocation expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
   public OUTPUT visit(Expression.Cast expr) throws EXCEPTION {
     return visitFallback(expr);
   }
@@ -171,11 +176,6 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
 
   @Override
   public OUTPUT visit(Expression.InPredicate expr) throws EXCEPTION {
-    return visitFallback(expr);
-  }
-
-  @Override
-  public OUTPUT visit(Expression.Window expr) throws EXCEPTION {
     return visitFallback(expr);
   }
 }
