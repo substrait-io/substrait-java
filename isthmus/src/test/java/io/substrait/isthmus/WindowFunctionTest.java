@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,7 +14,7 @@ public class WindowFunctionTest extends PlanTestBase {
 
     @Test
     void rowNumber() throws IOException, SqlParseException {
-      assertProtoPlanRoundrip("select O_ORDERKEY, row_number() over () from ORDERS");
+      assertFullRoundTrip("select O_ORDERKEY, row_number() over () from ORDERS");
     }
 
     @ParameterizedTest
@@ -24,7 +23,7 @@ public class WindowFunctionTest extends PlanTestBase {
       var query =
           String.format(
               "select O_ORDERKEY, %s() over (order by O_SHIPPRIORITY) from ORDERS", rankFunction);
-      assertProtoPlanRoundrip(query);
+      assertFullRoundTrip(query);
     }
 
     @ParameterizedTest
@@ -34,21 +33,18 @@ public class WindowFunctionTest extends PlanTestBase {
           String.format(
               "select O_ORDERKEY, %s() over (partition by O_CUSTKEY order by O_SHIPPRIORITY) from ORDERS",
               rankFunction);
-      assertProtoPlanRoundrip(query);
+      assertFullRoundTrip(query);
     }
 
     @Test
     void cumeDist() throws IOException, SqlParseException {
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           "select O_ORDERKEY, cume_dist() over (order by O_SHIPPRIORITY) from ORDERS");
     }
 
     @Test
-    @Disabled
     void ntile() throws IOException, SqlParseException {
-      // TODO: The WindowFunctionConverter has some assumptions about function arguments that need
-      // to be addressed for this to work.
-      assertProtoPlanRoundrip("select O_ORDERKEY, ntile(4) over () from ORDERS");
+      assertFullRoundTrip("select O_ORDERKEY, ntile(4) over () from ORDERS");
     }
   }
 
@@ -66,7 +62,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MAX($7) OVER ()])
         LogicalTableScan(table=[[ORDERS]])
       */
-      assertProtoPlanRoundrip("select max(O_SHIPPRIORITY) over () from ORDERS");
+      assertFullRoundTrip("select max(O_SHIPPRIORITY) over () from ORDERS");
     }
 
     @Test
@@ -76,7 +72,7 @@ public class WindowFunctionTest extends PlanTestBase {
         LogicalTableScan(table=[[ORDERS]])
       */
       var overClause = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
 
@@ -88,7 +84,7 @@ public class WindowFunctionTest extends PlanTestBase {
       */
       var overClaus =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row AND unbounded following";
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClaus));
     }
 
@@ -100,7 +96,7 @@ public class WindowFunctionTest extends PlanTestBase {
       */
       var overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between 1 preceding and current row";
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
 
@@ -112,7 +108,7 @@ public class WindowFunctionTest extends PlanTestBase {
       */
       var overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row and 2 following";
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
 
@@ -124,7 +120,7 @@ public class WindowFunctionTest extends PlanTestBase {
       */
       var overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE  rows between 3 preceding and 4 following";
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
   }
@@ -135,7 +131,7 @@ public class WindowFunctionTest extends PlanTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"avg", "count", "max", "min", "sum"})
     void standardAggregateFunctions(String aggFunction) throws SqlParseException, IOException {
-      assertProtoPlanRoundrip(
+      assertFullRoundTrip(
           String.format(
               "select %s(L_LINENUMBER) over (partition BY L_PARTKEY) from lineitem", aggFunction));
     }

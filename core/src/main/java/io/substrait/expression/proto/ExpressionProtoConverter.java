@@ -1,14 +1,15 @@
 package io.substrait.expression.proto;
 
-import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Expression;
+import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
+import io.substrait.proto.Type;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
@@ -415,97 +416,46 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  public Expression visit(io.substrait.expression.Expression.Window expr) throws RuntimeException {
-    var partExps =
+  public Expression visit(io.substrait.expression.Expression.WindowFunctionInvocation expr)
+      throws RuntimeException {
+    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
+    List<FunctionArgument> args =
+        expr.arguments().stream()
+            .map(a -> a.accept(expr.declaration(), 0, argVisitor))
+            .collect(java.util.stream.Collectors.toList());
+    Type outputType = expr.getType().accept(typeProtoConverter);
+
+    List<Expression> partitionExprs =
         expr.partitionBy().stream()
             .map(e -> e.accept(this))
             .collect(java.util.stream.Collectors.toList());
-    var outputType = expr.getType().accept(typeProtoConverter);
-    var builder = Expression.WindowFunction.newBuilder().setOutputType(outputType);
-    if (expr.hasNormalAggregateFunction()) {
-      var aggMeasureFunc = expr.aggregateFunction().getFunction();
-      var funcReference = extensionCollector.getFunctionReference(aggMeasureFunc.declaration());
-      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
-      var args =
-          aggMeasureFunc.arguments().stream()
-              .map(a -> a.accept(aggMeasureFunc.declaration(), 0, argVisitor))
-              .collect(java.util.stream.Collectors.toList());
-      builder
-          .setFunctionReference(funcReference)
-          .setPhase(aggMeasureFunc.aggregationPhase().toProto())
-          .addAllArguments(args);
-    } else {
-      var windowFunc = expr.windowFunction().getFunction();
-      var funcReference = extensionCollector.getFunctionReference(windowFunc.declaration());
-      var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
-      var args =
-          windowFunc.arguments().stream()
-              .map(a -> a.accept(windowFunc.declaration(), 0, argVisitor))
-              .collect(java.util.stream.Collectors.toList());
-      builder
-          .setFunctionReference(funcReference)
-          .setPhase(windowFunc.aggregationPhase().toProto())
-          .addAllArguments(args);
-    }
-    var sortFields =
-        expr.orderBy().stream()
+
+    List<SortField> sortFields =
+        expr.sort().stream()
             .map(
-                s -> {
-                  return SortField.newBuilder()
-                      .setDirection(s.direction().toProto())
-                      .setExpr(s.expr().accept(this))
-                      .build();
-                })
+                s ->
+                    SortField.newBuilder()
+                        .setDirection(s.direction().toProto())
+                        .setExpr(s.expr().accept(this))
+                        .build())
             .collect(java.util.stream.Collectors.toList());
-    var upperBound = toBound(expr.upperBound());
-    var lowerBound = toBound(expr.lowerBound());
+
+    Expression.WindowFunction.Bound upperBound = toBound(expr.upperBound());
+    Expression.WindowFunction.Bound lowerBound = toBound(expr.lowerBound());
+
     return Expression.newBuilder()
         .setWindowFunction(
-            builder
-                .addAllPartitions(partExps)
+            Expression.WindowFunction.newBuilder()
+                .setFunctionReference(extensionCollector.getFunctionReference(expr.declaration()))
+                .addAllArguments(args)
+                .setOutputType(outputType)
+                .setPhase(expr.aggregationPhase().toProto())
+                .setInvocation(expr.invocation().toProto())
                 .addAllSorts(sortFields)
+                .addAllPartitions(partitionExprs)
                 .setLowerBound(lowerBound)
-                .setUpperBound(upperBound)
-                .build())
+                .setUpperBound(upperBound))
         .build();
-  }
-
-  private static class LiteralToWindowBoundOffset
-      extends AbstractExpressionVisitor<Long, RuntimeException> {
-
-    @Override
-    public Long visitFallback(io.substrait.expression.Expression expr) {
-      throw new RuntimeException(
-          String.format("Expected positive integer for Window Bound offset, received: %s", expr));
-    }
-
-    private static long offsetIsPositive(long offset) {
-      if (offset >= 1) {
-        return offset;
-      }
-      throw new RuntimeException(
-          String.format("Expected positive offset for Window Bound offset, recieved: %d", offset));
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I8Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I16Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I32Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
-
-    @Override
-    public Long visit(io.substrait.expression.Expression.I64Literal expr) throws RuntimeException {
-      return offsetIsPositive(expr.value());
-    }
   }
 
   private Expression.WindowFunction.Bound toBound(io.substrait.expression.WindowBound windowBound) {
@@ -517,7 +467,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       case BOUNDED -> {
         WindowBound.BoundedWindowBound boundedWindowBound =
             (WindowBound.BoundedWindowBound) windowBound;
-        var offset = boundedWindowBound.offset().accept(new LiteralToWindowBoundOffset());
+        var offset = boundedWindowBound.offset();
         yield switch (boundedWindowBound.direction()) {
           case PRECEDING -> Expression.WindowFunction.Bound.newBuilder()
               .setPreceding(

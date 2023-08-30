@@ -3,13 +3,17 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.annotations.Beta;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,5 +114,62 @@ public class PlanTestBase {
       Assertions.assertEquals(pojoRel, pojoRel2);
     }
     return relNodeList;
+  }
+
+  @Beta
+  protected void assertFullRoundTrip(String query) throws IOException, SqlParseException {
+    assertFullRoundTrip(query, tpchSchemaCreateStatements());
+  }
+
+  /**
+   * Verifies that the given query can be converted from its Calcite form to the Substrait Proto
+   * representation and back.
+   *
+   * <p>For the given transformations: <code>
+   *   SQL -> Calcite 1 -> Substrait POJO 1 -> Substrait Proto -> Substrait POJO 2 -> Calcite 2 -> Substrait POJO 3
+   * </code> this code also checks that:
+   *
+   * <ul>
+   *   <li>Substrait POJO 1 == Substrait POJO 2
+   *   <li>Substrait POJO 2 == Substrait POJO 3
+   * </ul>
+   */
+  @Beta
+  protected void assertFullRoundTrip(String sqlQuery, List<String> createStatements)
+      throws SqlParseException {
+    SqlToSubstrait sqlConverter = new SqlToSubstrait();
+    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, createStatements);
+
+    for (RelRoot calcite1 : relRoots) {
+      var extensionCollector = new ExtensionCollector();
+
+      // Calcite 1 -> Substrait POJO 1
+      io.substrait.relation.Rel pojo1 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
+
+      // Substrait POJO 1 -> Substrait Proto
+      io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
+
+      // Substrait Proto -> Substrait Pojo 2
+      io.substrait.relation.Rel pojo2 =
+          new ProtoRelConverter(extensionCollector, EXTENSION_COLLECTION).from(proto);
+
+      // Verify that POJOs are the same
+      assertEquals(pojo1, pojo2);
+
+      /*
+      // TODO vbarua: go all the way once window function conversions are allowed
+      // Substrait POJO 2 -> Calcite 2
+      RelNode calcite2 = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
+      // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
+      // do so
+      assertNotNull(calcite2);
+
+      // Calcite 2 -> Substrait POJO 3
+      io.substrait.relation.Rel pojo3 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
+
+      // Verify that POJOs are the same
+      assertEquals(pojo1, pojo3);
+      */
+    }
   }
 }

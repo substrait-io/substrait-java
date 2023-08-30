@@ -45,7 +45,7 @@ public interface WindowBound {
 
     public abstract Direction direction();
 
-    public abstract Expression offset();
+    public abstract long offset();
 
     public static ImmutableWindowBound.BoundedWindowBound.Builder builder() {
       return ImmutableWindowBound.BoundedWindowBound.builder();

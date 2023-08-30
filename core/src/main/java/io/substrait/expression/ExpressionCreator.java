@@ -313,36 +313,48 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static WindowFunctionInvocation windowFunction(
+  public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
+      List<Expression> partitionBy,
+      WindowBound lowerBound,
+      WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
-    return WindowFunctionInvocation.builder()
+    return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
+        .partitionBy(partitionBy)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .invocation(invocation)
         .addAllArguments(arguments)
         .build();
   }
 
-  public static WindowFunctionInvocation windowFunction(
+  public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
       Expression.AggregationPhase phase,
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
+      List<Expression> partitionBy,
+      WindowBound lowerBound,
+      WindowBound upperBound,
       FunctionArg... arguments) {
-    return WindowFunctionInvocation.builder()
+    return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
         .invocation(invocation)
+        .partitionBy(partitionBy)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .addArguments(arguments)
         .build();
   }

@@ -6,9 +6,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
-import io.substrait.expression.WindowFunctionInvocation;
 import io.substrait.extension.ExtensionLookup;
-import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
@@ -119,30 +117,12 @@ public class ProtoExpressionConverter {
       case WINDOW_FUNCTION -> {
         var windowFunction = expr.getWindowFunction();
         var functionReference = windowFunction.getFunctionReference();
-        SimpleExtension.WindowFunctionVariant functionVariant;
-        try {
-          functionVariant = lookup.getWindowFunction(functionReference, extensions);
-        } catch (RuntimeException e) {
-          // TODO: Ideally we shouldn't need to catch a RuntimeException to be able to attempt our
-          // second lookup
-          var aggFunctionVariant = lookup.getAggregateFunction(functionReference, extensions);
-          functionVariant =
-              ImmutableSimpleExtension.WindowFunctionVariant.builder()
-                  // Sets all fields declared in the Function interface
-                  .from(aggFunctionVariant)
-                  // Set WindowFunctionVariant fields
-                  .decomposability(aggFunctionVariant.decomposability())
-                  .intermediate(aggFunctionVariant.intermediate())
-                  // Aggregate Functions used in Windows have WindowType Streaming
-                  .windowType(SimpleExtension.WindowType.STREAMING)
-                  .build();
-        }
-        final SimpleExtension.WindowFunctionVariant declaration = functionVariant;
+        var declaration = lookup.getWindowFunction(functionReference, extensions);
 
-        var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+        var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
         var args =
             IntStream.range(0, windowFunction.getArgumentsCount())
-                .mapToObj(i -> pF.convert(declaration, i, windowFunction.getArguments(i)))
+                .mapToObj(i -> argVisitor.convert(declaration, i, windowFunction.getArguments(i)))
                 .collect(java.util.stream.Collectors.toList());
         var partitionExprs =
             windowFunction.getPartitionsList().stream()
@@ -157,29 +137,20 @@ public class ProtoExpressionConverter {
                             .expr(from(s.getExpr()))
                             .build())
                 .collect(java.util.stream.Collectors.toList());
-        var wfi =
-            WindowFunctionInvocation.builder()
-                .addAllArguments(args)
-                .declaration(declaration)
-                .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
-                .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
-                .addAllSort(sortFields)
-                .invocation(
-                    Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
-                .build();
 
         WindowBound lowerBound = toLowerBound(windowFunction.getLowerBound());
         WindowBound upperBound = toUpperBound(windowFunction.getUpperBound());
 
-        var wf = ImmutableExpression.WindowFunction.builder().function(wfi).build();
-        yield Expression.Window.builder()
-            .windowFunction(wf)
-            .hasNormalAggregateFunction(false)
-            .type(protoTypeConverter.from(windowFunction.getOutputType()))
+        yield Expression.WindowFunctionInvocation.builder()
+            .arguments(args)
+            .declaration(declaration)
+            .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
+            .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
             .partitionBy(partitionExprs)
-            .orderBy(sortFields)
+            .sort(sortFields)
             .lowerBound(lowerBound)
             .upperBound(upperBound)
+            .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
             .build();
       }
       case IF_THEN -> {
@@ -297,17 +268,11 @@ public class ProtoExpressionConverter {
     return switch (bound.getKindCase()) {
       case PRECEDING -> WindowBound.BoundedWindowBound.builder()
           .direction(WindowBound.Direction.PRECEDING)
-          .offset(
-              Expression.Literal.I64Literal.builder()
-                  .value(bound.getPreceding().getOffset())
-                  .build())
+          .offset(bound.getPreceding().getOffset())
           .build();
       case FOLLOWING -> WindowBound.BoundedWindowBound.builder()
           .direction(WindowBound.Direction.FOLLOWING)
-          .offset(
-              Expression.Literal.I64Literal.builder()
-                  .value(bound.getFollowing().getOffset())
-                  .build())
+          .offset(bound.getFollowing().getOffset())
           .build();
       case CURRENT_ROW -> WindowBound.CURRENT_ROW;
       case UNBOUNDED, KIND_NOT_SET -> defaultBound;

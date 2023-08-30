@@ -464,6 +464,10 @@ public class SimpleExtension {
     public Stream<WindowFunctionVariant> resolve(String uri) {
       return impls().stream().map(f -> f.resolve(uri, name(), description()));
     }
+
+    public static ImmutableSimpleExtension.WindowFunction.Builder builder() {
+      return ImmutableSimpleExtension.WindowFunction.builder();
+    }
   }
 
   @JsonDeserialize(as = ImmutableSimpleExtension.AggregateFunctionVariant.class)
@@ -541,6 +545,10 @@ public class SimpleExtension {
           .returnType(returnType())
           .windowType(windowType())
           .build();
+    }
+
+    public static ImmutableSimpleExtension.WindowFunctionVariant.Builder builder() {
+      return ImmutableSimpleExtension.WindowFunctionVariant.builder();
     }
   }
 
@@ -796,20 +804,43 @@ public class SimpleExtension {
 
   public static ExtensionCollection buildExtensionCollection(
       String namespace, ExtensionSignatures extensionSignatures) {
+    List<ScalarFunctionVariant> scalarFunctionVariants =
+        extensionSignatures.scalars().stream()
+            .flatMap(t -> t.resolve(namespace))
+            .collect(java.util.stream.Collectors.toList());
+
+    List<AggregateFunctionVariant> aggregateFunctionVariants =
+        extensionSignatures.aggregates().stream()
+            .flatMap(t -> t.resolve(namespace))
+            .collect(java.util.stream.Collectors.toList());
+
+    Stream<WindowFunctionVariant> windowFunctionVariants =
+        extensionSignatures.windows().stream().flatMap(t -> t.resolve(namespace));
+
+    // Aggregate functions can be used as Window Functions
+    Stream<WindowFunctionVariant> windowAggFunctionVariants =
+        aggregateFunctionVariants.stream()
+            .map(
+                afi ->
+                    WindowFunctionVariant.builder()
+                        // Sets all fields declared in the Function interface
+                        .from(afi)
+                        // Set WindowFunctionVariant fields
+                        .decomposability(afi.decomposability())
+                        .intermediate(afi.intermediate())
+                        // Aggregate Functions used in Windows have WindowType Streaming
+                        .windowType(SimpleExtension.WindowType.STREAMING)
+                        .build());
+
+    List<WindowFunctionVariant> allWindowFunctionVariants =
+        Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
+            .collect(Collectors.toList());
+
     var collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
-            .addAllAggregateFunctions(
-                extensionSignatures.aggregates().stream()
-                    .flatMap(t -> t.resolve(namespace))
-                    .collect(java.util.stream.Collectors.toList()))
-            .addAllScalarFunctions(
-                extensionSignatures.scalars().stream()
-                    .flatMap(t -> t.resolve(namespace))
-                    .collect(java.util.stream.Collectors.toList()))
-            .addAllWindowFunctions(
-                extensionSignatures.windows().stream()
-                    .flatMap(t -> t.resolve(namespace))
-                    .collect(java.util.stream.Collectors.toList()))
+            .scalarFunctions(scalarFunctionVariants)
+            .aggregateFunctions(aggregateFunctionVariants)
+            .windowFunctions(allWindowFunctionVariants)
             .addAllTypes(extensionSignatures.types())
             .build();
     logger.debug(
