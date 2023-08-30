@@ -53,13 +53,15 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
-    - uses: DeLaGuardo/setup-graalvm@5.0
+    - uses: graalvm/setup-graalvm@v1
       with:
-        graalvm: '22.0.0.2'
-        java: 'java17'
+        java-version: '17'
+        distribution: 'graalvm'
+        # helps avoid rate-limiting issues
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Report Java Version
