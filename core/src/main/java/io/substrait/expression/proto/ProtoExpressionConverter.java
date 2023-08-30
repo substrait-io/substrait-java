@@ -148,6 +148,7 @@ public class ProtoExpressionConverter {
             .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
             .partitionBy(partitionExprs)
             .sort(sortFields)
+            .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
             .lowerBound(lowerBound)
             .upperBound(upperBound)
             .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))

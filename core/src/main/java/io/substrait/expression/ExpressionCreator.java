@@ -320,6 +320,7 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       List<Expression> partitionBy,
+      Expression.WindowBoundsType boundsType,
       WindowBound lowerBound,
       WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
@@ -329,6 +330,7 @@ public class ExpressionCreator {
         .aggregationPhase(phase)
         .sort(sort)
         .partitionBy(partitionBy)
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(invocation)
@@ -343,6 +345,7 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       List<Expression> partitionBy,
+      Expression.WindowBoundsType boundsType,
       WindowBound lowerBound,
       WindowBound upperBound,
       FunctionArg... arguments) {
@@ -353,6 +356,7 @@ public class ExpressionCreator {
         .sort(sort)
         .invocation(invocation)
         .partitionBy(partitionBy)
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .addArguments(arguments)

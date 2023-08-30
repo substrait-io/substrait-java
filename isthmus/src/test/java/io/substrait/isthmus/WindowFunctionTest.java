@@ -125,6 +125,30 @@ public class WindowFunctionTest extends PlanTestBase {
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
+
+    @Test
+    void rangePrecedingToCurrent() throws IOException, SqlParseException {
+      /*
+      LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE 10 PRECEDING)])
+        LogicalTableScan(table=[[ORDERS]])
+      */
+      var overClause =
+          "partition by O_CUSTKEY order by O_TOTALPRICE range between 10 preceding and current row";
+      assertFullRoundTrip(
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
+    }
+
+    @Test
+    void rangeCurrentToFollowing() throws IOException, SqlParseException {
+      /*
+      LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE BETWEEN CURRENT ROW AND 11 FOLLOWING)])
+        LogicalTableScan(table=[[ORDERS]])
+      */
+      var overClause =
+          "partition by O_CUSTKEY order by O_TOTALPRICE range between current row and 11 following";
+      assertFullRoundTrip(
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
+    }
   }
 
   @Nested

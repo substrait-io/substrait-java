@@ -65,6 +65,9 @@ public class WindowFunctionConverter
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
 
+    // Calcite only supports ROW or RANGE mode
+    Expression.WindowBoundsType boundsType =
+        window.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
     WindowBound lowerBound = toWindowBound(window.getLowerBound());
     WindowBound upperBound = toWindowBound(window.getUpperBound());
 
@@ -75,6 +78,7 @@ public class WindowFunctionConverter
         sorts,
         invocation,
         partitionExprs,
+        boundsType,
         lowerBound,
         upperBound,
         arguments);

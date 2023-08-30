@@ -453,6 +453,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .setInvocation(expr.invocation().toProto())
                 .addAllSorts(sortFields)
                 .addAllPartitions(partitionExprs)
+                .setBoundsType(expr.boundsType().toProto())
                 .setLowerBound(lowerBound)
                 .setUpperBound(upperBound))
         .build();

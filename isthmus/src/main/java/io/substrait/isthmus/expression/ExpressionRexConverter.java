@@ -306,8 +306,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
             // per the spec, unbounded on the upper bound means the end of the partition
             .accept(new ToRexWindowBoundVisitor(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
 
-    // TODO: Bounds Type
-    boolean rowMode = true;
+    boolean rowMode =
+        switch (expr.boundsType()) {
+          case ROWS -> true;
+          case RANGE -> false;
+          case UNSPECIFIED -> throw new IllegalArgumentException(
+              "bounds type on window function must be specified");
+        };
 
     boolean distinct =
         switch (expr.invocation()) {
