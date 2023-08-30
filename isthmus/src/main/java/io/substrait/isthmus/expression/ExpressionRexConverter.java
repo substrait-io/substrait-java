@@ -1,8 +1,13 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
-import io.substrait.expression.*;
+import io.substrait.expression.AbstractExpressionVisitor;
+import io.substrait.expression.EnumArg;
+import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SingleOrList;
+import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionArg;
+import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
