@@ -293,24 +293,13 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
             .collect(ImmutableList.toImmutableList());
 
     RexWindowBound lowerBound =
-        switch (expr.lowerBound().boundedKind()) {
-          case UNBOUNDED -> RexWindowBounds.UNBOUNDED_PRECEDING;
-          case BOUNDED -> RexWindowBounds.preceding(
-              rexBuilder.makeBigintLiteral(
-                  BigDecimal.valueOf(
-                      ((WindowBound.BoundedWindowBound) expr.lowerBound()).offset())));
-          case CURRENT_ROW -> RexWindowBounds.CURRENT_ROW;
-        };
-
+        expr.lowerBound()
+            // per the spec, unbounded on the lower bound means the start of the partition
+            .accept(new ToRexWindowBoundVisitor(rexBuilder, RexWindowBounds.UNBOUNDED_PRECEDING));
     RexWindowBound upperBound =
-        switch (expr.upperBound().boundedKind()) {
-          case UNBOUNDED -> RexWindowBounds.UNBOUNDED_FOLLOWING;
-          case BOUNDED -> RexWindowBounds.following(
-              rexBuilder.makeBigintLiteral(
-                  BigDecimal.valueOf(
-                      ((WindowBound.BoundedWindowBound) expr.upperBound()).offset())));
-          case CURRENT_ROW -> RexWindowBounds.CURRENT_ROW;
-        };
+        expr.upperBound()
+            // per the spec, unbounded on the upper bound means the end of the partition
+            .accept(new ToRexWindowBoundVisitor(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
 
     // TODO: Bounds Type
     boolean rowMode = true;
@@ -343,6 +332,40 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         nullWhenCountZero,
         distinct,
         ignoreNulls);
+  }
+
+  static class ToRexWindowBoundVisitor
+      implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
+
+    private final RexBuilder rexBuilder;
+    private final RexWindowBound unboundedVariant;
+
+    ToRexWindowBoundVisitor(RexBuilder rexBuilder, RexWindowBound unboundedVariant) {
+      this.rexBuilder = rexBuilder;
+      this.unboundedVariant = unboundedVariant;
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Preceding preceding) {
+      var offset = BigDecimal.valueOf(preceding.offset());
+      return RexWindowBounds.preceding(rexBuilder.makeBigintLiteral(offset));
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Following following) {
+      var offset = BigDecimal.valueOf(following.offset());
+      return RexWindowBounds.following(rexBuilder.makeBigintLiteral(offset));
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.CurrentRow currentRow) {
+      return RexWindowBounds.CURRENT_ROW;
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Unbounded unbounded) {
+      return unboundedVariant;
+    }
   }
 
   private String convert(FunctionArg a) {

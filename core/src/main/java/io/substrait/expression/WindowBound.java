@@ -5,58 +5,62 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface WindowBound {
 
-  public BoundedKind boundedKind();
+  interface WindowBoundVisitor<R, E extends Throwable> {
+    R visit(Preceding preceding);
 
-  enum BoundedKind {
-    UNBOUNDED,
-    BOUNDED,
-    CURRENT_ROW
+    R visit(Following following);
+
+    R visit(CurrentRow currentRow);
+
+    R visit(Unbounded unbounded);
   }
 
-  enum Direction {
-    PRECEDING,
-    FOLLOWING
-  }
+  <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor);
 
-  public static CurrentRowWindowBound CURRENT_ROW =
-      ImmutableWindowBound.CurrentRowWindowBound.builder().build();
+  CurrentRow CURRENT_ROW = ImmutableWindowBound.CurrentRow.builder().build();
+  Unbounded UNBOUNDED = ImmutableWindowBound.Unbounded.builder().build();
 
   @Value.Immutable
-  abstract static class UnboundedWindowBound implements WindowBound {
-    @Override
-    public BoundedKind boundedKind() {
-      return BoundedKind.UNBOUNDED;
-    }
-
-    public abstract Direction direction();
-
-    public static ImmutableWindowBound.UnboundedWindowBound.Builder builder() {
-      return ImmutableWindowBound.UnboundedWindowBound.builder();
-    }
-  }
-
-  @Value.Immutable
-  abstract static class BoundedWindowBound implements WindowBound {
-
-    @Override
-    public BoundedKind boundedKind() {
-      return BoundedKind.BOUNDED;
-    }
-
-    public abstract Direction direction();
-
+  abstract class Preceding implements WindowBound {
     public abstract long offset();
 
-    public static ImmutableWindowBound.BoundedWindowBound.Builder builder() {
-      return ImmutableWindowBound.BoundedWindowBound.builder();
+    public static Preceding of(long offset) {
+      return ImmutableWindowBound.Preceding.builder().offset(offset).build();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+      return visitor.visit(this);
     }
   }
 
   @Value.Immutable
-  static class CurrentRowWindowBound implements WindowBound {
+  abstract class Following implements WindowBound {
+    public abstract long offset();
+
+    public static Following of(long offset) {
+      return ImmutableWindowBound.Following.builder().offset(offset).build();
+    }
+
     @Override
-    public BoundedKind boundedKind() {
-      return BoundedKind.CURRENT_ROW;
+    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract class CurrentRow implements WindowBound {
+    @Override
+    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract class Unbounded implements WindowBound {
+    @Override
+    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+      return visitor.visit(this);
     }
   }
 }

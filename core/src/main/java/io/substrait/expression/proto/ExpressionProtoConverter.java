@@ -440,8 +440,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
-    Expression.WindowFunction.Bound upperBound = toBound(expr.upperBound());
-    Expression.WindowFunction.Bound lowerBound = toBound(expr.lowerBound());
+    Expression.WindowFunction.Bound upperBound = expr.upperBound().accept(TO_BOUND_VISITOR);
+    Expression.WindowFunction.Bound lowerBound = expr.lowerBound().accept(TO_BOUND_VISITOR);
 
     return Expression.newBuilder()
         .setWindowFunction(
@@ -458,30 +458,39 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  private Expression.WindowFunction.Bound toBound(io.substrait.expression.WindowBound windowBound) {
-    var boundedKind = windowBound.boundedKind();
-    return switch (boundedKind) {
-      case CURRENT_ROW -> Expression.WindowFunction.Bound.newBuilder()
+  private static final ToBoundVisitor TO_BOUND_VISITOR = new ToBoundVisitor();
+
+  static class ToBoundVisitor
+      implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
+
+    @Override
+    public Expression.WindowFunction.Bound visit(WindowBound.Preceding preceding) {
+      return Expression.WindowFunction.Bound.newBuilder()
+          .setPreceding(
+              Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(preceding.offset()))
+          .build();
+    }
+
+    @Override
+    public Expression.WindowFunction.Bound visit(WindowBound.Following following) {
+      return Expression.WindowFunction.Bound.newBuilder()
+          .setFollowing(
+              Expression.WindowFunction.Bound.Following.newBuilder().setOffset(following.offset()))
+          .build();
+    }
+
+    @Override
+    public Expression.WindowFunction.Bound visit(WindowBound.CurrentRow currentRow) {
+      return Expression.WindowFunction.Bound.newBuilder()
           .setCurrentRow(Expression.WindowFunction.Bound.CurrentRow.getDefaultInstance())
           .build();
-      case BOUNDED -> {
-        WindowBound.BoundedWindowBound boundedWindowBound =
-            (WindowBound.BoundedWindowBound) windowBound;
-        var offset = boundedWindowBound.offset();
-        yield switch (boundedWindowBound.direction()) {
-          case PRECEDING -> Expression.WindowFunction.Bound.newBuilder()
-              .setPreceding(
-                  Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(offset))
-              .build();
-          case FOLLOWING -> Expression.WindowFunction.Bound.newBuilder()
-              .setFollowing(
-                  Expression.WindowFunction.Bound.Following.newBuilder().setOffset(offset))
-              .build();
-        };
-      }
-      case UNBOUNDED -> Expression.WindowFunction.Bound.newBuilder()
+    }
+
+    @Override
+    public Expression.WindowFunction.Bound visit(WindowBound.Unbounded unbounded) {
+      return Expression.WindowFunction.Bound.newBuilder()
           .setUnbounded(Expression.WindowFunction.Bound.Unbounded.getDefaultInstance())
           .build();
-    };
+    }
   }
 }

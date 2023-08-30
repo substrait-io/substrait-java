@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
@@ -103,29 +102,25 @@ public class WindowFunctionConverter
       return WindowBound.CURRENT_ROW;
     }
     if (rexWindowBound.isUnbounded()) {
-      var direction = findWindowBoundDirection(rexWindowBound);
-      return ImmutableWindowBound.UnboundedWindowBound.builder().direction(direction).build();
+      return WindowBound.UNBOUNDED;
     } else {
-      var direction = findWindowBoundDirection(rexWindowBound);
       if (rexWindowBound.getOffset() instanceof RexLiteral literal
           && SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
         BigDecimal offset = (BigDecimal) literal.getValue4();
-        return ImmutableWindowBound.BoundedWindowBound.builder()
-            .direction(direction)
-            .offset(offset.longValue())
-            .build();
+        if (rexWindowBound.isPreceding()) {
+          return WindowBound.Preceding.of(offset.longValue());
+        }
+        if (rexWindowBound.isFollowing()) {
+          return WindowBound.Following.of(offset.longValue());
+        }
+        throw new IllegalStateException(
+            "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
       }
       throw new IllegalArgumentException(
           String.format(
               "substrait only supports integer window offsets. Received: %s",
               rexWindowBound.getOffset().getKind()));
     }
-  }
-
-  private WindowBound.Direction findWindowBoundDirection(RexWindowBound rexWindowBound) {
-    return rexWindowBound.isFollowing()
-        ? WindowBound.Direction.FOLLOWING
-        : WindowBound.Direction.PRECEDING;
   }
 
   private Expression.SortField toSortField(
