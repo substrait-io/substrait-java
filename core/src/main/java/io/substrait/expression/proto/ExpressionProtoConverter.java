@@ -440,8 +440,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
-    Expression.WindowFunction.Bound upperBound = expr.upperBound().accept(TO_BOUND_VISITOR);
-    Expression.WindowFunction.Bound lowerBound = expr.lowerBound().accept(TO_BOUND_VISITOR);
+    Expression.WindowFunction.Bound lowerBound = BoundConverter.convert(expr.lowerBound());
+    Expression.WindowFunction.Bound upperBound = BoundConverter.convert(expr.upperBound());
 
     return Expression.newBuilder()
         .setWindowFunction(
@@ -459,10 +459,16 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .build();
   }
 
-  private static final ToBoundVisitor TO_BOUND_VISITOR = new ToBoundVisitor();
-
-  static class ToBoundVisitor
+  static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
+
+    static Expression.WindowFunction.Bound convert(WindowBound bound) {
+      return bound.accept(TO_BOUND_VISITOR);
+    }
+
+    private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
+
+    private BoundConverter() {}
 
     @Override
     public Expression.WindowFunction.Bound visit(WindowBound.Preceding preceding) {

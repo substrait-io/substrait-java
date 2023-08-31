@@ -297,14 +297,8 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
                 })
             .collect(ImmutableList.toImmutableList());
 
-    RexWindowBound lowerBound =
-        expr.lowerBound()
-            // per the spec, unbounded on the lower bound means the start of the partition
-            .accept(new ToRexWindowBoundVisitor(rexBuilder, RexWindowBounds.UNBOUNDED_PRECEDING));
-    RexWindowBound upperBound =
-        expr.upperBound()
-            // per the spec, unbounded on the upper bound means the end of the partition
-            .accept(new ToRexWindowBoundVisitor(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
+    RexWindowBound lowerBound = ToRexWindowBound.lowerBound(rexBuilder, expr.lowerBound());
+    RexWindowBound upperBound = ToRexWindowBound.lowerBound(rexBuilder, expr.upperBound());
 
     boolean rowMode =
         switch (expr.boundsType()) {
@@ -344,13 +338,25 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         ignoreNulls);
   }
 
-  static class ToRexWindowBoundVisitor
+  static class ToRexWindowBound
       implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
+
+    static RexWindowBound lowerBound(RexBuilder rexBuilder, WindowBound bound) {
+      // per the spec, unbounded on the lower bound means the start of the partition
+      // thus UNBOUNDED_PRECEDING should be used when bound is unbounded
+      return bound.accept(new ToRexWindowBound(rexBuilder, RexWindowBounds.UNBOUNDED_PRECEDING));
+    }
+
+    static RexWindowBound upperBound(RexBuilder rexBuilder, WindowBound bound) {
+      // per the spec, unbounded on the upper bound means the end of the partition
+      // thus UNBOUNDED_FOLLOWING should be used when bound is unbounded
+      return bound.accept(new ToRexWindowBound(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
+    }
 
     private final RexBuilder rexBuilder;
     private final RexWindowBound unboundedVariant;
 
-    ToRexWindowBoundVisitor(RexBuilder rexBuilder, RexWindowBound unboundedVariant) {
+    private ToRexWindowBound(RexBuilder rexBuilder, RexWindowBound unboundedVariant) {
       this.rexBuilder = rexBuilder;
       this.unboundedVariant = unboundedVariant;
     }
