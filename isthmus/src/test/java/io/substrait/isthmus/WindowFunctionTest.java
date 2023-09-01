@@ -1,5 +1,7 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Nested;
@@ -123,6 +125,30 @@ public class WindowFunctionTest extends PlanTestBase {
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
+
+    @Test
+    void rangePrecedingToCurrent() throws IOException, SqlParseException {
+      /*
+      LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE 10 PRECEDING)])
+        LogicalTableScan(table=[[ORDERS]])
+      */
+      var overClause =
+          "partition by O_CUSTKEY order by O_TOTALPRICE range between 10 preceding and current row";
+      assertFullRoundTrip(
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
+    }
+
+    @Test
+    void rangeCurrentToFollowing() throws IOException, SqlParseException {
+      /*
+      LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE BETWEEN CURRENT ROW AND 11 FOLLOWING)])
+        LogicalTableScan(table=[[ORDERS]])
+      */
+      var overClause =
+          "partition by O_CUSTKEY order by O_TOTALPRICE range between current row and 11 following";
+      assertFullRoundTrip(
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
+    }
   }
 
   @Nested
@@ -135,5 +161,13 @@ public class WindowFunctionTest extends PlanTestBase {
           String.format(
               "select %s(L_LINENUMBER) over (partition BY L_PARTKEY) from lineitem", aggFunction));
     }
+  }
+
+  @Test
+  void rejectQueriesWithIgnoreNulls() {
+    // IGNORE NULLS cannot be specified in the Substrait representation.
+    // Queries using it should be rejected.
+    var query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
+    assertThrows(IllegalArgumentException.class, () -> assertFullRoundTrip(query));
   }
 }

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
@@ -66,8 +65,11 @@ public class WindowFunctionConverter
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
 
-    WindowBound lowerBound = toWindowBound(window.getLowerBound(), call.rexExpressionConverter);
-    WindowBound upperBound = toWindowBound(window.getUpperBound(), call.rexExpressionConverter);
+    // Calcite only supports ROW or RANGE mode
+    Expression.WindowBoundsType boundsType =
+        window.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
+    WindowBound lowerBound = toWindowBound(window.getLowerBound());
+    WindowBound upperBound = toWindowBound(window.getUpperBound());
 
     return ExpressionCreator.windowFunction(
         function,
@@ -76,6 +78,7 @@ public class WindowFunctionConverter
         sorts,
         invocation,
         partitionExprs,
+        boundsType,
         lowerBound,
         upperBound,
         arguments);
@@ -98,35 +101,30 @@ public class WindowFunctionConverter
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
-  private WindowBound toWindowBound(
-      RexWindowBound rexWindowBound, RexExpressionConverter rexExpressionConverter) {
+  private WindowBound toWindowBound(RexWindowBound rexWindowBound) {
     if (rexWindowBound.isCurrentRow()) {
       return WindowBound.CURRENT_ROW;
     }
     if (rexWindowBound.isUnbounded()) {
-      var direction = findWindowBoundDirection(rexWindowBound);
-      return ImmutableWindowBound.UnboundedWindowBound.builder().direction(direction).build();
+      return WindowBound.UNBOUNDED;
     } else {
-      var direction = findWindowBoundDirection(rexWindowBound);
       if (rexWindowBound.getOffset() instanceof RexLiteral literal
           && SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
         BigDecimal offset = (BigDecimal) literal.getValue4();
-        return ImmutableWindowBound.BoundedWindowBound.builder()
-            .direction(direction)
-            .offset(offset.longValue())
-            .build();
+        if (rexWindowBound.isPreceding()) {
+          return WindowBound.Preceding.of(offset.longValue());
+        }
+        if (rexWindowBound.isFollowing()) {
+          return WindowBound.Following.of(offset.longValue());
+        }
+        throw new IllegalStateException(
+            "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
       }
       throw new IllegalArgumentException(
           String.format(
-              "substrait only supports integer window offsets. Received: %",
+              "substrait only supports integer window offsets. Received: %s",
               rexWindowBound.getOffset().getKind()));
     }
-  }
-
-  private WindowBound.Direction findWindowBoundDirection(RexWindowBound rexWindowBound) {
-    return rexWindowBound.isFollowing()
-        ? WindowBound.Direction.FOLLOWING
-        : WindowBound.Direction.PRECEDING;
   }
 
   private Expression.SortField toSortField(
