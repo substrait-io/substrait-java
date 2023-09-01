@@ -585,6 +585,8 @@ public interface Expression extends FunctionArg {
 
     public abstract List<SortField> sort();
 
+    public abstract WindowBoundsType boundsType();
+
     public abstract WindowBound lowerBound();
 
     public abstract WindowBound upperBound();
@@ -603,6 +605,33 @@ public interface Expression extends FunctionArg {
 
     public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
       return visitor.visit(this);
+    }
+  }
+
+  enum WindowBoundsType {
+    UNSPECIFIED(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_UNSPECIFIED),
+    ROWS(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_ROWS),
+    RANGE(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_RANGE);
+
+    private final io.substrait.proto.Expression.WindowFunction.BoundsType proto;
+
+    WindowBoundsType(io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
+      this.proto = proto;
+    }
+
+    public io.substrait.proto.Expression.WindowFunction.BoundsType toProto() {
+      return proto;
+    }
+
+    public static WindowBoundsType fromProto(
+        io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
+      for (var v : values()) {
+        if (v.proto == proto) {
+          return v;
+        }
+      }
+
+      throw new IllegalArgumentException("Unknown type: " + proto);
     }
   }
 

@@ -138,8 +138,8 @@ public class ProtoExpressionConverter {
                             .build())
                 .collect(java.util.stream.Collectors.toList());
 
-        WindowBound lowerBound = toLowerBound(windowFunction.getLowerBound());
-        WindowBound upperBound = toUpperBound(windowFunction.getUpperBound());
+        WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
+        WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
 
         yield Expression.WindowFunctionInvocation.builder()
             .arguments(args)
@@ -148,6 +148,7 @@ public class ProtoExpressionConverter {
             .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
             .partitionBy(partitionExprs)
             .sort(sortFields)
+            .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
             .lowerBound(lowerBound)
             .upperBound(upperBound)
             .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
@@ -247,35 +248,16 @@ public class ProtoExpressionConverter {
     };
   }
 
-  private WindowBound toLowerBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
-    return toWindowBound(
-        bound,
-        WindowBound.UnboundedWindowBound.builder()
-            .direction(WindowBound.Direction.PRECEDING)
-            .build());
-  }
-
-  private WindowBound toUpperBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
-    return toWindowBound(
-        bound,
-        WindowBound.UnboundedWindowBound.builder()
-            .direction(WindowBound.Direction.FOLLOWING)
-            .build());
-  }
-
-  private WindowBound toWindowBound(
-      io.substrait.proto.Expression.WindowFunction.Bound bound, WindowBound defaultBound) {
+  private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
     return switch (bound.getKindCase()) {
-      case PRECEDING -> WindowBound.BoundedWindowBound.builder()
-          .direction(WindowBound.Direction.PRECEDING)
-          .offset(bound.getPreceding().getOffset())
-          .build();
-      case FOLLOWING -> WindowBound.BoundedWindowBound.builder()
-          .direction(WindowBound.Direction.FOLLOWING)
-          .offset(bound.getFollowing().getOffset())
-          .build();
+      case PRECEDING -> WindowBound.Preceding.of(bound.getPreceding().getOffset());
+      case FOLLOWING -> WindowBound.Following.of(bound.getFollowing().getOffset());
       case CURRENT_ROW -> WindowBound.CURRENT_ROW;
-      case UNBOUNDED, KIND_NOT_SET -> defaultBound;
+      case UNBOUNDED -> WindowBound.UNBOUNDED;
+      case KIND_NOT_SET ->
+      // per the spec, the lower and upper bounds default to the start or end of the partition
+      // respectively if not set
+      WindowBound.UNBOUNDED;
     };
   }
 

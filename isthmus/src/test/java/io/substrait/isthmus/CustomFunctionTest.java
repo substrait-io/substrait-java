@@ -156,6 +156,7 @@ public class CustomFunctionTest extends PlanTestBase {
           relBuilder,
           scalarFunctionConverter,
           aggregateFunctionConverter,
+          windowFunctionConverter,
           typeConverter);
     }
   }
