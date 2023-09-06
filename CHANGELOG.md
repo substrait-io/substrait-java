@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.16.0](https://github.com/substrait-io/substrait-java/compare/v0.15.0...v0.16.0) (2023-09-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* * windowFunction expression creator now requires window bound type parameter
+* the WindowBound POJO representation has been reworked to use visitation and more closely match the spec
+* ExpressionRexConverter now requires a WindowFunctionConverter
+
+* * feat: convert Substrait window functions to Calcite RexOvers (#172) ([7618bb8](https://github.com/substrait-io/substrait-java/commit/7618bb82150a430c3a8a9621c28e983e66785230)), closes [#172](https://github.com/substrait-io/substrait-java/issues/172)
+
 ## [0.15.0](https://github.com/substrait-io/substrait-java/compare/v0.14.1...v0.15.0) (2023-08-20)
 
 
