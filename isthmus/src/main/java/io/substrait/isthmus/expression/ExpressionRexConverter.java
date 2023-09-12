@@ -298,7 +298,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
             .collect(ImmutableList.toImmutableList());
 
     RexWindowBound lowerBound = ToRexWindowBound.lowerBound(rexBuilder, expr.lowerBound());
-    RexWindowBound upperBound = ToRexWindowBound.lowerBound(rexBuilder, expr.upperBound());
+    RexWindowBound upperBound = ToRexWindowBound.upperBound(rexBuilder, expr.upperBound());
 
     boolean rowMode =
         switch (expr.boundsType()) {
