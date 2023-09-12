@@ -44,11 +44,11 @@ import org.apache.calcite.util.TimestampString;
  */
 public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException>
     implements FunctionArg.FuncArgVisitor<RexNode, RuntimeException> {
-  private final RelDataTypeFactory typeFactory;
-  private final TypeConverter typeConverter;
-  private final RexBuilder rexBuilder;
-  private final ScalarFunctionConverter scalarFunctionConverter;
-  private final WindowFunctionConverter windowFunctionConverter;
+  protected final RelDataTypeFactory typeFactory;
+  protected final TypeConverter typeConverter;
+  protected final RexBuilder rexBuilder;
+  protected final ScalarFunctionConverter scalarFunctionConverter;
+  protected final WindowFunctionConverter windowFunctionConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
