@@ -44,11 +44,11 @@ import org.apache.calcite.util.TimestampString;
  */
 public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, RuntimeException>
     implements FunctionArg.FuncArgVisitor<RexNode, RuntimeException> {
-  private final RelDataTypeFactory typeFactory;
-  private final TypeConverter typeConverter;
-  private final RexBuilder rexBuilder;
-  private final ScalarFunctionConverter scalarFunctionConverter;
-  private final WindowFunctionConverter windowFunctionConverter;
+  protected final RelDataTypeFactory typeFactory;
+  protected final TypeConverter typeConverter;
+  protected final RexBuilder rexBuilder;
+  protected final ScalarFunctionConverter scalarFunctionConverter;
+  protected final WindowFunctionConverter windowFunctionConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
@@ -216,6 +216,22 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
     return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(Expression.ListLiteral expr) throws RuntimeException {
+    List<RexNode> args =
+        expr.values().stream().map(l -> l.accept(this)).collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
+  public RexNode visit(Expression.MapLiteral expr) throws RuntimeException {
+    var args =
+        expr.values().entrySet().stream()
+            .flatMap(entry -> Stream.of(entry.getKey().accept(this), entry.getValue().accept(this)))
+            .collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, args);
   }
 
   @Override
