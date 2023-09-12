@@ -219,6 +219,22 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   }
 
   @Override
+  public RexNode visit(Expression.ListLiteral expr) throws RuntimeException {
+    List<RexNode> args =
+        expr.values().stream().map(l -> l.accept(this)).collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
+  public RexNode visit(Expression.MapLiteral expr) throws RuntimeException {
+    var args =
+        expr.values().entrySet().stream()
+            .flatMap(entry -> Stream.of(entry.getKey().accept(this), entry.getValue().accept(this)))
+            .collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
   public RexNode visit(Expression.IfThen expr) throws RuntimeException {
     // In Calcite, the arguments to the CASE operator are given as:
     //   <cond1> <value1> <cond2> <value2> ... <condN> <valueN> ... <else>

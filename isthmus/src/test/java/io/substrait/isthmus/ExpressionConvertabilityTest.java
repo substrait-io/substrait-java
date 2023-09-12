@@ -16,6 +16,7 @@ import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.List;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 /** Tests which test that an expression can be converted to and from Calcite expressions. */
@@ -31,6 +32,16 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
       b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
 
   final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
+
+  @Test
+  public void listLiteral() throws IOException, SqlParseException {
+    assertFullRoundTrip("select ARRAY[1,2,3] from ORDERS");
+  }
+
+  @Test
+  public void mapLiteral() throws IOException, SqlParseException {
+    assertFullRoundTrip("select MAP[1, 'hello'] from ORDERS");
+  }
 
   @Test
   public void singleOrList() throws IOException {
