@@ -35,22 +35,6 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.TableFunctionScan;
-import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.logical.LogicalAggregate;
-import org.apache.calcite.rel.logical.LogicalCalc;
-import org.apache.calcite.rel.logical.LogicalCorrelate;
-import org.apache.calcite.rel.logical.LogicalExchange;
-import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rel.logical.LogicalIntersect;
-import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.calcite.rel.logical.LogicalMatch;
-import org.apache.calcite.rel.logical.LogicalMinus;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.logical.LogicalSort;
-import org.apache.calcite.rel.logical.LogicalTableModify;
-import org.apache.calcite.rel.logical.LogicalUnion;
-import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -67,10 +51,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
-  private final RexExpressionConverter converter;
-  private final AggregateFunctionConverter aggregateFunctionConverter;
-  private final TypeConverter typeConverter;
-  private final FeatureBoard featureBoard;
+  protected final RexExpressionConverter rexExpressionConverter;
+  protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final TypeConverter typeConverter;
+  protected final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
   public SubstraitRelVisitor(
@@ -91,7 +75,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
     var windowFunctionConverter =
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
-    this.converter =
+    this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;
   }
@@ -108,18 +92,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     converters.add(scalarFunctionConverter);
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter = aggregateFunctionConverter;
-    this.converter =
+    this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.typeConverter = typeConverter;
     this.featureBoard = features;
   }
 
-  private Expression toExpression(RexNode node) {
-    return node.accept(converter);
+  protected Expression toExpression(RexNode node) {
+    return node.accept(rexExpressionConverter);
   }
 
   @Override
-  public Rel visit(TableScan scan) {
+  public Rel visit(org.apache.calcite.rel.core.TableScan scan) {
     var type = typeConverter.toNamedStruct(scan.getRowType());
     return NamedScan.builder()
         .initialSchema(type)
@@ -128,12 +112,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(TableFunctionScan scan) {
+  public Rel visit(org.apache.calcite.rel.core.TableFunctionScan scan) {
     return super.visit(scan);
   }
 
   @Override
-  public Rel visit(LogicalValues values) {
+  public Rel visit(org.apache.calcite.rel.core.Values values) {
     var type = typeConverter.toNamedStruct(values.getRowType());
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
@@ -155,18 +139,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalFilter filter) {
+  public Rel visit(org.apache.calcite.rel.core.Filter filter) {
     var condition = toExpression(filter.getCondition());
     return Filter.builder().condition(condition).input(apply(filter.getInput())).build();
   }
 
   @Override
-  public Rel visit(LogicalCalc calc) {
+  public Rel visit(org.apache.calcite.rel.core.Calc calc) {
     return super.visit(calc);
   }
 
   @Override
-  public Rel visit(LogicalProject project) {
+  public Rel visit(org.apache.calcite.rel.core.Project project) {
     var expressions =
         project.getProjects().stream()
             .map(this::toExpression)
@@ -182,7 +166,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalJoin join) {
+  public Rel visit(org.apache.calcite.rel.core.Join join) {
     var left = apply(join.getLeft());
     var right = apply(join.getRight());
     var condition = toExpression(join.getCondition());
@@ -205,7 +189,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalCorrelate correlate) {
+  public Rel visit(org.apache.calcite.rel.core.Correlate correlate) {
     // left input of correlated-join is similar to the left input of a logical join
     apply(correlate.getLeft());
 
@@ -223,28 +207,28 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalUnion union) {
+  public Rel visit(org.apache.calcite.rel.core.Union union) {
     var inputs = apply(union.getInputs());
     var setOp = union.all ? Set.SetOp.UNION_ALL : Set.SetOp.UNION_DISTINCT;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
-  public Rel visit(LogicalIntersect intersect) {
+  public Rel visit(org.apache.calcite.rel.core.Intersect intersect) {
     var inputs = apply(intersect.getInputs());
     var setOp = intersect.all ? Set.SetOp.INTERSECTION_MULTISET : Set.SetOp.INTERSECTION_PRIMARY;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
-  public Rel visit(LogicalMinus minus) {
+  public Rel visit(org.apache.calcite.rel.core.Minus minus) {
     var inputs = apply(minus.getInputs());
     var setOp = minus.all ? Set.SetOp.MINUS_MULTISET : Set.SetOp.MINUS_PRIMARY;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
-  public Rel visit(LogicalAggregate aggregate) {
+  public Rel visit(org.apache.calcite.rel.core.Aggregate aggregate) {
     var input = apply(aggregate.getInput());
     Stream<ImmutableBitSet> sets;
     if (aggregate.groupSets != null) {
@@ -278,7 +262,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {
     var invocation =
-        aggregateFunctionConverter.convert(input, inputType, call, t -> t.accept(converter));
+        aggregateFunctionConverter.convert(
+            input, inputType, call, t -> t.accept(rexExpressionConverter));
     if (invocation.isEmpty()) {
       throw new UnsupportedOperationException("Unable to find binding for call " + call);
     }
@@ -290,12 +275,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalMatch match) {
+  public Rel visit(org.apache.calcite.rel.core.Match match) {
     return super.visit(match);
   }
 
   @Override
-  public Rel visit(LogicalSort sort) {
+  public Rel visit(org.apache.calcite.rel.core.Sort sort) {
     var input = apply(sort.getInput());
     var fields =
         sort.getCollation().getFieldCollations().stream()
@@ -346,12 +331,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(LogicalExchange exchange) {
+  public Rel visit(org.apache.calcite.rel.core.Exchange exchange) {
     return super.visit(exchange);
   }
 
   @Override
-  public Rel visit(LogicalTableModify modify) {
+  public Rel visit(org.apache.calcite.rel.core.TableModify modify) {
     return super.visit(modify);
   }
 

@@ -6,11 +6,15 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
-import org.apache.calcite.rel.logical.LogicalCorrelate;
-import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rex.*;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 
 /** Resolve correlated variable and get Depth map for RexFieldAccess */
 // See OuterReferenceResolver.md for explanation how the Depth map is computed.
@@ -39,7 +43,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visit(LogicalFilter filter) throws RuntimeException {
+  public RelNode visit(Filter filter) throws RuntimeException {
     for (CorrelationId id : filter.getVariablesSet()) {
       if (!nestedDepth.containsKey(id)) {
         nestedDepth.put(id, 0);
@@ -50,7 +54,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visit(LogicalCorrelate correlate) throws RuntimeException {
+  public RelNode visit(Correlate correlate) throws RuntimeException {
     for (CorrelationId id : correlate.getVariablesSet()) {
       if (!nestedDepth.containsKey(id)) {
         nestedDepth.put(id, 0);
@@ -84,7 +88,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visit(LogicalProject project) throws RuntimeException {
+  public RelNode visit(Project project) throws RuntimeException {
     if (containsSubQuery(project)) {
       throw new UnsupportedOperationException(
           "Unsupported subquery nested in Project relational operator : " + project);
