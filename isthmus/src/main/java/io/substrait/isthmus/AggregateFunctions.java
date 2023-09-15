@@ -71,6 +71,13 @@ public class AggregateFunctions {
     }
 
     @Override
+    public String getName() {
+      // the default name for this function is `$sum0`
+      // override this to `sum0` which is a nicer name to use in queries
+      return "sum0";
+    }
+
+    @Override
     public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
       return ReturnTypes.BIGINT.inferReturnType(opBinding);
     }
