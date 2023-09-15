@@ -1,7 +1,6 @@
 package io.substrait.extension;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -77,6 +76,11 @@ public class SimpleExtension {
   public interface Argument {
     String toTypeString();
 
+    @JsonProperty()
+    @Nullable
+    String name();
+
+    @JsonProperty()
     @Nullable
     String description();
 
@@ -92,82 +96,39 @@ public class SimpleExtension {
     List<String> getValues();
   }
 
-  public static class ValueArgument implements Argument {
-
-    @JsonCreator
-    public ValueArgument(
-        @JsonProperty("value") ParameterizedType value,
-        @JsonProperty("name") String name,
-        @JsonProperty("constant") boolean constant,
-        @JsonProperty("description") String description) {
-      this.value = value;
-      this.constant = constant;
-      this.name = name;
-      this.description = description;
-    }
+  @JsonSerialize(as = ImmutableSimpleExtension.ValueArgument.class)
+  @JsonDeserialize(as = ImmutableSimpleExtension.ValueArgument.class)
+  @Value.Immutable
+  public abstract static class ValueArgument implements Argument {
 
     @JsonProperty(required = true)
-    ParameterizedType value;
+    public abstract ParameterizedType value();
 
-    String name;
-
-    boolean constant;
-
-    String description;
-
-    public ParameterizedType value() {
-      return value;
-    }
-
-    public String name() {
-      return name;
-    }
-
-    public boolean constant() {
-      return constant;
-    }
-
-    public String description() {
-      return description;
-    }
+    @JsonProperty()
+    @Nullable
+    public abstract Boolean constant();
 
     @Override
     public String toTypeString() {
-      return value.accept(ToTypeString.INSTANCE);
+      return value().accept(ToTypeString.INSTANCE);
     }
 
     public boolean required() {
       return true;
     }
+
+    public static ImmutableSimpleExtension.ValueArgument.Builder builder() {
+      return ImmutableSimpleExtension.ValueArgument.builder();
+    }
   }
 
-  public static class TypeArgument implements Argument {
+  @JsonSerialize(as = ImmutableSimpleExtension.TypeArgument.class)
+  @JsonDeserialize(as = ImmutableSimpleExtension.TypeArgument.class)
+  @Value.Immutable
+  public abstract static class TypeArgument implements Argument {
 
-    @JsonCreator
-    public TypeArgument(
-        @JsonProperty("type") ParameterizedType type,
-        @JsonProperty("name") String name,
-        @JsonProperty("description") String description) {
-      this.type = type;
-      this.name = name;
-      this.description = description;
-    }
-
-    private ParameterizedType type;
-    private String name;
-    private String description;
-
-    public ParameterizedType getType() {
-      return type;
-    }
-
-    public void setType(final ParameterizedType type) {
-      this.type = type;
-    }
-
-    public String description() {
-      return description;
-    }
+    @JsonProperty(required = true)
+    public abstract ParameterizedType type();
 
     public String toTypeString() {
       return "type";
@@ -175,6 +136,10 @@ public class SimpleExtension {
 
     public boolean required() {
       return true;
+    }
+
+    public static ImmutableSimpleExtension.TypeArgument.Builder builder() {
+      return ImmutableSimpleExtension.TypeArgument.builder();
     }
   }
 
@@ -187,29 +152,13 @@ public class SimpleExtension {
    * href="https://github.com/substrait-io/substrait-java/pull/55#issuecomment-1154484254">comments
    * in this issue</a>
    */
-  public static class EnumArgument implements Argument {
+  @JsonSerialize(as = ImmutableSimpleExtension.EnumArgument.class)
+  @JsonDeserialize(as = ImmutableSimpleExtension.EnumArgument.class)
+  @Value.Immutable
+  public abstract static class EnumArgument implements Argument {
 
-    @JsonCreator
-    public EnumArgument(
-        @JsonProperty("options") List<String> options,
-        @JsonProperty("name") String name,
-        @JsonProperty("description") String description) {
-      this.options = options;
-      this.name = name;
-      this.description = description;
-    }
-
-    private final List<String> options;
-    private final String name;
-    private final String description;
-
-    public List<String> options() {
-      return options;
-    }
-
-    public String description() {
-      return description;
-    }
+    @JsonProperty(required = true)
+    public abstract List<String> options();
 
     @Override
     public boolean required() {
@@ -218,6 +167,10 @@ public class SimpleExtension {
 
     public String toTypeString() {
       return "req";
+    }
+
+    public static ImmutableSimpleExtension.EnumArgument.Builder builder() {
+      return ImmutableSimpleExtension.EnumArgument.builder();
     }
   }
 
