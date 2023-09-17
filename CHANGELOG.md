@@ -1,6 +1,26 @@
 Release Notes
 ---
 
+## [0.17.0](https://github.com/substrait-io/substrait-java/compare/v0.16.0...v0.17.0) (2023-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* EnumArgument, TypeArgument and ValueArgument are now
+abstract
+* visit over core substrait types (#178)
+
+### Features
+
+* **calcite:** support reading in list and map literals ([#177](https://github.com/substrait-io/substrait-java/issues/177)) ([e8a2645](https://github.com/substrait-io/substrait-java/commit/e8a264539d35f2acee8b720e8292796f4d4825d1))
+* use Immutables for Argument subclasses ([#179](https://github.com/substrait-io/substrait-java/issues/179)) ([edfc65f](https://github.com/substrait-io/substrait-java/commit/edfc65f1606f38e3dffd5fc9a294bf7365455186))
+* visit over core substrait types ([#178](https://github.com/substrait-io/substrait-java/issues/178)) ([6bee452](https://github.com/substrait-io/substrait-java/commit/6bee452bb9070c42d1f06ac2c3387c5440a4ba1b))
+
+
+### Bug Fixes
+
+* **calcite:** use upperBound util when converting upperBound ([#176](https://github.com/substrait-io/substrait-java/issues/176)) ([b90432d](https://github.com/substrait-io/substrait-java/commit/b90432d8cc06d8c674abeed848cc4f2fe57d734d))
+
 ## [0.16.0](https://github.com/substrait-io/substrait-java/compare/v0.15.0...v0.16.0) (2023-09-06)
 
 
