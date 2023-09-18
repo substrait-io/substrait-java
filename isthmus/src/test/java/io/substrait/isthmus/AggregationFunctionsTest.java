@@ -63,7 +63,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
-  void maxNoGrouping(String aggFunction) {
+  void emptyGrouping(String aggFunction) {
     var rel =
         b.aggregate(
             input -> b.grouping(input), input -> functions(input, aggFunction), numericTypesTable);
@@ -72,7 +72,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
-  void maxWithGrouping(String aggFunction) {
+  void withGrouping(String aggFunction) {
     var rel =
         b.aggregate(
             input -> b.grouping(input, 0),

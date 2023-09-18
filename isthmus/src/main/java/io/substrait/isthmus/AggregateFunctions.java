@@ -13,7 +13,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 public class AggregateFunctions {
 
   // For some arithmetic aggregate functions, the default Calcite aggregate function implementations
-  // will infer returns types that differ from those expected by Substrait.
+  // will infer return types that differ from those expected by Substrait.
   // This type mismatch can cause conversion and planning failures.
 
   public static SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
