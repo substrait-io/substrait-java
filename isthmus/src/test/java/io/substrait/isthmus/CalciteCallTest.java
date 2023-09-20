@@ -12,7 +12,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.function.Consumer;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -65,7 +65,7 @@ public class CalciteCallTest extends CalciteObjs {
         func -> {
           // check that there is a cast for the incorrect argument type.
           assertEquals(
-              ExpressionCreator.cast(Type.REQUIRED.I64, ExpressionCreator.i32(false, 20)),
+              ExpressionCreator.cast(TypeCreator.REQUIRED.I64, ExpressionCreator.i32(false, 20)),
               func.arguments().get(0));
         },
         false); // TODO: implicit calcite cast

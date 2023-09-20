@@ -5,6 +5,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -642,7 +643,7 @@ public interface Expression extends FunctionArg {
     public abstract List<Expression> options();
 
     public Type getType() {
-      return Type.NULLABLE.BOOLEAN;
+      return TypeCreator.NULLABLE.BOOLEAN;
     }
 
     public static ImmutableExpression.SingleOrList.Builder builder() {
@@ -661,7 +662,7 @@ public interface Expression extends FunctionArg {
     public abstract List<MultiOrListRecord> optionCombinations();
 
     public Type getType() {
-      return Type.NULLABLE.BOOLEAN;
+      return TypeCreator.NULLABLE.BOOLEAN;
     }
 
     public static ImmutableExpression.MultiOrList.Builder builder() {
@@ -702,7 +703,7 @@ public interface Expression extends FunctionArg {
     public abstract Rel tuples();
 
     public Type getType() {
-      return Type.REQUIRED.BOOLEAN;
+      return TypeCreator.REQUIRED.BOOLEAN;
     }
 
     public static ImmutableExpression.SetPredicate.Builder builder() {
@@ -734,7 +735,7 @@ public interface Expression extends FunctionArg {
     public abstract List<Expression> needles();
 
     public Type getType() {
-      return Type.REQUIRED.BOOLEAN;
+      return TypeCreator.REQUIRED.BOOLEAN;
     }
 
     public static ImmutableExpression.InPredicate.Builder builder() {

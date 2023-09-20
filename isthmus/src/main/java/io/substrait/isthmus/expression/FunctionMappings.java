@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import io.substrait.isthmus.AggregateFunctions;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -69,13 +70,13 @@ public class FunctionMappings {
     AGGREGATE_SIGS =
         ImmutableList.<Sig>builder()
             .add(
-                s(SqlStdOperatorTable.MIN, "min"),
-                s(SqlStdOperatorTable.MAX, "max"),
-                s(SqlStdOperatorTable.SUM, "sum"),
-                s(SqlStdOperatorTable.SUM0, "sum0"),
+                s(AggregateFunctions.MIN, "min"),
+                s(AggregateFunctions.MAX, "max"),
+                s(AggregateFunctions.SUM, "sum"),
+                s(AggregateFunctions.SUM0, "sum0"),
                 s(SqlStdOperatorTable.COUNT, "count"),
                 s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
-                s(SqlStdOperatorTable.AVG, "avg"))
+                s(AggregateFunctions.AVG, "avg"))
             .build();
 
     WINDOW_SIGS =
