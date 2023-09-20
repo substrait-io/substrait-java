@@ -80,15 +80,13 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tStr() {
-    // TODO: varchar vs fixed length char
-    test(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
+    bitest(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
   }
 
   @Test
   void tBinary() {
-    // TODO: varbinary vs fixed length binary
     var val = "my test".getBytes(StandardCharsets.UTF_8);
-    test(
+    bitest(
         binary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.VARBINARY));
   }
@@ -264,12 +262,12 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tFixedChar() {
-    test(fixedChar(false, "hello "), c("hello ", SqlTypeName.CHAR));
+    bitest(fixedChar(false, "hello "), c("hello ", SqlTypeName.CHAR));
   }
 
   @Test
   void tVarChar() {
-    test(varChar(false, "hello ", 10), c("hello ", SqlTypeName.VARCHAR, 10));
+    bitest(varChar(false, "hello ", 10), c("hello ", SqlTypeName.VARCHAR, 10));
   }
 
   @Test
@@ -321,12 +319,12 @@ public class CalciteLiteralTest extends CalciteObjs {
             type.createMapType(t(SqlTypeName.VARCHAR), t(SqlTypeName.INTEGER)),
             true,
             false);
-    test(map(false, ss), calcite);
+    bitest(map(false, ss), calcite);
   }
 
   @Test
   void tList() {
-    test(
+    bitest(
         list(false, i32(false, 4), i32(false, -1)),
         rex.makeLiteral(
             Arrays.asList(4, -1), type.createArrayType(t(SqlTypeName.INTEGER), -1), false, false));
@@ -348,7 +346,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tFixedBinary() {
     var val = "my test".getBytes(StandardCharsets.UTF_8);
-    test(
+    bitest(
         fixedBinary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.BINARY));
   }
