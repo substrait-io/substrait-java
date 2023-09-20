@@ -11,9 +11,6 @@ import org.immutables.value.Value;
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Type.class);
 
-  public static final TypeCreator REQUIRED = TypeCreator.REQUIRED;
-  public static final TypeCreator NULLABLE = TypeCreator.NULLABLE;
-
   public static TypeCreator withNullability(boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
