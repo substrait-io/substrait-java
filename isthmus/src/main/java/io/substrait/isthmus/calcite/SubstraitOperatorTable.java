@@ -1,6 +1,7 @@
 package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,6 +25,8 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
 
   public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
+  private SubstraitOperatorTable() {}
+
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(
           List.of(
@@ -33,9 +36,12 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               AggregateFunctions.SUM,
               AggregateFunctions.SUM0));
 
-  // kinds for which Substrait specific operators are provided
+  // SQL Kinds for which Substrait specific operators are provided
   private static final Set<SqlKind> OVERRIDE_KINDS =
-      Set.of(SqlKind.MAX, SqlKind.MIN, SqlKind.AVG, SqlKind.SUM, SqlKind.SUM0);
+      EnumSet.copyOf(
+          SUBSTRAIT_OPERATOR_TABLE.getOperatorList().stream()
+              .map(SqlOperator::getKind)
+              .collect(Collectors.toList()));
 
   private static final SqlOperatorTable STANDARD_OPERATOR_TABLE = SqlStdOperatorTable.instance();
 
@@ -57,9 +63,9 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
     SUBSTRAIT_OPERATOR_TABLE.lookupOperatorOverloads(
         opName, category, syntax, operatorList, nameMatcher);
     if (!operatorList.isEmpty()) {
-      // if a match for a Substrait operator is found, return it immediately
-      // without this, Calcite will find multiple matches for the same operator
-      // it then fails to resolve a specific operator as it can't pick between them
+      // If a match for a Substrait operator is found, return it immediately.
+      // Without this, Calcite will find multiple matches for the same operator.
+      // It then fails to resolve a specific operator as it can't pick between them
       return;
     }
     STANDARD_OPERATOR_TABLE.lookupOperatorOverloads(
