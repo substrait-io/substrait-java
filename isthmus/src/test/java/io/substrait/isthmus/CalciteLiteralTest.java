@@ -80,8 +80,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tStr() {
-    // TODO: varchar vs fixed length char
-    test(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
+    bitest(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
   }
 
   @Test
