@@ -85,9 +85,8 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tBinary() {
-    // TODO: varbinary vs fixed length binary
     var val = "my test".getBytes(StandardCharsets.UTF_8);
-    test(
+    bitest(
         binary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.VARBINARY));
   }

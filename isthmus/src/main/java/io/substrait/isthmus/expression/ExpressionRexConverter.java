@@ -151,10 +151,10 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.BinaryLiteral expr) throws RuntimeException {
-    // Calcite RexLiteral only takes ByteString
     return rexBuilder.makeLiteral(
         new ByteString(expr.value().toByteArray()),
-        typeConverter.toCalcite(typeFactory, expr.getType()));
+        typeConverter.toCalcite(typeFactory, expr.getType()),
+        true);
   }
 
   @Override
