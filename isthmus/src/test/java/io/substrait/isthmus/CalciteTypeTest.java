@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.function.TypeExpression;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -145,7 +146,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ValueSource(booleans = {true, false})
   void list(boolean nullable) {
     testType(
-        Type.withNullability(nullable).list(Type.REQUIRED.I16),
+        Type.withNullability(nullable).list(TypeCreator.REQUIRED.I16),
         type.createArrayType(type.createSqlType(SqlTypeName.SMALLINT), -1),
         nullable);
   }
@@ -154,7 +155,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ValueSource(booleans = {true, false})
   void map(boolean nullable) {
     testType(
-        Type.withNullability(nullable).map(Type.REQUIRED.STRING, Type.REQUIRED.I8),
+        Type.withNullability(nullable).map(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I8),
         type.createMapType(
             type.createSqlType(SqlTypeName.VARCHAR), type.createSqlType(SqlTypeName.TINYINT)),
         nullable);
@@ -163,7 +164,7 @@ class CalciteTypeTest extends CalciteObjs {
   @Test
   void struct() {
     testType(
-        Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
+        TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I8),
         type.createStructType(
             Arrays.asList(
                 type.createSqlType(SqlTypeName.VARCHAR), type.createSqlType(SqlTypeName.TINYINT)),
@@ -174,10 +175,10 @@ class CalciteTypeTest extends CalciteObjs {
   @Test
   void nestedStruct() {
     testType(
-        Type.REQUIRED.struct(
-            Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
-            Type.REQUIRED.struct(Type.REQUIRED.STRING, Type.REQUIRED.I8),
-            Type.REQUIRED.STRING),
+        TypeCreator.REQUIRED.struct(
+            TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I8),
+            TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I8),
+            TypeCreator.REQUIRED.STRING),
         type.createStructType(
             Arrays.asList(
                 type.createStructType(

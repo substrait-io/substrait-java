@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +32,6 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
 import org.apache.calcite.sql.ddl.SqlKeyConstraint;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -208,7 +208,7 @@ class SqlConverterBase {
 
     public static Validator create(
         RelDataTypeFactory factory, CalciteCatalogReader catalog, SqlValidator.Config config) {
-      return new Validator(SqlStdOperatorTable.instance(), catalog, factory, config);
+      return new Validator(SubstraitOperatorTable.INSTANCE, catalog, factory, config);
     }
   }
 

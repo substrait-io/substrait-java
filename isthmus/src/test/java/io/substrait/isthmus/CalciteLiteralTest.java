@@ -10,7 +10,7 @@ import io.substrait.expression.Expression;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -43,7 +43,9 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void nullLiteral() {
-    bitest(typedNull(Type.NULLABLE.varChar(10)), rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
+    bitest(
+        typedNull(TypeCreator.NULLABLE.varChar(10)),
+        rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
   }
 
   @Test

@@ -135,7 +135,6 @@ public class PlanTestBase {
    *   <li>Substrait POJO 2 == Substrait POJO 3
    * </ul>
    */
-  @Beta
   protected void assertFullRoundTrip(String sqlQuery, List<String> createStatements)
       throws SqlParseException {
     SqlToSubstrait sqlConverter = new SqlToSubstrait();
@@ -170,5 +169,38 @@ public class PlanTestBase {
       // Verify that POJOs are the same
       assertEquals(pojo1, pojo3);
     }
+  }
+
+  /**
+   * Verifies that the given POJO can be converted:
+   *
+   * <ul>
+   *   <li>From POJO to Proto and back
+   *   <li>From POJO to Calcite and back
+   * </ul>
+   */
+  protected void assertFullRoundTrip(Rel pojo1) {
+    var extensionCollector = new ExtensionCollector();
+
+    // Substrait POJO 1 -> Substrait Proto
+    io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
+
+    // Substrait Proto -> Substrait Pojo 2
+    io.substrait.relation.Rel pojo2 =
+        new ProtoRelConverter(extensionCollector, EXTENSION_COLLECTION).from(proto);
+
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo2);
+
+    // Substrait POJO 2 -> Calcite
+    RelNode calcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
+
+    // Calcite -> Substrait POJO 3
+    io.substrait.relation.Rel pojo3 =
+        // SqlKind.SELECT is used because the majority of our tests are SELECT queries
+        SubstraitRelVisitor.convert(RelRoot.of(calcite, SqlKind.SELECT), EXTENSION_COLLECTION);
+
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo3);
   }
 }
