@@ -22,3 +22,12 @@ scalar_functions:
           - name: arg1
             value: i64
         return: u!customType2
+  - name: "array_index"
+    description: "returns the element in the array at index, or NULL if index is out of bounds"
+    impls:
+      - args:
+          - name: array
+            value: list<any1>
+          - name: index
+            value: i64
+        return: any1?

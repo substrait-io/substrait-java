@@ -194,7 +194,7 @@ expr
   | Identifier Eq expr Newline+ (Identifier Eq expr Newline+)* finalType=type Newline* #MultilineDefinition
   | type #TypeLiteral
   | number=Number #LiteralNumber
-  | identifier=Identifier #TypeParam
+  | identifier=Identifier isnull='?'? #TypeParam
   | Identifier OParen (expr (Comma expr)*)? CParen #FunctionCall
   | left=expr op=(And | Or | Plus | Minus | Lt | Gt | Eq | NotEquals | Lte | Gte | Asterisk | ForwardSlash) right=expr #BinaryExpr
   | If ifExpr=expr Then thenExpr=expr Else elseExpr=expr #IfExpr
