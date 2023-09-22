@@ -12,30 +12,40 @@ public class ParameterizedTypeCreator extends TypeCreator
     super(nullable);
   }
 
+  private static ParameterizedType.StringLiteral parameter(String literal, boolean nullable) {
+    return ParameterizedType.StringLiteral.builder().nullable(nullable).value(literal).build();
+  }
+
   public ParameterizedType.StringLiteral parameter(String literal) {
-    return ParameterizedType.StringLiteral.builder().value(literal).build();
+    return parameter(literal, nullable);
   }
 
   public ParameterizedType fixedCharE(String len) {
-    return ParameterizedType.FixedChar.builder().nullable(nullable).length(parameter(len)).build();
+    return ParameterizedType.FixedChar.builder()
+        .nullable(nullable)
+        .length(parameter(len, false))
+        .build();
   }
 
   public ParameterizedType varCharE(String len) {
-    return ParameterizedType.VarChar.builder().nullable(nullable).length(parameter(len)).build();
+    return ParameterizedType.VarChar.builder()
+        .nullable(nullable)
+        .length(parameter(len, false))
+        .build();
   }
 
   public ParameterizedType fixedBinaryE(String len) {
     return ParameterizedType.FixedBinary.builder()
         .nullable(nullable)
-        .length(parameter(len))
+        .length(parameter(len, false))
         .build();
   }
 
   public ParameterizedType decimalE(String precision, String scale) {
     return ParameterizedType.Decimal.builder()
         .nullable(nullable)
-        .precision(parameter(precision))
-        .scale(parameter(scale))
+        .precision(parameter(precision, false))
+        .scale(parameter(scale, false))
         .build();
   }
 

@@ -1,5 +1,6 @@
 package io.substrait.extension;
 
+import static io.substrait.type.TypeCreator.REQUIRED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
@@ -72,6 +73,32 @@ public class TypeExtensionTest {
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
 
+    var protoPlan = planProtoConverter.toProto(plan);
+    var planReturned = protoPlanConverter.from(protoPlan);
+    assertEquals(plan, planReturned);
+  }
+
+  @Test
+  void roundtripNumberedAnyTypes() {
+    List<String> tableName = Stream.of("example").collect(Collectors.toList());
+    List<String> columnNames =
+        Stream.of("array_i64_type_column", "array_i64_column").collect(Collectors.toList());
+    List<io.substrait.type.Type> types =
+        Stream.of(REQUIRED.list(R.I64)).collect(Collectors.toList());
+
+    Plan plan =
+        b.plan(
+            b.root(
+                b.project(
+                    input ->
+                        Stream.of(
+                                b.scalarFn(
+                                    NAMESPACE,
+                                    "array_index:list_i64",
+                                    R.I64,
+                                    b.fieldReference(input, 0)))
+                            .collect(Collectors.toList()),
+                    b.namedScan(tableName, columnNames, types))));
     var protoPlan = planProtoConverter.toProto(plan);
     var planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);

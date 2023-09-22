@@ -347,7 +347,11 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitTypeParam(final SubstraitTypeParser.TypeParamContext ctx) {
       checkParameterizedOrExpression();
-      return ParameterizedType.StringLiteral.builder().value(ctx.getText()).build();
+      boolean nullable = ctx.isnull != null;
+      return ParameterizedType.StringLiteral.builder()
+          .nullable(nullable)
+          .value(ctx.getText())
+          .build();
     }
 
     @Override
@@ -436,7 +440,7 @@ public class ParseToPojo {
     public TypeExpression visitNumericParameterName(
         final SubstraitTypeParser.NumericParameterNameContext ctx) {
       checkParameterizedOrExpression();
-      return ParameterizedType.StringLiteral.builder().value(ctx.getText()).build();
+      return ParameterizedType.StringLiteral.builder().nullable(false).value(ctx.getText()).build();
     }
 
     @Override
