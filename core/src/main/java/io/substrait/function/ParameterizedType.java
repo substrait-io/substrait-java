@@ -154,7 +154,7 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class StringLiteral extends BaseParameterizedType {
+  abstract static class StringLiteral extends BaseParameterizedType implements NullableType {
     public abstract String value();
 
     public static ImmutableParameterizedType.StringLiteral.Builder builder() {
