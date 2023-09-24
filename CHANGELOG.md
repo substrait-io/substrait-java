@@ -1,6 +1,28 @@
 Release Notes
 ---
 
+## [0.18.0](https://github.com/substrait-io/substrait-java/compare/v0.17.0...v0.18.0) (2023-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* StrLiteral is no longer converted to CHAR(<length>)
+
+fix(isthmus): convert BinaryLiteral to VARBINARY 
+* BinaryLiteral is no longer converted to BINARY<length>)
+* **calcite:** Isthmus no longer uses Calcite built-in MAX, MIN, SUM, SUM0 and AVG functions
+* **calcite:** removed REQUIRED and NULLABLE fields from Type interface
+
+### Features
+
+* **calcite:** dedicated Substrait MAX, MIN, SUM, SUM0 and AVG functions ([#180](https://github.com/substrait-io/substrait-java/issues/180)) ([477b63e](https://github.com/substrait-io/substrait-java/commit/477b63e0b2b3bb2caf877a5cc9518fd08b2f6ea0))
+* extend literal conversion support ([#183](https://github.com/substrait-io/substrait-java/issues/183)) ([6e82f39](https://github.com/substrait-io/substrait-java/commit/6e82f397a168f3811593fe8248753d70d4f0c04f))
+
+
+### Bug Fixes
+
+* support any<n>? type syntax in function extensions ([#184](https://github.com/substrait-io/substrait-java/issues/184)) ([16e5604](https://github.com/substrait-io/substrait-java/commit/16e56046cec47a7913975817d780224c95a926e4))
+
 ## [0.17.0](https://github.com/substrait-io/substrait-java/compare/v0.16.0...v0.17.0) (2023-09-17)
 
 
