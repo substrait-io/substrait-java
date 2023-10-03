@@ -6,6 +6,8 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.ImmutableHashJoin;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -163,6 +165,29 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             .from(cross)
             .left(left.orElse(cross.getLeft()))
             .right(right.orElse(cross.getRight()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(HashJoin hashJoin) throws RuntimeException {
+    var left = hashJoin.getLeft().accept(this);
+    var right = hashJoin.getRight().accept(this);
+    // var condition = join.getCondition().flatMap(t -> visitExpression(t));
+    var postFilter = hashJoin.getPostJoinFilter().flatMap(t -> visitExpression(t));
+    //      if (allEmpty(left, right, condition, postFilter)) {
+    //          return Optional.empty();
+    //      }
+    return Optional.of(
+        ImmutableHashJoin.builder()
+            .from(hashJoin)
+            .left(left.orElse(hashJoin.getLeft()))
+            .right(right.orElse(hashJoin.getRight()))
+            //                      .condition(
+            //                              Optional.ofNullable(condition.orElseGet(() ->
+            // join.getCondition().orElse(null))))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    postFilter.orElseGet(() -> hashJoin.getPostJoinFilter().orElse(null))))
             .build());
   }
 

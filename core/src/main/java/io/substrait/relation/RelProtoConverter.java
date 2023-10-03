@@ -4,23 +4,10 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.proto.AggregateFunction;
-import io.substrait.proto.AggregateRel;
-import io.substrait.proto.CrossRel;
-import io.substrait.proto.ExtensionLeafRel;
-import io.substrait.proto.ExtensionMultiRel;
-import io.substrait.proto.ExtensionSingleRel;
-import io.substrait.proto.FetchRel;
-import io.substrait.proto.FilterRel;
-import io.substrait.proto.JoinRel;
-import io.substrait.proto.ProjectRel;
-import io.substrait.proto.ReadRel;
+import io.substrait.proto.*;
 import io.substrait.proto.Rel;
-import io.substrait.proto.RelCommon;
-import io.substrait.proto.SetRel;
-import io.substrait.proto.SortField;
-import io.substrait.proto.SortRel;
 import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.physical.HashJoin;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -226,6 +213,21 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
+  }
+
+  @Override
+  public Rel visit(HashJoin hashJoin) throws RuntimeException {
+    var builder =
+        HashJoinRel.newBuilder()
+            .setCommon(common(hashJoin))
+            .setLeft(toProto(hashJoin.getLeft()))
+            .setRight(toProto(hashJoin.getRight()))
+            .setType(hashJoin.getJoinType().toProto());
+
+    // hashJoin.getLeftKeys().ifPresent(t -> builder.setLeftKeys());
+
+    hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setHashJoin(builder).build();
   }
 
   @Override

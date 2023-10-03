@@ -1,17 +1,22 @@
-package io.substrait.relation;
+package io.substrait.relation.physical;
 
-import io.substrait.expression.Expression;
-import io.substrait.proto.JoinRel;
+import io.substrait.expression.FieldReference;
+import io.substrait.proto.HashJoinRel;
+import io.substrait.relation.AbstractJoin;
+import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Join extends AbstractJoin {
+public abstract class HashJoin extends AbstractJoin {
 
-  public abstract Optional<Expression> getCondition();
+  public abstract Optional<List<FieldReference>> getLeftKeys();
+
+  public abstract Optional<List<FieldReference>> getRightKeys();
 
   public abstract JoinType getJoinType();
 
@@ -33,21 +38,23 @@ public abstract class Join extends AbstractJoin {
   }
 
   public static enum JoinType {
-    UNKNOWN(JoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
-    INNER(JoinRel.JoinType.JOIN_TYPE_INNER),
-    OUTER(JoinRel.JoinType.JOIN_TYPE_OUTER),
-    LEFT(JoinRel.JoinType.JOIN_TYPE_LEFT),
-    RIGHT(JoinRel.JoinType.JOIN_TYPE_RIGHT),
-    SEMI(JoinRel.JoinType.JOIN_TYPE_SEMI),
-    ANTI(JoinRel.JoinType.JOIN_TYPE_ANTI);
+    UNKNOWN(HashJoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
+    INNER(HashJoinRel.JoinType.JOIN_TYPE_INNER),
+    OUTER(HashJoinRel.JoinType.JOIN_TYPE_OUTER),
+    LEFT(HashJoinRel.JoinType.JOIN_TYPE_LEFT),
+    RIGHT(HashJoinRel.JoinType.JOIN_TYPE_RIGHT),
+    LEFT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
+    RIGHT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_SEMI),
+    LEFT_ANTI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_ANTI),
+    RIGHT_ANTO(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI);
 
-    private JoinRel.JoinType proto;
+    private HashJoinRel.JoinType proto;
 
-    JoinType(JoinRel.JoinType proto) {
+    JoinType(HashJoinRel.JoinType proto) {
       this.proto = proto;
     }
 
-    public static JoinType fromProto(JoinRel.JoinType proto) {
+    public static JoinType fromProto(HashJoinRel.JoinType proto) {
       for (var v : values()) {
         if (v.proto == proto) {
           return v;
@@ -56,7 +63,7 @@ public abstract class Join extends AbstractJoin {
       throw new IllegalArgumentException("Unknown type: " + proto);
     }
 
-    public JoinRel.JoinType toProto() {
+    public HashJoinRel.JoinType toProto() {
       return proto;
     }
   }
@@ -66,7 +73,7 @@ public abstract class Join extends AbstractJoin {
     return visitor.visit(this);
   }
 
-  public static ImmutableJoin.Builder builder() {
-    return ImmutableJoin.builder();
+  public static ImmutableHashJoin.Builder builder() {
+    return ImmutableHashJoin.builder();
   }
 }
