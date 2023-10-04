@@ -46,7 +46,7 @@ public abstract class HashJoin extends AbstractJoin {
     LEFT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
     RIGHT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_SEMI),
     LEFT_ANTI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_ANTI),
-    RIGHT_ANTO(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI);
+    RIGHT_ANTI(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI);
 
     private HashJoinRel.JoinType proto;
 

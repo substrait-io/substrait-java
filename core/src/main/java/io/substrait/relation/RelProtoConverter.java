@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
@@ -53,6 +54,10 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .build();
             })
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
+    return fieldReference.accept(exprProtoConverter).getSelection();
   }
 
   @Override
@@ -224,7 +229,23 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setRight(toProto(hashJoin.getRight()))
             .setType(hashJoin.getJoinType().toProto());
 
-    // hashJoin.getLeftKeys().ifPresent(t -> builder.setLeftKeys());
+    hashJoin
+        .getLeftKeys()
+        .ifPresent(
+            keys -> {
+              for (int i = 0; i < keys.size(); i++) {
+                builder.setLeftKeys(i, toProto(keys.get(i)));
+              }
+            });
+
+    hashJoin
+        .getRightKeys()
+        .ifPresent(
+            keys -> {
+              for (int i = 0; i < keys.size(); i++) {
+                builder.setRightKeys(i, toProto(keys.get(i)));
+              }
+            });
 
     hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setHashJoin(builder).build();

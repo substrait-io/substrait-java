@@ -172,19 +172,19 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   public Optional<Rel> visit(HashJoin hashJoin) throws RuntimeException {
     var left = hashJoin.getLeft().accept(this);
     var right = hashJoin.getRight().accept(this);
-    // var condition = join.getCondition().flatMap(t -> visitExpression(t));
+    var leftKeys = hashJoin.getLeftKeys();
+    var rightKeys = hashJoin.getRightKeys();
     var postFilter = hashJoin.getPostJoinFilter().flatMap(t -> visitExpression(t));
-    //      if (allEmpty(left, right, condition, postFilter)) {
-    //          return Optional.empty();
-    //      }
+    if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
+      return Optional.empty();
+    }
     return Optional.of(
         ImmutableHashJoin.builder()
             .from(hashJoin)
             .left(left.orElse(hashJoin.getLeft()))
             .right(right.orElse(hashJoin.getRight()))
-            //                      .condition(
-            //                              Optional.ofNullable(condition.orElseGet(() ->
-            // join.getCondition().orElse(null))))
+            .leftKeys(leftKeys)
+            .rightKeys(rightKeys)
             .postJoinFilter(
                 Optional.ofNullable(
                     postFilter.orElseGet(() -> hashJoin.getPostJoinFilter().orElse(null))))

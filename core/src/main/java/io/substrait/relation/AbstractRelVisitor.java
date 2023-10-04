@@ -1,5 +1,7 @@
 package io.substrait.relation;
 
+import io.substrait.relation.physical.HashJoin;
+
 public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
     implements RelVisitor<OUTPUT, EXCEPTION> {
   public abstract OUTPUT visitFallback(Rel rel);
@@ -82,5 +84,10 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   @Override
   public OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION {
     return visitFallback(extensionTable);
+  }
+
+  @Override
+  public OUTPUT visit(HashJoin hashJoin) throws EXCEPTION {
+    return visitFallback(hashJoin);
   }
 }
