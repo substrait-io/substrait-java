@@ -17,6 +17,7 @@ import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
+import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
@@ -27,6 +28,7 @@ import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
+import io.substrait.relation.physical.HashJoin;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -94,6 +96,9 @@ public class ProtoRelConverter {
       }
       case EXTENSION_MULTI -> {
         return newExtensionMulti(rel.getExtensionMulti());
+      }
+      case HASH_JOIN -> {
+        return newHashJoin(rel.getHashJoin());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -480,6 +485,35 @@ public class ProtoRelConverter {
             .map(inputRel -> from(inputRel))
             .collect(java.util.stream.Collectors.toList());
     var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private Rel newHashJoin(HashJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        HashJoin.builder()
+            .left(left)
+            .right(right)
+            .leftKeys(
+                rel.getLeftKeysList().stream().map(converter::from).collect(Collectors.toList()))
+            .rightKeys(
+                rel.getRightKeysList().stream().map(converter::from).collect(Collectors.toList()))
+            .joinType(HashJoin.JoinType.fromProto(rel.getType()))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
