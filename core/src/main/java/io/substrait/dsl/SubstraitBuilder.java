@@ -19,6 +19,7 @@ import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NestedLoopJoin;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
@@ -216,6 +217,30 @@ public class SubstraitBuilder {
     var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
     var namedStruct = NamedStruct.of(columnNames, struct);
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
+  }
+
+  public NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
+    return nestedLoopJoin(conditionFn, joinType, Optional.empty(), left, right);
+  }
+
+  private NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    var condition = conditionFn.apply(new JoinInput(left, right));
+    return NestedLoopJoin.builder()
+        .left(left)
+        .right(right)
+        .condition(condition)
+        .joinType(joinType)
+        .remap(remap)
+        .build();
   }
 
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {

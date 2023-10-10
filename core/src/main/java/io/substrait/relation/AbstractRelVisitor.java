@@ -32,6 +32,11 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   }
 
   @Override
+  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
+    return visitFallback(nestedLoopJoin);
+  }
+
+  @Override
   public OUTPUT visit(Set set) throws EXCEPTION {
     return visitFallback(set);
   }

@@ -16,6 +16,7 @@ import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NestedLoopJoin;
 import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
@@ -184,6 +185,19 @@ public class ExtensionRoundtripTest extends TestBase {
             .extension(relExtension)
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void nested_loop_join() {
+    Rel rel =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
   }
 
   @Test

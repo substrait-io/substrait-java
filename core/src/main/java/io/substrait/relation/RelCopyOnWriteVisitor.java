@@ -121,6 +121,25 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   }
 
   @Override
+  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var left = nestedLoopJoin.getLeft().accept(this);
+    var right = nestedLoopJoin.getRight().accept(this);
+    var condition = nestedLoopJoin.getCondition().flatMap(t -> visitExpression(t));
+    if (allEmpty(left, right, condition)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableNestedLoopJoin.builder()
+            .from(nestedLoopJoin)
+            .left(left.orElse(nestedLoopJoin.getLeft()))
+            .right(right.orElse(nestedLoopJoin.getRight()))
+            .condition(
+                Optional.ofNullable(
+                    condition.orElseGet(() -> nestedLoopJoin.getCondition().orElse(null))))
+            .build());
+  }
+
+  @Override
   public Optional<Rel> visit(Set set) throws RuntimeException {
     return transformList(set.getInputs(), t -> t.accept(this))
         .map(u -> ImmutableSet.builder().from(set).inputs(u).setOp(set.getSetOp()).build());

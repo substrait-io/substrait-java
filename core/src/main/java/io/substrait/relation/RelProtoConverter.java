@@ -15,6 +15,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
@@ -177,6 +178,21 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var builder =
+        NestedLoopJoinRel.newBuilder()
+            .setCommon(common(nestedLoopJoin))
+            .setLeft(toProto(nestedLoopJoin.getLeft()))
+            .setRight(toProto(nestedLoopJoin.getRight()))
+            .setType(nestedLoopJoin.getJoinType().toProto());
+
+    nestedLoopJoin.getCondition().ifPresent(t -> builder.setExpression(toProto(t)));
+
+    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
   @Override
