@@ -9,28 +9,13 @@ import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class Join extends AbstractJoin {
+public abstract class Join extends BiRel implements HasExtension {
 
   public abstract Optional<Expression> getCondition();
 
-  public abstract JoinType getJoinType();
+  public abstract Optional<Expression> getPostJoinFilter();
 
-  @Override
-  protected Type.Struct deriveRecordType() {
-    Stream<Type> leftTypes =
-        switch (getJoinType()) {
-          case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          default -> getLeft().getRecordType().fields().stream();
-        };
-    Stream<Type> rightTypes =
-        switch (getJoinType()) {
-          case LEFT, OUTER -> getRight().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          default -> getRight().getRecordType().fields().stream();
-        };
-    return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
-  }
+  public abstract JoinType getJoinType();
 
   public static enum JoinType {
     UNKNOWN(JoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
@@ -47,6 +32,10 @@ public abstract class Join extends AbstractJoin {
       this.proto = proto;
     }
 
+    public JoinRel.JoinType toProto() {
+      return proto;
+    }
+
     public static JoinType fromProto(JoinRel.JoinType proto) {
       for (var v : values()) {
         if (v.proto == proto) {
@@ -55,10 +44,23 @@ public abstract class Join extends AbstractJoin {
       }
       throw new IllegalArgumentException("Unknown type: " + proto);
     }
+  }
 
-    public JoinRel.JoinType toProto() {
-      return proto;
-    }
+  @Override
+  protected Type.Struct deriveRecordType() {
+    Stream<Type> leftTypes =
+        switch (getJoinType()) {
+          case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
+              .map(TypeCreator::asNullable);
+          default -> getLeft().getRecordType().fields().stream();
+        };
+    Stream<Type> rightTypes =
+        switch (getJoinType()) {
+          case LEFT, OUTER -> getRight().getRecordType().fields().stream()
+              .map(TypeCreator::asNullable);
+          default -> getRight().getRecordType().fields().stream();
+        };
+    return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
   }
 
   @Override
