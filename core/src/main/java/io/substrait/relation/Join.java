@@ -42,6 +42,7 @@ public abstract class Join extends BiRel implements HasExtension {
           return v;
         }
       }
+
       throw new IllegalArgumentException("Unknown type: " + proto);
     }
   }
