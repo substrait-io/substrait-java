@@ -26,6 +26,7 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.utils.StringHolder;
 import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
@@ -168,6 +169,21 @@ public class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         Join.builder()
             .from(b.innerJoin(__ -> b.bool(true), commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void hashJoin() {
+    int[] left_keys = {};
+    int[] right_keys = {};
+    Rel rel =
+        HashJoin.builder()
+            .from(
+                b.hashJoin(
+                    left_keys, right_keys, HashJoin.JoinType.INNER, commonTable, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();

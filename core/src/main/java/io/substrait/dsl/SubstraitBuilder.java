@@ -23,6 +23,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.physical.HashJoin;
 import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -160,6 +161,28 @@ public class SubstraitBuilder {
         .left(left)
         .right(right)
         .condition(condition)
+        .joinType(joinType)
+        .remap(remap)
+        .build();
+  }
+
+  public HashJoin hashJoin(
+      int[] leftKeys, int[] rightKeys, HashJoin.JoinType joinType, Rel left, Rel right) {
+    return hashJoin(leftKeys, rightKeys, joinType, Optional.empty(), left, right);
+  }
+
+  public HashJoin hashJoin(
+      int[] leftKeys,
+      int[] rightKeys,
+      HashJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    return HashJoin.builder()
+        .left(left)
+        .right(right)
+        .leftKeys(this.fieldReferences(left, leftKeys))
+        .rightKeys(this.fieldReferences(right, rightKeys))
         .joinType(joinType)
         .remap(remap)
         .build();
