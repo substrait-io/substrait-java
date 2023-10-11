@@ -61,12 +61,14 @@ public abstract class HashJoin extends BiRel implements HasExtension {
         switch (getJoinType()) {
           case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case RIGHT_ANTI, RIGHT_SEMI -> Stream.empty();
           default -> getLeft().getRecordType().fields().stream();
         };
     Stream<Type> rightTypes =
         switch (getJoinType()) {
           case LEFT, OUTER -> getRight().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case LEFT_ANTI, LEFT_SEMI -> Stream.empty();
           default -> getRight().getRecordType().fields().stream();
         };
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
