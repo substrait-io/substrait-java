@@ -51,14 +51,16 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
   protected Type.Struct deriveRecordType() {
     Stream<Type> leftTypes =
         switch (getJoinType()) {
-          case RIGHT, RIGHT_SEMI, RIGHT_ANTI, OUTER -> getLeft().getRecordType().fields().stream()
+          case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case RIGHT_ANTI, RIGHT_SEMI -> Stream.empty();
           default -> getLeft().getRecordType().fields().stream();
         };
     Stream<Type> rightTypes =
         switch (getJoinType()) {
-          case LEFT, LEFT_SEMI, LEFT_ANTI, OUTER -> getRight().getRecordType().fields().stream()
+          case LEFT, OUTER -> getRight().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case LEFT_ANTI, LEFT_SEMI -> Stream.empty();
           default -> getRight().getRecordType().fields().stream();
         };
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
