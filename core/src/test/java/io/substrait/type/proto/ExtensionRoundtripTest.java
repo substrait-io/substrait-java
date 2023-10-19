@@ -33,6 +33,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Nested;
@@ -177,17 +178,22 @@ public class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void hashJoin() {
-    int[] left_keys = {};
-    int[] right_keys = {};
-    Rel rel =
+    // with empty keys
+    List<Integer> leftEmptyKeys = Collections.emptyList();
+    List<Integer> rightEmptyKeys = Collections.emptyList();
+    Rel relWithoutKeys =
         HashJoin.builder()
             .from(
                 b.hashJoin(
-                    left_keys, right_keys, HashJoin.JoinType.INNER, commonTable, commonTable))
+                    leftEmptyKeys,
+                    rightEmptyKeys,
+                    HashJoin.JoinType.INNER,
+                    commonTable,
+                    commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
-    verifyRoundTrip(rel);
+    verifyRoundTrip(relWithoutKeys);
   }
 
   @Test

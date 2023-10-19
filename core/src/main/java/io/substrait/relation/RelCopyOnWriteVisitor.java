@@ -175,7 +175,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
     var leftKeys = hashJoin.getLeftKeys();
     var rightKeys = hashJoin.getRightKeys();
     var postFilter = hashJoin.getPostJoinFilter().flatMap(t -> visitExpression(t));
-    if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
+    if (allEmpty(left, right, postFilter)) {
       return Optional.empty();
     }
     return Optional.of(

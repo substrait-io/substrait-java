@@ -173,6 +173,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     join.getCondition().ifPresent(t -> builder.setExpression(toProto(t)));
 
+    join.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
     join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setJoin(builder).build();
   }
@@ -244,23 +246,19 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setRight(toProto(hashJoin.getRight()))
             .setType(hashJoin.getJoinType().toProto());
 
-    hashJoin
-        .getLeftKeys()
-        .ifPresent(
-            keys -> {
-              for (int i = 0; i < keys.size(); i++) {
-                builder.setLeftKeys(i, toProto(keys.get(i)));
-              }
-            });
+    List<FieldReference> leftKeys = hashJoin.getLeftKeys();
+    List<FieldReference> rightKeys = hashJoin.getRightKeys();
 
-    hashJoin
-        .getRightKeys()
-        .ifPresent(
-            keys -> {
-              for (int i = 0; i < keys.size(); i++) {
-                builder.setRightKeys(i, toProto(keys.get(i)));
-              }
-            });
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new RuntimeException("Number of left and right keys must be equal.");
+    }
+
+    for (int idx = 0; idx < hashJoin.getLeftKeys().size(); idx++) {
+      builder.setLeftKeys(idx, toProto(leftKeys.get(idx)));
+      builder.setRightKeys(idx, toProto(rightKeys.get(idx)));
+    }
+
+    hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
     hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setHashJoin(builder).build();

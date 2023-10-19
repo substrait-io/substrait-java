@@ -167,13 +167,17 @@ public class SubstraitBuilder {
   }
 
   public HashJoin hashJoin(
-      int[] leftKeys, int[] rightKeys, HashJoin.JoinType joinType, Rel left, Rel right) {
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
+      HashJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
     return hashJoin(leftKeys, rightKeys, joinType, Optional.empty(), left, right);
   }
 
   public HashJoin hashJoin(
-      int[] leftKeys,
-      int[] rightKeys,
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
       HashJoin.JoinType joinType,
       Optional<Rel.Remap> remap,
       Rel left,
@@ -181,8 +185,10 @@ public class SubstraitBuilder {
     return HashJoin.builder()
         .left(left)
         .right(right)
-        .leftKeys(this.fieldReferences(left, leftKeys))
-        .rightKeys(this.fieldReferences(right, rightKeys))
+        .leftKeys(
+            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .rightKeys(
+            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
         .joinType(joinType)
         .remap(remap)
         .build();

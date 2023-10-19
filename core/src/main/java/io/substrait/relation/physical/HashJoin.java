@@ -16,9 +16,9 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class HashJoin extends BiRel implements HasExtension {
 
-  public abstract Optional<List<FieldReference>> getLeftKeys();
+  public abstract List<FieldReference> getLeftKeys();
 
-  public abstract Optional<List<FieldReference>> getRightKeys();
+  public abstract List<FieldReference> getRightKeys();
 
   public abstract JoinType getJoinType();
 
