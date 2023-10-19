@@ -210,16 +210,20 @@ public class ExpressionCreator {
   }
 
   public static Expression.Switch switchStatement(
-      Expression defaultExpression, Expression.SwitchClause... conditionClauses) {
+      Expression match, Expression defaultExpression, Expression.SwitchClause... conditionClauses) {
     return Expression.Switch.builder()
+        .match(match)
         .defaultClause(defaultExpression)
         .addSwitchClauses(conditionClauses)
         .build();
   }
 
   public static Expression.Switch switchStatement(
-      Expression defaultExpression, Iterable<? extends Expression.SwitchClause> conditionClauses) {
+      Expression match,
+      Expression defaultExpression,
+      Iterable<? extends Expression.SwitchClause> conditionClauses) {
     return Expression.Switch.builder()
+        .match(match)
         .defaultClause(defaultExpression)
         .addAllSwitchClauses(conditionClauses)
         .build();

@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.expression.CallConverters.CASE;
 import static io.substrait.isthmus.expression.CallConverters.CREATE_SEARCH_CONV;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 /** Tests which test that an expression can be converted to and from Calcite expressions. */
 public class ExpressionConvertabilityTest extends PlanTestBase {
+
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
 
@@ -61,7 +63,6 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
                         SimpleExtension.loadDefaults().scalarFunctions(), typeFactory)));
     var to = new ExpressionProtoConverter(new ExtensionCollector(), null);
     assertEquals(
-        expression.accept(to),
         b.scalarFn(
                 "/functions_boolean.yaml",
                 "or:bool",
@@ -78,6 +79,54 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
                     R.BOOLEAN,
                     b.fieldReference(commonTable, 0),
                     b.i32(10)))
-            .accept(to));
+            .accept(to),
+        expression.accept(to));
+  }
+
+  @Test
+  public void switchExpression() throws IOException {
+    Plan.Root root =
+        b.root(
+            b.filter(
+                input ->
+                    b.switchExpression(
+                        b.fieldReference(input, 0),
+                        List.of(
+                            b.switchClause(b.i32(5), b.i32(1)),
+                            b.switchClause(b.i32(10), b.i32(2))),
+                        b.i32(3)),
+                commonTable));
+    var relNode = converter.convert(root.getInput());
+    var expression =
+        ((Filter) relNode)
+            .getCondition()
+            .accept(
+                new RexExpressionConverter(
+                    CASE,
+                    new ScalarFunctionConverter(
+                        SimpleExtension.loadDefaults().scalarFunctions(), typeFactory)));
+    var to = new ExpressionProtoConverter(new ExtensionCollector(), null);
+    assertEquals(
+        b.ifThen(
+                List.of(
+                    b.ifClause(
+                        b.scalarFn(
+                            "/functions_comparison.yaml",
+                            "equal:any_any",
+                            R.BOOLEAN,
+                            b.fieldReference(commonTable, 0),
+                            b.i32(5)),
+                        b.i32(1)),
+                    b.ifClause(
+                        b.scalarFn(
+                            "/functions_comparison.yaml",
+                            "equal:any_any",
+                            R.BOOLEAN,
+                            b.fieldReference(commonTable, 0),
+                            b.i32(10)),
+                        b.i32(2))),
+                b.i32(3))
+            .accept(to),
+        expression.accept(to));
   }
 }

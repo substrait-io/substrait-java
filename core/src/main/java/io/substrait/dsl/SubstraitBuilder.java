@@ -4,9 +4,13 @@ import com.github.bsideup.jabel.Desugar;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
+import io.substrait.expression.Expression.IfClause;
+import io.substrait.expression.Expression.IfThen;
+import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
+import io.substrait.expression.ImmutableExpression.Switch;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
@@ -301,6 +305,14 @@ public class SubstraitBuilder {
     return Expression.I32Literal.builder().value(v).build();
   }
 
+  public Expression cast(Expression input, Type type) {
+    return Cast.builder()
+        .input(input)
+        .type(type)
+        .failureBehavior(FailureBehavior.UNSPECIFIED)
+        .build();
+  }
+
   public FieldReference fieldReference(Rel input, int index) {
     return ImmutableFieldReference.newInputRelReference(index, input);
   }
@@ -321,12 +333,16 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  public Expression cast(Expression input, Type type) {
-    return Cast.builder()
-        .input(input)
-        .type(type)
-        .failureBehavior(FailureBehavior.UNSPECIFIED)
-        .build();
+  public IfThen ifThen(Iterable<? extends IfClause> ifClauses, Expression elseClause) {
+    return IfThen.builder().addAllIfClauses(ifClauses).elseClause(elseClause).build();
+  }
+
+  public IfClause ifClause(Expression condition, Expression then) {
+    return IfClause.builder().condition(condition).then(then).build();
+  }
+
+  public Expression singleOrList(Expression condition, Expression... options) {
+    return SingleOrList.builder().condition(condition).addOptions(options).build();
   }
 
   public List<Expression.SortField> sortFields(Rel input, int... indexes) {
@@ -340,8 +356,17 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  public Expression singleOrList(Expression condition, Expression... options) {
-    return SingleOrList.builder().condition(condition).addOptions(options).build();
+  public SwitchClause switchClause(Expression.Literal condition, Expression then) {
+    return SwitchClause.builder().condition(condition).then(then).build();
+  }
+
+  public Switch switchExpression(
+      Expression match, Iterable<? extends SwitchClause> clauses, Expression defaultClause) {
+    return Switch.builder()
+        .match(match)
+        .addAllSwitchClauses(clauses)
+        .defaultClause(defaultClause)
+        .build();
   }
 
   // Aggregate Functions
