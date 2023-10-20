@@ -253,10 +253,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
       throw new RuntimeException("Number of left and right keys must be equal.");
     }
 
-    for (int idx = 0; idx < hashJoin.getLeftKeys().size(); idx++) {
-      builder.setLeftKeys(idx, toProto(leftKeys.get(idx)));
-      builder.setRightKeys(idx, toProto(rightKeys.get(idx)));
-    }
+    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
+    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
