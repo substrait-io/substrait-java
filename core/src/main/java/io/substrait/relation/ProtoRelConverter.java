@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
@@ -498,22 +499,26 @@ public class ProtoRelConverter {
   private Rel newHashJoin(HashJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
+    var leftKeys = rel.getLeftKeysList();
+    var rightKeys = rel.getRightKeysList();
+    var rightOffSetKeys =
+        Stream.concat(leftKeys.stream(), rightKeys.stream()).collect(Collectors.toList());
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var leftConverter = new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
+    var rightConverter = new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
+    var unionConverter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
     var builder =
         HashJoin.builder()
             .left(left)
             .right(right)
-            .leftKeys(
-                rel.getLeftKeysList().stream().map(converter::from).collect(Collectors.toList()))
-            .rightKeys(
-                rel.getRightKeysList().stream().map(converter::from).collect(Collectors.toList()))
+            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
+            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
