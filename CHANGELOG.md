@@ -8,7 +8,7 @@ Release Notes
 
 * StrLiteral is no longer converted to CHAR(<length>)
 
-fix(isthmus): convert BinaryLiteral to VARBINARY 
+fix(isthmus): convert BinaryLiteral to VARBINARY
 * BinaryLiteral is no longer converted to BINARY<length>)
 * **calcite:** Isthmus no longer uses Calcite built-in MAX, MIN, SUM, SUM0 and AVG functions
 * **calcite:** removed REQUIRED and NULLABLE fields from Type interface
