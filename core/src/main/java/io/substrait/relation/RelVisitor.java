@@ -1,5 +1,7 @@
 package io.substrait.relation;
 
+import io.substrait.relation.physical.HashJoin;
+
 public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(Aggregate aggregate) throws EXCEPTION;
 
@@ -32,4 +34,6 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION;
 
   OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION;
+
+  OUTPUT visit(HashJoin hashJoin) throws EXCEPTION;
 }
