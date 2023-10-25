@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
@@ -501,8 +500,7 @@ public class ProtoRelConverter {
     Rel right = from(rel.getRight());
     var leftKeys = rel.getLeftKeysList();
     var rightKeys = rel.getRightKeysList();
-    var rightOffSetKeys =
-        Stream.concat(leftKeys.stream(), rightKeys.stream()).collect(Collectors.toList());
+
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
