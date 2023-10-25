@@ -28,6 +28,7 @@ import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;

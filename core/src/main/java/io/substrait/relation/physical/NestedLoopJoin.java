@@ -1,7 +1,10 @@
-package io.substrait.relation;
+package io.substrait.relation.physical;
 
 import io.substrait.expression.Expression;
 import io.substrait.proto.NestedLoopJoinRel;
+import io.substrait.relation.BiRel;
+import io.substrait.relation.HasExtension;
+import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Optional;

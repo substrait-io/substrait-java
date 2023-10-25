@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 
 public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(Aggregate aggregate) throws EXCEPTION;
