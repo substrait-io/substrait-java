@@ -41,6 +41,14 @@ public class JoinRoundtripTest extends TestBase {
 
   @Test
   void nestedLoopJoin() {
+    Rel relWithCustomExpression =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.bool(false), NestedLoopJoin.JoinType.INNER, leftTable, rightTable))
+            .build();
+    verifyRoundTrip(relWithCustomExpression);
+
     Rel relWithDefaultExpression =
         NestedLoopJoin.builder()
             .from(
