@@ -475,29 +475,6 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
-    Rel left = from(rel.getLeft());
-    Rel right = from(rel.getRight());
-    Type.Struct leftStruct = left.getRecordType();
-    Type.Struct rightStruct = right.getRecordType();
-    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
-    var builder =
-        NestedLoopJoin.builder()
-            .left(left)
-            .right(right)
-            .condition(converter.from(rel.getExpression()))
-            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
-
-    builder
-        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()));
-    if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
-    }
-    return builder.build();
-  }
-
   private Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
@@ -550,6 +527,35 @@ public class ProtoRelConverter {
             .postJoinFilter(
                 Optional.ofNullable(
                     rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        NestedLoopJoin.builder()
+            .left(left)
+            .right(right)
+            .condition(
+                // defaults to true if the join expression is unassigned, resulting in a cartesian
+                // join
+                Optional.of(
+                    rel.hasExpression()
+                        ? converter.from(rel.getExpression())
+                        : Expression.BoolLiteral.builder().value(true).build()))
+            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

@@ -219,6 +219,10 @@ public class SubstraitBuilder {
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
+  public NestedLoopJoin nestedLoopJoin(NestedLoopJoin.JoinType joinType, Rel left, Rel right) {
+    return nestedLoopJoin(Optional.empty(), joinType, Optional.empty(), left, right);
+  }
+
   public NestedLoopJoin nestedLoopJoin(
       Function<JoinInput, Expression> conditionFn,
       NestedLoopJoin.JoinType joinType,
@@ -234,6 +238,15 @@ public class SubstraitBuilder {
       Rel left,
       Rel right) {
     var condition = conditionFn.apply(new JoinInput(left, right));
+    return nestedLoopJoin(Optional.of(condition), joinType, remap, left, right);
+  }
+
+  private NestedLoopJoin nestedLoopJoin(
+      Optional<Expression> condition,
+      NestedLoopJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
     return NestedLoopJoin.builder()
         .left(left)
         .right(right)
