@@ -6,7 +6,6 @@ import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
@@ -108,8 +106,7 @@ class SqlConverterBase {
     }
    */
 
-  Result registerCreateTables(List<String> tables)
-      throws SqlParseException {
+  Result registerCreateTables(List<String> tables) throws SqlParseException {
     Map<String, RelDataType> nameToTypeMap = new HashMap<>();
     Map<String, RexNode> nameToNodeMap = new HashMap<>();
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
@@ -132,10 +129,11 @@ class SqlConverterBase {
   }
 
   @Desugar
-  public record Result(SqlValidator validator, CalciteCatalogReader catalogReader,
-                       Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap) {
-
-  }
+  public record Result(
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap,
+      Map<String, RexNode> nameToNodeMap) {}
 
   Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(
       Function<List<String>, NamedStruct> tableLookup) throws SqlParseException {

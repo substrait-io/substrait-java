@@ -3,6 +3,8 @@ package io.substrait.isthmus;
 import com.github.bsideup.jabel.Desugar;
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.isthmus.expression.RexExpressionConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Expression.ScalarFunction;
 import io.substrait.proto.ExpressionReference;
@@ -38,13 +40,18 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
+
+  private final ScalarFunctionConverter functionConverter =
+      new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), factory);
+
+  private final RexExpressionConverter rexExpressionConverter =
+      new RexExpressionConverter(functionConverter);
 
   public SqlToSubstrait() {
     this(null);
@@ -73,8 +80,12 @@ public class SqlToSubstrait extends SqlConverterBase {
   public ExtendedExpression executeExpression(String expr, List<String> tables)
       throws SqlParseException {
     var result = registerCreateTables(tables);
-    return executeInnerExpression(expr, result.validator(), result.catalogReader(),
-        result.nameToTypeMap(), result.nameToNodeMap());
+    return executeInnerExpression(
+        expr,
+        result.validator(),
+        result.catalogReader(),
+        result.nameToTypeMap(),
+        result.nameToNodeMap());
   }
 
   // Package protected for testing
@@ -121,11 +132,15 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   private ExtendedExpression executeInnerExpression(
-      String sql, SqlValidator validator, CalciteCatalogReader catalogReader,
-      Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap)
+      String sql,
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap,
+      Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
+    RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
     sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap)
         .forEach(
             rexNode -> {
@@ -186,6 +201,11 @@ public class SqlToSubstrait extends SqlConverterBase {
                       .setUri("/functions_comparison.yaml")
                       .build());
 
+              io.substrait.expression.Expression.ScalarFunctionInvocation func =
+                  (io.substrait.expression.Expression.ScalarFunctionInvocation)
+                      rexNode.accept(rexExpressionConverter);
+              String declaration = func.declaration().key();
+
               // Extensions FIXME! Populate/create this dynamically, maybe use rexNode.getKind()
               ArrayList<SimpleExtensionDeclaration> extensions = new ArrayList<>();
               SimpleExtensionDeclaration extensionFunctionLowerThan =
@@ -193,7 +213,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                       .setExtensionFunction(
                           SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
                               .setFunctionAnchor(1)
-                              .setName("gt:any_any")
+                              .setName(declaration)
                               .setExtensionUriReference(1))
                       .build();
               extensions.add(extensionFunctionLowerThan);
@@ -229,6 +249,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                                   .setStructField(
                                       Expression.ReferenceSegment.StructField.newBuilder()
                                           .setField(ref.getIndex()))));
+
           break;
         case "REXLITERAL":
           RexLiteral literal = (RexLiteral) rexNode;
@@ -270,15 +291,17 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   private List<RexNode> sqlToRexNode(
-      String sql, SqlValidator validator, CalciteCatalogReader catalogReader,
-      Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap)
+      String sql,
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap,
+      Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseExpression();
     SqlNode validSQLNode =
         validator.validateParameterizedExpression(
-            sqlNode,
-            nameToTypeMap); // FIXME! It may be optional to include this validation
+            sqlNode, nameToTypeMap); // FIXME! It may be optional to include this validation
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
     RexNode rexNode = converter.convertExpression(validSQLNode, nameToNodeMap);
 

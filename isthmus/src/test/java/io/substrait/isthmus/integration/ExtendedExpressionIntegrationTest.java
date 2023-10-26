@@ -21,6 +21,7 @@ import org.apache.arrow.dataset.source.Dataset;
 import org.apache.arrow.dataset.source.DatasetFactory;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.ipc.ArrowReader;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -28,17 +29,21 @@ import org.junit.jupiter.api.Test;
 public class ExtendedExpressionIntegrationTest {
 
   @Test
-  public void projectAndFilterDataset() throws SqlParseException, IOException, URISyntaxException {
+  public void filterDataset() throws SqlParseException, IOException, URISyntaxException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
+    String sqlExpression = "N_NATIONKEY > 20";
     ScanOptions options =
         new ScanOptions.Builder(/*batchSize*/ 32768)
             .columns(Optional.empty())
-            .substraitFilter(getSubstraitExpressionFilter())
+            .substraitFilter(getFilterExtendedExpression(sqlExpression))
             .build();
     try (BufferAllocator allocator = new RootAllocator();
         DatasetFactory datasetFactory =
             new FileSystemDatasetFactory(
-                allocator, NativeMemoryPool.getDefault(), FileFormat.PARQUET, resource.toURI().toString());
+                allocator,
+                NativeMemoryPool.getDefault(),
+                FileFormat.PARQUET,
+                resource.toURI().toString());
         Dataset dataset = datasetFactory.finish();
         Scanner scanner = dataset.newScan(options);
         ArrowReader reader = scanner.scanBatches()) {
@@ -53,16 +58,66 @@ public class ExtendedExpressionIntegrationTest {
     }
   }
 
-  private static ByteBuffer getSubstraitExpressionFilter() throws IOException, SqlParseException {
+  @Test
+  public void projectDataset() throws SqlParseException, IOException, URISyntaxException {
+    URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
+    String sqlExpression = "N_NATIONKEY + 20";
+    ScanOptions options =
+        new ScanOptions.Builder(/*batchSize*/ 32768)
+            .columns(Optional.empty())
+            .substraitProjection(getProjectExtendedExpression(sqlExpression))
+            .build();
+    try (BufferAllocator allocator = new RootAllocator();
+        DatasetFactory datasetFactory =
+            new FileSystemDatasetFactory(
+                allocator,
+                NativeMemoryPool.getDefault(),
+                FileFormat.PARQUET,
+                resource.toURI().toString());
+        Dataset dataset = datasetFactory.finish();
+        Scanner scanner = dataset.newScan(options);
+        ArrowReader reader = scanner.scanBatches()) {
+      int count = 0;
+      int sum = 0;
+      while (reader.loadNextBatch()) {
+        count += reader.getVectorSchemaRoot().getRowCount();
+        IntVector intVector = (IntVector) reader.getVectorSchemaRoot().getVector(0);
+        for (int i = 0; i < intVector.getValueCount(); i++) {
+          sum += intVector.get(i);
+        }
+      }
+      assertEquals(25, count);
+      assertEquals(24 * 25 / 2 + 20 * count, sum);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static ByteBuffer getFilterExtendedExpression(String sqlExpression)
+      throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
         new SqlToSubstrait()
             .executeExpression(
-                "N_NATIONKEY > 20", ExtendedExpressionTestBase.tpchSchemaCreateStatements());
+                sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
     byte[] extendedExpressions =
         Base64.getDecoder()
             .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
     ByteBuffer substraitExpressionFilter = ByteBuffer.allocateDirect(extendedExpressions.length);
     substraitExpressionFilter.put(extendedExpressions);
     return substraitExpressionFilter;
+  }
+
+  private static ByteBuffer getProjectExtendedExpression(String sqlExpression)
+      throws IOException, SqlParseException {
+    ExtendedExpression extendedExpression =
+        new SqlToSubstrait()
+            .executeExpression(
+                sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
+    byte[] extendedExpressions =
+        Base64.getDecoder()
+            .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
+    ByteBuffer substraitExpressionProject = ByteBuffer.allocateDirect(extendedExpressions.length);
+    substraitExpressionProject.put(extendedExpressions);
+    return substraitExpressionProject;
   }
 }
