@@ -1,11 +1,15 @@
 package io.substrait.isthmus;
 
+import com.github.bsideup.jabel.Desugar;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -22,8 +26,12 @@ import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
@@ -86,8 +94,24 @@ class SqlConverterBase {
     EXTENSION_COLLECTION = defaults;
   }
 
-  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
+  /*
+  HashMap<String, RexNode> nameToNodeMap = new HashMap<>();
+    nameToNodeMap.put(
+        "N_NATIONKEY",
+        new RexInputRef(0, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
+    nameToNodeMap.put(
+        "N_REGIONKEY",
+        new RexInputRef(1, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
+    final Map<String, RelDataType> nameToTypeMap = new HashMap<>();
+    for (Map.Entry<String, RexNode> entry : nameToNodeMap.entrySet()) {
+      nameToTypeMap.put(entry.getKey(), entry.getValue().getType());
+    }
+   */
+
+  Result registerCreateTables(List<String> tables)
       throws SqlParseException {
+    Map<String, RelDataType> nameToTypeMap = new HashMap<>();
+    Map<String, RexNode> nameToNodeMap = new HashMap<>();
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
@@ -97,10 +121,20 @@ class SqlConverterBase {
         List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
         for (DefinedTable t : tList) {
           rootSchema.add(t.getName(), t);
+          for (RelDataTypeField field : t.type.getFieldList()) {
+            nameToTypeMap.put(field.getName(), field.getType());
+            nameToNodeMap.put(field.getName(), new RexInputRef(field.getIndex(), field.getType()));
+          }
         }
       }
     }
-    return Pair.of(validator, catalogReader);
+    return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
+  }
+
+  @Desugar
+  public record Result(SqlValidator validator, CalciteCatalogReader catalogReader,
+                       Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap) {
+
   }
 
   Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(

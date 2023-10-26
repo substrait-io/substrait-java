@@ -22,8 +22,8 @@ public class SubstraitToSql extends SqlConverterBase {
 
   public RelNode substraitRelToCalciteRel(Rel relRoot, List<String> tables)
       throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, pair.right, parserConfig);
+    var result = registerCreateTables(tables);
+    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, result.catalogReader(), parserConfig);
   }
 
   public RelNode substraitRelToCalciteRel(

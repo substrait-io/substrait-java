@@ -61,8 +61,8 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return executeInner(sql, factory, pair.left, pair.right);
+    var result = registerCreateTables(tables);
+    return executeInner(sql, factory, result.validator(), result.catalogReader());
   }
 
   public Plan execute(String sql, String name, Schema schema) throws SqlParseException {
@@ -72,14 +72,15 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   public ExtendedExpression executeExpression(String expr, List<String> tables)
       throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return executeInnerExpression(expr, pair.left, pair.right);
+    var result = registerCreateTables(tables);
+    return executeInnerExpression(expr, result.validator(), result.catalogReader(),
+        result.nameToTypeMap(), result.nameToNodeMap());
   }
 
   // Package protected for testing
   List<RelRoot> sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return sqlToRelNode(sql, pair.left, pair.right);
+    var result = registerCreateTables(tables);
+    return sqlToRelNode(sql, result.validator(), result.catalogReader());
   }
 
   // Package protected for testing
@@ -120,11 +121,12 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   private ExtendedExpression executeInnerExpression(
-      String sql, SqlValidator validator, CalciteCatalogReader catalogReader)
+      String sql, SqlValidator validator, CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
-    sqlToRexNode(sql, validator, catalogReader)
+    sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap)
         .forEach(
             rexNode -> {
               // FIXME! Implement it dynamically for more expression types
@@ -268,40 +270,20 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   private List<RexNode> sqlToRexNode(
-      String sql, SqlValidator validator, CalciteCatalogReader catalogReader)
+      String sql, SqlValidator validator, CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap, Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseExpression();
-    Result result = getResult(validator);
     SqlNode validSQLNode =
         validator.validateParameterizedExpression(
             sqlNode,
-            result.nameToTypeMap()); // FIXME! It may be optional to include this validation
+            nameToTypeMap); // FIXME! It may be optional to include this validation
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
-    RexNode rexNode = converter.convertExpression(validSQLNode, result.nameToNodeMap());
+    RexNode rexNode = converter.convertExpression(validSQLNode, nameToNodeMap);
 
     return Collections.singletonList(rexNode);
   }
-
-  private static Result getResult(SqlValidator validator) {
-    // FIXME! Needs to be created dinamycally, this is for PoC purpose
-    HashMap<String, RexNode> nameToNodeMap = new HashMap<>();
-    nameToNodeMap.put(
-        "N_NATIONKEY",
-        new RexInputRef(0, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
-    nameToNodeMap.put(
-        "N_REGIONKEY",
-        new RexInputRef(1, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
-    final Map<String, RelDataType> nameToTypeMap = new HashMap<>();
-    for (Map.Entry<String, RexNode> entry : nameToNodeMap.entrySet()) {
-      nameToTypeMap.put(entry.getKey(), entry.getValue().getType());
-    }
-    Result result = new Result(nameToNodeMap, nameToTypeMap);
-    return result;
-  }
-
-  private @Desugar record Result(
-      HashMap<String, RexNode> nameToNodeMap, Map<String, RelDataType> nameToTypeMap) {}
 
   @VisibleForTesting
   SqlToRelConverter createSqlToRelConverter(

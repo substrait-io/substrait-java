@@ -94,6 +94,8 @@ dependencies {
   implementation("org.immutables:value-annotations:2.8.8")
   annotationProcessor("org.immutables:value:2.8.8")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
+  testImplementation("org.apache.arrow:arrow-dataset:14.0.0-SNAPSHOT")
+  testImplementation("org.apache.arrow:arrow-memory-netty:14.0.0-SNAPSHOT")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }

@@ -33,8 +33,13 @@ val submodulesUpdate by
   }
 
 allprojects {
-  repositories { mavenCentral() }
-
+  repositories {
+    mavenCentral()
+    maven {
+      name = "github"
+      url = uri("https://nightlies.apache.org/arrow/java")
+    }
+  }
   tasks.configureEach<Test> {
     val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()
