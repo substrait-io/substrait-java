@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.19.0](https://github.com/substrait-io/substrait-java/compare/v0.18.0...v0.19.0) (2023-10-29)
+
+
+### Features
+
+* initial HashJoinRel support  ([#187](https://github.com/substrait-io/substrait-java/issues/187)) ([46d03ca](https://github.com/substrait-io/substrait-java/commit/46d03ca240e4bd25f2cb892ffe4dc371844e298d))
+
 ## [0.18.0](https://github.com/substrait-io/substrait-java/compare/v0.17.0...v0.18.0) (2023-09-24)
 
 
