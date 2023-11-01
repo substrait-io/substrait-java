@@ -188,7 +188,7 @@ public class ExtensionRoundtripTest extends TestBase {
   }
 
   @Test
-  void nested_loop_join() {
+  void nestedLoopJoin() {
     Rel rel =
         NestedLoopJoin.builder()
             .from(
