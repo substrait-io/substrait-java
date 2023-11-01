@@ -7,14 +7,13 @@ import io.substrait.relation.HasExtension;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.util.Optional;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class NestedLoopJoin extends BiRel implements HasExtension {
 
-  public abstract Optional<Expression> getCondition();
+  public abstract Expression getCondition();
 
   public abstract JoinType getJoinType();
 

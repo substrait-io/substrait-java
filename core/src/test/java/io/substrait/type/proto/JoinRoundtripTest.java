@@ -3,7 +3,6 @@ package io.substrait.type.proto;
 <<<<<<< HEAD
 =======
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 >>>>>>> 408672a (fix: improve tests)
 import io.substrait.TestBase;
@@ -41,27 +40,12 @@ public class JoinRoundtripTest extends TestBase {
 
   @Test
   void nestedLoopJoin() {
-    Rel relWithCustomExpression =
-        NestedLoopJoin.builder()
-            .from(
-                b.nestedLoopJoin(
-                    __ -> b.bool(false), NestedLoopJoin.JoinType.INNER, leftTable, rightTable))
-            .build();
-    verifyRoundTrip(relWithCustomExpression);
-
-    Rel relWithDefaultExpression =
+    Rel rel =
         NestedLoopJoin.builder()
             .from(
                 b.nestedLoopJoin(
                     __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, leftTable, rightTable))
             .build();
-    verifyRoundTrip(relWithDefaultExpression);
-
-    Rel relWithoutExpression =
-        NestedLoopJoin.builder()
-            .from(b.nestedLoopJoin(NestedLoopJoin.JoinType.INNER, leftTable, rightTable))
-            .build();
-    assertNotEquals(relWithDefaultExpression, relWithoutExpression);
-    assertEquals(relWithDefaultExpression, roundTrip(relWithoutExpression));
+    verifyRoundTrip(rel);
   }
 }

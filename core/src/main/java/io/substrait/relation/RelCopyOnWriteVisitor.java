@@ -126,7 +126,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
   public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
     var left = nestedLoopJoin.getLeft().accept(this);
     var right = nestedLoopJoin.getRight().accept(this);
-    var condition = nestedLoopJoin.getCondition().flatMap(t -> visitExpression(t));
+    var condition = visitExpression(nestedLoopJoin.getCondition());
     if (allEmpty(left, right, condition)) {
       return Optional.empty();
     }
@@ -135,9 +135,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             .from(nestedLoopJoin)
             .left(left.orElse(nestedLoopJoin.getLeft()))
             .right(right.orElse(nestedLoopJoin.getRight()))
-            .condition(
-                Optional.ofNullable(
-                    condition.orElseGet(() -> nestedLoopJoin.getCondition().orElse(null))))
+            .condition(condition.orElse(nestedLoopJoin.getCondition()))
             .build());
   }
 

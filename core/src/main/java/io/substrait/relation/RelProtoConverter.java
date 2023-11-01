@@ -188,9 +188,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setCommon(common(nestedLoopJoin))
             .setLeft(toProto(nestedLoopJoin.getLeft()))
             .setRight(toProto(nestedLoopJoin.getRight()))
+            .setExpression(toProto(nestedLoopJoin.getCondition()))
             .setType(nestedLoopJoin.getJoinType().toProto());
-
-    nestedLoopJoin.getCondition().ifPresent(t -> builder.setExpression(toProto(t)));
 
     nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setNestedLoopJoin(builder).build();
