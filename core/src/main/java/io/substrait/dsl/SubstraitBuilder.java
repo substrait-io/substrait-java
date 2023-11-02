@@ -41,7 +41,6 @@ public class SubstraitBuilder {
 
   private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
   private static final String FUNCTIONS_COMPARISON = "/functions_comparison.yaml";
-
   private static final String FUNCTIONS_AGGREGATE_GENERIC = "/functions_aggregate_generic.yaml";
 
   private final SimpleExtension.ExtensionCollection extensions;
