@@ -318,6 +318,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .build())
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
+    virtualTableScan.getFilter().map(f -> builder.setFilter(toProto(f)));
+
     virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
   }
