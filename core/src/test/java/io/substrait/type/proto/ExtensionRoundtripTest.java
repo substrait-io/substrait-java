@@ -3,11 +3,8 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
-import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.ExtensionLeaf;
@@ -22,7 +19,6 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
@@ -45,15 +41,8 @@ import org.junit.jupiter.api.Test;
  */
 public class ExtensionRoundtripTest extends TestBase {
 
-  TypeCreator R = TypeCreator.REQUIRED;
-
-  final SimpleExtension.ExtensionCollection extensions = defaultExtensionCollection;
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
-  final ExtensionCollector functionCollector = new ExtensionCollector();
-  final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
+      new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   final Rel commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -72,7 +61,8 @@ public class ExtensionRoundtripTest extends TestBase {
           .optimization(new StringHolder("REL OPTIMIZATION"))
           .build();
 
-  void verifyRoundTrip(Rel rel) {
+  @Override
+  protected void verifyRoundTrip(Rel rel) {
     io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
     Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);

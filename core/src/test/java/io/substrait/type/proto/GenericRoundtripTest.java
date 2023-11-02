@@ -29,8 +29,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class GenericRoundtripTest extends TestBase {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(GenericRoundtripTest.class);
 
   static Random rand = new Random(123);
 
