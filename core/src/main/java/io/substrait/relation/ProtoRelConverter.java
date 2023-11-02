@@ -1,7 +1,5 @@
 package io.substrait.relation;
 
-import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
-
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
@@ -108,7 +106,12 @@ public class ProtoRelConverter {
 
   private Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
-      return newVirtualTable(rel);
+      var virtualTable = rel.getVirtualTable();
+      if (virtualTable.getValuesCount() == 0) {
+        return newEmptyScan(rel);
+      } else {
+        return newVirtualTable(rel);
+      }
     } else if (rel.hasNamedTable()) {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
@@ -304,7 +307,9 @@ public class ProtoRelConverter {
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE, this);
+    var virtualTableSchema = newNamedStruct(rel);
+    var converter =
+        new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
