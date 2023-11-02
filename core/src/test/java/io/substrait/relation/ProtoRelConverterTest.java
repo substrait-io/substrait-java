@@ -5,21 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.AdvancedExtension;
-import io.substrait.extension.ExtensionCollector;
 import io.substrait.relation.utils.StringHolder;
 import java.util.Collections;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 public class ProtoRelConverterTest extends TestBase {
-
-  final SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
-  final ExtensionCollector functionCollector = new ExtensionCollector();
-  final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
-  final ProtoRelConverter protoRelConverter =
-      new ProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   final NamedScan commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());

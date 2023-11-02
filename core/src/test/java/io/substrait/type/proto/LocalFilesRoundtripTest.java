@@ -7,33 +7,20 @@ import io.substrait.TestBase;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
-import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.ReadRel;
 import io.substrait.relation.LocalFiles;
-import io.substrait.relation.ProtoRelConverter;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 public class LocalFilesRoundtripTest extends TestBase {
 
-  SimpleExtension.ExtensionCollection extensions = defaultExtensionCollection;
-
-  public LocalFilesRoundtripTest() throws IOException {}
-
   private void assertLocalFilesRoundtrip(FileOrFiles file) {
-    ExtensionCollector functionCollector = new ExtensionCollector();
-    RelProtoConverter to = new RelProtoConverter(functionCollector);
-    ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
-
     var builder =
         LocalFiles.builder()
             .initialSchema(
@@ -47,7 +34,7 @@ public class LocalFilesRoundtripTest extends TestBase {
                     .build())
             .addItems(file);
 
-    extensions.scalarFunctions().stream()
+    defaultExtensionCollection.scalarFunctions().stream()
         .filter(s -> s.name().equalsIgnoreCase("equal"))
         .findFirst()
         .map(
@@ -63,9 +50,9 @@ public class LocalFilesRoundtripTest extends TestBase {
         .ifPresent(builder::filter);
 
     var localFiles = builder.build();
-    var protoFileRel = to.toProto(localFiles);
+    var protoFileRel = relProtoConverter.toProto(localFiles);
     assertTrue(protoFileRel.getRead().hasFilter());
-    assertEquals(protoFileRel, to.toProto(from.from(protoFileRel)));
+    assertEquals(protoFileRel, relProtoConverter.toProto(protoRelConverter.from(protoFileRel)));
   }
 
   private ImmutableFileOrFiles.Builder setPath(
