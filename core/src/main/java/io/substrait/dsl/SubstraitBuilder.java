@@ -40,6 +40,8 @@ public class SubstraitBuilder {
   static final TypeCreator N = TypeCreator.of(true);
 
   private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
+  private static final String FUNCTIONS_COMPARISON = "/functions_comparison.yaml";
+
   private static final String FUNCTIONS_AGGREGATE_GENERIC = "/functions_aggregate_generic.yaml";
 
   private final SimpleExtension.ExtensionCollection extensions;
@@ -395,6 +397,10 @@ public class SubstraitBuilder {
   }
 
   // Scalar Functions
+
+  public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
+    return scalarFn(FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
+  }
 
   public Expression.ScalarFunctionInvocation scalarFn(
       String namespace, String key, Type outputType, Expression... args) {
