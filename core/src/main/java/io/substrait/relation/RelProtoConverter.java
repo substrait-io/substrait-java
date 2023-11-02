@@ -200,7 +200,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setNamedTable(ReadRel.NamedTable.newBuilder().addAllNames(namedScan.getNames()))
             .setBaseSchema(namedScan.getInitialSchema().toProto(typeProtoConverter));
 
-    namedScan.getFilter().map(f -> builder.setFilter(toProto(f)));
+    namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
 
     namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
@@ -318,7 +318,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .build())
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
-    virtualTableScan.getFilter().map(f -> builder.setFilter(toProto(f)));
+    virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
 
     virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
