@@ -304,7 +304,9 @@ public class ProtoRelConverter {
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE, this);
+    var virtualTableSchema = newNamedStruct(rel);
+    var converter =
+        new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
