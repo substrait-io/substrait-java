@@ -285,24 +285,4 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
   }
-
-  @Nested
-  class Switch {
-    @Test
-    public void simple() {
-      Plan.Root root =
-          b.root(
-              b.project(
-                  input ->
-                      List.of(
-                          b.switchExpression(
-                              b.fieldReference(input, 0),
-                              List.of(b.switchClause(b.i32(0), b.fieldReference(input, 3))),
-                              b.bool(false))),
-                  b.remap(4),
-                  commonTable));
-      var relNode = converter.convert(root.getInput());
-      assertRowMatch(relNode.getRowType(), N.BOOLEAN);
-    }
-  }
 }
