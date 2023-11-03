@@ -220,6 +220,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
 
           @Override
           public Optional<Expression> visit(Expression.Switch expr) throws RuntimeException {
+            var matchExpr = expr.match().accept(this);
             var defaultClause = expr.defaultClause().accept(this);
             var switchClauses =
                 transformList(
@@ -234,6 +235,7 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             return Optional.of(
                 Expression.Switch.builder()
                     .from(expr)
+                    .match(matchExpr.orElse(expr.match()))
                     .defaultClause(defaultClause.orElse(expr.defaultClause()))
                     .switchClauses(switchClauses.orElse(expr.switchClauses()))
                     .build());

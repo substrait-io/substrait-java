@@ -237,6 +237,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return Expression.newBuilder()
         .setSwitchExpression(
             Expression.SwitchExpression.newBuilder()
+                .setMatch(expr.match().accept(this))
                 .addAllIfs(clauses)
                 .setElse(expr.defaultClause().accept(this)))
         .build();
