@@ -46,6 +46,7 @@ public class SubstraitBuilder {
 
   private static final String FUNCTIONS_AGGREGATE_GENERIC = "/functions_aggregate_generic.yaml";
   private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
+  private static final String FUNCTIONS_BOOLEAN = "/functions_boolean.yaml";
   private static final String FUNCTIONS_COMPARISON = "/functions_comparison.yaml";
 
   private final SimpleExtension.ExtensionCollection extensions;
@@ -459,6 +460,14 @@ public class SubstraitBuilder {
 
   public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
     return scalarFn(FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation or(Expression... args) {
+    // If any arg is nullable, the output of or is potentially nullable
+    // For example: false or null = null
+    var isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
+    var outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
+    return scalarFn(FUNCTIONS_BOOLEAN, "or:bool", outputType, args);
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
