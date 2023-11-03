@@ -24,6 +24,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -218,6 +219,30 @@ public class SubstraitBuilder {
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
+  public NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
+    return nestedLoopJoin(conditionFn, joinType, Optional.empty(), left, right);
+  }
+
+  private NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    var condition = conditionFn.apply(new JoinInput(left, right));
+    return NestedLoopJoin.builder()
+        .left(left)
+        .right(right)
+        .condition(condition)
+        .joinType(joinType)
+        .remap(remap)
+        .build();
+  }
+
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
     return project(expressionsFn, Optional.empty(), input);
   }
@@ -283,6 +308,16 @@ public class SubstraitBuilder {
   public List<FieldReference> fieldReferences(Rel input, int... indexes) {
     return Arrays.stream(indexes)
         .mapToObj(index -> fieldReference(input, index))
+        .collect(java.util.stream.Collectors.toList());
+  }
+
+  public FieldReference fieldReference(List<Rel> inputs, int index) {
+    return ImmutableFieldReference.newInputRelReference(index, inputs);
+  }
+
+  public List<FieldReference> fieldReferences(List<Rel> inputs, int... indexes) {
+    return Arrays.stream(indexes)
+        .mapToObj(index -> fieldReference(inputs, index))
         .collect(java.util.stream.Collectors.toList());
   }
 

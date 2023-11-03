@@ -17,6 +17,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
@@ -27,6 +28,7 @@ import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -76,6 +78,9 @@ public class ProtoRelConverter {
       }
       case JOIN -> {
         return newJoin(rel.getJoin());
+      }
+      case NESTED_LOOP_JOIN -> {
+        return newNestedLoopJoin(rel.getNestedLoopJoin());
       }
       case SET -> {
         return newSet(rel.getSet());
@@ -522,6 +527,33 @@ public class ProtoRelConverter {
             .postJoinFilter(
                 Optional.ofNullable(
                     rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        NestedLoopJoin.builder()
+            .left(left)
+            .right(right)
+            .condition(
+                // defaults to true (aka cartesian join) if the join expression is missing
+                rel.hasExpression()
+                    ? converter.from(rel.getExpression())
+                    : Expression.BoolLiteral.builder().value(true).build())
+            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

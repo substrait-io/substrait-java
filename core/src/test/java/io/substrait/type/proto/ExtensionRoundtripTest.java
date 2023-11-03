@@ -23,6 +23,7 @@ import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.utils.StringHolder;
 import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
@@ -184,6 +185,19 @@ public class ExtensionRoundtripTest extends TestBase {
             .extension(relExtension)
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void nestedLoopJoin() {
+    Rel rel =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
   }
 
   @Test
