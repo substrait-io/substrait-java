@@ -311,6 +311,16 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  public FieldReference fieldReference(List<Rel> inputs, int index) {
+    return ImmutableFieldReference.newInputRelReference(index, inputs);
+  }
+
+  public List<FieldReference> fieldReferences(List<Rel> inputs, int... indexes) {
+    return Arrays.stream(indexes)
+        .mapToObj(index -> fieldReference(inputs, index))
+        .collect(java.util.stream.Collectors.toList());
+  }
+
   public Expression cast(Expression input, Type type) {
     return Cast.builder()
         .input(input)
