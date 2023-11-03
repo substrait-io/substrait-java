@@ -8,6 +8,8 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.ImmutableHashJoin;
+import io.substrait.relation.physical.ImmutableNestedLoopJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,6 +119,23 @@ public class RelCopyOnWriteVisitor extends AbstractRelVisitor<Optional<Rel>, Run
             .postJoinFilter(
                 Optional.ofNullable(
                     postFilter.orElseGet(() -> join.getPostJoinFilter().orElse(null))))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var left = nestedLoopJoin.getLeft().accept(this);
+    var right = nestedLoopJoin.getRight().accept(this);
+    var condition = visitExpression(nestedLoopJoin.getCondition());
+    if (allEmpty(left, right, condition)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableNestedLoopJoin.builder()
+            .from(nestedLoopJoin)
+            .left(left.orElse(nestedLoopJoin.getLeft()))
+            .right(right.orElse(nestedLoopJoin.getRight()))
+            .condition(condition.orElse(nestedLoopJoin.getCondition()))
             .build());
   }
 

@@ -3,6 +3,7 @@ package io.substrait.type.proto;
 import io.substrait.TestBase;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -30,5 +31,20 @@ public class JoinRoundtripTest extends TestBase {
             .from(b.hashJoin(leftKeys, rightKeys, HashJoin.JoinType.INNER, leftTable, rightTable))
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void nestedLoopJoin() {
+    List<Rel> inputRels = Arrays.asList(leftTable, rightTable);
+    Rel rel =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.equal(b.fieldReference(inputRels, 0), b.fieldReference(inputRels, 5)),
+                    NestedLoopJoin.JoinType.INNER,
+                    leftTable,
+                    rightTable))
+            .build();
+    verifyRoundTrip(rel);
   }
 }
