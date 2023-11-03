@@ -5,18 +5,20 @@ import static io.substrait.isthmus.expression.CallConverters.CREATE_SEARCH_CONV;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.plan.Plan;
+import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.List;
-import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
@@ -28,12 +30,22 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
+  final ExpressionProtoConverter expressionProtoConverter =
+      new ExpressionProtoConverter(new ExtensionCollector(), null);
+
+  final ExpressionRexConverter converter =
+      new ExpressionRexConverter(
+          typeFactory,
+          new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+          TypeConverter.DEFAULT);
+
+  final RexBuilder rexBuilder = new RexBuilder(typeFactory);
+
   // Define a shared table (i.e. a NamedScan) for use in tests.
   final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
   final Rel commonTable =
       b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
-
-  final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
 
   @Test
   public void listLiteral() throws IOException, SqlParseException {
@@ -46,87 +58,50 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void singleOrList() throws IOException {
-    Plan.Root root =
-        b.root(
-            b.filter(
-                input -> b.singleOrList(b.fieldReference(input, 0), b.i32(5), b.i32(10)),
-                commonTable));
-    var relNode = converter.convert(root.getInput());
-    var expression =
-        ((Filter) relNode)
-            .getCondition()
-            .accept(
-                new RexExpressionConverter(
-                    CREATE_SEARCH_CONV.apply(relNode.getCluster().getRexBuilder()),
-                    new ScalarFunctionConverter(
-                        SimpleExtension.loadDefaults().scalarFunctions(), typeFactory)));
-    var to = new ExpressionProtoConverter(new ExtensionCollector(), null);
-    assertEquals(
-        b.scalarFn(
-                "/functions_boolean.yaml",
-                "or:bool",
-                R.BOOLEAN,
-                b.scalarFn(
-                    "/functions_comparison.yaml",
-                    "equal:any_any",
-                    R.BOOLEAN,
-                    b.fieldReference(commonTable, 0),
-                    b.i32(5)),
-                b.scalarFn(
-                    "/functions_comparison.yaml",
-                    "equal:any_any",
-                    R.BOOLEAN,
-                    b.fieldReference(commonTable, 0),
-                    b.i32(10)))
-            .accept(to),
-        expression.accept(to));
+  public void singleOrList() {
+    Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
+    RexNode rexNode = singleOrList.accept(converter);
+    Expression substraitExpression =
+        rexNode.accept(
+            new RexExpressionConverter(
+                CREATE_SEARCH_CONV.apply(rexBuilder),
+                new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)));
+
+    // cannot roundtrip test singleOrList because Calcite simplifies the representation
+    assertExpressionEquality(
+        b.or(
+            b.equal(b.fieldReference(commonTable, 0), b.i32(5)),
+            b.equal(b.fieldReference(commonTable, 0), b.i32(10))),
+        substraitExpression);
   }
 
   @Test
-  public void switchExpression() throws IOException {
-    Plan.Root root =
-        b.root(
-            b.filter(
-                input ->
-                    b.switchExpression(
-                        b.fieldReference(input, 0),
-                        List.of(
-                            b.switchClause(b.i32(5), b.i32(1)),
-                            b.switchClause(b.i32(10), b.i32(2))),
-                        b.i32(3)),
-                commonTable));
-    var relNode = converter.convert(root.getInput());
-    var expression =
-        ((Filter) relNode)
-            .getCondition()
-            .accept(
-                new RexExpressionConverter(
-                    CASE,
-                    new ScalarFunctionConverter(
-                        SimpleExtension.loadDefaults().scalarFunctions(), typeFactory)));
-    var to = new ExpressionProtoConverter(new ExtensionCollector(), null);
-    assertEquals(
+  public void switchExpression() {
+    Expression switchExpression =
+        b.switchExpression(
+            b.fieldReference(commonTable, 0),
+            List.of(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
+            b.i32(3));
+    RexNode rexNode = switchExpression.accept(converter);
+    Expression expression =
+        rexNode.accept(
+            new RexExpressionConverter(
+                CASE, new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)));
+
+      // cannot roundtrip test switchExpression because Calcite simplifies the representation
+      assertExpressionEquality(
         b.ifThen(
-                List.of(
-                    b.ifClause(
-                        b.scalarFn(
-                            "/functions_comparison.yaml",
-                            "equal:any_any",
-                            R.BOOLEAN,
-                            b.fieldReference(commonTable, 0),
-                            b.i32(5)),
-                        b.i32(1)),
-                    b.ifClause(
-                        b.scalarFn(
-                            "/functions_comparison.yaml",
-                            "equal:any_any",
-                            R.BOOLEAN,
-                            b.fieldReference(commonTable, 0),
-                            b.i32(10)),
-                        b.i32(2))),
-                b.i32(3))
-            .accept(to),
-        expression.accept(to));
+            List.of(
+                b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(5)), b.i32(1)),
+                b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(10)), b.i32(2))),
+            b.i32(3)),
+        expression);
+  }
+
+  void assertExpressionEquality(Expression expected, Expression actual) {
+    // go the extra mile and convert both inputs to protobuf
+    // helps verify that the protobuf conversion is not broken
+    assertEquals(
+        expected.accept(expressionProtoConverter), actual.accept(expressionProtoConverter));
   }
 }
