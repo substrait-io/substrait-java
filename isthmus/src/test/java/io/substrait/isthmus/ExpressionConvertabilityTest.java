@@ -88,8 +88,8 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
             new RexExpressionConverter(
                 CASE, new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)));
 
-      // cannot roundtrip test switchExpression because Calcite simplifies the representation
-      assertExpressionEquality(
+    // cannot roundtrip test switchExpression because Calcite simplifies the representation
+    assertExpressionEquality(
         b.ifThen(
             List.of(
                 b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(5)), b.i32(1)),
