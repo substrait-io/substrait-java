@@ -39,15 +39,11 @@ public class JoinRoundtripTest extends TestBase {
         NestedLoopJoin.builder()
             .from(
                 b.nestedLoopJoin(
-                    __ -> b.equal(b.fieldReference(leftTable, 1), b.fieldReference(rightTable, 0)),
+                    __ -> b.equal(b.fieldReference(leftTable, 0), b.fieldReference(rightTable, 2)),
                     NestedLoopJoin.JoinType.INNER,
                     leftTable,
                     rightTable))
             .build();
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    Rel relReturned = protoRelConverter.from(protoRel);
-    System.out.println(rel);
-    System.out.println(relReturned);
     verifyRoundTrip(rel);
   }
 }
