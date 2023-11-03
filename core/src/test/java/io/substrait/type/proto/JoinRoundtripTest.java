@@ -1,10 +1,5 @@
 package io.substrait.type.proto;
 
-<<<<<<< HEAD
-=======
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
->>>>>>> 408672a (fix: improve tests)
 import io.substrait.TestBase;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.HashJoin;
@@ -44,8 +39,15 @@ public class JoinRoundtripTest extends TestBase {
         NestedLoopJoin.builder()
             .from(
                 b.nestedLoopJoin(
-                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, leftTable, rightTable))
+                    __ -> b.equal(b.fieldReference(leftTable, 1), b.fieldReference(rightTable, 0)),
+                    NestedLoopJoin.JoinType.INNER,
+                    leftTable,
+                    rightTable))
             .build();
+    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+    Rel relReturned = protoRelConverter.from(protoRel);
+    System.out.println(rel);
+    System.out.println(relReturned);
     verifyRoundTrip(rel);
   }
 }

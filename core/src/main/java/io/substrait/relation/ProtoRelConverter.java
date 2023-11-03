@@ -548,7 +548,11 @@ public class ProtoRelConverter {
         NestedLoopJoin.builder()
             .left(left)
             .right(right)
-            .condition(converter.from(rel.getExpression()))
+            .condition(
+                // defaults to true (aka cartesian join) if the join expression is missing
+                rel.hasExpression()
+                    ? converter.from(rel.getExpression())
+                    : Expression.BoolLiteral.builder().value(true).build())
             .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
 
     builder
