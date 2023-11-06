@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.relation.RelCopyOnWriteVisitor.transformList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,19 +12,40 @@ import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.CopyOnWriteVisitor;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 public class RelCopyOnWriteVisitorTest extends PlanTestBase {
+
+  /** Simplified version of {@link CopyOnWriteVisitor#transformList} for testing */
+  static <ITEM> Optional<List<ITEM>> transformList(
+      List<ITEM> items, Function<ITEM, Optional<ITEM>> transform) {
+    ArrayList<ITEM> newItems = new ArrayList<>();
+    boolean listUpdated = false;
+    for (ITEM item : items) {
+      Optional<ITEM> newItem = transform.apply(item);
+      if (newItem.isPresent()) {
+        newItems.add(newItem.get());
+        listUpdated = true;
+      } else {
+        newItems.add(item);
+      }
+    }
+    return listUpdated ? Optional.of(newItems) : Optional.empty();
+  }
+
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
           + "  count(distinct l.l_orderkey),\n"
@@ -169,7 +189,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return (visitor.hasTableReference());
     }
 
-    private class HasTableReferenceVisitor extends RelCopyOnWriteVisitor {
+    private class HasTableReferenceVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private boolean hasTableReference;
       private final List<String> tableName;
 
@@ -203,7 +223,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return visitor.getCountDistincts();
     }
 
-    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor {
+    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private int countDistincts;
 
       public int getCountDistincts() {
@@ -234,7 +254,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return visitor.getApproxCountDistincts();
     }
 
-    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor {
+    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private int aproxCountDistincts;
 
       public int getApproxCountDistincts() {
@@ -270,7 +290,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
           .map(t -> ImmutablePlan.builder().from(plan).roots(t).build());
     }
 
-    private static class ReplaceCountDistinctWithApproxVisitor extends RelCopyOnWriteVisitor {
+    private static class ReplaceCountDistinctWithApproxVisitor
+        extends RelCopyOnWriteVisitor<RuntimeException> {
 
       private final SimpleExtension.AggregateFunctionVariant approxFunc;
 
