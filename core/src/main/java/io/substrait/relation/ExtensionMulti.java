@@ -27,4 +27,8 @@ public abstract class ExtensionMulti extends AbstractRel {
         .detail(detail)
         .deriveRecordType(detail.deriveRecordType(inputs));
   }
+
+  public static ImmutableExtensionMulti.Builder builder() {
+    return ImmutableExtensionMulti.builder();
+  }
 }

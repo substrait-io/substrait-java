@@ -15,4 +15,8 @@ public abstract class ExtensionTable extends AbstractReadRel {
   public static ImmutableExtensionTable.Builder from(Extension.ExtensionTableDetail detail) {
     return ImmutableExtensionTable.builder().initialSchema(detail.deriveSchema()).detail(detail);
   }
+
+  public static ImmutableExtensionTable.Builder builder() {
+    return ImmutableExtensionTable.builder();
+  }
 }
