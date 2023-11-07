@@ -26,7 +26,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
     this.expressionCopyOnWriteVisitor = new ExpressionCopyOnWriteVisitor<>(this);
   }
 
-  public RelCopyOnWriteVisitor(ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor) {
+  public RelCopyOnWriteVisitor(
+      ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor) {
     this.expressionCopyOnWriteVisitor = expressionCopyOnWriteVisitor;
   }
 
@@ -337,7 +338,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
         funcArgs,
         arg -> {
           if (arg instanceof Expression expr) {
-            return expr.accept(getExpressionCopyOnWriteVisitor()).flatMap(Optional::<FunctionArg>of);
+            return expr.accept(getExpressionCopyOnWriteVisitor())
+                .flatMap(Optional::<FunctionArg>of);
           } else {
             return Optional.empty();
           }
