@@ -17,7 +17,7 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
     this.relCopyOnWriteVisitor = relCopyOnWriteVisitor;
   }
 
-  protected final RelCopyOnWriteVisitor<EXCEPTION> getRelVisitor() {
+  protected final RelCopyOnWriteVisitor<EXCEPTION> getRelCopyOnWriteVisitor() {
     return this.relCopyOnWriteVisitor;
   }
 
@@ -298,7 +298,7 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   public Optional<Expression> visit(Expression.SetPredicate setPredicate) throws EXCEPTION {
     return setPredicate
         .tuples()
-        .accept(getRelVisitor())
+        .accept(getRelCopyOnWriteVisitor())
         .map(tuple -> Expression.SetPredicate.builder().from(setPredicate).tuples(tuple).build());
   }
 
@@ -306,14 +306,14 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   public Optional<Expression> visit(Expression.ScalarSubquery scalarSubquery) throws EXCEPTION {
     return scalarSubquery
         .input()
-        .accept(getRelVisitor())
+        .accept(getRelCopyOnWriteVisitor())
         .map(
             input -> Expression.ScalarSubquery.builder().from(scalarSubquery).input(input).build());
   }
 
   @Override
   public Optional<Expression> visit(Expression.InPredicate inPredicate) throws EXCEPTION {
-    var haystack = inPredicate.haystack().accept(getRelVisitor());
+    var haystack = inPredicate.haystack().accept(getRelCopyOnWriteVisitor());
     var needles = visitExprList(inPredicate.needles());
 
     if (allEmpty(haystack, needles)) {
