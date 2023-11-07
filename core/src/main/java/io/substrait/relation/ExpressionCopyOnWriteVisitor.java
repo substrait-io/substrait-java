@@ -1,5 +1,8 @@
 package io.substrait.relation;
 
+import static io.substrait.relation.CopyOnWriteUtils.allEmpty;
+import static io.substrait.relation.CopyOnWriteUtils.transformList;
+
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
@@ -8,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 
 public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
-    extends CopyOnWriteVisitor<Expression, EXCEPTION>
     implements ExpressionVisitor<Optional<Expression>, EXCEPTION> {
 
   private final RelCopyOnWriteVisitor<EXCEPTION> relCopyOnWriteVisitor;
@@ -344,7 +346,7 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
 
   protected Optional<List<FunctionArg>> visitFunctionArguments(List<FunctionArg> funcArgs)
       throws EXCEPTION {
-    return transformList(
+    return CopyOnWriteUtils.<FunctionArg, EXCEPTION>transformList(
         funcArgs,
         arg -> {
           if (arg instanceof Expression expr) {

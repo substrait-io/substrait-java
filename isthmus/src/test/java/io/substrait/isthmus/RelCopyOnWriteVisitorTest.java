@@ -12,39 +12,20 @@ import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
-import io.substrait.relation.CopyOnWriteVisitor;
+import io.substrait.relation.CopyOnWriteUtils;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 public class RelCopyOnWriteVisitorTest extends PlanTestBase {
-
-  /** Simplified version of {@link CopyOnWriteVisitor#transformList} for testing */
-  static <ITEM> Optional<List<ITEM>> transformList(
-      List<ITEM> items, Function<ITEM, Optional<ITEM>> transform) {
-    ArrayList<ITEM> newItems = new ArrayList<>();
-    boolean listUpdated = false;
-    for (ITEM item : items) {
-      Optional<ITEM> newItem = transform.apply(item);
-      if (newItem.isPresent()) {
-        newItems.add(newItem.get());
-        listUpdated = true;
-      } else {
-        newItems.add(item);
-      }
-    }
-    return listUpdated ? Optional.of(newItems) : Optional.empty();
-  }
 
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
@@ -303,7 +284,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
       @Override
       public Optional<Rel> visit(Aggregate aggregate) {
-        return transformList(
+        return CopyOnWriteUtils.<Aggregate.Measure, RuntimeException>transformList(
                 aggregate.getMeasures(),
                 m -> {
                   if (m.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT)

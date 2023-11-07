@@ -1,5 +1,9 @@
 package io.substrait.relation;
 
+import static io.substrait.relation.CopyOnWriteUtils.allEmpty;
+import static io.substrait.relation.CopyOnWriteUtils.or;
+import static io.substrait.relation.CopyOnWriteUtils.transformList;
+
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
@@ -17,7 +21,6 @@ import java.util.function.Function;
  * to return a non-empty optional value, then that value will replace the relation in the tree.
  */
 public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
-    extends CopyOnWriteVisitor<Optional<Rel>, EXCEPTION>
     implements RelVisitor<Optional<Rel>, EXCEPTION> {
 
   private final ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor;
@@ -334,7 +337,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
 
   protected Optional<List<FunctionArg>> visitFunctionArguments(List<FunctionArg> funcArgs)
       throws EXCEPTION {
-    return transformList(
+    return CopyOnWriteUtils.<FunctionArg, EXCEPTION>transformList(
         funcArgs,
         arg -> {
           if (arg instanceof Expression expr) {
