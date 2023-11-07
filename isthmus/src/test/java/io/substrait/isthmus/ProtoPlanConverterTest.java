@@ -74,7 +74,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   public void crossJoin() throws IOException, SqlParseException {
     int[] counter = new int[1];
     var visitor =
-        new RelCopyOnWriteVisitor() {
+        new RelCopyOnWriteVisitor<RuntimeException>() {
           public Optional<Rel> visit(Cross cross) throws RuntimeException {
             counter[0]++;
             return super.visit(cross);
