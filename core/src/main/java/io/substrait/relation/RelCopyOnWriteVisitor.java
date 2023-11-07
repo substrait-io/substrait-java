@@ -20,22 +20,22 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
     extends CopyOnWriteVisitor<Optional<Rel>, EXCEPTION>
     implements RelVisitor<Optional<Rel>, EXCEPTION> {
 
-  private final ExprCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor;
+  private final ExpressionCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor;
 
   public RelCopyOnWriteVisitor() {
-    this.exprCopyOnWriteVisitor = new ExprCopyOnWriteVisitor<>(this);
+    this.exprCopyOnWriteVisitor = new ExpressionCopyOnWriteVisitor<>(this);
   }
 
-  public RelCopyOnWriteVisitor(ExprCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor) {
+  public RelCopyOnWriteVisitor(ExpressionCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor) {
     this.exprCopyOnWriteVisitor = exprCopyOnWriteVisitor;
   }
 
   public RelCopyOnWriteVisitor(
-      Function<RelCopyOnWriteVisitor<EXCEPTION>, ExprCopyOnWriteVisitor<EXCEPTION>> fn) {
+      Function<RelCopyOnWriteVisitor<EXCEPTION>, ExpressionCopyOnWriteVisitor<EXCEPTION>> fn) {
     this.exprCopyOnWriteVisitor = fn.apply(this);
   }
 
-  protected ExprCopyOnWriteVisitor<EXCEPTION> getExprVisitor() {
+  protected ExpressionCopyOnWriteVisitor<EXCEPTION> getExprVisitor() {
     return exprCopyOnWriteVisitor;
   }
 

@@ -7,13 +7,13 @@ import io.substrait.expression.FunctionArg;
 import java.util.List;
 import java.util.Optional;
 
-public class ExprCopyOnWriteVisitor<EXCEPTION extends Exception>
+public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
     extends CopyOnWriteVisitor<Expression, EXCEPTION>
     implements ExpressionVisitor<Optional<Expression>, EXCEPTION> {
 
   private final RelCopyOnWriteVisitor<EXCEPTION> relCopyOnWriteVisitor;
 
-  public ExprCopyOnWriteVisitor(RelCopyOnWriteVisitor<EXCEPTION> relCopyOnWriteVisitor) {
+  public ExpressionCopyOnWriteVisitor(RelCopyOnWriteVisitor<EXCEPTION> relCopyOnWriteVisitor) {
     this.relCopyOnWriteVisitor = relCopyOnWriteVisitor;
   }
 
