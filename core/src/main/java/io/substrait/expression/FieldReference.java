@@ -24,6 +24,10 @@ public abstract class FieldReference implements Expression {
     return type();
   }
 
+  public static ImmutableFieldReference.Builder builder() {
+    return ImmutableFieldReference.builder();
+  }
+
   public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
     return visitor.visit(this);
   }

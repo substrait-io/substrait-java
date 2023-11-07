@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.relation.RelCopyOnWriteVisitor.transformList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +12,7 @@ import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.CopyOnWriteUtils;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
@@ -26,6 +26,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 public class RelCopyOnWriteVisitorTest extends PlanTestBase {
+
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
           + "  count(distinct l.l_orderkey),\n"
@@ -169,7 +170,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return (visitor.hasTableReference());
     }
 
-    private class HasTableReferenceVisitor extends RelCopyOnWriteVisitor {
+    private class HasTableReferenceVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private boolean hasTableReference;
       private final List<String> tableName;
 
@@ -203,7 +204,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return visitor.getCountDistincts();
     }
 
-    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor {
+    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private int countDistincts;
 
       public int getCountDistincts() {
@@ -234,7 +235,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       return visitor.getApproxCountDistincts();
     }
 
-    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor {
+    private static class CountCountDistinctVisitor extends RelCopyOnWriteVisitor<RuntimeException> {
       private int aproxCountDistincts;
 
       public int getApproxCountDistincts() {
@@ -261,7 +262,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     }
 
     public Optional<Plan> modify(Plan plan) {
-      return transformList(
+      return CopyOnWriteUtils.<Plan.Root, RuntimeException>transformList(
               plan.getRoots(),
               t ->
                   t.getInput()
@@ -270,7 +271,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
           .map(t -> ImmutablePlan.builder().from(plan).roots(t).build());
     }
 
-    private static class ReplaceCountDistinctWithApproxVisitor extends RelCopyOnWriteVisitor {
+    private static class ReplaceCountDistinctWithApproxVisitor
+        extends RelCopyOnWriteVisitor<RuntimeException> {
 
       private final SimpleExtension.AggregateFunctionVariant approxFunc;
 
@@ -282,7 +284,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
       @Override
       public Optional<Rel> visit(Aggregate aggregate) {
-        return transformList(
+        return CopyOnWriteUtils.<Aggregate.Measure, RuntimeException>transformList(
                 aggregate.getMeasures(),
                 m -> {
                   if (m.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT)

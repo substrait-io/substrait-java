@@ -18,4 +18,8 @@ public abstract class ExtensionSingle extends SingleInputRel {
         .detail(detail)
         .deriveRecordType(detail.deriveRecordType(input));
   }
+
+  public static ImmutableExtensionSingle.Builder builder() {
+    return ImmutableExtensionSingle.builder();
+  }
 }
