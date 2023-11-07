@@ -168,6 +168,9 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
 
   protected Optional<Expression.SwitchClause> visitSwitchClause(
       Expression.SwitchClause switchClause) throws EXCEPTION {
+    // This code does not visit the condition on the switch clause as that MUST be a Literal and the
+    // visitor does not guarantee a Literal return type. If you wish to update the condition,
+    // override this method
     return switchClause
         .then()
         .accept(this)
