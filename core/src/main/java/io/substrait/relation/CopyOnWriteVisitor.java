@@ -29,9 +29,10 @@ public abstract class CopyOnWriteVisitor<T, E extends Exception> {
   /**
    * Applies the given transformation function to each item in the list. If any of the list items
    * are transformed, returns a new list in which each item is either
+   *
    * <ul>
-   *     <li>a transformed new item replacing an old item</li>
-   *     <li>the original item in the position it was in</li>
+   *   <li>a transformed new item replacing an old item
+   *   <li>the original item in the position it was in
    * </ul>
    *
    * @param items the list of items to transform
