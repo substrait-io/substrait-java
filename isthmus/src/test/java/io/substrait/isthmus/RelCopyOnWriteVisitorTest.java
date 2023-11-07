@@ -262,7 +262,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     }
 
     public Optional<Plan> modify(Plan plan) {
-      return transformList(
+      return CopyOnWriteUtils.<Plan.Root, RuntimeException>transformList(
               plan.getRoots(),
               t ->
                   t.getInput()
