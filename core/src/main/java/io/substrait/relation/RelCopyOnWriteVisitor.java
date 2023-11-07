@@ -20,23 +20,23 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
     extends CopyOnWriteVisitor<Optional<Rel>, EXCEPTION>
     implements RelVisitor<Optional<Rel>, EXCEPTION> {
 
-  private final ExpressionCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor;
+  private final ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor;
 
   public RelCopyOnWriteVisitor() {
-    this.exprCopyOnWriteVisitor = new ExpressionCopyOnWriteVisitor<>(this);
+    this.expressionCopyOnWriteVisitor = new ExpressionCopyOnWriteVisitor<>(this);
   }
 
-  public RelCopyOnWriteVisitor(ExpressionCopyOnWriteVisitor<EXCEPTION> exprCopyOnWriteVisitor) {
-    this.exprCopyOnWriteVisitor = exprCopyOnWriteVisitor;
+  public RelCopyOnWriteVisitor(ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor) {
+    this.expressionCopyOnWriteVisitor = expressionCopyOnWriteVisitor;
   }
 
   public RelCopyOnWriteVisitor(
       Function<RelCopyOnWriteVisitor<EXCEPTION>, ExpressionCopyOnWriteVisitor<EXCEPTION>> fn) {
-    this.exprCopyOnWriteVisitor = fn.apply(this);
+    this.expressionCopyOnWriteVisitor = fn.apply(this);
   }
 
-  protected ExpressionCopyOnWriteVisitor<EXCEPTION> getExprVisitor() {
-    return exprCopyOnWriteVisitor;
+  protected ExpressionCopyOnWriteVisitor<EXCEPTION> getExpressionCopyOnWriteVisitor() {
+    return expressionCopyOnWriteVisitor;
   }
 
   @Override
@@ -119,7 +119,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   @Override
   public Optional<Rel> visit(Filter filter) throws EXCEPTION {
     var input = filter.getInput().accept(this);
-    var condition = filter.getCondition().accept(getExprVisitor());
+    var condition = filter.getCondition().accept(getExpressionCopyOnWriteVisitor());
 
     if (allEmpty(input, condition)) {
       return Optional.empty();
@@ -156,7 +156,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
     var left = nestedLoopJoin.getLeft().accept(this);
     var right = nestedLoopJoin.getRight().accept(this);
-    var condition = nestedLoopJoin.getCondition().accept(getExprVisitor());
+    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
 
     if (allEmpty(left, right, condition)) {
       return Optional.empty();
@@ -318,7 +318,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   // utilities
 
   protected Optional<List<Expression>> visitExprList(List<Expression> exprs) throws EXCEPTION {
-    return transformList(exprs, t -> t.accept(getExprVisitor()));
+    return transformList(exprs, t -> t.accept(getExpressionCopyOnWriteVisitor()));
   }
 
   public Optional<FieldReference> visitFieldReference(FieldReference fieldReference)
@@ -337,7 +337,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
         funcArgs,
         arg -> {
           if (arg instanceof Expression expr) {
-            return expr.accept(getExprVisitor()).flatMap(Optional::<FunctionArg>of);
+            return expr.accept(getExpressionCopyOnWriteVisitor()).flatMap(Optional::<FunctionArg>of);
           } else {
             return Optional.empty();
           }
@@ -348,7 +348,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
       throws EXCEPTION {
     return sortField
         .expr()
-        .accept(getExprVisitor())
+        .accept(getExpressionCopyOnWriteVisitor())
         .map(expr -> Expression.SortField.builder().from(sortField).expr(expr).build());
   }
 
@@ -356,7 +356,7 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
       throws EXCEPTION {
     // not using optExpr.map to allow us to propagate the THROWABLE nicely
     if (optExpr.isPresent()) {
-      return optExpr.get().accept(getExprVisitor());
+      return optExpr.get().accept(getExpressionCopyOnWriteVisitor());
     }
     return Optional.empty();
   }

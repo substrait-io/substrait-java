@@ -180,7 +180,6 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
     if (allEmpty(ifClauses, elseClause)) {
       return Optional.empty();
     }
-
     return Optional.of(
         Expression.IfThen.builder()
             .from(ifThen)
