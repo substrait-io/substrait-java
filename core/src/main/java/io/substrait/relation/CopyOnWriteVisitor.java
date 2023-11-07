@@ -9,10 +9,6 @@ import java.util.function.Supplier;
 /** Base class for Copy On Write visitors. Provides common utils. */
 public abstract class CopyOnWriteVisitor<T, E extends Exception> {
 
-  protected interface TransformFunction<T, E extends Exception> {
-    Optional<T> apply(T t) throws E;
-  }
-
   protected boolean allEmpty(Optional<?>... optionals) {
     return Arrays.stream(optionals).noneMatch(Optional::isPresent);
   }
@@ -24,6 +20,10 @@ public abstract class CopyOnWriteVisitor<T, E extends Exception> {
     } else {
       return right.get();
     }
+  }
+
+  protected interface TransformFunction<T, E extends Exception> {
+    Optional<T> apply(T t) throws E;
   }
 
   /**
