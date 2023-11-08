@@ -102,11 +102,11 @@ public class ProtoRelConverter {
       case HASH_JOIN -> {
         return newHashJoin(rel.getHashJoin());
       }
-      case NESTED_LOOP_JOIN -> {
-        return newNestedLoopJoin(rel.getNestedLoopJoin());
-      }
       case MERGE_JOIN -> {
         return newMergeJoin(rel.getMergeJoin());
+      }
+      case NESTED_LOOP_JOIN -> {
+        return newNestedLoopJoin(rel.getNestedLoopJoin());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
