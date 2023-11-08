@@ -189,19 +189,6 @@ public class ExtensionRoundtripTest extends TestBase {
   }
 
   @Test
-  void nestedLoopJoin() {
-    Rel rel =
-        NestedLoopJoin.builder()
-            .from(
-                b.nestedLoopJoin(
-                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
   void mergeJoin() {
     // with empty keys
     List<Integer> leftEmptyKeys = Collections.emptyList();
@@ -219,6 +206,19 @@ public class ExtensionRoundtripTest extends TestBase {
             .extension(relExtension)
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void nestedLoopJoin() {
+    Rel rel =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
   }
 
   @Test

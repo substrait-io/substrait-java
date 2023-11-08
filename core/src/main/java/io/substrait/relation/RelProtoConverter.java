@@ -269,20 +269,6 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
-    var builder =
-        NestedLoopJoinRel.newBuilder()
-            .setCommon(common(nestedLoopJoin))
-            .setLeft(toProto(nestedLoopJoin.getLeft()))
-            .setRight(toProto(nestedLoopJoin.getRight()))
-            .setExpression(toProto(nestedLoopJoin.getCondition()))
-            .setType(nestedLoopJoin.getJoinType().toProto());
-
-    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
-    return Rel.newBuilder().setNestedLoopJoin(builder).build();
-  }
-
-  @Override
   public Rel visit(MergeJoin mergeJoin) throws RuntimeException {
     var builder =
         MergeJoinRel.newBuilder()
@@ -305,6 +291,20 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     mergeJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setMergeJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var builder =
+        NestedLoopJoinRel.newBuilder()
+            .setCommon(common(nestedLoopJoin))
+            .setLeft(toProto(nestedLoopJoin.getLeft()))
+            .setRight(toProto(nestedLoopJoin.getRight()))
+            .setExpression(toProto(nestedLoopJoin.getCondition()))
+            .setType(nestedLoopJoin.getJoinType().toProto());
+
+    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
   @Override

@@ -39,7 +39,7 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(HashJoin hashJoin) throws EXCEPTION;
 
-  OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
-
   OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION;
+
+  OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
 }

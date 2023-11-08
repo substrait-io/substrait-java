@@ -303,24 +303,6 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    var left = nestedLoopJoin.getLeft().accept(this);
-    var right = nestedLoopJoin.getRight().accept(this);
-    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
-
-    if (allEmpty(left, right, condition)) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        NestedLoopJoin.builder()
-            .from(nestedLoopJoin)
-            .left(left.orElse(nestedLoopJoin.getLeft()))
-            .right(right.orElse(nestedLoopJoin.getRight()))
-            .condition(condition.orElse(nestedLoopJoin.getCondition()))
-            .build());
-  }
-
-  @Override
   public Optional<Rel> visit(MergeJoin mergeJoin) throws EXCEPTION {
     var left = mergeJoin.getLeft().accept(this);
     var right = mergeJoin.getRight().accept(this);
@@ -339,6 +321,24 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .leftKeys(leftKeys.orElse(mergeJoin.getLeftKeys()))
             .rightKeys(rightKeys.orElse(mergeJoin.getRightKeys()))
             .postJoinFilter(or(postFilter, mergeJoin::getPostJoinFilter))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
+    var left = nestedLoopJoin.getLeft().accept(this);
+    var right = nestedLoopJoin.getRight().accept(this);
+    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
+
+    if (allEmpty(left, right, condition)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        NestedLoopJoin.builder()
+            .from(nestedLoopJoin)
+            .left(left.orElse(nestedLoopJoin.getLeft()))
+            .right(right.orElse(nestedLoopJoin.getRight()))
+            .condition(condition.orElse(nestedLoopJoin.getCondition()))
             .build());
   }
 

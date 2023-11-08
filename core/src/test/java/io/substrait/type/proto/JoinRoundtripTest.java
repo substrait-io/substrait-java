@@ -35,6 +35,17 @@ public class JoinRoundtripTest extends TestBase {
   }
 
   @Test
+  void mergeJoin() {
+    List<Integer> leftKeys = Arrays.asList(0, 1);
+    List<Integer> rightKeys = Arrays.asList(2, 0);
+    Rel relWithoutKeys =
+        MergeJoin.builder()
+            .from(b.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
+            .build();
+    verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
   void nestedLoopJoin() {
     List<Rel> inputRels = Arrays.asList(leftTable, rightTable);
     Rel rel =
@@ -47,16 +58,5 @@ public class JoinRoundtripTest extends TestBase {
                     rightTable))
             .build();
     verifyRoundTrip(rel);
-  }
-
-  @Test
-  void mergeJoin() {
-    List<Integer> leftKeys = Arrays.asList(0, 1);
-    List<Integer> rightKeys = Arrays.asList(2, 0);
-    Rel relWithoutKeys =
-        MergeJoin.builder()
-            .from(b.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
-            .build();
-    verifyRoundTrip(relWithoutKeys);
   }
 }

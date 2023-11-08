@@ -94,12 +94,12 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   }
 
   @Override
-  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    return visitFallback(nestedLoopJoin);
+  public OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION {
+    return visitFallback(mergeJoin);
   }
 
   @Override
-  public OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION {
-    return visitFallback(mergeJoin);
+  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
+    return visitFallback(nestedLoopJoin);
   }
 }
