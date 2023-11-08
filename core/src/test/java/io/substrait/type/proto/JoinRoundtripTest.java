@@ -3,6 +3,7 @@ package io.substrait.type.proto;
 import io.substrait.TestBase;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import java.util.Arrays;
 import java.util.List;
@@ -46,5 +47,16 @@ public class JoinRoundtripTest extends TestBase {
                     rightTable))
             .build();
     verifyRoundTrip(rel);
+  }
+
+  @Test
+  void mergeJoin() {
+    List<Integer> leftKeys = Arrays.asList(0, 1);
+    List<Integer> rightKeys = Arrays.asList(2, 0);
+    Rel relWithoutKeys =
+        MergeJoin.builder()
+            .from(b.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
+            .build();
+    verifyRoundTrip(relWithoutKeys);
   }
 }

@@ -15,6 +15,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
@@ -25,6 +26,7 @@ import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
@@ -182,20 +184,6 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
-    var builder =
-        NestedLoopJoinRel.newBuilder()
-            .setCommon(common(nestedLoopJoin))
-            .setLeft(toProto(nestedLoopJoin.getLeft()))
-            .setRight(toProto(nestedLoopJoin.getRight()))
-            .setExpression(toProto(nestedLoopJoin.getCondition()))
-            .setType(nestedLoopJoin.getJoinType().toProto());
-
-    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
-    return Rel.newBuilder().setNestedLoopJoin(builder).build();
-  }
-
-  @Override
   public Rel visit(Set set) throws RuntimeException {
     var builder = SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
     set.getInputs()
@@ -278,6 +266,45 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setHashJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var builder =
+        NestedLoopJoinRel.newBuilder()
+            .setCommon(common(nestedLoopJoin))
+            .setLeft(toProto(nestedLoopJoin.getLeft()))
+            .setRight(toProto(nestedLoopJoin.getRight()))
+            .setExpression(toProto(nestedLoopJoin.getCondition()))
+            .setType(nestedLoopJoin.getJoinType().toProto());
+
+    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setNestedLoopJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(MergeJoin mergeJoin) throws RuntimeException {
+    var builder =
+        MergeJoinRel.newBuilder()
+            .setCommon(common(mergeJoin))
+            .setLeft(toProto(mergeJoin.getLeft()))
+            .setRight(toProto(mergeJoin.getRight()))
+            .setType(mergeJoin.getJoinType().toProto());
+
+    List<FieldReference> leftKeys = mergeJoin.getLeftKeys();
+    List<FieldReference> rightKeys = mergeJoin.getRightKeys();
+
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new RuntimeException("Number of left and right keys must be equal.");
+    }
+
+    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
+    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
+
+    mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
+    mergeJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setMergeJoin(builder).build();
   }
 
   @Override

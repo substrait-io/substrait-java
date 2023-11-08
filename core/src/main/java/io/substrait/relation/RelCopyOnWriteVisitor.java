@@ -9,6 +9,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import java.util.List;
 import java.util.Optional;
@@ -157,24 +158,6 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    var left = nestedLoopJoin.getLeft().accept(this);
-    var right = nestedLoopJoin.getRight().accept(this);
-    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
-
-    if (allEmpty(left, right, condition)) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        NestedLoopJoin.builder()
-            .from(nestedLoopJoin)
-            .left(left.orElse(nestedLoopJoin.getLeft()))
-            .right(right.orElse(nestedLoopJoin.getRight()))
-            .condition(condition.orElse(nestedLoopJoin.getCondition()))
-            .build());
-  }
-
-  @Override
   public Optional<Rel> visit(Set set) throws EXCEPTION {
     return transformList(set.getInputs(), t -> t.accept(this))
         .map(s -> Set.builder().from(set).inputs(s).build());
@@ -316,6 +299,46 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .leftKeys(leftKeys.orElse(hashJoin.getLeftKeys()))
             .rightKeys(rightKeys.orElse(hashJoin.getRightKeys()))
             .postJoinFilter(or(postFilter, hashJoin::getPostJoinFilter))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
+    var left = nestedLoopJoin.getLeft().accept(this);
+    var right = nestedLoopJoin.getRight().accept(this);
+    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
+
+    if (allEmpty(left, right, condition)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        NestedLoopJoin.builder()
+            .from(nestedLoopJoin)
+            .left(left.orElse(nestedLoopJoin.getLeft()))
+            .right(right.orElse(nestedLoopJoin.getRight()))
+            .condition(condition.orElse(nestedLoopJoin.getCondition()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(MergeJoin mergeJoin) throws EXCEPTION {
+    var left = mergeJoin.getLeft().accept(this);
+    var right = mergeJoin.getRight().accept(this);
+    var leftKeys = transformList(mergeJoin.getLeftKeys(), this::visitFieldReference);
+    var rightKeys = transformList(mergeJoin.getRightKeys(), this::visitFieldReference);
+    var postFilter = visitOptionalExpression(mergeJoin.getPostJoinFilter());
+
+    if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        MergeJoin.builder()
+            .from(mergeJoin)
+            .left(left.orElse(mergeJoin.getLeft()))
+            .right(right.orElse(mergeJoin.getRight()))
+            .leftKeys(leftKeys.orElse(mergeJoin.getLeftKeys()))
+            .rightKeys(rightKeys.orElse(mergeJoin.getRightKeys()))
+            .postJoinFilter(or(postFilter, mergeJoin::getPostJoinFilter))
             .build());
   }
 
