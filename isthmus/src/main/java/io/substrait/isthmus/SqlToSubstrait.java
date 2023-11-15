@@ -16,11 +16,9 @@ import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURI;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
-import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -173,24 +171,7 @@ public class SqlToSubstrait extends SqlConverterBase {
                       .setExpression(expressionBuilder)
                       .addOutputNames(result.ref().getName());
 
-              // FIXME! Get schema dynamically
-              // (as the same for Plan with:
-              // TypeConverter.DEFAULT.toNamedStruct(rexNode.getType());)
-              List<String> columnNames =
-                  Arrays.asList("N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT");
-              List<Type> dataTypes =
-                  Arrays.asList(
-                      TypeCreator.NULLABLE.I32,
-                      TypeCreator.NULLABLE.STRING,
-                      TypeCreator.NULLABLE.I32,
-                      TypeCreator.NULLABLE.STRING);
-              NamedStruct namedStruct =
-                  NamedStruct.of(
-                      columnNames, Type.Struct.builder().fields(dataTypes).nullable(false).build());
-
-              extendedExpressionBuilder
-                  .addReferredExpr(0, expressionReferenceBuilder)
-                  .setBaseSchema(namedStruct.toProto(new TypeProtoConverter(functionCollector)));
+              extendedExpressionBuilder.addReferredExpr(0, expressionReferenceBuilder);
 
               // Extensions URI FIXME! Populate/create this dynamically
               HashMap<String, SimpleExtensionURI> extensionUris = new HashMap<>();
@@ -221,6 +202,10 @@ public class SqlToSubstrait extends SqlConverterBase {
               extendedExpressionBuilder.addAllExtensionUris(extensionUris.values());
               extendedExpressionBuilder.addAllExtensions(extensions);
             });
+    NamedStruct namedStruct = TypeConverter.DEFAULT.toNamedStruct(nameToTypeMap);
+    extendedExpressionBuilder.setBaseSchema(
+        namedStruct.toProto(new TypeProtoConverter(functionCollector)));
+
     return extendedExpressionBuilder.build();
   }
 

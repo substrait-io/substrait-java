@@ -2,6 +2,7 @@ package io.substrait.isthmus.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.protobuf.util.JsonFormat;
 import com.ibm.icu.impl.ClassLoaderUtil;
 import io.substrait.isthmus.ExtendedExpressionTestBase;
 import io.substrait.isthmus.SqlToSubstrait;
@@ -85,6 +86,7 @@ public class ExtendedExpressionIntegrationTest {
         for (int i = 0; i < intVector.getValueCount(); i++) {
           sum += intVector.get(i);
         }
+        System.out.println(reader.getVectorSchemaRoot().contentToTSVString());
       }
       assertEquals(25, count);
       assertEquals(24 * 25 / 2 + 20 * count, sum);
@@ -99,6 +101,9 @@ public class ExtendedExpressionIntegrationTest {
         new SqlToSubstrait()
             .executeExpression(
                 sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
+    System.out.println(
+        "JsonFormat.printer().print(getFilterExtendedExpression): "
+            + JsonFormat.printer().print(extendedExpression));
     byte[] extendedExpressions =
         Base64.getDecoder()
             .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
@@ -113,6 +118,9 @@ public class ExtendedExpressionIntegrationTest {
         new SqlToSubstrait()
             .executeExpression(
                 sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
+    System.out.println(
+        "JsonFormat.printer().print(getProjectExtendedExpression): "
+            + JsonFormat.printer().print(extendedExpression));
     byte[] extendedExpressions =
         Base64.getDecoder()
             .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));

@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SubstraitTypeSystem.DAY_SECOND_INTERVAL;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 
+import com.google.common.collect.Lists;
 import io.substrait.function.NullableType;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.NamedStruct;
@@ -11,6 +12,7 @@ import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -54,6 +56,17 @@ public class TypeConverter {
     var names = new ArrayList<String>();
     var struct = (Type.Struct) toSubstrait(type, names);
     return NamedStruct.of(names, struct);
+  }
+
+  public NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
+    var names = Lists.<String>newArrayList();
+    var types = Lists.<Type>newArrayList();
+    nameToTypeMap.forEach(
+        (k, v) -> {
+          names.add(k);
+          types.add(toSubstrait(v, names));
+        });
+    return NamedStruct.of(names, Type.Struct.builder().fields(types).nullable(false).build());
   }
 
   private Type toSubstrait(RelDataType type, List<String> names) {

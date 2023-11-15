@@ -5,10 +5,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.NamedStruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -107,7 +104,7 @@ class SqlConverterBase {
    */
 
   Result registerCreateTables(List<String> tables) throws SqlParseException {
-    Map<String, RelDataType> nameToTypeMap = new HashMap<>();
+    Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
     Map<String, RexNode> nameToNodeMap = new HashMap<>();
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
