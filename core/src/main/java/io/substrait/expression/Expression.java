@@ -469,6 +469,8 @@ public interface Expression extends FunctionArg {
 
   @Value.Immutable
   abstract static class Switch implements Expression {
+    public abstract Expression match();
+
     public abstract List<SwitchClause> switchClauses();
 
     public abstract Expression defaultClause();

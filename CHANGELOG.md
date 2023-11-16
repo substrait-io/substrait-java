@@ -1,6 +1,31 @@
 Release Notes
 ---
 
+## [0.20.0](https://github.com/substrait-io/substrait-java/compare/v0.19.0...v0.20.0) (2023-11-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* RelCopyOnWriteVisitor now extends RelVisitor and has generic type parameter
+
+### Features
+
+* exhaustive copy on write visitors ([#199](https://github.com/substrait-io/substrait-java/issues/199)) ([39c56ab](https://github.com/substrait-io/substrait-java/commit/39c56ab36042fefd30e5cb35b68301ea135fee1a))
+* improved ReadRel handling ([#194](https://github.com/substrait-io/substrait-java/issues/194)) ([6548670](https://github.com/substrait-io/substrait-java/commit/6548670cba32efd42b6d5a312a7793569dd3d531))
+* initial NestedLoopJoin support ([#188](https://github.com/substrait-io/substrait-java/issues/188)) ([b66d5b1](https://github.com/substrait-io/substrait-java/commit/b66d5b1354841e86f7f6fd73fe077155559ecfe3))
+
+
+### Bug Fixes
+
+* map switch expression to a Calcite CASE statement ([#189](https://github.com/substrait-io/substrait-java/issues/189)) ([b938573](https://github.com/substrait-io/substrait-java/commit/b9385731bd384624f0d04771dead6262a7a9328e))
+
+## [0.19.0](https://github.com/substrait-io/substrait-java/compare/v0.18.0...v0.19.0) (2023-10-29)
+
+
+### Features
+
+* initial HashJoinRel support  ([#187](https://github.com/substrait-io/substrait-java/issues/187)) ([46d03ca](https://github.com/substrait-io/substrait-java/commit/46d03ca240e4bd25f2cb892ffe4dc371844e298d))
+
 ## [0.18.0](https://github.com/substrait-io/substrait-java/compare/v0.17.0...v0.18.0) (2023-09-24)
 
 
@@ -8,7 +33,7 @@ Release Notes
 
 * StrLiteral is no longer converted to CHAR(<length>)
 
-fix(isthmus): convert BinaryLiteral to VARBINARY 
+fix(isthmus): convert BinaryLiteral to VARBINARY
 * BinaryLiteral is no longer converted to BINARY<length>)
 * **calcite:** Isthmus no longer uses Calcite built-in MAX, MIN, SUM, SUM0 and AVG functions
 * **calcite:** removed REQUIRED and NULLABLE fields from Type interface

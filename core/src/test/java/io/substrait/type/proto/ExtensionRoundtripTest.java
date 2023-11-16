@@ -3,11 +3,8 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
-import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.ExtensionLeaf;
@@ -22,16 +19,18 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.utils.StringHolder;
 import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Nested;
@@ -43,15 +42,8 @@ import org.junit.jupiter.api.Test;
  */
 public class ExtensionRoundtripTest extends TestBase {
 
-  TypeCreator R = TypeCreator.REQUIRED;
-
-  final SimpleExtension.ExtensionCollection extensions = defaultExtensionCollection;
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
-  final ExtensionCollector functionCollector = new ExtensionCollector();
-  final RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
+      new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   final Rel commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -70,7 +62,8 @@ public class ExtensionRoundtripTest extends TestBase {
           .optimization(new StringHolder("REL OPTIMIZATION"))
           .build();
 
-  void verifyRoundTrip(Rel rel) {
+  @Override
+  protected void verifyRoundTrip(Rel rel) {
     io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
     Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);
@@ -168,6 +161,39 @@ public class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         Join.builder()
             .from(b.innerJoin(__ -> b.bool(true), commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void hashJoin() {
+    // with empty keys
+    List<Integer> leftEmptyKeys = Collections.emptyList();
+    List<Integer> rightEmptyKeys = Collections.emptyList();
+    Rel relWithoutKeys =
+        HashJoin.builder()
+            .from(
+                b.hashJoin(
+                    leftEmptyKeys,
+                    rightEmptyKeys,
+                    HashJoin.JoinType.INNER,
+                    commonTable,
+                    commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void nestedLoopJoin() {
+    Rel rel =
+        NestedLoopJoin.builder()
+            .from(
+                b.nestedLoopJoin(
+                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();

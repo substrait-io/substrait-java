@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
@@ -12,7 +13,9 @@ import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
+import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
@@ -21,6 +24,8 @@ import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
 import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.Collection;
 import java.util.List;
@@ -66,6 +71,10 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .build();
             })
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
+    return fieldReference.accept(exprProtoConverter).getSelection();
   }
 
   @Override
@@ -166,8 +175,24 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     join.getCondition().ifPresent(t -> builder.setExpression(toProto(t)));
 
+    join.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
     join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(NestedLoopJoin nestedLoopJoin) throws RuntimeException {
+    var builder =
+        NestedLoopJoinRel.newBuilder()
+            .setCommon(common(nestedLoopJoin))
+            .setLeft(toProto(nestedLoopJoin.getLeft()))
+            .setRight(toProto(nestedLoopJoin.getRight()))
+            .setExpression(toProto(nestedLoopJoin.getCondition()))
+            .setType(nestedLoopJoin.getJoinType().toProto());
+
+    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
   @Override
@@ -190,6 +215,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setCommon(common(namedScan))
             .setNamedTable(ReadRel.NamedTable.newBuilder().addAllNames(namedScan.getNames()))
             .setBaseSchema(namedScan.getInitialSchema().toProto(typeProtoConverter));
+
+    namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
 
     namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
@@ -226,6 +253,31 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
+  }
+
+  @Override
+  public Rel visit(HashJoin hashJoin) throws RuntimeException {
+    var builder =
+        HashJoinRel.newBuilder()
+            .setCommon(common(hashJoin))
+            .setLeft(toProto(hashJoin.getLeft()))
+            .setRight(toProto(hashJoin.getRight()))
+            .setType(hashJoin.getJoinType().toProto());
+
+    List<FieldReference> leftKeys = hashJoin.getLeftKeys();
+    List<FieldReference> rightKeys = hashJoin.getRightKeys();
+
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new RuntimeException("Number of left and right keys must be equal.");
+    }
+
+    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
+    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
+
+    hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
+    hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    return Rel.newBuilder().setHashJoin(builder).build();
   }
 
   @Override
@@ -281,6 +333,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                             .collect(java.util.stream.Collectors.toList()))
                     .build())
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
+
+    virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
 
     virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();

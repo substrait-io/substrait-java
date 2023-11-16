@@ -5,6 +5,7 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SingleOrList;
+import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
@@ -258,6 +259,22 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
                 clause -> Stream.of(clause.condition().accept(this), clause.then().accept(this)));
     Stream<RexNode> elseArg = Stream.of(expr.elseClause().accept(this));
     List<RexNode> args = Stream.concat(ifThenArgs, elseArg).collect(Collectors.toList());
+    return rexBuilder.makeCall(SqlStdOperatorTable.CASE, args);
+  }
+
+  @Override
+  public RexNode visit(Switch expr) throws RuntimeException {
+    RexNode match = expr.match().accept(this);
+    Stream<RexNode> caseThenArgs =
+        expr.switchClauses().stream()
+            .flatMap(
+                clause ->
+                    Stream.of(
+                        rexBuilder.makeCall(
+                            SqlStdOperatorTable.EQUALS, match, clause.condition().accept(this)),
+                        clause.then().accept(this)));
+    Stream<RexNode> defaultArg = Stream.of(expr.defaultClause().accept(this));
+    List<RexNode> args = Stream.concat(caseThenArgs, defaultArg).collect(Collectors.toList());
     return rexBuilder.makeCall(SqlStdOperatorTable.CASE, args);
   }
 

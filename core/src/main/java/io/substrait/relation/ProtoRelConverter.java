@@ -1,7 +1,5 @@
 package io.substrait.relation;
 
-import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
-
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
@@ -17,7 +15,9 @@ import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
+import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
@@ -27,6 +27,8 @@ import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -77,6 +79,9 @@ public class ProtoRelConverter {
       case JOIN -> {
         return newJoin(rel.getJoin());
       }
+      case NESTED_LOOP_JOIN -> {
+        return newNestedLoopJoin(rel.getNestedLoopJoin());
+      }
       case SET -> {
         return newSet(rel.getSet());
       }
@@ -95,6 +100,9 @@ public class ProtoRelConverter {
       case EXTENSION_MULTI -> {
         return newExtensionMulti(rel.getExtensionMulti());
       }
+      case HASH_JOIN -> {
+        return newHashJoin(rel.getHashJoin());
+      }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
@@ -103,7 +111,12 @@ public class ProtoRelConverter {
 
   private Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
-      return newVirtualTable(rel);
+      var virtualTable = rel.getVirtualTable();
+      if (virtualTable.getValuesCount() == 0) {
+        return newEmptyScan(rel);
+      } else {
+        return newVirtualTable(rel);
+      }
     } else if (rel.hasNamedTable()) {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
@@ -299,7 +312,9 @@ public class ProtoRelConverter {
 
   private VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
-    var converter = new ProtoExpressionConverter(lookup, extensions, EMPTY_TYPE, this);
+    var virtualTableSchema = newNamedStruct(rel);
+    var converter =
+        new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
@@ -480,6 +495,65 @@ public class ProtoRelConverter {
             .map(inputRel -> from(inputRel))
             .collect(java.util.stream.Collectors.toList());
     var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private Rel newHashJoin(HashJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    var leftKeys = rel.getLeftKeysList();
+    var rightKeys = rel.getRightKeysList();
+
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var leftConverter = new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
+    var rightConverter = new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
+    var unionConverter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        HashJoin.builder()
+            .left(left)
+            .right(right)
+            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
+            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .joinType(HashJoin.JoinType.fromProto(rel.getType()))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        NestedLoopJoin.builder()
+            .left(left)
+            .right(right)
+            .condition(
+                // defaults to true (aka cartesian join) if the join expression is missing
+                rel.hasExpression()
+                    ? converter.from(rel.getExpression())
+                    : Expression.BoolLiteral.builder().value(true).build())
+            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

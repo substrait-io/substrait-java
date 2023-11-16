@@ -21,8 +21,6 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 public class AggregateRoundtripTest extends TestBase {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(AggregateRoundtripTest.class);
 
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);

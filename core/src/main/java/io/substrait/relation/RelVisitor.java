@@ -1,5 +1,8 @@
 package io.substrait.relation;
 
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
+
 public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(Aggregate aggregate) throws EXCEPTION;
 
@@ -10,6 +13,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(Filter filter) throws EXCEPTION;
 
   OUTPUT visit(Join join) throws EXCEPTION;
+
+  OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
 
   OUTPUT visit(Set set) throws EXCEPTION;
 
@@ -32,4 +37,6 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION;
 
   OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION;
+
+  OUTPUT visit(HashJoin hashJoin) throws EXCEPTION;
 }

@@ -4,9 +4,13 @@ import com.github.bsideup.jabel.Desugar;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
+import io.substrait.expression.Expression.IfClause;
+import io.substrait.expression.Expression.IfThen;
+import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
+import io.substrait.expression.ImmutableExpression.Switch;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
@@ -23,6 +27,8 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -38,8 +44,10 @@ public class SubstraitBuilder {
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
 
-  private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
   private static final String FUNCTIONS_AGGREGATE_GENERIC = "/functions_aggregate_generic.yaml";
+  private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
+  private static final String FUNCTIONS_BOOLEAN = "/functions_boolean.yaml";
+  private static final String FUNCTIONS_COMPARISON = "/functions_comparison.yaml";
 
   private final SimpleExtension.ExtensionCollection extensions;
 
@@ -165,6 +173,34 @@ public class SubstraitBuilder {
         .build();
   }
 
+  public HashJoin hashJoin(
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
+      HashJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
+    return hashJoin(leftKeys, rightKeys, joinType, Optional.empty(), left, right);
+  }
+
+  public HashJoin hashJoin(
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
+      HashJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    return HashJoin.builder()
+        .left(left)
+        .right(right)
+        .leftKeys(
+            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .rightKeys(
+            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .joinType(joinType)
+        .remap(remap)
+        .build();
+  }
+
   public NamedScan namedScan(
       Iterable<String> tableName, Iterable<String> columnNames, Iterable<Type> types) {
     return namedScan(tableName, columnNames, types, Optional.empty());
@@ -186,6 +222,30 @@ public class SubstraitBuilder {
     var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
     var namedStruct = NamedStruct.of(columnNames, struct);
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
+  }
+
+  public NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
+    return nestedLoopJoin(conditionFn, joinType, Optional.empty(), left, right);
+  }
+
+  private NestedLoopJoin nestedLoopJoin(
+      Function<JoinInput, Expression> conditionFn,
+      NestedLoopJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    var condition = conditionFn.apply(new JoinInput(left, right));
+    return NestedLoopJoin.builder()
+        .left(left)
+        .right(right)
+        .condition(condition)
+        .joinType(joinType)
+        .remap(remap)
+        .build();
   }
 
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
@@ -246,6 +306,14 @@ public class SubstraitBuilder {
     return Expression.I32Literal.builder().value(v).build();
   }
 
+  public Expression cast(Expression input, Type type) {
+    return Cast.builder()
+        .input(input)
+        .type(type)
+        .failureBehavior(FailureBehavior.UNSPECIFIED)
+        .build();
+  }
+
   public FieldReference fieldReference(Rel input, int index) {
     return ImmutableFieldReference.newInputRelReference(index, input);
   }
@@ -256,12 +324,26 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  public Expression cast(Expression input, Type type) {
-    return Cast.builder()
-        .input(input)
-        .type(type)
-        .failureBehavior(FailureBehavior.UNSPECIFIED)
-        .build();
+  public FieldReference fieldReference(List<Rel> inputs, int index) {
+    return ImmutableFieldReference.newInputRelReference(index, inputs);
+  }
+
+  public List<FieldReference> fieldReferences(List<Rel> inputs, int... indexes) {
+    return Arrays.stream(indexes)
+        .mapToObj(index -> fieldReference(inputs, index))
+        .collect(java.util.stream.Collectors.toList());
+  }
+
+  public IfThen ifThen(Iterable<? extends IfClause> ifClauses, Expression elseClause) {
+    return IfThen.builder().addAllIfClauses(ifClauses).elseClause(elseClause).build();
+  }
+
+  public IfClause ifClause(Expression condition, Expression then) {
+    return IfClause.builder().condition(condition).then(then).build();
+  }
+
+  public Expression singleOrList(Expression condition, Expression... options) {
+    return SingleOrList.builder().condition(condition).addOptions(options).build();
   }
 
   public List<Expression.SortField> sortFields(Rel input, int... indexes) {
@@ -275,8 +357,17 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  public Expression singleOrList(Expression condition, Expression... options) {
-    return SingleOrList.builder().condition(condition).addOptions(options).build();
+  public SwitchClause switchClause(Expression.Literal condition, Expression then) {
+    return SwitchClause.builder().condition(condition).then(then).build();
+  }
+
+  public Switch switchExpression(
+      Expression match, Iterable<? extends SwitchClause> clauses, Expression defaultClause) {
+    return Switch.builder()
+        .match(match)
+        .addAllSwitchClauses(clauses)
+        .defaultClause(defaultClause)
+        .build();
   }
 
   // Aggregate Functions
@@ -366,6 +457,18 @@ public class SubstraitBuilder {
   }
 
   // Scalar Functions
+
+  public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
+    return scalarFn(FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation or(Expression... args) {
+    // If any arg is nullable, the output of or is potentially nullable
+    // For example: false or null = null
+    var isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
+    var outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
+    return scalarFn(FUNCTIONS_BOOLEAN, "or:bool", outputType, args);
+  }
 
   public Expression.ScalarFunctionInvocation scalarFn(
       String namespace, String key, Type outputType, Expression... args) {
