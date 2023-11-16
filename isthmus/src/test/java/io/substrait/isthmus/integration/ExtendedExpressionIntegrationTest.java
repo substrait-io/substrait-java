@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 public class ExtendedExpressionIntegrationTest {
 
   @Test
-  public void filterDataset() throws SqlParseException, IOException {
+  public void filterDatasetUsingExtendedExpression() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
     String sqlExpression = "N_NATIONKEY > 20";
     ScanOptions options =
@@ -60,7 +60,7 @@ public class ExtendedExpressionIntegrationTest {
   }
 
   @Test
-  public void projectDataset() throws SqlParseException, IOException {
+  public void projectDatasetUsingExtendedExpression() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
     String sqlExpression = "20 + N_NATIONKEY";
     ScanOptions options =
