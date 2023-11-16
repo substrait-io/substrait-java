@@ -23,6 +23,7 @@ import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.utils.StringHolder;
 import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
@@ -179,6 +180,26 @@ public class ExtensionRoundtripTest extends TestBase {
                     leftEmptyKeys,
                     rightEmptyKeys,
                     HashJoin.JoinType.INNER,
+                    commonTable,
+                    commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void mergeJoin() {
+    // with empty keys
+    List<Integer> leftEmptyKeys = Collections.emptyList();
+    List<Integer> rightEmptyKeys = Collections.emptyList();
+    Rel relWithoutKeys =
+        MergeJoin.builder()
+            .from(
+                b.mergeJoin(
+                    leftEmptyKeys,
+                    rightEmptyKeys,
+                    MergeJoin.JoinType.INNER,
                     commonTable,
                     commonTable))
             .commonExtension(commonExtension)

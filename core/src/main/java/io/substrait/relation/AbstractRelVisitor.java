@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 
 public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
@@ -30,11 +31,6 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   @Override
   public OUTPUT visit(Join join) throws EXCEPTION {
     return visitFallback(join);
-  }
-
-  @Override
-  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    return visitFallback(nestedLoopJoin);
   }
 
   @Override
@@ -95,5 +91,15 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   @Override
   public OUTPUT visit(HashJoin hashJoin) throws EXCEPTION {
     return visitFallback(hashJoin);
+  }
+
+  @Override
+  public OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION {
+    return visitFallback(mergeJoin);
+  }
+
+  @Override
+  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
+    return visitFallback(nestedLoopJoin);
   }
 }

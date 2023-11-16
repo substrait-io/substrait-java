@@ -28,6 +28,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
@@ -201,27 +202,32 @@ public class SubstraitBuilder {
         .build();
   }
 
-  public NamedScan namedScan(
-      Iterable<String> tableName, Iterable<String> columnNames, Iterable<Type> types) {
-    return namedScan(tableName, columnNames, types, Optional.empty());
+  public MergeJoin mergeJoin(
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
+      MergeJoin.JoinType joinType,
+      Rel left,
+      Rel right) {
+    return mergeJoin(leftKeys, rightKeys, joinType, Optional.empty(), left, right);
   }
 
-  public NamedScan namedScan(
-      Iterable<String> tableName,
-      Iterable<String> columnNames,
-      Iterable<Type> types,
-      Rel.Remap remap) {
-    return namedScan(tableName, columnNames, types, Optional.of(remap));
-  }
-
-  private NamedScan namedScan(
-      Iterable<String> tableName,
-      Iterable<String> columnNames,
-      Iterable<Type> types,
-      Optional<Rel.Remap> remap) {
-    var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
-    var namedStruct = NamedStruct.of(columnNames, struct);
-    return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
+  public MergeJoin mergeJoin(
+      List<Integer> leftKeys,
+      List<Integer> rightKeys,
+      MergeJoin.JoinType joinType,
+      Optional<Rel.Remap> remap,
+      Rel left,
+      Rel right) {
+    return MergeJoin.builder()
+        .left(left)
+        .right(right)
+        .leftKeys(
+            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .rightKeys(
+            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .joinType(joinType)
+        .remap(remap)
+        .build();
   }
 
   public NestedLoopJoin nestedLoopJoin(
@@ -246,6 +252,29 @@ public class SubstraitBuilder {
         .joinType(joinType)
         .remap(remap)
         .build();
+  }
+
+  public NamedScan namedScan(
+      Iterable<String> tableName, Iterable<String> columnNames, Iterable<Type> types) {
+    return namedScan(tableName, columnNames, types, Optional.empty());
+  }
+
+  public NamedScan namedScan(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      Iterable<Type> types,
+      Rel.Remap remap) {
+    return namedScan(tableName, columnNames, types, Optional.of(remap));
+  }
+
+  private NamedScan namedScan(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      Iterable<Type> types,
+      Optional<Rel.Remap> remap) {
+    var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
+    var namedStruct = NamedStruct.of(columnNames, struct);
+    return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
