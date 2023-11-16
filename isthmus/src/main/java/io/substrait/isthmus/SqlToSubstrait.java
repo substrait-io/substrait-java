@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import com.github.bsideup.jabel.Desugar;
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.proto.Expression;
@@ -18,11 +19,8 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import io.substrait.type.proto.TypeProtoConverter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 import java.util.function.Function;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -138,34 +136,33 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
-    RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
     sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap)
         .forEach(
             rexNode -> {
               // FIXME! Implement it dynamically for more expression types
-              ResulTraverseRowExpression result = TraverseRexNode.getRowExpression(rexNode);
+              // ResulTraverseRowExpression result = TraverseRexNode.getRowExpression(rexNode);
+              ResulTraverseRowExpression result = new TraverseRexNode().getRowExpression(rexNode);
 
-              // FIXME! Get output type dynamically:
-              // final static Map<String, Type> getTypeCreator = new HashMap<>(){{put("BOOLEAN",
-              // TypeCreator.of(true).BOOLEAN);}};
-              // getTypeCreator.get(rexNode.getType()).accept(...)
               io.substrait.proto.Type output =
                   TypeCreator.NULLABLE.BOOLEAN.accept(new TypeProtoConverter(functionCollector));
 
-              // FIXME! setFunctionReference, addArguments(index: 0, 1)
+              List<FunctionArgument> functionArgumentList = new ArrayList<>();
+              result
+                  .expressionBuilderMap()
+                  .forEach(
+                      (k, v) -> {
+                        functionArgumentList.add(FunctionArgument.newBuilder().setValue(v).build());
+                      });
+
+              ScalarFunction.Builder scalarFunctionBuilder =
+                  ScalarFunction.newBuilder()
+                      .setFunctionReference(1) // rel_01
+                      .setOutputType(output)
+                      .addAllArguments(functionArgumentList);
+
               Expression.Builder expressionBuilder =
-                  Expression.newBuilder()
-                      .setScalarFunction(
-                          ScalarFunction.newBuilder()
-                              .setFunctionReference(1)
-                              .setOutputType(output)
-                              .addArguments(
-                                  0,
-                                  FunctionArgument.newBuilder().setValue(result.referenceBuilder()))
-                              .addArguments(
-                                  1,
-                                  FunctionArgument.newBuilder()
-                                      .setValue(result.expressionBuilderLiteral())));
+                  Expression.newBuilder().setScalarFunction(scalarFunctionBuilder);
+
               ExpressionReference.Builder expressionReferenceBuilder =
                   ExpressionReference.newBuilder()
                       .setExpression(expressionBuilder)
@@ -173,32 +170,53 @@ public class SqlToSubstrait extends SqlConverterBase {
 
               extendedExpressionBuilder.addReferredExpr(0, expressionReferenceBuilder);
 
-              // Extensions URI FIXME! Populate/create this dynamically
-              HashMap<String, SimpleExtensionURI> extensionUris = new HashMap<>();
-              extensionUris.put(
-                  "key-001",
-                  SimpleExtensionURI.newBuilder()
-                      .setExtensionUriAnchor(1)
-                      .setUri("/functions_comparison.yaml")
-                      .build());
-
               io.substrait.expression.Expression.ScalarFunctionInvocation func =
                   (io.substrait.expression.Expression.ScalarFunctionInvocation)
                       rexNode.accept(rexExpressionConverter);
-              String declaration = func.declaration().key();
+              String declaration =
+                  func.declaration().key(); // values example: gt:any_any, add:i64_i64
 
-              // Extensions FIXME! Populate/create this dynamically, maybe use rexNode.getKind()
+              // this is not mandatory to be defined; it is working without this definition. It is
+              // only created here to create a proto message that has the correct semantics
+              HashMap<String, SimpleExtensionURI> extensionUris = new HashMap<>();
+              SimpleExtensionURI simpleExtensionURI;
+              try {
+                simpleExtensionURI =
+                    SimpleExtensionURI.newBuilder()
+                        .setExtensionUriAnchor(1) // rel_02
+                        .setUri(
+                            SimpleExtension.loadDefaults().scalarFunctions().stream()
+                                .filter(s -> s.toString().equalsIgnoreCase(declaration))
+                                .findFirst()
+                                .orElseThrow(
+                                    () ->
+                                        new IllegalArgumentException(
+                                            String.format(
+                                                "Failed to get URI resource for %s.", declaration)))
+                                .uri())
+                        .build();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+              extensionUris.put("uri", simpleExtensionURI);
+
               ArrayList<SimpleExtensionDeclaration> extensions = new ArrayList<>();
               SimpleExtensionDeclaration extensionFunctionLowerThan =
                   SimpleExtensionDeclaration.newBuilder()
                       .setExtensionFunction(
                           SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
-                              .setFunctionAnchor(1)
+                              .setFunctionAnchor(
+                                  scalarFunctionBuilder.getFunctionReference()) // rel_01
                               .setName(declaration)
-                              .setExtensionUriReference(1))
+                              .setExtensionUriReference(
+                                  simpleExtensionURI.getExtensionUriAnchor())) // rel_02
                       .build();
               extensions.add(extensionFunctionLowerThan);
 
+              System.out.println(
+                  "extendedExpressionBuilder.getExtensionUrisList(): "
+                      + extendedExpressionBuilder.getExtensionUrisList());
+              // adding it for semantic purposes, it is not mandatory or needed
               extendedExpressionBuilder.addAllExtensionUris(extensionUris.values());
               extendedExpressionBuilder.addAllExtensions(extensions);
             });
@@ -209,13 +227,14 @@ public class SqlToSubstrait extends SqlConverterBase {
     return extendedExpressionBuilder.build();
   }
 
-  static class TraverseRexNode {
-    static RexInputRef ref = null;
-    static Expression.Builder referenceBuilder = null;
-    static Expression.Builder expressionBuilderLiteral = null;
+  class TraverseRexNode {
+    RexInputRef ref = null;
+    int control = 0;
+    Expression.Builder referenceBuilder = null;
+    Expression.Builder literalBuilder = null;
+    Map<Integer, Expression.Builder> expressionBuilderMap = new LinkedHashMap<>();
 
-    static ResulTraverseRowExpression getRowExpression(RexNode rexNode) {
-
+    ResulTraverseRowExpression getRowExpression(RexNode rexNode) {
       switch (rexNode.getClass().getSimpleName().toUpperCase()) {
         case "REXCALL":
           for (RexNode rexInternal : ((RexCall) rexNode).operands) {
@@ -234,22 +253,24 @@ public class SqlToSubstrait extends SqlConverterBase {
                                   .setStructField(
                                       Expression.ReferenceSegment.StructField.newBuilder()
                                           .setField(ref.getIndex()))));
-
+          expressionBuilderMap.put(control, referenceBuilder);
+          control++;
           break;
         case "REXLITERAL":
           RexLiteral literal = (RexLiteral) rexNode;
-          expressionBuilderLiteral =
+          literalBuilder =
               Expression.newBuilder()
                   .setLiteral(
                       Expression.Literal.newBuilder().setI32(literal.getValueAs(Integer.class)));
+          expressionBuilderMap.put(control, literalBuilder);
+          control++;
           break;
         default:
           throw new AssertionError(
               "Unsupported type for: " + rexNode.getClass().getSimpleName().toUpperCase());
       }
-      ResulTraverseRowExpression result =
-          new ResulTraverseRowExpression(ref, referenceBuilder, expressionBuilderLiteral);
-      return result;
+      return new ResulTraverseRowExpression(
+          ref, referenceBuilder, literalBuilder, expressionBuilderMap);
     }
   }
 
@@ -257,7 +278,8 @@ public class SqlToSubstrait extends SqlConverterBase {
   private record ResulTraverseRowExpression(
       RexInputRef ref,
       Expression.Builder referenceBuilder,
-      Expression.Builder expressionBuilderLiteral) {}
+      Expression.Builder literalBuilder,
+      Map<Integer, Expression.Builder> expressionBuilderMap) {}
 
   private List<RelRoot> sqlToRelNode(
       String sql, SqlValidator validator, CalciteCatalogReader catalogReader)

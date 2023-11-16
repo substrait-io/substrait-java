@@ -8,7 +8,6 @@ import io.substrait.isthmus.ExtendedExpressionTestBase;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.proto.ExtendedExpression;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.Test;
 public class ExtendedExpressionIntegrationTest {
 
   @Test
-  public void filterDataset() throws SqlParseException, IOException, URISyntaxException {
+  public void filterDataset() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
     String sqlExpression = "N_NATIONKEY > 20";
     ScanOptions options =
@@ -55,14 +54,15 @@ public class ExtendedExpressionIntegrationTest {
       }
       assertEquals(4, count);
     } catch (Exception e) {
+      e.printStackTrace();
       throw new RuntimeException(e);
     }
   }
 
   @Test
-  public void projectDataset() throws SqlParseException, IOException, URISyntaxException {
+  public void projectDataset() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
-    String sqlExpression = "N_NATIONKEY + 20";
+    String sqlExpression = "20 + N_NATIONKEY";
     ScanOptions options =
         new ScanOptions.Builder(/*batchSize*/ 32768)
             .columns(Optional.empty())
