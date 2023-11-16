@@ -34,6 +34,7 @@ val submodulesUpdate by
 
 allprojects {
   repositories { mavenCentral() }
+
   tasks.configureEach<Test> {
     val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()

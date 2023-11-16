@@ -89,20 +89,6 @@ class SqlConverterBase {
     EXTENSION_COLLECTION = defaults;
   }
 
-  /*
-  HashMap<String, RexNode> nameToNodeMap = new HashMap<>();
-    nameToNodeMap.put(
-        "N_NATIONKEY",
-        new RexInputRef(0, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
-    nameToNodeMap.put(
-        "N_REGIONKEY",
-        new RexInputRef(1, validator.getTypeFactory().createSqlType(SqlTypeName.BIGINT)));
-    final Map<String, RelDataType> nameToTypeMap = new HashMap<>();
-    for (Map.Entry<String, RexNode> entry : nameToNodeMap.entrySet()) {
-      nameToTypeMap.put(entry.getKey(), entry.getValue().getType());
-    }
-   */
-
   Result registerCreateTables(List<String> tables) throws SqlParseException {
     Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
     Map<String, RexNode> nameToNodeMap = new HashMap<>();
@@ -116,8 +102,12 @@ class SqlConverterBase {
         for (DefinedTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.type.getFieldList()) {
-            nameToTypeMap.put(field.getName(), field.getType());
-            nameToNodeMap.put(field.getName(), new RexInputRef(field.getIndex(), field.getType()));
+            nameToTypeMap.put(
+                field.getName(), field.getType()); // to validate the sql expression tree
+            nameToNodeMap.put(
+                field.getName(),
+                new RexInputRef(
+                    field.getIndex(), field.getType())); // to convert sql expression into RexNode
           }
         }
       }

@@ -136,90 +136,80 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
-    sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap)
+    RexNode rexNode = sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap);
+    ResulTraverseRowExpression result = new TraverseRexNode().getRowExpression(rexNode);
+    io.substrait.proto.Type output =
+        TypeCreator.NULLABLE.BOOLEAN.accept(new TypeProtoConverter(functionCollector));
+    List<FunctionArgument> functionArgumentList = new ArrayList<>();
+    result
+        .expressionBuilderMap()
         .forEach(
-            rexNode -> {
-              // FIXME! Implement it dynamically for more expression types
-              // ResulTraverseRowExpression result = TraverseRexNode.getRowExpression(rexNode);
-              ResulTraverseRowExpression result = new TraverseRexNode().getRowExpression(rexNode);
-
-              io.substrait.proto.Type output =
-                  TypeCreator.NULLABLE.BOOLEAN.accept(new TypeProtoConverter(functionCollector));
-
-              List<FunctionArgument> functionArgumentList = new ArrayList<>();
-              result
-                  .expressionBuilderMap()
-                  .forEach(
-                      (k, v) -> {
-                        functionArgumentList.add(FunctionArgument.newBuilder().setValue(v).build());
-                      });
-
-              ScalarFunction.Builder scalarFunctionBuilder =
-                  ScalarFunction.newBuilder()
-                      .setFunctionReference(1) // rel_01
-                      .setOutputType(output)
-                      .addAllArguments(functionArgumentList);
-
-              Expression.Builder expressionBuilder =
-                  Expression.newBuilder().setScalarFunction(scalarFunctionBuilder);
-
-              ExpressionReference.Builder expressionReferenceBuilder =
-                  ExpressionReference.newBuilder()
-                      .setExpression(expressionBuilder)
-                      .addOutputNames(result.ref().getName());
-
-              extendedExpressionBuilder.addReferredExpr(0, expressionReferenceBuilder);
-
-              io.substrait.expression.Expression.ScalarFunctionInvocation func =
-                  (io.substrait.expression.Expression.ScalarFunctionInvocation)
-                      rexNode.accept(rexExpressionConverter);
-              String declaration =
-                  func.declaration().key(); // values example: gt:any_any, add:i64_i64
-
-              // this is not mandatory to be defined; it is working without this definition. It is
-              // only created here to create a proto message that has the correct semantics
-              HashMap<String, SimpleExtensionURI> extensionUris = new HashMap<>();
-              SimpleExtensionURI simpleExtensionURI;
-              try {
-                simpleExtensionURI =
-                    SimpleExtensionURI.newBuilder()
-                        .setExtensionUriAnchor(1) // rel_02
-                        .setUri(
-                            SimpleExtension.loadDefaults().scalarFunctions().stream()
-                                .filter(s -> s.toString().equalsIgnoreCase(declaration))
-                                .findFirst()
-                                .orElseThrow(
-                                    () ->
-                                        new IllegalArgumentException(
-                                            String.format(
-                                                "Failed to get URI resource for %s.", declaration)))
-                                .uri())
-                        .build();
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-              extensionUris.put("uri", simpleExtensionURI);
-
-              ArrayList<SimpleExtensionDeclaration> extensions = new ArrayList<>();
-              SimpleExtensionDeclaration extensionFunctionLowerThan =
-                  SimpleExtensionDeclaration.newBuilder()
-                      .setExtensionFunction(
-                          SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
-                              .setFunctionAnchor(
-                                  scalarFunctionBuilder.getFunctionReference()) // rel_01
-                              .setName(declaration)
-                              .setExtensionUriReference(
-                                  simpleExtensionURI.getExtensionUriAnchor())) // rel_02
-                      .build();
-              extensions.add(extensionFunctionLowerThan);
-
-              System.out.println(
-                  "extendedExpressionBuilder.getExtensionUrisList(): "
-                      + extendedExpressionBuilder.getExtensionUrisList());
-              // adding it for semantic purposes, it is not mandatory or needed
-              extendedExpressionBuilder.addAllExtensionUris(extensionUris.values());
-              extendedExpressionBuilder.addAllExtensions(extensions);
+            (k, v) -> {
+              functionArgumentList.add(FunctionArgument.newBuilder().setValue(v).build());
             });
+
+    ScalarFunction.Builder scalarFunctionBuilder =
+        ScalarFunction.newBuilder()
+            .setFunctionReference(1) // rel_01
+            .setOutputType(output)
+            .addAllArguments(functionArgumentList);
+
+    Expression.Builder expressionBuilder =
+        Expression.newBuilder().setScalarFunction(scalarFunctionBuilder);
+
+    ExpressionReference.Builder expressionReferenceBuilder =
+        ExpressionReference.newBuilder()
+            .setExpression(expressionBuilder)
+            .addOutputNames(result.ref().getName());
+
+    extendedExpressionBuilder.addReferredExpr(0, expressionReferenceBuilder);
+
+    io.substrait.expression.Expression.ScalarFunctionInvocation func =
+        (io.substrait.expression.Expression.ScalarFunctionInvocation)
+            rexNode.accept(rexExpressionConverter);
+    String declaration = func.declaration().key(); // values example: gt:any_any, add:i64_i64
+
+    // this is not mandatory to be defined; it is working without this definition. It is
+    // only created here to create a proto message that has the correct semantics
+    HashMap<String, SimpleExtensionURI> extensionUris = new HashMap<>();
+    SimpleExtensionURI simpleExtensionURI;
+    try {
+      simpleExtensionURI =
+          SimpleExtensionURI.newBuilder()
+              .setExtensionUriAnchor(1) // rel_02
+              .setUri(
+                  SimpleExtension.loadDefaults().scalarFunctions().stream()
+                      .filter(s -> s.toString().equalsIgnoreCase(declaration))
+                      .findFirst()
+                      .orElseThrow(
+                          () ->
+                              new IllegalArgumentException(
+                                  String.format("Failed to get URI resource for %s.", declaration)))
+                      .uri())
+              .build();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    extensionUris.put("uri", simpleExtensionURI);
+
+    ArrayList<SimpleExtensionDeclaration> extensions = new ArrayList<>();
+    SimpleExtensionDeclaration extensionFunctionLowerThan =
+        SimpleExtensionDeclaration.newBuilder()
+            .setExtensionFunction(
+                SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
+                    .setFunctionAnchor(scalarFunctionBuilder.getFunctionReference()) // rel_01
+                    .setName(declaration)
+                    .setExtensionUriReference(simpleExtensionURI.getExtensionUriAnchor())) // rel_02
+            .build();
+    extensions.add(extensionFunctionLowerThan);
+
+    System.out.println(
+        "extendedExpressionBuilder.getExtensionUrisList(): "
+            + extendedExpressionBuilder.getExtensionUrisList());
+    // adding it for semantic purposes, it is not mandatory or needed
+    extendedExpressionBuilder.addAllExtensionUris(extensionUris.values());
+    extendedExpressionBuilder.addAllExtensions(extensions);
+
     NamedStruct namedStruct = TypeConverter.DEFAULT.toNamedStruct(nameToTypeMap);
     extendedExpressionBuilder.setBaseSchema(
         namedStruct.toProto(new TypeProtoConverter(functionCollector)));
@@ -297,7 +287,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     return roots;
   }
 
-  private List<RexNode> sqlToRexNode(
+  private RexNode sqlToRexNode(
       String sql,
       SqlValidator validator,
       CalciteCatalogReader catalogReader,
@@ -306,13 +296,9 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseExpression();
-    SqlNode validSQLNode =
-        validator.validateParameterizedExpression(
-            sqlNode, nameToTypeMap); // FIXME! It may be optional to include this validation
+    SqlNode validSQLNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
-    RexNode rexNode = converter.convertExpression(validSQLNode, nameToNodeMap);
-
-    return Collections.singletonList(rexNode);
+    return converter.convertExpression(validSQLNode, nameToNodeMap);
   }
 
   @VisibleForTesting

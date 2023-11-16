@@ -72,6 +72,7 @@ java {
 }
 
 var CALCITE_VERSION = "1.34.0"
+var ARROW_VERSION = "14.0.0"
 
 dependencies {
   implementation(project(":core"))
@@ -94,8 +95,8 @@ dependencies {
   implementation("org.immutables:value-annotations:2.8.8")
   annotationProcessor("org.immutables:value:2.8.8")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
-  testImplementation("org.apache.arrow:arrow-dataset:14.0.0")
-  testImplementation("org.apache.arrow:arrow-memory-netty:14.0.0")
+  testImplementation("org.apache.arrow:arrow-dataset:${ARROW_VERSION}")
+  testImplementation("org.apache.arrow:arrow-memory-netty:${ARROW_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
