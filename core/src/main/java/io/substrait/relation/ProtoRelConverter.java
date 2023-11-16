@@ -17,6 +17,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
@@ -28,6 +29,7 @@ import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
@@ -79,9 +81,6 @@ public class ProtoRelConverter {
       case JOIN -> {
         return newJoin(rel.getJoin());
       }
-      case NESTED_LOOP_JOIN -> {
-        return newNestedLoopJoin(rel.getNestedLoopJoin());
-      }
       case SET -> {
         return newSet(rel.getSet());
       }
@@ -102,6 +101,12 @@ public class ProtoRelConverter {
       }
       case HASH_JOIN -> {
         return newHashJoin(rel.getHashJoin());
+      }
+      case MERGE_JOIN -> {
+        return newMergeJoin(rel.getMergeJoin());
+      }
+      case NESTED_LOOP_JOIN -> {
+        return newNestedLoopJoin(rel.getNestedLoopJoin());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -524,6 +529,38 @@ public class ProtoRelConverter {
             .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
             .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private Rel newMergeJoin(MergeJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    var leftKeys = rel.getLeftKeysList();
+    var rightKeys = rel.getRightKeysList();
+
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    var leftConverter = new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
+    var rightConverter = new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
+    var unionConverter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    var builder =
+        MergeJoin.builder()
+            .left(left)
+            .right(right)
+            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
+            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
                     rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
