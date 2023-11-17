@@ -73,11 +73,20 @@ public class SqlToSubstrait extends SqlConverterBase {
     return executeInner(sql, factory, pair.left, pair.right);
   }
 
-  public ExtendedExpression executeExpression(String expr, List<String> tables)
+  /**
+   * Process to execute an SQL Expression to convert into an Extended expression protobuf message
+   *
+   * @param sqlExpression expression defined by the user
+   * @param tables of names of table needed to consider to load into memory for catalog, schema,
+   *     validate and parse sql
+   * @return extended expression protobuf message
+   * @throws SqlParseException
+   */
+  public ExtendedExpression executeSQLExpression(String sqlExpression, List<String> tables)
       throws SqlParseException {
     var result = registerCreateTables(tables);
-    return executeInnerExpression(
-        expr,
+    return executeInnerSQLExpression(
+        sqlExpression,
         result.validator(),
         result.catalogReader(),
         result.nameToTypeMap(),
@@ -127,8 +136,8 @@ public class SqlToSubstrait extends SqlConverterBase {
     return plan.build();
   }
 
-  private ExtendedExpression executeInnerExpression(
-      String sql,
+  private ExtendedExpression executeInnerSQLExpression(
+      String sqlExpression,
       SqlValidator validator,
       CalciteCatalogReader catalogReader,
       Map<String, RelDataType> nameToTypeMap,
@@ -136,7 +145,8 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
-    RexNode rexNode = sqlToRexNode(sql, validator, catalogReader, nameToTypeMap, nameToNodeMap);
+    RexNode rexNode =
+        sqlToRexNode(sqlExpression, validator, catalogReader, nameToTypeMap, nameToNodeMap);
     ResulTraverseRowExpression result = new TraverseRexNode().getRowExpression(rexNode);
     io.substrait.proto.Type output =
         TypeCreator.NULLABLE.BOOLEAN.accept(new TypeProtoConverter(functionCollector));

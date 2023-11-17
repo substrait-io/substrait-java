@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 public class ExtendedExpressionIntegrationTest {
 
   @Test
-  public void filterDatasetUsingExtendedExpression() throws SqlParseException, IOException {
+  public void filterDataset() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
     String sqlExpression = "N_NATIONKEY > 20";
     ScanOptions options =
@@ -60,7 +60,7 @@ public class ExtendedExpressionIntegrationTest {
   }
 
   @Test
-  public void projectDatasetUsingExtendedExpression() throws SqlParseException, IOException {
+  public void projectDataset() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
     String sqlExpression = "20 + N_NATIONKEY";
     ScanOptions options =
@@ -95,11 +95,42 @@ public class ExtendedExpressionIntegrationTest {
     }
   }
 
+  @Test
+  public void filterDatasetUsingExtendedExpression() throws SqlParseException, IOException {
+    URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
+    String sqlExpression = "N_NATIONKEY > 20";
+    ScanOptions options =
+        new ScanOptions.Builder(/*batchSize*/ 32768)
+            .columns(Optional.empty())
+            .substraitFilter(getFilterExtendedExpression(sqlExpression))
+            .build();
+    try (BufferAllocator allocator = new RootAllocator();
+        DatasetFactory datasetFactory =
+            new FileSystemDatasetFactory(
+                allocator,
+                NativeMemoryPool.getDefault(),
+                FileFormat.PARQUET,
+                resource.toURI().toString());
+        Dataset dataset = datasetFactory.finish();
+        Scanner scanner = dataset.newScan(options);
+        ArrowReader reader = scanner.scanBatches()) {
+      int count = 0;
+      while (reader.loadNextBatch()) {
+        count += reader.getVectorSchemaRoot().getRowCount();
+        System.out.println(reader.getVectorSchemaRoot().contentToTSVString());
+      }
+      assertEquals(4, count);
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    }
+  }
+
   private static ByteBuffer getFilterExtendedExpression(String sqlExpression)
       throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
         new SqlToSubstrait()
-            .executeExpression(
+            .executeSQLExpression(
                 sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
     System.out.println(
         "JsonFormat.printer().print(getFilterExtendedExpression): "
@@ -116,7 +147,7 @@ public class ExtendedExpressionIntegrationTest {
       throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
         new SqlToSubstrait()
-            .executeExpression(
+            .executeSQLExpression(
                 sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
     System.out.println(
         "JsonFormat.printer().print(getProjectExtendedExpression): "

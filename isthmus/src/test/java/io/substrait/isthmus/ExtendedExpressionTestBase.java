@@ -35,7 +35,7 @@ public class ExtendedExpressionTestBase {
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
       String query, SqlToSubstrait s, List<String> creates) throws SqlParseException {
     io.substrait.proto.ExtendedExpression protoExtendedExpression =
-        s.executeExpression(query, creates);
+        s.executeSQLExpression(query, creates);
 
     try {
       String ee = JsonFormat.printer().print(protoExtendedExpression);
