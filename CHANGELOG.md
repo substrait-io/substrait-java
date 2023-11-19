@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.21.0](https://github.com/substrait-io/substrait-java/compare/v0.20.0...v0.21.0) (2023-11-19)
+
+
+### Features
+
+* add MergeJoinRel ([#201](https://github.com/substrait-io/substrait-java/issues/201)) ([237179f](https://github.com/substrait-io/substrait-java/commit/237179f9f170c30f34ed09a1810db19e3725a5bc))
+
 ## [0.20.0](https://github.com/substrait-io/substrait-java/compare/v0.19.0...v0.20.0) (2023-11-07)
 
 
