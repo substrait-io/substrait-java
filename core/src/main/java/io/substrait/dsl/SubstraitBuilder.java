@@ -375,6 +375,13 @@ public class SubstraitBuilder {
     return SingleOrList.builder().condition(condition).addOptions(options).build();
   }
 
+  public Expression.InPredicate inPredicate(Rel haystack, Expression... needles) {
+    return Expression.InPredicate.builder()
+        .addAllNeedles(Arrays.asList(needles))
+        .haystack(haystack)
+        .build();
+  }
+
   public List<Expression.SortField> sortFields(Rel input, int... indexes) {
     return Arrays.stream(indexes)
         .mapToObj(

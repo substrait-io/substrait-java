@@ -58,6 +58,13 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
+  public void inPredicate() throws IOException, SqlParseException {
+    assertFullRoundTrip(
+        "select L_PARTKEY from LINEITEM where L_PARTKEY in "
+            + "(SELECT L_SUPPKEY from LINEITEM where L_SUPPKEY < L_ORDERKEY)");
+  }
+
+  @Test
   public void singleOrList() {
     Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
     RexNode rexNode = singleOrList.accept(converter);
