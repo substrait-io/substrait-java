@@ -31,7 +31,7 @@ public class ExtendedExpressionIntegrationTest {
   @Test
   public void filterDataset() throws SqlParseException, IOException {
     URL resource = ClassLoaderUtil.getClassLoader().getResource("./tpch/data/nation.parquet");
-    String sqlExpression = "N_NATIONKEY > 20";
+    String sqlExpression = "N_REGIONKEY > 20";
     ScanOptions options =
         new ScanOptions.Builder(/*batchSize*/ 32768)
             .columns(Optional.empty())

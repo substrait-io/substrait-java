@@ -1,5 +1,6 @@
 package io.substrait.extension;
 
+import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import java.util.Collections;
@@ -31,6 +32,49 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
 
     public Builder from(Plan p) {
+      Map<Integer, String> namespaceMap = new HashMap<>();
+      for (var extension : p.getExtensionUrisList()) {
+        namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());
+      }
+
+      // Add all functions used in plan to the functionMap
+      for (var extension : p.getExtensionsList()) {
+        if (!extension.hasExtensionFunction()) {
+          continue;
+        }
+        SimpleExtensionDeclaration.ExtensionFunction func = extension.getExtensionFunction();
+        int reference = func.getFunctionAnchor();
+        String namespace = namespaceMap.get(func.getExtensionUriReference());
+        if (namespace == null) {
+          throw new IllegalStateException(
+              "Could not find extension URI of " + func.getExtensionUriReference());
+        }
+        String name = func.getName();
+        SimpleExtension.FunctionAnchor anchor = SimpleExtension.FunctionAnchor.of(namespace, name);
+        functionMap.put(reference, anchor);
+      }
+
+      // Add all types used in plan to the typeMap
+      for (var extension : p.getExtensionsList()) {
+        if (!extension.hasExtensionType()) {
+          continue;
+        }
+        SimpleExtensionDeclaration.ExtensionType type = extension.getExtensionType();
+        int reference = type.getTypeAnchor();
+        String namespace = namespaceMap.get(type.getExtensionUriReference());
+        if (namespace == null) {
+          throw new IllegalStateException(
+              "Could not find extension URI of " + type.getExtensionUriReference());
+        }
+        String name = type.getName();
+        SimpleExtension.TypeAnchor anchor = SimpleExtension.TypeAnchor.of(namespace, name);
+        typeMap.put(reference, anchor);
+      }
+
+      return this;
+    }
+
+    public Builder from(ExtendedExpression p) {
       Map<Integer, String> namespaceMap = new HashMap<>();
       for (var extension : p.getExtensionUrisList()) {
         namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());

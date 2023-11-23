@@ -10,7 +10,13 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   @Test
   public void filter() throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY > 10");
+        assertProtoExtendedExpressionRoundrip("N_NATIONKEY > 10");
+  }
+
+  @Test
+  public void projection() throws IOException, SqlParseException {
+    ExtendedExpression extendedExpression =
+        assertProtoExtendedExpressionRoundrip("L_ORDERKEY + 10");
   }
 
   @Test

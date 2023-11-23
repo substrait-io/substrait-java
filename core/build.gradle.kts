@@ -85,6 +85,11 @@ dependencies {
   compileOnly("org.immutables:value-annotations:2.8.8")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+
+  implementation("com.google.protobuf:protobuf-java-util:3.17.3") {
+    exclude("com.google.guava", "guava")
+      .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
+  }
 }
 
 java {
