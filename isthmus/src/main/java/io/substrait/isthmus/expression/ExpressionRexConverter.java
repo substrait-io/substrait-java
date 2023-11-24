@@ -10,6 +10,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
@@ -22,12 +23,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.avatica.util.ByteString;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.rex.RexWindowBounds;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -50,6 +53,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   protected final RexBuilder rexBuilder;
   protected final ScalarFunctionConverter scalarFunctionConverter;
   protected final WindowFunctionConverter windowFunctionConverter;
+  protected SubstraitRelNodeConverter relNodeConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
@@ -77,6 +81,10 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.windowFunctionConverter = windowFunctionConverter;
+  }
+
+  public void setRelNodeConverter(final SubstraitRelNodeConverter substraitRelNodeConverter) {
+    this.relNodeConverter = substraitRelNodeConverter;
   }
 
   @Override
@@ -383,6 +391,14 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         nullWhenCountZero,
         distinct,
         ignoreNulls);
+  }
+
+  @Override
+  public RexNode visit(Expression.InPredicate expr) throws RuntimeException {
+    List<RexNode> needles =
+        expr.needles().stream().map(e -> e.accept(this)).collect(Collectors.toList());
+    RelNode rel = expr.haystack().accept(relNodeConverter);
+    return RexSubQuery.in(rel, ImmutableList.copyOf(needles));
   }
 
   static class ToRexWindowBound

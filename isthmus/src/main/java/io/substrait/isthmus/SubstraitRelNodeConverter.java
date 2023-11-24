@@ -110,6 +110,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.aggregateFunctionConverter = aggregateFunctionConverter;
     this.expressionRexConverter = expressionRexConverter;
+    this.expressionRexConverter.setRelNodeConverter(this);
   }
 
   public static RelNode convert(
