@@ -1,76 +1,73 @@
 package io.substrait.extended.expression;
 
-import com.google.protobuf.util.JsonFormat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.type.ImmutableNamedStruct;
-import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 public class ExtendedExpressionProtoConverterTest extends TestBase {
   @Test
-  public void toProtoTest() throws IOException {
-    Optional<Expression.ScalarFunctionInvocation> equal =
+  public void toProtoTest() {
+    // create predefined POJO extended expression
+    Optional<Expression.ScalarFunctionInvocation> scalarFunctionExpression =
         defaultExtensionCollection.scalarFunctions().stream()
-            .filter(
-                s -> {
-                  System.out.println(":>>>>");
-                  System.out.println(s);
-                  System.out.println(s.uri());
-                  System.out.println(s.returnType());
-                  System.out.println(s.description());
-                  System.out.println("s.name(): " + s.name());
-                  System.out.println(s.key());
-                  return s.name().equalsIgnoreCase("add");
-                })
+            .filter(s -> s.name().equalsIgnoreCase("add"))
             .findFirst()
             .map(
-                declaration -> {
-                  System.out.println("declaration: " + declaration);
-                  System.out.println("declaration.name(): " + declaration.name());
-                  return ExpressionCreator.scalarFunction(
-                      declaration,
-                      TypeCreator.REQUIRED.BOOLEAN,
-                      ImmutableFieldReference.builder()
-                          .addSegments(FieldReference.StructField.of(0))
-                          .type(TypeCreator.REQUIRED.I32)
-                          .build(),
-                      ExpressionCreator.i32(false, 183));
-                });
+                declaration ->
+                    ExpressionCreator.scalarFunction(
+                        declaration,
+                        TypeCreator.REQUIRED.BOOLEAN,
+                        ImmutableFieldReference.builder()
+                            .addSegments(FieldReference.StructField.of(0))
+                            .type(TypeCreator.REQUIRED.decimal(10, 2))
+                            .build(),
+                        ExpressionCreator.i32(false, 183)));
 
-    Map<Integer, Expression> indexToExpressionMap = new HashMap<>();
-    indexToExpressionMap.put(0, equal.get());
-    List<String> columnNames = Arrays.asList("N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT");
-    List<Type> dataTypes =
-        Arrays.asList(
-            TypeCreator.NULLABLE.I32,
-            TypeCreator.NULLABLE.STRING,
-            TypeCreator.NULLABLE.I32,
-            TypeCreator.NULLABLE.STRING);
-    NamedStruct namedStruct =
-        NamedStruct.of(
-            columnNames, Type.Struct.builder().fields(dataTypes).nullable(false).build());
+    ImmutableExpressionReference expressionReference =
+        ImmutableExpressionReference.builder()
+            .referredExpr(scalarFunctionExpression.get())
+            .addOutputNames("new-column")
+            .build();
 
-    ImmutableNamedStruct.builder()
-        .addNames("id")
-        .struct(Type.Struct.builder().nullable(false).addFields(TypeCreator.REQUIRED.I32).build())
-        .build();
+    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
+    expressionReferences.add(expressionReference);
 
-    ImmutableExtendedExpression.Builder builder =
+    ImmutableNamedStruct namedStruct =
+        ImmutableNamedStruct.builder()
+            .addNames("N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT")
+            .struct(
+                Type.Struct.builder()
+                    .nullable(false)
+                    .addFields(
+                        TypeCreator.NULLABLE.decimal(10, 2),
+                        TypeCreator.REQUIRED.STRING,
+                        TypeCreator.REQUIRED.decimal(10, 2),
+                        TypeCreator.REQUIRED.STRING)
+                    .build())
+            .build();
+
+    ImmutableExtendedExpression.Builder extendedExpression =
         ImmutableExtendedExpression.builder()
-            .putAllReferredExpr(indexToExpressionMap)
+            .referredExpr(expressionReferences)
             .baseSchema(namedStruct);
 
-    System.out.println(
-        "JsonFormat.printer().print(getFilterExtendedExpression): "
-            + JsonFormat.printer()
-                .print(new ExtendedExpressionProtoConverter().toProto(builder.build())));
+    // convert POJO extended expression into PROTOBUF extended expression
+    io.substrait.proto.ExtendedExpression proto =
+        new ExtendedExpressionProtoConverter().toProto(extendedExpression.build());
+
+    assertEquals(
+        "/functions_arithmetic_decimal.yaml", proto.getExtensionUrisList().get(0).getUri());
+    assertEquals("add:dec_dec", proto.getExtensionsList().get(0).getExtensionFunction().getName());
   }
 }

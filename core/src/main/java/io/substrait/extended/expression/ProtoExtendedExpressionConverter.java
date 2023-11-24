@@ -5,38 +5,18 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.*;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
-import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
+/**
+ * Converts from {@link io.substrait.proto.ExtendedExpression} to {@link
+ * io.substrait.extended.expression.ExtendedExpression}
+ */
 public class ProtoExtendedExpressionConverter {
-  private ExtensionCollector lookup = new ExtensionCollector();
-  private ProtoTypeConverter protoTypeConverter =
-      new ProtoTypeConverter(
-          lookup, ImmutableSimpleExtension.ExtensionCollection.builder().build());
-
-  private ProtoExpressionConverter getPprotoExpressionConverter(ExtensionLookup functionLookup) {
-    return new ProtoExpressionConverter(
-        functionLookup,
-        this.extensionCollection,
-        null,
-        null);
-  }
-
-    private ProtoExpressionConverter getPprotoExpressionConverter(ExtensionLookup functionLookup, io.substrait.type.NamedStruct namedStruct) {
-        return new ProtoExpressionConverter(
-                functionLookup,
-                this.extensionCollection,
-                namedStruct.struct(),
-                null);
-    }
-
-  protected final SimpleExtension.ExtensionCollection extensionCollection;
+  private final SimpleExtension.ExtensionCollection extensionCollection;
 
   public ProtoExtendedExpressionConverter() throws IOException {
     this(SimpleExtension.loadDefaults());
@@ -46,120 +26,49 @@ public class ProtoExtendedExpressionConverter {
     this.extensionCollection = extensionCollection;
   }
 
-  protected ProtoRelConverter getProtoRelConverter(ExtensionLookup functionLookup) {
-    return new ProtoRelConverter(functionLookup, this.extensionCollection);
-  }
+  private final ProtoTypeConverter protoTypeConverter =
+      new ProtoTypeConverter(
+          new ExtensionCollector(), ImmutableSimpleExtension.ExtensionCollection.builder().build());
 
-  public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpressionProto) {
+  public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpression) {
+    // fill in simple extension information through a discovery in the current proto-extended
+    // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder().from(extendedExpressionProto).build();
+        ImmutableExtensionLookup.builder()
+            .from(extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList())
+            .build();
 
-
-      // para struct
-      NamedStruct baseSchema = extendedExpressionProto.getBaseSchema();
-      io.substrait.type.NamedStruct namedStruct = newNamedStruct(baseSchema);
-
-      System.out.println("namedStruct");
-      System.out.println(namedStruct);
+    NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
+    io.substrait.type.NamedStruct namedStruct = convertNamedStrutProtoToPojo(baseSchemaProto);
 
     ProtoExpressionConverter protoExpressionConverter =
-        getPprotoExpressionConverter(functionLookup, namedStruct);
+        new ProtoExpressionConverter(
+            functionLookup, this.extensionCollection, namedStruct.struct(), null);
 
-    Map<Integer, Expression> indexToExpressionMap = new HashMap<>();
-    for (ExpressionReference expressionReference : extendedExpressionProto.getReferredExprList()) {
-      System.out.println(
-          "expressionReference.getExpression(): " + expressionReference.getExpression());
-      indexToExpressionMap.put(
-          0, protoExpressionConverter.from(expressionReference.getExpression()));
+    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
+    for (ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
+      Expression expressionPojo =
+          protoExpressionConverter.from(expressionReference.getExpression());
+      expressionReferences.add(
+          ImmutableExpressionReference.builder()
+              .referredExpr(expressionPojo)
+              .addAllOutputNames(expressionReference.getOutputNamesList())
+              .build());
     }
-
-    // para struct
-      /*
-    NamedStruct baseSchema = extendedExpressionProto.getBaseSchema();
-    io.substrait.type.NamedStruct namedStruct = newNamedStruct(baseSchema);
-
-    System.out.println("namedStruct");
-    System.out.println(namedStruct);
-
-       */
 
     ImmutableExtendedExpression.Builder builder =
         ImmutableExtendedExpression.builder()
-            .putAllReferredExpr(indexToExpressionMap)
+            .referredExpr(expressionReferences)
             .advancedExtension(
                 Optional.ofNullable(
-                    extendedExpressionProto.hasAdvancedExtensions()
-                        ? extendedExpressionProto.getAdvancedExtensions()
+                    extendedExpression.hasAdvancedExtensions()
+                        ? extendedExpression.getAdvancedExtensions()
                         : null))
             .baseSchema(namedStruct);
-    /*
-     ProtocolStringList namesList = baseSchema.getNamesList();
-
-     Type.Struct struct = baseSchema.getStruct();
-     Type types = struct.getTypes(0);
-     System.out.println("types.getDescriptorForType().getName(): " + types.getDescriptorForType().);
-
-
-    */
-
-    /*
-    System.out.println("namesList: " + namesList);
-    System.out.println("baseSchema.getStruct(): " + baseSchema.getStruct());
-    System.out.println("}}{{{{{{{{{{''------>");
-    System.out.println("baseSchema.getStruct(): " + baseSchema.getStruct().getTypes(0));
-
-
-     */
-
-    /*
-    ImmutableNamedStruct.builder().
-
-    // para expression
-
-    Optional<Expression.ScalarFunctionInvocation> equal =
-            defaultExtensionCollection.scalarFunctions().stream()
-                    .filter(
-                            s -> {
-                                System.out.println(":>>>>");
-                                System.out.println(s);
-                                System.out.println(s.uri());
-                                System.out.println(s.returnType());
-                                System.out.println(s.description());
-                                System.out.println("s.name(): " + s.name());
-                                System.out.println(s.key());
-                                return s.name().equalsIgnoreCase("add");
-                            })
-                    .findFirst()
-                    .map(
-                            declaration -> {
-                                System.out.println("declaration: " + declaration);
-                                System.out.println("declaration.name(): " + declaration.name());
-                                return ExpressionCreator.scalarFunction(
-                                        declaration,
-                                        TypeCreator.REQUIRED.BOOLEAN,
-                                        ImmutableFieldReference.builder()
-                                                .addSegments(FieldReference.StructField.of(0))
-                                                .type(TypeCreator.REQUIRED.I32)
-                                                .build(),
-                                        ExpressionCreator.i32(false, 183)
-                                );
-                            }
-                    );
-
-    Map<Integer, Expression> indexToExpressionMap = new HashMap<>();
-    indexToExpressionMap.put(0, equal.get());
-
-    ImmutableExtendedExpression.Builder builder =
-            ImmutableExtendedExpression.builder()
-                    .putAllReferredExpr(indexToExpressionMap)
-                    .baseSchema(namedStruct);
-
-             */
-
     return builder.build();
   }
 
-  private io.substrait.type.NamedStruct newNamedStruct(NamedStruct namedStruct) {
+  private io.substrait.type.NamedStruct convertNamedStrutProtoToPojo(NamedStruct namedStruct) {
     var struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
         .names(namedStruct.getNamesList())

@@ -2,8 +2,6 @@ package io.substrait.isthmus;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import io.substrait.extended.expression.ExtendedExpressionProtoConverter;
 import io.substrait.extended.expression.ProtoExtendedExpressionConverter;
 import io.substrait.proto.ExtendedExpression;
@@ -37,24 +35,20 @@ public class ExtendedExpressionTestBase {
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
       String query, SqlToSubstrait s, List<String> creates) throws SqlParseException, IOException {
-    io.substrait.proto.ExtendedExpression protoExtendedExpression =
-        s.executeSQLExpression(query, creates);
+    // proto initial extended expression
+    ExtendedExpression extendedExpressionProtoInitial = s.executeSQLExpression(query, creates);
 
-    try {
-      String ee = JsonFormat.printer().print(protoExtendedExpression);
-      System.out.println("Proto Extended Expression: \n" + ee);
+    // pojo final extended expression
+    io.substrait.extended.expression.ExtendedExpression extendedExpressionPojoFinal =
+        new ProtoExtendedExpressionConverter().from(extendedExpressionProtoInitial);
 
-      io.substrait.extended.expression.ExtendedExpression from =
-          new ProtoExtendedExpressionConverter().from(protoExtendedExpression);
+    // proto final extended expression
+    ExtendedExpression extendedExpressionProtoFinal =
+        new ExtendedExpressionProtoConverter().toProto(extendedExpressionPojoFinal);
 
-      ExtendedExpression proto = new ExtendedExpressionProtoConverter().toProto(from);
+    // round-trip to validate extended expression proto initial equals to final
+    Assertions.assertEquals(extendedExpressionProtoFinal, extendedExpressionProtoInitial);
 
-      Assertions.assertEquals(proto, protoExtendedExpression);
-      // FIXME! Implement test validation as the same as proto Plan implementation
-    } catch (InvalidProtocolBufferException e) {
-      throw new RuntimeException(e);
-    }
-
-    return protoExtendedExpression;
+    return extendedExpressionProtoInitial;
   }
 }

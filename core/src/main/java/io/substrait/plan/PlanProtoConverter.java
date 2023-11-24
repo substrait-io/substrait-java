@@ -34,10 +34,6 @@ public class PlanProtoConverter {
     if (plan.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
     }
-    /*
-    extendedExpressionBuilder.addAllExtensionUris(extensionUris.values());
-    extendedExpressionBuilder.addAllExtensions(extensions);
-     */
     return builder.build();
   }
 }

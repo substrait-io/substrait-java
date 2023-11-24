@@ -89,7 +89,24 @@ class SqlConverterBase {
     EXTENSION_COLLECTION = defaults;
   }
 
-  Result registerCreateTables(List<String> tables) throws SqlParseException {
+  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
+      throws SqlParseException {
+    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    CalciteCatalogReader catalogReader =
+        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    if (tables != null) {
+      for (String tableDef : tables) {
+        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
+        for (DefinedTable t : tList) {
+          rootSchema.add(t.getName(), t);
+        }
+      }
+    }
+    return Pair.of(validator, catalogReader);
+  }
+
+  Result registerCreateTablesForExtendedExpression(List<String> tables) throws SqlParseException {
     Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
     Map<String, RexNode> nameToNodeMap = new HashMap<>();
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);

@@ -1,5 +1,6 @@
 package io.substrait.extension;
 
+import com.github.bsideup.jabel.Desugar;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
@@ -52,6 +53,20 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   }
 
   public void addExtensionsToPlan(Plan.Builder builder) {
+    SimpleExtensions simpleExtensions = getExtensions();
+
+    builder.addAllExtensionUris(simpleExtensions.uris().values());
+    builder.addAllExtensions(simpleExtensions.extensionList());
+  }
+
+  public void addExtensionsToExtendedExpression(ExtendedExpression.Builder builder) {
+    SimpleExtensions simpleExtensions = getExtensions();
+
+    builder.addAllExtensionUris(simpleExtensions.uris().values());
+    builder.addAllExtensions(simpleExtensions.extensionList());
+  }
+
+  private SimpleExtensions getExtensions() {
     var uriPos = new AtomicInteger(1);
     var uris = new HashMap<String, SimpleExtensionURI>();
 
@@ -94,58 +109,13 @@ public class ExtensionCollector extends AbstractExtensionLookup {
               .build();
       extensionList.add(decl);
     }
-
-    builder.addAllExtensionUris(uris.values());
-    builder.addAllExtensions(extensionList);
+    return new SimpleExtensions(uris, extensionList);
   }
 
-    public void addExtensionsToPlan(ExtendedExpression.Builder builder) {
-        var uriPos = new AtomicInteger(1);
-        var uris = new HashMap<String, SimpleExtensionURI>();
-
-        var extensionList = new ArrayList<SimpleExtensionDeclaration>();
-        for (var e : funcMap.forwardMap.entrySet()) {
-            SimpleExtensionURI uri =
-                    uris.computeIfAbsent(
-                            e.getValue().namespace(),
-                            k ->
-                                    SimpleExtensionURI.newBuilder()
-                                            .setExtensionUriAnchor(uriPos.getAndIncrement())
-                                            .setUri(k)
-                                            .build());
-            var decl =
-                    SimpleExtensionDeclaration.newBuilder()
-                            .setExtensionFunction(
-                                    SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
-                                            .setFunctionAnchor(e.getKey())
-                                            .setName(e.getValue().key())
-                                            .setExtensionUriReference(uri.getExtensionUriAnchor()))
-                            .build();
-            extensionList.add(decl);
-        }
-        for (var e : typeMap.forwardMap.entrySet()) {
-            SimpleExtensionURI uri =
-                    uris.computeIfAbsent(
-                            e.getValue().namespace(),
-                            k ->
-                                    SimpleExtensionURI.newBuilder()
-                                            .setExtensionUriAnchor(uriPos.getAndIncrement())
-                                            .setUri(k)
-                                            .build());
-            var decl =
-                    SimpleExtensionDeclaration.newBuilder()
-                            .setExtensionType(
-                                    SimpleExtensionDeclaration.ExtensionType.newBuilder()
-                                            .setTypeAnchor(e.getKey())
-                                            .setName(e.getValue().key())
-                                            .setExtensionUriReference(uri.getExtensionUriAnchor()))
-                            .build();
-            extensionList.add(decl);
-        }
-
-        builder.addAllExtensionUris(uris.values());
-        builder.addAllExtensions(extensionList);
-    }
+  @Desugar
+  private record SimpleExtensions(
+      HashMap<String, SimpleExtensionURI> uris,
+      ArrayList<SimpleExtensionDeclaration> extensionList) {}
 
   /** We don't depend on guava... */
   private static class BidiMap<T1, T2> {
