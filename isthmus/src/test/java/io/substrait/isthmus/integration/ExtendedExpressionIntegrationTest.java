@@ -36,7 +36,7 @@ public class ExtendedExpressionIntegrationTest {
     ScanOptions options =
         new ScanOptions.Builder(/*batchSize*/ 32768)
             .columns(Optional.empty())
-            .substraitFilter(getFilterExtendedExpression(sqlExpression))
+            .substraitFilter(getExtendedExpression(sqlExpression))
             .build();
     try (BufferAllocator allocator = new RootAllocator();
         DatasetFactory datasetFactory =
@@ -67,7 +67,7 @@ public class ExtendedExpressionIntegrationTest {
     ScanOptions options =
         new ScanOptions.Builder(/*batchSize*/ 32768)
             .columns(Optional.empty())
-            .substraitProjection(getProjectExtendedExpression(sqlExpression))
+            .substraitProjection(getExtendedExpression(sqlExpression))
             .build();
     try (BufferAllocator allocator = new RootAllocator();
         DatasetFactory datasetFactory =
@@ -95,7 +95,7 @@ public class ExtendedExpressionIntegrationTest {
     }
   }
 
-  private static ByteBuffer getFilterExtendedExpression(String sqlExpression)
+  private static ByteBuffer getExtendedExpression(String sqlExpression)
       throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
         new SqlToSubstrait()
@@ -104,22 +104,8 @@ public class ExtendedExpressionIntegrationTest {
     byte[] extendedExpressions =
         Base64.getDecoder()
             .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
-    ByteBuffer substraitExpressionFilter = ByteBuffer.allocateDirect(extendedExpressions.length);
-    substraitExpressionFilter.put(extendedExpressions);
-    return substraitExpressionFilter;
-  }
-
-  private static ByteBuffer getProjectExtendedExpression(String sqlExpression)
-      throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        new SqlToSubstrait()
-            .executeSQLExpression(
-                sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
-    byte[] extendedExpressions =
-        Base64.getDecoder()
-            .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
-    ByteBuffer substraitExpressionProject = ByteBuffer.allocateDirect(extendedExpressions.length);
-    substraitExpressionProject.put(extendedExpressions);
-    return substraitExpressionProject;
+    ByteBuffer substraitExpression = ByteBuffer.allocateDirect(extendedExpressions.length);
+    substraitExpression.put(extendedExpressions);
+    return substraitExpression;
   }
 }
