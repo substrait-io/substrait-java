@@ -1,5 +1,7 @@
 package io.substrait.extension;
 
+import io.substrait.proto.ExtendedExpression;
+import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURI;
 import java.util.Collections;
@@ -31,7 +33,16 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
 
-    public Builder from(
+    public Builder from(Plan plan) {
+      return from(plan.getExtensionUrisList(), plan.getExtensionsList());
+    }
+
+    public Builder from(ExtendedExpression extendedExpression) {
+      return from(
+          extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList());
+    }
+
+    private Builder from(
         List<SimpleExtensionURI> simpleExtensionURIs,
         List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
       Map<Integer, String> namespaceMap = new HashMap<>();

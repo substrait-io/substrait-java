@@ -1,12 +1,10 @@
-package io.substrait.extended.expression;
+package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.*;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
-import io.substrait.type.ImmutableNamedStruct;
-import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,12 +31,13 @@ public class ProtoExtendedExpressionConverter {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder()
-            .from(extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList())
-            .build();
+        ImmutableExtensionLookup.builder().from(extendedExpression).build();
 
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
-    io.substrait.type.NamedStruct namedStruct = convertNamedStrutProtoToPojo(baseSchemaProto);
+
+    io.substrait.type.NamedStruct namedStruct =
+        io.substrait.type.NamedStruct.convertNamedStructProtoToPojo(
+            baseSchemaProto, protoTypeConverter);
 
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
@@ -50,14 +49,14 @@ public class ProtoExtendedExpressionConverter {
           protoExpressionConverter.from(expressionReference.getExpression());
       expressionReferences.add(
           ImmutableExpressionReference.builder()
-              .referredExpr(expressionPojo)
+              .expression(expressionPojo)
               .addAllOutputNames(expressionReference.getOutputNamesList())
               .build());
     }
 
     ImmutableExtendedExpression.Builder builder =
         ImmutableExtendedExpression.builder()
-            .referredExpr(expressionReferences)
+            .referredExpressions(expressionReferences)
             .advancedExtension(
                 Optional.ofNullable(
                     extendedExpression.hasAdvancedExtensions()
@@ -65,20 +64,5 @@ public class ProtoExtendedExpressionConverter {
                         : null))
             .baseSchema(namedStruct);
     return builder.build();
-  }
-
-  private io.substrait.type.NamedStruct convertNamedStrutProtoToPojo(NamedStruct namedStruct) {
-    var struct = namedStruct.getStruct();
-    return ImmutableNamedStruct.builder()
-        .names(namedStruct.getNamesList())
-        .struct(
-            Type.Struct.builder()
-                .fields(
-                    struct.getTypesList().stream()
-                        .map(protoTypeConverter::from)
-                        .collect(java.util.stream.Collectors.toList()))
-                .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
-                .build())
-        .build();
   }
 }

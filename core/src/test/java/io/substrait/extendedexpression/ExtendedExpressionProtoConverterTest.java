@@ -1,24 +1,23 @@
-package io.substrait.extended.expression;
+package io.substrait.extendedexpression;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
-import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ProtoExtendedExpressionConverterTest extends TestBase {
+public class ExtendedExpressionProtoConverterTest extends TestBase {
   @Test
-  public void fromTest() throws IOException {
+  public void toProtoTest() {
     // create predefined POJO extended expression
     Optional<Expression.ScalarFunctionInvocation> scalarFunctionExpression =
         defaultExtensionCollection.scalarFunctions().stream()
@@ -37,12 +36,11 @@ public class ProtoExtendedExpressionConverterTest extends TestBase {
 
     ImmutableExpressionReference expressionReference =
         ImmutableExpressionReference.builder()
-            .referredExpr(scalarFunctionExpression.get())
+            .expression(scalarFunctionExpression.get())
             .addOutputNames("new-column")
             .build();
 
-    List<io.substrait.extended.expression.ExtendedExpression.ExpressionReference>
-        expressionReferences = new ArrayList<>();
+    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
 
     ImmutableNamedStruct namedStruct =
@@ -52,29 +50,24 @@ public class ProtoExtendedExpressionConverterTest extends TestBase {
                 Type.Struct.builder()
                     .nullable(false)
                     .addFields(
-                        TypeCreator.REQUIRED.decimal(10, 2),
+                        TypeCreator.NULLABLE.decimal(10, 2),
                         TypeCreator.REQUIRED.STRING,
                         TypeCreator.REQUIRED.decimal(10, 2),
                         TypeCreator.REQUIRED.STRING)
                     .build())
             .build();
 
-    // pojo initial extended expression
-    ImmutableExtendedExpression extendedExpressionPojoInitial =
+    ImmutableExtendedExpression.Builder extendedExpression =
         ImmutableExtendedExpression.builder()
-            .referredExpr(expressionReferences)
-            .baseSchema(namedStruct)
-            .build();
+            .referredExpressions(expressionReferences)
+            .baseSchema(namedStruct);
 
-    // proto extended expression
-    ExtendedExpression extendedExpressionProto =
-        new ExtendedExpressionProtoConverter().toProto(extendedExpressionPojoInitial);
+    // convert POJO extended expression into PROTOBUF extended expression
+    io.substrait.proto.ExtendedExpression proto =
+        new ExtendedExpressionProtoConverter().toProto(extendedExpression.build());
 
-    // pojo final extended expression
-    io.substrait.extended.expression.ExtendedExpression extendedExpressionPojoFinal =
-        new ProtoExtendedExpressionConverter().from(extendedExpressionProto);
-
-    // validate extended expression pojo initial equals to final roundtrip
-    Assertions.assertEquals(extendedExpressionPojoInitial, extendedExpressionPojoFinal);
+    assertEquals(
+        "/functions_arithmetic_decimal.yaml", proto.getExtensionUrisList().get(0).getUri());
+    assertEquals("add:dec_dec", proto.getExtensionsList().get(0).getExtensionFunction().getName());
   }
 }

@@ -1,4 +1,4 @@
-package io.substrait.extended.expression;
+package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.proto.AdvancedExtension;

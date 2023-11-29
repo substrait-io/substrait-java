@@ -1,5 +1,6 @@
 package io.substrait.type;
 
+import io.substrait.type.proto.ProtoTypeConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
 import org.immutables.value.Value;
@@ -19,6 +20,22 @@ public interface NamedStruct {
     return io.substrait.proto.NamedStruct.newBuilder()
         .setStruct(type.getStruct())
         .addAllNames(names())
+        .build();
+  }
+
+  static io.substrait.type.NamedStruct convertNamedStructProtoToPojo(
+      io.substrait.proto.NamedStruct namedStruct, ProtoTypeConverter protoTypeConverter) {
+    var struct = namedStruct.getStruct();
+    return ImmutableNamedStruct.builder()
+        .names(namedStruct.getNamesList())
+        .struct(
+            Type.Struct.builder()
+                .fields(
+                    struct.getTypesList().stream()
+                        .map(protoTypeConverter::from)
+                        .collect(java.util.stream.Collectors.toList()))
+                .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
+                .build())
         .build();
   }
 }
