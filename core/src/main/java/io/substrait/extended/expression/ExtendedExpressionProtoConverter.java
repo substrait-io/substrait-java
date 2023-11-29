@@ -15,7 +15,7 @@ public class ExtendedExpressionProtoConverter {
   public ExtendedExpression toProto(
       io.substrait.extended.expression.ExtendedExpression extendedExpression) {
 
-    ExtendedExpression.Builder extendedExpressionBuilder = ExtendedExpression.newBuilder();
+    ExtendedExpression.Builder builder = ExtendedExpression.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
 
     final ExpressionProtoConverter expressionProtoConverter =

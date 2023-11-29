@@ -9,7 +9,7 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class ExtendedExpression {
-  public abstract List<ExpressionReference> getReferredExpr();
+  public abstract List<ExpressionReference> getReferredExpressions();
 
   public abstract NamedStruct getBaseSchema();
 
@@ -21,7 +21,7 @@ public abstract class ExtendedExpression {
 
   @Value.Immutable
   public abstract static class ExpressionReference {
-    public abstract Expression getReferredExpr();
+    public abstract Expression getExpression();
 
     public abstract List<String> getOutputNames();
   }
