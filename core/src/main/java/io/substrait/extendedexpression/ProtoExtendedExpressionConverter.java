@@ -45,13 +45,22 @@ public class ProtoExtendedExpressionConverter {
 
     List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
     for (ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
-      Expression expressionPojo =
-          protoExpressionConverter.from(expressionReference.getExpression());
-      expressionReferences.add(
-          ImmutableExpressionReference.builder()
-              .expression(expressionPojo)
-              .addAllOutputNames(expressionReference.getOutputNamesList())
-              .build());
+      if (expressionReference.getExprTypeCase().getNumber() == 1) { // Expression
+        Expression expressionPojo =
+            protoExpressionConverter.from(expressionReference.getExpression());
+        expressionReferences.add(
+            ImmutableExpressionReference.builder()
+                .expressionType(
+                    ImmutableExpressionType.builder().expression(expressionPojo).build())
+                .addAllOutputNames(expressionReference.getOutputNamesList())
+                .build());
+      } else if (expressionReference.getExprTypeCase().getNumber() == 2) { // AggregateFunction
+        throw new UnsupportedOperationException(
+            "Aggregate function types are not supported in conversion from proto Extended Expressions for now");
+      } else {
+        throw new UnsupportedOperationException(
+            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions for now");
+      }
     }
 
     ImmutableExtendedExpression.Builder builder =

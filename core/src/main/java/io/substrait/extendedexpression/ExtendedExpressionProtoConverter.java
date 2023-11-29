@@ -20,17 +20,29 @@ public class ExtendedExpressionProtoConverter {
 
     for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReference
         expressionReference : extendedExpression.getReferredExpressions()) {
-
-      io.substrait.proto.Expression expressionProto =
-          expressionProtoConverter.visit(
-              (Expression.ScalarFunctionInvocation) expressionReference.getExpression());
-
-      ExpressionReference.Builder expressionReferenceBuilder =
-          ExpressionReference.newBuilder()
-              .setExpression(expressionProto)
-              .addAllOutputNames(expressionReference.getOutputNames());
-
-      builder.addReferredExpr(expressionReferenceBuilder);
+      io.substrait.extendedexpression.ExtendedExpression.ExpressionTypeReference expressionType =
+          expressionReference.getExpressionType();
+      if (expressionType
+          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionType) {
+        io.substrait.proto.Expression expressionProto =
+            expressionProtoConverter.visit(
+                (Expression.ScalarFunctionInvocation)
+                    ((io.substrait.extendedexpression.ExtendedExpression.ExpressionType)
+                            expressionType)
+                        .getExpression());
+        ExpressionReference.Builder expressionReferenceBuilder =
+            ExpressionReference.newBuilder()
+                .setExpression(expressionProto)
+                .addAllOutputNames(expressionReference.getOutputNames());
+        builder.addReferredExpr(expressionReferenceBuilder);
+      } else if (expressionType
+          instanceof io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType) {
+        throw new UnsupportedOperationException(
+            "Aggregate function types are not supported in conversion to proto Extended Expressions for now");
+      } else {
+        throw new UnsupportedOperationException(
+            "Only Expression or Aggregate Function type are supported in conversion to proto Extended Expressions for now");
+      }
     }
     builder.setBaseSchema(
         extendedExpression.getBaseSchema().toProto(new TypeProtoConverter(functionCollector)));
