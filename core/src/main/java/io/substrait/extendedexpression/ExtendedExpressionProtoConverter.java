@@ -3,6 +3,7 @@ package io.substrait.extendedexpression;
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.proto.TypeProtoConverter;
@@ -37,11 +38,18 @@ public class ExtendedExpressionProtoConverter {
         builder.addReferredExpr(expressionReferenceBuilder);
       } else if (expressionType
           instanceof io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType) {
-        throw new UnsupportedOperationException(
-            "Aggregate function types are not supported in conversion to proto Extended Expressions for now");
+        AggregateFunction measure =
+            ((io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType)
+                    expressionType)
+                .getMeasure();
+        ExpressionReference.Builder expressionReferenceBuilder =
+            ExpressionReference.newBuilder()
+                .setMeasure(measure.toBuilder())
+                .addAllOutputNames(expressionReference.getOutputNames());
+        builder.addReferredExpr(expressionReferenceBuilder);
       } else {
         throw new UnsupportedOperationException(
-            "Only Expression or Aggregate Function type are supported in conversion to proto Extended Expressions for now");
+            "Only Expression or Aggregate Function type are supported in conversion to proto Extended Expressions");
       }
     }
     builder.setBaseSchema(

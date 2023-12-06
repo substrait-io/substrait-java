@@ -2,7 +2,12 @@ package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.extension.*;
+import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ImmutableExtensionLookup;
+import io.substrait.extension.ImmutableSimpleExtension;
+import io.substrait.extension.SimpleExtension;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
 import io.substrait.type.proto.ProtoTypeConverter;
@@ -36,8 +41,7 @@ public class ProtoExtendedExpressionConverter {
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 
     io.substrait.type.NamedStruct namedStruct =
-        io.substrait.type.NamedStruct.convertNamedStructProtoToPojo(
-            baseSchemaProto, protoTypeConverter);
+        io.substrait.type.NamedStruct.fromProto(baseSchemaProto, protoTypeConverter);
 
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
@@ -55,8 +59,12 @@ public class ProtoExtendedExpressionConverter {
                 .addAllOutputNames(expressionReference.getOutputNamesList())
                 .build());
       } else if (expressionReference.getExprTypeCase().getNumber() == 2) { // AggregateFunction
-        throw new UnsupportedOperationException(
-            "Aggregate function types are not supported in conversion from proto Extended Expressions for now");
+        AggregateFunction measure = expressionReference.getMeasure();
+        ImmutableExpressionReference.Builder builder =
+            ImmutableExpressionReference.builder()
+                .expressionType(ImmutableAggregateFunctionType.builder().measure(measure).build())
+                .addAllOutputNames(expressionReference.getOutputNamesList());
+        expressionReferences.add(builder.build());
       } else {
         throw new UnsupportedOperationException(
             "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions for now");
