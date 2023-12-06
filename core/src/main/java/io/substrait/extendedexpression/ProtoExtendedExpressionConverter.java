@@ -2,7 +2,11 @@ package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
-import io.substrait.extension.*;
+import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ImmutableExtensionLookup;
+import io.substrait.extension.ImmutableSimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
@@ -37,8 +41,7 @@ public class ProtoExtendedExpressionConverter {
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 
     io.substrait.type.NamedStruct namedStruct =
-        io.substrait.type.NamedStruct.convertNamedStructProtoToPojo(
-            baseSchemaProto, protoTypeConverter);
+        io.substrait.type.NamedStruct.fromProto(baseSchemaProto, protoTypeConverter);
 
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(

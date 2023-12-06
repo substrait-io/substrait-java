@@ -23,7 +23,7 @@ public interface NamedStruct {
         .build();
   }
 
-  static io.substrait.type.NamedStruct convertNamedStructProtoToPojo(
+  static io.substrait.type.NamedStruct fromProto(
       io.substrait.proto.NamedStruct namedStruct, ProtoTypeConverter protoTypeConverter) {
     var struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
