@@ -25,16 +25,17 @@ public class ExtendedExpressionTestBase {
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(String query)
       throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(query, new SqlToSubstrait());
+    return assertProtoExtendedExpressionRoundrip(query, new SqlExpressionToSubstrait());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(String query, SqlToSubstrait s)
-      throws IOException, SqlParseException {
+  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+      String query, SqlExpressionToSubstrait s) throws IOException, SqlParseException {
     return assertProtoExtendedExpressionRoundrip(query, s, tpchSchemaCreateStatements());
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
-      String query, SqlToSubstrait s, List<String> creates) throws SqlParseException, IOException {
+      String query, SqlExpressionToSubstrait s, List<String> creates)
+      throws SqlParseException, IOException {
     // proto initial extended expression
     ExtendedExpression extendedExpressionProtoInitial = s.executeSQLExpression(query, creates);
 

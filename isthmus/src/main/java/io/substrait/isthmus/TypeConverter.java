@@ -3,7 +3,6 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SubstraitTypeSystem.DAY_SECOND_INTERVAL;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 
-import com.google.common.collect.Lists;
 import io.substrait.function.NullableType;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.NamedStruct;
@@ -59,8 +58,8 @@ public class TypeConverter {
   }
 
   public NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
-    var names = Lists.<String>newArrayList();
-    var types = Lists.<Type>newArrayList();
+    var names = new ArrayList<String>();
+    var types = new ArrayList<Type>();
     nameToTypeMap.forEach(
         (k, v) -> {
           names.add(k);

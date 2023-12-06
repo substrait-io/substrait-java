@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.ibm.icu.impl.ClassLoaderUtil;
 import io.substrait.isthmus.ExtendedExpressionTestBase;
-import io.substrait.isthmus.SqlToSubstrait;
+import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.proto.ExtendedExpression;
 import java.io.IOException;
 import java.net.URL;
@@ -98,7 +98,7 @@ public class ExtendedExpressionIntegrationTest {
   private static ByteBuffer getExtendedExpression(String sqlExpression)
       throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
-        new SqlToSubstrait()
+        new SqlExpressionToSubstrait()
             .executeSQLExpression(
                 sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
     byte[] extendedExpressions =
