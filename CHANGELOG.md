@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.22.0](https://github.com/substrait-io/substrait-java/compare/v0.21.0...v0.22.0) (2023-11-26)
+
+
+### Features
+
+* **isthmus:** support inPredicate expression ([#205](https://github.com/substrait-io/substrait-java/issues/205)) ([133ab83](https://github.com/substrait-io/substrait-java/commit/133ab8335ccf57b50ddf7a12f7822c81613bc30a))
+
 ## [0.21.0](https://github.com/substrait-io/substrait-java/compare/v0.20.0...v0.21.0) (2023-11-19)
 
 
