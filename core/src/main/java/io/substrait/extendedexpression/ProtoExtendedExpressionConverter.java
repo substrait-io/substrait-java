@@ -67,7 +67,7 @@ public class ProtoExtendedExpressionConverter {
         expressionReferences.add(builder.build());
       } else {
         throw new UnsupportedOperationException(
-            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions for now");
+            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions");
       }
     }
 
