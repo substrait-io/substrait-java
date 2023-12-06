@@ -2,8 +2,8 @@ package io.substrait.isthmus;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import io.substrait.extended.expression.ExtendedExpressionProtoConverter;
-import io.substrait.extended.expression.ProtoExtendedExpressionConverter;
+import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
+import io.substrait.extendedexpression.ProtoExtendedExpressionConverter;
 import io.substrait.proto.ExtendedExpression;
 import java.io.IOException;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ public class ExtendedExpressionTestBase {
     ExtendedExpression extendedExpressionProtoInitial = s.executeSQLExpression(query, creates);
 
     // pojo final extended expression
-    io.substrait.extended.expression.ExtendedExpression extendedExpressionPojoFinal =
+    io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoFinal =
         new ProtoExtendedExpressionConverter().from(extendedExpressionProtoInitial);
 
     // proto final extended expression

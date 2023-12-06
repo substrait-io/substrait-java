@@ -1,9 +1,10 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.substrait.extended.expression.ExtendedExpressionProtoConverter;
-import io.substrait.extended.expression.ImmutableExpressionReference;
-import io.substrait.extended.expression.ImmutableExtendedExpression;
+import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
+import io.substrait.extendedexpression.ImmutableExpressionReference;
+import io.substrait.extendedexpression.ImmutableExpressionType;
+import io.substrait.extendedexpression.ImmutableExtendedExpression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -138,16 +139,20 @@ public class SqlToSubstrait extends SqlConverterBase {
         (io.substrait.expression.Expression.ScalarFunctionInvocation)
             rexNode.accept(rexExpressionConverter);
     NamedStruct namedStruct = TypeConverter.DEFAULT.toNamedStruct(nameToTypeMap);
-    ImmutableExpressionReference expressionReference =
-        ImmutableExpressionReference.builder().referredExpr(func).addOutputNames("output").build();
 
-    List<io.substrait.extended.expression.ExtendedExpression.ExpressionReference>
+    ImmutableExpressionReference expressionReference =
+        ImmutableExpressionReference.builder()
+            .expressionType(ImmutableExpressionType.builder().expression(func).build())
+            .addOutputNames("new-column")
+            .build();
+
+    List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
         expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
 
     ImmutableExtendedExpression.Builder extendedExpression =
         ImmutableExtendedExpression.builder()
-            .referredExpr(expressionReferences)
+            .referredExpressions(expressionReferences)
             .baseSchema(namedStruct);
 
     return new ExtendedExpressionProtoConverter().toProto(extendedExpression.build());

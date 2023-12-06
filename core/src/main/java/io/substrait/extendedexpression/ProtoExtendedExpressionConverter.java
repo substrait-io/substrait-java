@@ -1,20 +1,18 @@
-package io.substrait.extended.expression;
+package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.*;
+import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
-import io.substrait.type.ImmutableNamedStruct;
-import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-/**
- * Converts from {@link io.substrait.proto.ExtendedExpression} to {@link
- * io.substrait.extended.expression.ExtendedExpression}
- */
+/** Converts from {@link io.substrait.proto.ExtendedExpression} to {@link ExtendedExpression} */
 public class ProtoExtendedExpressionConverter {
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
@@ -34,12 +32,13 @@ public class ProtoExtendedExpressionConverter {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder()
-            .from(extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList())
-            .build();
+        ImmutableExtensionLookup.builder().from(extendedExpression).build();
 
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
-    io.substrait.type.NamedStruct namedStruct = convertNamedStrutProtoToPojo(baseSchemaProto);
+
+    io.substrait.type.NamedStruct namedStruct =
+        io.substrait.type.NamedStruct.convertNamedStructProtoToPojo(
+            baseSchemaProto, protoTypeConverter);
 
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
@@ -47,18 +46,31 @@ public class ProtoExtendedExpressionConverter {
 
     List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
     for (ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
-      Expression expressionPojo =
-          protoExpressionConverter.from(expressionReference.getExpression());
-      expressionReferences.add(
-          ImmutableExpressionReference.builder()
-              .referredExpr(expressionPojo)
-              .addAllOutputNames(expressionReference.getOutputNamesList())
-              .build());
+      if (expressionReference.getExprTypeCase().getNumber() == 1) { // Expression
+        Expression expressionPojo =
+            protoExpressionConverter.from(expressionReference.getExpression());
+        expressionReferences.add(
+            ImmutableExpressionReference.builder()
+                .expressionType(
+                    ImmutableExpressionType.builder().expression(expressionPojo).build())
+                .addAllOutputNames(expressionReference.getOutputNamesList())
+                .build());
+      } else if (expressionReference.getExprTypeCase().getNumber() == 2) { // AggregateFunction
+        AggregateFunction measure = expressionReference.getMeasure();
+        ImmutableExpressionReference.Builder builder =
+            ImmutableExpressionReference.builder()
+                .expressionType(ImmutableAggregateFunctionType.builder().measure(measure).build())
+                .addAllOutputNames(expressionReference.getOutputNamesList());
+        expressionReferences.add(builder.build());
+      } else {
+        throw new UnsupportedOperationException(
+            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions for now");
+      }
     }
 
     ImmutableExtendedExpression.Builder builder =
         ImmutableExtendedExpression.builder()
-            .referredExpr(expressionReferences)
+            .referredExpressions(expressionReferences)
             .advancedExtension(
                 Optional.ofNullable(
                     extendedExpression.hasAdvancedExtensions()
@@ -66,20 +78,5 @@ public class ProtoExtendedExpressionConverter {
                         : null))
             .baseSchema(namedStruct);
     return builder.build();
-  }
-
-  private io.substrait.type.NamedStruct convertNamedStrutProtoToPojo(NamedStruct namedStruct) {
-    var struct = namedStruct.getStruct();
-    return ImmutableNamedStruct.builder()
-        .names(namedStruct.getNamesList())
-        .struct(
-            Type.Struct.builder()
-                .fields(
-                    struct.getTypesList().stream()
-                        .map(protoTypeConverter::from)
-                        .collect(java.util.stream.Collectors.toList()))
-                .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
-                .build())
-        .build();
   }
 }
