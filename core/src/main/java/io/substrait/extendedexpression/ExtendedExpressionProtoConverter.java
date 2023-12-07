@@ -21,27 +21,21 @@ public class ExtendedExpressionProtoConverter {
 
     for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReference
         expressionReference : extendedExpression.getReferredExpressions()) {
-      io.substrait.extendedexpression.ExtendedExpression.ExpressionTypeReference expressionType =
-          expressionReference.getExpressionType();
-      if (expressionType
-          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionType) {
+      io.substrait.extendedexpression.ExtendedExpression.ExpressionTypeReference
+          expressionTypeReference = expressionReference.getExpressionType();
+      if (expressionTypeReference
+          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionType et) {
         io.substrait.proto.Expression expressionProto =
             expressionProtoConverter.visit(
-                (Expression.ScalarFunctionInvocation)
-                    ((io.substrait.extendedexpression.ExtendedExpression.ExpressionType)
-                            expressionType)
-                        .getExpression());
+                (Expression.ScalarFunctionInvocation) et.getExpression());
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setExpression(expressionProto)
                 .addAllOutputNames(expressionReference.getOutputNames());
         builder.addReferredExpr(expressionReferenceBuilder);
-      } else if (expressionType
-          instanceof io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType) {
-        AggregateFunction measure =
-            ((io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType)
-                    expressionType)
-                .getMeasure();
+      } else if (expressionTypeReference
+          instanceof io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType aft) {
+        AggregateFunction measure = aft.getMeasure();
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setMeasure(measure.toBuilder())
