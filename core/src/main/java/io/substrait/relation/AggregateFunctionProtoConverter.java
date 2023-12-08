@@ -11,13 +11,13 @@ import java.util.stream.IntStream;
  * Converts from {@link io.substrait.relation.Aggregate.Measure} to {@link
  * io.substrait.proto.AggregateFunction}
  */
-public class AggregateFunctionProtoController {
+public class AggregateFunctionProtoConverter {
 
   private final ExpressionProtoConverter exprProtoConverter;
   private final TypeProtoConverter typeProtoConverter;
   private final ExtensionCollector functionCollector;
 
-  public AggregateFunctionProtoController(ExtensionCollector functionCollector) {
+  public AggregateFunctionProtoConverter(ExtensionCollector functionCollector) {
     this.functionCollector = functionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, null);
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);

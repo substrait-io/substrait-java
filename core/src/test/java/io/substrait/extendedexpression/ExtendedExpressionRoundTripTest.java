@@ -3,7 +3,6 @@ package io.substrait.extendedexpression;
 import io.substrait.TestBase;
 import io.substrait.expression.*;
 import io.substrait.relation.Aggregate;
-import io.substrait.relation.AggregateFunctionProtoController;
 import io.substrait.relation.ImmutableMeasure;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
@@ -58,7 +57,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
             .build();
 
     // pojo initial extended expression
-    ImmutableExtendedExpression extendedExpressionPojoInitial =
+    io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoInitial =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct)
@@ -79,7 +78,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
   @Test
   public void aggregationRoundTrip() throws IOException {
     // create predefined POJO aggregation function
-    ImmutableMeasure measure =
+    io.substrait.relation.Aggregate.Measure measure =
         Aggregate.Measure.builder()
             .function(
                 AggregateFunctionInvocation.builder()
@@ -92,9 +91,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
             .build();
 
     ImmutableAggregateFunctionType aggregateFunctionType =
-        ImmutableAggregateFunctionType.builder()
-            .measure(new AggregateFunctionProtoController(functionCollector).toProto(measure))
-            .build();
+        ImmutableAggregateFunctionType.builder().measure(measure).build();
 
     ImmutableExpressionReference expressionReference =
         ImmutableExpressionReference.builder()
@@ -121,7 +118,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
             .build();
 
     // pojo initial aggregation function
-    ImmutableExtendedExpression extendedExpressionPojoInitial =
+    io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoInitial =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct)
@@ -179,9 +176,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
             .build();
 
     ImmutableAggregateFunctionType aggregateFunctionType =
-        ImmutableAggregateFunctionType.builder()
-            .measure(new AggregateFunctionProtoController(functionCollector).toProto(measure))
-            .build();
+        ImmutableAggregateFunctionType.builder().measure(measure).build();
 
     ImmutableExpressionReference expressionReferenceAggregation =
         ImmutableExpressionReference.builder()
@@ -209,7 +204,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
             .build();
 
     // pojo initial extended expression + aggregation
-    ImmutableExtendedExpression extendedExpressionPojoInitial =
+    io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoInitial =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct)

@@ -2,7 +2,7 @@ package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.proto.AdvancedExtension;
-import io.substrait.proto.AggregateFunction;
+import io.substrait.relation.Aggregate;
 import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +36,6 @@ public abstract class ExtendedExpression {
 
   @Value.Immutable
   public abstract static class AggregateFunctionType extends ExpressionTypeReference {
-    public abstract AggregateFunction getMeasure();
+    public abstract Aggregate.Measure getMeasure();
   }
 }
