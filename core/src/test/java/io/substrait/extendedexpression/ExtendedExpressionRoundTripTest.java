@@ -33,8 +33,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
     ImmutableExpressionReference expressionReference =
         ImmutableExpressionReference.builder()
-            .expressionType(
-                ImmutableExpressionType.builder().expression(scalarFunctionInvocation).build())
+            .expression(scalarFunctionInvocation)
             .addOutputNames("new-column")
             .build();
 
@@ -90,18 +89,11 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
                     .build())
             .build();
 
-    ImmutableAggregateFunctionType aggregateFunctionType =
-        ImmutableAggregateFunctionType.builder().measure(measure).build();
+    ImmutableAggregateFunctionReference aggregateFunctionReference =
+        ImmutableAggregateFunctionReference.builder().measure(measure).build();
 
-    ImmutableExpressionReference expressionReference =
-        ImmutableExpressionReference.builder()
-            .expressionType(aggregateFunctionType)
-            .addOutputNames("new-column")
-            .build();
-
-    List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
-        expressionReferences = new ArrayList<>();
-    expressionReferences.add(expressionReference);
+    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
+    expressionReferences.add(aggregateFunctionReference);
 
     ImmutableNamedStruct namedStruct =
         ImmutableNamedStruct.builder()
@@ -151,15 +143,13 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
                 .build(),
             ExpressionCreator.i32(false, 183));
 
-    ImmutableExpressionReference expressionReferenceExpression =
+    ImmutableExpressionReference expressionReference =
         ImmutableExpressionReference.builder()
-            .expressionType(
-                ImmutableExpressionType.builder().expression(scalarFunctionInvocation).build())
+            .expression(scalarFunctionInvocation)
             .addOutputNames("new-column")
             .build();
 
-    List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
-        expressionReferences = new ArrayList<>();
+    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
 
     // POJO 02
     // create predefined POJO aggregation function
@@ -175,19 +165,16 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
                     .build())
             .build();
 
-    ImmutableAggregateFunctionType aggregateFunctionType =
-        ImmutableAggregateFunctionType.builder().measure(measure).build();
-
-    ImmutableExpressionReference expressionReferenceAggregation =
-        ImmutableExpressionReference.builder()
-            .expressionType(aggregateFunctionType)
+    ImmutableAggregateFunctionReference aggregateFunctionReference =
+        ImmutableAggregateFunctionReference.builder()
+            .measure(measure)
             .addOutputNames("new-column")
             .build();
 
     // adding expression
-    expressionReferences.add(expressionReferenceExpression);
+    expressionReferences.add(expressionReference);
     // adding aggregation function
-    expressionReferences.add(expressionReferenceAggregation);
+    expressionReferences.add(aggregateFunctionReference);
 
     ImmutableNamedStruct namedStruct =
         ImmutableNamedStruct.builder()
