@@ -1,6 +1,7 @@
 package io.substrait.extendedexpression;
 
 import io.substrait.TestBase;
+import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.*;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.ImmutableNamedStruct;
@@ -29,7 +30,8 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   @ParameterizedTest
   @MethodSource("expressionReferenceProvider")
-  public void testRoundTrip(ImmutableExpressionReference expressionReference) throws IOException {
+  public void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference)
+      throws IOException {
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
     ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
@@ -56,15 +58,16 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   private static ImmutableExpressionReference getScalarFunctionExpression() {
     Expression.ScalarFunctionInvocation scalarFunctionInvocation =
-        b.scalarFn(
-            NAMESPACE,
-            "add:dec_dec",
-            TypeCreator.REQUIRED.BOOLEAN,
-            ImmutableFieldReference.builder()
-                .addSegments(FieldReference.StructField.of(0))
-                .type(TypeCreator.REQUIRED.decimal(10, 2))
-                .build(),
-            ExpressionCreator.i32(false, 183));
+        new SubstraitBuilder(defaultExtensionCollection)
+            .scalarFn(
+                NAMESPACE,
+                "add:dec_dec",
+                TypeCreator.REQUIRED.BOOLEAN,
+                ImmutableFieldReference.builder()
+                    .addSegments(FieldReference.StructField.of(0))
+                    .type(TypeCreator.REQUIRED.decimal(10, 2))
+                    .build(),
+                ExpressionCreator.i32(false, 183));
 
     return ImmutableExpressionReference.builder()
         .expression(scalarFunctionInvocation)
