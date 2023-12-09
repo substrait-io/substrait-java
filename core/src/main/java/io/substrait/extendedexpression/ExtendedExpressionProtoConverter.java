@@ -1,6 +1,5 @@
 package io.substrait.extendedexpression;
 
-import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.ExpressionReference;
@@ -13,6 +12,7 @@ import io.substrait.type.proto.TypeProtoConverter;
  * io.substrait.proto.ExtendedExpression}
  */
 public class ExtendedExpressionProtoConverter {
+
   public ExtendedExpression toProto(
       io.substrait.extendedexpression.ExtendedExpression extendedExpression) {
 
@@ -27,8 +27,7 @@ public class ExtendedExpressionProtoConverter {
       if (expressionReference
           instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et) {
         io.substrait.proto.Expression expressionProto =
-            expressionProtoConverter.visit(
-                (Expression.ScalarFunctionInvocation) et.getExpression());
+            et.getExpression().accept(expressionProtoConverter);
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setExpression(expressionProto)

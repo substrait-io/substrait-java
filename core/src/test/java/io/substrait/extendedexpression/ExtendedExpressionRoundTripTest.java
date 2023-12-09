@@ -10,65 +10,51 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class ExtendedExpressionRoundTripTest extends TestBase {
   static final String NAMESPACE = "/functions_arithmetic_decimal.yaml";
 
-  @Test
-  public void expressionRoundTrip() throws IOException {
-    // create predefined POJO extended expression
-    ImmutableExpressionReference expressionReference = getImmutableExpressionReference();
+  private static Stream<Arguments> expressionReferenceProvider() {
+    return Stream.of(
+        Arguments.of(getI32LiteralExpression()),
+        Arguments.of(getFieldReferenceExpression()),
+        Arguments.of(getScalarFunctionExpression()),
+        Arguments.of(getImmutableAggregateFunctionReference()));
+  }
 
+  @ParameterizedTest
+  @MethodSource("expressionReferenceProvider")
+  public void testRoundTrip(ImmutableExpressionReference expressionReference) throws IOException {
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
-    // adding expression
     expressionReferences.add(expressionReference);
-
     ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
-
     assertExtendedExpressionOperation(expressionReferences, namedStruct);
   }
 
-  @Test
-  public void aggregationRoundTrip() throws IOException {
-    // create predefined POJO aggregation function
-    ImmutableAggregateFunctionReference aggregateFunctionReference =
-        getImmutableAggregateFunctionReference();
-
-    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
-    // adding aggregation function
-    expressionReferences.add(aggregateFunctionReference);
-
-    ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
-
-    assertExtendedExpressionOperation(expressionReferences, namedStruct);
+  private static ImmutableExpressionReference getI32LiteralExpression() {
+    return ImmutableExpressionReference.builder()
+        .expression(ExpressionCreator.i32(false, 76))
+        .addOutputNames("new-column")
+        .build();
   }
 
-  @Test
-  public void expressionAndAggregationRoundTrip() throws IOException {
-    // POJO 01
-    // create predefined POJO extended expression
-    ImmutableExpressionReference expressionReference = getImmutableExpressionReference();
-
-    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
-
-    // POJO 02
-    // create predefined POJO aggregation function
-    ImmutableAggregateFunctionReference aggregateFunctionReference =
-        getImmutableAggregateFunctionReference();
-
-    // adding expression
-    expressionReferences.add(expressionReference);
-    // adding aggregation function
-    expressionReferences.add(aggregateFunctionReference);
-
-    ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
-
-    assertExtendedExpressionOperation(expressionReferences, namedStruct);
+  private static ImmutableExpressionReference getFieldReferenceExpression() {
+    return ImmutableExpressionReference.builder()
+        .expression(
+            ImmutableFieldReference.builder()
+                .addSegments(FieldReference.StructField.of(0))
+                .type(TypeCreator.REQUIRED.decimal(10, 2))
+                .build())
+        .addOutputNames("new-column")
+        .build();
   }
 
-  private ImmutableExpressionReference getImmutableExpressionReference() {
+  private static ImmutableExpressionReference getScalarFunctionExpression() {
     Expression.ScalarFunctionInvocation scalarFunctionInvocation =
         b.scalarFn(
             NAMESPACE,
