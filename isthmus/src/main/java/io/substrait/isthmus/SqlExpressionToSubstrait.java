@@ -3,7 +3,6 @@ package io.substrait.isthmus;
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ImmutableExpressionReference;
-import io.substrait.extendedexpression.ImmutableExpressionType;
 import io.substrait.extendedexpression.ImmutableExtendedExpression;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -67,14 +66,11 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     RexNode rexNode =
         sqlToRexNode(sqlExpression, validator, catalogReader, nameToTypeMap, nameToNodeMap);
-    io.substrait.expression.Expression.ScalarFunctionInvocation func =
-        (io.substrait.expression.Expression.ScalarFunctionInvocation)
-            rexNode.accept(rexExpressionConverter);
     NamedStruct namedStruct = TypeConverter.DEFAULT.toNamedStruct(nameToTypeMap);
 
     ImmutableExpressionReference expressionReference =
         ImmutableExpressionReference.builder()
-            .expressionType(ImmutableExpressionType.builder().expression(func).build())
+            .expression(rexNode.accept(rexExpressionConverter))
             .addOutputNames("new-column")
             .build();
 
@@ -107,14 +103,12 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   @VisibleForTesting
   SqlToRelConverter createSqlToRelConverter(
       SqlValidator validator, CalciteCatalogReader catalogReader) {
-    SqlToRelConverter converter =
-        new SqlToRelConverter(
-            null,
-            validator,
-            catalogReader,
-            relOptCluster,
-            StandardConvertletTable.INSTANCE,
-            converterConfig);
-    return converter;
+    return new SqlToRelConverter(
+        null,
+        validator,
+        catalogReader,
+        relOptCluster,
+        StandardConvertletTable.INSTANCE,
+        converterConfig);
   }
 }
