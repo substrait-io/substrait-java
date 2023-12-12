@@ -102,9 +102,9 @@ dependencies {
 }
 
 graal {
-  mainClass("io.substrait.isthmus.PlanEntryPoint")
+  mainClass("io.substrait.isthmus.IsthmusEntryPoint")
   outputName("isthmus")
-  graalVersion("22.0.0.2")
+  graalVersion("22.1.0")
   javaVersion("17")
   option("--no-fallback")
   option(

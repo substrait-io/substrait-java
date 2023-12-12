@@ -26,7 +26,7 @@ public class RegisterAtRuntime implements Feature {
     try {
       Reflections substrait = new Reflections("io.substrait");
       // cli picocli
-      register(PlanEntryPoint.class);
+      register(IsthmusEntryPoint.class);
 
       // Empty class
       register(Empty.class);

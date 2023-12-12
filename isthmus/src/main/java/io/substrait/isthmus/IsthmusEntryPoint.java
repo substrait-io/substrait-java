@@ -7,7 +7,9 @@ import static picocli.CommandLine.Parameters;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
+import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -16,13 +18,17 @@ import picocli.CommandLine;
 @Command(
     name = "isthmus",
     version = "isthmus 0.1",
-    description = "Converts a SQL query to a Substrait Plan")
-public class PlanEntryPoint implements Callable<Integer> {
+    description = "Substrait Java Native Image for parsing SQL Query and SQL Expressions")
+public class IsthmusEntryPoint implements Callable<Integer> {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(IsthmusEntryPoint.class);
 
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PlanEntryPoint.class);
-
-  @Parameters(index = "0", description = "The sql we should parse.")
+  @Parameters(index = "0", arity = "0..1", description = "The sql we should parse.")
   private String sql;
+
+  @Option(
+      names = {"-e", "--sqlExpression"},
+      description = "The sql expression we should parse.")
+  private String sqlExpression;
 
   @Option(
       names = {"-c", "--create"},
@@ -48,16 +54,30 @@ public class PlanEntryPoint implements Callable<Integer> {
   // this example implements Callable, so parsing, error handling and handling user
   // requests for usage help or version help can be done with one line of code.
   public static void main(String... args) {
-    int exitCode = new CommandLine(new PlanEntryPoint()).execute(args);
+    logger.debug(Arrays.toString(args));
+    int exitCode = new CommandLine(new IsthmusEntryPoint()).execute(args);
     System.exit(exitCode);
   }
 
   @Override
   public Integer call() throws Exception {
     FeatureBoard featureBoard = buildFeatureBoard();
-    SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-    Plan plan = converter.execute(sql, createStatements);
-    System.out.println(JsonFormat.printer().includingDefaultValueFields().print(plan));
+    // Isthmus image is paring SQL Expression if that argument is defined
+    if (sqlExpression != null) {
+      logger.debug(sqlExpression);
+      logger.debug(String.valueOf(createStatements));
+      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(featureBoard);
+      ExtendedExpression extendedExpression =
+          converter.executeSQLExpression(sqlExpression, createStatements);
+      System.out.println(
+          JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
+    } else { // by default Isthmus image are parsing SQL Query
+      logger.debug(sql);
+      logger.debug(String.valueOf(createStatements));
+      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+      Plan plan = converter.execute(sql, createStatements);
+      System.out.println(JsonFormat.printer().includingDefaultValueFields().print(plan));
+    }
     return 0;
   }
 

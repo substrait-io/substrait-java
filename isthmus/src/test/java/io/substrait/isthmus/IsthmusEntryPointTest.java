@@ -12,12 +12,12 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
 
-class PlanEntryPointTest {
+class IsthmusEntryPointTest {
 
   /** Test that the default values are set correctly into the {@link FeatureBoard}. */
   @Test
   void defaultFeatureBoard() {
-    PlanEntryPoint planEntryPoint = new PlanEntryPoint();
+    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
     new CommandLine(planEntryPoint);
     FeatureBoard features = planEntryPoint.buildFeatureBoard();
     assertFalse(features.allowsSqlBatch());
@@ -28,7 +28,7 @@ class PlanEntryPointTest {
   /** Test that the command line options are correctly parsed into the {@link FeatureBoard}. */
   @Test
   void customFeatureBoard() {
-    PlanEntryPoint planEntryPoint = new PlanEntryPoint();
+    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
     new CommandLine(planEntryPoint)
         .parseArgs(
             "--multistatement",
@@ -47,7 +47,7 @@ class PlanEntryPointTest {
    */
   @Test
   void invalidCmdOptions() {
-    PlanEntryPoint planEntryPoint = new PlanEntryPoint();
+    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
     assertThrows(
         ParameterException.class,
         () ->

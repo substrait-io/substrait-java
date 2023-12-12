@@ -6,11 +6,17 @@ LINEITEM="CREATE TABLE LINEITEM (L_ORDERKEY BIGINT NOT NULL, L_PARTKEY BIGINT NO
 echo $LINEITEM
 #set -x
 
-# Simple
+# SQL Query - Simple
 $CMD 'select * from lineitem' --create "${LINEITEM}"
 
-# With condition
+# SQL Query - With condition
 $CMD 'select * from lineitem where l_orderkey > 10' --create "${LINEITEM}"
 
-# Aggregate
+# SQL Query - Aggregate
 $CMD 'select l_orderkey, count(l_partkey) from lineitem group by l_orderkey' --create "${LINEITEM}"
+
+# SQL Expression - Filter
+$CMD --sqlExpression 'l_orderkey > 10' --create "${LINEITEM}"
+
+# SQL Expression - Projection
+$CMD --sqlExpression 'l_orderkey + 9888486986' --create "${LINEITEM}"
