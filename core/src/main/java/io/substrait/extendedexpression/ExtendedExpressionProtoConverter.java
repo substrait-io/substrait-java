@@ -1,15 +1,18 @@
 package io.substrait.extendedexpression;
 
-import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
+import io.substrait.relation.AggregateFunctionProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 
-/** Converts from {@link ExtendedExpression} to {@link ExtendedExpression} */
+/**
+ * Converts from {@link io.substrait.extendedexpression.ExtendedExpression} to {@link
+ * io.substrait.proto.ExtendedExpression}
+ */
 public class ExtendedExpressionProtoConverter {
+
   public ExtendedExpression toProto(
       io.substrait.extendedexpression.ExtendedExpression extendedExpression) {
 
@@ -19,32 +22,26 @@ public class ExtendedExpressionProtoConverter {
     final ExpressionProtoConverter expressionProtoConverter =
         new ExpressionProtoConverter(functionCollector, null);
 
-    for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReference
+    for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReferenceBase
         expressionReference : extendedExpression.getReferredExpressions()) {
-      io.substrait.extendedexpression.ExtendedExpression.ExpressionTypeReference expressionType =
-          expressionReference.getExpressionType();
-      if (expressionType
-          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionType) {
+      if (expressionReference
+          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et) {
         io.substrait.proto.Expression expressionProto =
-            expressionProtoConverter.visit(
-                (Expression.ScalarFunctionInvocation)
-                    ((io.substrait.extendedexpression.ExtendedExpression.ExpressionType)
-                            expressionType)
-                        .getExpression());
+            et.getExpression().accept(expressionProtoConverter);
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setExpression(expressionProto)
                 .addAllOutputNames(expressionReference.getOutputNames());
         builder.addReferredExpr(expressionReferenceBuilder);
-      } else if (expressionType
-          instanceof io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType) {
-        AggregateFunction measure =
-            ((io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionType)
-                    expressionType)
-                .getMeasure();
+      } else if (expressionReference
+          instanceof
+          io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference
+          aft) {
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
-                .setMeasure(measure.toBuilder())
+                .setMeasure(
+                    new AggregateFunctionProtoConverter(functionCollector)
+                        .toProto(aft.getMeasure()))
                 .addAllOutputNames(expressionReference.getOutputNames());
         builder.addReferredExpr(expressionReferenceBuilder);
       } else {

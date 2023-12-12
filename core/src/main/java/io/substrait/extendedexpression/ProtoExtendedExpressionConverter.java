@@ -7,9 +7,9 @@ import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
+import io.substrait.relation.ProtoAggregateFunctionConverter;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,27 +47,32 @@ public class ProtoExtendedExpressionConverter {
         new ProtoExpressionConverter(
             functionLookup, this.extensionCollection, namedStruct.struct(), null);
 
-    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
+    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
+
     for (ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
       if (expressionReference.getExprTypeCase().getNumber() == 1) { // Expression
         Expression expressionPojo =
             protoExpressionConverter.from(expressionReference.getExpression());
-        expressionReferences.add(
+        ImmutableExpressionReference build =
             ImmutableExpressionReference.builder()
-                .expressionType(
-                    ImmutableExpressionType.builder().expression(expressionPojo).build())
+                .expression(expressionPojo)
                 .addAllOutputNames(expressionReference.getOutputNamesList())
-                .build());
+                .build();
+        expressionReferences.add(build);
       } else if (expressionReference.getExprTypeCase().getNumber() == 2) { // AggregateFunction
-        AggregateFunction measure = expressionReference.getMeasure();
-        ImmutableExpressionReference.Builder builder =
-            ImmutableExpressionReference.builder()
-                .expressionType(ImmutableAggregateFunctionType.builder().measure(measure).build())
-                .addAllOutputNames(expressionReference.getOutputNamesList());
-        expressionReferences.add(builder.build());
+        io.substrait.relation.Aggregate.Measure measure =
+            new ProtoAggregateFunctionConverter(
+                    functionLookup, extensionCollection, protoExpressionConverter)
+                .from(expressionReference.getMeasure());
+        ImmutableAggregateFunctionReference build =
+            ImmutableAggregateFunctionReference.builder()
+                .measure(measure)
+                .addAllOutputNames(expressionReference.getOutputNamesList())
+                .build();
+        expressionReferences.add(build);
       } else {
         throw new UnsupportedOperationException(
-            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions for now");
+            "Only Expression or Aggregate Function type are supported in conversion from proto Extended Expressions");
       }
     }
 
@@ -80,6 +85,7 @@ public class ProtoExtendedExpressionConverter {
                         ? extendedExpression.getAdvancedExtensions()
                         : null))
             .baseSchema(namedStruct);
+
     return builder.build();
   }
 }
