@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,7 +26,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
         Arguments.of(getI32LiteralExpression()),
         Arguments.of(getFieldReferenceExpression()),
         Arguments.of(getScalarFunctionExpression()),
-        Arguments.of(getImmutableAggregateFunctionReference()));
+        Arguments.of(getAggregateFunctionReference()));
   }
 
   @ParameterizedTest
@@ -38,15 +39,42 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
     assertExtendedExpressionOperation(expressionReferences, namedStruct);
   }
 
+  @Test
+  public void getNoExpressionDefined() {
+    IllegalStateException illegalStateException =
+        Assertions.assertThrows(
+            IllegalStateException.class,
+            () -> ImmutableExpressionReference.builder().addOutputNames("new-column").build());
+    Assertions.assertTrue(
+        illegalStateException
+            .getMessage()
+            .contains(
+                "Cannot build ExpressionReference, some of required attributes are not set [expression]"));
+  }
+
+  @Test
+  public void getNoAggregateFunctionDefined() {
+    IllegalStateException illegalStateException =
+        Assertions.assertThrows(
+            IllegalStateException.class,
+            () ->
+                ImmutableAggregateFunctionReference.builder().addOutputNames("new-column").build());
+    Assertions.assertTrue(
+        illegalStateException
+            .getMessage()
+            .contains(
+                "Cannot build AggregateFunctionReference, some of required attributes are not set [measure]"));
+  }
+
   private static ImmutableExpressionReference getI32LiteralExpression() {
-    return ImmutableExpressionReference.builder()
+    return io.substrait.extendedexpression.ImmutableExpressionReference.builder()
         .expression(ExpressionCreator.i32(false, 76))
         .addOutputNames("new-column")
         .build();
   }
 
   private static ImmutableExpressionReference getFieldReferenceExpression() {
-    return ImmutableExpressionReference.builder()
+    return io.substrait.extendedexpression.ImmutableExpressionReference.builder()
         .expression(
             ImmutableFieldReference.builder()
                 .addSegments(FieldReference.StructField.of(0))
@@ -69,13 +97,13 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
                     .build(),
                 ExpressionCreator.i32(false, 183));
 
-    return ImmutableExpressionReference.builder()
+    return io.substrait.extendedexpression.ImmutableExpressionReference.builder()
         .expression(scalarFunctionInvocation)
         .addOutputNames("new-column")
         .build();
   }
 
-  private static ImmutableAggregateFunctionReference getImmutableAggregateFunctionReference() {
+  private static ImmutableAggregateFunctionReference getAggregateFunctionReference() {
     Aggregate.Measure measure =
         Aggregate.Measure.builder()
             .function(
