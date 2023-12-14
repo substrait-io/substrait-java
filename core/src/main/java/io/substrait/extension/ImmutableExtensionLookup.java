@@ -1,9 +1,12 @@
 package io.substrait.extension;
 
+import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
+import io.substrait.proto.SimpleExtensionURI;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,14 +33,25 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
 
-    public Builder from(Plan p) {
+    public Builder from(Plan plan) {
+      return from(plan.getExtensionUrisList(), plan.getExtensionsList());
+    }
+
+    public Builder from(ExtendedExpression extendedExpression) {
+      return from(
+          extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList());
+    }
+
+    private Builder from(
+        List<SimpleExtensionURI> simpleExtensionURIs,
+        List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
       Map<Integer, String> namespaceMap = new HashMap<>();
-      for (var extension : p.getExtensionUrisList()) {
+      for (var extension : simpleExtensionURIs) {
         namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());
       }
 
       // Add all functions used in plan to the functionMap
-      for (var extension : p.getExtensionsList()) {
+      for (var extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionFunction()) {
           continue;
         }
@@ -54,7 +68,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       }
 
       // Add all types used in plan to the typeMap
-      for (var extension : p.getExtensionsList()) {
+      for (var extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionType()) {
           continue;
         }
