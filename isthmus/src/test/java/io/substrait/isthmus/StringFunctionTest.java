@@ -10,7 +10,7 @@ public class StringFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
-  void char_length(String column) throws Exception {
+  void charLength(String column) throws Exception {
     String query = String.format("SELECT char_length(%s) FROM strings", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
