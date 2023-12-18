@@ -78,7 +78,7 @@ jobs:
       run: |
         value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
     - name: Publish artifact
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v4
       with:
         name: isthmus-${{ matrix.os }}
         path: isthmus/build/graal/isthmus-${{ matrix.os }}
