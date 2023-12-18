@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macOS-latest ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: graalvm/setup-graalvm@v1
@@ -44,7 +44,7 @@ jobs:
         run: |
           value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
       - name: Publish artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: isthmus-${{ matrix.os }}
           path: isthmus/build/graal/isthmus-${{ matrix.os }}
@@ -54,7 +54,7 @@ jobs:
     needs: isthmus-native-image-mac-linux
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Set up JDK 17
@@ -62,18 +62,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'adopt'
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Download isthmus-ubuntu-latest binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: isthmus-ubuntu-latest
           path: native/libs
       - name: Download isthmus-macOS-latest binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: isthmus-macOS-latest
           path: native/libs
