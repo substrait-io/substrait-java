@@ -37,7 +37,7 @@ public class ExtendedExpressionTestBase {
       String query, SqlExpressionToSubstrait s, List<String> creates)
       throws SqlParseException, IOException {
     // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial = s.executeSQLExpression(query, creates);
+    ExtendedExpression extendedExpressionProtoInitial = s.convert(query, creates);
 
     // pojo final extended expression
     io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoFinal =

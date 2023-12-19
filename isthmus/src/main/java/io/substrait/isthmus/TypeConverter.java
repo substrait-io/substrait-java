@@ -11,7 +11,6 @@ import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import javax.annotation.Nullable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -55,17 +54,6 @@ public class TypeConverter {
     var names = new ArrayList<String>();
     var struct = (Type.Struct) toSubstrait(type, names);
     return NamedStruct.of(names, struct);
-  }
-
-  public NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
-    var names = new ArrayList<String>();
-    var types = new ArrayList<Type>();
-    nameToTypeMap.forEach(
-        (k, v) -> {
-          names.add(k);
-          types.add(toSubstrait(v, names));
-        });
-    return NamedStruct.of(names, Type.Struct.builder().fields(types).nullable(false).build());
   }
 
   private Type toSubstrait(RelDataType type, List<String> names) {

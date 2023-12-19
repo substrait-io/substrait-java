@@ -99,8 +99,7 @@ public class ExtendedExpressionIntegrationTest {
       throws IOException, SqlParseException {
     ExtendedExpression extendedExpression =
         new SqlExpressionToSubstrait()
-            .executeSQLExpression(
-                sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
+            .convert(sqlExpression, ExtendedExpressionTestBase.tpchSchemaCreateStatements());
     byte[] extendedExpressions =
         Base64.getDecoder()
             .decode(Base64.getEncoder().encodeToString(extendedExpression.toByteArray()));
