@@ -52,12 +52,11 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       Map<String, RexNode> nameToNodeMap) {}
 
   /**
-   * Process to execute an SQL Expression to convert into an Extended expression protobuf message
+   * Converts the given SQL expression string to an {@link io.substrait.proto.ExtendedExpression }
    *
-   * @param sqlExpression expression defined by the user
-   * @param createStatements of names of table needed to consider to load into memory for catalog,
-   *     schema, validate and parse sql
-   * @return extended expression protobuf message
+   * @param sqlExpression a SQL expression
+   * @param createStatements table creation statements defining fields referenced by the expression
+   * @return a {@link io.substrait.proto.ExtendedExpression }
    * @throws SqlParseException
    */
   public ExtendedExpression convert(String sqlExpression, List<String> createStatements)
