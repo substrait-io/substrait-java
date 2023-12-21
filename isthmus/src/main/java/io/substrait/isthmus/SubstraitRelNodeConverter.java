@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -227,6 +228,11 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   @Override
   public RelNode visit(Aggregate aggregate) throws RuntimeException {
+    if (!AggregateValidator.isValidCalciteAggregate(aggregate)) {
+      aggregate =
+          AggregateValidator.AggregateTransformer.transformToValidCalciteAggregate(aggregate);
+    }
+
     RelNode child = aggregate.getInput().accept(this);
     var groupExprLists =
         aggregate.getGroupings().stream()
@@ -268,8 +274,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     }
     List<Integer> argIndex = new ArrayList<>();
     for (RexNode arg : arguments) {
-      // TODO: rewrite compound expression into project Rel
-      checkRexInputRefOnly(arg, "argument", measure.getFunction().declaration().name());
+      // arguments are guaranteed to be RexInputRef because of the prior call to
+      // AggregateValidator.AggregateTransformer.transformToValidCalciteAggregate
       argIndex.add(((RexInputRef) arg).getIndex());
     }
 
@@ -292,10 +298,16 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     int filterArg = -1;
     if (measure.getPreMeasureFilter().isPresent()) {
       RexNode filter = measure.getPreMeasureFilter().get().accept(expressionRexConverter);
-      // TODO: rewrite compound expression into project Rel
-      // Calcite's AggregateCall only allow agg filter to be a direct filter from input
-      checkRexInputRefOnly(filter, "filter", measure.getFunction().declaration().name());
       filterArg = ((RexInputRef) filter).getIndex();
+    }
+
+    RelCollation relCollation = RelCollations.EMPTY;
+    if (!measure.getFunction().sort().isEmpty()) {
+      relCollation =
+          RelCollations.of(
+              measure.getFunction().sort().stream()
+                  .map(sortField -> toRelFieldCollation(sortField))
+                  .collect(Collectors.toList()));
     }
 
     return AggregateCall.create(
@@ -306,7 +318,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         argIndex,
         filterArg,
         null,
-        RelCollations.EMPTY,
+        relCollation,
         returnType,
         null);
   }
