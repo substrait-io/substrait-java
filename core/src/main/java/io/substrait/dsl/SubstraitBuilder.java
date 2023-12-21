@@ -389,6 +389,11 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  public Expression.SortField sortField(
+      Expression expression, Expression.SortDirection sortDirection) {
+    return Expression.SortField.builder().expr(expression).direction(sortDirection).build();
+  }
+
   public SwitchClause switchClause(Expression.Literal condition, Expression then) {
     return SwitchClause.builder().condition(condition).then(then).build();
   }
