@@ -530,6 +530,48 @@ public class SubstraitBuilder {
 
   // Scalar Functions
 
+  public Expression.ScalarFunctionInvocation negate(Expression expr) {
+    // output type of negate is the same as the input type
+    var outputType = expr.getType();
+    return scalarFn(
+        FUNCTIONS_ARITHMETIC,
+        String.format("negate:%s", ToTypeString.apply(outputType)),
+        outputType,
+        expr);
+  }
+
+  public Expression.ScalarFunctionInvocation add(Expression left, Expression right) {
+    return arithmeticFunction("add", left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation subtract(Expression left, Expression right) {
+    return arithmeticFunction("substract", left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation multiply(Expression left, Expression right) {
+    return arithmeticFunction("multiply", left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation divide(Expression left, Expression right) {
+    return arithmeticFunction("divide", left, right);
+  }
+
+  private Expression.ScalarFunctionInvocation arithmeticFunction(
+      String fname, Expression left, Expression right) {
+    var leftTypeStr = ToTypeString.apply(left.getType());
+    var rightTypeStr = ToTypeString.apply(right.getType());
+    var key = String.format("%s:%s_%s", fname, leftTypeStr, rightTypeStr);
+
+    var isOutputNullable = left.getType().nullable() || right.getType().nullable();
+    var outputType = left.getType();
+    outputType =
+        isOutputNullable
+            ? TypeCreator.asNullable(outputType)
+            : TypeCreator.asNotNullable(outputType);
+
+    return scalarFn(FUNCTIONS_ARITHMETIC, key, outputType, left, right);
+  }
+
   public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
     return scalarFn(
         DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
