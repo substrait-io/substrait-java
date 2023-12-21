@@ -437,49 +437,76 @@ public class SubstraitBuilder {
   }
 
   public AggregateFunctionInvocation min(Rel input, int field) {
-    Type inputType = input.getRecordType().fields().get(field);
-    // min output is always nullable
+    return min(fieldReference(input, field));
+  }
+
+  public AggregateFunctionInvocation min(Expression expr) {
     return singleArgumentArithmeticAggregate(
-        input, field, "min", TypeCreator.asNullable(inputType));
+        expr,
+        "min",
+        // min output is always nullable
+        TypeCreator.asNullable(expr.getType()));
   }
 
   public AggregateFunctionInvocation max(Rel input, int field) {
-    Type inputType = input.getRecordType().fields().get(field);
-    // max output is always nullable
+    return max(fieldReference(input, field));
+  }
+
+  public AggregateFunctionInvocation max(Expression expr) {
+
     return singleArgumentArithmeticAggregate(
-        input, field, "max", TypeCreator.asNullable(inputType));
+        expr,
+        "max",
+        // max output is always nullable
+        TypeCreator.asNullable(expr.getType()));
   }
 
   public AggregateFunctionInvocation avg(Rel input, int field) {
-    Type inputType = input.getRecordType().fields().get(field);
-    // avg output is always nullable
+    return avg(fieldReference(input, field));
+  }
+
+  public AggregateFunctionInvocation avg(Expression expr) {
     return singleArgumentArithmeticAggregate(
-        input, field, "avg", TypeCreator.asNullable(inputType));
+        expr,
+        "avg",
+        // avg output is always nullable
+        TypeCreator.asNullable(expr.getType()));
   }
 
   public AggregateFunctionInvocation sum(Rel input, int field) {
-    Type inputType = input.getRecordType().fields().get(field);
-    // sum output is always nullable
+    return sum(fieldReference(input, field));
+  }
+
+  public AggregateFunctionInvocation sum(Expression expr) {
     return singleArgumentArithmeticAggregate(
-        input, field, "sum", TypeCreator.asNullable(inputType));
+        expr,
+        "sum",
+        // sum output is always nullable
+        TypeCreator.asNullable(expr.getType()));
   }
 
   public AggregateFunctionInvocation sum0(Rel input, int field) {
-    // sum0 output is always NOT NULL I64
-    return singleArgumentArithmeticAggregate(input, field, "sum0", R.I64);
+    return sum(fieldReference(input, field));
+  }
+
+  public AggregateFunctionInvocation sum0(Expression expr) {
+    return singleArgumentArithmeticAggregate(
+        expr,
+        "sum0",
+        // sum0 output is always NOT NULL I64
+        R.I64);
   }
 
   private AggregateFunctionInvocation singleArgumentArithmeticAggregate(
-      Rel input, int field, String functionName, Type outputType) {
-    Type inputType = input.getRecordType().fields().get(field);
-    String typeString = inputType.accept(ToTypeString.INSTANCE);
+      Expression expr, String functionName, Type outputType) {
+    String typeString = ToTypeString.apply(expr.getType());
     var declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                 String.format("%s:%s", functionName, typeString)));
     return AggregateFunctionInvocation.builder()
-        .arguments(fieldReferences(input, field))
+        .arguments(Arrays.asList(expr))
         .outputType(outputType)
         .declaration(declaration)
         // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
