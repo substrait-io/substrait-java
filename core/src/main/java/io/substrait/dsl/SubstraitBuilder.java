@@ -427,6 +427,12 @@ public class SubstraitBuilder {
     return Aggregate.Grouping.builder().addAllExpressions(columns).build();
   }
 
+  public Aggregate.Grouping grouping(Expression... expressions) {
+    List<Expression> exprs =
+        Arrays.stream(expressions).collect(java.util.stream.Collectors.toList());
+    return Aggregate.Grouping.builder().addAllExpressions(exprs).build();
+  }
+
   public AggregateFunctionInvocation count(Rel input, int field) {
     var declaration =
         extensions.getAggregateFunction(
