@@ -53,35 +53,63 @@ public class SubstraitBuilder {
   }
 
   // Relations
-  public Aggregate aggregate(
-      Function<Rel, Aggregate.Grouping> groupingFn,
-      Function<Rel, List<AggregateFunctionInvocation>> measuresFn,
-      Rel input) {
-    Function<Rel, List<Aggregate.Grouping>> groupingsFn =
-        groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
-    return aggregate(groupingsFn, measuresFn, Optional.empty(), input);
+  public Aggregate.Measure measure(AggregateFunctionInvocation aggFn) {
+    return Aggregate.Measure.builder().function(aggFn).build();
+  }
+
+  public Aggregate.Measure measure(AggregateFunctionInvocation aggFn, Expression preMeasureFilter) {
+    return Aggregate.Measure.builder().function(aggFn).preMeasureFilter(preMeasureFilter).build();
   }
 
   public Aggregate aggregate(
       Function<Rel, Aggregate.Grouping> groupingFn,
-      Function<Rel, List<AggregateFunctionInvocation>> measuresFn,
+      Function<Rel, List<AggregateFunctionInvocation>> aggsFn,
+      Rel input) {
+    Function<Rel, List<Aggregate.Measure>> measuresFn =
+        aggsFn.andThen(
+            functionInvocations ->
+                functionInvocations.stream().map(this::measure).collect(Collectors.toList()));
+    return aggregateM(groupingFn, measuresFn, input);
+  }
+
+  public Aggregate aggregateM(
+      Function<Rel, Aggregate.Grouping> groupingFn,
+      Function<Rel, List<Aggregate.Measure>> measuresFn,
+      Rel input) {
+    Function<Rel, List<Aggregate.Grouping>> groupingsFn =
+        groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
+    return aggregateInner(groupingsFn, measuresFn, Optional.empty(), input);
+  }
+
+  public Aggregate aggregate(
+      Function<Rel, Aggregate.Grouping> groupingFn,
+      Function<Rel, List<AggregateFunctionInvocation>> aggsFn,
+      Rel.Remap remap,
+      Rel input) {
+    Function<Rel, List<Aggregate.Measure>> measureFn =
+        aggsFn.andThen(
+            functionInvocations ->
+                functionInvocations.stream().map(this::measure).collect(Collectors.toList()));
+    return aggregateM(groupingFn, measureFn, remap, input);
+  }
+
+  public Aggregate aggregateM(
+      Function<Rel, Aggregate.Grouping> groupingFn,
+      Function<Rel, List<Aggregate.Measure>> measuresFn,
       Rel.Remap remap,
       Rel input) {
     Function<Rel, List<Aggregate.Grouping>> groupingsFn =
         groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
-    return aggregate(groupingsFn, measuresFn, Optional.of(remap), input);
+    return aggregateInner(groupingsFn, measuresFn, Optional.of(remap), input);
   }
 
-  private Aggregate aggregate(
+  private Aggregate aggregateInner(
       Function<Rel, List<Aggregate.Grouping>> groupingsFn,
-      Function<Rel, List<AggregateFunctionInvocation>> measuresFn,
+      Function<Rel, List<Aggregate.Measure>> measuresFn,
       Optional<Rel.Remap> remap,
       Rel input) {
     var groupings = groupingsFn.apply(input);
-    var measures =
-        measuresFn.apply(input).stream()
-            .map(m -> Aggregate.Measure.builder().function(m).build())
-            .collect(java.util.stream.Collectors.toList());
+    var measures = measuresFn.apply(input);
     return Aggregate.builder()
         .groupings(groupings)
         .measures(measures)
