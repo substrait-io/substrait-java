@@ -80,7 +80,7 @@ dependencies {
   implementation("org.junit.jupiter:junit-jupiter:5.9.2")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:29.0-jre")
-  implementation("org.graalvm.sdk:graal-sdk:22.0.0.2")
+  implementation("org.graalvm.sdk:graal-sdk:22.1.0")
   implementation("info.picocli:picocli:4.6.1")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
@@ -101,7 +101,7 @@ dependencies {
 graal {
   mainClass("io.substrait.isthmus.PlanEntryPoint")
   outputName("isthmus")
-  graalVersion("22.0.0.2")
+  graalVersion("22.1.0")
   javaVersion("17")
   option("--no-fallback")
   option(
