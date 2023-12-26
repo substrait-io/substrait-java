@@ -3,6 +3,7 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import io.substrait.expression.EnumArg;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -28,7 +29,8 @@ public class EnumConverter {
 
   static {
     calciteEnumMap.put(
-        TimeUnitRange.class, argAnchor("/functions_datetime.yaml", "extract:req_ts", 0));
+        TimeUnitRange.class,
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_ts", 0));
   }
 
   private static Optional<Enum> constructValue(

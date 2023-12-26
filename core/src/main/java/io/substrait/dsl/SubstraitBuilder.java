@@ -12,6 +12,7 @@ import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
 import io.substrait.expression.ImmutableExpression.Switch;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
 import io.substrait.plan.ImmutablePlan;
@@ -44,11 +45,6 @@ import java.util.stream.Stream;
 public class SubstraitBuilder {
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
-
-  private static final String FUNCTIONS_AGGREGATE_GENERIC = "/functions_aggregate_generic.yaml";
-  private static final String FUNCTIONS_ARITHMETIC = "/functions_arithmetic.yaml";
-  private static final String FUNCTIONS_BOOLEAN = "/functions_boolean.yaml";
-  private static final String FUNCTIONS_COMPARISON = "/functions_comparison.yaml";
 
   private final SimpleExtension.ExtensionCollection extensions;
 
@@ -429,7 +425,8 @@ public class SubstraitBuilder {
   public AggregateFunctionInvocation count(Rel input, int field) {
     var declaration =
         extensions.getAggregateFunction(
-            SimpleExtension.FunctionAnchor.of(FUNCTIONS_AGGREGATE_GENERIC, "count:any"));
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any"));
     return AggregateFunctionInvocation.builder()
         .arguments(fieldReferences(input, field))
         .outputType(R.I64)
@@ -479,7 +476,8 @@ public class SubstraitBuilder {
     var declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
-                FUNCTIONS_ARITHMETIC, String.format("%s:%s", functionName, typeString)));
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+                String.format("%s:%s", functionName, typeString)));
     return AggregateFunctionInvocation.builder()
         .arguments(fieldReferences(input, field))
         .outputType(outputType)
@@ -495,7 +493,8 @@ public class SubstraitBuilder {
   // Scalar Functions
 
   public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
-    return scalarFn(FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
+    return scalarFn(
+        DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
   }
 
   public Expression.ScalarFunctionInvocation or(Expression... args) {
@@ -503,7 +502,7 @@ public class SubstraitBuilder {
     // For example: false or null = null
     var isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
     var outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
-    return scalarFn(FUNCTIONS_BOOLEAN, "or:bool", outputType, args);
+    return scalarFn(DefaultExtensionCatalog.FUNCTIONS_BOOLEAN, "or:bool", outputType, args);
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
