@@ -34,7 +34,7 @@ public class ComplexAggregateTest extends PlanTestBase {
    *
    * <ol>
    *   <li>The {@code pojo} pojo given is transformed as expected by {@link
-   *       AggregateValidator.AggregateTransformer#transformToValidCalciteAggregate}
+   *       PreCalciteAggregateValidator.PreCalciteAggregateTransformer#transformToValidCalciteAggregate}
    *   <li>The {@code} (original) pojo can be converted to Calcite without issues
    * </ol>
    *
@@ -43,7 +43,8 @@ public class ComplexAggregateTest extends PlanTestBase {
    */
   protected void validateAggregateTransformation(Aggregate pojo, Rel expectedTransform) {
     var converterPojo =
-        AggregateValidator.AggregateTransformer.transformToValidCalciteAggregate(pojo);
+        PreCalciteAggregateValidator.PreCalciteAggregateTransformer
+            .transformToValidCalciteAggregate(pojo);
     assertEquals(expectedTransform, converterPojo);
 
     // Substrait POJO -> Calcite

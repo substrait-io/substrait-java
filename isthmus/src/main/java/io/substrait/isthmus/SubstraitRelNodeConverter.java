@@ -228,9 +228,10 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   @Override
   public RelNode visit(Aggregate aggregate) throws RuntimeException {
-    if (!AggregateValidator.isValidCalciteAggregate(aggregate)) {
+    if (!PreCalciteAggregateValidator.isValidCalciteAggregate(aggregate)) {
       aggregate =
-          AggregateValidator.AggregateTransformer.transformToValidCalciteAggregate(aggregate);
+          PreCalciteAggregateValidator.PreCalciteAggregateTransformer
+              .transformToValidCalciteAggregate(aggregate);
     }
 
     RelNode child = aggregate.getInput().accept(this);

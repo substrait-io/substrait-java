@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  *   <li>Rewrite the Substrait {@link Aggregate} such that it can be converted to Calcite
  * </ul>
  */
-public class AggregateValidator {
+public class PreCalciteAggregateValidator {
 
   /**
    * Checks that the given {@link Aggregate} is valid for use in Calcite
@@ -33,8 +33,10 @@ public class AggregateValidator {
    * @return
    */
   public static boolean isValidCalciteAggregate(Aggregate aggregate) {
-    return aggregate.getMeasures().stream().allMatch(AggregateValidator::isValidCalciteMeasure)
-        && aggregate.getGroupings().stream().allMatch(AggregateValidator::isValidCalciteGrouping);
+    return aggregate.getMeasures().stream()
+            .allMatch(PreCalciteAggregateValidator::isValidCalciteMeasure)
+        && aggregate.getGroupings().stream()
+            .allMatch(PreCalciteAggregateValidator::isValidCalciteGrouping);
   }
 
   /**
@@ -109,7 +111,7 @@ public class AggregateValidator {
     return true;
   }
 
-  public static class AggregateTransformer {
+  public static class PreCalciteAggregateTransformer {
 
     // New expressions to include in the project before the aggregate
     private final List<Expression> newExpressions;
@@ -117,7 +119,7 @@ public class AggregateValidator {
     // Tracks the offset of the next expression added
     private int expressionOffset;
 
-    private AggregateTransformer(Aggregate aggregate) {
+    private PreCalciteAggregateTransformer(Aggregate aggregate) {
       this.newExpressions = new ArrayList<>();
       // The Substrait project output includes all input fields, followed by expressions
       this.expressionOffset = aggregate.getInput().getRecordType().fields().size();
@@ -133,7 +135,7 @@ public class AggregateValidator {
      * </ul>
      */
     public static Aggregate transformToValidCalciteAggregate(Aggregate aggregate) {
-      var at = new AggregateTransformer(aggregate);
+      var at = new PreCalciteAggregateTransformer(aggregate);
 
       List<Aggregate.Measure> newMeasures =
           aggregate.getMeasures().stream().map(at::updateMeasure).collect(Collectors.toList());
@@ -209,8 +211,9 @@ public class AggregateValidator {
     }
 
     /**
-     * Adds a new expression to the project at {@link AggregateTransformer#expressionOffset} and
-     * returns a field reference to the new expression
+     * Adds a new expression to the project at {@link
+     * PreCalciteAggregateTransformer#expressionOffset} and returns a field reference to the new
+     * expression
      */
     private Expression projectOut(Expression expr) {
       newExpressions.add(expr);
