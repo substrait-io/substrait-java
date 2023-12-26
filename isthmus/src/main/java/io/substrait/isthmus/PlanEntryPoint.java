@@ -5,6 +5,7 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.Plan;
@@ -36,6 +37,18 @@ public class PlanEntryPoint implements Callable<Integer> {
   private boolean allowMultiStatement;
 
   @Option(
+      names = {"--outputformat"},
+      defaultValue = "PROTOJSON",
+      description = "Set the output format for the generated plan: ${COMPLETION-CANDIDATES}")
+  private OutputFormat outputFormat = OutputFormat.PROTOJSON;
+
+  enum OutputFormat {
+    PROTOJSON, // protobuf json format
+    PROTOTEXT, // protobuf text format
+    BINARY, // protobuf BINARY format
+  }
+
+  @Option(
       names = {"--sqlconformancemode"},
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private SqlConformanceEnum sqlConformanceMode = SqlConformanceEnum.DEFAULT;
@@ -57,7 +70,12 @@ public class PlanEntryPoint implements Callable<Integer> {
     FeatureBoard featureBoard = buildFeatureBoard();
     SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
     Plan plan = converter.execute(sql, createStatements);
-    System.out.println(JsonFormat.printer().includingDefaultValueFields().print(plan));
+    switch (outputFormat) {
+      case PROTOJSON -> System.out.println(
+          JsonFormat.printer().includingDefaultValueFields().print(plan));
+      case PROTOTEXT -> TextFormat.printer().print(plan, System.out);
+      case BINARY -> plan.writeTo(System.out);
+    }
     return 0;
   }
 
