@@ -63,47 +63,24 @@ public class SubstraitBuilder {
 
   public Aggregate aggregate(
       Function<Rel, Aggregate.Grouping> groupingFn,
-      Function<Rel, List<AggregateFunctionInvocation>> aggsFn,
-      Rel input) {
-    Function<Rel, List<Aggregate.Measure>> measuresFn =
-        aggsFn.andThen(
-            functionInvocations ->
-                functionInvocations.stream().map(this::measure).collect(Collectors.toList()));
-    return aggregateM(groupingFn, measuresFn, input);
-  }
-
-  public Aggregate aggregateM(
-      Function<Rel, Aggregate.Grouping> groupingFn,
       Function<Rel, List<Aggregate.Measure>> measuresFn,
       Rel input) {
     Function<Rel, List<Aggregate.Grouping>> groupingsFn =
         groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
-    return aggregateInner(groupingsFn, measuresFn, Optional.empty(), input);
+    return aggregate(groupingsFn, measuresFn, Optional.empty(), input);
   }
 
   public Aggregate aggregate(
       Function<Rel, Aggregate.Grouping> groupingFn,
-      Function<Rel, List<AggregateFunctionInvocation>> aggsFn,
-      Rel.Remap remap,
-      Rel input) {
-    Function<Rel, List<Aggregate.Measure>> measureFn =
-        aggsFn.andThen(
-            functionInvocations ->
-                functionInvocations.stream().map(this::measure).collect(Collectors.toList()));
-    return aggregateM(groupingFn, measureFn, remap, input);
-  }
-
-  public Aggregate aggregateM(
-      Function<Rel, Aggregate.Grouping> groupingFn,
       Function<Rel, List<Aggregate.Measure>> measuresFn,
       Rel.Remap remap,
       Rel input) {
     Function<Rel, List<Aggregate.Grouping>> groupingsFn =
         groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
-    return aggregateInner(groupingsFn, measuresFn, Optional.of(remap), input);
+    return aggregate(groupingsFn, measuresFn, Optional.of(remap), input);
   }
 
-  private Aggregate aggregateInner(
+  private Aggregate aggregate(
       Function<Rel, List<Aggregate.Grouping>> groupingsFn,
       Function<Rel, List<Aggregate.Measure>> measuresFn,
       Optional<Rel.Remap> remap,
@@ -461,25 +438,26 @@ public class SubstraitBuilder {
     return Aggregate.Grouping.builder().addAllExpressions(exprs).build();
   }
 
-  public AggregateFunctionInvocation count(Rel input, int field) {
+  public Aggregate.Measure count(Rel input, int field) {
     var declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any"));
-    return AggregateFunctionInvocation.builder()
-        .arguments(fieldReferences(input, field))
-        .outputType(R.I64)
-        .declaration(declaration)
-        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-        .invocation(Expression.AggregationInvocation.ALL)
-        .build();
+    return measure(
+        AggregateFunctionInvocation.builder()
+            .arguments(fieldReferences(input, field))
+            .outputType(R.I64)
+            .declaration(declaration)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
   }
 
-  public AggregateFunctionInvocation min(Rel input, int field) {
+  public Aggregate.Measure min(Rel input, int field) {
     return min(fieldReference(input, field));
   }
 
-  public AggregateFunctionInvocation min(Expression expr) {
+  public Aggregate.Measure min(Expression expr) {
     return singleArgumentArithmeticAggregate(
         expr,
         "min",
@@ -487,12 +465,11 @@ public class SubstraitBuilder {
         TypeCreator.asNullable(expr.getType()));
   }
 
-  public AggregateFunctionInvocation max(Rel input, int field) {
+  public Aggregate.Measure max(Rel input, int field) {
     return max(fieldReference(input, field));
   }
 
-  public AggregateFunctionInvocation max(Expression expr) {
-
+  public Aggregate.Measure max(Expression expr) {
     return singleArgumentArithmeticAggregate(
         expr,
         "max",
@@ -500,11 +477,11 @@ public class SubstraitBuilder {
         TypeCreator.asNullable(expr.getType()));
   }
 
-  public AggregateFunctionInvocation avg(Rel input, int field) {
+  public Aggregate.Measure avg(Rel input, int field) {
     return avg(fieldReference(input, field));
   }
 
-  public AggregateFunctionInvocation avg(Expression expr) {
+  public Aggregate.Measure avg(Expression expr) {
     return singleArgumentArithmeticAggregate(
         expr,
         "avg",
@@ -512,11 +489,11 @@ public class SubstraitBuilder {
         TypeCreator.asNullable(expr.getType()));
   }
 
-  public AggregateFunctionInvocation sum(Rel input, int field) {
+  public Aggregate.Measure sum(Rel input, int field) {
     return sum(fieldReference(input, field));
   }
 
-  public AggregateFunctionInvocation sum(Expression expr) {
+  public Aggregate.Measure sum(Expression expr) {
     return singleArgumentArithmeticAggregate(
         expr,
         "sum",
@@ -524,11 +501,11 @@ public class SubstraitBuilder {
         TypeCreator.asNullable(expr.getType()));
   }
 
-  public AggregateFunctionInvocation sum0(Rel input, int field) {
+  public Aggregate.Measure sum0(Rel input, int field) {
     return sum(fieldReference(input, field));
   }
 
-  public AggregateFunctionInvocation sum0(Expression expr) {
+  public Aggregate.Measure sum0(Expression expr) {
     return singleArgumentArithmeticAggregate(
         expr,
         "sum0",
@@ -536,7 +513,7 @@ public class SubstraitBuilder {
         R.I64);
   }
 
-  private AggregateFunctionInvocation singleArgumentArithmeticAggregate(
+  private Aggregate.Measure singleArgumentArithmeticAggregate(
       Expression expr, String functionName, Type outputType) {
     String typeString = ToTypeString.apply(expr.getType());
     var declaration =
@@ -544,16 +521,17 @@ public class SubstraitBuilder {
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                 String.format("%s:%s", functionName, typeString)));
-    return AggregateFunctionInvocation.builder()
-        .arguments(Arrays.asList(expr))
-        .outputType(outputType)
-        .declaration(declaration)
-        // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
-        // as it does not allow decomposition. Use it as the default for now.
-        // TODO: set this per function
-        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-        .invocation(Expression.AggregationInvocation.ALL)
-        .build();
+    return measure(
+        AggregateFunctionInvocation.builder()
+            .arguments(Arrays.asList(expr))
+            .outputType(outputType)
+            .declaration(declaration)
+            // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
+            // as it does not allow decomposition. Use it as the default for now.
+            // TODO: set this per function
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
   }
 
   // Scalar Functions
@@ -562,7 +540,7 @@ public class SubstraitBuilder {
     // output type of negate is the same as the input type
     var outputType = expr.getType();
     return scalarFn(
-        FUNCTIONS_ARITHMETIC,
+        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
         String.format("negate:%s", ToTypeString.apply(outputType)),
         outputType,
         expr);
@@ -597,7 +575,7 @@ public class SubstraitBuilder {
             ? TypeCreator.asNullable(outputType)
             : TypeCreator.asNotNullable(outputType);
 
-    return scalarFn(FUNCTIONS_ARITHMETIC, key, outputType, left, right);
+    return scalarFn(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, key, outputType, left, right);
   }
 
   public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {

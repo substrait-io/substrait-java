@@ -19,6 +19,16 @@ public class ComplexAggregateTest extends PlanTestBase {
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);
 
+  Aggregate.Measure withPreMeasureFilter(Aggregate.Measure measure, Expression preMeasureFilter) {
+    return Aggregate.Measure.builder().from(measure).preMeasureFilter(preMeasureFilter).build();
+  }
+
+  Aggregate.Measure withSort(Aggregate.Measure measure, List<Expression.SortField> sortFields) {
+    var afi =
+        AggregateFunctionInvocation.builder().from(measure.getFunction()).sort(sortFields).build();
+    return Aggregate.Measure.builder().from(measure).function(afi).build();
+  }
+
   /**
    * Check that:
    *
@@ -72,16 +82,18 @@ public class ComplexAggregateTest extends PlanTestBase {
   void handleComplexPreMeasureFilter() {
     // SELECT sum(a) FILTER (b = 42) FROM example
     var rel =
-        b.aggregateM(
+        b.aggregate(
             input -> emptyGrouping,
             input ->
-                List.of(b.measure(b.sum(input, 0), b.equal(b.fieldReference(input, 1), b.i32(42)))),
+                List.of(
+                    withPreMeasureFilter(
+                        b.sum(input, 0), b.equal(b.fieldReference(input, 1), b.i32(42)))),
             table);
 
     var expectedFinal =
-        b.aggregateM(
+        b.aggregate(
             input -> emptyGrouping,
-            input -> List.of(b.measure(b.sum(input, 0), b.fieldReference(input, 4))),
+            input -> List.of(withPreMeasureFilter(b.sum(input, 0), b.fieldReference(input, 4))),
             b.project(input -> List.of(b.equal(b.fieldReference(input, 1), b.i32(42))), table));
 
     validateAggregateTransformation(rel, expectedFinal);
@@ -95,14 +107,12 @@ public class ComplexAggregateTest extends PlanTestBase {
             input -> emptyGrouping,
             input ->
                 List.of(
-                    AggregateFunctionInvocation.builder()
-                        .from(b.sum(input, 3))
-                        .sort(
-                            List.of(
-                                b.sortField(
-                                    b.negate(b.fieldReference(input, 1)),
-                                    Expression.SortDirection.ASC_NULLS_FIRST)))
-                        .build()),
+                    withSort(
+                        b.sum(input, 3),
+                        List.of(
+                            b.sortField(
+                                b.negate(b.fieldReference(input, 1)),
+                                Expression.SortDirection.ASC_NULLS_FIRST)))),
             table);
 
     var expectedFinal =
@@ -110,16 +120,12 @@ public class ComplexAggregateTest extends PlanTestBase {
             input -> emptyGrouping,
             input ->
                 List.of(
-                    AggregateFunctionInvocation.builder()
-                        // sum input does not need to be rewritten
-                        .from(b.sum(input, 3))
-                        .sort(
-                            List.of(
-                                b.sortField(
-                                    // sort field references input
-                                    b.fieldReference(input, 4),
-                                    Expression.SortDirection.ASC_NULLS_FIRST)))
-                        .build()),
+                    withSort(
+                        b.sum(input, 3),
+                        List.of(
+                            b.sortField(
+                                b.fieldReference(input, 4),
+                                Expression.SortDirection.ASC_NULLS_FIRST)))),
             b.project(
                 // negate call is moved to child project
                 input -> List.of(b.negate(b.fieldReference(input, 1))),

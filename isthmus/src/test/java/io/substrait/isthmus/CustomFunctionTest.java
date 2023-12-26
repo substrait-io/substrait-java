@@ -201,8 +201,9 @@ public class CustomFunctionTest extends PlanTestBase {
             input -> b.grouping(input, 0),
             input ->
                 List.of(
-                    b.aggregateFn(
-                        NAMESPACE, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0))),
+                    b.measure(
+                        b.aggregateFn(
+                            NAMESPACE, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0)))),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
