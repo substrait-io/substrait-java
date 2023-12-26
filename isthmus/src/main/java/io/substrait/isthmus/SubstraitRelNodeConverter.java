@@ -276,7 +276,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     List<Integer> argIndex = new ArrayList<>();
     for (RexNode arg : arguments) {
       // arguments are guaranteed to be RexInputRef because of the prior call to
-      // AggregateValidator.AggregateTransformer.transformToValidCalciteAggregate
+      // transformToValidCalciteAggregate
       argIndex.add(((RexInputRef) arg).getIndex());
     }
 
