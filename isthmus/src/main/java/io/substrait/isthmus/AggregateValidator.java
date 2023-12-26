@@ -112,10 +112,10 @@ public class AggregateValidator {
   public static class AggregateTransformer {
 
     // New expressions to include in the project before the aggregate
-    final List<Expression> newExpressions;
+    private final List<Expression> newExpressions;
 
     // Tracks the offset of the next expression added
-    int expressionOffset;
+    private int expressionOffset;
 
     private AggregateTransformer(Aggregate aggregate) {
       this.newExpressions = new ArrayList<>();
