@@ -433,9 +433,7 @@ public class SubstraitBuilder {
   }
 
   public Aggregate.Grouping grouping(Expression... expressions) {
-    List<Expression> exprs =
-        Arrays.stream(expressions).collect(java.util.stream.Collectors.toList());
-    return Aggregate.Grouping.builder().addAllExpressions(exprs).build();
+    return Aggregate.Grouping.builder().addExpressions(expressions).build();
   }
 
   public Aggregate.Measure count(Rel input, int field) {
