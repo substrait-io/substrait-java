@@ -3,6 +3,7 @@ package io.substrait.type;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import java.io.File;
 import java.util.*;
@@ -25,7 +26,8 @@ public class YamlRead {
 
   public static void main(String[] args) throws Exception {
     try {
-      System.out.println("Read: " + YamlRead.class.getResource("/functions_boolean.yaml"));
+      System.out.println(
+          "Read: " + YamlRead.class.getResource(DefaultExtensionCatalog.FUNCTIONS_BOOLEAN));
       List<SimpleExtension.Function> signatures = loadFunctions();
 
       signatures.forEach(f -> System.out.println(f.key()));
