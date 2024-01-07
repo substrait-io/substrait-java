@@ -1,6 +1,14 @@
 Release Notes
 ---
 
+## [0.24.0](https://github.com/substrait-io/substrait-java/compare/v0.23.0...v0.24.0) (2024-01-07)
+
+
+### Features
+
+* introduce DefaultExtensionCatalog ([#217](https://github.com/substrait-io/substrait-java/issues/217)) ([35f9b62](https://github.com/substrait-io/substrait-java/commit/35f9b628ecc2c986c19dd5b8d50fc4a478d5a881))
+* **isthmus:** additional output formats for cli ([#216](https://github.com/substrait-io/substrait-java/issues/216)) ([6e62f46](https://github.com/substrait-io/substrait-java/commit/6e62f46f69739ce31f0ed5cd3cdce11170d2cf57))
+
 ## [0.23.0](https://github.com/substrait-io/substrait-java/compare/v0.22.0...v0.23.0) (2023-12-18)
 
 
