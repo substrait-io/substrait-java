@@ -108,9 +108,9 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseExpression();
-    SqlNode validSQLNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
+    SqlNode validSqlNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
-    return converter.convertExpression(validSQLNode, nameToNodeMap);
+    return converter.convertExpression(validSqlNode, nameToNodeMap);
   }
 
   SqlToRelConverter createSqlToRelConverter(
