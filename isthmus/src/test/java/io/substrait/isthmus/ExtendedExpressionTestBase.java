@@ -16,11 +16,15 @@ public class ExtendedExpressionTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  public static List<String> tpchSchemaCreateStatements() throws IOException {
-    String[] values = asString("tpch/schema.sql").split(";");
+  public static List<String> tpchSchemaCreateStatements(String schemaToLoad) throws IOException {
+    String[] values = asString(schemaToLoad).split(";");
     return Arrays.stream(values)
         .filter(t -> !t.trim().isBlank())
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  public static List<String> tpchSchemaCreateStatements() throws IOException {
+    return tpchSchemaCreateStatements("tpch/schema.sql");
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(String query)
@@ -29,8 +33,21 @@ public class ExtendedExpressionTestBase {
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+      String query, String schemaToLoad) throws IOException, SqlParseException {
+    return assertProtoExtendedExpressionRoundrip(
+        query, new SqlExpressionToSubstrait(), schemaToLoad);
+  }
+
+  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
       String query, SqlExpressionToSubstrait s) throws IOException, SqlParseException {
     return assertProtoExtendedExpressionRoundrip(query, s, tpchSchemaCreateStatements());
+  }
+
+  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+      String query, SqlExpressionToSubstrait s, String schemaToLoad)
+      throws IOException, SqlParseException {
+    return assertProtoExtendedExpressionRoundrip(
+        query, s, tpchSchemaCreateStatements(schemaToLoad));
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundrip(

@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
-import io.substrait.proto.ExtendedExpression;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -26,7 +28,19 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   @MethodSource("expressionTypeProvider")
   public void testExtendedExpressionsRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
+    assertProtoExtendedExpressionRoundrip(sqlExpression);
+  }
 
-    ExtendedExpression extendedExpression = assertProtoExtendedExpressionRoundrip(sqlExpression);
+  @ParameterizedTest
+  @MethodSource("expressionTypeProvider")
+  public void testExtendedExpressionsRoundTripDuplicateColumnIdentifier(String sqlExpression) {
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> assertProtoExtendedExpressionRoundrip(sqlExpression, "tpch/schema_error.sql"));
+    assertTrue(
+        illegalArgumentException
+            .getMessage()
+            .startsWith("There is no support for duplicate column names"));
   }
 }
