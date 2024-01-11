@@ -1,6 +1,22 @@
 Release Notes
 ---
 
+## [0.24.0](https://github.com/substrait-io/substrait-java/compare/v0.23.0...v0.24.0) (2024-01-07)
+
+
+### Features
+
+* introduce DefaultExtensionCatalog ([#217](https://github.com/substrait-io/substrait-java/issues/217)) ([35f9b62](https://github.com/substrait-io/substrait-java/commit/35f9b628ecc2c986c19dd5b8d50fc4a478d5a881))
+* **isthmus:** additional output formats for cli ([#216](https://github.com/substrait-io/substrait-java/issues/216)) ([6e62f46](https://github.com/substrait-io/substrait-java/commit/6e62f46f69739ce31f0ed5cd3cdce11170d2cf57))
+
+## [0.23.0](https://github.com/substrait-io/substrait-java/compare/v0.22.0...v0.23.0) (2023-12-18)
+
+
+### Features
+
+* **isthmus:** support for char_length ([#212](https://github.com/substrait-io/substrait-java/issues/212)) ([7424483](https://github.com/substrait-io/substrait-java/commit/7424483fc858f8fd2896d4a1cce0318ef83e50b0))
+* **pojo:** support for extended expressions ([#206](https://github.com/substrait-io/substrait-java/issues/206)) ([9e023a7](https://github.com/substrait-io/substrait-java/commit/9e023a70a374541e949877dbe01609ea56dbfdae))
+
 ## [0.22.0](https://github.com/substrait-io/substrait-java/compare/v0.21.0...v0.22.0) (2023-11-26)
 
 

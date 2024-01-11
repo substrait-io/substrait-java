@@ -3,6 +3,7 @@ package io.substrait.extendedexpression;
 import io.substrait.TestBase;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.*;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
@@ -19,7 +20,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class ExtendedExpressionRoundTripTest extends TestBase {
-  static final String NAMESPACE = "/functions_arithmetic_decimal.yaml";
 
   private static Stream<Arguments> expressionReferenceProvider() {
     return Stream.of(
@@ -88,7 +88,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
     Expression.ScalarFunctionInvocation scalarFunctionInvocation =
         new SubstraitBuilder(defaultExtensionCollection)
             .scalarFn(
-                NAMESPACE,
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                 "add:dec_dec",
                 TypeCreator.REQUIRED.BOOLEAN,
                 ImmutableFieldReference.builder()
