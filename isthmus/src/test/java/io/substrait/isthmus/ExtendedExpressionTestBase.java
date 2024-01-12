@@ -27,30 +27,30 @@ public class ExtendedExpressionTestBase {
     return tpchSchemaCreateStatements("tpch/schema.sql");
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(String query)
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(String query)
       throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(query, new SqlExpressionToSubstrait());
+    return assertProtoExtendedExpressionRoundtrip(query, new SqlExpressionToSubstrait());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, String schemaToLoad) throws IOException, SqlParseException {
     return assertProtoExtendedExpressionRoundrip(
         query, new SqlExpressionToSubstrait(), schemaToLoad);
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s) throws IOException, SqlParseException {
     return assertProtoExtendedExpressionRoundrip(query, s, tpchSchemaCreateStatements());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s, String schemaToLoad)
       throws IOException, SqlParseException {
     return assertProtoExtendedExpressionRoundrip(
         query, s, tpchSchemaCreateStatements(schemaToLoad));
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s, List<String> creates)
       throws SqlParseException, IOException {
     // proto initial extended expression
