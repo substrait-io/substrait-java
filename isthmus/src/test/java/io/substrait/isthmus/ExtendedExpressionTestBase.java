@@ -34,19 +34,19 @@ public class ExtendedExpressionTestBase {
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, String schemaToLoad) throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(
+    return assertProtoExtendedExpressionRoundtrip(
         query, new SqlExpressionToSubstrait(), schemaToLoad);
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s) throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(query, s, tpchSchemaCreateStatements());
+    return assertProtoExtendedExpressionRoundtrip(query, s, tpchSchemaCreateStatements());
   }
 
   protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s, String schemaToLoad)
       throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(
+    return assertProtoExtendedExpressionRoundtrip(
         query, s, tpchSchemaCreateStatements(schemaToLoad));
   }
 

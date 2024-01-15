@@ -28,7 +28,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   @MethodSource("expressionTypeProvider")
   public void testExtendedExpressionsRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
-    assertProtoExtendedExpressionRoundrip(sqlExpression);
+    assertProtoExtendedExpressionRoundtrip(sqlExpression);
   }
 
   @ParameterizedTest
@@ -37,7 +37,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
     IllegalArgumentException illegalArgumentException =
         assertThrows(
             IllegalArgumentException.class,
-            () -> assertProtoExtendedExpressionRoundrip(sqlExpression, "tpch/schema_error.sql"));
+            () -> assertProtoExtendedExpressionRoundtrip(sqlExpression, "tpch/schema_error.sql"));
     assertTrue(
         illegalArgumentException
             .getMessage()

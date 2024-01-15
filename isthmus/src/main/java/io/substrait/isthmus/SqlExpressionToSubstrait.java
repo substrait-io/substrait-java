@@ -109,19 +109,15 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNode sqlNode = parser.parseExpression();
     SqlNode validSqlNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
-    SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
+    SqlToRelConverter converter =
+        new SqlToRelConverter(
+            null,
+            validator,
+            catalogReader,
+            relOptCluster,
+            StandardConvertletTable.INSTANCE,
+            converterConfig);
     return converter.convertExpression(validSqlNode, nameToNodeMap);
-  }
-
-  SqlToRelConverter createSqlToRelConverter(
-      SqlValidator validator, CalciteCatalogReader catalogReader) {
-    return new SqlToRelConverter(
-        null,
-        validator,
-        catalogReader,
-        relOptCluster,
-        StandardConvertletTable.INSTANCE,
-        converterConfig);
   }
 
   private Result registerCreateTablesForExtendedExpression(List<String> tables)
@@ -155,6 +151,9 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
           }
         }
       }
+    } else {
+      throw new IllegalArgumentException(
+          "Information regarding the data and types must be passed.");
     }
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
