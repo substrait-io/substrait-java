@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
       - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
   security:
     name: Security validation
@@ -91,6 +91,6 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
       - name: Check current status before next release
         run: ./ci/release/dry_run.sh

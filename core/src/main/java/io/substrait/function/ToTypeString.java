@@ -5,7 +5,11 @@ import io.substrait.type.Type;
 public class ToTypeString
     extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
-  public static ToTypeString INSTANCE = new ToTypeString();
+  public static final ToTypeString INSTANCE = new ToTypeString();
+
+  public static String apply(Type type) {
+    return type.accept(INSTANCE);
+  }
 
   private ToTypeString() {
     super("Only type literals and parameterized types can be used in functions.");
