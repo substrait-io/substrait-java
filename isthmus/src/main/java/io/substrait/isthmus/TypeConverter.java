@@ -10,6 +10,7 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.calcite.rel.type.RelDataType;
@@ -328,7 +329,8 @@ public class TypeConverter {
             case 0 -> typeFactory.createSqlType(typeName);
             case 1 -> typeFactory.createSqlType(typeName, props[0]);
             case 2 -> typeFactory.createSqlType(typeName, props[0], props[1]);
-            default -> throw new IllegalArgumentException();
+            default -> throw new IllegalArgumentException(
+                "Unexpected properties length: " + Arrays.toString(props));
           };
 
       return typeFactory.createTypeWithNullability(baseType, nullable);

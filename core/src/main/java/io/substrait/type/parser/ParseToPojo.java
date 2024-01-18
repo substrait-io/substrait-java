@@ -422,7 +422,7 @@ public class ParseToPojo {
             case "OR" -> TypeExpression.BinaryOperation.OpType.OR;
             case "=" -> TypeExpression.BinaryOperation.OpType.EQ;
             case ":=" -> TypeExpression.BinaryOperation.OpType.COVERS;
-            default -> throw new IllegalStateException();
+            default -> throw new IllegalStateException("Unexpected value: " + ctx.op.getText());
           };
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
