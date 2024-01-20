@@ -2,7 +2,7 @@ package io.substrait.isthmus;
 
 import com.google.common.collect.Streams;
 import io.substrait.dsl.SubstraitBuilder;
-import io.substrait.expression.AggregateFunctionInvocation;
+import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
@@ -40,7 +40,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
   private NamedScan numericTypesTable = b.namedScan(List.of("example"), columnNames, tableTypes);
 
   // Create the given function call on the given field of the input
-  private AggregateFunctionInvocation functionPicker(Rel input, int field, String fname) {
+  private Aggregate.Measure functionPicker(Rel input, int field, String fname) {
     return switch (fname) {
       case "min" -> b.min(input, field);
       case "max" -> b.max(input, field);
@@ -53,7 +53,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
   }
 
   // Create one function call per numeric type column
-  private List<AggregateFunctionInvocation> functions(Rel input, String fname) {
+  private List<Aggregate.Measure> functions(Rel input, String fname) {
     // first column is for grouping, skip it
     return IntStream.range(1, tableTypes.size())
         .boxed()

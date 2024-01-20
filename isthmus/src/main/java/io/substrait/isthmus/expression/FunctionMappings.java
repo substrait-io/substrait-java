@@ -60,6 +60,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.LIKE),
                 s(SqlStdOperatorTable.SUBSTRING, "substring"),
                 s(SqlStdOperatorTable.CONCAT, "concat"),
+                s(SqlStdOperatorTable.CHAR_LENGTH, "char_length"),
                 s(SqlStdOperatorTable.LOWER, "lower"),
                 s(SqlStdOperatorTable.UPPER, "upper"),
                 s(SqlStdOperatorTable.BETWEEN),

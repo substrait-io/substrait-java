@@ -271,6 +271,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (call.filterArg != -1) {
       builder.preMeasureFilter(FieldReference.newRootStructReference(call.filterArg, inputType));
     }
+    // TODO: handle the collation on the AggregateCall
+    //   https://github.com/substrait-io/substrait-java/issues/215
     return builder.build();
   }
 

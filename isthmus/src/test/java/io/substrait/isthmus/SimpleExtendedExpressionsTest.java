@@ -1,39 +1,46 @@
 package io.substrait.isthmus;
 
-import io.substrait.proto.ExtendedExpression;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
+import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
-  @Test
-  public void filter() throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY > 10");
+  private static Stream<Arguments> expressionTypeProvider() {
+    return Stream.of(
+        Arguments.of("2"), // I32LiteralExpression
+        Arguments.of("L_ORDERKEY"), // FieldReferenceExpression
+        Arguments.of("L_ORDERKEY > 10"), // ScalarFunctionExpressionFilter
+        Arguments.of("L_ORDERKEY + 10"), // ScalarFunctionExpressionProjection
+        Arguments.of("L_ORDERKEY IN (10, 20)"), // ScalarFunctionExpressionIn
+        Arguments.of("L_ORDERKEY is not null"), // ScalarFunctionExpressionIsNotNull
+        Arguments.of("L_ORDERKEY is null") // ScalarFunctionExpressionIsNull
+        );
   }
 
-  @Test
-  public void projection() throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY + 10");
+  @ParameterizedTest
+  @MethodSource("expressionTypeProvider")
+  public void testExtendedExpressionsRoundTrip(String sqlExpression)
+      throws SqlParseException, IOException {
+    assertProtoExtendedExpressionRoundtrip(sqlExpression);
   }
 
-  @Test
-  public void in() throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY IN (10, 20)");
-  }
-
-  @Test
-  public void isNotNull() throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY is not null");
-  }
-
-  @Test
-  public void isNull() throws IOException, SqlParseException {
-    ExtendedExpression extendedExpression =
-        assertProtoExtendedExpressionRoundrip("L_ORDERKEY is null");
+  @ParameterizedTest
+  @MethodSource("expressionTypeProvider")
+  public void testExtendedExpressionsRoundTripDuplicateColumnIdentifier(String sqlExpression) {
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> assertProtoExtendedExpressionRoundtrip(sqlExpression, "tpch/schema_error.sql"));
+    assertTrue(
+        illegalArgumentException
+            .getMessage()
+            .startsWith("There is no support for duplicate column names"));
   }
 }

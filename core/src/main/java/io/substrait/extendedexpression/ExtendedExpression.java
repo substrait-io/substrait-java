@@ -2,7 +2,7 @@ package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.proto.AdvancedExtension;
-import io.substrait.proto.AggregateFunction;
+import io.substrait.relation.Aggregate;
 import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +10,7 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class ExtendedExpression {
-  public abstract List<ExpressionReference> getReferredExpressions();
+  public abstract List<ExpressionReferenceBase> getReferredExpressions();
 
   public abstract NamedStruct getBaseSchema();
 
@@ -20,22 +20,17 @@ public abstract class ExtendedExpression {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
-  @Value.Immutable
-  public abstract static class ExpressionReference {
-    public abstract ExpressionTypeReference getExpressionType();
-
-    public abstract List<String> getOutputNames();
+  public interface ExpressionReferenceBase {
+    List<String> getOutputNames();
   }
 
-  public abstract static class ExpressionTypeReference {}
-
   @Value.Immutable
-  public abstract static class ExpressionType extends ExpressionTypeReference {
+  public abstract static class ExpressionReference implements ExpressionReferenceBase {
     public abstract Expression getExpression();
   }
 
   @Value.Immutable
-  public abstract static class AggregateFunctionType extends ExpressionTypeReference {
-    public abstract AggregateFunction getMeasure();
+  public abstract static class AggregateFunctionReference implements ExpressionReferenceBase {
+    public abstract Aggregate.Measure getMeasure();
   }
 }

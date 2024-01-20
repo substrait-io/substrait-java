@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.annotations.Beta;
@@ -15,12 +16,14 @@ import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
+import io.substrait.type.Type;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlKind;
@@ -202,5 +205,16 @@ public class PlanTestBase {
 
     // Verify that POJOs are the same
     assertEquals(pojo1, pojo3);
+  }
+
+  protected void assertRowMatch(RelDataType actual, Type... expected) {
+    assertRowMatch(actual, Arrays.asList(expected));
+  }
+
+  protected void assertRowMatch(RelDataType actual, List<Type> expected) {
+    Type type = TypeConverter.DEFAULT.toSubstrait(actual);
+    assertInstanceOf(Type.Struct.class, type);
+    Type.Struct struct = (Type.Struct) type;
+    assertEquals(expected, struct.fields());
   }
 }

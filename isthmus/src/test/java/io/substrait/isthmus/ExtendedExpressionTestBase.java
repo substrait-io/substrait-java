@@ -16,28 +16,45 @@ public class ExtendedExpressionTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  public static List<String> tpchSchemaCreateStatements() throws IOException {
-    String[] values = asString("tpch/schema.sql").split(";");
+  public static List<String> tpchSchemaCreateStatements(String schemaToLoad) throws IOException {
+    String[] values = asString(schemaToLoad).split(";");
     return Arrays.stream(values)
         .filter(t -> !t.trim().isBlank())
         .collect(java.util.stream.Collectors.toList());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(String query)
+  public static List<String> tpchSchemaCreateStatements() throws IOException {
+    return tpchSchemaCreateStatements("tpch/schema.sql");
+  }
+
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(String query)
       throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(query, new SqlExpressionToSubstrait());
+    return assertProtoExtendedExpressionRoundtrip(query, new SqlExpressionToSubstrait());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
+      String query, String schemaToLoad) throws IOException, SqlParseException {
+    return assertProtoExtendedExpressionRoundtrip(
+        query, new SqlExpressionToSubstrait(), schemaToLoad);
+  }
+
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s) throws IOException, SqlParseException {
-    return assertProtoExtendedExpressionRoundrip(query, s, tpchSchemaCreateStatements());
+    return assertProtoExtendedExpressionRoundtrip(query, s, tpchSchemaCreateStatements());
   }
 
-  protected ExtendedExpression assertProtoExtendedExpressionRoundrip(
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
+      String query, SqlExpressionToSubstrait s, String schemaToLoad)
+      throws IOException, SqlParseException {
+    return assertProtoExtendedExpressionRoundtrip(
+        query, s, tpchSchemaCreateStatements(schemaToLoad));
+  }
+
+  protected ExtendedExpression assertProtoExtendedExpressionRoundtrip(
       String query, SqlExpressionToSubstrait s, List<String> creates)
       throws SqlParseException, IOException {
     // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial = s.executeSQLExpression(query, creates);
+    ExtendedExpression extendedExpressionProtoInitial = s.convert(query, creates);
 
     // pojo final extended expression
     io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoFinal =

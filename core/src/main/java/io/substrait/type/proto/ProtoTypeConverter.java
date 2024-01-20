@@ -55,7 +55,9 @@ public class ProtoTypeConverter {
         var t = lookup.getType(userDefined.getTypeReference(), extensions);
         yield n(userDefined.getNullability()).userDefined(t.uri(), t.name());
       }
-      case USER_DEFINED_TYPE_REFERENCE, KIND_NOT_SET -> throw new UnsupportedOperationException();
+      case USER_DEFINED_TYPE_REFERENCE -> throw new UnsupportedOperationException(
+          "Unsupported user defined reference: " + type);
+      case KIND_NOT_SET -> throw new UnsupportedOperationException("Type is not set: " + type);
     };
   }
 

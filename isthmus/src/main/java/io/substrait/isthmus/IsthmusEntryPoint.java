@@ -5,7 +5,9 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
@@ -42,6 +44,18 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   private boolean allowMultiStatement;
 
   @Option(
+      names = {"--outputformat"},
+      defaultValue = "PROTOJSON",
+      description = "Set the output format for the generated plan: ${COMPLETION-CANDIDATES}")
+  private OutputFormat outputFormat = OutputFormat.PROTOJSON;
+
+  enum OutputFormat {
+    PROTOJSON, // protobuf json format
+    PROTOTEXT, // protobuf text format
+    BINARY, // protobuf BINARY format
+  }
+
+  @Option(
       names = {"--sqlconformancemode"},
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private SqlConformanceEnum sqlConformanceMode = SqlConformanceEnum.DEFAULT;
@@ -66,17 +80,28 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     if (sqlExpression != null) {
       logger.debug(sqlExpression);
       logger.debug(String.valueOf(createStatements));
-      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(featureBoard);
-      ExtendedExpression extendedExpression =
-          converter.executeSQLExpression(sqlExpression, createStatements);
+      SqlExpressionToSubstrait converter =
+          new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
+      ExtendedExpression extendedExpression = converter.convert(sqlExpression, createStatements);
       System.out.println(
           JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
+      switch (outputFormat) {
+        case PROTOJSON -> System.out.println(
+            JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
+        case PROTOTEXT -> TextFormat.printer().print(extendedExpression, System.out);
+        case BINARY -> extendedExpression.writeTo(System.out);
+      }
     } else { // by default Isthmus image are parsing SQL Query
       logger.debug(sql);
       logger.debug(String.valueOf(createStatements));
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
       Plan plan = converter.execute(sql, createStatements);
-      System.out.println(JsonFormat.printer().includingDefaultValueFields().print(plan));
+      switch (outputFormat) {
+        case PROTOJSON -> System.out.println(
+            JsonFormat.printer().includingDefaultValueFields().print(plan));
+        case PROTOTEXT -> TextFormat.printer().print(plan, System.out);
+        case BINARY -> plan.writeTo(System.out);
+      }
     }
     return 0;
   }
