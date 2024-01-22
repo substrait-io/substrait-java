@@ -151,9 +151,6 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
           }
         }
       }
-    } else {
-      throw new IllegalArgumentException(
-          "Information regarding the data and types must be passed.");
     }
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
