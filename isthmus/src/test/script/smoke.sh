@@ -15,8 +15,14 @@ $CMD 'select * from lineitem where l_orderkey > 10' --create "${LINEITEM}"
 # SQL Query - Aggregate
 $CMD 'select l_orderkey, count(l_partkey) from lineitem group by l_orderkey' --create "${LINEITEM}"
 
-# SQL Expression - Filter
-$CMD --sqlExpression 'l_orderkey > 10' --create "${LINEITEM}"
+# SQL Expression - Literal expression
+$CMD --expression '10'
 
-# SQL Expression - Projection
-$CMD --sqlExpression 'l_orderkey + 9888486986' --create "${LINEITEM}"
+# SQL Expression - Reference expression
+$CMD --expression 'l_suppkey' --create "${LINEITEM}"
+
+# SQL Expression - Filter expression
+$CMD --expression 'l_orderkey > 10' --create "${LINEITEM}"
+
+# SQL Expression - Projection expression
+$CMD --expression 'l_orderkey + 9888486986' --create "${LINEITEM}"

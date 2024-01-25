@@ -28,7 +28,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   private String sql;
 
   @Option(
-      names = {"-e", "--sqlExpression"},
+      names = {"-e", "--expression"},
       description = "The sql expression we should parse.")
   private String sqlExpression;
 
