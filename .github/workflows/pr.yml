@@ -42,7 +42,7 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
       - name: Build with Gradle
         run: gradle build
   isthmus-native-image-mac-linux:
@@ -63,7 +63,7 @@ jobs:
         # helps avoid rate-limiting issues
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@v3
     - name: Report Java Version
       run: java -version
     - name: Install GraalVM native image
