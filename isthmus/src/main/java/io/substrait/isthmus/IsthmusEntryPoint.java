@@ -76,7 +76,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     FeatureBoard featureBoard = buildFeatureBoard();
-    // Isthmus image is paring SQL Expression if that argument is defined
+    // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpression != null) {
       logger.debug(sqlExpression);
       logger.debug(String.valueOf(createStatements));
