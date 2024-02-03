@@ -17,9 +17,9 @@ class IsthmusEntryPointTest {
   /** Test that the default values are set correctly into the {@link FeatureBoard}. */
   @Test
   void defaultFeatureBoard() {
-    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
-    new CommandLine(planEntryPoint);
-    FeatureBoard features = planEntryPoint.buildFeatureBoard();
+    IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
+    new CommandLine(isthmusEntryPoint);
+    FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertFalse(features.allowsSqlBatch());
     assertEquals(SqlConformanceEnum.DEFAULT, features.sqlConformanceMode());
     assertEquals(CrossJoinPolicy.KEEP_AS_CROSS_JOIN, features.crossJoinPolicy());
@@ -28,14 +28,14 @@ class IsthmusEntryPointTest {
   /** Test that the command line options are correctly parsed into the {@link FeatureBoard}. */
   @Test
   void customFeatureBoard() {
-    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
-    new CommandLine(planEntryPoint)
+    IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
+    new CommandLine(isthmusEntryPoint)
         .parseArgs(
             "--multistatement",
             "--sqlconformancemode=SQL_SERVER_2008",
             "--crossjoinpolicy=CONVERT_TO_INNER_JOIN",
             "SELECT * FROM foo");
-    FeatureBoard features = planEntryPoint.buildFeatureBoard();
+    FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
     assertEquals(
         (SqlConformance) SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
@@ -47,11 +47,11 @@ class IsthmusEntryPointTest {
    */
   @Test
   void invalidCmdOptions() {
-    IsthmusEntryPoint planEntryPoint = new IsthmusEntryPoint();
+    IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
     assertThrows(
         ParameterException.class,
         () ->
-            new CommandLine(planEntryPoint)
+            new CommandLine(isthmusEntryPoint)
                 .parseArgs(
                     "--sqlconformancemode=SQL_SERVER_2008",
                     "--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
