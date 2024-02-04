@@ -1,6 +1,29 @@
 Release Notes
 ---
 
+## [0.25.0](https://github.com/substrait-io/substrait-java/compare/v0.24.0...v0.25.0) (2024-01-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** signatures for aggregate building utils have changed
+
+* feat: additional builder methods for arithmetic aggregate functions
+* feat: sortField builder method
+* feat: grouping builder method
+* feat: add, subtract, multiply, divide and negate methods for builder
+* refactor: extract row matching assertions to PlanTestBase
+* feat(isthmus): improved Calcite support for Substrait Aggregate rels
+* refactor: builder functions for aggregates and aggregate functions now
+consume and return Aggregate.Measure instead of
+AggregateFunctionInvocation
+
+### Features
+
+* enable conversion of SQL expressions to Substrait ExtendedExpressions ([#191](https://github.com/substrait-io/substrait-java/issues/191)) ([750220e](https://github.com/substrait-io/substrait-java/commit/750220e10b61d3bdff426e2ee4ee9a4ffcc71487))
+* improved error messages for Substrait conversion failures ([#221](https://github.com/substrait-io/substrait-java/issues/221)) ([#222](https://github.com/substrait-io/substrait-java/issues/222)) ([8c70245](https://github.com/substrait-io/substrait-java/commit/8c70245d1f361005417a7184640d919eb6f36f77))
+* **isthmus:** improved Calcite support for Substrait Aggregate rels  ([#214](https://github.com/substrait-io/substrait-java/issues/214)) ([1689c93](https://github.com/substrait-io/substrait-java/commit/1689c9348afc1116982c5e8a5c821f2590ca094e))
+
 ## [0.24.0](https://github.com/substrait-io/substrait-java/compare/v0.23.0...v0.24.0) (2024-01-07)
 
 
