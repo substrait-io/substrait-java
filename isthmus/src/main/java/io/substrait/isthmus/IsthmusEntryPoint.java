@@ -11,7 +11,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -20,10 +19,9 @@ import picocli.CommandLine;
 @Command(
     name = "isthmus",
     version = "isthmus 0.1",
-    description = "Substrait Java Native Image for parsing SQL Query and SQL Expressions")
+    description = "Substrait Java Native Image for parsing SQL Query and SQL Expressions",
+    mixinStandardHelpOptions = true)
 public class IsthmusEntryPoint implements Callable<Integer> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(IsthmusEntryPoint.class);
-
   @Parameters(index = "0", arity = "0..1", description = "The sql we should parse.")
   private String sql;
 
@@ -65,11 +63,23 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private CrossJoinPolicy crossJoinPolicy = CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 
-  // this example implements Callable, so parsing, error handling and handling user
-  // requests for usage help or version help can be done with one line of code.
   public static void main(String... args) {
-    logger.debug(Arrays.toString(args));
-    int exitCode = new CommandLine(new IsthmusEntryPoint()).execute(args);
+    CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
+    commandLine.setCaseInsensitiveEnumValuesAllowed(true);
+    CommandLine.ParseResult parseResult = commandLine.parseArgs(args);
+    if (parseResult.originalArgs().isEmpty()) { // If no arguments print usage help
+      commandLine.usage(System.out);
+      System.exit(0);
+    }
+    if (commandLine.isUsageHelpRequested()) {
+      commandLine.usage(System.out);
+      System.exit(0);
+    }
+    if (commandLine.isVersionHelpRequested()) {
+      commandLine.printVersionHelp(System.out);
+      System.exit(0);
+    }
+    int exitCode = commandLine.execute(args);
     System.exit(exitCode);
   }
 
@@ -78,13 +88,9 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     FeatureBoard featureBoard = buildFeatureBoard();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpression != null) {
-      logger.debug(sqlExpression);
-      logger.debug(String.valueOf(createStatements));
       SqlExpressionToSubstrait converter =
           new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
       ExtendedExpression extendedExpression = converter.convert(sqlExpression, createStatements);
-      System.out.println(
-          JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
       switch (outputFormat) {
         case PROTOJSON -> System.out.println(
             JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
@@ -92,8 +98,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
         case BINARY -> extendedExpression.writeTo(System.out);
       }
     } else { // by default Isthmus image are parsing SQL Query
-      logger.debug(sql);
-      logger.debug(String.valueOf(createStatements));
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
       Plan plan = converter.execute(sql, createStatements);
       switch (outputFormat) {
