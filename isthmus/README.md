@@ -29,7 +29,8 @@ isthmus 0.1
 $ ./isthmus/build/graal/isthmus --help
 
 Usage: isthmus [-hmV] [--crossjoinpolicy=<crossJoinPolicy>]
-               [-e=<sqlExpression>] [--outputformat=<outputFormat>]
+               [-e=<sqlExpression>] [-es=<sqlExpressionSeparator>]
+               [--outputformat=<outputFormat>]
                [--sqlconformancemode=<sqlConformanceMode>]
                [-c=<createStatements>]... [<sql>]
 Substrait Java Native Image for parsing SQL Query and SQL Expressions
@@ -42,6 +43,8 @@ Substrait Java Native Image for parsing SQL Query and SQL Expressions
                            KEEP_AS_CROSS_JOIN, CONVERT_TO_INNER_JOIN
   -e, --expression=<sqlExpression>
                          The sql expression we should parse.
+      -es, --separator=<sqlExpressionSeparator>
+                         The separator for the sql expressions.
   -h, --help             Show this help message and exit.
   -m, --multistatement   Allow multiple statements terminated with a semicolon
       --outputformat=<outputFormat>

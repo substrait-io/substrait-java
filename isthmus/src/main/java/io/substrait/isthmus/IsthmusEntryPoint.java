@@ -13,10 +13,8 @@ import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import picocli.CommandLine;
 
@@ -33,6 +31,12 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"-e", "--expression"},
       description = "The sql expression we should parse.")
   private String sqlExpression;
+
+  @Option(
+      names = {"-es", "--separator"},
+      defaultValue = ",",
+      description = "The separator for the sql expressions.")
+  private String sqlExpressionSeparator;
 
   @Option(
       names = {"-c", "--create"},
@@ -87,37 +91,25 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     System.exit(exitCode);
   }
 
-  private FeatureBoard featureBoard;
-
   @Override
   public Integer call() throws Exception {
-    this.featureBoard = buildFeatureBoard();
+    FeatureBoard featureBoard = buildFeatureBoard();
+    // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpression != null) {
-      handleSQLExpression();
-    } else {
-      handleSQLPlan();
+      SqlExpressionToSubstrait converter =
+          new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
+      ExtendedExpression extendedExpression =
+          converter.convert(sqlExpression, sqlExpressionSeparator, createStatements);
+      printMessage(extendedExpression);
+    } else { // by default Isthmus image are parsing SQL Query
+      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+      Plan plan = converter.execute(sql, createStatements);
+      printMessage(plan);
     }
     return 0;
   }
 
-  private void handleSQLExpression() throws SqlParseException, IOException {
-    ExtendedExpression extendedExpression = createExpression();
-    printExpression(extendedExpression);
-  }
-
-  private void handleSQLPlan() throws SqlParseException, IOException {
-    SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-    Plan plan = converter.execute(sql, createStatements);
-    printExpression(plan);
-  }
-
-  private ExtendedExpression createExpression() throws IOException, SqlParseException {
-    SqlExpressionToSubstrait converter =
-        new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
-    return converter.convert(Arrays.asList(sqlExpression.split(",")), createStatements);
-  }
-
-  private void printExpression(Message message) throws IOException {
+  private void printMessage(Message message) throws IOException {
     switch (outputFormat) {
       case PROTOJSON -> System.out.println(
           JsonFormat.printer().includingDefaultValueFields().print(message));

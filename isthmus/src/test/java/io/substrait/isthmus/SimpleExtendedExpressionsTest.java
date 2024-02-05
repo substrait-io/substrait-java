@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -18,30 +21,55 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
         Arguments.of("L_ORDERKEY"), // FieldReferenceExpression
         Arguments.of("L_ORDERKEY > 10"), // ScalarFunctionExpressionFilter
         Arguments.of("L_ORDERKEY + 10"), // ScalarFunctionExpressionProjection
-        Arguments.of("L_ORDERKEY IN (10, 20)"), // ScalarFunctionExpressionIn
+        Arguments.of("L_ORDERKEY IN (10)"), // ScalarFunctionExpressionIn
         Arguments.of("L_ORDERKEY is not null"), // ScalarFunctionExpressionIsNotNull
-        Arguments.of("L_ORDERKEY is null"), // ScalarFunctionExpressionIsNull
-        Arguments.of("L_ORDERKEY + 10", "L_ORDERKEY * 2"),
-        Arguments.of("L_ORDERKEY + 10", "L_ORDERKEY * 2", "L_ORDERKEY > 10"));
+        Arguments.of("L_ORDERKEY is null")); // ScalarFunctionExpressionIsNull
   }
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsRoundTrip(String sqlExpression)
+  public void testExtendedExpressionsCommaSeparatorRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
-    assertProtoExtendedExpressionRoundtrip(sqlExpression);
+    assertProtoEEForExpressionsDefaultCommaSeparatorRoundtrip(
+        sqlExpression); // comma-separator by default
   }
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsRoundTripDuplicateColumnIdentifier(String sqlExpression) {
+  public void testExtendedExpressionsDuplicateColumnIdentifierRoundTrip(String sqlExpression) {
     IllegalArgumentException illegalArgumentException =
         assertThrows(
             IllegalArgumentException.class,
-            () -> assertProtoExtendedExpressionRoundtrip(sqlExpression, "tpch/schema_error.sql"));
+            () ->
+                assertProtoEEForExpressionsDefaultCommaSeparatorErrorRoundtrip(
+                    sqlExpression, "tpch/schema_error.sql"));
     assertTrue(
         illegalArgumentException
             .getMessage()
             .startsWith("There is no support for duplicate column names"));
+  }
+
+  @Test
+  public void testExtendedExpressionsCustomSeparatorRoundTrip()
+      throws SqlParseException, IOException {
+    String expressions =
+        "2#L_ORDERKEY#L_ORDERKEY > 10#L_ORDERKEY + 10#L_ORDERKEY IN (10, 20)#L_ORDERKEY is not null#L_ORDERKEY is null";
+    String separator = "#";
+    assertProtoEEForExpressionsCustomSeparatorRoundtrip(expressions, separator);
+  }
+
+  @Test
+  public void testExtendedExpressionsListExpressionRoundTrip()
+      throws SqlParseException, IOException {
+    List<String> expressions =
+        Arrays.asList(
+            "2",
+            "L_ORDERKEY",
+            "L_ORDERKEY > 10",
+            "L_ORDERKEY + 10",
+            "L_ORDERKEY IN (10, 20)", // the comma won't cause any problems
+            "L_ORDERKEY is not null",
+            "L_ORDERKEY is null");
+    assertProtoEEForListExpressionRoundtrip(expressions);
   }
 }
