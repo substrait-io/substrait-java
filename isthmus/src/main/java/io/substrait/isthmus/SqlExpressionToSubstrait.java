@@ -11,6 +11,7 @@ import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,6 +71,25 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         result.nameToNodeMap());
   }
 
+  /**
+   * Converts the given SQL expressions string to an {@link io.substrait.proto.ExtendedExpression }
+   *
+   * @param sqlExpressions a List of SQL expression
+   * @param createStatements table creation statements defining fields referenced by the expression
+   * @return a {@link io.substrait.proto.ExtendedExpression }
+   * @throws SqlParseException
+   */
+  public ExtendedExpression convert(List<String> sqlExpressions, List<String> createStatements)
+      throws SqlParseException {
+    var result = registerCreateTablesForExtendedExpression(createStatements);
+    return executeInnerSQLExpressions(
+        sqlExpressions,
+        result.validator(),
+        result.catalogReader(),
+        result.nameToTypeMap(),
+        result.nameToNodeMap());
+  }
+
   private ExtendedExpression executeInnerSQLExpression(
       String sqlExpression,
       SqlValidator validator,
@@ -77,20 +97,35 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       Map<String, RelDataType> nameToTypeMap,
       Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
-    RexNode rexNode =
-        sqlToRexNode(sqlExpression, validator, catalogReader, nameToTypeMap, nameToNodeMap);
-    NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
+    return executeInnerSQLExpressions(
+        Collections.singletonList(sqlExpression),
+        validator,
+        catalogReader,
+        nameToTypeMap,
+        nameToNodeMap);
+  }
 
-    ImmutableExpressionReference expressionReference =
-        ImmutableExpressionReference.builder()
-            .expression(rexNode.accept(this.rexConverter))
-            .addOutputNames("new-column")
-            .build();
-
+  private ExtendedExpression executeInnerSQLExpressions(
+      List<String> sqlExpressions,
+      SqlValidator validator,
+      CalciteCatalogReader catalogReader,
+      Map<String, RelDataType> nameToTypeMap,
+      Map<String, RexNode> nameToNodeMap)
+      throws SqlParseException {
+    int columnIndex = 1;
     List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
         expressionReferences = new ArrayList<>();
-    expressionReferences.add(expressionReference);
-
+    RexNode rexNode;
+    for (String sqlExpression : sqlExpressions) {
+      rexNode = sqlToRexNode(sqlExpression, validator, catalogReader, nameToTypeMap, nameToNodeMap);
+      ImmutableExpressionReference expressionReference =
+          ImmutableExpressionReference.builder()
+              .expression(rexNode.accept(this.rexConverter))
+              .addOutputNames("column-" + columnIndex++)
+              .build();
+      expressionReferences.add(expressionReference);
+    }
+    NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
     ImmutableExtendedExpression.Builder extendedExpression =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)

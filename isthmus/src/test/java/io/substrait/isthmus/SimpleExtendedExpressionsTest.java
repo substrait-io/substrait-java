@@ -20,8 +20,9 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
         Arguments.of("L_ORDERKEY + 10"), // ScalarFunctionExpressionProjection
         Arguments.of("L_ORDERKEY IN (10, 20)"), // ScalarFunctionExpressionIn
         Arguments.of("L_ORDERKEY is not null"), // ScalarFunctionExpressionIsNotNull
-        Arguments.of("L_ORDERKEY is null") // ScalarFunctionExpressionIsNull
-        );
+        Arguments.of("L_ORDERKEY is null"), // ScalarFunctionExpressionIsNull
+        Arguments.of("L_ORDERKEY + 10", "L_ORDERKEY * 2"),
+        Arguments.of("L_ORDERKEY + 10", "L_ORDERKEY * 2", "L_ORDERKEY > 10"));
   }
 
   @ParameterizedTest

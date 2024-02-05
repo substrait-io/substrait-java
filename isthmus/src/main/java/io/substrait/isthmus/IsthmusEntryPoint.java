@@ -5,14 +5,18 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import picocli.CommandLine;
 
@@ -83,31 +87,43 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     System.exit(exitCode);
   }
 
+  private FeatureBoard featureBoard;
+
   @Override
   public Integer call() throws Exception {
-    FeatureBoard featureBoard = buildFeatureBoard();
-    // Isthmus image is parsing SQL Expression if that argument is defined
+    this.featureBoard = buildFeatureBoard();
     if (sqlExpression != null) {
-      SqlExpressionToSubstrait converter =
-          new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
-      ExtendedExpression extendedExpression = converter.convert(sqlExpression, createStatements);
-      switch (outputFormat) {
-        case PROTOJSON -> System.out.println(
-            JsonFormat.printer().includingDefaultValueFields().print(extendedExpression));
-        case PROTOTEXT -> TextFormat.printer().print(extendedExpression, System.out);
-        case BINARY -> extendedExpression.writeTo(System.out);
-      }
-    } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-      Plan plan = converter.execute(sql, createStatements);
-      switch (outputFormat) {
-        case PROTOJSON -> System.out.println(
-            JsonFormat.printer().includingDefaultValueFields().print(plan));
-        case PROTOTEXT -> TextFormat.printer().print(plan, System.out);
-        case BINARY -> plan.writeTo(System.out);
-      }
+      handleSQLExpression();
+    } else {
+      handleSQLPlan();
     }
     return 0;
+  }
+
+  private void handleSQLExpression() throws SqlParseException, IOException {
+    ExtendedExpression extendedExpression = createExpression();
+    printExpression(extendedExpression);
+  }
+
+  private void handleSQLPlan() throws SqlParseException, IOException {
+    SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+    Plan plan = converter.execute(sql, createStatements);
+    printExpression(plan);
+  }
+
+  private ExtendedExpression createExpression() throws IOException, SqlParseException {
+    SqlExpressionToSubstrait converter =
+        new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
+    return converter.convert(Arrays.asList(sqlExpression.split(",")), createStatements);
+  }
+
+  private void printExpression(Message message) throws IOException {
+    switch (outputFormat) {
+      case PROTOJSON -> System.out.println(
+          JsonFormat.printer().includingDefaultValueFields().print(message));
+      case PROTOTEXT -> TextFormat.printer().print(message, System.out);
+      case BINARY -> message.writeTo(System.out);
+    }
   }
 
   @VisibleForTesting

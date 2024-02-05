@@ -24,5 +24,8 @@ $CMD --expression 'l_suppkey' --create "${LINEITEM}"
 # SQL Expression - Filter expression
 $CMD --expression 'l_orderkey > 10' --create "${LINEITEM}"
 
-# SQL Expression - Projection expression
+# SQL Expression - Projection expression (column-1)
 $CMD --expression 'l_orderkey + 9888486986' --create "${LINEITEM}"
+
+# SQL Expression - 03 Projection expression (column-1, column-2, column-3)
+$CMD --expression 'l_orderkey + 9888486986, l_orderkey * 2, l_orderkey > 10' --create "${LINEITEM}"
