@@ -29,14 +29,9 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Option(
       names = {"-e", "--expression"},
-      description = "The sql expression we should parse.")
-  private String sqlExpression;
-
-  @Option(
-      names = {"-es", "--separator"},
-      defaultValue = ",",
-      description = "The separator for the sql expressions.")
-  private String sqlExpressionSeparator;
+      arity = "1..*",
+      description = "One or more SQL expressions e.g. col + 1")
+  private String[] sqlExpressions;
 
   @Option(
       names = {"-c", "--create"},
@@ -95,11 +90,10 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   public Integer call() throws Exception {
     FeatureBoard featureBoard = buildFeatureBoard();
     // Isthmus image is parsing SQL Expression if that argument is defined
-    if (sqlExpression != null) {
+    if (sqlExpressions != null) {
       SqlExpressionToSubstrait converter =
           new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
-      ExtendedExpression extendedExpression =
-          converter.convert(sqlExpression, sqlExpressionSeparator, createStatements);
+      ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);

@@ -11,7 +11,6 @@ import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,33 +61,18 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    */
   public ExtendedExpression convert(String sqlExpression, List<String> createStatements)
       throws SqlParseException {
-    return convert(sqlExpression, ",", createStatements);
-  }
-
-  /**
-   * Converts the given SQL expression string to an {@link io.substrait.proto.ExtendedExpression }
-   *
-   * @param sqlExpression a SQL expression
-   * @param separator the separator for the sql expressions
-   * @param createStatements table creation statements defining fields referenced by the expression
-   * @return a {@link io.substrait.proto.ExtendedExpression }
-   * @throws SqlParseException
-   */
-  public ExtendedExpression convert(
-      String sqlExpression, String separator, List<String> createStatements)
-      throws SqlParseException {
-    return convert(Arrays.asList(sqlExpression.split(separator)), createStatements);
+    return convert(new String[] {sqlExpression}, createStatements);
   }
 
   /**
    * Converts the given SQL expressions string to an {@link io.substrait.proto.ExtendedExpression }
    *
-   * @param sqlExpressions a List of SQL expression
+   * @param sqlExpressions an array of SQL expression
    * @param createStatements table creation statements defining fields referenced by the expression
    * @return a {@link io.substrait.proto.ExtendedExpression }
    * @throws SqlParseException
    */
-  public ExtendedExpression convert(List<String> sqlExpressions, List<String> createStatements)
+  public ExtendedExpression convert(String[] sqlExpressions, List<String> createStatements)
       throws SqlParseException {
     var result = registerCreateTablesForExtendedExpression(createStatements);
     return executeInnerSQLExpressions(
@@ -100,7 +84,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   private ExtendedExpression executeInnerSQLExpressions(
-      List<String> sqlExpressions,
+      String[] sqlExpressions,
       SqlValidator validator,
       CalciteCatalogReader catalogReader,
       Map<String, RelDataType> nameToTypeMap,

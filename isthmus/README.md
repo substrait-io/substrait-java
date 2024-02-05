@@ -29,10 +29,9 @@ isthmus 0.1
 $ ./isthmus/build/graal/isthmus --help
 
 Usage: isthmus [-hmV] [--crossjoinpolicy=<crossJoinPolicy>]
-               [-e=<sqlExpression>] [-es=<sqlExpressionSeparator>]
                [--outputformat=<outputFormat>]
                [--sqlconformancemode=<sqlConformanceMode>]
-               [-c=<createStatements>]... [<sql>]
+               [-c=<createStatements>]... [-e=<sqlExpressions>...]... [<sql>]
 Substrait Java Native Image for parsing SQL Query and SQL Expressions
       [<sql>]            The sql we should parse.
   -c, --create=<createStatements>
@@ -41,10 +40,8 @@ Substrait Java Native Image for parsing SQL Query and SQL Expressions
       --crossjoinpolicy=<crossJoinPolicy>
                          One of built-in Calcite SQL compatibility modes:
                            KEEP_AS_CROSS_JOIN, CONVERT_TO_INNER_JOIN
-  -e, --expression=<sqlExpression>
-                         The sql expression we should parse.
-      -es, --separator=<sqlExpressionSeparator>
-                         The separator for the sql expressions.
+  -e, --expression=<sqlExpressions>...
+                         One or more SQL expressions e.g. col + 1
   -h, --help             Show this help message and exit.
   -m, --multistatement   Allow multiple statements terminated with a semicolon
       --outputformat=<outputFormat>
@@ -57,6 +54,7 @@ Substrait Java Native Image for parsing SQL Query and SQL Expressions
                            ORACLE_12, STRICT_2003, PRAGMATIC_2003, PRESTO,
                            SQL_SERVER_2008
   -V, --version          Print version information and exit.
+
 ```
 
 ## Example

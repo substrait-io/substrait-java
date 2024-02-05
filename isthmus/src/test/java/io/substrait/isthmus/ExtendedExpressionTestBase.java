@@ -44,16 +44,7 @@ public class ExtendedExpressionTestBase {
     asserProtoExtendedExpression(extendedExpressionProtoInitial);
   }
 
-  protected void assertProtoEEForExpressionsCustomSeparatorRoundtrip(
-      String expressions, String separator) throws SqlParseException, IOException {
-    // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial =
-        new SqlExpressionToSubstrait()
-            .convert(expressions, separator, tpchSchemaCreateStatements());
-    asserProtoExtendedExpression(extendedExpressionProtoInitial);
-  }
-
-  protected void assertProtoEEForListExpressionRoundtrip(List<String> expression)
+  protected void assertProtoEEForListExpressionRoundtrip(String[] expression)
       throws SqlParseException, IOException {
     // proto initial extended expression
     ExtendedExpression extendedExpressionProtoInitial =

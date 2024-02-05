@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -21,7 +19,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
         Arguments.of("L_ORDERKEY"), // FieldReferenceExpression
         Arguments.of("L_ORDERKEY > 10"), // ScalarFunctionExpressionFilter
         Arguments.of("L_ORDERKEY + 10"), // ScalarFunctionExpressionProjection
-        Arguments.of("L_ORDERKEY IN (10)"), // ScalarFunctionExpressionIn
+        Arguments.of("L_ORDERKEY IN (10, 20)"), // ScalarFunctionExpressionIn
         Arguments.of("L_ORDERKEY is not null"), // ScalarFunctionExpressionIsNotNull
         Arguments.of("L_ORDERKEY is null")); // ScalarFunctionExpressionIsNull
   }
@@ -50,26 +48,18 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   }
 
   @Test
-  public void testExtendedExpressionsCustomSeparatorRoundTrip()
-      throws SqlParseException, IOException {
-    String expressions =
-        "2#L_ORDERKEY#L_ORDERKEY > 10#L_ORDERKEY + 10#L_ORDERKEY IN (10, 20)#L_ORDERKEY is not null#L_ORDERKEY is null";
-    String separator = "#";
-    assertProtoEEForExpressionsCustomSeparatorRoundtrip(expressions, separator);
-  }
-
-  @Test
   public void testExtendedExpressionsListExpressionRoundTrip()
       throws SqlParseException, IOException {
-    List<String> expressions =
-        Arrays.asList(
-            "2",
-            "L_ORDERKEY",
-            "L_ORDERKEY > 10",
-            "L_ORDERKEY + 10",
-            "L_ORDERKEY IN (10, 20)", // the comma won't cause any problems
-            "L_ORDERKEY is not null",
-            "L_ORDERKEY is null");
+    String[] expressions = {
+      "2",
+      "L_ORDERKEY",
+      "L_ORDERKEY > 10",
+      "L_ORDERKEY + 10",
+      "L_ORDERKEY IN (10, 20)",
+      "L_ORDERKEY is not null",
+      "L_ORDERKEY is null"
+    };
+
     assertProtoEEForListExpressionRoundtrip(expressions);
   }
 }
