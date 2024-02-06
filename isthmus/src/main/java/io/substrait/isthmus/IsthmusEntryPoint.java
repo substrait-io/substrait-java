@@ -5,10 +5,14 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
+import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -17,13 +21,17 @@ import picocli.CommandLine;
 @Command(
     name = "isthmus",
     version = "isthmus 0.1",
-    description = "Converts a SQL query to a Substrait Plan")
-public class PlanEntryPoint implements Callable<Integer> {
-
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PlanEntryPoint.class);
-
-  @Parameters(index = "0", description = "The sql we should parse.")
+    description = "Convert SQL Queries and SQL Expressions to Substrait",
+    mixinStandardHelpOptions = true)
+public class IsthmusEntryPoint implements Callable<Integer> {
+  @Parameters(index = "0", arity = "0..1", description = "A SQL query")
   private String sql;
+
+  @Option(
+      names = {"-e", "--expression"},
+      arity = "1..*",
+      description = "One or more SQL expressions e.g. col + 1")
+  private String[] sqlExpressions;
 
   @Option(
       names = {"-c", "--create"},
@@ -58,25 +66,50 @@ public class PlanEntryPoint implements Callable<Integer> {
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private CrossJoinPolicy crossJoinPolicy = CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 
-  // this example implements Callable, so parsing, error handling and handling user
-  // requests for usage help or version help can be done with one line of code.
   public static void main(String... args) {
-    int exitCode = new CommandLine(new PlanEntryPoint()).execute(args);
+    CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
+    commandLine.setCaseInsensitiveEnumValuesAllowed(true);
+    CommandLine.ParseResult parseResult = commandLine.parseArgs(args);
+    if (parseResult.originalArgs().isEmpty()) { // If no arguments print usage help
+      commandLine.usage(System.out);
+      System.exit(0);
+    }
+    if (commandLine.isUsageHelpRequested()) {
+      commandLine.usage(System.out);
+      System.exit(0);
+    }
+    if (commandLine.isVersionHelpRequested()) {
+      commandLine.printVersionHelp(System.out);
+      System.exit(0);
+    }
+    int exitCode = commandLine.execute(args);
     System.exit(exitCode);
   }
 
   @Override
   public Integer call() throws Exception {
     FeatureBoard featureBoard = buildFeatureBoard();
-    SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-    Plan plan = converter.execute(sql, createStatements);
-    switch (outputFormat) {
-      case PROTOJSON -> System.out.println(
-          JsonFormat.printer().includingDefaultValueFields().print(plan));
-      case PROTOTEXT -> TextFormat.printer().print(plan, System.out);
-      case BINARY -> plan.writeTo(System.out);
+    // Isthmus image is parsing SQL Expression if that argument is defined
+    if (sqlExpressions != null) {
+      SqlExpressionToSubstrait converter =
+          new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
+      ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
+      printMessage(extendedExpression);
+    } else { // by default Isthmus image are parsing SQL Query
+      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+      Plan plan = converter.execute(sql, createStatements);
+      printMessage(plan);
     }
     return 0;
+  }
+
+  private void printMessage(Message message) throws IOException {
+    switch (outputFormat) {
+      case PROTOJSON -> System.out.println(
+          JsonFormat.printer().includingDefaultValueFields().print(message));
+      case PROTOTEXT -> TextFormat.printer().print(message, System.out);
+      case BINARY -> message.writeTo(System.out);
+    }
   }
 
   @VisibleForTesting

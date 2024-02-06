@@ -52,7 +52,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       Map<String, RexNode> nameToNodeMap) {}
 
   /**
-   * Converts the given SQL expression string to an {@link io.substrait.proto.ExtendedExpression }
+   * Converts the given SQL expression to an {@link io.substrait.proto.ExtendedExpression }
    *
    * @param sqlExpression a SQL expression
    * @param createStatements table creation statements defining fields referenced by the expression
@@ -61,36 +61,51 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    */
   public ExtendedExpression convert(String sqlExpression, List<String> createStatements)
       throws SqlParseException {
+    return convert(new String[] {sqlExpression}, createStatements);
+  }
+
+  /**
+   * Converts the given SQL expressions to an {@link io.substrait.proto.ExtendedExpression }
+   *
+   * @param sqlExpressions an array of SQL expressions
+   * @param createStatements table creation statements defining fields referenced by the expression
+   * @return a {@link io.substrait.proto.ExtendedExpression }
+   * @throws SqlParseException
+   */
+  public ExtendedExpression convert(String[] sqlExpressions, List<String> createStatements)
+      throws SqlParseException {
     var result = registerCreateTablesForExtendedExpression(createStatements);
-    return executeInnerSQLExpression(
-        sqlExpression,
+    return executeInnerSQLExpressions(
+        sqlExpressions,
         result.validator(),
         result.catalogReader(),
         result.nameToTypeMap(),
         result.nameToNodeMap());
   }
 
-  private ExtendedExpression executeInnerSQLExpression(
-      String sqlExpression,
+  private ExtendedExpression executeInnerSQLExpressions(
+      String[] sqlExpressions,
       SqlValidator validator,
       CalciteCatalogReader catalogReader,
       Map<String, RelDataType> nameToTypeMap,
       Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
-    RexNode rexNode =
-        sqlToRexNode(sqlExpression, validator, catalogReader, nameToTypeMap, nameToNodeMap);
-    NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
-
-    ImmutableExpressionReference expressionReference =
-        ImmutableExpressionReference.builder()
-            .expression(rexNode.accept(this.rexConverter))
-            .addOutputNames("new-column")
-            .build();
-
+    int columnIndex = 1;
     List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
         expressionReferences = new ArrayList<>();
-    expressionReferences.add(expressionReference);
-
+    RexNode rexNode;
+    for (String sqlExpression : sqlExpressions) {
+      rexNode =
+          sqlToRexNode(
+              sqlExpression.trim(), validator, catalogReader, nameToTypeMap, nameToNodeMap);
+      ImmutableExpressionReference expressionReference =
+          ImmutableExpressionReference.builder()
+              .expression(rexNode.accept(this.rexConverter))
+              .addOutputNames("column-" + columnIndex++)
+              .build();
+      expressionReferences.add(expressionReference);
+    }
+    NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
     ImmutableExtendedExpression.Builder extendedExpression =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
@@ -151,9 +166,6 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
           }
         }
       }
-    } else {
-      throw new IllegalArgumentException(
-          "Information regarding the data and types must be passed.");
     }
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
