@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -20,8 +21,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
         Arguments.of("L_ORDERKEY + 10"), // ScalarFunctionExpressionProjection
         Arguments.of("L_ORDERKEY IN (10, 20)"), // ScalarFunctionExpressionIn
         Arguments.of("L_ORDERKEY is not null"), // ScalarFunctionExpressionIsNotNull
-        Arguments.of("L_ORDERKEY is null") // ScalarFunctionExpressionIsNull
-        );
+        Arguments.of("L_ORDERKEY is null")); // ScalarFunctionExpressionIsNull
   }
 
   @ParameterizedTest
@@ -33,7 +33,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsRoundTripDuplicateColumnIdentifier(String sqlExpression) {
+  public void testExtendedExpressionsDuplicateColumnIdentifierRoundTrip(String sqlExpression) {
     IllegalArgumentException illegalArgumentException =
         assertThrows(
             IllegalArgumentException.class,
@@ -42,5 +42,21 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
         illegalArgumentException
             .getMessage()
             .startsWith("There is no support for duplicate column names"));
+  }
+
+  @Test
+  public void testExtendedExpressionsListExpressionRoundTrip()
+      throws SqlParseException, IOException {
+    String[] expressions = {
+      "2",
+      "L_ORDERKEY",
+      "L_ORDERKEY > 10",
+      "L_ORDERKEY + 10",
+      "L_ORDERKEY IN (10, 20)",
+      "L_ORDERKEY is not null",
+      "L_ORDERKEY is null"
+    };
+
+    assertProtoExtendedExpressionRoundtrip(expressions);
   }
 }
