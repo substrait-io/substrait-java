@@ -58,6 +58,7 @@ public class FunctionMappings {
                 s(SqlStdOperatorTable.FLOOR, "floor"),
                 s(SqlStdOperatorTable.ROUND, "round"),
                 s(SqlStdOperatorTable.LIKE),
+                s(SqlStdOperatorTable.REPLACE, "replace"),
                 s(SqlStdOperatorTable.SUBSTRING, "substring"),
                 s(SqlStdOperatorTable.CONCAT, "concat"),
                 s(SqlStdOperatorTable.CHAR_LENGTH, "char_length"),
