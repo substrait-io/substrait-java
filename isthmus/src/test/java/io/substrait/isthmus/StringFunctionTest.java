@@ -7,6 +7,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 public class StringFunctionTest extends PlanTestBase {
 
   static List<String> CREATES = List.of("CREATE TABLE strings (c16 CHAR(16), vc32 VARCHAR(32))");
+  static List<String> REPLACE_CREATES =
+      List.of(
+          "CREATE TABLE replace_strings (c16 CHAR(16), vc32 VARCHAR(32), replace_from VARCHAR(16), replace_to VARCHAR(16))");
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
@@ -34,6 +37,14 @@ public class StringFunctionTest extends PlanTestBase {
   void upper(String column) throws Exception {
     String query = String.format("SELECT upper(%s) FROM strings", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void replace(String column) throws Exception {
+    String query =
+        String.format("SELECT replace(%s, replace_from, replace_to) FROM replace_strings", column);
+    assertSqlSubstraitRelRoundTrip(query, REPLACE_CREATES);
   }
 
   @ParameterizedTest
