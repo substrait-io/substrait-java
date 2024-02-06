@@ -28,7 +28,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   @MethodSource("expressionTypeProvider")
   public void testExtendedExpressionsRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
-    assertProtoExtendedExpressionRoundtrip(sqlExpression); // comma-separator by default
+    assertProtoExtendedExpressionRoundtrip(sqlExpression);
   }
 
   @ParameterizedTest
