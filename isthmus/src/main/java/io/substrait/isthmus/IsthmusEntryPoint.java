@@ -21,10 +21,10 @@ import picocli.CommandLine;
 @Command(
     name = "isthmus",
     version = "isthmus 0.1",
-    description = "Substrait Java Native Image for parsing SQL Query and SQL Expressions",
+    description = "Convert SQL Queries and SQL Expressions to Substrait",
     mixinStandardHelpOptions = true)
 public class IsthmusEntryPoint implements Callable<Integer> {
-  @Parameters(index = "0", arity = "0..1", description = "The sql we should parse.")
+  @Parameters(index = "0", arity = "0..1", description = "A SQL query")
   private String sql;
 
   @Option(

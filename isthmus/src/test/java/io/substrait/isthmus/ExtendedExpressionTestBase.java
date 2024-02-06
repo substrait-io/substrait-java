@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ProtoExtendedExpressionConverter;
-import io.substrait.proto.ExtendedExpression;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -27,39 +26,39 @@ public class ExtendedExpressionTestBase {
     return tpchSchemaCreateStatements("tpch/schema.sql");
   }
 
-  protected void assertProtoEEForExpressionsDefaultCommaSeparatorRoundtrip(String expressions)
+  protected void assertProtoExtendedExpressionRoundtrip(String expressions)
       throws SqlParseException, IOException {
     // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial =
+    io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial =
         new SqlExpressionToSubstrait().convert(expressions, tpchSchemaCreateStatements());
     asserProtoExtendedExpression(extendedExpressionProtoInitial);
   }
 
-  protected void assertProtoEEForExpressionsDefaultCommaSeparatorErrorRoundtrip(
-      String expressions, String schemaToLoad) throws SqlParseException, IOException {
+  protected void assertProtoExtendedExpressionRoundtrip(String expressions, String schemaToLoad)
+      throws SqlParseException, IOException {
     // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial =
+    io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial =
         new SqlExpressionToSubstrait()
             .convert(expressions, tpchSchemaCreateStatements(schemaToLoad));
     asserProtoExtendedExpression(extendedExpressionProtoInitial);
   }
 
-  protected void assertProtoEEForListExpressionRoundtrip(String[] expression)
+  protected void assertProtoExtendedExpressionRoundtrip(String[] expression)
       throws SqlParseException, IOException {
     // proto initial extended expression
-    ExtendedExpression extendedExpressionProtoInitial =
+    io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial =
         new SqlExpressionToSubstrait().convert(expression, tpchSchemaCreateStatements());
     asserProtoExtendedExpression(extendedExpressionProtoInitial);
   }
 
   private static void asserProtoExtendedExpression(
-      ExtendedExpression extendedExpressionProtoInitial) throws IOException {
+      io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial) throws IOException {
     // pojo final extended expression
     io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoFinal =
         new ProtoExtendedExpressionConverter().from(extendedExpressionProtoInitial);
 
     // proto final extended expression
-    ExtendedExpression extendedExpressionProtoFinal =
+    io.substrait.proto.ExtendedExpression extendedExpressionProtoFinal =
         new ExtendedExpressionProtoConverter().toProto(extendedExpressionPojoFinal);
 
     // round-trip to validate extended expression proto initial equals to final

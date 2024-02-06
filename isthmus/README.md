@@ -2,7 +2,7 @@
 
 ## Overview
 
-Substrait Isthmus is a Java library which enables serializing SQL to [Substrait Protobuf](https://substrait.io/serialization/binary_serialization/) and SQL Expression to [Extended Expression](https://substrait.io/expressions/extended_expression/) via
+Substrait Isthmus is a Java library which enables serializing SQL queries to [Substrait Protobuf](https://substrait.io/serialization/binary_serialization/) and SQL expressions to [Extended Expressions](https://substrait.io/expressions/extended_expression/) via
 the Calcite SQL compiler. Optionally, you can leverage the Calcite RelNode to Substrait Plan translator as an IR translation.
 
 ## Build
@@ -32,8 +32,8 @@ Usage: isthmus [-hmV] [--crossjoinpolicy=<crossJoinPolicy>]
                [--outputformat=<outputFormat>]
                [--sqlconformancemode=<sqlConformanceMode>]
                [-c=<createStatements>]... [-e=<sqlExpressions>...]... [<sql>]
-Substrait Java Native Image for parsing SQL Query and SQL Expressions
-      [<sql>]            The sql we should parse.
+Convert SQL Queries and SQL Expressions to Substrait
+      [<sql>]            A SQL query
   -c, --create=<createStatements>
                          One or multiple create table statements e.g. CREATE
                            TABLE T1(foo int, bar bigint)
@@ -54,7 +54,6 @@ Substrait Java Native Image for parsing SQL Query and SQL Expressions
                            ORACLE_12, STRICT_2003, PRAGMATIC_2003, PRESTO,
                            SQL_SERVER_2008
   -V, --version          Print version information and exit.
-
 ```
 
 ## Example

@@ -26,10 +26,9 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsCommaSeparatorRoundTrip(String sqlExpression)
+  public void testExtendedExpressionsRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
-    assertProtoEEForExpressionsDefaultCommaSeparatorRoundtrip(
-        sqlExpression); // comma-separator by default
+    assertProtoExtendedExpressionRoundtrip(sqlExpression); // comma-separator by default
   }
 
   @ParameterizedTest
@@ -38,9 +37,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
     IllegalArgumentException illegalArgumentException =
         assertThrows(
             IllegalArgumentException.class,
-            () ->
-                assertProtoEEForExpressionsDefaultCommaSeparatorErrorRoundtrip(
-                    sqlExpression, "tpch/schema_error.sql"));
+            () -> assertProtoExtendedExpressionRoundtrip(sqlExpression, "tpch/schema_error.sql"));
     assertTrue(
         illegalArgumentException
             .getMessage()
@@ -60,6 +57,6 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
       "L_ORDERKEY is null"
     };
 
-    assertProtoEEForListExpressionRoundtrip(expressions);
+    assertProtoExtendedExpressionRoundtrip(expressions);
   }
 }

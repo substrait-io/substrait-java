@@ -52,7 +52,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       Map<String, RexNode> nameToNodeMap) {}
 
   /**
-   * Converts the given SQL expression string to an {@link io.substrait.proto.ExtendedExpression }
+   * Converts the given SQL expression to an {@link io.substrait.proto.ExtendedExpression }
    *
    * @param sqlExpression a SQL expression
    * @param createStatements table creation statements defining fields referenced by the expression
@@ -65,9 +65,9 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   /**
-   * Converts the given SQL expressions string to an {@link io.substrait.proto.ExtendedExpression }
+   * Converts the given SQL expressions to an {@link io.substrait.proto.ExtendedExpression }
    *
-   * @param sqlExpressions an array of SQL expression
+   * @param sqlExpressions an array of SQL expressions
    * @param createStatements table creation statements defining fields referenced by the expression
    * @return a {@link io.substrait.proto.ExtendedExpression }
    * @throws SqlParseException
