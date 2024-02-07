@@ -69,7 +69,7 @@ These are the repositories availables:
 Once published, the artifacts can be downloaded from the following locations:
 
 - Github Artifacts:
-  - https://github.com/substrait/sustrait-java/releases
+  - https://github.com/substrait-io/substrait-java/releases
 
 - Sonatype OSSRH Artifacts:
   - https://s01.oss.sonatype.org/content/repositories/{snapshots,staging,releases}/io/substrait/substrait-java/core/1.0.0/
@@ -277,7 +277,7 @@ $ ./isthmus-macOS-1.0.0  -c "CREATE TABLE Persons ( firstName VARCHAR, lastName 
 The CI process will automatically create a Github issue to track the failure.
 
 ```shell
-[10:30:55 PM] [semantic-release] [@semantic-release/github] › ℹ  Created issue #3: https://github.com/substrait/sustrait-java/issues/3.
+[10:30:55 PM] [semantic-release] [@semantic-release/github] › ℹ  Created issue #3: https://github.com/substrait-io/substrait-java/issues/3.
 ```
 
 ![release_failing](img/automate_release_is_failing.png)
