@@ -205,6 +205,23 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   @Override
+  public Expression visit(io.substrait.expression.Expression.EmptyListLiteral expr)
+      throws RuntimeException {
+    return lit(
+        builder -> {
+          var protoListType = expr.getType().accept(typeProtoConverter);
+          builder
+              .setEmptyList(protoListType.getList())
+              // For empty lists, the Literal message's own nullable field should be ignored
+              // in favor of the nullability of the Type.List in the literal's
+              // empty_list field. But for safety we set the literal's nullable field
+              // to match in case any readers either look in the wrong location
+              // or want to verify that they are consistent.
+              .setNullable(expr.nullable());
+        });
+  }
+
+  @Override
   public Expression visit(io.substrait.expression.Expression.StructLiteral expr) {
     return lit(
         bldr -> {
