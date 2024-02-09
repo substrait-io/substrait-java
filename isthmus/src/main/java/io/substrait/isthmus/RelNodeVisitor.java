@@ -17,6 +17,7 @@ import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.core.Window;
 
 /** A more generic version of RelShuttle that allows an alternative return value. */
 public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
@@ -85,12 +86,16 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
     return visitOther(modify);
   }
 
+  public OUTPUT visit(Window window) throws EXCEPTION {
+    return visitOther(window);
+  }
+
   public abstract OUTPUT visitOther(RelNode other) throws EXCEPTION;
 
   protected RelNodeVisitor() {}
 
   /**
-   * The method you call when you would normally call RelNode.accept(visitor). Instead call
+   * The method you call when you would normally call RelNode.accept(visitor). Instead, call
    * RelVisitor.reverseAccept(RelNode) due to the lack of ability to extend base classes.
    */
   public final OUTPUT reverseAccept(RelNode node) throws EXCEPTION {
@@ -126,6 +131,8 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
       return this.visit(aggregate);
     } else if (node instanceof TableModify modify) {
       return this.visit(modify);
+    } else if (node instanceof Window window) {
+      return this.visit(window);
     } else {
       return this.visitOther(node);
     }

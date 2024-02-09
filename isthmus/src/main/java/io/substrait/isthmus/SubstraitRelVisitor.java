@@ -12,6 +12,7 @@ import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.isthmus.expression.WindowRelFunctionConverter;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -53,6 +54,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   protected final RexExpressionConverter rexExpressionConverter;
   protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final WindowFunctionConverter windowFunctionConverter;
+  protected final WindowRelFunctionConverter windowRelFunctionConverter;
   protected final TypeConverter typeConverter;
   protected final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
@@ -73,8 +76,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-    var windowFunctionConverter =
+    this.windowFunctionConverter =
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+    this.windowRelFunctionConverter =
+        new WindowRelFunctionConverter(extensions.windowFunctions(), typeFactory);
     this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;
@@ -85,6 +90,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
+      WindowRelFunctionConverter windowRelFunctionConverter,
       TypeConverter typeConverter,
       FeatureBoard features) {
     var converters = new ArrayList<CallConverter>();
@@ -92,6 +98,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     converters.add(scalarFunctionConverter);
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter = aggregateFunctionConverter;
+    this.windowFunctionConverter = windowFunctionConverter;
+    this.windowRelFunctionConverter = windowRelFunctionConverter;
     this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.typeConverter = typeConverter;
@@ -253,11 +261,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {
+    List<Expression> references = toFieldReferenceExpressions(bitSet, input);
+    return Aggregate.Grouping.builder().addAllExpressions(references).build();
+  }
+
+  private static List<Expression> toFieldReferenceExpressions(ImmutableBitSet bitSet, Rel input) {
     List<Expression> references =
         bitSet.asList().stream()
             .map(i -> FieldReference.newInputRelReference(i, input))
             .collect(Collectors.toList());
-    return Aggregate.Grouping.builder().addAllExpressions(references).build();
+    return references;
   }
 
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {

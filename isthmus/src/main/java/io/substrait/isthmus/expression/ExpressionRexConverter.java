@@ -1,5 +1,8 @@
 package io.substrait.isthmus.expression;
 
+import static io.substrait.expression.Expression.SortDirection.ASC_NULLS_FIRST;
+import static io.substrait.expression.Expression.SortDirection.ASC_NULLS_LAST;
+
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
@@ -53,6 +56,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   protected final RexBuilder rexBuilder;
   protected final ScalarFunctionConverter scalarFunctionConverter;
   protected final WindowFunctionConverter windowFunctionConverter;
+  protected final WindowRelFunctionConverter windowRelFunctionConverter;
   protected SubstraitRelNodeConverter relNodeConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
@@ -75,12 +79,14 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
+      WindowRelFunctionConverter windowRelFunctionConverter,
       TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.windowFunctionConverter = windowFunctionConverter;
+    this.windowRelFunctionConverter = windowRelFunctionConverter;
   }
 
   public void setRelNodeConverter(final SubstraitRelNodeConverter substraitRelNodeConverter) {
@@ -384,6 +390,66 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         args,
         partitionKeys,
         orderKeys,
+        lowerBound,
+        upperBound,
+        rowMode,
+        allowPartial,
+        nullWhenCountZero,
+        distinct,
+        ignoreNulls);
+  }
+
+  public RexNode visit(Expression.WindowRelFunctionInvocation expr) throws RuntimeException {
+    SqlOperator operator =
+        windowRelFunctionConverter
+            .getSqlOperatorFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        callConversionFailureMessage(
+                            "windowRel", expr.declaration().name(), expr.arguments())));
+
+    RelDataType outputType = typeConverter.toCalcite(typeFactory, expr.outputType());
+
+    List<FunctionArg> eArgs = expr.arguments();
+    List<RexNode> args =
+        IntStream.range(0, expr.arguments().size())
+            .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
+            .collect(java.util.stream.Collectors.toList());
+
+    RexWindowBound lowerBound = ToRexWindowBound.lowerBound(rexBuilder, expr.lowerBound());
+    RexWindowBound upperBound = ToRexWindowBound.upperBound(rexBuilder, expr.upperBound());
+
+    boolean rowMode =
+        switch (expr.boundsType()) {
+          case ROWS -> true;
+          case RANGE -> false;
+          case UNSPECIFIED -> throw new IllegalArgumentException(
+              "bounds type on window function must be specified");
+        };
+
+    boolean distinct =
+        switch (expr.invocation()) {
+          case UNSPECIFIED, ALL -> false;
+          case DISTINCT -> true;
+        };
+
+    // For queries like: SELECT last_value() IGNORE NULLS OVER ...
+    // Substrait has no mechanism to set this, so by default it is false
+    boolean ignoreNulls = false;
+
+    // These both control a rewrite rule within rexBuilder.makeOver that rewrites the given
+    // expression into a case expression. These values are set as such to avoid this rewrite.
+    boolean nullWhenCountZero = false;
+    boolean allowPartial = true;
+
+    // TODO: what to pass on partitionKeys / orderKeys? send the ConsistentWindowRel?
+    return rexBuilder.makeOver(
+        outputType,
+        (SqlAggFunction) operator,
+        args,
+        null,
+        null,
         lowerBound,
         upperBound,
         rowMode,

@@ -342,6 +342,27 @@ public class ExpressionCreator {
         .build();
   }
 
+  public static Expression.WindowRelFunctionInvocation windowRelFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      Expression.AggregationInvocation invocation,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      Iterable<? extends FunctionArg> arguments) {
+    return Expression.WindowRelFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(phase)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .invocation(invocation)
+        .addAllArguments(arguments)
+        .build();
+  }
+
   public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,

@@ -7,22 +7,16 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexFieldCollation;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexWindow;
-import org.apache.calcite.rex.RexWindowBound;
-import org.apache.calcite.sql.type.SqlTypeName;
 
 public class WindowFunctionConverter
     extends FunctionConverter<
@@ -57,7 +51,7 @@ public class WindowFunctionConverter
     List<Expression.SortField> sorts =
         window.orderKeys != null
             ? window.orderKeys.stream()
-                .map(rfc -> toSortField(rfc, call.rexExpressionConverter))
+                .map(rfc -> SortFieldConverter.toSortField(rfc, call.rexExpressionConverter))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
     Expression.AggregationInvocation invocation =
@@ -68,8 +62,8 @@ public class WindowFunctionConverter
     // Calcite only supports ROW or RANGE mode
     Expression.WindowBoundsType boundsType =
         window.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
-    WindowBound lowerBound = toWindowBound(window.getLowerBound());
-    WindowBound upperBound = toWindowBound(window.getUpperBound());
+    WindowBound lowerBound = WindowBoundConverter.toWindowBound(window.getLowerBound());
+    WindowBound upperBound = WindowBoundConverter.toWindowBound(window.getUpperBound());
 
     return ExpressionCreator.windowFunction(
         function,
@@ -99,55 +93,6 @@ public class WindowFunctionConverter
 
     var wrapped = new WrappedWindowCall(over, rexExpressionConverter);
     return m.attemptMatch(wrapped, topLevelConverter);
-  }
-
-  private WindowBound toWindowBound(RexWindowBound rexWindowBound) {
-    if (rexWindowBound.isCurrentRow()) {
-      return WindowBound.CURRENT_ROW;
-    }
-    if (rexWindowBound.isUnbounded()) {
-      return WindowBound.UNBOUNDED;
-    } else {
-      if (rexWindowBound.getOffset() instanceof RexLiteral literal
-          && SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
-        BigDecimal offset = (BigDecimal) literal.getValue4();
-        if (rexWindowBound.isPreceding()) {
-          return WindowBound.Preceding.of(offset.longValue());
-        }
-        if (rexWindowBound.isFollowing()) {
-          return WindowBound.Following.of(offset.longValue());
-        }
-        throw new IllegalStateException(
-            "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
-      }
-      throw new IllegalArgumentException(
-          String.format(
-              "substrait only supports integer window offsets. Received: %s",
-              rexWindowBound.getOffset().getKind()));
-    }
-  }
-
-  private Expression.SortField toSortField(
-      RexFieldCollation rexFieldCollation, RexExpressionConverter rexExpressionConverter) {
-    var expr = rexFieldCollation.left.accept(rexExpressionConverter);
-    var rexDirection = rexFieldCollation.getDirection();
-    Expression.SortDirection direction =
-        switch (rexDirection) {
-          case ASCENDING -> rexFieldCollation.getNullDirection()
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.ASC_NULLS_LAST
-              : Expression.SortDirection.ASC_NULLS_FIRST;
-          case DESCENDING -> rexFieldCollation.getNullDirection()
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.DESC_NULLS_LAST
-              : Expression.SortDirection.DESC_NULLS_FIRST;
-          default -> throw new IllegalArgumentException(
-              String.format(
-                  "Unexpected RelFieldCollation.Direction:%s enum at the RexFieldCollation!",
-                  rexDirection));
-        };
-
-    return Expression.SortField.builder().expr(expr).direction(direction).build();
   }
 
   static class WrappedWindowCall implements FunctionConverter.GenericCall {

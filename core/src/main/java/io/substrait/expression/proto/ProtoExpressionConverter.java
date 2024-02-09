@@ -4,16 +4,23 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableExpression;
+import io.substrait.expression.ImmutableFunctionOption;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.proto.ConsistentPartitionWindowRel;
+import io.substrait.proto.FunctionArgument;
+import io.substrait.proto.SortField;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -115,46 +122,7 @@ public class ProtoExpressionConverter {
             .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
             .build();
       }
-      case WINDOW_FUNCTION -> {
-        var windowFunction = expr.getWindowFunction();
-        var functionReference = windowFunction.getFunctionReference();
-        var declaration = lookup.getWindowFunction(functionReference, extensions);
-
-        var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
-        var args =
-            IntStream.range(0, windowFunction.getArgumentsCount())
-                .mapToObj(i -> argVisitor.convert(declaration, i, windowFunction.getArguments(i)))
-                .collect(java.util.stream.Collectors.toList());
-        var partitionExprs =
-            windowFunction.getPartitionsList().stream()
-                .map(this::from)
-                .collect(java.util.stream.Collectors.toList());
-        var sortFields =
-            windowFunction.getSortsList().stream()
-                .map(
-                    s ->
-                        Expression.SortField.builder()
-                            .direction(Expression.SortDirection.fromProto(s.getDirection()))
-                            .expr(from(s.getExpr()))
-                            .build())
-                .collect(java.util.stream.Collectors.toList());
-
-        WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
-        WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
-
-        yield Expression.WindowFunctionInvocation.builder()
-            .arguments(args)
-            .declaration(declaration)
-            .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
-            .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
-            .partitionBy(partitionExprs)
-            .sort(sortFields)
-            .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
-            .lowerBound(lowerBound)
-            .upperBound(upperBound)
-            .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
-            .build();
-      }
+      case WINDOW_FUNCTION -> fromWindowFunction(expr.getWindowFunction());
       case IF_THEN -> {
         var ifThen = expr.getIfThen();
         var clauses =
@@ -248,6 +216,104 @@ public class ProtoExpressionConverter {
           "Unsupported type: " + expr.getRexTypeCase());
       default -> throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     };
+  }
+
+  public ImmutableExpression.WindowFunctionInvocation fromWindowFunction(
+      io.substrait.proto.Expression.WindowFunction windowFunction) {
+    var functionReference = windowFunction.getFunctionReference();
+    var declaration = lookup.getWindowFunction(functionReference, extensions);
+    var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+
+    var args =
+        fromFunctionArgumentList(
+            windowFunction.getArgumentsCount(),
+            argVisitor,
+            declaration,
+            windowFunction::getArguments);
+    var partitionExprs =
+        windowFunction.getPartitionsList().stream().map(this::from).collect(Collectors.toList());
+    var sortFields =
+        windowFunction.getSortsList().stream()
+            .map(this::fromSortField)
+            .collect(Collectors.toList());
+    var options =
+        windowFunction.getOptionsList().stream()
+            .map(this::fromFunctionOption)
+            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+
+    WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
+    WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
+
+    return Expression.WindowFunctionInvocation.builder()
+        .arguments(args)
+        .declaration(declaration)
+        .outputType(protoTypeConverter.from(windowFunction.getOutputType()))
+        .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
+        .partitionBy(partitionExprs)
+        .sort(sortFields)
+        .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
+        .options(options)
+        .build();
+  }
+
+  public Expression.WindowRelFunctionInvocation fromWindowRelFunction(
+      ConsistentPartitionWindowRel.WindowRelFunction windowRelFunction) {
+    var functionReference = windowRelFunction.getFunctionReference();
+    var declaration = lookup.getWindowFunction(functionReference, extensions);
+    var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+
+    var args =
+        fromFunctionArgumentList(
+            windowRelFunction.getArgumentsCount(),
+            argVisitor,
+            declaration,
+            windowRelFunction::getArguments);
+    var options =
+        windowRelFunction.getOptionsList().stream()
+            .map(this::fromFunctionOption)
+            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+
+    WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
+    WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
+
+    return Expression.WindowRelFunctionInvocation.builder()
+        .arguments(args)
+        .declaration(declaration)
+        .outputType(protoTypeConverter.from(windowRelFunction.getOutputType()))
+        .aggregationPhase(Expression.AggregationPhase.fromProto(windowRelFunction.getPhase()))
+        .boundsType(Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType()))
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .invocation(Expression.AggregationInvocation.fromProto(windowRelFunction.getInvocation()))
+        .options(options)
+        .build();
+  }
+
+  private static List<FunctionArg> fromFunctionArgumentList(
+      int argumentsCount,
+      FunctionArg.ProtoFrom argVisitor,
+      SimpleExtension.Function declaration,
+      Function<Integer, FunctionArgument> argFunction) {
+    return IntStream.range(0, argumentsCount)
+        .mapToObj(i -> argVisitor.convert(declaration, i, argFunction.apply(i)))
+        .collect(Collectors.toList());
+  }
+
+  public ImmutableExpression.SortField fromSortField(SortField s) {
+    return Expression.SortField.builder()
+        .direction(Expression.SortDirection.fromProto(s.getDirection()))
+        .expr(from(s.getExpr()))
+        .build();
+  }
+
+  public FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
+    return ImmutableFunctionOption.builder()
+        .name(o.getName())
+        .addAllValues(o.getPreferenceList())
+        .build();
   }
 
   private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {

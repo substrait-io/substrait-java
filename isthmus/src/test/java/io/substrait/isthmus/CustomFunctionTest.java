@@ -8,6 +8,7 @@ import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.isthmus.expression.WindowRelFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
@@ -139,6 +140,9 @@ public class CustomFunctionTest extends PlanTestBase {
   WindowFunctionConverter windowFunctionConverter =
       new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
 
+  WindowRelFunctionConverter windowRelFunctionConverter =
+      new WindowRelFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
+
   // Create a SubstraitToCalcite converter that has access to the custom Function Converters
   class CustomSubstraitToCalcite extends SubstraitToCalcite {
 
@@ -157,6 +161,7 @@ public class CustomFunctionTest extends PlanTestBase {
           scalarFunctionConverter,
           aggregateFunctionConverter,
           windowFunctionConverter,
+          windowRelFunctionConverter,
           typeConverter);
     }
   }
@@ -171,6 +176,7 @@ public class CustomFunctionTest extends PlanTestBase {
           scalarFunctionConverter,
           aggregateFunctionConverter,
           windowFunctionConverter,
+          windowRelFunctionConverter,
           typeConverter,
           ImmutableFeatureBoard.builder().build());
 

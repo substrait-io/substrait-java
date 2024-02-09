@@ -611,6 +611,32 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  @Value.Immutable
+  abstract class WindowRelFunctionInvocation {
+
+    public abstract SimpleExtension.WindowFunctionVariant declaration();
+
+    public abstract List<FunctionArg> arguments();
+
+    public abstract Map<String, FunctionOption> options();
+
+    public abstract Type outputType();
+
+    public abstract AggregationPhase aggregationPhase();
+
+    public abstract AggregationInvocation invocation();
+
+    public abstract WindowBound lowerBound();
+
+    public abstract WindowBound upperBound();
+
+    public abstract WindowBoundsType boundsType();
+
+    public static ImmutableExpression.WindowRelFunctionInvocation.Builder builder() {
+      return ImmutableExpression.WindowRelFunctionInvocation.builder();
+    }
+  }
+
   enum WindowBoundsType {
     UNSPECIFIED(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_UNSPECIFIED),
     ROWS(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_ROWS),

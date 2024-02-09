@@ -8,6 +8,7 @@ import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.isthmus.expression.WindowRelFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
@@ -59,6 +60,9 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
   protected final ScalarFunctionConverter scalarFunctionConverter;
   protected final AggregateFunctionConverter aggregateFunctionConverter;
+  protected final WindowFunctionConverter windowFunctionConverter;
+  protected final WindowRelFunctionConverter windowRelFunctionConverter;
+
   protected final ExpressionRexConverter expressionRexConverter;
 
   protected final RelBuilder relBuilder;
@@ -75,6 +79,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+        new WindowRelFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT);
   }
 
@@ -84,6 +89,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
+      WindowRelFunctionConverter windowRelFunctionConverter,
       TypeConverter typeConverter) {
     this(
         typeFactory,
@@ -91,9 +97,14 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         scalarFunctionConverter,
         aggregateFunctionConverter,
         windowFunctionConverter,
+        windowRelFunctionConverter,
         typeConverter,
         new ExpressionRexConverter(
-            typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter));
+            typeFactory,
+            scalarFunctionConverter,
+            windowFunctionConverter,
+            windowRelFunctionConverter,
+            typeConverter));
   }
 
   public SubstraitRelNodeConverter(
@@ -102,6 +113,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
+      WindowRelFunctionConverter windowRelFunctionConverter,
       TypeConverter typeConverter,
       ExpressionRexConverter expressionRexConverter) {
     this.typeFactory = typeFactory;
@@ -110,6 +122,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.aggregateFunctionConverter = aggregateFunctionConverter;
+    this.windowFunctionConverter = windowFunctionConverter;
+    this.windowRelFunctionConverter = windowRelFunctionConverter;
     this.expressionRexConverter = expressionRexConverter;
     this.expressionRexConverter.setRelNodeConverter(this);
   }

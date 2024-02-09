@@ -6,6 +6,7 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.isthmus.expression.WindowRelFunctionConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -25,6 +26,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
           typeFactory,
           new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
           new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+          new WindowRelFunctionConverter(extensions.windowFunctions(), typeFactory),
           TypeConverter.DEFAULT);
 
   final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
