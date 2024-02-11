@@ -1,6 +1,19 @@
 Release Notes
 ---
 
+## [0.26.0](https://github.com/substrait-io/substrait-java/compare/v0.25.0...v0.26.0) (2024-02-11)
+
+
+### Features
+
+* **isthmus:** support for replace ([#224](https://github.com/substrait-io/substrait-java/issues/224)) ([e96f4ba](https://github.com/substrait-io/substrait-java/commit/e96f4baa7e2aca179bda0eac1563297ef96a117c))
+* **isthmus:** support for SQL expressions in CLI ([#209](https://github.com/substrait-io/substrait-java/issues/209)) ([e63388d](https://github.com/substrait-io/substrait-java/commit/e63388d1206edc894ab065b6ce13a8213d6cf066))
+
+
+### Bug Fixes
+
+* update bad URLs in the release readme ([#225](https://github.com/substrait-io/substrait-java/issues/225)) ([aad2739](https://github.com/substrait-io/substrait-java/commit/aad2739094620a63a8bf83d577c558d055bacaa3))
+
 ## [0.25.0](https://github.com/substrait-io/substrait-java/compare/v0.24.0...v0.25.0) (2024-01-21)
 
 
