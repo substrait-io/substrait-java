@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import java.util.Optional;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
@@ -21,6 +22,25 @@ public class AggregateFunctions {
   public static SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
   public static SqlAggFunction SUM = new SubstraitSumAggFunction();
   public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
+
+  /**
+   * Utility class to possibly convert the SqlAggFunction from the native Calcite implementation to
+   * the Substrait subclasses present here, in case they have definitions.
+   */
+  public static Optional<SqlAggFunction> getSubstraitAggVariant(SqlAggFunction aggFunction) {
+    if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
+      return Optional.of(AggregateFunctions.SUM0);
+    } else if (aggFunction instanceof SqlMinMaxAggFunction fun) {
+      return Optional.of(
+          fun.getKind() == SqlKind.MIN ? AggregateFunctions.MIN : AggregateFunctions.MAX);
+    } else if (aggFunction instanceof SqlAvgAggFunction) {
+      return Optional.of(AggregateFunctions.AVG);
+    } else if (aggFunction instanceof SqlSumAggFunction) {
+      return Optional.of(AggregateFunctions.SUM);
+    } else {
+      return Optional.empty();
+    }
+  }
 
   /** Extension of {@link SqlMinMaxAggFunction} that ALWAYS infers a nullable return type */
   private static class SubstraitSqlMinMaxAggFunction extends SqlMinMaxAggFunction {

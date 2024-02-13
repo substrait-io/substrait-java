@@ -6,6 +6,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
@@ -80,13 +81,7 @@ public class AggregateFunctionConverter
       AggregateCall call,
       Function<RexNode, Expression> topLevelConverter) {
 
-    // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
-    // before converting into substrait function
-    SqlAggFunction aggFunction = call.getAggregation();
-    if (aggFunction == SqlStdOperatorTable.COUNT && call.isDistinct() && call.isApproximate()) {
-      aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
-    }
-    FunctionFinder m = signatures.get(aggFunction);
+    var m = getFunctionFinder(call);
     if (m == null) {
       return Optional.empty();
     }
@@ -96,6 +91,27 @@ public class AggregateFunctionConverter
 
     var wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
     return m.attemptMatch(wrapped, topLevelConverter);
+  }
+
+  protected FunctionConverter<
+              SimpleExtension.AggregateFunctionVariant,
+              AggregateFunctionInvocation,
+              WrappedAggregateCall>
+          .FunctionFinder
+      getFunctionFinder(AggregateCall call) {
+    // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
+    // before converting into substrait function
+    SqlAggFunction aggFunction = call.getAggregation();
+    if (aggFunction == SqlStdOperatorTable.COUNT && call.isDistinct() && call.isApproximate()) {
+      aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
+    }
+
+    // Substrait has replaced those function classes with their own counterparts (which are
+    // subclasses of the Calcite ones), but some Calcite rules might still use the original
+    // functions during optimization (for example, at AggregateExpandDistinctAggregatesRule)
+    SqlAggFunction lookupFunction =
+        AggregateFunctions.getSubstraitAggVariant(aggFunction).orElse(aggFunction);
+    return signatures.get(lookupFunction);
   }
 
   static class WrappedAggregateCall implements GenericCall {

@@ -354,6 +354,10 @@ public abstract class FunctionConverter<
       }
       return Optional.empty();
     }
+
+    protected String getName() {
+      return name;
+    }
   }
 
   public interface GenericCall {
