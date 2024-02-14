@@ -487,6 +487,27 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
+  abstract static class UserDefinedLiteral implements Literal {
+    public abstract ByteString value();
+
+    public abstract String uri();
+
+    public abstract String name();
+
+    public Type getType() {
+      return Type.withNullability(nullable()).userDefined(uri(), name());
+    }
+
+    public static ImmutableExpression.UserDefinedLiteral.Builder builder() {
+      return ImmutableExpression.UserDefinedLiteral.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract static class Switch implements Expression {
     public abstract Expression match();
 

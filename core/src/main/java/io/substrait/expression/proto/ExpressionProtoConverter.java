@@ -1,5 +1,7 @@
 package io.substrait.expression.proto;
 
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -231,6 +233,28 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                   .collect(java.util.stream.Collectors.toList());
           bldr.setNullable(expr.nullable())
               .setStruct(Expression.Literal.Struct.newBuilder().addAllFields(values));
+        });
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.UserDefinedLiteral expr) {
+
+    return lit(
+        bldr -> {
+          try {
+            bldr.setNullable(expr.nullable())
+                .setUserDefined(
+                    Expression.Literal.UserDefined.newBuilder()
+                        .setTypeReference(
+                            expr.getType()
+                                .accept(typeProtoConverter)
+                                .getUserDefined()
+                                .getTypeReference())
+                        .setValue(Any.parseFrom(expr.value())))
+                .build();
+          } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException(e);
+          }
         });
   }
 

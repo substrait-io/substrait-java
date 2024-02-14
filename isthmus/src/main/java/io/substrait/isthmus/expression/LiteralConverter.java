@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.*;
@@ -88,6 +89,14 @@ public class LiteralConverter {
 
     if (literal.isNull()) {
       return typedNull(type);
+    }
+
+    if (type instanceof Type.UserDefined t) {
+      return Expression.UserDefinedLiteral.builder()
+          .uri(t.uri())
+          .name(t.name())
+          .value(ByteString.copyFrom(literal.getValueAs(byte[].class)))
+          .build();
     }
 
     return switch (literal.getType().getSqlTypeName()) {
@@ -186,14 +195,12 @@ public class LiteralConverter {
 
       case ROW -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield struct(
-            n, literals.stream().map(this::convert).collect(java.util.stream.Collectors.toList()));
+        yield struct(n, literals.stream().map(this::convert).collect(Collectors.toList()));
       }
 
       case ARRAY -> {
         List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield list(
-            n, literals.stream().map(this::convert).collect(java.util.stream.Collectors.toList()));
+        yield list(n, literals.stream().map(this::convert).collect(Collectors.toList()));
       }
 
       default -> throw new UnsupportedOperationException(
