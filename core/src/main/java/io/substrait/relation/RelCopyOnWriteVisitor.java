@@ -342,6 +342,26 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Rel> visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION {
+    var windowFunctions =
+        transformList(consistentPartitionWindow.getWindowFunctions(), this::visitWindowRelFunction);
+    var partitionExpressions =
+        transformList(
+            consistentPartitionWindow.getPartitionExpressions(),
+            t -> t.accept(getExpressionCopyOnWriteVisitor()));
+    var sorts = transformList(consistentPartitionWindow.getSorts(), this::visitSortField);
+
+    return Optional.of(
+        ConsistentPartitionWindow.builder()
+            .from(consistentPartitionWindow)
+            .partitionExpressions(
+                partitionExpressions.orElse(consistentPartitionWindow.getPartitionExpressions()))
+            .sorts(sorts.orElse(consistentPartitionWindow.getSorts()))
+            .windowFunctions(windowFunctions.orElse(consistentPartitionWindow.getWindowFunctions()))
+            .build());
+  }
+
   // utilities
 
   protected Optional<List<Expression>> visitExprList(List<Expression> exprs) throws EXCEPTION {
@@ -378,6 +398,24 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
         .expr()
         .accept(getExpressionCopyOnWriteVisitor())
         .map(expr -> Expression.SortField.builder().from(sortField).expr(expr).build());
+  }
+
+  protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
+      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
+      throws EXCEPTION {
+    return Optional.of(
+        ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+            .arguments(
+                visitFunctionArguments(windowRelFunctionInvocation.arguments())
+                    .orElse(windowRelFunctionInvocation.arguments()))
+            .declaration(windowRelFunctionInvocation.declaration())
+            .outputType(windowRelFunctionInvocation.outputType())
+            .aggregationPhase(windowRelFunctionInvocation.aggregationPhase())
+            .invocation(windowRelFunctionInvocation.invocation())
+            .lowerBound(windowRelFunctionInvocation.lowerBound())
+            .upperBound(windowRelFunctionInvocation.upperBound())
+            .boundsType(windowRelFunctionInvocation.boundsType())
+            .build());
   }
 
   private Optional<Expression> visitOptionalExpression(Optional<Expression> optExpr)
