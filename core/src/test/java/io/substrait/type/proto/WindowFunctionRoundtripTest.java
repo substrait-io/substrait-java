@@ -8,7 +8,6 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.proto.Rel;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.ImmutableConsistentPartitionWindow;
 import io.substrait.relation.ImmutableVirtualTableScan;
@@ -58,10 +57,9 @@ public class WindowFunctionRoundtripTest extends TestBase {
                         .build()))
             .build();
 
-    Rel protoWindowRel = to.toProto(aggRel);
-    assertEquals(protoWindowRel, to.toProto(from.from(protoWindowRel)));
-    assertEquals(
-        protoWindowRel.getWindow().getWindowFunctions(0).getInvocation(), invocation.toProto());
+    io.substrait.proto.Rel protoRel = to.toProto(aggRel);
+    io.substrait.relation.Rel aggRel2 = from.from(protoRel);
+    assertEquals(aggRel, aggRel2);
   }
 
   @Test

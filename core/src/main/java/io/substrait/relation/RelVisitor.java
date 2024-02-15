@@ -43,5 +43,5 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
 
-  OUTPUT visit(ConsistentPartitionWindow partitionWindow) throws EXCEPTION;
+  OUTPUT visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION;
 }

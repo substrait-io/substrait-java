@@ -219,7 +219,7 @@ public class ProtoExpressionConverter {
     };
   }
 
-  public ImmutableExpression.WindowFunctionInvocation fromWindowFunction(
+  public Expression.WindowFunctionInvocation fromWindowFunction(
       io.substrait.proto.Expression.WindowFunction windowFunction) {
     var functionReference = windowFunction.getFunctionReference();
     var declaration = lookup.getWindowFunction(functionReference, extensions);
@@ -372,7 +372,7 @@ public class ProtoExpressionConverter {
         .collect(Collectors.toList());
   }
 
-  public ImmutableExpression.SortField fromSortField(SortField s) {
+  public Expression.SortField fromSortField(SortField s) {
     return Expression.SortField.builder()
         .direction(Expression.SortDirection.fromProto(s.getDirection()))
         .expr(from(s.getExpr()))

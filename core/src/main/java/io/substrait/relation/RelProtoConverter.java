@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
+import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
@@ -72,43 +73,6 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
               return SortField.newBuilder()
                   .setDirection(s.direction().toProto())
                   .setExpr(toProto(s.expr()))
-                  .build();
-            })
-        .collect(java.util.stream.Collectors.toList());
-  }
-
-  private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
-      Collection<ConsistentPartitionWindow.WindowRelFunctionInvocation>
-          windowRelFunctionInvocations) {
-
-    return windowRelFunctionInvocations.stream()
-        .map(
-            f -> {
-              var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-              var args = f.arguments();
-              var aggFuncDef = f.declaration();
-
-              var arguments =
-                  IntStream.range(0, args.size())
-                      .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
-                      .collect(Collectors.toList());
-              var options =
-                  f.options().entrySet().stream()
-                      .map(
-                          o ->
-                              FunctionOption.newBuilder()
-                                  .setName(o.getKey())
-                                  .addAllPreference(o.getValue().values())
-                                  .build())
-                      .collect(java.util.stream.Collectors.toList());
-
-              return ConsistentPartitionWindowRel.WindowRelFunction.newBuilder()
-                  .setInvocation(f.invocation().toProto())
-                  .setPhase(f.aggregationPhase().toProto())
-                  .setOutputType(toProto(f.outputType()))
-                  .addAllArguments(arguments)
-                  .addAllOptions(options)
-                  .setFunctionReference(functionCollector.getFunctionReference(f.declaration()))
                   .build();
             })
         .collect(java.util.stream.Collectors.toList());
@@ -363,6 +327,46 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
 
     return Rel.newBuilder().setWindow(builder).build();
+  }
+
+  private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
+      Collection<ConsistentPartitionWindow.WindowRelFunctionInvocation>
+          windowRelFunctionInvocations) {
+
+    return windowRelFunctionInvocations.stream()
+        .map(
+            f -> {
+              var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
+              var args = f.arguments();
+              var aggFuncDef = f.declaration();
+
+              var arguments =
+                  IntStream.range(0, args.size())
+                      .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
+                      .collect(Collectors.toList());
+              var options =
+                  f.options().entrySet().stream()
+                      .map(
+                          o ->
+                              FunctionOption.newBuilder()
+                                  .setName(o.getKey())
+                                  .addAllPreference(o.getValue().values())
+                                  .build())
+                      .collect(java.util.stream.Collectors.toList());
+
+              return ConsistentPartitionWindowRel.WindowRelFunction.newBuilder()
+                  .setInvocation(f.invocation().toProto())
+                  .setPhase(f.aggregationPhase().toProto())
+                  .setOutputType(toProto(f.outputType()))
+                  .addAllArguments(arguments)
+                  .addAllOptions(options)
+                  .setFunctionReference(functionCollector.getFunctionReference(f.declaration()))
+                  .setBoundsType(f.boundsType().toProto())
+                  .setLowerBound(BoundConverter.convert(f.lowerBound()))
+                  .setUpperBound(BoundConverter.convert(f.upperBound()))
+                  .build();
+            })
+        .collect(java.util.stream.Collectors.toList());
   }
 
   @Override

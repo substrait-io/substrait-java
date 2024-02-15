@@ -352,6 +352,10 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             t -> t.accept(getExpressionCopyOnWriteVisitor()));
     var sorts = transformList(consistentPartitionWindow.getSorts(), this::visitSortField);
 
+    if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
+      return Optional.empty();
+    }
+
     return Optional.of(
         ConsistentPartitionWindow.builder()
             .from(consistentPartitionWindow)
@@ -359,6 +363,28 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
                 partitionExpressions.orElse(consistentPartitionWindow.getPartitionExpressions()))
             .sorts(sorts.orElse(consistentPartitionWindow.getSorts()))
             .windowFunctions(windowFunctions.orElse(consistentPartitionWindow.getWindowFunctions()))
+            .build());
+  }
+
+  protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
+      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
+      throws EXCEPTION {
+    var functionArgs = visitFunctionArguments(windowRelFunctionInvocation.arguments());
+
+    if (allEmpty(functionArgs)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+            .arguments(functionArgs.orElse(windowRelFunctionInvocation.arguments()))
+            .declaration(windowRelFunctionInvocation.declaration())
+            .outputType(windowRelFunctionInvocation.outputType())
+            .aggregationPhase(windowRelFunctionInvocation.aggregationPhase())
+            .invocation(windowRelFunctionInvocation.invocation())
+            .lowerBound(windowRelFunctionInvocation.lowerBound())
+            .upperBound(windowRelFunctionInvocation.upperBound())
+            .boundsType(windowRelFunctionInvocation.boundsType())
             .build());
   }
 
@@ -398,24 +424,6 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
         .expr()
         .accept(getExpressionCopyOnWriteVisitor())
         .map(expr -> Expression.SortField.builder().from(sortField).expr(expr).build());
-  }
-
-  protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
-      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
-      throws EXCEPTION {
-    return Optional.of(
-        ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
-            .arguments(
-                visitFunctionArguments(windowRelFunctionInvocation.arguments())
-                    .orElse(windowRelFunctionInvocation.arguments()))
-            .declaration(windowRelFunctionInvocation.declaration())
-            .outputType(windowRelFunctionInvocation.outputType())
-            .aggregationPhase(windowRelFunctionInvocation.aggregationPhase())
-            .invocation(windowRelFunctionInvocation.invocation())
-            .lowerBound(windowRelFunctionInvocation.lowerBound())
-            .upperBound(windowRelFunctionInvocation.upperBound())
-            .boundsType(windowRelFunctionInvocation.boundsType())
-            .build());
   }
 
   private Optional<Expression> visitOptionalExpression(Optional<Expression> optExpr)
