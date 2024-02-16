@@ -2,6 +2,7 @@ package io.substrait.expression;
 
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
@@ -334,6 +335,27 @@ public class ExpressionCreator {
         .aggregationPhase(phase)
         .sort(sort)
         .partitionBy(partitionBy)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .invocation(invocation)
+        .addAllArguments(arguments)
+        .build();
+  }
+
+  public static ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      Expression.AggregationInvocation invocation,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      Iterable<? extends FunctionArg> arguments) {
+    return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(phase)
         .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)

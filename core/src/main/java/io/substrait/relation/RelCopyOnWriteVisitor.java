@@ -342,6 +342,46 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Rel> visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION {
+    var windowFunctions =
+        transformList(consistentPartitionWindow.getWindowFunctions(), this::visitWindowRelFunction);
+    var partitionExpressions =
+        transformList(
+            consistentPartitionWindow.getPartitionExpressions(),
+            t -> t.accept(getExpressionCopyOnWriteVisitor()));
+    var sorts = transformList(consistentPartitionWindow.getSorts(), this::visitSortField);
+
+    if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        ConsistentPartitionWindow.builder()
+            .from(consistentPartitionWindow)
+            .partitionExpressions(
+                partitionExpressions.orElse(consistentPartitionWindow.getPartitionExpressions()))
+            .sorts(sorts.orElse(consistentPartitionWindow.getSorts()))
+            .windowFunctions(windowFunctions.orElse(consistentPartitionWindow.getWindowFunctions()))
+            .build());
+  }
+
+  protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
+      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
+      throws EXCEPTION {
+    var functionArgs = visitFunctionArguments(windowRelFunctionInvocation.arguments());
+
+    if (allEmpty(functionArgs)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+            .from(windowRelFunctionInvocation)
+            .arguments(functionArgs.orElse(windowRelFunctionInvocation.arguments()))
+            .build());
+  }
+
   // utilities
 
   protected Optional<List<Expression>> visitExprList(List<Expression> exprs) throws EXCEPTION {

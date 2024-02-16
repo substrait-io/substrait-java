@@ -9,6 +9,7 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateRel;
+import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
@@ -107,6 +108,9 @@ public class ProtoRelConverter {
       }
       case NESTED_LOOP_JOIN -> {
         return newNestedLoopJoin(rel.getNestedLoopJoin());
+      }
+      case WINDOW -> {
+        return newConsistentPartitionWindow(rel.getWindow());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -591,6 +595,41 @@ public class ProtoRelConverter {
                     ? converter.from(rel.getExpression())
                     : Expression.BoolLiteral.builder().value(true).build())
             .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  private ConsistentPartitionWindow newConsistentPartitionWindow(ConsistentPartitionWindowRel rel) {
+
+    var input = from(rel.getInput());
+    var protoExpressionConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+
+    var partitionExprs =
+        rel.getPartitionExpressionsList().stream()
+            .map(protoExpressionConverter::from)
+            .collect(Collectors.toList());
+    var sortFields =
+        rel.getSortsList().stream()
+            .map(protoExpressionConverter::fromSortField)
+            .collect(Collectors.toList());
+    var windowRelFunctions =
+        rel.getWindowFunctionsList().stream()
+            .map(protoExpressionConverter::fromWindowRelFunction)
+            .collect(Collectors.toList());
+
+    var builder =
+        ConsistentPartitionWindow.builder()
+            .input(input)
+            .partitionExpressions(partitionExprs)
+            .sorts(sortFields)
+            .windowFunctions(windowRelFunctions);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
