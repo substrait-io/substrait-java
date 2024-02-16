@@ -102,4 +102,9 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
     return visitFallback(nestedLoopJoin);
   }
+
+  @Override
+  public OUTPUT visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION {
+    return visitFallback(consistentPartitionWindow);
+  }
 }
