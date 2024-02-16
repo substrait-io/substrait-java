@@ -377,14 +377,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
 
     return Optional.of(
         ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+            .from(windowRelFunctionInvocation)
             .arguments(functionArgs.orElse(windowRelFunctionInvocation.arguments()))
-            .declaration(windowRelFunctionInvocation.declaration())
-            .outputType(windowRelFunctionInvocation.outputType())
-            .aggregationPhase(windowRelFunctionInvocation.aggregationPhase())
-            .invocation(windowRelFunctionInvocation.invocation())
-            .lowerBound(windowRelFunctionInvocation.lowerBound())
-            .upperBound(windowRelFunctionInvocation.upperBound())
-            .boundsType(windowRelFunctionInvocation.boundsType())
             .build());
   }
 
