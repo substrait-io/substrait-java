@@ -91,14 +91,6 @@ public class LiteralConverter {
       return typedNull(type);
     }
 
-    if (type instanceof Type.UserDefined t) {
-      return Expression.UserDefinedLiteral.builder()
-          .uri(t.uri())
-          .name(t.name())
-          .value(ByteString.copyFrom(literal.getValueAs(byte[].class)))
-          .build();
-    }
-
     return switch (literal.getType().getSqlTypeName()) {
       case TINYINT -> i8(n, i(literal).intValue());
       case SMALLINT -> i16(n, i(literal).intValue());

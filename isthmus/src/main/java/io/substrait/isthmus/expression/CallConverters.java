@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.*;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,37 @@ public class CallConverters {
             return ExpressionCreator.cast(
                 typeConverter.toSubstrait(call.getType()),
                 visitor.apply(call.getOperands().get(0)));
+          };
+
+  public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
+      typeConverter ->
+          (call, visitor) -> {
+            if (call.getKind() != SqlKind.REINTERPRET) {
+              return null;
+            }
+
+            var operand = visitor.apply(call.getOperands().get(0));
+            var type = typeConverter.toSubstrait(call.getType());
+
+            // for now, we only support reinterpretation of fixed binary literals to user defined
+            // type literals
+            // this is a needed workaround as calcite does not support user defined type literals
+            // and has
+            // strict type checking for literals, specifically checking if the value matches the
+            // calcite.sql.type.SqlTypeName
+            // note: This is tightly coupled to
+            // ExpressionRexConverter.visit(Expression.UserDefinedLiteral expr)
+            // if we ever start accepting other ways to encode user defined type literals (e.g.
+            // structured UDTs), this will need to be updated
+            if (operand instanceof Expression.FixedBinaryLiteral literal
+                && type instanceof Type.UserDefined t) {
+              return Expression.UserDefinedLiteral.builder()
+                  .uri(t.uri())
+                  .name(t.name())
+                  .value(literal.value())
+                  .build();
+            }
+            return null;
           };
 
   //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
@@ -93,6 +125,7 @@ public class CallConverters {
         new FieldSelectionConverter(typeConverter),
         CallConverters.CASE,
         CallConverters.CAST.apply(typeConverter),
+        CallConverters.REINTERPRET.apply(typeConverter),
         new LiteralConstructorConverter(typeConverter));
   }
 

@@ -2,13 +2,16 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
+import io.substrait.proto.Expression;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -224,6 +227,28 @@ public class CustomFunctionTest extends PlanTestBase {
                         "to_b_type:u!a_type",
                         R.userDefined(NAMESPACE, "b_type"),
                         b.fieldReference(input, 0))),
+            b.remap(1),
+            b.namedScan(
+                List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    var relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void customTypesLiteralInFunctionsRoundtrip() {
+
+    var bldr = Expression.Literal.newBuilder();
+    var anyValue = Any.pack(bldr.setI32(10).build());
+    var val = ExpressionCreator.userDefinedLiteral(false, anyValue, "a_type", NAMESPACE);
+
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    b.scalarFn(
+                        NAMESPACE, "to_b_type:u!a_type", R.userDefined(NAMESPACE, "b_type"), val)),
             b.remap(1),
             b.namedScan(
                 List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));

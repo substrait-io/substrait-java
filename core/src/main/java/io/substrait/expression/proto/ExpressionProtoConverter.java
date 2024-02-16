@@ -7,6 +7,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Expression;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.Rel;
@@ -239,17 +240,15 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   @Override
   public Expression visit(io.substrait.expression.Expression.UserDefinedLiteral expr) {
 
+    var typeReference =
+        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
     return lit(
         bldr -> {
           try {
             bldr.setNullable(expr.nullable())
                 .setUserDefined(
                     Expression.Literal.UserDefined.newBuilder()
-                        .setTypeReference(
-                            expr.getType()
-                                .accept(typeProtoConverter)
-                                .getUserDefined()
-                                .getTypeReference())
+                        .setTypeReference(typeReference)
                         .setValue(Any.parseFrom(expr.value())))
                 .build();
           } catch (InvalidProtocolBufferException e) {
