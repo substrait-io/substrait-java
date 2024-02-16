@@ -93,7 +93,7 @@ public class CallConverters {
         new FieldSelectionConverter(typeConverter),
         CallConverters.CASE,
         CallConverters.CAST.apply(typeConverter),
-        new LiteralConstructorConverter());
+        new LiteralConstructorConverter(typeConverter));
   }
 
   public interface SimpleCallConverter extends CallConverter {

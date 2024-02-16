@@ -201,6 +201,13 @@ public class ExpressionCreator {
     return Expression.ListLiteral.builder().nullable(nullable).addAllValues(values).build();
   }
 
+  public static Expression.EmptyListLiteral emptyList(boolean listNullable, Type elementType) {
+    return Expression.EmptyListLiteral.builder()
+        .elementType(elementType)
+        .nullable(listNullable)
+        .build();
+  }
+
   public static Expression.StructLiteral struct(boolean nullable, Expression.Literal... values) {
     return Expression.StructLiteral.builder().nullable(nullable).addFields(values).build();
   }

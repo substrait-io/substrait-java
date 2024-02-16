@@ -77,7 +77,7 @@ public class TypeCreator {
         .build();
   }
 
-  public Type list(Type type) {
+  public Type.ListType list(Type type) {
     return Type.ListType.builder().nullable(nullable).elementType(type).build();
   }
 
