@@ -357,6 +357,12 @@ public class ProtoExpressionConverter {
           literal.getList().getValuesList().stream()
               .map(this::from)
               .collect(java.util.stream.Collectors.toList()));
+      case EMPTY_LIST -> {
+        // literal.getNullable() is intentionally ignored in favor of the nullability
+        // specified in the literal.getEmptyList() type.
+        var listType = protoTypeConverter.fromList(literal.getEmptyList());
+        yield ExpressionCreator.emptyList(listType.nullable(), listType.elementType());
+      }
       default -> throw new IllegalStateException(
           "Unexpected value: " + literal.getLiteralTypeCase());
     };

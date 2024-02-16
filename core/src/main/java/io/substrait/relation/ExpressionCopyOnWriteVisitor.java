@@ -144,6 +144,11 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.EmptyListLiteral expr) throws EXCEPTION {
+    return visitLiteral(expr);
+  }
+
+  @Override
   public Optional<Expression> visit(Expression.StructLiteral expr) throws EXCEPTION {
     return visitLiteral(expr);
   }

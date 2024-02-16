@@ -47,7 +47,7 @@ public class ProtoTypeConverter {
               type.getStruct().getTypesList().stream()
                   .map(this::from)
                   .collect(java.util.stream.Collectors.toList()));
-      case LIST -> n(type.getList().getNullability()).list(from(type.getList().getType()));
+      case LIST -> fromList(type.getList());
       case MAP -> n(type.getMap().getNullability())
           .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
       case USER_DEFINED -> {
@@ -59,6 +59,10 @@ public class ProtoTypeConverter {
           "Unsupported user defined reference: " + type);
       case KIND_NOT_SET -> throw new UnsupportedOperationException("Type is not set: " + type);
     };
+  }
+
+  public Type.ListType fromList(io.substrait.proto.Type.List list) {
+    return n(list.getNullability()).list(from(list.getType()));
   }
 
   public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {
