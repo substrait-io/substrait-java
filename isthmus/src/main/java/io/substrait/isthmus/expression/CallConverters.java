@@ -33,26 +33,30 @@ public class CallConverters {
                 visitor.apply(call.getOperands().get(0)));
           };
 
+  /**
+   * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link
+   * Expression.UserDefinedLiteral}s within Calcite.
+   *
+   * <p>When converting from Substrait to Calcite, the {@link Expression.UserDefinedLiteral#value()}
+   * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
+   * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
+   *
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral)} for this conversion.
+   *
+   * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
+   * Expression.UserDefinedLiteral} that was stored.
+   */
   public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
           (call, visitor) -> {
             if (call.getKind() != SqlKind.REINTERPRET) {
               return null;
             }
-
             var operand = visitor.apply(call.getOperands().get(0));
             var type = typeConverter.toSubstrait(call.getType());
 
-            // for now, we only support reinterpretation of fixed binary literals to user defined
-            // type literals
-            // this is a needed workaround as calcite does not support user defined type literals
-            // and has
-            // strict type checking for literals, specifically checking if the value matches the
-            // calcite.sql.type.SqlTypeName
-            // note: This is tightly coupled to
-            // ExpressionRexConverter.visit(Expression.UserDefinedLiteral expr)
-            // if we ever start accepting other ways to encode user defined type literals (e.g.
-            // structured UDTs), this will need to be updated
+            // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
+            // user-defined literals
             if (operand instanceof Expression.FixedBinaryLiteral literal
                 && type instanceof Type.UserDefined t) {
               return Expression.UserDefinedLiteral.builder()

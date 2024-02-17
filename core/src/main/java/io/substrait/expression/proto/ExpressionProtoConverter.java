@@ -239,7 +239,6 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
 
   @Override
   public Expression visit(io.substrait.expression.Expression.UserDefinedLiteral expr) {
-
     var typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
     return lit(
