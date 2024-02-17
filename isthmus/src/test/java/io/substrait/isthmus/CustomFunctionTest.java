@@ -241,7 +241,7 @@ public class CustomFunctionTest extends PlanTestBase {
 
     var bldr = Expression.Literal.newBuilder();
     var anyValue = Any.pack(bldr.setI32(10).build());
-    var val = ExpressionCreator.userDefinedLiteral(false, anyValue, "a_type", NAMESPACE);
+    var val = ExpressionCreator.userDefinedLiteral(false, NAMESPACE, "a_type", anyValue);
 
     Rel rel =
         b.project(
