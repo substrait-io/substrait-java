@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ConsistentPartitionWindow;
@@ -215,6 +216,16 @@ public class ExpressionCreator {
   public static Expression.StructLiteral struct(
       boolean nullable, Iterable<? extends Expression.Literal> values) {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
+  }
+
+  public static Expression.UserDefinedLiteral userDefinedLiteral(
+      boolean nullable, String uri, String name, Any value) {
+    return Expression.UserDefinedLiteral.builder()
+        .nullable(nullable)
+        .uri(uri)
+        .name(name)
+        .value(value.toByteString())
+        .build();
   }
 
   public static Expression.Switch switchStatement(

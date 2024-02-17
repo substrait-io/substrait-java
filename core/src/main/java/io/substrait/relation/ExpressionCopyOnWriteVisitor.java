@@ -154,6 +154,11 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.UserDefinedLiteral expr) throws EXCEPTION {
+    return visitLiteral(expr);
+  }
+
+  @Override
   public Optional<Expression> visit(Expression.Switch expr) throws EXCEPTION {
     var match = expr.match().accept(this);
     var switchClauses = transformList(expr.switchClauses(), this::visitSwitchClause);
