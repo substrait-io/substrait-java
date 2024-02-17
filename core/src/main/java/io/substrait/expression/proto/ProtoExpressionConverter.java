@@ -363,6 +363,12 @@ public class ProtoExpressionConverter {
         var listType = protoTypeConverter.fromList(literal.getEmptyList());
         yield ExpressionCreator.emptyList(listType.nullable(), listType.elementType());
       }
+      case USER_DEFINED -> {
+        var userDefinedLiteral = literal.getUserDefined();
+        var type = lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
+        yield ExpressionCreator.userDefinedLiteral(
+            literal.getNullable(), type.uri(), type.name(), userDefinedLiteral.getValue());
+      }
       default -> throw new IllegalStateException(
           "Unexpected value: " + literal.getLiteralTypeCase());
     };

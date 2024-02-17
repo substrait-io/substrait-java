@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.*;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,41 @@ public class CallConverters {
             return ExpressionCreator.cast(
                 typeConverter.toSubstrait(call.getType()),
                 visitor.apply(call.getOperands().get(0)));
+          };
+
+  /**
+   * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link
+   * Expression.UserDefinedLiteral}s within Calcite.
+   *
+   * <p>When converting from Substrait to Calcite, the {@link Expression.UserDefinedLiteral#value()}
+   * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
+   * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
+   *
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral)} for this conversion.
+   *
+   * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
+   * Expression.UserDefinedLiteral} that was stored.
+   */
+  public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
+      typeConverter ->
+          (call, visitor) -> {
+            if (call.getKind() != SqlKind.REINTERPRET) {
+              return null;
+            }
+            var operand = visitor.apply(call.getOperands().get(0));
+            var type = typeConverter.toSubstrait(call.getType());
+
+            // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
+            // user-defined literals
+            if (operand instanceof Expression.FixedBinaryLiteral literal
+                && type instanceof Type.UserDefined t) {
+              return Expression.UserDefinedLiteral.builder()
+                  .uri(t.uri())
+                  .name(t.name())
+                  .value(literal.value())
+                  .build();
+            }
+            return null;
           };
 
   //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
@@ -93,6 +129,7 @@ public class CallConverters {
         new FieldSelectionConverter(typeConverter),
         CallConverters.CASE,
         CallConverters.CAST.apply(typeConverter),
+        CallConverters.REINTERPRET.apply(typeConverter),
         new LiteralConstructorConverter(typeConverter));
   }
 
