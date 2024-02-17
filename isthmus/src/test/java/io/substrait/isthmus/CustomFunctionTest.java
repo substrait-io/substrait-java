@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
@@ -12,7 +13,9 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.proto.Expression;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
@@ -238,12 +241,11 @@ public class CustomFunctionTest extends PlanTestBase {
 
   @Test
   void customTypesLiteralInFunctionsRoundtrip() {
-
     var bldr = Expression.Literal.newBuilder();
     var anyValue = Any.pack(bldr.setI32(10).build());
     var val = ExpressionCreator.userDefinedLiteral(false, NAMESPACE, "a_type", anyValue);
 
-    Rel rel =
+    Rel rel1 =
         b.project(
             input ->
                 List.of(
@@ -253,8 +255,13 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(
                 List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
 
-    RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
-    assertEquals(rel, relReturned);
+    RelNode calciteRel = substraitToCalcite.convert(rel1);
+    Rel rel2 = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel1, rel2);
+
+    var extensionCollector = new ExtensionCollector();
+    io.substrait.proto.Rel protoRel = new RelProtoConverter(extensionCollector).toProto(rel1);
+    Rel rel3 = new ProtoRelConverter(extensionCollector, extensionCollection).from(protoRel);
+    assertEquals(rel1, rel3);
   }
 }
