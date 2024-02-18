@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [0.27.0](https://github.com/substrait-io/substrait-java/compare/v0.26.0...v0.27.0) (2024-02-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* ExpressionVisitor now has a `visit(Expression.EmptyListLiteral)` method
+* LiteralConstructorConverter constructor now requires a TypeConverter
+
+### Features
+
+* add support for empty list literals ([#227](https://github.com/substrait-io/substrait-java/issues/227)) ([2a98e3c](https://github.com/substrait-io/substrait-java/commit/2a98e3c97c3dad734bfe95a1846df36894513048))
+* **pojo:** add POJO representation and converters for ConsistentPartitionWindowRel ([#231](https://github.com/substrait-io/substrait-java/issues/231)) ([f148bbb](https://github.com/substrait-io/substrait-java/commit/f148bbb8bb3f0feefa64d34f7644faf849f046e8))
+* support for user-defined type literals ([#232](https://github.com/substrait-io/substrait-java/issues/232)) ([ca8187f](https://github.com/substrait-io/substrait-java/commit/ca8187ffd9be688b8aa9a3c45d8ab1b11e42a001))
+
 ## [0.26.0](https://github.com/substrait-io/substrait-java/compare/v0.25.0...v0.26.0) (2024-02-11)
 
 
