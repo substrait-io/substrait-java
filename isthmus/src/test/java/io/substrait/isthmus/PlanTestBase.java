@@ -32,7 +32,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Assertions;
 
 public class PlanTestBase {
-  final SimpleExtension.ExtensionCollection extensions;
+  protected final SimpleExtension.ExtensionCollection extensions;
 
   {
     try {

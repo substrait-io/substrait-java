@@ -358,6 +358,10 @@ public abstract class FunctionConverter<
     protected String getName() {
       return name;
     }
+
+    public SqlOperator getOperator() {
+      return operator;
+    }
   }
 
   public interface GenericCall {

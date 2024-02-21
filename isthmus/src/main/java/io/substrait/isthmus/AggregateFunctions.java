@@ -24,19 +24,29 @@ public class AggregateFunctions {
   public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
 
   /**
-   * Utility class to possibly convert the SqlAggFunction from the native Calcite implementation to
-   * the Substrait subclasses present here, in case they have definitions.
+   * Some Calcite rules, like {@link
+   * org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule}, introduce the default
+   * Calcite aggregate functions into plans.
+   *
+   * <p>When converting these Calcite plans to Substrait, we need to convert the default Calcite
+   * aggregate calls to the Substrait specific variants.
+   *
+   * <p>This function attempts to convert the given {@code aggFunction} to its Substrait equivalent
+   *
+   * @param aggFunction the {@link SqlAggFunction} to convert to a Substrait specific variant
+   * @return an optional containing the Substrait equivalent of the given {@code aggFunction} if
+   *     conversion was needed, empty otherwise.
    */
-  public static Optional<SqlAggFunction> getSubstraitAggVariant(SqlAggFunction aggFunction) {
-    if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
-      return Optional.of(AggregateFunctions.SUM0);
-    } else if (aggFunction instanceof SqlMinMaxAggFunction fun) {
+  public static Optional<SqlAggFunction> toSubstraitAggVariant(SqlAggFunction aggFunction) {
+    if (aggFunction instanceof SqlMinMaxAggFunction fun) {
       return Optional.of(
           fun.getKind() == SqlKind.MIN ? AggregateFunctions.MIN : AggregateFunctions.MAX);
     } else if (aggFunction instanceof SqlAvgAggFunction) {
       return Optional.of(AggregateFunctions.AVG);
     } else if (aggFunction instanceof SqlSumAggFunction) {
       return Optional.of(AggregateFunctions.SUM);
+    } else if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
+      return Optional.of(AggregateFunctions.SUM0);
     } else {
       return Optional.empty();
     }
