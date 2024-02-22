@@ -44,7 +44,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Build with Gradle
-        run: gradle build
+        run: gradle build --rerun-tasks
   isthmus-native-image-mac-linux:
     name: Build Isthmus Native Image
     needs: java
