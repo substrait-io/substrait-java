@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import java.util.Optional;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
@@ -21,6 +22,35 @@ public class AggregateFunctions {
   public static SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
   public static SqlAggFunction SUM = new SubstraitSumAggFunction();
   public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
+
+  /**
+   * Some Calcite rules, like {@link
+   * org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule}, introduce the default
+   * Calcite aggregate functions into plans.
+   *
+   * <p>When converting these Calcite plans to Substrait, we need to convert the default Calcite
+   * aggregate calls to the Substrait specific variants.
+   *
+   * <p>This function attempts to convert the given {@code aggFunction} to its Substrait equivalent
+   *
+   * @param aggFunction the {@link SqlAggFunction} to convert to a Substrait specific variant
+   * @return an optional containing the Substrait equivalent of the given {@code aggFunction} if
+   *     conversion was needed, empty otherwise.
+   */
+  public static Optional<SqlAggFunction> toSubstraitAggVariant(SqlAggFunction aggFunction) {
+    if (aggFunction instanceof SqlMinMaxAggFunction fun) {
+      return Optional.of(
+          fun.getKind() == SqlKind.MIN ? AggregateFunctions.MIN : AggregateFunctions.MAX);
+    } else if (aggFunction instanceof SqlAvgAggFunction) {
+      return Optional.of(AggregateFunctions.AVG);
+    } else if (aggFunction instanceof SqlSumAggFunction) {
+      return Optional.of(AggregateFunctions.SUM);
+    } else if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
+      return Optional.of(AggregateFunctions.SUM0);
+    } else {
+      return Optional.empty();
+    }
+  }
 
   /** Extension of {@link SqlMinMaxAggFunction} that ALWAYS infers a nullable return type */
   private static class SubstraitSqlMinMaxAggFunction extends SqlMinMaxAggFunction {
