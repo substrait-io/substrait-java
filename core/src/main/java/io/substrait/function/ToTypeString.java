@@ -178,4 +178,20 @@ public class ToTypeString
       return super.visit(expr);
     }
   }
+
+  /**
+   * Subclass of ToTypeString that doesn't lose the context on the wildcard being used (for example,
+   * that can return any1, any2, etc, instead of only any, any).
+   */
+  public static class ToTypeLiteralStringLossless extends ToTypeString {
+
+    public static final ToTypeLiteralStringLossless INSTANCE = new ToTypeLiteralStringLossless();
+
+    private ToTypeLiteralStringLossless() {}
+
+    @Override
+    public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
+      return expr.value().toLowerCase();
+    }
+  }
 }
