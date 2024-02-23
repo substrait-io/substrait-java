@@ -180,8 +180,11 @@ public class ToTypeString
   }
 
   /**
-   * Subclass of ToTypeString that doesn't lose the context on the wildcard being used (for example,
-   * that can return any1, any2, etc, instead of only any, any).
+   * {@link ToTypeString} emits the string `any` for all wildcard any types, even if they have
+   * numeric suffixes (i.e. `any1`, `any2`, etc).
+   *
+   * <p>These suffixes are needed to correctly perform function matching based on arguments. This
+   * subclass retains the numerics suffixes when emitting type strings for this.
    */
   public static class ToTypeLiteralStringLossless extends ToTypeString {
 

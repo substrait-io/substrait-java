@@ -44,13 +44,6 @@ scalar_functions:
         - name: another_arg
           value: any2
       return: any2
-  - name: "to_b_type"
-    description: "converts a nullable a_type to a b_type"
-    impls:
-      - args:
-          - name: arg1
-            value: u!a_type?
-        return: u!b_type
   - name: "custom_scalar_listany_to_listany"
     description: "custom function that takes list of any"
     impls:
@@ -105,6 +98,13 @@ scalar_functions:
         variadic:
           min: 1
         return: LIST<string>
+  - name: "to_b_type"
+    description: "converts a nullable a_type to a b_type"
+    impls:
+      - args:
+          - name: arg1
+            value: u!a_type?
+        return: u!b_type
 
 aggregate_functions:
   - name: "custom_aggregate"

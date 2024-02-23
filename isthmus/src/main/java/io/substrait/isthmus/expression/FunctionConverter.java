@@ -1,6 +1,12 @@
 package io.substrait.isthmus.expression;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Streams;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
@@ -179,7 +185,7 @@ public abstract class FunctionConverter<
           // Make sure that arguments & return are within bounds and match the types
           if (function.returnType() instanceof ParameterizedType
               && isMatch(outputType, (ParameterizedType) function.returnType())
-              && argumentsMatchType(inputTypes, args)) {
+              && inputTypesSatisfyDefinedArguments(inputTypes, args)) {
             return Optional.of(function);
           }
         }
@@ -188,15 +194,30 @@ public abstract class FunctionConverter<
       };
     }
 
-    private static boolean argumentsMatchType(
+    /**
+     * Checks to see if the given input types satisfy the function arguments given. Checks that
+     *
+     * <ul>
+     *   <li>Variadic arguments all have the same input type
+     *   <li>Matched wildcard arguments (i.e.`any`, `any1`, `any2`, etc) all have the same input
+     *       type
+     * </ul>
+     *
+     * @param inputTypes input types to check against arguments
+     * @param args expected arguments as defined in a {@link SimpleExtension.Function}
+     * @return true if the {@code inputTypes} satisfy the {@code args}, false otherwise
+     */
+    private static boolean inputTypesSatisfyDefinedArguments(
         List<Type> inputTypes, List<SimpleExtension.Argument> args) {
 
       Map<String, Set<Type>> wildcardToType = new HashMap<>();
       for (int i = 0; i < inputTypes.size(); i++) {
         Type givenType = inputTypes.get(i);
-        // Variadic arguments should match the last argument's type
         SimpleExtension.ValueArgument wantType =
-            (SimpleExtension.ValueArgument) args.get(Integer.min(i, args.size() - 1));
+            (SimpleExtension.ValueArgument)
+                args.get(
+                    // Variadic arguments should match the last argument's type
+                    Integer.min(i, args.size() - 1));
 
         if (!isMatch(givenType, wantType.value())) {
           return false;
@@ -213,7 +234,8 @@ public abstract class FunctionConverter<
       }
 
       // If all the types match, check if the wildcard types are compatible.
-      // Note: We could ignore the "any" key here if we decide to not match non-enumerated types.
+      // TODO: Determine if non-enumerated wildcard types (i.e. `any` as opposed to `any1`) need to
+      //   have the same type.
       return wildcardToType.values().stream().allMatch(s -> s.size() == 1);
     }
 
