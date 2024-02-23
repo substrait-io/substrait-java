@@ -1,6 +1,5 @@
 package io.substrait.isthmus.expression;
 
-import com.github.bsideup.jabel.Desugar;
 import com.google.common.collect.*;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -177,13 +176,9 @@ public abstract class FunctionConverter<
       return (inputTypes, outputType) -> {
         for (F function : functions) {
           List<SimpleExtension.Argument> args = function.requiredArguments();
-
-          var bounds = ArgumentBounds.parse(function);
-
           // Make sure that arguments & return are within bounds and match the types
           if (function.returnType() instanceof ParameterizedType
               && isMatch(outputType, (ParameterizedType) function.returnType())
-              && bounds.within(inputTypes.size())
               && argumentsMatchType(inputTypes, args)) {
             return Optional.of(function);
           }
@@ -514,34 +509,5 @@ public abstract class FunctionConverter<
       return true;
     }
     return inputType.accept(new IgnoreNullableAndParameters(type));
-  }
-
-  @Desugar
-  record ArgumentBounds(int lower, int upper) {
-
-    static ArgumentBounds parse(SimpleExtension.Function function) {
-      List<SimpleExtension.Argument> args = function.requiredArguments();
-
-      int lowerBoundRequiredArgs = args.size();
-      int upperBoundRequiredArgs = args.size();
-
-      if (function.variadic().isPresent()) {
-        SimpleExtension.VariadicBehavior variadicBehavior = function.variadic().get();
-        // Do not count variadic as a required argument, use the behavior.
-        lowerBoundRequiredArgs += 1 - variadicBehavior.getMin();
-
-        if (variadicBehavior.getMax().isEmpty()) {
-          upperBoundRequiredArgs = Integer.MAX_VALUE;
-        } else {
-          upperBoundRequiredArgs += variadicBehavior.getMax().getAsInt();
-        }
-      }
-
-      return new ArgumentBounds(lowerBoundRequiredArgs, upperBoundRequiredArgs);
-    }
-
-    boolean within(int count) {
-      return count >= lower && count <= upper;
-    }
   }
 }

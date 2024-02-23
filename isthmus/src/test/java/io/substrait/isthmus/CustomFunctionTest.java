@@ -112,7 +112,8 @@ public class CustomFunctionTest extends PlanTestBase {
           FunctionMappings.s(customScalarListAnyAndAnyFn),
           FunctionMappings.s(customScalarListStringFn),
           FunctionMappings.s(customScalarListStringAndAnyFn),
-          FunctionMappings.s(customScalarListStringAndAnyVariadicFn),
+          FunctionMappings.s(customScalarListStringAndAnyVariadic0Fn),
+          FunctionMappings.s(customScalarListStringAndAnyVariadic1Fn),
           FunctionMappings.s(toBType));
 
   static final SqlFunction customScalarFn =
@@ -193,9 +194,17 @@ public class CustomFunctionTest extends PlanTestBase {
           null,
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
-  static final SqlFunction customScalarListStringAndAnyVariadicFn =
+  static final SqlFunction customScalarListStringAndAnyVariadic0Fn =
       new SqlFunction(
-          "custom_scalar_liststring_anyvariadic_to_liststring",
+          "custom_scalar_liststring_anyvariadic0_to_liststring",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(varcharArrayType),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+  static final SqlFunction customScalarListStringAndAnyVariadic1Fn =
+      new SqlFunction(
+          "custom_scalar_liststring_anyvariadic1_to_liststring",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(varcharArrayType),
           null,
@@ -475,14 +484,14 @@ public class CustomFunctionTest extends PlanTestBase {
   }
 
   @Test
-  void customScalarListStringAndAnyVariadicRoundtrip() {
+  void customScalarListStringAndAnyVariadic0Roundtrip() {
     Rel rel =
         b.project(
             input ->
                 List.of(
                     b.scalarFn(
                         NAMESPACE,
-                        "custom_scalar_liststring_anyvariadic_to_liststring:list_any",
+                        "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0),
                         b.fieldReference(input, 1),
@@ -493,6 +502,46 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of("example"),
                 List.of("a", "b", "c", "d"),
                 List.of(R.list(R.STRING), R.STRING, R.STRING, R.STRING)));
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    var relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void customScalarListStringAndAnyVariadic0NoArgsRoundtrip() {
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    b.scalarFn(
+                        NAMESPACE,
+                        "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
+                        R.list(R.STRING),
+                        b.fieldReference(input, 0))),
+            b.remap(1),
+            b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    var relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void customScalarListStringAndAnyVariadic1Roundtrip() {
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    b.scalarFn(
+                        NAMESPACE,
+                        "custom_scalar_liststring_anyvariadic1_to_liststring:list_any",
+                        R.list(R.STRING),
+                        b.fieldReference(input, 0),
+                        b.fieldReference(input, 1))),
+            b.remap(2),
+            b.namedScan(
+                List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     var relReturned = calciteToSubstrait.apply(calciteRel);

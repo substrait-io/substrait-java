@@ -83,8 +83,19 @@ scalar_functions:
           - name: val
             value: any1
         return: LIST<string>
-  - name: "custom_scalar_liststring_anyvariadic_to_liststring"
-    description: "custom function that takes list of string and an any scalar"
+  - name: "custom_scalar_liststring_anyvariadic0_to_liststring"
+    description: "custom function that takes list of string and an any scalar (variadic with min 0)"
+    impls:
+      - args:
+          - name: list
+            value: LIST<string>
+          - name: val
+            value: any1
+        variadic:
+          min: 0
+        return: LIST<string>
+  - name: "custom_scalar_liststring_anyvariadic1_to_liststring"
+    description: "custom function that takes list of string and an any scalar (variadic with min 1)"
     impls:
       - args:
           - name: list
