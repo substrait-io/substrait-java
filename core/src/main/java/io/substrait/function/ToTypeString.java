@@ -178,4 +178,23 @@ public class ToTypeString
       return super.visit(expr);
     }
   }
+
+  /**
+   * {@link ToTypeString} emits the string `any` for all wildcard any types, even if they have
+   * numeric suffixes (i.e. `any1`, `any2`, etc).
+   *
+   * <p>These suffixes are needed to correctly perform function matching based on arguments. This
+   * subclass retains the numerics suffixes when emitting type strings for this.
+   */
+  public static class ToTypeLiteralStringLossless extends ToTypeString {
+
+    public static final ToTypeLiteralStringLossless INSTANCE = new ToTypeLiteralStringLossless();
+
+    private ToTypeLiteralStringLossless() {}
+
+    @Override
+    public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
+      return expr.value().toLowerCase();
+    }
+  }
 }
