@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [0.28.0](https://github.com/substrait-io/substrait-java/compare/v0.27.0...v0.28.0) (2024-02-25)
+
+
+### Features
+
+* **isthmus:** add WindowRelFunctionConverter ([#234](https://github.com/substrait-io/substrait-java/issues/234)) ([a5e1a21](https://github.com/substrait-io/substrait-java/commit/a5e1a219f273906fc068f1c3b91f6c59b87ca8ba))
+* **isthmus:** improve signature matching for functions with wildcard arguments ([#226](https://github.com/substrait-io/substrait-java/issues/226)) ([ec1887c](https://github.com/substrait-io/substrait-java/commit/ec1887cf5778ff0f3cce50d03cfed43a46c9f2ba))
+
+
+### Bug Fixes
+
+* disable task caches in the gradle build ([#233](https://github.com/substrait-io/substrait-java/issues/233)) ([7879f2b](https://github.com/substrait-io/substrait-java/commit/7879f2b21832531f04a07cb9fcbb6e900f060c6c))
+* **isthmus:** allow for conversion of plans containing Calcite SqlAggFunctions ([#230](https://github.com/substrait-io/substrait-java/issues/230)) ([0bdac49](https://github.com/substrait-io/substrait-java/commit/0bdac4949b26896e4c7da50b6362debacee365a1)), closes [#180](https://github.com/substrait-io/substrait-java/issues/180)
+
 ## [0.27.0](https://github.com/substrait-io/substrait-java/compare/v0.26.0...v0.27.0) (2024-02-18)
 
 
