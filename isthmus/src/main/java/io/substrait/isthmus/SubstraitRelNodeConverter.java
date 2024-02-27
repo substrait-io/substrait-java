@@ -4,6 +4,7 @@ import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.RexVisitorFinder;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -358,8 +359,16 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     var expression = sortField.expr();
     var rex = expression.accept(expressionRexConverter);
     var sortDirection = sortField.direction();
-    RexSlot rexSlot = (RexSlot) rex;
-    int fieldIndex = rexSlot.getIndex();
+
+    RexSlot slot =
+        new RexVisitorFinder<>(RexSlot.class)
+            .findUnique(rex)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        String.format(
+                            "No slot found in sort field, expression type: %s", rex.getKind())));
+    int fieldIndex = slot.getIndex();
     var fieldDirection = RelFieldCollation.Direction.ASCENDING;
     var nullDirection = RelFieldCollation.NullDirection.UNSPECIFIED;
     switch (sortDirection) {
