@@ -105,6 +105,11 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
         expression);
   }
 
+  @Test
+  public void castFailureCondition() throws IOException, SqlParseException {
+    assertProtoPlanRoundrip("SELECT CAST(25.65 AS varchar)");
+  }
+
   void assertExpressionEquality(Expression expected, Expression actual) {
     // go the extra mile and convert both inputs to protobuf
     // helps verify that the protobuf conversion is not broken
