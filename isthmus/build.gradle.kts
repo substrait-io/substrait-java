@@ -72,6 +72,7 @@ java {
 }
 
 var CALCITE_VERSION = properties.get("calcite.version")
+var GUAVA_VERSION = properties.get("guava.version")
 var IMMUTABLES_VERSION = properties.get("immutables.version")
 var JACKSON_VERSION = properties.get("jackson.version")
 var JUNIT_VERSION = properties.get("junit.version")
@@ -82,7 +83,7 @@ dependencies {
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
   implementation("org.junit.jupiter:junit-jupiter:${JUNIT_VERSION}")
   implementation("org.reflections:reflections:0.9.12")
-  implementation("com.google.guava:guava:29.0-jre")
+  implementation("com.google.guava:guava:${GUAVA_VERSION}")
   implementation("org.graalvm.sdk:graal-sdk:22.1.0")
   implementation("info.picocli:picocli:4.7.5")
   annotationProcessor("info.picocli:picocli-codegen:4.7.5")
