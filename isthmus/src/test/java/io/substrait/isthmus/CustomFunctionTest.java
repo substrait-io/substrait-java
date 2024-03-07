@@ -38,8 +38,6 @@ import org.junit.jupiter.api.Test;
 
 /** Verify that custom functions can convert from Substrait to Calcite and back. */
 public class CustomFunctionTest extends PlanTestBase {
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
 
   // Define custom functions in a "functions_custom.yaml" extension
   static final String NAMESPACE = "/functions_custom";

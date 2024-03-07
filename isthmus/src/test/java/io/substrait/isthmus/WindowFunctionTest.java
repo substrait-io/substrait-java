@@ -2,7 +2,11 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.expression.Expression;
+import io.substrait.expression.WindowBound;
+import io.substrait.relation.Rel;
 import java.io.IOException;
+import java.util.List;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,6 +21,16 @@ public class WindowFunctionTest extends PlanTestBase {
     @Test
     void rowNumber() throws IOException, SqlParseException {
       assertFullRoundTrip("select O_ORDERKEY, row_number() over () from ORDERS");
+    }
+
+    @Test
+    void lag() throws IOException, SqlParseException {
+      assertFullRoundTrip("select O_TOTALPRICE, LAG(O_TOTALPRICE, 1) over () from ORDERS");
+    }
+
+    @Test
+    void lead() throws IOException, SqlParseException {
+      assertFullRoundTrip("select O_TOTALPRICE, LEAD(O_TOTALPRICE, 1) over () from ORDERS");
     }
 
     @ParameterizedTest
@@ -169,5 +183,77 @@ public class WindowFunctionTest extends PlanTestBase {
     // Queries using it should be rejected.
     var query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
     assertThrows(IllegalArgumentException.class, () -> assertFullRoundTrip(query));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"lag", "lead"})
+  void lagLeadFunctions(String function) {
+    Rel rel =
+        substraitBuilder.project(
+            input ->
+                List.of(
+                    substraitBuilder.windowFn(
+                        "/functions_arithmetic.yaml",
+                        String.format("%s:any", function),
+                        R.FP64,
+                        Expression.AggregationPhase.INITIAL_TO_RESULT,
+                        Expression.AggregationInvocation.ALL,
+                        Expression.WindowBoundsType.ROWS,
+                        WindowBound.Preceding.UNBOUNDED,
+                        WindowBound.Following.CURRENT_ROW,
+                        substraitBuilder.fieldReference(input, 0))),
+            substraitBuilder.remap(1),
+            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+
+    assertFullRoundTrip(rel);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"lag", "lead"})
+  void lagLeadWithOffset(String function) {
+    Rel rel =
+        substraitBuilder.project(
+            input ->
+                List.of(
+                    substraitBuilder.windowFn(
+                        "/functions_arithmetic.yaml",
+                        String.format("%s:any_i32", function),
+                        R.FP64,
+                        Expression.AggregationPhase.INITIAL_TO_RESULT,
+                        Expression.AggregationInvocation.ALL,
+                        Expression.WindowBoundsType.RANGE,
+                        WindowBound.Preceding.UNBOUNDED,
+                        WindowBound.Following.UNBOUNDED,
+                        substraitBuilder.fieldReference(input, 0),
+                        substraitBuilder.i32(1))),
+            substraitBuilder.remap(1),
+            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+
+    assertFullRoundTrip(rel);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"lag", "lead"})
+  void lagLeadWithOffsetAndDefault(String function) {
+    Rel rel =
+        substraitBuilder.project(
+            input ->
+                List.of(
+                    substraitBuilder.windowFn(
+                        "/functions_arithmetic.yaml",
+                        String.format("%s:any_i32_any", function),
+                        R.I64,
+                        Expression.AggregationPhase.INITIAL_TO_RESULT,
+                        Expression.AggregationInvocation.ALL,
+                        Expression.WindowBoundsType.ROWS,
+                        WindowBound.Preceding.UNBOUNDED,
+                        WindowBound.Following.CURRENT_ROW,
+                        substraitBuilder.fieldReference(input, 0),
+                        substraitBuilder.i32(1),
+                        substraitBuilder.fp64(100.0))),
+            substraitBuilder.remap(1),
+            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+
+    assertFullRoundTrip(rel);
   }
 }
