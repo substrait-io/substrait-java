@@ -71,29 +71,32 @@ java {
   withSourcesJar()
 }
 
-var CALCITE_VERSION = "1.34.0"
+var CALCITE_VERSION = properties.get("calcite.version")
+var IMMUTABLES_VERSION = properties.get("immutables.version")
+var JACKSON_VERSION = properties.get("jackson.version")
+var JUNIT_VERSION = properties.get("junit.version")
 
 dependencies {
   implementation(project(":core"))
   implementation("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
-  implementation("org.junit.jupiter:junit-jupiter:5.9.2")
+  implementation("org.junit.jupiter:junit-jupiter:${JUNIT_VERSION}")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:29.0-jre")
   implementation("org.graalvm.sdk:graal-sdk:22.1.0")
   implementation("info.picocli:picocli:4.7.5")
   annotationProcessor("info.picocli:picocli-codegen:4.7.5")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.13.4")
+  implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
   implementation("com.google.protobuf:protobuf-java-util:3.17.3") {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
   implementation("com.google.code.findbugs:jsr305:3.0.2")
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
-  implementation("org.immutables:value-annotations:2.8.8")
-  annotationProcessor("org.immutables:value:2.8.8")
+  implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
+  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")

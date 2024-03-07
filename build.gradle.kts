@@ -11,16 +11,19 @@ plugins {
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
+var IMMUTABLES_VERSION = properties.get("immutables.version")
+var JUNIT_VERSION = properties.get("junit.version")
+
 repositories { mavenCentral() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
   implementation("org.slf4j:slf4j-jdk14:1.7.30")
-  annotationProcessor("org.immutables:value:2.8.8")
-  compileOnly("org.immutables:value-annotations:2.8.8")
+  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
+  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }

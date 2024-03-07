@@ -67,22 +67,27 @@ signing {
   sign(publishing.publications["maven-publish"])
 }
 
+val ANTLR_VERSION = properties.get("antlr.version")
+var IMMUTABLES_VERSION = properties.get("immutables.version")
+var JACKSON_VERSION = properties.get("jackson.version")
+var JUNIT_VERSION = properties.get("junit.version")
+
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
+  testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:{$JUNIT_VERSION")
   implementation("com.google.protobuf:protobuf-java:3.17.3")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.13.4")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.4")
+  implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
   implementation("com.google.code.findbugs:jsr305:3.0.2")
 
-  antlr("org.antlr:antlr4:4.9.2")
+  antlr("org.antlr:antlr4:${ANTLR_VERSION}")
+  implementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
   implementation("org.slf4j:slf4j-jdk14:1.7.30")
-  implementation("org.antlr:antlr4-runtime:4.9.2")
-  annotationProcessor("org.immutables:value:2.8.8")
-  compileOnly("org.immutables:value-annotations:2.8.8")
+  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
+  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
