@@ -12,6 +12,7 @@ import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
 import io.substrait.expression.ImmutableExpression.Switch;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
@@ -336,6 +337,10 @@ public class SubstraitBuilder {
     return Expression.I32Literal.builder().value(v).build();
   }
 
+  public Expression.FP64Literal fp64(double v) {
+    return Expression.FP64Literal.builder().value(v).build();
+  }
+
   public Expression cast(Expression input, Type type) {
     return Cast.builder()
         .input(input)
@@ -596,6 +601,30 @@ public class SubstraitBuilder {
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
+        .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
+        .build();
+  }
+
+  public Expression.WindowFunctionInvocation windowFn(
+      String namespace,
+      String key,
+      Type outputType,
+      Expression.AggregationPhase aggregationPhase,
+      Expression.AggregationInvocation invocation,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      Expression... args) {
+    var declaration =
+        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+    return Expression.WindowFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(aggregationPhase)
+        .invocation(invocation)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
         .build();
   }
