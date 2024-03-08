@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.google.common.annotations.Beta;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
@@ -17,6 +18,7 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +48,9 @@ public class PlanTestBase {
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RexBuilder rex = creator.rex();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
+  protected final SubstraitBuilder substraitBuilder = new SubstraitBuilder(extensions);
+  protected static final TypeCreator R = TypeCreator.of(false);
+  protected static final TypeCreator N = TypeCreator.of(true);
 
   public static String asString(String resource) throws IOException {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);

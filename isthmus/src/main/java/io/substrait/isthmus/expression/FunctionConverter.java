@@ -390,14 +390,13 @@ public abstract class FunctionConverter<
       }
 
       if (singularInputType.isPresent()) {
-        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
-        if (leastRestrictive.isPresent()) {
-          return leastRestrictive;
-        }
-
         Optional<T> coerced = matchCoerced(call, outputType, operands);
         if (coerced.isPresent()) {
           return coerced;
+        }
+        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
+        if (leastRestrictive.isPresent()) {
+          return leastRestrictive;
         }
       }
       return Optional.empty();
