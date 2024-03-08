@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.WindowBound;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.Rel;
 import java.io.IOException;
 import java.util.List;
@@ -193,7 +194,7 @@ public class WindowFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     substraitBuilder.windowFn(
-                        "/functions_arithmetic.yaml",
+                        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any", function),
                         R.FP64,
                         Expression.AggregationPhase.INITIAL_TO_RESULT,
@@ -216,7 +217,7 @@ public class WindowFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     substraitBuilder.windowFn(
-                        "/functions_arithmetic.yaml",
+                        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32", function),
                         R.FP64,
                         Expression.AggregationPhase.INITIAL_TO_RESULT,
@@ -240,7 +241,7 @@ public class WindowFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     substraitBuilder.windowFn(
-                        "/functions_arithmetic.yaml",
+                        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32_any", function),
                         R.I64,
                         Expression.AggregationPhase.INITIAL_TO_RESULT,
