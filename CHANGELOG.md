@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.28.1](https://github.com/substrait-io/substrait-java/compare/v0.28.0...v0.28.1) (2024-03-10)
+
+
+### Bug Fixes
+
+* use coercive function matcher before least restrictive matcher ([#237](https://github.com/substrait-io/substrait-java/issues/237)) ([e7aa8ff](https://github.com/substrait-io/substrait-java/commit/e7aa8ff1fe11dd784074138bf75c1afa140b59db))
+
 ## [0.28.0](https://github.com/substrait-io/substrait-java/compare/v0.27.0...v0.28.0) (2024-02-25)
 
 
