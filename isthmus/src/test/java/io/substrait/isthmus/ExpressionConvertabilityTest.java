@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -106,8 +107,21 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void castFailureCondition() throws IOException, SqlParseException {
-    assertProtoPlanRoundrip("SELECT CAST(25.65 AS varchar)");
+  public void castFailureCondition() {
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    ExpressionCreator.cast(
+                        R.I64,
+                        b.fieldReference(input, 0),
+                        Expression.FailureBehavior.THROW_EXCEPTION),
+                    ExpressionCreator.cast(
+                        R.I64, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
+            b.remap(1, 2),
+            b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
+
+    assertFullRoundTrip(rel);
   }
 
   void assertExpressionEquality(Expression expected, Expression actual) {
