@@ -174,7 +174,9 @@ public class ProtoExpressionConverter {
             .build();
       }
       case CAST -> ExpressionCreator.cast(
-          protoTypeConverter.from(expr.getCast().getType()), from(expr.getCast().getInput()));
+          protoTypeConverter.from(expr.getCast().getType()),
+          from(expr.getCast().getInput()),
+          Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
       case SUBQUERY -> {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {

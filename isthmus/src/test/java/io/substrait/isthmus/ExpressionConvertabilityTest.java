@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -103,6 +104,24 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
                 b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(10)), b.i32(2))),
             b.i32(3)),
         expression);
+  }
+
+  @Test
+  public void castFailureCondition() {
+    Rel rel =
+        b.project(
+            input ->
+                List.of(
+                    ExpressionCreator.cast(
+                        R.I64,
+                        b.fieldReference(input, 0),
+                        Expression.FailureBehavior.THROW_EXCEPTION),
+                    ExpressionCreator.cast(
+                        R.I32, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
+            b.remap(1, 2),
+            b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
+
+    assertFullRoundTrip(rel);
   }
 
   void assertExpressionEquality(Expression expected, Expression actual) {

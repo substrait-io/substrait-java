@@ -65,7 +65,10 @@ public class CalciteCallTest extends CalciteObjs {
         func -> {
           // check that there is a cast for the incorrect argument type.
           assertEquals(
-              ExpressionCreator.cast(TypeCreator.REQUIRED.I64, ExpressionCreator.i32(false, 20)),
+              ExpressionCreator.cast(
+                  TypeCreator.REQUIRED.I64,
+                  ExpressionCreator.i32(false, 20),
+                  Expression.FailureBehavior.THROW_EXCEPTION),
               func.arguments().get(0));
         },
         false); // TODO: implicit calcite cast
