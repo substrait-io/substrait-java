@@ -486,7 +486,7 @@ public abstract class FunctionConverter<
   private static Expression coerceArgument(Expression argument, Type type) {
     var typeMatches = isMatch(type, argument.getType());
     if (!typeMatches) {
-      return ExpressionCreator.cast(type, argument);
+      return ExpressionCreator.cast(type, argument, Expression.FailureBehavior.THROW_EXCEPTION);
     }
     return argument;
   }
