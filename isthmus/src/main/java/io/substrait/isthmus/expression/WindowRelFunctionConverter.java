@@ -9,7 +9,6 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
-import io.substrait.isthmus.expression.FunctionConverter.GenericCall;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.type.Type;
 import java.util.List;

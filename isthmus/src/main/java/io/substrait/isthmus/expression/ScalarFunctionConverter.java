@@ -6,7 +6,6 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.isthmus.expression.FunctionConverter.GenericCall;
 import io.substrait.type.Type;
 import java.util.List;
 import java.util.Optional;

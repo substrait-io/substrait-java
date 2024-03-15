@@ -479,7 +479,6 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.Cast expr) throws RuntimeException {
-
     var safeCast = expr.failureBehavior() == FailureBehavior.RETURN_NULL;
     return rexBuilder.makeAbstractCast(
         typeConverter.toCalcite(typeFactory, expr.getType()), expr.input().accept(this), safeCast);

@@ -9,7 +9,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.isthmus.expression.FunctionConverter.GenericCall;
 import io.substrait.type.Type;
 import java.util.Collections;
 import java.util.List;
