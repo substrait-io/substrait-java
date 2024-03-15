@@ -407,10 +407,6 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static Expression cast(Type type, Expression expression) {
-    return cast(type, expression, Expression.FailureBehavior.UNSPECIFIED);
-  }
-
   public static Expression cast(
       Type type, Expression expression, Expression.FailureBehavior failureBehavior) {
     return Expression.Cast.builder()

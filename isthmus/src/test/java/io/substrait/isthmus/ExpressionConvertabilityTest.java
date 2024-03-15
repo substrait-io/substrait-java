@@ -117,7 +117,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
                         b.fieldReference(input, 0),
                         Expression.FailureBehavior.THROW_EXCEPTION),
                     ExpressionCreator.cast(
-                        R.I64, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
+                        R.I32, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
             b.remap(1, 2),
             b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
 

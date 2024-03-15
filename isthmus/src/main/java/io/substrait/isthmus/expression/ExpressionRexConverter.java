@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.FieldReference;
@@ -478,8 +479,10 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.Cast expr) throws RuntimeException {
+
+    var safeCast = expr.failureBehavior() == FailureBehavior.RETURN_NULL;
     return rexBuilder.makeAbstractCast(
-        typeConverter.toCalcite(typeFactory, expr.getType()), expr.input().accept(this));
+        typeConverter.toCalcite(typeFactory, expr.getType()), expr.input().accept(this), safeCast);
   }
 
   @Override
