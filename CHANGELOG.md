@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.29.0](https://github.com/substrait-io/substrait-java/compare/v0.28.1...v0.29.0) (2024-03-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** method ExpressionCreator.cast(Type, Expression) has been removed
+
+### Features
+
+* **isthmus:** support for safe casting ([#236](https://github.com/substrait-io/substrait-java/issues/236)) ([72785ad](https://github.com/substrait-io/substrait-java/commit/72785ad1a4bd1ba8481d75ddaf4f1a822bf9bf6b))
+
 ## [0.28.1](https://github.com/substrait-io/substrait-java/compare/v0.28.0...v0.28.1) (2024-03-10)
 
 
