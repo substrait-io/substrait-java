@@ -1,6 +1,8 @@
 package io.substrait.type.proto;
 
 import io.substrait.proto.Type;
+import io.substrait.type.Type;
+
 import java.util.Arrays;
 
 abstract class BaseProtoTypes<T, I> {
@@ -22,6 +24,13 @@ abstract class BaseProtoTypes<T, I> {
   public final T INTERVAL_DAY;
   public final T INTERVAL_YEAR;
   public final T UUID;
+  public final T VARCHAR;
+  public final T FIXCHAR;
+  public final T FIX_BINARY;
+  public final T DECIMAL;
+  public final T MAP;
+  public final T LIST_TYPE;
+  public final T STRUCT;
 
   public BaseProtoTypes(Type.Nullability nullability) {
     this.nullability = nullability;
@@ -41,6 +50,13 @@ abstract class BaseProtoTypes<T, I> {
     INTERVAL_DAY = wrap(Type.IntervalDay.newBuilder().setNullability(nullability).build());
     INTERVAL_YEAR = wrap(Type.IntervalYear.newBuilder().setNullability(nullability).build());
     UUID = wrap(Type.UUID.newBuilder().setNullability(nullability).build());
+    VARCHAR = wrap(Type.VarChar.newBuilder().setNullability(nullability).build());
+    FIXCHAR = wrap(Type.FixedChar.newBuilder().setNullability(nullability).build());
+    FIX_BINARY= wrap(Type.FixedBinary.newBuilder().setNullability(nullability).build());
+    DECIMAL = wrap(Type.Decimal.newBuilder().setNullability(nullability).build());
+    MAP = wrap(Type.Map.newBuilder().setNullability(nullability).build());
+    LIST_TYPE = wrap(Type.ListType.newBuilder().setNullability(nullability).build());
+    STRUCT = wrap(Type.Struct.newBuilder().setNullability(nullability).build());
   }
 
   public abstract T fixedChar(I len);
