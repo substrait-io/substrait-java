@@ -22,6 +22,9 @@ abstract class BaseProtoTypes<T, I> {
   public final T INTERVAL_DAY;
   public final T INTERVAL_YEAR;
   public final T UUID;
+  public final T VARCHAR;
+  public final T FIXED_CHAR;
+  public final T FIXED_BINARY;
 
   public BaseProtoTypes(Type.Nullability nullability) {
     this.nullability = nullability;
@@ -41,6 +44,9 @@ abstract class BaseProtoTypes<T, I> {
     INTERVAL_DAY = wrap(Type.IntervalDay.newBuilder().setNullability(nullability).build());
     INTERVAL_YEAR = wrap(Type.IntervalYear.newBuilder().setNullability(nullability).build());
     UUID = wrap(Type.UUID.newBuilder().setNullability(nullability).build());
+    VARCHAR = wrap(Type.VarChar.newBuilder().setNullability(nullability).build());
+    FIXED_CHAR = wrap(Type.FixedChar.newBuilder().setNullability(nullability).build());
+    FIXED_BINARY = wrap(Type.FixedBinary.newBuilder().setNullability(nullability).build());
   }
 
   public abstract T fixedChar(I len);
