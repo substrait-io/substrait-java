@@ -25,10 +25,6 @@ abstract class BaseProtoTypes<T, I> {
   public final T VARCHAR;
   public final T FIXED_CHAR;
   public final T FIXED_BINARY;
-  public final T DECIMAL;
-  public final T MAP;
-  public final T LIST;
-  public final T STRUCT;
 
   public BaseProtoTypes(Type.Nullability nullability) {
     this.nullability = nullability;
@@ -51,10 +47,6 @@ abstract class BaseProtoTypes<T, I> {
     VARCHAR = wrap(Type.VarChar.newBuilder().setNullability(nullability).build());
     FIXED_CHAR = wrap(Type.FixedChar.newBuilder().setNullability(nullability).build());
     FIXED_BINARY = wrap(Type.FixedBinary.newBuilder().setNullability(nullability).build());
-    DECIMAL = wrap(Type.Decimal.newBuilder().setNullability(nullability).build());
-    MAP = wrap(Type.Map.newBuilder().setNullability(nullability).build());
-    LIST = wrap(Type.List.newBuilder().setNullability(nullability).build());
-    STRUCT = wrap(Type.Struct.newBuilder().setNullability(nullability).build());
   }
 
   public abstract T fixedChar(I len);
