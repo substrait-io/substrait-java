@@ -82,12 +82,12 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.IntervalYear expr) {
-    return "year";
+    return "iyear";
   }
 
   @Override
   public String visit(final Type.IntervalDay expr) {
-    return "day";
+    return "iday";
   }
 
   @Override
