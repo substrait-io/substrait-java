@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.29.1](https://github.com/substrait-io/substrait-java/compare/v0.29.0...v0.29.1) (2024-03-31)
+
+
+### Bug Fixes
+
+* correct function compound names for IntervalDay and IntervalYear [#240](https://github.com/substrait-io/substrait-java/issues/240) ([#242](https://github.com/substrait-io/substrait-java/issues/242)) ([856331b](https://github.com/substrait-io/substrait-java/commit/856331bae9901e618663622bbf60eaf923dea5b8))
+
 ## [0.29.0](https://github.com/substrait-io/substrait-java/compare/v0.28.1...v0.29.0) (2024-03-17)
 
 
