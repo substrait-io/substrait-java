@@ -116,6 +116,16 @@ public class ToTypeString
   }
 
   @Override
+  public String visit(final Type.PrecisionTimestamp expr) {
+    return "pts";
+  }
+
+  @Override
+  public String visit(final Type.PrecisionTimestampTZ expr) {
+    return "ptstz";
+  }
+
+  @Override
   public String visit(final Type.Struct expr) {
     return "struct";
   }
@@ -153,6 +163,16 @@ public class ToTypeString
   @Override
   public String visit(ParameterizedType.Decimal expr) throws RuntimeException {
     return "dec";
+  }
+
+  @Override
+  public String visit(ParameterizedType.PrecisionTimestamp expr) throws RuntimeException {
+    return "pts";
+  }
+
+  @Override
+  public String visit(ParameterizedType.PrecisionTimestampTZ expr) throws RuntimeException {
+    return "ptstz";
   }
 
   @Override

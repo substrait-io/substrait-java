@@ -107,6 +107,36 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   @Value.Immutable
+  abstract static class PrecisionTimestamp extends BaseParameterizedType implements NullableType {
+    public abstract StringLiteral precision();
+
+    @Override
+    <R, E extends Throwable> R accept(final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor)
+        throws E {
+      return parameterizedTypeVisitor.visit(this);
+    }
+
+    public static ImmutableParameterizedType.PrecisionTimestamp.Builder builder() {
+      return ImmutableParameterizedType.PrecisionTimestamp.builder();
+    }
+  }
+
+  @Value.Immutable
+  abstract static class PrecisionTimestampTZ extends BaseParameterizedType implements NullableType {
+    public abstract StringLiteral precision();
+
+    @Override
+    <R, E extends Throwable> R accept(final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor)
+        throws E {
+      return parameterizedTypeVisitor.visit(this);
+    }
+
+    public static ImmutableParameterizedType.PrecisionTimestampTZ.Builder builder() {
+      return ImmutableParameterizedType.PrecisionTimestampTZ.builder();
+    }
+  }
+
+  @Value.Immutable
   abstract static class Struct extends BaseParameterizedType implements NullableType {
     public abstract java.util.List<ParameterizedType> fields();
 

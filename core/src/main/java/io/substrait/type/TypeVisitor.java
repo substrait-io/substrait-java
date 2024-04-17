@@ -27,6 +27,10 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Timestamp type) throws E;
 
+  R visit(Type.PrecisionTimestamp type) throws E;
+
+  R visit(Type.PrecisionTimestampTZ type) throws E;
+
   R visit(Type.IntervalYear type) throws E;
 
   R visit(Type.IntervalDay type) throws E;
@@ -159,6 +163,16 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.Decimal type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.PrecisionTimestamp type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.PrecisionTimestampTZ type) throws E {
       throw t();
     }
 
