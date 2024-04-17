@@ -155,8 +155,12 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     }
   }
 
+  /** Deprecated, use {@link PrecisionTimestampTZ} instead */
   @Value.Immutable
+  @Deprecated
   abstract static class TimestampTZ implements Type {
+
+    /** Deprecated, use {@link PrecisionTimestampTZ#builder()} instead */
     public static ImmutableType.TimestampTZ.Builder builder() {
       return ImmutableType.TimestampTZ.builder();
     }
@@ -167,8 +171,13 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     }
   }
 
+  /** Deprecated, use {@link PrecisionTimestamp} instead */
   @Value.Immutable
+  @Deprecated
   abstract static class Timestamp implements Type {
+
+    /** Deprecated, use {@link PrecisionTimestamp#builder()} instead */
+    @Deprecated
     public static ImmutableType.Timestamp.Builder builder() {
       return ImmutableType.Timestamp.builder();
     }
@@ -265,6 +274,36 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
 
     public static ImmutableType.Decimal.Builder builder() {
       return ImmutableType.Decimal.builder();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class PrecisionTimestamp implements Type {
+
+    public abstract int precision();
+
+    public static ImmutableType.PrecisionTimestamp.Builder builder() {
+      return ImmutableType.PrecisionTimestamp.builder();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class PrecisionTimestampTZ implements Type {
+
+    public abstract int precision();
+
+    public static ImmutableType.PrecisionTimestampTZ.Builder builder() {
+      return ImmutableType.PrecisionTimestampTZ.builder();
     }
 
     @Override

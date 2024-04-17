@@ -237,6 +237,40 @@ public class ParseToPojo {
       return withNullE(nullable).decimalE(ctx.precision.accept(this), ctx.scale.accept(this));
     }
 
+    @Override
+    public TypeExpression visitPrecisionTimestamp(
+        final SubstraitTypeParser.PrecisionTimestampContext ctx) {
+      boolean nullable = ctx.isnull != null;
+      Object precision = i(ctx.precision);
+      if (precision instanceof Integer p) {
+        return withNull(nullable).precisionTimestamp(p);
+      }
+      if (precision instanceof String s) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).precisionTimestampE(s);
+      }
+
+      checkExpression();
+      return withNullE(nullable).precisionTimestampE(ctx.precision.accept(this));
+    }
+
+    @Override
+    public TypeExpression visitPrecisionTimestampTZ(
+        final SubstraitTypeParser.PrecisionTimestampTZContext ctx) {
+      boolean nullable = ctx.isnull != null;
+      Object precision = i(ctx.precision);
+      if (precision instanceof Integer p) {
+        return withNull(nullable).precisionTimestampTZ(p);
+      }
+      if (precision instanceof String s) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).precisionTimestampTZE(s);
+      }
+
+      checkExpression();
+      return withNullE(nullable).precisionTimestampTZE(ctx.precision.accept(this));
+    }
+
     private Object i(SubstraitTypeParser.NumericParameterContext ctx) {
       TypeExpression type = ctx.accept(this);
       if (type instanceof TypeExpression.IntegerLiteral) {

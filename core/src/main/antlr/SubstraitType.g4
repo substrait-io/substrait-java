@@ -51,6 +51,8 @@ IntervalYear: I N T E R V A L '_' Y E A R;
 IntervalDay: I N T E R V A L '_' D A Y;
 UUID     : U U I D;
 Decimal  : D E C I M A L;
+PrecisionTimestamp: P R E C I S I O N '_' T I M E S T A M P;
+PrecisionTimestampTZ: P R E C I S I O N '_' T I M E S T A M P '_' T Z;
 FixedChar: F I X E D C H A R;
 VarChar  : V A R C H A R;
 FixedBinary: F I X E D B I N A R Y;
@@ -167,6 +169,8 @@ parameterizedType
 	| VarChar isnull='?'? Lt len=numericParameter Gt #varChar
 	| FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
 	| Decimal isnull='?'? Lt precision=numericParameter Comma scale=numericParameter Gt #decimal
+	| PrecisionTimestamp isnull='?'? Lt precision=numericParameter Gt #precisionTimestamp
+	| PrecisionTimestampTZ isnull='?'? Lt precision=numericParameter Gt #precisionTimestampTZ
 	| Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
 	| NStruct isnull='?'? Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
 	| List isnull='?'? Lt expr Gt #list

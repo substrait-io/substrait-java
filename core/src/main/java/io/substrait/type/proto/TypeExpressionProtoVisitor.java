@@ -122,6 +122,16 @@ public class TypeExpressionProtoVisitor
   }
 
   @Override
+  public DerivationExpression visit(ParameterizedType.PrecisionTimestamp expr) {
+    return typeContainer(expr).precisionTimestamp(expr.precision().accept(this));
+  }
+
+  @Override
+  public DerivationExpression visit(TypeExpression.PrecisionTimestampTZ expr) {
+    return typeContainer(expr).precisionTimestampTZ(expr.precision().accept(this));
+  }
+
+  @Override
   public DerivationExpression visit(ParameterizedType.Struct expr) {
     return typeContainer(expr)
         .struct(
@@ -235,6 +245,24 @@ public class TypeExpressionProtoVisitor
               .build());
     }
 
+    @Override
+    public DerivationExpression precisionTimestamp(DerivationExpression precision) {
+      return wrap(
+          DerivationExpression.ExpressionPrecisionTimestamp.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    @Override
+    public DerivationExpression precisionTimestampTZ(DerivationExpression precision) {
+      return wrap(
+          DerivationExpression.ExpressionPrecisionTimestampTZ.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
     public DerivationExpression struct(Iterable<DerivationExpression> types) {
       return wrap(
           DerivationExpression.ExpressionStruct.newBuilder()
@@ -311,6 +339,10 @@ public class TypeExpressionProtoVisitor
         return bldr.setFixedBinary(t).build();
       } else if (o instanceof DerivationExpression.ExpressionDecimal t) {
         return bldr.setDecimal(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionPrecisionTimestamp t) {
+        return bldr.setPrecisionTimestamp(t).build();
+      } else if (o instanceof DerivationExpression.ExpressionPrecisionTimestampTZ t) {
+        return bldr.setPrecisionTimestampTz(t).build();
       } else if (o instanceof DerivationExpression.ExpressionStruct t) {
         return bldr.setStruct(t).build();
       } else if (o instanceof DerivationExpression.ExpressionList t) {
