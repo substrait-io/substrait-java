@@ -81,7 +81,7 @@ public abstract class FunctionConverter<
     for (String key : alm.keySet()) {
       var sigs = calciteOperators.get(key);
       if (sigs == null) {
-        logger.info("Dropping function due to no binding: {}", key);
+        logger.atInfo().log("Dropping function due to no binding: {}", key);
         continue;
       }
 

@@ -13,6 +13,7 @@ plugins {
 
 var IMMUTABLES_VERSION = properties.get("immutables.version")
 var JUNIT_VERSION = properties.get("junit.version")
+var SLF4J_VERSION = properties.get("slf4j.version")
 
 repositories { mavenCentral() }
 
@@ -21,7 +22,7 @@ java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
-  implementation("org.slf4j:slf4j-jdk14:1.7.30")
+  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")

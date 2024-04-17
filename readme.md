@@ -23,5 +23,14 @@ Another way to get an idea of what Substrait plans look like is to use our scrip
 ./isthmus/src/test/script/tpch_smoke.sh
 ```
 
+## Logging
+This project uses the [SLF4J](https://www.slf4j.org/) logging API. If you are using the Substrait Java core component as a dependency in your own project, you should consider including an appropriate [SLF4J logging provider](https://www.slf4j.org/manual.html#swapping) in your runtime classpath. If you do not include a logging provider in your classpath, the code will still work correctly but you will not receive any logging output and might see the following warning in your standard error output:
+
+```
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+```
+
 ## Getting Involved
 To learn more, head over [Substrait](https://substrait.io/), our parent project and join our [community](https://substrait.io/community/)

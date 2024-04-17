@@ -796,7 +796,7 @@ public class SimpleExtension {
             .windowFunctions(allWindowFunctionVariants)
             .addAllTypes(extensionSignatures.types())
             .build();
-    logger.debug(
+    logger.atDebug().log(
         "Loaded {} aggregate functions and {} scalar functions from {}.",
         collection.aggregateFunctions().size(),
         collection.scalarFunctions().size(),

@@ -32,10 +32,12 @@ public class FieldSelectionConverter implements CallConverter {
     var reference = call.getOperands().get(1);
 
     if (reference.getKind() != SqlKind.LITERAL || !(reference instanceof RexLiteral)) {
-      logger.warn(
-          "Found item operator without literal kind/type. This isn't handled well. Reference was {} with toString {}.",
-          reference.getKind().name(),
-          reference);
+      logger
+          .atWarn()
+          .log(
+              "Found item operator without literal kind/type. This isn't handled well. Reference was {} with toString {}.",
+              reference.getKind().name(),
+              reference);
       return Optional.empty();
     }
 
@@ -99,13 +101,13 @@ public class FieldSelectionConverter implements CallConverter {
     } else if (l instanceof Expression.I64Literal i64) {
       return Optional.of((int) i64.value());
     }
-    logger.warn("Literal expected to be int type but was not. {}.", l);
+    logger.atWarn().log("Literal expected to be int type but was not. {}.", l);
     return Optional.empty();
   }
 
   public Optional<String> toString(Expression.Literal l) {
     if (!(l instanceof Expression.FixedCharLiteral)) {
-      logger.warn("Literal expected to be char type but was not. {}", l);
+      logger.atWarn().log("Literal expected to be char type but was not. {}", l);
       return Optional.empty();
     }
 
