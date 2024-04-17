@@ -66,6 +66,14 @@ public class TypeCreator {
     return Type.Struct.builder().nullable(nullable).addFields(types).build();
   }
 
+  public final Type precisionTimestamp(int precision) {
+    return Type.PrecisionTimestamp.builder().nullable(nullable).precision(precision).build();
+  }
+
+  public final Type precisionTimestampTZ(int precision) {
+    return Type.PrecisionTimestampTZ.builder().nullable(nullable).precision(precision).build();
+  }
+
   public Type.Struct struct(Iterable<? extends Type> types) {
     return Type.Struct.builder().nullable(nullable).addAllFields(types).build();
   }
@@ -213,6 +221,16 @@ public class TypeCreator {
     @Override
     public Type visit(Type.Decimal type) throws RuntimeException {
       return Type.Decimal.builder().from(type).nullable(nullability).build();
+    }
+
+    @Override
+    public Type visit(Type.PrecisionTimestamp type) throws RuntimeException {
+      return Type.PrecisionTimestamp.builder().from(type).nullable(nullability).build();
+    }
+
+    @Override
+    public Type visit(Type.PrecisionTimestampTZ type) throws RuntimeException {
+      return Type.PrecisionTimestampTZ.builder().from(type).nullable(nullability).build();
     }
 
     @Override

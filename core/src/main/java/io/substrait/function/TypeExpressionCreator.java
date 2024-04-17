@@ -35,6 +35,20 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
+  public TypeExpression precisionTimestampE(TypeExpression precision) {
+    return TypeExpression.PrecisionTimestamp.builder()
+        .nullable(nullable)
+        .precision(precision)
+        .build();
+  }
+
+  public TypeExpression precisionTimestampTZE(TypeExpression precision) {
+    return TypeExpression.PrecisionTimestampTZ.builder()
+        .nullable(nullable)
+        .precision(precision)
+        .build();
+  }
+
   public TypeExpression structE(TypeExpression... types) {
     return TypeExpression.Struct.builder().nullable(nullable).addFields(types).build();
   }

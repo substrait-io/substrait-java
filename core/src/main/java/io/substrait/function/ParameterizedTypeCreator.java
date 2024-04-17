@@ -49,6 +49,20 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  public ParameterizedType precisionTimestampE(String precision) {
+    return ParameterizedType.PrecisionTimestamp.builder()
+        .nullable(nullable)
+        .precision(parameter(precision, false))
+        .build();
+  }
+
+  public ParameterizedType precisionTimestampTZE(String precision) {
+    return ParameterizedType.PrecisionTimestampTZ.builder()
+        .nullable(nullable)
+        .precision(parameter(precision, false))
+        .build();
+  }
+
   public ParameterizedType structE(ParameterizedType... types) {
     return ParameterizedType.Struct.builder().nullable(nullable).addFields(types).build();
   }
