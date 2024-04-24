@@ -71,17 +71,18 @@ jobs:
     - name: Build with Gradle
       run: gradle nativeImage
     - name: Smoke Test
-      run: ./isthmus/src/test/script/smoke.sh
-        ./isthmus/src/test/script/tpch_smoke.sh
+      run: |
+        ./isthmus-cli/src/test/script/smoke.sh
+        ./isthmus-cli/src/test/script/tpch_smoke.sh
     - name: Rename the artifact to OS-unique name
       shell: bash
       run: |
-        value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
+        value=`mv isthmus-cli/build/graal/isthmus isthmus-cli/build/graal/isthmus-${{ matrix.os }}`
     - name: Publish artifact
       uses: actions/upload-artifact@v4
       with:
         name: isthmus-${{ matrix.os }}
-        path: isthmus/build/graal/isthmus-${{ matrix.os }}
+        path: isthmus-cli/build/graal/isthmus-${{ matrix.os }}
   dry-run-release:
     name: Dry-run release
     runs-on: ubuntu-latest

@@ -1,3 +1,3 @@
-package io.substrait.isthmus;
+package io.substrait.isthmus.cli;
 
 public class InitializeAtBuildTime {}

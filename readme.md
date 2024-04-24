@@ -20,7 +20,7 @@ A good way to get started is to experiment with building Substrait plans for you
 
 Another way to get an idea of what Substrait plans look like is to use our script that generates Substrait plans for all the TPC-H queries:
 ```
-./isthmus/src/test/script/tpch_smoke.sh
+./isthmus-cli/src/test/script/tpch_smoke.sh
 ```
 
 ## Logging
