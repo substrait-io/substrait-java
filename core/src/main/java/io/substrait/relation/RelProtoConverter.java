@@ -149,9 +149,9 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         FetchRel.newBuilder()
             .setCommon(common(fetch))
             .setInput(toProto(fetch.getInput()))
-            .setOffset(fetch.getOffset());
-
-    fetch.getCount().ifPresent(f -> builder.setCount(f));
+            .setOffset(fetch.getOffset())
+            // -1 is used as a sentinel value to signal LIMIT ALL
+            .setCount(fetch.getCount().orElse(-1));
 
     fetch.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setFetch(builder).build();

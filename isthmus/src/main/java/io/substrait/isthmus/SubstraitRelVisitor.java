@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -283,22 +284,33 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Sort sort) {
-    var input = apply(sort.getInput());
-    var fields =
-        sort.getCollation().getFieldCollations().stream()
-            .map(t -> toSortField(t, input.getRecordType()))
-            .collect(java.util.stream.Collectors.toList());
-    var convertedSort = Sort.builder().addAllSortFields(fields).input(input).build();
-    if (sort.fetch == null && sort.offset == null) {
-      return convertedSort;
-    }
-    var offset = Optional.ofNullable(sort.offset).map(r -> asLong(r)).orElse(0L);
-    var builder = Fetch.builder().input(convertedSort).offset(offset);
-    if (sort.fetch == null) {
-      return builder.build();
+    Rel input = apply(sort.getInput());
+    Rel output = input;
+
+    // The Calcite Sort relation combines sorting along with offset and fetch/limit
+    // Sorting is applied BEFORE the offset and limit is are applied
+    // Substrait splits this functionality into two different relations: SortRel, FetchRel
+    // Add the SortRel to the relation tree first to match Calcite's application order
+    if (!sort.getCollation().getFieldCollations().isEmpty()) {
+      List<Expression.SortField> fields =
+          sort.getCollation().getFieldCollations().stream()
+              .map(t -> toSortField(t, input.getRecordType()))
+              .collect(java.util.stream.Collectors.toList());
+      output = Sort.builder().addAllSortFields(fields).input(output).build();
     }
 
-    return builder.count(asLong(sort.fetch)).build();
+    if (sort.fetch != null || sort.offset != null) {
+      Long offset = Optional.ofNullable(sort.offset).map(this::asLong).orElse(0L);
+      OptionalLong count =
+          Optional.ofNullable(sort.fetch)
+              .map(r -> OptionalLong.of(asLong(r)))
+              .orElse(OptionalLong.empty());
+
+      var builder = Fetch.builder().input(output).offset(offset).count(count);
+      output = builder.build();
+    }
+
+    return output;
   }
 
   private long asLong(RexNode rex) {

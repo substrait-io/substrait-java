@@ -353,7 +353,12 @@ public class ProtoRelConverter {
 
   private Fetch newFetch(FetchRel rel) {
     var input = from(rel.getInput());
-    var builder = Fetch.builder().input(input).count(rel.getCount()).offset(rel.getOffset());
+    var builder = Fetch.builder().input(input).offset(rel.getOffset());
+    if (rel.getCount() != -1) {
+      // -1 is used as a sentinel value to signal LIMIT ALL
+      // count only needs to be set when it is not -1
+      builder.count(rel.getCount());
+    }
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
