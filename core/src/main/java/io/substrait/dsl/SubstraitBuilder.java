@@ -39,6 +39,7 @@ import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -109,14 +110,30 @@ public class SubstraitBuilder {
   }
 
   public Fetch fetch(long offset, long count, Rel input) {
-    return fetch(offset, count, Optional.empty(), input);
+    return fetch(offset, OptionalLong.of(count), Optional.empty(), input);
   }
 
   public Fetch fetch(long offset, long count, Rel.Remap remap, Rel input) {
-    return fetch(offset, count, Optional.of(remap), input);
+    return fetch(offset, OptionalLong.of(count), Optional.of(remap), input);
   }
 
-  private Fetch fetch(long offset, long count, Optional<Rel.Remap> remap, Rel input) {
+  public Fetch limit(long limit, Rel input) {
+    return fetch(0, OptionalLong.of(limit), Optional.empty(), input);
+  }
+
+  public Fetch limit(long limit, Rel.Remap remap, Rel input) {
+    return fetch(0, OptionalLong.of(limit), Optional.of(remap), input);
+  }
+
+  public Fetch offset(long offset, Rel input) {
+    return fetch(offset, OptionalLong.empty(), Optional.empty(), input);
+  }
+
+  public Fetch offset(long offset, Rel.Remap remap, Rel input) {
+    return fetch(offset, OptionalLong.empty(), Optional.of(remap), input);
+  }
+
+  private Fetch fetch(long offset, OptionalLong count, Optional<Rel.Remap> remap, Rel input) {
     return Fetch.builder().offset(offset).count(count).input(input).remap(remap).build();
   }
 
