@@ -287,7 +287,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     Rel input = apply(sort.getInput());
     Rel output = input;
 
-    // SortRel is added BEFORE FetchRel, if present
+    // The Calcite Sort relation combines sorting along with offset and fetch/limit
+    // Sorting is applied BEFORE the offset and limit is are applied
+    // Substrait splits this functionality into two different relations: SortRel, FetchRel
+    // Add the SortRel to the relation tree first to match Calcite's application order
     if (!sort.getCollation().getFieldCollations().isEmpty()) {
       List<Expression.SortField> fields =
           sort.getCollation().getFieldCollations().stream()
