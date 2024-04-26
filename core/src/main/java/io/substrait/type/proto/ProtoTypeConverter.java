@@ -42,6 +42,10 @@ public class ProtoTypeConverter {
           .fixedBinary(type.getFixedBinary().getLength());
       case DECIMAL -> n(type.getDecimal().getNullability())
           .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
+      case PRECISION_TIMESTAMP -> n(type.getPrecisionTimestamp().getNullability())
+          .precisionTimestamp(type.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ -> n(type.getPrecisionTimestampTz().getNullability())
+          .precisionTimestampTZ(type.getPrecisionTimestampTz().getPrecision());
       case STRUCT -> n(type.getStruct().getNullability())
           .struct(
               type.getStruct().getTypesList().stream()

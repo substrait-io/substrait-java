@@ -125,6 +125,16 @@ abstract class BaseProtoConverter<T, I>
   }
 
   @Override
+  public final T visit(final Type.PrecisionTimestamp expr) {
+    return typeContainer(expr).precisionTimestamp(expr.precision());
+  }
+
+  @Override
+  public final T visit(final Type.PrecisionTimestampTZ expr) {
+    return typeContainer(expr).precisionTimestampTZ(expr.precision());
+  }
+
+  @Override
   public final T visit(final Type.Struct expr) {
     return typeContainer(expr)
         .struct(

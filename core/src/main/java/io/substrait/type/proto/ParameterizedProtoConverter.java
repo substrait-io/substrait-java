@@ -55,6 +55,18 @@ public class ParameterizedProtoConverter
   }
 
   @Override
+  public ParameterizedType visit(io.substrait.function.ParameterizedType.PrecisionTimestamp expr)
+      throws RuntimeException {
+    return typeContainer(expr).precisionTimestamp(i(expr.precision()));
+  }
+
+  @Override
+  public ParameterizedType visit(io.substrait.function.ParameterizedType.PrecisionTimestampTZ expr)
+      throws RuntimeException {
+    return typeContainer(expr).precisionTimestampTZ(i(expr.precision()));
+  }
+
+  @Override
   public ParameterizedType visit(io.substrait.function.ParameterizedType.Struct expr)
       throws RuntimeException {
     return typeContainer(expr)
@@ -174,6 +186,24 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
+    public ParameterizedType precisionTimestamp(ParameterizedType.IntegerOption precision) {
+      return wrap(
+          ParameterizedType.ParameterizedPrecisionTimestamp.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    @Override
+    public ParameterizedType precisionTimestampTZ(ParameterizedType.IntegerOption precision) {
+      return wrap(
+          ParameterizedType.ParameterizedPrecisionTimestampTZ.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
     public ParameterizedType struct(Iterable<ParameterizedType> types) {
       return wrap(
           ParameterizedType.ParameterizedStruct.newBuilder()
@@ -246,6 +276,10 @@ public class ParameterizedProtoConverter
         return bldr.setFixedBinary(t).build();
       } else if (o instanceof ParameterizedType.ParameterizedDecimal t) {
         return bldr.setDecimal(t).build();
+      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestamp t) {
+        return bldr.setPrecisionTimestamp(t).build();
+      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestampTZ t) {
+        return bldr.setPrecisionTimestampTz(t).build();
       } else if (o instanceof ParameterizedType.ParameterizedStruct t) {
         return bldr.setStruct(t).build();
       } else if (o instanceof ParameterizedType.ParameterizedList t) {
