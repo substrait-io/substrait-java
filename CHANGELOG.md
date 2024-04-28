@@ -1,6 +1,25 @@
 Release Notes
 ---
 
+## [0.30.0](https://github.com/substrait-io/substrait-java/compare/v0.29.1...v0.30.0) (2024-04-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* ParameterizedTypeVisitor has new visit methods
+* TypeExpressionVisitor has new visit methods
+* TypeVisitor has new visit methods
+* BaseProtoTypes has new visit methods
+
+### Bug Fixes
+
+* handle FetchRels with only offset set ([#252](https://github.com/substrait-io/substrait-java/issues/252)) ([b334e1d](https://github.com/substrait-io/substrait-java/commit/b334e1d4004ebc4598cab7bc076f3d477e97a52a))
+
+
+### Miscellaneous Chores
+
+* update to substrait 0.48.0 ([#250](https://github.com/substrait-io/substrait-java/issues/250)) ([572fe57](https://github.com/substrait-io/substrait-java/commit/572fe57ccf473e3d680f8928dd5f6833583350cc))
+
 ## [0.29.1](https://github.com/substrait-io/substrait-java/compare/v0.29.0...v0.29.1) (2024-03-31)
 
 
