@@ -76,6 +76,7 @@ var GUAVA_VERSION = properties.get("guava.version")
 var IMMUTABLES_VERSION = properties.get("immutables.version")
 var JACKSON_VERSION = properties.get("jackson.version")
 var JUNIT_VERSION = properties.get("junit.version")
+var SLF4J_VERSION = properties.get("slf4j.version")
 
 dependencies {
   implementation(project(":core"))
@@ -97,6 +98,8 @@ dependencies {
   implementation("com.google.code.findbugs:jsr305:3.0.2")
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
+  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
+  runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")

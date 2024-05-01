@@ -56,7 +56,7 @@ public class YamlRead {
               .registerModule(Deserializers.MODULE);
       var doc = mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
 
-      logger.debug(
+      logger.atDebug().log(
           "Parsed {} functions in file {}.",
           Optional.ofNullable(doc.scalars()).map(List::size).orElse(0)
               + Optional.ofNullable(doc.aggregates()).map(List::size).orElse(0),
