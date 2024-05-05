@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.31.0](https://github.com/substrait-io/substrait-java/compare/v0.30.0...v0.31.0) (2024-05-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **isthumus:** CLI related functionality is now in the io.substrait.isthmus.cli package
+
+### Features
+
+* allow deployment time selection of logging framework [#243](https://github.com/substrait-io/substrait-java/issues/243) ([#244](https://github.com/substrait-io/substrait-java/issues/244)) ([72bab63](https://github.com/substrait-io/substrait-java/commit/72bab63edf6c4ffb12c3c4b0e4f49d066e0c5524))
+* **isthumus:** extract CLI into isthmus-cli project [#248](https://github.com/substrait-io/substrait-java/issues/248) ([#249](https://github.com/substrait-io/substrait-java/issues/249)) ([a49de62](https://github.com/substrait-io/substrait-java/commit/a49de62c670274cccfa8b94fb86e88b36fc716d3))
+
 ## [0.30.0](https://github.com/substrait-io/substrait-java/compare/v0.29.1...v0.30.0) (2024-04-28)
 
 
