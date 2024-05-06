@@ -29,6 +29,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -296,6 +297,11 @@ public class SubstraitBuilder {
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
+  public VirtualTableScan virtualTableScan(
+      List<String> dfsNames, List<Expression.StructLiteral> rows) {
+    return VirtualTableScan.builder().dfsNames(dfsNames).rows(rows).build();
+  }
+
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
     return project(expressionsFn, Optional.empty(), input);
   }
@@ -354,8 +360,20 @@ public class SubstraitBuilder {
     return Expression.I32Literal.builder().value(v).build();
   }
 
+  public Expression.I64Literal i64(int v) {
+    return Expression.I64Literal.builder().value(v).build();
+  }
+
   public Expression.FP64Literal fp64(double v) {
     return Expression.FP64Literal.builder().value(v).build();
+  }
+
+  public Expression.StrLiteral str(String s) {
+    return Expression.StrLiteral.builder().value(s).build();
+  }
+
+  public Expression.StructLiteral struct(Expression.Literal... fields) {
+    return Expression.StructLiteral.builder().addFields(fields).build();
   }
 
   public Expression cast(Expression input, Type type) {
@@ -599,8 +617,30 @@ public class SubstraitBuilder {
   }
 
   public Expression.ScalarFunctionInvocation equal(Expression left, Expression right) {
+    return comparisonFunction("equal", left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation lt(Expression left, Expression right) {
+    return comparisonFunction("lt", left, right);
+  }
+
+  private Expression.ScalarFunctionInvocation comparisonFunction(
+      String fname, Expression left, Expression right) {
+    var key = String.format("%s:any_any", fname);
+
+    var isOutputNullable = left.getType().nullable() || right.getType().nullable();
+    var outputType = left.getType();
+    outputType =
+        isOutputNullable
+            ? TypeCreator.asNullable(outputType)
+            : TypeCreator.asNotNullable(outputType);
+
     return scalarFn(
-        DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
+        io.substrait.extension.DefaultExtensionCatalog.FUNCTIONS_COMPARISON,
+        key,
+        outputType,
+        left,
+        right);
   }
 
   public Expression.ScalarFunctionInvocation or(Expression... args) {
