@@ -703,6 +703,7 @@ public class SimpleExtension {
                 "comparison",
                 "datetime",
                 "logarithmic",
+                "match_recognize",
                 "rounding",
                 "string")
             .stream()

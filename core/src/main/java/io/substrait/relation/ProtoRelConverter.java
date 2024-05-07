@@ -18,6 +18,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.MatchRecognizeRel;
 import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
@@ -111,6 +112,9 @@ public class ProtoRelConverter {
       }
       case WINDOW -> {
         return newConsistentPartitionWindow(rel.getWindow());
+      }
+      case MATCH_RECOGNIZE -> {
+        return newMatchRecognize(rel.getMatchRecognize());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -643,6 +647,115 @@ public class ProtoRelConverter {
       builder.extension(advancedExtension(rel.getAdvancedExtension()));
     }
     return builder.build();
+  }
+
+  private Rel newMatchRecognize(MatchRecognizeRel rel) {
+    var input = from(rel.getInput());
+    ProtoExpressionConverter protoExpressionConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+
+    List<Expression> partitionExprs =
+        rel.getPartitionKeysList().stream()
+            .map(protoExpressionConverter::from)
+            .collect(Collectors.toList());
+    List<Expression.SortField> sortFields =
+        rel.getSortKeysList().stream()
+            .map(protoExpressionConverter::fromSortField)
+            .collect(Collectors.toList());
+    List<MatchRecognize.Measure> measures =
+        rel.getMeasuresList().stream()
+            .map(m -> fromProto(protoExpressionConverter, m))
+            .collect(Collectors.toList());
+
+    MatchRecognize.Pattern pattern = fromProto(rel.getPattern());
+    List<MatchRecognize.PatternDefinition> patternDefinitions =
+        rel.getDefinitionsList().stream()
+            .map(pd -> fromProto(protoExpressionConverter, pd))
+            .collect(Collectors.toList());
+
+    return MatchRecognize.builder()
+        .input(input)
+        .partitionExpressions(partitionExprs)
+        .sortExpressions(sortFields)
+        .measures(measures)
+        .rowsPerMatch(MatchRecognize.RowsPerMatch.fromProto(rel.getRowsPerMatch()))
+        .afterMatchSkip(fromProto(rel.getAfterMatchSkip()))
+        .pattern(pattern)
+        .patternDefinitions(patternDefinitions)
+        .build();
+  }
+
+  private MatchRecognize.AfterMatchSkip fromProto(MatchRecognizeRel.AfterMatchSkip afterMatchSkip) {
+    MatchRecognize.AfterMatch afterMatch =
+        MatchRecognize.AfterMatch.fromProto(afterMatchSkip.getOption());
+    // TODO: handle skip to variable
+    return ImmutableMatchRecognize.AfterMatchSkip.builder().afterMatch(afterMatch).build();
+  }
+
+  private MatchRecognize.PatternDefinition fromProto(
+      ProtoExpressionConverter converter, MatchRecognizeRel.PatternDefinition patternDefinition) {
+
+    return MatchRecognize.PatternDefinition.builder()
+        .patternIdentifier(
+            MatchRecognize.PatternIdentifier.of(patternDefinition.getIdentifier().getId()))
+        .predicate(converter.from(patternDefinition.getCondition()))
+        .build();
+  }
+
+  private MatchRecognize.Measure fromProto(
+      ProtoExpressionConverter converter, MatchRecognizeRel.Measure measure) {
+    return MatchRecognize.Measure.builder()
+        .frameSemantics(
+            MatchRecognize.Measure.FrameSemantics.fromProto(measure.getFrameSemantics()))
+        .measureExpr(converter.from(measure.getExpr()))
+        .build();
+  }
+
+  private io.substrait.relation.MatchRecognize.Pattern fromProto(
+      io.substrait.proto.MatchRecognizeRel.Pattern pattern) {
+    return io.substrait.relation.MatchRecognize.Pattern.builder()
+        .startAnchor(pattern.getStartAnchor())
+        .endAnchor(pattern.getEndAnchor())
+        .root(patternTermFromProto(pattern.getRoot()))
+        .build();
+  }
+
+  private io.substrait.relation.MatchRecognize.Pattern.PatternTerm patternTermFromProto(
+      io.substrait.proto.MatchRecognizeRel.Pattern.PatternTerm term) {
+
+    MatchRecognize.Pattern.Quantifier quantifier =
+        ImmutableMatchRecognize.Quantifier.builder()
+            .quantifier(
+                MatchRecognize.Pattern.QuantifierBase.fromProto(term.getQuantifier().getBase()))
+            .matchingStrategy(
+                MatchRecognize.MatchingStrategy.fromProto(term.getQuantifier().getStrategy()))
+            .build();
+
+    return switch (term.getTermCase()) {
+      case LEAF -> io.substrait.relation.MatchRecognize.Pattern.Leaf.of(
+          term.getLeaf().getId(), quantifier);
+      case GROUP -> {
+        var terms =
+            term.getGroup().getTermsList().stream()
+                .map(this::patternTermFromProto)
+                .collect(java.util.stream.Collectors.toList());
+        yield switch (term.getGroup().getGrouping()) {
+          case PATTERN_GROUPING_CONCATENATION -> io.substrait.relation.MatchRecognize.Pattern
+              .Concatenation.builder()
+              .addAllComponents(terms)
+              .quantifier(quantifier)
+              .build();
+          case PATTERN_GROUPING_ALTERNATION -> MatchRecognize.Pattern.Alternation.builder()
+              .addAllComponents(terms)
+              .quantifier(quantifier)
+              .build();
+          case PATTERN_GROUPING_EXCLUDE,
+              PATTERN_GROUPING_UNSPECIFIED,
+              UNRECOGNIZED -> throw new RuntimeException("TODO");
+        };
+      }
+      case TERM_NOT_SET -> null;
+    };
   }
 
   private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {

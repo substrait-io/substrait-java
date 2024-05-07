@@ -10,6 +10,7 @@ public class DefaultExtensionCatalog {
   public static final String FUNCTIONS_DATETIME = "/functions_datetime.yaml";
   public static final String FUNCTIONS_GEOMETRY = "/functions_geometry.yaml";
   public static final String FUNCTIONS_LOGARITHMIC = "/functions_logarithmic.yaml";
+  public static final String FUNCTIONS_MATCH_RECOGNIZE = "/functions_match_recognize.yaml";
   public static final String FUNCTIONS_ROUNDING = "/functions_rounding.yaml";
   public static final String FUNCTIONS_SET = "/functions_set.yaml";
   public static final String FUNCTIONS_STRING = "/functions_string.yaml";

@@ -686,8 +686,70 @@ public class SubstraitBuilder {
         .build();
   }
 
-  // Types
+  // MATCH_RECOGNIZE Functions
 
+  public Expression.ScalarFunctionInvocation patternRef(
+      Rel input, String patternIdentifier, int colRef) {
+    var outputType = input.getRecordType().fields().get(colRef);
+    return scalarFn(
+        io.substrait.extension.DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "pattern_ref:str_i32",
+        outputType,
+        str(patternIdentifier),
+        i32(colRef));
+  }
+
+  public Expression.ScalarFunctionInvocation classifier() {
+    return scalarFn(
+        io.substrait.extension.DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "classifier:",
+        TypeCreator.of(false).STRING);
+  }
+
+  public Expression.ScalarFunctionInvocation matchNumber() {
+    return scalarFn(
+        io.substrait.extension.DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "match_number:",
+        TypeCreator.of(false).I32);
+  }
+
+  public Expression.ScalarFunctionInvocation prev(Rel input, String patternIdentifier, int colRef) {
+    var outputType = input.getRecordType().fields().get(colRef);
+    return scalarFn(
+        io.substrait.extension.DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "prev:str_i32",
+        outputType,
+        str(patternIdentifier),
+        i32(colRef));
+  }
+
+  public Expression.ScalarFunctionInvocation next(Rel input, String patternIdentifier, int colRef) {
+    var outputType = input.getRecordType().fields().get(colRef);
+    return scalarFn(
+        DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "next:str_i32",
+        outputType,
+        str(patternIdentifier),
+        i32(colRef));
+  }
+
+  public Expression.ScalarFunctionInvocation last(Rel input, int colRef) {
+    var outputType = input.getRecordType().fields().get(colRef);
+    return scalarFn(
+        DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE, "last:i32", outputType, i32(colRef));
+  }
+
+  public Expression.ScalarFunctionInvocation last(Rel input, String patternIdentifier, int colRef) {
+    var outputType = input.getRecordType().fields().get(colRef);
+    return scalarFn(
+        DefaultExtensionCatalog.FUNCTIONS_MATCH_RECOGNIZE,
+        "last:str_i32",
+        outputType,
+        str(patternIdentifier),
+        i32(colRef));
+  }
+
+  // Types
   public Type.UserDefined userDefinedType(String namespace, String typeName) {
     return ImmutableType.UserDefined.builder()
         .uri(namespace)

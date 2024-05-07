@@ -366,6 +366,11 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Rel> visit(MatchRecognize matchRecognize) throws EXCEPTION {
+    throw new RuntimeException("RelCopyOnWrite not implemented for MatchRecognize yet");
+  }
+
   protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
       ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
       throws EXCEPTION {

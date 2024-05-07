@@ -18,6 +18,7 @@ import io.substrait.proto.FilterRel;
 import io.substrait.proto.FunctionOption;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.MatchRecognizeRel;
 import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
@@ -327,6 +328,47 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
 
     return Rel.newBuilder().setWindow(builder).build();
+  }
+
+  @Override
+  public Rel visit(MatchRecognize matchRecognize) throws RuntimeException {
+    var builder =
+        MatchRecognizeRel.newBuilder()
+            .setCommon(common(matchRecognize))
+            .setInput(toProto(matchRecognize.getInput()))
+            .addAllSortKeys(toProtoS(matchRecognize.getSortExpressions()))
+            .addAllPartitionKeys(toProto(matchRecognize.getPartitionExpressions()))
+            .addAllMeasures(
+                matchRecognize.getMeasures().stream()
+                    .map(this::toProto)
+                    .collect(Collectors.toList()))
+            .setRowsPerMatch(matchRecognize.getRowsPerMatch().toProto())
+            .setAfterMatchSkip(matchRecognize.getAfterMatchSkip().toProto())
+            .setPattern(matchRecognize.getPattern().toProto())
+            .addAllDefinitions(toProto(matchRecognize.getPatternDefinitions()));
+
+    matchRecognize.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+
+    return Rel.newBuilder().setMatchRecognize(builder).build();
+  }
+
+  private MatchRecognizeRel.Measure toProto(MatchRecognize.Measure measure) {
+    return MatchRecognizeRel.Measure.newBuilder()
+        .setFrameSemantics(measure.getFrameSemantics().toProto())
+        .setExpr(measure.getMeasureExpr().accept(exprProtoConverter))
+        .build();
+  }
+
+  private List<MatchRecognizeRel.PatternDefinition> toProto(
+      List<MatchRecognize.PatternDefinition> patternDefinitions) {
+    return patternDefinitions.stream()
+        .map(
+            pd ->
+                MatchRecognizeRel.PatternDefinition.newBuilder()
+                    .setIdentifier(pd.getPatternIdentifier().toProto())
+                    .setCondition(pd.getPredicate().accept(exprProtoConverter))
+                    .build())
+        .collect(Collectors.toList());
   }
 
   private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
