@@ -722,14 +722,8 @@ public class ProtoRelConverter {
 
   private io.substrait.relation.MatchRecognize.Pattern.PatternTerm patternTermFromProto(
       io.substrait.proto.MatchRecognizeRel.Pattern.PatternTerm term) {
-
     MatchRecognize.Pattern.Quantifier quantifier =
-        ImmutableMatchRecognize.Quantifier.builder()
-            .quantifier(
-                MatchRecognize.Pattern.QuantifierBase.fromProto(term.getQuantifier().getBase()))
-            .matchingStrategy(
-                MatchRecognize.MatchingStrategy.fromProto(term.getQuantifier().getStrategy()))
-            .build();
+        MatchRecognize.Pattern.Quantifier.fromProto(term.getQuantifier());
 
     return switch (term.getTermCase()) {
       case LEAF -> io.substrait.relation.MatchRecognize.Pattern.Leaf.of(

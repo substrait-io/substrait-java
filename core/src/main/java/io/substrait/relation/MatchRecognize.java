@@ -188,20 +188,22 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
 
     public static final Quantifier ONCE =
         ImmutableMatchRecognize.Quantifier.builder()
-            .quantifier(QuantifierBase.QUANTIFIER_BASE_ONCE)
-            .matchingStrategy(MatchingStrategy.UNSPECIFIED)
+            .matchingStrategy(MatchingStrategy.GREEDY)
+            .min(1)
+            .max(1)
             .build();
 
     public static final Quantifier ZERO_OR_MORE =
         ImmutableMatchRecognize.Quantifier.builder()
-            .quantifier(QuantifierBase.QUANTIFIER_BASE_ZERO_OR_MORE)
-            .matchingStrategy(MatchingStrategy.UNSPECIFIED)
+            .min(0)
+            .matchingStrategy(MatchingStrategy.GREEDY)
             .build();
 
     public static final Quantifier ZERO_OR_ONE =
         ImmutableMatchRecognize.Quantifier.builder()
-            .quantifier(QuantifierBase.QUANTIFIER_BASE_ZERO_OR_ONE)
-            .matchingStrategy(MatchingStrategy.UNSPECIFIED)
+            .min(0)
+            .max(1)
+            .matchingStrategy(MatchingStrategy.GREEDY)
             .build();
 
     @Value.Immutable
@@ -209,57 +211,37 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
 
       public abstract MatchingStrategy getMatchingStrategy();
 
-      // TODO: figure out a better way to model all the different kinds of quantifiers
-      public abstract QuantifierBase getQuantifier();
+      public abstract Optional<Integer> getMin();
+
+      public abstract Optional<Integer> getMax();
 
       public MatchRecognizeRel.Pattern.Quantifier toProto() {
-        return MatchRecognizeRel.Pattern.Quantifier.newBuilder()
-            .setStrategy(getMatchingStrategy().toProto())
-            .setBase(getQuantifier().toProto())
-            .build();
-      }
-    }
-
-    public enum QuantifierBase {
-      QUANTIFIER_BASE_UNSPECIFIED(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase.QUANTIFIER_BASE_UNSPECIFIED),
-      QUANTIFIER_BASE_ONCE(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase.QUANTIFIER_BASE_ONCE), // A
-      QUANTIFIER_BASE_ZERO_OR_MORE(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase.QUANTIFIER_BASE_ZERO_OR_MORE), // A*
-      QUANTIFIER_BASE_ONE_OR_MORE(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase.QUANTIFIER_BASE_ONE_OR_MORE), // A+
-      QUANTIFIER_BASE_ZERO_OR_ONE(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase.QUANTIFIER_BASE_ZERO_OR_ONE); // A?
-
-      private final MatchRecognizeRel.Pattern.Quantifier.QuantifierBase proto;
-
-      QuantifierBase(MatchRecognizeRel.Pattern.Quantifier.QuantifierBase proto) {
-        this.proto = proto;
+        var builder =
+            MatchRecognizeRel.Pattern.Quantifier.newBuilder()
+                .setStrategy(getMatchingStrategy().toProto());
+        getMin().ifPresent(builder::setMin);
+        getMax().ifPresent(builder::setMax);
+        return builder.build();
       }
 
-      public MatchRecognizeRel.Pattern.Quantifier.QuantifierBase toProto() {
-        return proto;
-      }
-
-      public static QuantifierBase fromProto(
-          MatchRecognizeRel.Pattern.Quantifier.QuantifierBase proto) {
-        for (var v : values()) {
-          if (v.proto == proto) {
-            return v;
-          }
+      public static Quantifier fromProto(MatchRecognizeRel.Pattern.Quantifier proto) {
+        var builder =
+            ImmutableMatchRecognize.Quantifier.builder()
+                .matchingStrategy(MatchingStrategy.fromProto(proto.getStrategy()));
+        if (proto.hasMin()) {
+          builder.min(proto.getMin());
         }
-        throw new IllegalArgumentException("Unknown type: " + proto);
+        if (proto.hasMax()) {
+          builder.max(proto.getMax());
+        }
+        return builder.build();
       }
     }
 
     public interface PatternTerm {
-
       Quantifier getQuantifier();
 
       io.substrait.proto.MatchRecognizeRel.Pattern.PatternTerm toProto();
-      // getQuantifier
-      // getGreedy()
     }
 
     @Value.Immutable
