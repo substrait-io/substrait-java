@@ -1,5 +1,6 @@
 package io.substrait.isthmus.cli;
 
+import com.google.protobuf.util.JsonFormat;
 import io.substrait.dsl.PatternBuilder;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
@@ -118,7 +119,8 @@ public class MatchRecognizeMain {
     var planToProtoConverter = new PlanProtoConverter();
 
     var protoPlan = planToProtoConverter.toProto(plan);
-    System.out.println(protoPlan.toString());
+
+    System.out.println(JsonFormat.printer().includingDefaultValueFields().print(protoPlan));
 
     var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
     var plan2 = protoPlanConverter.from(protoPlan);
