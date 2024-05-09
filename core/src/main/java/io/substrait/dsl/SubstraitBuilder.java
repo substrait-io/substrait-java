@@ -624,6 +624,10 @@ public class SubstraitBuilder {
     return comparisonFunction("lt", left, right);
   }
 
+  public Expression.ScalarFunctionInvocation gt(Expression left, Expression right) {
+    return comparisonFunction("gt", left, right);
+  }
+
   private Expression.ScalarFunctionInvocation comparisonFunction(
       String fname, Expression left, Expression right) {
     var key = String.format("%s:any_any", fname);
@@ -761,6 +765,10 @@ public class SubstraitBuilder {
   // Misc
 
   public Plan.Root root(Rel rel) {
+    return ImmutableRoot.builder().input(rel).build();
+  }
+
+  public Plan.Root root(Rel rel, List<String> names) {
     return ImmutableRoot.builder().input(rel).build();
   }
 
