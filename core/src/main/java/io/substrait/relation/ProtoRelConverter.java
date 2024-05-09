@@ -707,11 +707,9 @@ public class ProtoRelConverter {
   private MatchRecognize.PatternDefinition fromProto(
       ProtoExpressionConverter converter, MatchRecognizeRel.PatternDefinition patternDefinition) {
 
-    return MatchRecognize.PatternDefinition.builder()
-        .patternIdentifier(
-            MatchRecognize.PatternIdentifier.of(patternDefinition.getIdentifier().getId()))
-        .predicate(converter.from(patternDefinition.getCondition()))
-        .build();
+    return MatchRecognize.PatternDefinition.of(
+        patternDefinition.getIdentifier().getId(),
+        converter.from(patternDefinition.getCondition()));
   }
 
   private MatchRecognize.Measure fromProto(

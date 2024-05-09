@@ -344,6 +344,13 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
 
     public abstract Expression getPredicate();
 
+    public static PatternDefinition of(String identifier, Expression predicate) {
+      return builder()
+          .patternIdentifier(PatternIdentifier.of(identifier))
+          .predicate(predicate)
+          .build();
+    }
+
     public static ImmutableMatchRecognize.PatternDefinition.Builder builder() {
       return ImmutableMatchRecognize.PatternDefinition.builder();
     }

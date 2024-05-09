@@ -491,6 +491,30 @@ public class SubstraitBuilder {
             .build());
   }
 
+  public Expression.WindowFunctionInvocation countWindowed(
+      Expression expr,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound) {
+    var declaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any"));
+    return Expression.WindowFunctionInvocation.builder()
+        .arguments(Arrays.asList(expr))
+        .outputType(R.I64)
+        .declaration(declaration)
+        // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
+        // as it does not allow decomposition. Use it as the default for now.
+        // TODO: set this per function
+        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+        .invocation(Expression.AggregationInvocation.ALL)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .build();
+  }
+
   public Aggregate.Measure min(Rel input, int field) {
     return min(fieldReference(input, field));
   }
@@ -539,6 +563,21 @@ public class SubstraitBuilder {
         TypeCreator.asNullable(expr.getType()));
   }
 
+  public Expression.WindowFunctionInvocation sumWindowed(
+      Expression expr,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound) {
+    return singleArgumentArithmeticWindowAggregate(
+        expr,
+        "sum",
+        // sum output is always nullable
+        TypeCreator.asNullable(expr.getType()),
+        boundsType,
+        lowerBound,
+        upperBound);
+  }
+
   public Aggregate.Measure sum0(Rel input, int field) {
     return sum(fieldReference(input, field));
   }
@@ -572,6 +611,36 @@ public class SubstraitBuilder {
             .build());
   }
 
+  // Window Functions
+
+  private Expression.WindowFunctionInvocation singleArgumentArithmeticWindowAggregate(
+      Expression expr,
+      String functionName,
+      Type outputType,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound) {
+    String typeString = ToTypeString.apply(expr.getType());
+    var declaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+                String.format("%s:%s", functionName, typeString)));
+    return Expression.WindowFunctionInvocation.builder()
+        .arguments(Arrays.asList(expr))
+        .outputType(outputType)
+        .declaration(declaration)
+        // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
+        // as it does not allow decomposition. Use it as the default for now.
+        // TODO: set this per function
+        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+        .invocation(Expression.AggregationInvocation.ALL)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
+        .build();
+  }
+
   // Scalar Functions
 
   public Expression.ScalarFunctionInvocation negate(Expression expr) {
@@ -598,6 +667,10 @@ public class SubstraitBuilder {
 
   public Expression.ScalarFunctionInvocation divide(Expression left, Expression right) {
     return arithmeticFunction("divide", left, right);
+  }
+
+  public Expression.ScalarFunctionInvocation mod(Expression left, Expression right) {
+    return arithmeticFunction("modulus", left, right);
   }
 
   private Expression.ScalarFunctionInvocation arithmeticFunction(
