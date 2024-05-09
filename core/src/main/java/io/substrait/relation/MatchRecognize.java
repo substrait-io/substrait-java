@@ -196,26 +196,6 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
           .build();
     }
 
-    public static final Quantifier ONCE =
-        ImmutableMatchRecognize.Quantifier.builder()
-            .matchingStrategy(MatchingStrategy.GREEDY)
-            .min(1)
-            .max(1)
-            .build();
-
-    public static final Quantifier ZERO_OR_MORE =
-        ImmutableMatchRecognize.Quantifier.builder()
-            .min(0)
-            .matchingStrategy(MatchingStrategy.GREEDY)
-            .build();
-
-    public static final Quantifier ZERO_OR_ONE =
-        ImmutableMatchRecognize.Quantifier.builder()
-            .min(0)
-            .max(1)
-            .matchingStrategy(MatchingStrategy.GREEDY)
-            .build();
-
     @Value.Immutable
     public abstract static class Quantifier {
 

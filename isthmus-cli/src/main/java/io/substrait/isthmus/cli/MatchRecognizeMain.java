@@ -62,7 +62,24 @@ public class MatchRecognizeMain {
   public static void main(String[] args) throws java.io.IOException {
     //    patternConcatenation();
     //    customersWith6OrMoreOrdersWithRisingPrices();
-    aggregationsInMeasures();
+    //    oneRowPerMatchShowEmptyMatchesByDefault();
+    oneRowPerMatchOmitsUnmatchedRows();
+    //    aggregationsInMeasures();
+  }
+
+  static void printAndCompare(Plan plan) throws IOException {
+    var planToProtoConverter = new PlanProtoConverter();
+    var protoPlan = planToProtoConverter.toProto(plan);
+
+    System.out.println(
+        JsonFormat.printer()
+            .usingTypeRegistry(TYPE_REGISTRY)
+            .includingDefaultValueFields()
+            .print(protoPlan));
+
+    var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
+    var plan2 = protoPlanConverter.from(protoPlan);
+    assert plan.equals(plan2);
   }
 
   static void patternConcatenation() throws IOException {
@@ -77,6 +94,7 @@ public class MatchRecognizeMain {
                 b.struct(b.i64(2), b.i64(80)),
                 b.struct(b.i64(3), b.i64(70)),
                 b.struct(b.i64(4), b.i64(70))));
+
     // SELECT m.id AS row_id, m.match, m.val, m.label
     // FROM (
     //   VALUES
@@ -100,7 +118,7 @@ public class MatchRecognizeMain {
     // ) AS m
 
     List<Expression.SortField> sortKeys =
-        List.of(b.sortField(b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_FIRST));
+        List.of(b.sortField(b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST));
 
     List<MatchRecognize.Measure> measures =
         List.of(
@@ -132,16 +150,7 @@ public class MatchRecognizeMain {
             .build();
 
     var plan = b.plan(b.root(matchRecognize));
-    var planToProtoConverter = new PlanProtoConverter();
-
-    var protoPlan = planToProtoConverter.toProto(plan);
-
-    System.out.println(JsonFormat.printer().includingDefaultValueFields().print(protoPlan));
-
-    var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
-    var plan2 = protoPlanConverter.from(protoPlan);
-
-    assert plan.equals(plan2);
+    printAndCompare(plan);
   }
 
   // trino> SHOW COLUMNS FROM tiny.orders
@@ -173,9 +182,7 @@ public class MatchRecognizeMain {
           List.of(R.I64, R.I64, R.STRING, R.FP64, R.DATE, R.STRING, R.STRING, R.I64, R.STRING));
 
   static void customersWith6OrMoreOrdersWithRisingPrices() throws IOException {
-    // SOURCE:
-    // https://github.com/trinodb/trino/blob/f26bade5be88f5326e4bc243bff6bae27a93b2d2/testing/trino-testing/src/main/java/io/trino/testing/AbstractTestEngineOnlyQueries.java#L5137-L5159
-    //    SubstraitBuilder b = new SubstraitBuilder(extensions);
+    // source: https://github.com/trinodb/trino/blob/f26bade5be88f5326e4bc243bff6bae27a93b2d2/testing/trino-testing/src/main/java/io/trino/testing/AbstractTestEngineOnlyQueries.java#L5137-L5159
 
     // SELECT m.custkey, m.matchno, m.lowest_price, m.highest_price
     // FROM orders MATCH_RECOGNIZE (
@@ -209,9 +216,9 @@ public class MatchRecognizeMain {
                     false,
                     false,
                     p.concatenate(
-                        MatchRecognize.Pattern.ONCE,
+                        p.ONCE,
                         // A
-                        p.leaf(MatchRecognize.Pattern.ONCE, "A"),
+                        p.leaf(p.ONCE, "A"),
                         // R{5,}
                         p.leaf(
                             MatchRecognize.Pattern.Quantifier.builder()
@@ -229,21 +236,12 @@ public class MatchRecognizeMain {
     Plan plan =
         b.plan(b.root(select, List.of("custkey", "matchno", "lowest_price", "highest_price")));
 
-    var planToProtoConverter = new PlanProtoConverter();
-    var protoPlan = planToProtoConverter.toProto(plan);
-
-    System.out.println(
-        JsonFormat.printer()
-            .usingTypeRegistry(TYPE_REGISTRY)
-            .includingDefaultValueFields()
-            .print(protoPlan));
-
-    var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
-    var plan2 = protoPlanConverter.from(protoPlan);
-    assert plan.equals(plan2);
+    printAndCompare(plan);
   }
 
   static void aggregationsInMeasures() throws IOException {
+      // source: https://github.com/trinodb/trino/blob/8e5ee08e525683bb471951d808aa16df46a2d63f/testing/trino-testing/src/main/java/io/trino/testing/AbstractTestEngineOnlyQueries.java#L5280-L5298
+
     // SELECT even_count, even_sum, odd_count, odd_sum
     // FROM orders MATCH_RECOGNIZE (
     //   MEASURES
@@ -298,10 +296,7 @@ public class MatchRecognizeMain {
                 MatchRecognize.Pattern.of(
                     false,
                     false,
-                    p.alternation(
-                        MatchRecognize.Pattern.ZERO_OR_MORE,
-                        p.leaf(MatchRecognize.Pattern.ONCE, "EVEN"),
-                        p.leaf(MatchRecognize.Pattern.ONCE, "ODD"))))
+                    p.alternation(p.ZERO_OR_MORE, p.leaf(p.ONCE, "EVEN"), p.leaf(p.ONCE, "ODD"))))
             .addPatternDefinitions(
                 MatchRecognize.PatternDefinition.of(
                     "EVEN", b.equal(b.mod(b.fieldReference(ORDERS, 0), b.i64(2)), b.i64(0))))
@@ -309,18 +304,114 @@ public class MatchRecognizeMain {
 
     Plan plan =
         b.plan(b.root(matchRecognize, List.of("even_count", "even_sum", "odd_count", "odd_sum")));
+    printAndCompare(plan);
+  }
 
-    var planToProtoConverter = new PlanProtoConverter();
-    var protoPlan = planToProtoConverter.toProto(plan);
+  static void oneRowPerMatchShowsEmptyMatchesByDefault() throws IOException {
+      // source: https://github.com/trinodb/trino/blob/8e5ee08e525683bb471951d808aa16df46a2d63f/core/trino-main/src/test/java/io/trino/sql/query/TestRowPatternMatching.java#L666-L671
 
-    System.out.println(
-        JsonFormat.printer()
-            .usingTypeRegistry(TYPE_REGISTRY)
-            .includingDefaultValueFields()
-            .print(protoPlan));
+    // SELECT m.match, m.val, m.label
+    // FROM (
+    //   VALUES
+    //     (1, 90),
+    //     (2, 80),
+    //     (3, 70),
+    //     (4, 70)
+    //   ) t(id, value)
+    // MATCH_RECOGNIZE (
+    //   ORDER BY id
+    //   MEASURES
+    //     match_number() AS match,
+    //     RUNNING LAST(value) AS val,
+    //     classifier() AS label
+    //   ONE ROWS PER MATCH
+    //   AFTER MATCH SKIP PAST LAST ROW
+    //   PATTERN (B*)
+    //   DEFINE B AS B.value < PREV (B.value)
+    // ) AS m
 
-    var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
-    var plan2 = protoPlanConverter.from(protoPlan);
-    assert plan.equals(plan2);
+    VirtualTableScan input =
+        b.virtualTableScan(
+            List.of("id", "value"),
+            List.of(
+                b.struct(b.i64(1), b.i64(90)),
+                b.struct(b.i64(2), b.i64(80)),
+                b.struct(b.i64(3), b.i64(70)),
+                b.struct(b.i64(4), b.i64(70))));
+
+    MatchRecognize matchRecognize =
+        MatchRecognize.builder()
+            .input(input)
+            .addSortExpressions(
+                b.sortField(b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST))
+            .addMeasures(
+                measure(b.matchNumber()), runningMeasure(b.last(input, 1)), measure(b.classifier()))
+            .rowsPerMatch(MatchRecognize.RowsPerMatch.ROWS_PER_MATCH_ONE)
+            .afterMatchSkip(MatchRecognize.AfterMatchSkip.PAST_LAST_ROW)
+            .pattern(
+                MatchRecognize.Pattern.of(
+                    false, false, MatchRecognize.Pattern.Leaf.of("B", p.ZERO_OR_MORE)))
+            .addPatternDefinitions(
+                MatchRecognize.PatternDefinition.of(
+                    "B", b.lt(b.patternRef(input, "B", 1), b.prev(input, "B", 1))))
+            .build();
+
+    Plan plan = b.plan(b.root(matchRecognize, List.of("match", "val", "label")));
+
+    printAndCompare(plan);
+  }
+
+  static void oneRowPerMatchOmitsUnmatchedRows() throws IOException {
+      // source: https://github.com/trinodb/trino/blob/8e5ee08e525683bb471951d808aa16df46a2d63f/core/trino-main/src/test/java/io/trino/sql/query/TestRowPatternMatching.java#L680-L682
+
+    // SELECT m.match, m.val, m.label
+    // FROM (
+    //   VALUES
+    //     (1, 90),
+    //     (2, 80),
+    //     (3, 70),
+    //     (4, 70)
+    //   ) t(id, value)
+    // MATCH_RECOGNIZE (
+    //   ORDER BY id
+    //   MEASURES
+    //     match_number() AS match,
+    //     RUNNING LAST(value) AS val,
+    //     classifier() AS label
+    //   ONE ROWS PER MATCH
+    //   AFTER MATCH SKIP PAST LAST ROW
+    //   PATTERN (B+)
+    //   DEFINE B AS B.value < PREV (B.value)
+    // ) AS m
+
+    VirtualTableScan input =
+        b.virtualTableScan(
+            List.of("id", "value"),
+            List.of(
+                b.struct(b.i64(1), b.i64(90)),
+                b.struct(b.i64(2), b.i64(80)),
+                b.struct(b.i64(3), b.i64(70)),
+                b.struct(b.i64(4), b.i64(70))));
+
+    MatchRecognize matchRecognize =
+        MatchRecognize.builder()
+            .input(input)
+            .addSortExpressions(
+                b.sortField(b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST))
+            .addMeasures(
+                measure(b.matchNumber()), runningMeasure(b.last(input, 1)), measure(b.classifier()))
+            .rowsPerMatch(MatchRecognize.RowsPerMatch.ROWS_PER_MATCH_ONE)
+            .afterMatchSkip(MatchRecognize.AfterMatchSkip.PAST_LAST_ROW)
+            .pattern(
+                MatchRecognize.Pattern.of(
+                    false, false, MatchRecognize.Pattern.Leaf.of("B", p.ONE_OR_MORE)))
+            .addPatternDefinitions(
+                MatchRecognize.PatternDefinition.of(
+                    "B", b.lt(b.patternRef(input, "B", 1), b.prev(input, "B", 1))))
+            .build();
+
+    Plan plan = b.plan(b.root(matchRecognize, List.of("match", "val", "label")));
+
+    printAndCompare(plan);
   }
 }
