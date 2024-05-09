@@ -30,11 +30,17 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
   @Override
   protected Type.Struct deriveRecordType() {
     Type.Struct inputType = getInput().getRecordType();
-    return TypeCreator.of(inputType.nullable())
-        .struct(
-            Stream.concat(
-                getPartitionExpressions().stream().map(Expression::getType),
-                getMeasures().stream().map(m -> m.getMeasureExpr().getType())));
+
+    // https://docs.oracle.com/en/database/oracle/oracle-database/23/dwhsg/sql-pattern-matching-data-warehouses.html#GUID-CAE4A0B5-41D3-4F4B-BEE7-5B7953CDFBB5
+    if (getRowsPerMatch() == RowsPerMatch.ROWS_PER_MATCH_ONE) {
+      return TypeCreator.of(inputType.nullable())
+          .struct(
+              Stream.concat(
+                  getPartitionExpressions().stream().map(Expression::getType),
+                  getMeasures().stream().map(m -> m.getMeasureExpr().getType())));
+    } else {
+      throw new RuntimeException("CANNOT DERIVE RECORD TYPE FOR ALL ROWS PER MATCH VARIANTS YET");
+    }
   }
 
   @Override
@@ -174,8 +180,12 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
 
     public abstract io.substrait.relation.MatchRecognize.Pattern.PatternTerm getRoot();
 
-    public static ImmutableMatchRecognize.Pattern.Builder builder() {
-      return ImmutableMatchRecognize.Pattern.builder();
+    public static Pattern of(boolean startAnchor, boolean endAnchor, PatternTerm root) {
+      return ImmutableMatchRecognize.Pattern.builder()
+          .startAnchor(startAnchor)
+          .endAnchor(endAnchor)
+          .root(root)
+          .build();
     }
 
     public MatchRecognizeRel.Pattern toProto() {
@@ -214,6 +224,10 @@ public abstract class MatchRecognize extends SingleInputRel implements HasExtens
       public abstract Optional<Integer> getMin();
 
       public abstract Optional<Integer> getMax();
+
+      public static ImmutableMatchRecognize.Quantifier.Builder builder() {
+        return ImmutableMatchRecognize.Quantifier.builder();
+      }
 
       public MatchRecognizeRel.Pattern.Quantifier toProto() {
         var builder =

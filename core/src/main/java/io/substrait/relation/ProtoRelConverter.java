@@ -713,11 +713,8 @@ public class ProtoRelConverter {
 
   private io.substrait.relation.MatchRecognize.Pattern fromProto(
       io.substrait.proto.MatchRecognizeRel.Pattern pattern) {
-    return io.substrait.relation.MatchRecognize.Pattern.builder()
-        .startAnchor(pattern.getStartAnchor())
-        .endAnchor(pattern.getEndAnchor())
-        .root(patternTermFromProto(pattern.getRoot()))
-        .build();
+    return io.substrait.relation.MatchRecognize.Pattern.of(
+        pattern.getStartAnchor(), pattern.getEndAnchor(), patternTermFromProto(pattern.getRoot()));
   }
 
   private io.substrait.relation.MatchRecognize.Pattern.PatternTerm patternTermFromProto(
