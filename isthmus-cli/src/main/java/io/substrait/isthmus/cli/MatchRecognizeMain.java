@@ -67,6 +67,7 @@ public class MatchRecognizeMain {
 
   static void patternConcatenation() throws IOException {
     // Trino: TestRowPatternMatching
+    // TODO: need to figure how to compute the output columns when ALL ROWS PER MATCH is set
 
     VirtualTableScan input =
         b.virtualTableScan(
@@ -76,21 +77,26 @@ public class MatchRecognizeMain {
                 b.struct(b.i64(2), b.i64(80)),
                 b.struct(b.i64(3), b.i64(70)),
                 b.struct(b.i64(4), b.i64(70))));
-
-    // -- QUERY
     // SELECT m.id AS row_id, m.match, m.val, m.label
-    // FROM t2 MATCH_RECOGNIZE (
-    //  ORDER BY id
-    //  MEASURES
-    //    match_number() AS match,
-    //    RUNNING LAST(value) AS val,
-    //    classifier() AS label
-    //  ALL ROWS PER MATCH
-    //  AFTER MATCH SKIP PAST LAST ROW
-    //  PATTERN (A B C)
-    //  DEFINE
-    //    B AS B.value < PREV (B.value)
-    //    C AS C.value = PREV (C.value)
+    // FROM (
+    //   VALUES
+    //     (1, 90),
+    //     (2, 80),
+    //     (3, 70),
+    //     (4, 70)
+    // )  t(id, value)
+    // MATCH_RECOGNIZE (
+    //   ORDER BY id
+    //   MEASURES
+    //     match_number() AS match,
+    //     RUNNING LAST(value) AS val,
+    //     classifier() AS label
+    //   ALL ROWS PER MATCH
+    //   AFTER MATCH SKIP PAST LAST ROW
+    //   PATTERN (A B C)
+    //   DEFINE
+    //     B AS B.value < PREV (B.value),
+    //     C AS C.value = PREV (C.value)
     // ) AS m
 
     List<Expression.SortField> sortKeys =
