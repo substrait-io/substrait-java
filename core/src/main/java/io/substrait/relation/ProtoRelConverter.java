@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
@@ -197,8 +198,19 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
+  private Rel newExtensionLeaf(ExtensionLeafRel rel) {
     Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
+
+    // TODO: remove
+    if (rel.getDetail().getTypeUrl().equals("type.googleapis.com/substrait.MatchRecognizeRel")) {
+      try {
+        MatchRecognizeRel matchRecognizeRel = rel.getDetail().unpack(MatchRecognizeRel.class);
+        return newMatchRecognize(matchRecognizeRel);
+      } catch (InvalidProtocolBufferException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
     var builder =
         ExtensionLeaf.from(detail)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))

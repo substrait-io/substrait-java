@@ -7,6 +7,7 @@ import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
+import io.substrait.proto.MatchRecognizeRel;
 import io.substrait.relation.ImmutableMatchRecognize;
 import io.substrait.relation.MatchRecognize;
 import io.substrait.relation.NamedScan;
@@ -133,8 +134,12 @@ public class MatchRecognizeMain {
     assert plan.equals(plan2);
   }
 
+  private static final JsonFormat.TypeRegistry TYPE_REGISTRY =
+      JsonFormat.TypeRegistry.newBuilder().add(MatchRecognizeRel.getDescriptor()).build();
+
   static void customersWith6OrMoreOrdersWithRisingPrices() throws IOException {
-    // SOURCE: https://github.com/trinodb/trino/blob/f26bade5be88f5326e4bc243bff6bae27a93b2d2/testing/trino-testing/src/main/java/io/trino/testing/AbstractTestEngineOnlyQueries.java#L5137-L5159
+    // SOURCE:
+    // https://github.com/trinodb/trino/blob/f26bade5be88f5326e4bc243bff6bae27a93b2d2/testing/trino-testing/src/main/java/io/trino/testing/AbstractTestEngineOnlyQueries.java#L5137-L5159
     SubstraitBuilder b = new SubstraitBuilder(extensions);
     PatternBuilder p = new PatternBuilder();
     TypeCreator R = TypeCreator.of(false);
@@ -224,7 +229,11 @@ public class MatchRecognizeMain {
     var planToProtoConverter = new PlanProtoConverter();
     var protoPlan = planToProtoConverter.toProto(plan);
 
-    System.out.println(JsonFormat.printer().includingDefaultValueFields().print(protoPlan));
+    System.out.println(
+        JsonFormat.printer()
+            .usingTypeRegistry(TYPE_REGISTRY)
+            .includingDefaultValueFields()
+            .print(protoPlan));
 
     var protoPlanConverter = new io.substrait.plan.ProtoPlanConverter();
     var plan2 = protoPlanConverter.from(protoPlan);

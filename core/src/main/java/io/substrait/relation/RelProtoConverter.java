@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import com.google.protobuf.Any;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -349,7 +350,13 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     matchRecognize.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
 
-    return Rel.newBuilder().setMatchRecognize(builder).build();
+    // TODO: Remove this wrapping
+    // Wrap the MatchRecognizeRel in an ExtensionLeafRel for other systems to use
+    // Using Leaf instead of Single to keep the input on the MatchRecognizeRel itself
+    ExtensionLeafRel extensionLeaf =
+        ExtensionLeafRel.newBuilder().setDetail(Any.pack(builder.build())).build();
+
+    return Rel.newBuilder().setExtensionLeaf(extensionLeaf).build();
   }
 
   private MatchRecognizeRel.Measure toProto(MatchRecognize.Measure measure) {
