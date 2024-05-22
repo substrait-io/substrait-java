@@ -9,6 +9,7 @@ plugins {
   id("antlr")
   id("com.google.protobuf") version "0.8.17"
   id("com.diffplug.spotless") version "6.11.0"
+  id("com.github.johnrengelman.shadow") version "7.1.2"
   signing
 }
 
@@ -85,7 +86,7 @@ dependencies {
   implementation("com.google.code.findbugs:jsr305:3.0.2")
 
   antlr("org.antlr:antlr4:${ANTLR_VERSION}")
-  implementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
+  shadow("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
@@ -138,3 +139,16 @@ tasks.named<AntlrTask>("generateGrammarSource") {
 }
 
 protobuf { protoc { artifact = "com.google.protobuf:protoc:3.17.3" } }
+
+tasks {
+  shadowJar {
+    archiveClassifier.set("")
+    relocate("org.antlr.v4.runtime", "io.substrait.shadow.org.antlr.v4.runtime")
+    dependencies { include(dependency("org.antlr:antlr4-runtime:.*")) }
+    exclude("META-INF/maven/org.antlr/")
+  }
+  jar {
+    enabled = false
+    dependsOn(shadowJar)
+  }
+}
