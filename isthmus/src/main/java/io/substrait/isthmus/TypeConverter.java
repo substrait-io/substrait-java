@@ -71,7 +71,7 @@ public class TypeConverter {
       case SMALLINT -> creator.I16;
       case INTEGER -> creator.I32;
       case BIGINT -> creator.I64;
-      case FLOAT -> creator.FP32;
+      case REAL -> creator.FP32;
       case DOUBLE -> creator.FP64;
       case DECIMAL -> {
         if (type.getPrecision() > 38) {
@@ -203,7 +203,7 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.FP32 expr) {
-      return t(n(expr), SqlTypeName.FLOAT);
+      return t(n(expr), SqlTypeName.REAL);
     }
 
     @Override

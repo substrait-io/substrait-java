@@ -51,7 +51,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void fp32(boolean nullable) {
-    testType(Type.withNullability(nullable).FP32, SqlTypeName.FLOAT, nullable);
+    testType(Type.withNullability(nullable).FP32, SqlTypeName.REAL, nullable);
   }
 
   @ParameterizedTest

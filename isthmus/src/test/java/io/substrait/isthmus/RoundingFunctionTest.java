@@ -8,7 +8,7 @@ public class RoundingFunctionTest extends PlanTestBase {
 
   static List<String> CREATES =
       List.of(
-          "CREATE TABLE numbers (i8 TINYINT, i16 SMALLINT, i32 INT, i64 BIGINT, fp32 FLOAT, fp64 DOUBLE)");
+          "CREATE TABLE numbers (i8 TINYINT, i16 SMALLINT, i32 INT, i64 BIGINT, fp32 REAL, fp64 DOUBLE)");
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
