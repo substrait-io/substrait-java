@@ -25,9 +25,10 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       case INTERVAL_YEAR_MONTH:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
+      // TODO: change it
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-        return 6;
+        return 9;
     }
     return super.getMaxPrecision(typeName);
   }

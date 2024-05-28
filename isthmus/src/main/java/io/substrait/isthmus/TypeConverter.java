@@ -97,11 +97,11 @@ public class TypeConverter {
         yield creator.TIME;
       }
       case TIMESTAMP -> {
-        if (type.getPrecision() != 6) {
+        if (type.getPrecision() > 9) {
           throw new UnsupportedOperationException(
               "unsupported timestamp precision " + type.getPrecision());
         }
-        yield creator.TIMESTAMP;
+        yield creator.precisionTimestamp(type.getPrecision());
       }
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE -> {
         if (type.getPrecision() != 6) {
@@ -239,6 +239,11 @@ public class TypeConverter {
     @Override
     public RelDataType visit(Type.Timestamp expr) {
       return t(n(expr), SqlTypeName.TIMESTAMP, 6);
+    }
+
+    @Override
+    public RelDataType visit(Type.PrecisionTimestamp expr) {
+      return t(n(expr), SqlTypeName.TIMESTAMP, expr.precision());
     }
 
     @Override
