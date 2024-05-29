@@ -62,6 +62,15 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
+  void calciteFloatToFp64(boolean nullable) {
+    assertEquals(
+        Type.withNullability(nullable).FP64,
+        TypeConverter.DEFAULT.toSubstrait(
+            type.createTypeWithNullability(type.createSqlType(SqlTypeName.FLOAT), nullable)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   void date(boolean nullable) {
     testType(Type.withNullability(nullable).DATE, SqlTypeName.DATE, nullable);
   }

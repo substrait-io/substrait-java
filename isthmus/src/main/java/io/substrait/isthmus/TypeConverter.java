@@ -72,7 +72,7 @@ public class TypeConverter {
       case INTEGER -> creator.I32;
       case BIGINT -> creator.I64;
       case REAL -> creator.FP32;
-      case DOUBLE -> creator.FP64;
+      case FLOAT, DOUBLE -> creator.FP64;
       case DECIMAL -> {
         if (type.getPrecision() > 38) {
           throw new UnsupportedOperationException(
