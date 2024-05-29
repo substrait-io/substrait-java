@@ -74,12 +74,6 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void timestamp(boolean nullable) {
-    testType(Type.withNullability(nullable).TIMESTAMP, SqlTypeName.TIMESTAMP, nullable, 6);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
   void precisionTimeStamp(boolean nullable) {
     testType(
         Type.withNullability(nullable).precisionTimestamp(9), SqlTypeName.TIMESTAMP, nullable, 9);
@@ -87,12 +81,12 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void timestamptz(boolean nullable) {
+  void precisionTimestamptz(boolean nullable) {
     testType(
-        Type.withNullability(nullable).TIMESTAMP_TZ,
+        Type.withNullability(nullable).precisionTimestampTZ(9),
         SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
         nullable,
-        6);
+        9);
   }
 
   @ParameterizedTest
