@@ -2,6 +2,11 @@ name: PR Build Check
 
 on:
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   editorconfig-checker:
     name: Check editorconfig
