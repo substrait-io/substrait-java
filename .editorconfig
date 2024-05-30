@@ -16,3 +16,6 @@ end_of_line = unset
 insert_final_newline = unset
 indent_style = unset
 trim_trailing_whitespace = unset
+
+[*.gradle.kts]
+indent_size = 2
