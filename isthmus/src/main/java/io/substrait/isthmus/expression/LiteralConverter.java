@@ -104,7 +104,7 @@ public class LiteralConverter {
         }
         throw new UnsupportedOperationException("Unable to handle char type: " + val);
       }
-      case DOUBLE -> fp64(n, bd(literal).doubleValue());
+      case FLOAT, DOUBLE -> fp64(n, bd(literal).doubleValue());
       case REAL -> fp32(n, bd(literal).floatValue());
 
       case DECIMAL -> {
