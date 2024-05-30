@@ -1,7 +1,10 @@
 package io.substrait.relation;
 
-import static io.substrait.expression.ExpressionCreator.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static io.substrait.expression.ExpressionCreator.list;
+import static io.substrait.expression.ExpressionCreator.map;
+import static io.substrait.expression.ExpressionCreator.string;
+import static io.substrait.expression.ExpressionCreator.struct;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import io.substrait.expression.Expression;
 import java.util.HashMap;
