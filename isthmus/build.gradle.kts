@@ -108,6 +108,8 @@ tasks {
     archiveBaseName.set("isthmus")
     manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
   }
+
+  classes { dependsOn(":core:shadowJar") }
 }
 
 tasks { build { dependsOn(shadowJar) } }

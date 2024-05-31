@@ -9,6 +9,7 @@ plugins {
   id("antlr")
   id("com.google.protobuf") version "0.8.17"
   id("com.diffplug.spotless") version "6.11.0"
+  id("com.github.johnrengelman.shadow") version "7.1.2"
   signing
 }
 
@@ -73,6 +74,13 @@ var JACKSON_VERSION = properties.get("jackson.version")
 var JUNIT_VERSION = properties.get("junit.version")
 var SLF4J_VERSION = properties.get("slf4j.version")
 
+// This allows specifying deps to be shadowed so that they don't get included in the POM file
+val shadowImplementation by configurations.creating
+
+configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
+
+configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
+
 dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
@@ -85,12 +93,28 @@ dependencies {
   implementation("com.google.code.findbugs:jsr305:3.0.2")
 
   antlr("org.antlr:antlr4:${ANTLR_VERSION}")
-  implementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
+  shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+}
+
+configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
+  // Workaround for https://github.com/gradle/gradle/issues/820
+  apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter { it.name != "antlr" })
+}
+
+tasks {
+  shadowJar {
+    archiveClassifier.set("") // to override ".jar" instead of producing "-all.jar"
+    minimize()
+    // bundle the deps from shadowImplementation into the jar
+    configurations = listOf(shadowImplementation)
+    // rename the shadowed deps so that they don't conflict with consumer's own deps
+    relocate("org.antlr.v4.runtime", "io.substrait.org.antlr.v4.runtime")
+  }
 }
 
 java {
