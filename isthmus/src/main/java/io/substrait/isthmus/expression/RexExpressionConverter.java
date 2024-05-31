@@ -196,11 +196,13 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
   }
 
-  @Override public Expression visitLambda(RexLambda rexLambda) {
+  @Override
+  public Expression visitLambda(RexLambda rexLambda) {
     throw new UnsupportedOperationException("RexLambda not supported");
   }
 
-  @Override public Expression visitLambdaRef(RexLambdaRef rexLambdaRef) {
+  @Override
+  public Expression visitLambdaRef(RexLambdaRef rexLambdaRef) {
     throw new UnsupportedOperationException("RexLambdaRef not supported");
   }
 }
