@@ -16,6 +16,8 @@ import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexDynamicParam;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLambda;
+import org.apache.calcite.rex.RexLambdaRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexNode;
@@ -192,5 +194,13 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   @Override
   public Expression visitPatternFieldRef(RexPatternFieldRef fieldRef) {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
+  }
+
+  @Override public Expression visitLambda(RexLambda rexLambda) {
+    throw new UnsupportedOperationException("RexLambda not supported");
+  }
+
+  @Override public Expression visitLambdaRef(RexLambdaRef rexLambdaRef) {
+    throw new UnsupportedOperationException("RexLambdaRef not supported");
   }
 }
