@@ -70,12 +70,17 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tFP32() {
-    bitest(fp32(false, 4.44F), c(4.44F, SqlTypeName.FLOAT));
+    bitest(fp32(false, 4.44F), c(4.44F, SqlTypeName.REAL));
   }
 
   @Test
   void tFP64() {
     bitest(fp64(false, 4.45F), c(4.45F, SqlTypeName.DOUBLE));
+  }
+
+  @Test
+  void tFloatFP64() {
+    test(fp64(false, 4.45F), c(4.45F, SqlTypeName.FLOAT));
   }
 
   @Test
