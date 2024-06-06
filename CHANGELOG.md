@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [0.32.0](https://github.com/substrait-io/substrait-java/compare/v0.31.0...v0.32.0) (2024-06-04)
+
+### ⚠ BREAKING CHANGES
+
+* Substrait FP32 is now mapped to Calcite REAL instead of FLOAT
+* Calcite FLOAT is now mapped to Substrait FP64 instead of FP32
+
+In Calcite, the Sql Type Names DOUBLE and FLOAT correspond to FP64, and REAL corresponds to FP32
+
+### Bug Fixes
+
+* account for struct fields in VirtualTableScan check ([#255](https://github.com/substrait-io/substrait-java/issues/255)) ([3bbcf82](https://github.com/substrait-io/substrait-java/commit/3bbcf82687bc51fdb1695436c198e91ba56befed))
+* map Calcite REAL to Substrait FP32 ([#261](https://github.com/substrait-io/substrait-java/issues/261)) ([37331c2](https://github.com/substrait-io/substrait-java/commit/37331c2fbee679fd5ec482d8ff4d16f1c7c1c5c0))
+
 ## [0.31.0](https://github.com/substrait-io/substrait-java/compare/v0.30.0...v0.31.0) (2024-05-05)
 
 
