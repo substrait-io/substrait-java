@@ -17,6 +17,7 @@ var IMMUTABLES_VERSION = properties.get("immutables.version")
 var JACKSON_VERSION = properties.get("jackson.version")
 var JUNIT_VERSION = properties.get("junit.version")
 var PROTOBUF_VERSION = properties.get("protobuf.version")
+var SLF4J_VERSION = properties.get("slf4j.version")
 
 dependencies {
   implementation(project(":core"))
@@ -39,6 +40,7 @@ dependencies {
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+  runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
 }
 
 var initializeAtBuildTime =
