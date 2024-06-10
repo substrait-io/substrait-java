@@ -96,7 +96,6 @@ dependencies {
   implementation("com.github.ben-manes.caffeine:caffeine:3.0.4")
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
-  runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
