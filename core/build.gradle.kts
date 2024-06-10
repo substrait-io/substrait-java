@@ -9,7 +9,7 @@ plugins {
   id("antlr")
   id("com.google.protobuf") version "0.8.17"
   id("com.diffplug.spotless") version "6.11.0"
-  id("com.github.johnrengelman.shadow") version "7.1.2"
+  id("com.github.johnrengelman.shadow") version "8.1.1"
   signing
 }
 
@@ -46,8 +46,8 @@ publishing {
   repositories {
     maven {
       name = "local"
-      val releasesRepoUrl = "$buildDir/repos/releases"
-      val snapshotsRepoUrl = "$buildDir/repos/snapshots"
+      val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
+      val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
   }
@@ -84,7 +84,7 @@ configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(sh
 dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:{$JUNIT_VERSION")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
   implementation("com.google.protobuf:protobuf-java:3.17.3")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
@@ -158,7 +158,8 @@ tasks.named<AntlrTask>("generateGrammarSource") {
   arguments.add("-Werror")
   arguments.add("-Xexact-output-dir")
   setSource(fileTree("src/main/antlr/SubstraitType.g4"))
-  outputDirectory = File(buildDir, "generated/sources/antlr/main/java/io/substrait/type")
+  outputDirectory =
+    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
 protobuf { protoc { artifact = "com.google.protobuf:protoc:3.17.3" } }

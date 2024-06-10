@@ -5,7 +5,7 @@ plugins {
   id("java")
   id("idea")
   id("com.diffplug.spotless") version "6.11.0"
-  id("com.github.johnrengelman.shadow") version "7.1.2"
+  id("com.github.johnrengelman.shadow") version "8.1.1"
   signing
 }
 
@@ -42,8 +42,8 @@ publishing {
   repositories {
     maven {
       name = "local"
-      val releasesRepoUrl = "$buildDir/repos/releases"
-      val snapshotsRepoUrl = "$buildDir/repos/snapshots"
+      val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
+      val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
   }
