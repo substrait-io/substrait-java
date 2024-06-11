@@ -237,7 +237,8 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.PrecisionTimestampTZ expr) throws RuntimeException {
-      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
+      int maxPrecision =
+          typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
       if (expr.precision() > maxPrecision) {
         throw new UnsupportedOperationException(
             String.format(
