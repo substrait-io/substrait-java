@@ -225,11 +225,21 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.PrecisionTimestamp expr) {
+      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+      if (expr.precision() > maxPrecision) {
+        throw new UnsupportedOperationException(
+            "unsupported timestamp precision " + expr.precision() + ", max precision in calcite type system is " + maxPrecision);
+      }
       return t(n(expr), SqlTypeName.TIMESTAMP, expr.precision());
     }
 
     @Override
     public RelDataType visit(Type.PrecisionTimestampTZ expr) throws RuntimeException {
+      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+      if (expr.precision() > maxPrecision) {
+        throw new UnsupportedOperationException(
+            "unsupported timestamp_tz precision " + expr.precision() + ", max precision in calcite type system is " + maxPrecision);
+      }
       return t(n(expr), SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, expr.precision());
     }
 
