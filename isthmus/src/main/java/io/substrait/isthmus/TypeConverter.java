@@ -228,7 +228,9 @@ public class TypeConverter {
       int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
       if (expr.precision() > maxPrecision) {
         throw new UnsupportedOperationException(
-            "unsupported timestamp precision " + expr.precision() + ", max precision in calcite type system is " + maxPrecision);
+            String.format(
+                "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
+                expr.precision(), maxPrecision));
       }
       return t(n(expr), SqlTypeName.TIMESTAMP, expr.precision());
     }
@@ -238,7 +240,9 @@ public class TypeConverter {
       int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
       if (expr.precision() > maxPrecision) {
         throw new UnsupportedOperationException(
-            "unsupported timestamp_tz precision " + expr.precision() + ", max precision in calcite type system is " + maxPrecision);
+            String.format(
+                "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
+                expr.precision(), maxPrecision));
       }
       return t(n(expr), SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, expr.precision());
     }
