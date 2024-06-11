@@ -9,6 +9,7 @@ plugins {
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.11.0"
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+  id("org.cyclonedx.bom") version "1.8.2"
 }
 
 var IMMUTABLES_VERSION = properties.get("immutables.version")
@@ -66,6 +67,21 @@ allprojects {
         trimTrailingWhitespace()
         targetExclude("**/build/**")
       }
+    }
+  }
+
+  if (listOf("core", "isthmus", "isthmus-cli").contains(project.name)) {
+    apply(plugin = "org.cyclonedx.bom")
+    tasks.cyclonedxBom {
+      setIncludeConfigs(listOf("runtimeClasspath"))
+      setSkipConfigs(listOf("compileClasspath", "testCompileClasspath"))
+      setProjectType("library")
+      setSchemaVersion("1.5")
+      setDestination(project.file("build/reports"))
+      setOutputName("bom")
+      setOutputFormat("json")
+      setIncludeBomSerialNumber(false)
+      setIncludeLicenseText(false)
     }
   }
 }

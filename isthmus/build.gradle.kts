@@ -70,13 +70,13 @@ java {
   withSourcesJar()
 }
 
-var CALCITE_VERSION = properties.get("calcite.version")
-var GUAVA_VERSION = properties.get("guava.version")
-var IMMUTABLES_VERSION = properties.get("immutables.version")
-var JACKSON_VERSION = properties.get("jackson.version")
-var JUNIT_VERSION = properties.get("junit.version")
-var SLF4J_VERSION = properties.get("slf4j.version")
-var PROTOBUF_VERSION = properties.get("protobuf.version")
+val CALCITE_VERSION = properties.get("calcite.version")
+val GUAVA_VERSION = properties.get("guava.version")
+val IMMUTABLES_VERSION = properties.get("immutables.version")
+val JACKSON_VERSION = properties.get("jackson.version")
+val JUNIT_VERSION = properties.get("junit.version")
+val SLF4J_VERSION = properties.get("slf4j.version")
+val PROTOBUF_VERSION = properties.get("protobuf.version")
 
 dependencies {
   implementation(project(":core"))
