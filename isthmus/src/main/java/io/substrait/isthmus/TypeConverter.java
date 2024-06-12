@@ -89,27 +89,9 @@ public class TypeConverter {
       }
       case SYMBOL -> creator.STRING;
       case DATE -> creator.DATE;
-      case TIME -> {
-        if (type.getPrecision() != 6) {
-          throw new UnsupportedOperationException(
-              "unsupported time precision " + type.getPrecision());
-        }
-        yield creator.TIME;
-      }
-      case TIMESTAMP -> {
-        if (type.getPrecision() != 6) {
-          throw new UnsupportedOperationException(
-              "unsupported timestamp precision " + type.getPrecision());
-        }
-        yield creator.TIMESTAMP;
-      }
-      case TIMESTAMP_WITH_LOCAL_TIME_ZONE -> {
-        if (type.getPrecision() != 6) {
-          throw new UnsupportedOperationException(
-              "unsupported timestamptz precision " + type.getPrecision());
-        }
-        yield creator.TIMESTAMP_TZ;
-      }
+      case TIME -> creator.TIME;
+      case TIMESTAMP -> creator.precisionTimestamp(type.getPrecision());
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE -> creator.precisionTimestampTZ(type.getPrecision());
       case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> creator.INTERVAL_YEAR;
       case INTERVAL_DAY,
           INTERVAL_DAY_HOUR,
@@ -239,6 +221,31 @@ public class TypeConverter {
     @Override
     public RelDataType visit(Type.Timestamp expr) {
       return t(n(expr), SqlTypeName.TIMESTAMP, 6);
+    }
+
+    @Override
+    public RelDataType visit(Type.PrecisionTimestamp expr) {
+      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+      if (expr.precision() > maxPrecision) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
+                expr.precision(), maxPrecision));
+      }
+      return t(n(expr), SqlTypeName.TIMESTAMP, expr.precision());
+    }
+
+    @Override
+    public RelDataType visit(Type.PrecisionTimestampTZ expr) throws RuntimeException {
+      int maxPrecision =
+          typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
+      if (expr.precision() > maxPrecision) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
+                expr.precision(), maxPrecision));
+      }
+      return t(n(expr), SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, expr.precision());
     }
 
     @Override
