@@ -1,5 +1,3 @@
-import com.google.protobuf.gradle.protobuf
-import com.google.protobuf.gradle.protoc
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
@@ -7,7 +5,7 @@ plugins {
   id("java")
   id("idea")
   id("antlr")
-  id("com.google.protobuf") version "0.8.17"
+  id("com.google.protobuf") version "0.9.4"
   id("com.diffplug.spotless") version "6.11.0"
   id("com.github.johnrengelman.shadow") version "8.1.1"
   signing
@@ -69,10 +67,11 @@ signing {
 }
 
 val ANTLR_VERSION = properties.get("antlr.version")
-var IMMUTABLES_VERSION = properties.get("immutables.version")
-var JACKSON_VERSION = properties.get("jackson.version")
-var JUNIT_VERSION = properties.get("junit.version")
-var SLF4J_VERSION = properties.get("slf4j.version")
+val IMMUTABLES_VERSION = properties.get("immutables.version")
+val JACKSON_VERSION = properties.get("jackson.version")
+val JUNIT_VERSION = properties.get("junit.version")
+val SLF4J_VERSION = properties.get("slf4j.version")
+val PROTOBUF_VERSION = properties.get("protobuf.version")
 
 // This allows specifying deps to be shadowed so that they don't get included in the POM file
 val shadowImplementation by configurations.creating
@@ -85,7 +84,7 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
-  implementation("com.google.protobuf:protobuf-java:3.17.3")
+  implementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
@@ -162,4 +161,4 @@ tasks.named<AntlrTask>("generateGrammarSource") {
     layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:3.17.3" } }
+protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }
