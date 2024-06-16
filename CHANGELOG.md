@@ -1,6 +1,16 @@
 Release Notes
 ---
 
+## [0.33.0](https://github.com/substrait-io/substrait-java/compare/v0.32.0...v0.33.0) (2024-06-16)
+
+### Features
+
+* **isthmus:** support for PrecisionTimestamp conversions ([#262](https://github.com/substrait-io/substrait-java/issues/262)) ([e726904](https://github.com/substrait-io/substrait-java/commit/e72690425cb31e52bc37550c1c4851db1b927651))
+
+### Bug Fixes
+
+* **isthmus:** correct SLF4J dependency ([#268](https://github.com/substrait-io/substrait-java/issues/268)) ([3134504](https://github.com/substrait-io/substrait-java/commit/31345045d522bf85bc60a59d52e4dd55601abbf8))
+
 ## [0.32.0](https://github.com/substrait-io/substrait-java/compare/v0.31.0...v0.32.0) (2024-06-04)
 
 ### ⚠ BREAKING CHANGES
