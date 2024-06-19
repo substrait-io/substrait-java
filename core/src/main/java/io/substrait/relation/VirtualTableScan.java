@@ -1,7 +1,6 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
-import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeVisitor;
 import java.util.List;
@@ -9,8 +8,6 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
-
-  public abstract List<String> getDfsNames();
 
   public abstract List<Expression.StructLiteral> getRows();
 
@@ -26,7 +23,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    */
   @Value.Check
   protected void check() {
-    var names = getDfsNames();
+    var names = getInitialSchema().names();
     var rows = getRows();
 
     assert rows.size() > 0
@@ -34,11 +31,6 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         && rows.stream().noneMatch(r -> r == null)
         && rows.stream()
             .allMatch(r -> r.getType().accept(new NamedFieldCountingTypeVisitor()) == names.size());
-  }
-
-  @Override
-  public final NamedStruct getInitialSchema() {
-    return NamedStruct.of(getDfsNames(), (Type.Struct) getRows().get(0).getType());
   }
 
   @Override

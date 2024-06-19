@@ -334,12 +334,11 @@ public class ProtoRelConverter {
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    var fieldNames =
-        rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
+
     var builder =
         VirtualTableScan.builder()
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
-            .addAllDfsNames(fieldNames)
+            .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
             .rows(structLiterals);
 
     builder
