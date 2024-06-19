@@ -16,18 +16,18 @@
  */
 package io.substrait.spark.expression
 
-import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack}
+import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, ToSubstraitType}
 import io.substrait.spark.logical.ToLogicalPlan
 
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.types.Decimal
-import org.apache.spark.substrait.{SparkTypeUtil, ToSubstraitType}
 import org.apache.spark.unsafe.types.UTF8String
 
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.util.DecimalUtil
+import org.apache.spark.substrait.SparkTypeUtil
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 

@@ -84,7 +84,7 @@ var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
 var SPARK_VERSION = properties.get("spark.version")
 
 sourceSets {
-  main { scala { setSrcDirs(listOf("src/main/spark-${SPARKBUNDLE_VERSION}")) } }
+  main { scala { setSrcDirs(listOf("src/main/scala", "src/main/spark-${SPARKBUNDLE_VERSION}")) } }
   test { scala { setSrcDirs(listOf("src/test/scala", "src/test/spark-3.2", "src/main/scala")) } }
 }
 

@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.SparkExtension
+import io.substrait.spark.{SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.internal.Logging
@@ -28,8 +28,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.substrait.ToSubstraitType
-import org.apache.spark.substrait.ToSubstraitType.toNamedStruct
+import ToSubstraitType.toNamedStruct
 
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
@@ -274,7 +273,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     } else {
       relation.VirtualTableScan
         .builder()
-        .addAllDfsNames(namedStruct.names())
+        .initialSchema(namedStruct)
         .addAllRows(
           localRelation.data
             .map(

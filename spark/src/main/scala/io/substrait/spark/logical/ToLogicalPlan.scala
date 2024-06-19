@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.{DefaultRelVisitor, SparkExtension}
+import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.sql.SparkSession
@@ -30,7 +30,6 @@ import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.types.{DataTypes, IntegerType, StructType}
-import org.apache.spark.substrait.ToSubstraitType
 
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}

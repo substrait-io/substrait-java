@@ -18,11 +18,11 @@ package io.substrait.spark.expression
 
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.types._
-import org.apache.spark.substrait.ToSubstraitType
 import org.apache.spark.unsafe.types.UTF8String
 
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.expression.ExpressionCreator._
+import io.substrait.spark.ToSubstraitType
 
 class ToSubstraitLiteral {
 

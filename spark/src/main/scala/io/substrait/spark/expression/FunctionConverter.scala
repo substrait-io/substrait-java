@@ -22,7 +22,6 @@ import org.apache.spark.sql.catalyst.analysis.{AnsiTypeCoercion, TypeCoercion}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.types.DataType
-import org.apache.spark.substrait.ToSubstraitType
 
 import com.google.common.collect.{ArrayListMultimap, Multimap}
 import io.substrait.`type`.Type
@@ -30,6 +29,7 @@ import io.substrait.expression.{Expression => SExpression, ExpressionCreator, Fu
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.extension.SimpleExtension
 import io.substrait.function.{ParameterizedType, ToTypeString}
+import io.substrait.spark.ToSubstraitType
 import io.substrait.utils.Util
 
 import java.{util => ju}
