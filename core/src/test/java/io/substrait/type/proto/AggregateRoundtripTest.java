@@ -13,6 +13,7 @@ import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -25,8 +26,12 @@ public class AggregateRoundtripTest extends TestBase {
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
-        ImmutableExpression.StructLiteral.builder().from(expression).build();
-    var input = VirtualTableScan.builder().addRows(literal).build();
+        ImmutableExpression.StructLiteral.builder().addFields(expression).build();
+    var input =
+        VirtualTableScan.builder()
+            .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
+            .addRows(literal)
+            .build();
     ExtensionCollector functionCollector = new ExtensionCollector();
     var to = new RelProtoConverter(functionCollector);
     var extensions = defaultExtensionCollection;

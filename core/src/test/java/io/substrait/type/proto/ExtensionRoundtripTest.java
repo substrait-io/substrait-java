@@ -74,6 +74,7 @@ public class ExtensionRoundtripTest extends TestBase {
   void virtualTable() {
     Rel rel =
         VirtualTableScan.builder()
+            .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
             .addRows(Expression.StructLiteral.builder().fields(Collections.emptyList()).build())
             .commonExtension(commonExtension)
             .extension(relExtension)
