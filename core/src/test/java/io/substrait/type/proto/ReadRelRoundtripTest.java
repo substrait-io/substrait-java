@@ -44,7 +44,10 @@ public class ReadRelRoundtripTest extends TestBase {
   void virtualTable() {
     var virtTable =
         VirtualTableScan.builder()
-            .addAllDfsNames(Stream.of("column1", "column2").collect(Collectors.toList()))
+            .initialSchema(
+                NamedStruct.of(
+                    Stream.of("column1", "column2").collect(Collectors.toList()),
+                    R.struct(R.I64, R.I64)))
             .addRows(
                 ExpressionCreator.struct(
                     false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2)))

@@ -136,7 +136,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                   return ExpressionCreator.struct(false, fields);
                 })
             .collect(Collectors.toUnmodifiableList());
-    return VirtualTableScan.builder().addAllDfsNames(type.names()).addAllRows(structs).build();
+    return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
   }
 
   @Override
