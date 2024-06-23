@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.34.0](https://github.com/substrait-io/substrait-java/compare/v0.33.0...v0.34.0) (2024-06-23)
+
+### ⚠ BREAKING CHANGES
+
+* getDfsNames() has been removed from VirtualTableScan
+* getInitialSchema() not longer has a default implementation in VirtualTableScan
+
+### Bug Fixes
+
+* set VirtualTableScan schema explicitly ([#272](https://github.com/substrait-io/substrait-java/issues/272)) ([f1192cf](https://github.com/substrait-io/substrait-java/commit/f1192cfaf6c84fb1e466bae6eda75ba164444aa8))
+
 ## [0.33.0](https://github.com/substrait-io/substrait-java/compare/v0.32.0...v0.33.0) (2024-06-16)
 
 ### Features
