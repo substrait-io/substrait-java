@@ -23,8 +23,10 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Time type) throws E;
 
+  @Deprecated
   R visit(Type.TimestampTZ type) throws E;
 
+  @Deprecated
   R visit(Type.Timestamp type) throws E;
 
   R visit(Type.PrecisionTimestamp type) throws E;
