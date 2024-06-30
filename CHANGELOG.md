@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.35.0](https://github.com/substrait-io/substrait-java/compare/v0.34.0...v0.35.0) (2024-06-30)
+
+### Features
+
+* deprecate Timestamp and TimestampTZ visit functions ([#273](https://github.com/substrait-io/substrait-java/issues/273)) ([8a8253e](https://github.com/substrait-io/substrait-java/commit/8a8253ec1f077b81d0da6503e299662048fca825))
+* introduce substrait-spark module ([#271](https://github.com/substrait-io/substrait-java/issues/271)) ([8537dca](https://github.com/substrait-io/substrait-java/commit/8537dca93b410177f2ee5aefffe83f7c02a3668c))
+
 ## [0.34.0](https://github.com/substrait-io/substrait-java/compare/v0.33.0...v0.34.0) (2024-06-23)
 
 ### ⚠ BREAKING CHANGES
