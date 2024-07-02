@@ -9,7 +9,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
@@ -49,7 +48,7 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
 
     public abstract List<FunctionArg> arguments();
 
-    public abstract Map<String, FunctionOption> options();
+    public abstract List<FunctionOption> options();
 
     public abstract Type outputType();
 

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -284,20 +285,25 @@ public class ExpressionCreator {
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
       FunctionArg... arguments) {
-    return Expression.ScalarFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .addArguments(arguments)
-        .build();
+      return scalarFunction(declaration, outputType, Arrays.asList(), Arrays.asList(arguments));
   }
 
   public static Expression.ScalarFunctionInvocation scalarFunction(
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
       Iterable<? extends FunctionArg> arguments) {
+    return scalarFunction(declaration, outputType, Arrays.asList(), arguments);
+  }
+
+  public static Expression.ScalarFunctionInvocation scalarFunction(
+      SimpleExtension.ScalarFunctionVariant declaration,
+      Type outputType,
+      List<? extends FunctionOption> options,
+      Iterable<? extends FunctionArg> arguments) {
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
+        .options(options)
         .addAllArguments(arguments)
         .build();
   }
@@ -309,12 +315,25 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       Iterable<? extends FunctionArg> arguments) {
+    return aggregateFunction(
+        declaration, outputType, phase, sort, invocation, Arrays.asList(), arguments);
+  }
+
+  public static AggregateFunctionInvocation aggregateFunction(
+      SimpleExtension.AggregateFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      List<Expression.SortField> sort,
+      Expression.AggregationInvocation invocation,
+      List<? extends FunctionOption> options,
+      Iterable<? extends FunctionArg> arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
         .aggregationPhase(phase)
         .sort(sort)
         .invocation(invocation)
+        .addAllOptions(options)
         .addAllArguments(arguments)
         .build();
   }
@@ -326,14 +345,8 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       FunctionArg... arguments) {
-    return AggregateFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .addArguments(arguments)
-        .build();
+    return aggregateFunction(
+        declaration, outputType, phase, sort, invocation, Arrays.asList(arguments));
   }
 
   public static Expression.WindowFunctionInvocation windowFunction(
@@ -347,6 +360,32 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
+    return windowFunction(
+        declaration,
+        outputType,
+        phase,
+        sort,
+        invocation,
+        partitionBy,
+        boundsType,
+        lowerBound,
+        upperBound,
+        Arrays.asList(),
+        arguments);
+  }
+
+  public static Expression.WindowFunctionInvocation windowFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      List<Expression.SortField> sort,
+      Expression.AggregationInvocation invocation,
+      List<Expression> partitionBy,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      List<? extends FunctionOption> options,
+      Iterable<? extends FunctionArg> arguments) {
     return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -357,6 +396,7 @@ public class ExpressionCreator {
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(invocation)
+        .addAllOptions(options)
         .addAllArguments(arguments)
         .build();
   }
@@ -370,6 +410,28 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       Iterable<? extends FunctionArg> arguments) {
+    return windowRelFunction(
+        declaration,
+        outputType,
+        phase,
+        invocation,
+        boundsType,
+        lowerBound,
+        upperBound,
+        Arrays.asList(),
+        arguments);
+  }
+
+  public static ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunction(
+      SimpleExtension.WindowFunctionVariant declaration,
+      Type outputType,
+      Expression.AggregationPhase phase,
+      Expression.AggregationInvocation invocation,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      List<? extends FunctionOption> options,
+      Iterable<? extends FunctionArg> arguments) {
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -379,6 +441,7 @@ public class ExpressionCreator {
         .upperBound(upperBound)
         .invocation(invocation)
         .addAllArguments(arguments)
+        .addAllOptions(options)
         .build();
   }
 
@@ -393,18 +456,18 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       FunctionArg... arguments) {
-    return Expression.WindowFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .partitionBy(partitionBy)
-        .boundsType(boundsType)
-        .lowerBound(lowerBound)
-        .upperBound(upperBound)
-        .addArguments(arguments)
-        .build();
+    return windowFunction(
+        declaration,
+        outputType,
+        phase,
+        sort,
+        invocation,
+        partitionBy,
+        boundsType,
+        lowerBound,
+        upperBound,
+        Arrays.asList(),
+        Arrays.asList(arguments));
   }
 
   public static Expression cast(

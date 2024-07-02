@@ -596,7 +596,7 @@ public interface Expression extends FunctionArg {
 
     public abstract List<FunctionArg> arguments();
 
-    public abstract Map<String, FunctionOption> options();
+    public abstract List<FunctionOption> options();
 
     public abstract Type outputType();
 
@@ -620,7 +620,7 @@ public interface Expression extends FunctionArg {
 
     public abstract List<FunctionArg> arguments();
 
-    public abstract Map<String, FunctionOption> options();
+    public abstract List<FunctionOption> options();
 
     public abstract AggregationPhase aggregationPhase();
 

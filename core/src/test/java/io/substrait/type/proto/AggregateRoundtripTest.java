@@ -6,6 +6,7 @@ import io.substrait.TestBase;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.relation.Aggregate;
@@ -46,6 +47,12 @@ public class AggregateRoundtripTest extends TestBase {
                     .outputType(TypeCreator.of(false).I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                     .invocation(invocation)
+                    .options(
+                        Arrays.asList(
+                            FunctionOption.builder()
+                                .name("option")
+                                .addValues("VALUE1", "VALUE2")
+                                .build()))
                     .build())
             .build();
 

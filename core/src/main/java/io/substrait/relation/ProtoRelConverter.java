@@ -1,6 +1,5 @@
 package io.substrait.relation;
 
-import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
@@ -392,6 +391,9 @@ public class ProtoRelConverter {
     var input = from(rel.getInput());
     var protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    var protoAggrFuncConverter =
+        new ProtoAggregateFunctionConverter(lookup, extensions, protoExprConverter);
+
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
     for (var grouping : rel.getGroupingsList()) {
       groupings.add(
@@ -413,14 +415,7 @@ public class ProtoRelConverter {
               .collect(java.util.stream.Collectors.toList());
       measures.add(
           Aggregate.Measure.builder()
-              .function(
-                  AggregateFunctionInvocation.builder()
-                      .arguments(args)
-                      .declaration(funcDecl)
-                      .outputType(protoTypeConverter.from(func.getOutputType()))
-                      .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
-                      .invocation(Expression.AggregationInvocation.fromProto(func.getInvocation()))
-                      .build())
+              .function(protoAggrFuncConverter.from(measure.getMeasure()))
               .preMeasureFilter(
                   Optional.ofNullable(
                       measure.hasFilter() ? protoExprConverter.from(measure.getFilter()) : null))

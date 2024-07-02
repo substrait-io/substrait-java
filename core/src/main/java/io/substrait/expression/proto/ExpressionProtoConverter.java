@@ -10,6 +10,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Expression;
 import io.substrait.proto.FunctionArgument;
+import io.substrait.proto.FunctionOption;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.Type;
@@ -314,7 +315,18 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .addAllArguments(
                     expr.arguments().stream()
                         .map(a -> a.accept(expr.declaration(), 0, argVisitor))
+                        .collect(java.util.stream.Collectors.toList()))
+                .addAllOptions(
+                    expr.options().stream()
+                        .map(ExpressionProtoConverter::from)
                         .collect(java.util.stream.Collectors.toList())))
+        .build();
+  }
+
+  public static FunctionOption from(io.substrait.expression.FunctionOption option) {
+    return FunctionOption.newBuilder()
+        .setName(option.getName())
+        .addAllPreference(option.values())
         .build();
   }
 
@@ -495,7 +507,11 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .addAllPartitions(partitionExprs)
                 .setBoundsType(expr.boundsType().toProto())
                 .setLowerBound(lowerBound)
-                .setUpperBound(upperBound))
+                .setUpperBound(upperBound)
+                .addAllOptions(
+                    expr.options().stream()
+                        .map(ExpressionProtoConverter::from)
+                        .collect(java.util.stream.Collectors.toList())))
         .build();
   }
 

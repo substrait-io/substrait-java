@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableWindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -11,7 +12,6 @@ import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.ImmutableConsistentPartitionWindow;
 import io.substrait.relation.Rel;
 import java.util.Arrays;
-import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 public class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
@@ -36,7 +36,12 @@ public class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .declaration(windowFunctionDeclaration)
                         // lead(a)
                         .arguments(Arrays.asList(b.fieldReference(input, 0)))
-                        .options(Collections.emptyMap())
+                        .options(
+                            Arrays.asList(
+                                FunctionOption.builder()
+                                    .name("option")
+                                    .addValues("VALUE1", "VALUE2")
+                                    .build()))
                         .outputType(R.I64)
                         .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                         .invocation(Expression.AggregationInvocation.ALL)
