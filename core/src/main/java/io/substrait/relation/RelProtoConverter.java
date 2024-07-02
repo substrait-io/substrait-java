@@ -15,7 +15,6 @@ import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
-import io.substrait.proto.FunctionOption;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
 import io.substrait.proto.MergeJoinRel;
@@ -117,7 +116,11 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .collect(java.util.stream.Collectors.toList()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
-                functionCollector.getFunctionReference(measure.getFunction().declaration()));
+                functionCollector.getFunctionReference(measure.getFunction().declaration()))
+            .addAllOptions(
+                measure.getFunction().options().stream()
+                    .map(ExpressionProtoConverter::from)
+                    .collect(java.util.stream.Collectors.toList()));
 
     var builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 
@@ -345,13 +348,8 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                       .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
                       .collect(Collectors.toList());
               var options =
-                  f.options().entrySet().stream()
-                      .map(
-                          o ->
-                              FunctionOption.newBuilder()
-                                  .setName(o.getKey())
-                                  .addAllPreference(o.getValue().values())
-                                  .build())
+                  f.options().stream()
+                      .map(ExpressionProtoConverter::from)
                       .collect(java.util.stream.Collectors.toList());
 
               return ConsistentPartitionWindowRel.WindowRelFunction.newBuilder()

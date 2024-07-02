@@ -3,7 +3,6 @@ package io.substrait.expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import java.util.List;
-import java.util.Map;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -12,7 +11,7 @@ public abstract class AggregateFunctionInvocation {
 
   public abstract List<FunctionArg> arguments();
 
-  public abstract Map<String, FunctionOption> options();
+  public abstract List<FunctionOption> options();
 
   public abstract Expression.AggregationPhase aggregationPhase();
 

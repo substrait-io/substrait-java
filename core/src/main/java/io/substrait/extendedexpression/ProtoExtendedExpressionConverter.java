@@ -64,9 +64,12 @@ public class ProtoExtendedExpressionConverter {
           break;
         case MEASURE:
           io.substrait.relation.Aggregate.Measure measure =
-              new ProtoAggregateFunctionConverter(
-                      functionLookup, extensionCollection, protoExpressionConverter)
-                  .from(expressionReference.getMeasure());
+              io.substrait.relation.Aggregate.Measure.builder()
+                  .function(
+                      new ProtoAggregateFunctionConverter(
+                              functionLookup, extensionCollection, protoExpressionConverter)
+                          .from(expressionReference.getMeasure()))
+                  .build();
           ImmutableAggregateFunctionReference buildMeasure =
               ImmutableAggregateFunctionReference.builder()
                   .measure(measure)
