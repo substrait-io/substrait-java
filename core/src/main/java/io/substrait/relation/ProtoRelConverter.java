@@ -411,6 +411,16 @@ public class ProtoRelConverter {
           IntStream.range(0, measure.getMeasure().getArgumentsCount())
               .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
               .collect(java.util.stream.Collectors.toList());
+      var sorts =
+          IntStream.range(0, func.getSortsCount())
+              .mapToObj(
+                  i ->
+                      Expression.SortField.builder()
+                          .expr(protoExprConverter.from(func.getSorts(i).getExpr()))
+                          .direction(
+                              Expression.SortDirection.fromProto(func.getSorts(i).getDirection()))
+                          .build())
+              .collect(java.util.stream.Collectors.toList());
       measures.add(
           Aggregate.Measure.builder()
               .function(
@@ -420,6 +430,7 @@ public class ProtoRelConverter {
                       .outputType(protoTypeConverter.from(func.getOutputType()))
                       .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
                       .invocation(Expression.AggregationInvocation.fromProto(func.getInvocation()))
+                      .sort(sorts)
                       .build())
               .preMeasureFilter(
                   Optional.ofNullable(
