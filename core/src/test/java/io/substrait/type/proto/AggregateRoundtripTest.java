@@ -32,6 +32,11 @@ public class AggregateRoundtripTest extends TestBase {
             .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
             .addRows(literal)
             .build();
+    var sort =
+        ImmutableExpression.SortField.builder()
+            .expr(ExpressionCreator.bool(true, true))
+            .direction(Expression.SortDirection.DESC_NULLS_LAST)
+            .build();
     ExtensionCollector functionCollector = new ExtensionCollector();
     var to = new RelProtoConverter(functionCollector);
     var extensions = defaultExtensionCollection;
@@ -45,6 +50,7 @@ public class AggregateRoundtripTest extends TestBase {
                     .declaration(extensions.aggregateFunctions().get(0))
                     .outputType(TypeCreator.of(false).I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                    .sort(Arrays.asList(sort))
                     .invocation(invocation)
                     .build())
             .build();
