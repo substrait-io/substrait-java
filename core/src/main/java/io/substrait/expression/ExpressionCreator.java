@@ -285,7 +285,7 @@ public class ExpressionCreator {
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
       FunctionArg... arguments) {
-      return scalarFunction(declaration, outputType, Arrays.asList(), Arrays.asList(arguments));
+    return scalarFunction(declaration, outputType, Arrays.asList(), Arrays.asList(arguments));
   }
 
   public static Expression.ScalarFunctionInvocation scalarFunction(
