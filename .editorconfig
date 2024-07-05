@@ -19,3 +19,9 @@ trim_trailing_whitespace = unset
 
 [*.gradle.kts]
 indent_size = 2
+
+[.gitmodules]
+indent_style = tab
+
+[**/*.g4]
+indent_style = tab
