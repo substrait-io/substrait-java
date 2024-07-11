@@ -6,7 +6,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.expression.ImmutableFunctionOption;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -117,10 +116,15 @@ public class ProtoExpressionConverter {
             IntStream.range(0, scalarFunction.getArgumentsCount())
                 .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
                 .collect(java.util.stream.Collectors.toList());
+        var options =
+            scalarFunction.getOptionsList().stream()
+                .map(ProtoExpressionConverter::fromFunctionOption)
+                .collect(Collectors.toList());
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
             .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
+            .options(options)
             .build();
       }
       case WINDOW_FUNCTION -> fromWindowFunction(expr.getWindowFunction());
@@ -241,8 +245,8 @@ public class ProtoExpressionConverter {
             .collect(Collectors.toList());
     var options =
         windowFunction.getOptionsList().stream()
-            .map(this::fromFunctionOption)
-            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+            .map(ProtoExpressionConverter::fromFunctionOption)
+            .collect(Collectors.toList());
 
     WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
@@ -276,8 +280,8 @@ public class ProtoExpressionConverter {
             windowRelFunction::getArguments);
     var options =
         windowRelFunction.getOptionsList().stream()
-            .map(this::fromFunctionOption)
-            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+            .map(ProtoExpressionConverter::fromFunctionOption)
+            .collect(Collectors.toList());
 
     WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
@@ -393,10 +397,7 @@ public class ProtoExpressionConverter {
         .build();
   }
 
-  public FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
-    return ImmutableFunctionOption.builder()
-        .name(o.getName())
-        .addAllValues(o.getPreferenceList())
-        .build();
+  public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
+    return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
   }
 }

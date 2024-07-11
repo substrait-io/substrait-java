@@ -9,4 +9,8 @@ public abstract class FunctionOption {
   public abstract String getName();
 
   public abstract List<String> values();
+
+  public static ImmutableFunctionOption.Builder builder() {
+    return ImmutableFunctionOption.builder();
+  }
 }

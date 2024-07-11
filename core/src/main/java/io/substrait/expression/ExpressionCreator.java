@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -284,13 +285,13 @@ public class ExpressionCreator {
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
       FunctionArg... arguments) {
-    return Expression.ScalarFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .addArguments(arguments)
-        .build();
+    return scalarFunction(declaration, outputType, Arrays.asList(arguments));
   }
 
+  /**
+   * Use {@link Expression.ScalarFunctionInvocation#builder()} directly to specify other parameters,
+   * e.g. options
+   */
   public static Expression.ScalarFunctionInvocation scalarFunction(
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
@@ -302,6 +303,10 @@ public class ExpressionCreator {
         .build();
   }
 
+  /**
+   * Use {@link AggregateFunctionInvocation#builder()} directly to specify other parameters, e.g.
+   * options
+   */
   public static AggregateFunctionInvocation aggregateFunction(
       SimpleExtension.AggregateFunctionVariant declaration,
       Type outputType,
@@ -326,16 +331,14 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       FunctionArg... arguments) {
-    return AggregateFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .addArguments(arguments)
-        .build();
+    return aggregateFunction(
+        declaration, outputType, phase, sort, invocation, Arrays.asList(arguments));
   }
 
+  /**
+   * Use {@link Expression.WindowFunctionInvocation#builder()} directly to specify other parameters,
+   * e.g. options
+   */
   public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
@@ -361,6 +364,10 @@ public class ExpressionCreator {
         .build();
   }
 
+  /**
+   * Use {@link ConsistentPartitionWindow.WindowRelFunctionInvocation#builder()} directly to specify
+   * other parameters, e.g. options
+   */
   public static ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
@@ -393,18 +400,17 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       FunctionArg... arguments) {
-    return Expression.WindowFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .partitionBy(partitionBy)
-        .boundsType(boundsType)
-        .lowerBound(lowerBound)
-        .upperBound(upperBound)
-        .addArguments(arguments)
-        .build();
+    return windowFunction(
+        declaration,
+        outputType,
+        phase,
+        sort,
+        invocation,
+        partitionBy,
+        boundsType,
+        lowerBound,
+        upperBound,
+        Arrays.asList(arguments));
   }
 
   public static Expression cast(
