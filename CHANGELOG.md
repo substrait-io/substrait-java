@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.36.0](https://github.com/substrait-io/substrait-java/compare/v0.35.0...v0.36.0) (2024-07-14)
+
+### ⚠ BREAKING CHANGES
+
+* Expression#options now returns List<FunctionOption>
+* ProtoAggregateFunctionConverter#from(AggregateFunction) now returns AggregateFunctionInvocation
+
+### Bug Fixes
+
+* include FunctionOptions when converting functions ([#278](https://github.com/substrait-io/substrait-java/issues/278)) ([e574913](https://github.com/substrait-io/substrait-java/commit/e57491333c7dd05ae3b1400e2185f807af1f5f88))
+
 ## [0.35.0](https://github.com/substrait-io/substrait-java/compare/v0.34.0...v0.35.0) (2024-06-30)
 
 ### Features
