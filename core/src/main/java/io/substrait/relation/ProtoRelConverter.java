@@ -658,15 +658,18 @@ public class ProtoRelConverter {
     if (advancedExtension.hasEnhancement()) {
       builder.enhancement(enhancementFromAdvancedExtension(advancedExtension.getEnhancement()));
     }
-    if (advancedExtension.hasOptimization()) {
-      builder.optimization(optimizationFromAdvancedExtension(advancedExtension.getOptimization()));
-    }
+    advancedExtension
+        .getOptimizationList()
+        .forEach(
+            optimization ->
+                builder.addOptimizations(optimizationFromAdvancedExtension(optimization)));
+
     return builder.build();
   }
 
   /**
    * Override to provide a custom converter for {@link
-   * io.substrait.proto.AdvancedExtension#getOptimization()} data
+   * io.substrait.proto.AdvancedExtension#getOptimizationList()} ()} data
    */
   protected Extension.Optimization optimizationFromAdvancedExtension(com.google.protobuf.Any any) {
     return new EmptyOptimization();
