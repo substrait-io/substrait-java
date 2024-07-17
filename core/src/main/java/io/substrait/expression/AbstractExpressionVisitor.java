@@ -75,6 +75,16 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
+  public OUTPUT visit(Expression.PrecisionTimestampLiteral expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
+  public OUTPUT visit(Expression.PrecisionTimestampTZLiteral expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
   public OUTPUT visit(Expression.IntervalYearLiteral expr) throws EXCEPTION {
     return visitFallback(expr);
   }

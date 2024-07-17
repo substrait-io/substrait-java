@@ -271,6 +271,44 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
+  abstract static class PrecisionTimestampLiteral implements Literal {
+    public abstract long value();
+
+    public abstract int precision();
+
+    public Type getType() {
+      return Type.withNullability(nullable()).precisionTimestamp(precision());
+    }
+
+    public static ImmutableExpression.PrecisionTimestampLiteral.Builder builder() {
+      return ImmutableExpression.PrecisionTimestampLiteral.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class PrecisionTimestampTZLiteral implements Literal {
+    public abstract long value();
+
+    public abstract int precision();
+
+    public Type getType() {
+      return Type.withNullability(nullable()).precisionTimestampTZ(precision());
+    }
+
+    public static ImmutableExpression.PrecisionTimestampTZLiteral.Builder builder() {
+      return ImmutableExpression.PrecisionTimestampTZLiteral.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract static class IntervalYearLiteral implements Literal {
     public abstract int years();
 

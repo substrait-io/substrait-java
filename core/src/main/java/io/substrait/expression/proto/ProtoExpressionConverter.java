@@ -324,6 +324,16 @@ public class ProtoExpressionConverter {
       case STRING -> ExpressionCreator.string(literal.getNullable(), literal.getString());
       case BINARY -> ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
       case TIMESTAMP -> ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
+      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
+          literal.getNullable(), literal.getTimestampTz());
+      case PRECISION_TIMESTAMP -> ExpressionCreator.precisionTimestamp(
+          literal.getNullable(),
+          literal.getPrecisionTimestamp().getValue(),
+          literal.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ -> ExpressionCreator.precisionTimestampTZ(
+          literal.getNullable(),
+          literal.getPrecisionTimestampTz().getValue(),
+          literal.getPrecisionTimestampTz().getPrecision());
       case DATE -> ExpressionCreator.date(literal.getNullable(), literal.getDate());
       case TIME -> ExpressionCreator.time(literal.getNullable(), literal.getTime());
       case INTERVAL_YEAR_TO_MONTH -> ExpressionCreator.intervalYear(
@@ -354,8 +364,6 @@ public class ProtoExpressionConverter {
           literal.getNullable(),
           literal.getMap().getKeyValuesList().stream()
               .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
-      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
-          literal.getNullable(), literal.getTimestampTz());
       case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
       case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
       case LIST -> ExpressionCreator.list(

@@ -76,10 +76,18 @@ public class ExpressionCreator {
     return Expression.TimeLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(boolean nullable, long value) {
     return Expression.TimestampLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
     var epochMicro =
         TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
@@ -87,6 +95,10 @@ public class ExpressionCreator {
     return timestamp(nullable, epochMicro);
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(
       boolean nullable,
       int year,
@@ -102,15 +114,57 @@ public class ExpressionCreator {
             .withNano((int) TimeUnit.MICROSECONDS.toNanos(micros)));
   }
 
+  /**
+   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
+   */
+  @Deprecated
   public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, long value) {
     return Expression.TimestampTZLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
+   */
+  @Deprecated
   public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, Instant value) {
     var epochMicro =
         TimeUnit.SECONDS.toMicros(value.getEpochSecond())
             + TimeUnit.NANOSECONDS.toMicros(value.getNano());
     return timestampTZ(nullable, epochMicro);
+  }
+
+  public static Expression.PrecisionTimestampLiteral precisionTimestamp(
+      boolean nullable, long value, int precision) {
+    return Expression.PrecisionTimestampLiteral.builder()
+        .nullable(nullable)
+        .value(value)
+        .precision(precision)
+        .build();
+  }
+
+  public static Expression.PrecisionTimestampLiteral precisionTimestamp(
+      boolean nullable, LocalDateTime value) {
+    var epochMicro =
+        TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
+            + TimeUnit.NANOSECONDS.toMicros(value.toLocalTime().getNano());
+    return precisionTimestamp(nullable, epochMicro, 6);
+  }
+
+  public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
+      boolean nullable, long value, int precision) {
+    return Expression.PrecisionTimestampTZLiteral.builder()
+        .nullable(nullable)
+        .value(value)
+        .precision(precision)
+        .build();
+  }
+
+  public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
+      boolean nullable, Instant value) {
+    var epochMicro =
+        TimeUnit.SECONDS.toMicros(value.getEpochSecond())
+            + TimeUnit.NANOSECONDS.toMicros(value.getNano());
+    return precisionTimestampTZ(nullable, epochMicro, 6);
   }
 
   public static Expression.IntervalYearLiteral intervalYear(
