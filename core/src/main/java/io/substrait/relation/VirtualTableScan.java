@@ -24,13 +24,16 @@ public abstract class VirtualTableScan extends AbstractReadRel {
   @Value.Check
   protected void check() {
     var names = getInitialSchema().names();
+
+    assert names.size()
+        == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
     var rows = getRows();
 
     assert rows.size() > 0
         && names.stream().noneMatch(s -> s == null)
         && rows.stream().noneMatch(r -> r == null)
         && rows.stream()
-            .allMatch(r -> r.getType().accept(new NamedFieldCountingTypeVisitor()) == names.size());
+            .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
   }
 
   @Override
@@ -44,6 +47,14 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
   private static class NamedFieldCountingTypeVisitor
       implements TypeVisitor<Integer, RuntimeException> {
+
+    private static final NamedFieldCountingTypeVisitor VISITOR =
+        new NamedFieldCountingTypeVisitor();
+
+    private static Integer countNames(Type type) {
+      return type.accept(VISITOR);
+    }
+
     @Override
     public Integer visit(Type.Bool type) throws RuntimeException {
       return 0;
