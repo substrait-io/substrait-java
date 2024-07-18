@@ -39,8 +39,8 @@ class VirtualTableScanTest extends TestBase {
                     R.struct(
                         R.STRING,
                         R.struct(R.STRING, R.STRING),
-                        R.list(R.STRING),
-                        R.map(R.STRING, R.STRING))))
+                        R.list(R.struct(R.STRING)),
+                        R.map(R.struct(R.STRING), R.struct(R.STRING)))))
             .addRows(
                 struct(
                     false,
