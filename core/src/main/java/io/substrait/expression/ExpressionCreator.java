@@ -142,14 +142,6 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static Expression.PrecisionTimestampLiteral precisionTimestamp(
-      boolean nullable, LocalDateTime value) {
-    var epochMicro =
-        TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
-            + TimeUnit.NANOSECONDS.toMicros(value.toLocalTime().getNano());
-    return precisionTimestamp(nullable, epochMicro, 6);
-  }
-
   public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
       boolean nullable, long value, int precision) {
     return Expression.PrecisionTimestampTZLiteral.builder()
@@ -157,14 +149,6 @@ public class ExpressionCreator {
         .value(value)
         .precision(precision)
         .build();
-  }
-
-  public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
-      boolean nullable, Instant value) {
-    var epochMicro =
-        TimeUnit.SECONDS.toMicros(value.getEpochSecond())
-            + TimeUnit.NANOSECONDS.toMicros(value.getNano());
-    return precisionTimestampTZ(nullable, epochMicro, 6);
   }
 
   public static Expression.IntervalYearLiteral intervalYear(
