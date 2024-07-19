@@ -114,6 +114,32 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   @Override
+  public Expression visit(io.substrait.expression.Expression.PrecisionTimestampLiteral expr) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setPrecisionTimestamp(
+                    Expression.Literal.PrecisionTimestamp.newBuilder()
+                        .setValue(expr.value())
+                        .setPrecision(expr.precision())
+                        .build())
+                .build());
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.PrecisionTimestampTZLiteral expr) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setPrecisionTimestampTz(
+                    Expression.Literal.PrecisionTimestamp.newBuilder()
+                        .setValue(expr.value())
+                        .setPrecision(expr.precision())
+                        .build())
+                .build());
+  }
+
+  @Override
   public Expression visit(io.substrait.expression.Expression.IntervalYearLiteral expr) {
     return lit(
         bldr ->

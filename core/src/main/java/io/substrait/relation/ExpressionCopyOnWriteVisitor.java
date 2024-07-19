@@ -99,6 +99,16 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.PrecisionTimestampLiteral expr) throws EXCEPTION {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(Expression.PrecisionTimestampTZLiteral expr) throws EXCEPTION {
+    return visitLiteral(expr);
+  }
+
+  @Override
   public Optional<Expression> visit(Expression.IntervalYearLiteral expr) throws EXCEPTION {
     return visitLiteral(expr);
   }
