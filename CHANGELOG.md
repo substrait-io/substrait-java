@@ -1,6 +1,21 @@
 Release Notes
 ---
 
+## [0.37.0](https://github.com/substrait-io/substrait-java/compare/v0.36.0...v0.37.0) (2024-07-21)
+
+### ⚠ BREAKING CHANGES
+
+* AdvancedExtension#getOptimization() has been removed. Use getOptimizations() instead.
+
+### Features
+
+* literal support for precision timestamp types ([#283](https://github.com/substrait-io/substrait-java/issues/283)) ([94996f9](https://github.com/substrait-io/substrait-java/commit/94996f916478ed8141e5fb54b1c8411cc80f4abd))
+* validate VirtualTableScan field names with schema ([#284](https://github.com/substrait-io/substrait-java/issues/284)) ([0f8514a](https://github.com/substrait-io/substrait-java/commit/0f8514a95f0ffa2c3cca645652ef91ebfd3ccb9d))
+
+### Miscellaneous Chores
+
+* update to substrait 0.52.0 ([#282](https://github.com/substrait-io/substrait-java/issues/282)) ([ada8d0b](https://github.com/substrait-io/substrait-java/commit/ada8d0be54b8bbd260b194c4e93f02ed42821b5d))
+
 ## [0.36.0](https://github.com/substrait-io/substrait-java/compare/v0.35.0...v0.36.0) (2024-07-14)
 
 ### ⚠ BREAKING CHANGES
