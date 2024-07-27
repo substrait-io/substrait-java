@@ -24,13 +24,22 @@ public class CallConverters {
   public static Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->
           (call, visitor) -> {
-            if (call.getKind() != SqlKind.CAST) {
-              return null;
+            Expression.FailureBehavior failureBehavior;
+            switch (call.getKind()) {
+              case CAST:
+                failureBehavior = Expression.FailureBehavior.THROW_EXCEPTION;
+                break;
+              case SAFE_CAST:
+                failureBehavior = Expression.FailureBehavior.RETURN_NULL;
+                break;
+              default:
+                return null;
             }
 
             return ExpressionCreator.cast(
                 typeConverter.toSubstrait(call.getType()),
-                visitor.apply(call.getOperands().get(0)));
+                visitor.apply(call.getOperands().get(0)),
+                failureBehavior);
           };
 
   /**

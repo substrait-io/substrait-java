@@ -37,17 +37,18 @@ jobs:
       - name: Build with Gradle
         run: gradle nativeImage
       - name: Smoke Test
-        run: ./isthmus/src/test/script/smoke.sh
-          ./isthmus/src/test/script/tpch_smoke.sh
+        run: |
+          ./isthmus-cli/src/test/script/smoke.sh
+          ./isthmus-cli/src/test/script/tpch_smoke.sh
       - name: Rename the artifact to OS-unique name
         shell: bash
         run: |
-          value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
+          value=`mv isthmus-cli/build/graal/isthmus isthmus-cli/build/graal/isthmus-${{ matrix.os }}`
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:
           name: isthmus-${{ matrix.os }}
-          path: isthmus/build/graal/isthmus-${{ matrix.os }}
+          path: isthmus-cli/build/graal/isthmus-${{ matrix.os }}
   semantic-release:
     if: github.repository == 'substrait-io/substrait-java'
     runs-on: ubuntu-latest
@@ -58,10 +59,10 @@ jobs:
         with:
           submodules: recursive
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

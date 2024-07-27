@@ -52,7 +52,7 @@ public class ExtensionRoundtripTest extends TestBase {
   final AdvancedExtension commonExtension =
       AdvancedExtension.builder()
           .enhancement(new StringHolder("COMMON ENHANCEMENT"))
-          .optimization(new StringHolder("COMMON OPTIMIZATION"))
+          .addOptimizations(new StringHolder("COMMON OPTIMIZATION"))
           .build();
 
   final StringHolder detail = new StringHolder("DETAIL");
@@ -60,7 +60,7 @@ public class ExtensionRoundtripTest extends TestBase {
   final AdvancedExtension relExtension =
       AdvancedExtension.builder()
           .enhancement(new StringHolder("REL ENHANCEMENT"))
-          .optimization(new StringHolder("REL OPTIMIZATION"))
+          .addOptimizations(new StringHolder("REL OPTIMIZATION"))
           .build();
 
   @Override
@@ -74,6 +74,7 @@ public class ExtensionRoundtripTest extends TestBase {
   void virtualTable() {
     Rel rel =
         VirtualTableScan.builder()
+            .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
             .addRows(Expression.StructLiteral.builder().fields(Collections.emptyList()).build())
             .commonExtension(commonExtension)
             .extension(relExtension)

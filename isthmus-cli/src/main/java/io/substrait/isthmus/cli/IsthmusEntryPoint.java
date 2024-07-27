@@ -1,4 +1,4 @@
-package io.substrait.isthmus;
+package io.substrait.isthmus.cli;
 
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Option;
@@ -9,6 +9,10 @@ import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.FeatureBoard;
+import io.substrait.isthmus.ImmutableFeatureBoard;
+import io.substrait.isthmus.SqlExpressionToSubstrait;
+import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;

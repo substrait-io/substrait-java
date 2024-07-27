@@ -61,6 +61,22 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    public Type precisionTimestamp(Integer precision) {
+      return wrap(
+          Type.PrecisionTimestamp.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    public Type precisionTimestampTZ(Integer precision) {
+      return wrap(
+          Type.PrecisionTimestampTZ.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
     public Type struct(Iterable<Type> types) {
       return wrap(Type.Struct.newBuilder().addAllTypes(types).setNullability(nullability).build());
     }
@@ -121,6 +137,10 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setFixedBinary(t).build();
       } else if (o instanceof Type.Decimal t) {
         return bldr.setDecimal(t).build();
+      } else if (o instanceof Type.PrecisionTimestamp t) {
+        return bldr.setPrecisionTimestamp(t).build();
+      } else if (o instanceof Type.PrecisionTimestampTZ t) {
+        return bldr.setPrecisionTimestampTz(t).build();
       } else if (o instanceof Type.Struct t) {
         return bldr.setStruct(t).build();
       } else if (o instanceof Type.List t) {

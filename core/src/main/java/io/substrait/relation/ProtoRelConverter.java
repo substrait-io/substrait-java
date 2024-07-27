@@ -1,6 +1,5 @@
 package io.substrait.relation;
 
-import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
@@ -334,12 +333,11 @@ public class ProtoRelConverter {
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    var fieldNames =
-        rel.getBaseSchema().getNamesList().stream().collect(java.util.stream.Collectors.toList());
+
     var builder =
         VirtualTableScan.builder()
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
-            .addAllDfsNames(fieldNames)
+            .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
             .rows(structLiterals);
 
     builder
@@ -353,7 +351,12 @@ public class ProtoRelConverter {
 
   private Fetch newFetch(FetchRel rel) {
     var input = from(rel.getInput());
-    var builder = Fetch.builder().input(input).count(rel.getCount()).offset(rel.getOffset());
+    var builder = Fetch.builder().input(input).offset(rel.getOffset());
+    if (rel.getCount() != -1) {
+      // -1 is used as a sentinel value to signal LIMIT ALL
+      // count only needs to be set when it is not -1
+      builder.count(rel.getCount());
+    }
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -388,6 +391,9 @@ public class ProtoRelConverter {
     var input = from(rel.getInput());
     var protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    var protoAggrFuncConverter =
+        new ProtoAggregateFunctionConverter(lookup, extensions, protoExprConverter);
+
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
     for (var grouping : rel.getGroupingsList()) {
       groupings.add(
@@ -409,14 +415,7 @@ public class ProtoRelConverter {
               .collect(java.util.stream.Collectors.toList());
       measures.add(
           Aggregate.Measure.builder()
-              .function(
-                  AggregateFunctionInvocation.builder()
-                      .arguments(args)
-                      .declaration(funcDecl)
-                      .outputType(protoTypeConverter.from(func.getOutputType()))
-                      .aggregationPhase(Expression.AggregationPhase.fromProto(func.getPhase()))
-                      .invocation(Expression.AggregationInvocation.fromProto(func.getInvocation()))
-                      .build())
+              .function(protoAggrFuncConverter.from(measure.getMeasure()))
               .preMeasureFilter(
                   Optional.ofNullable(
                       measure.hasFilter() ? protoExprConverter.from(measure.getFilter()) : null))
@@ -659,15 +658,18 @@ public class ProtoRelConverter {
     if (advancedExtension.hasEnhancement()) {
       builder.enhancement(enhancementFromAdvancedExtension(advancedExtension.getEnhancement()));
     }
-    if (advancedExtension.hasOptimization()) {
-      builder.optimization(optimizationFromAdvancedExtension(advancedExtension.getOptimization()));
-    }
+    advancedExtension
+        .getOptimizationList()
+        .forEach(
+            optimization ->
+                builder.addOptimizations(optimizationFromAdvancedExtension(optimization)));
+
     return builder.build();
   }
 
   /**
    * Override to provide a custom converter for {@link
-   * io.substrait.proto.AdvancedExtension#getOptimization()} data
+   * io.substrait.proto.AdvancedExtension#getOptimizationList()} ()} data
    */
   protected Extension.Optimization optimizationFromAdvancedExtension(com.google.protobuf.Any any) {
     return new EmptyOptimization();

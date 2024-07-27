@@ -81,7 +81,7 @@ public abstract class FunctionConverter<
     for (String key : alm.keySet()) {
       var sigs = calciteOperators.get(key);
       if (sigs == null) {
-        logger.info("Dropping function due to no binding: {}", key);
+        logger.atInfo().log("Dropping function due to no binding: {}", key);
         continue;
       }
 
@@ -390,14 +390,13 @@ public abstract class FunctionConverter<
       }
 
       if (singularInputType.isPresent()) {
-        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
-        if (leastRestrictive.isPresent()) {
-          return leastRestrictive;
-        }
-
         Optional<T> coerced = matchCoerced(call, outputType, operands);
         if (coerced.isPresent()) {
           return coerced;
+        }
+        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
+        if (leastRestrictive.isPresent()) {
+          return leastRestrictive;
         }
       }
       return Optional.empty();
@@ -487,7 +486,7 @@ public abstract class FunctionConverter<
   private static Expression coerceArgument(Expression argument, Type type) {
     var typeMatches = isMatch(type, argument.getType());
     if (!typeMatches) {
-      return ExpressionCreator.cast(type, argument);
+      return ExpressionCreator.cast(type, argument, Expression.FailureBehavior.THROW_EXCEPTION);
     }
     return argument;
   }

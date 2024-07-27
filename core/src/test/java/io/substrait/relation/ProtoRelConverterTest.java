@@ -36,12 +36,12 @@ public class ProtoRelConverterTest extends TestBase {
 
     Rel emptyAdvancedExtension = relWithExtension(AdvancedExtension.builder().build());
     Rel advancedExtensionWithOptimization =
-        relWithExtension(AdvancedExtension.builder().optimization(OPTIMIZED).build());
+        relWithExtension(AdvancedExtension.builder().addOptimizations(OPTIMIZED).build());
     Rel advancedExtensionWithEnhancement =
         relWithExtension(AdvancedExtension.builder().enhancement(ENHANCED).build());
     Rel advancedExtensionWithEnhancementAndOptimization =
         relWithExtension(
-            AdvancedExtension.builder().enhancement(ENHANCED).optimization(OPTIMIZED).build());
+            AdvancedExtension.builder().enhancement(ENHANCED).addOptimizations(OPTIMIZED).build());
 
     @Test
     void emptyAdvancedExtension() {

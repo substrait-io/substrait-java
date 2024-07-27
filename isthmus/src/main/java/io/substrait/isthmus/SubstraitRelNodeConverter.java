@@ -317,6 +317,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         distinct,
         false,
         false,
+        Collections.emptyList(),
         argIndex,
         filterArg,
         null,

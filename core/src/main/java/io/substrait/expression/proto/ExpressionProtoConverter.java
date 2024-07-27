@@ -10,6 +10,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Expression;
 import io.substrait.proto.FunctionArgument;
+import io.substrait.proto.FunctionOption;
 import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.Type;
@@ -110,6 +111,32 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   @Override
   public Expression visit(io.substrait.expression.Expression.TimestampTZLiteral expr) {
     return lit(bldr -> bldr.setNullable(expr.nullable()).setTimestampTz(expr.value()));
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.PrecisionTimestampLiteral expr) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setPrecisionTimestamp(
+                    Expression.Literal.PrecisionTimestamp.newBuilder()
+                        .setValue(expr.value())
+                        .setPrecision(expr.precision())
+                        .build())
+                .build());
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.PrecisionTimestampTZLiteral expr) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setPrecisionTimestampTz(
+                    Expression.Literal.PrecisionTimestamp.newBuilder()
+                        .setValue(expr.value())
+                        .setPrecision(expr.precision())
+                        .build())
+                .build());
   }
 
   @Override
@@ -314,7 +341,18 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .addAllArguments(
                     expr.arguments().stream()
                         .map(a -> a.accept(expr.declaration(), 0, argVisitor))
+                        .collect(java.util.stream.Collectors.toList()))
+                .addAllOptions(
+                    expr.options().stream()
+                        .map(ExpressionProtoConverter::from)
                         .collect(java.util.stream.Collectors.toList())))
+        .build();
+  }
+
+  public static FunctionOption from(io.substrait.expression.FunctionOption option) {
+    return FunctionOption.newBuilder()
+        .setName(option.getName())
+        .addAllPreference(option.values())
         .build();
   }
 
@@ -495,7 +533,11 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .addAllPartitions(partitionExprs)
                 .setBoundsType(expr.boundsType().toProto())
                 .setLowerBound(lowerBound)
-                .setUpperBound(upperBound))
+                .setUpperBound(upperBound)
+                .addAllOptions(
+                    expr.options().stream()
+                        .map(ExpressionProtoConverter::from)
+                        .collect(java.util.stream.Collectors.toList())))
         .build();
   }
 

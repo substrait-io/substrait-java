@@ -2,6 +2,11 @@ name: PR Build Check
 
 on:
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   editorconfig-checker:
     name: Check editorconfig
@@ -10,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: editorconfig-checker/action-editorconfig-checker@main
+      - uses: editorconfig-checker/action-editorconfig-checker@v2
       - run: editorconfig-checker
   commitlint:
     name: Lint commits for semantic-release
@@ -28,7 +33,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: gradle/wrapper-validation-action@v1
+      - uses: gradle/actions/wrapper-validation@v3
+  cyclonedx-sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Generate SBOMs
+        run: ./gradlew cyclonedxBom
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclonedx-sbom
+          path: |
+            core/build/reports/bom.json
+            isthmus/build/reports/bom.json
+            isthmus-cli/build/reports/bom.json
+  osv-scanner:
+    needs: cyclonedx-sbom
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - core
+          - isthmus
+          - isthmus-cli
+    steps:
+      - name: Download SBOMs
+        uses: actions/download-artifact@v4
+        with:
+          name: cyclonedx-sbom
+      - name: Scan
+        run: docker run --rm -v "${PWD}/${{ matrix.project }}/build/reports/bom.json:/bom.json" ghcr.io/google/osv-scanner --sbom /bom.json
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
@@ -37,10 +78,10 @@ jobs:
         with:
           submodules: recursive
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Build with Gradle
@@ -71,17 +112,18 @@ jobs:
     - name: Build with Gradle
       run: gradle nativeImage
     - name: Smoke Test
-      run: ./isthmus/src/test/script/smoke.sh
-        ./isthmus/src/test/script/tpch_smoke.sh
+      run: |
+        ./isthmus-cli/src/test/script/smoke.sh
+        ./isthmus-cli/src/test/script/tpch_smoke.sh
     - name: Rename the artifact to OS-unique name
       shell: bash
       run: |
-        value=`mv isthmus/build/graal/isthmus isthmus/build/graal/isthmus-${{ matrix.os }}`
+        value=`mv isthmus-cli/build/graal/isthmus isthmus-cli/build/graal/isthmus-${{ matrix.os }}`
     - name: Publish artifact
       uses: actions/upload-artifact@v4
       with:
         name: isthmus-${{ matrix.os }}
-        path: isthmus/build/graal/isthmus-${{ matrix.os }}
+        path: isthmus-cli/build/graal/isthmus-${{ matrix.os }}
   dry-run-release:
     name: Dry-run release
     runs-on: ubuntu-latest

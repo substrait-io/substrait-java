@@ -1,4 +1,4 @@
-package io.substrait.isthmus;
+package io.substrait.isthmus.cli;
 
 import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessageV3;
@@ -108,17 +108,17 @@ public class RegisterAtRuntime implements Feature {
   }
 
   private static void registerByAnnotation(Reflections reflections, Class<? extends Annotation> c) {
-    reflections.getTypesAnnotatedWith(c).stream()
+    reflections
+        .getTypesAnnotatedWith(c)
         .forEach(
             inner -> {
               register(inner);
-              reflections.getSubTypesOf(c).stream().forEach(RegisterAtRuntime::register);
+              reflections.getSubTypesOf(c).forEach(RegisterAtRuntime::register);
             });
   }
 
   private static void registerByParent(Reflections reflections, Class<?> c) {
     register(c);
-    reflections.getSubTypesOf(c).stream().forEach(RegisterAtRuntime::register);
+    reflections.getSubTypesOf(c).forEach(RegisterAtRuntime::register);
   }
-  ;
 }

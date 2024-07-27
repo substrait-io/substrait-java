@@ -6,7 +6,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.expression.ImmutableFunctionOption;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -117,10 +116,15 @@ public class ProtoExpressionConverter {
             IntStream.range(0, scalarFunction.getArgumentsCount())
                 .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
                 .collect(java.util.stream.Collectors.toList());
+        var options =
+            scalarFunction.getOptionsList().stream()
+                .map(ProtoExpressionConverter::fromFunctionOption)
+                .collect(Collectors.toList());
         yield ImmutableExpression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
             .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
+            .options(options)
             .build();
       }
       case WINDOW_FUNCTION -> fromWindowFunction(expr.getWindowFunction());
@@ -174,7 +178,9 @@ public class ProtoExpressionConverter {
             .build();
       }
       case CAST -> ExpressionCreator.cast(
-          protoTypeConverter.from(expr.getCast().getType()), from(expr.getCast().getInput()));
+          protoTypeConverter.from(expr.getCast().getType()),
+          from(expr.getCast().getInput()),
+          Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
       case SUBQUERY -> {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {
@@ -239,8 +245,8 @@ public class ProtoExpressionConverter {
             .collect(Collectors.toList());
     var options =
         windowFunction.getOptionsList().stream()
-            .map(this::fromFunctionOption)
-            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+            .map(ProtoExpressionConverter::fromFunctionOption)
+            .collect(Collectors.toList());
 
     WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
@@ -274,8 +280,8 @@ public class ProtoExpressionConverter {
             windowRelFunction::getArguments);
     var options =
         windowRelFunction.getOptionsList().stream()
-            .map(this::fromFunctionOption)
-            .collect(Collectors.toMap(FunctionOption::getName, Function.identity()));
+            .map(ProtoExpressionConverter::fromFunctionOption)
+            .collect(Collectors.toList());
 
     WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
@@ -318,6 +324,16 @@ public class ProtoExpressionConverter {
       case STRING -> ExpressionCreator.string(literal.getNullable(), literal.getString());
       case BINARY -> ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
       case TIMESTAMP -> ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
+      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
+          literal.getNullable(), literal.getTimestampTz());
+      case PRECISION_TIMESTAMP -> ExpressionCreator.precisionTimestamp(
+          literal.getNullable(),
+          literal.getPrecisionTimestamp().getValue(),
+          literal.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ -> ExpressionCreator.precisionTimestampTZ(
+          literal.getNullable(),
+          literal.getPrecisionTimestampTz().getValue(),
+          literal.getPrecisionTimestampTz().getPrecision());
       case DATE -> ExpressionCreator.date(literal.getNullable(), literal.getDate());
       case TIME -> ExpressionCreator.time(literal.getNullable(), literal.getTime());
       case INTERVAL_YEAR_TO_MONTH -> ExpressionCreator.intervalYear(
@@ -348,8 +364,6 @@ public class ProtoExpressionConverter {
           literal.getNullable(),
           literal.getMap().getKeyValuesList().stream()
               .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
-      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
-          literal.getNullable(), literal.getTimestampTz());
       case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
       case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
       case LIST -> ExpressionCreator.list(
@@ -391,10 +405,7 @@ public class ProtoExpressionConverter {
         .build();
   }
 
-  public FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
-    return ImmutableFunctionOption.builder()
-        .name(o.getName())
-        .addAllValues(o.getPreferenceList())
-        .build();
+  public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
+    return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
   }
 }

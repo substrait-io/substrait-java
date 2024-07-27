@@ -85,6 +85,36 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
+  abstract static class PrecisionTimestamp extends BaseTypeExpression implements NullableType {
+
+    public abstract TypeExpression precision();
+
+    @Override
+    <R, E extends Throwable> R acceptE(final TypeExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+
+    public static ImmutableTypeExpression.PrecisionTimestamp.Builder builder() {
+      return ImmutableTypeExpression.PrecisionTimestamp.builder();
+    }
+  }
+
+  @Value.Immutable
+  abstract static class PrecisionTimestampTZ extends BaseTypeExpression implements NullableType {
+
+    public abstract TypeExpression precision();
+
+    @Override
+    <R, E extends Throwable> R acceptE(final TypeExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+
+    public static ImmutableTypeExpression.PrecisionTimestampTZ.Builder builder() {
+      return ImmutableTypeExpression.PrecisionTimestampTZ.builder();
+    }
+  }
+
+  @Value.Immutable
   abstract static class Struct extends BaseTypeExpression implements NullableType {
     public abstract java.util.List<TypeExpression> fields();
 

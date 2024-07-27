@@ -1,6 +1,130 @@
 Release Notes
 ---
 
+## [0.37.0](https://github.com/substrait-io/substrait-java/compare/v0.36.0...v0.37.0) (2024-07-21)
+
+### ⚠ BREAKING CHANGES
+
+* AdvancedExtension#getOptimization() has been removed. Use getOptimizations() instead.
+
+### Features
+
+* literal support for precision timestamp types ([#283](https://github.com/substrait-io/substrait-java/issues/283)) ([94996f9](https://github.com/substrait-io/substrait-java/commit/94996f916478ed8141e5fb54b1c8411cc80f4abd))
+* validate VirtualTableScan field names with schema ([#284](https://github.com/substrait-io/substrait-java/issues/284)) ([0f8514a](https://github.com/substrait-io/substrait-java/commit/0f8514a95f0ffa2c3cca645652ef91ebfd3ccb9d))
+
+### Miscellaneous Chores
+
+* update to substrait 0.52.0 ([#282](https://github.com/substrait-io/substrait-java/issues/282)) ([ada8d0b](https://github.com/substrait-io/substrait-java/commit/ada8d0be54b8bbd260b194c4e93f02ed42821b5d))
+
+## [0.36.0](https://github.com/substrait-io/substrait-java/compare/v0.35.0...v0.36.0) (2024-07-14)
+
+### ⚠ BREAKING CHANGES
+
+* Expression#options now returns List<FunctionOption>
+* ProtoAggregateFunctionConverter#from(AggregateFunction) now returns AggregateFunctionInvocation
+
+### Bug Fixes
+
+* include FunctionOptions when converting functions ([#278](https://github.com/substrait-io/substrait-java/issues/278)) ([e574913](https://github.com/substrait-io/substrait-java/commit/e57491333c7dd05ae3b1400e2185f807af1f5f88))
+
+## [0.35.0](https://github.com/substrait-io/substrait-java/compare/v0.34.0...v0.35.0) (2024-06-30)
+
+### Features
+
+* deprecate Timestamp and TimestampTZ visit functions ([#273](https://github.com/substrait-io/substrait-java/issues/273)) ([8a8253e](https://github.com/substrait-io/substrait-java/commit/8a8253ec1f077b81d0da6503e299662048fca825))
+* introduce substrait-spark module ([#271](https://github.com/substrait-io/substrait-java/issues/271)) ([8537dca](https://github.com/substrait-io/substrait-java/commit/8537dca93b410177f2ee5aefffe83f7c02a3668c))
+
+## [0.34.0](https://github.com/substrait-io/substrait-java/compare/v0.33.0...v0.34.0) (2024-06-23)
+
+### ⚠ BREAKING CHANGES
+
+* getDfsNames() has been removed from VirtualTableScan
+* getInitialSchema() not longer has a default implementation in VirtualTableScan
+
+### Bug Fixes
+
+* set VirtualTableScan schema explicitly ([#272](https://github.com/substrait-io/substrait-java/issues/272)) ([f1192cf](https://github.com/substrait-io/substrait-java/commit/f1192cfaf6c84fb1e466bae6eda75ba164444aa8))
+
+## [0.33.0](https://github.com/substrait-io/substrait-java/compare/v0.32.0...v0.33.0) (2024-06-16)
+
+### Features
+
+* **isthmus:** support for PrecisionTimestamp conversions ([#262](https://github.com/substrait-io/substrait-java/issues/262)) ([e726904](https://github.com/substrait-io/substrait-java/commit/e72690425cb31e52bc37550c1c4851db1b927651))
+
+### Bug Fixes
+
+* **isthmus:** correct SLF4J dependency ([#268](https://github.com/substrait-io/substrait-java/issues/268)) ([3134504](https://github.com/substrait-io/substrait-java/commit/31345045d522bf85bc60a59d52e4dd55601abbf8))
+
+## [0.32.0](https://github.com/substrait-io/substrait-java/compare/v0.31.0...v0.32.0) (2024-06-04)
+
+### ⚠ BREAKING CHANGES
+
+* Substrait FP32 is now mapped to Calcite REAL instead of FLOAT
+* Calcite FLOAT is now mapped to Substrait FP64 instead of FP32
+
+In Calcite, the Sql Type Names DOUBLE and FLOAT correspond to FP64, and REAL corresponds to FP32
+
+### Bug Fixes
+
+* account for struct fields in VirtualTableScan check ([#255](https://github.com/substrait-io/substrait-java/issues/255)) ([3bbcf82](https://github.com/substrait-io/substrait-java/commit/3bbcf82687bc51fdb1695436c198e91ba56befed))
+* map Calcite REAL to Substrait FP32 ([#261](https://github.com/substrait-io/substrait-java/issues/261)) ([37331c2](https://github.com/substrait-io/substrait-java/commit/37331c2fbee679fd5ec482d8ff4d16f1c7c1c5c0))
+
+## [0.31.0](https://github.com/substrait-io/substrait-java/compare/v0.30.0...v0.31.0) (2024-05-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **isthumus:** CLI related functionality is now in the io.substrait.isthmus.cli package
+
+### Features
+
+* allow deployment time selection of logging framework [#243](https://github.com/substrait-io/substrait-java/issues/243) ([#244](https://github.com/substrait-io/substrait-java/issues/244)) ([72bab63](https://github.com/substrait-io/substrait-java/commit/72bab63edf6c4ffb12c3c4b0e4f49d066e0c5524))
+* **isthumus:** extract CLI into isthmus-cli project [#248](https://github.com/substrait-io/substrait-java/issues/248) ([#249](https://github.com/substrait-io/substrait-java/issues/249)) ([a49de62](https://github.com/substrait-io/substrait-java/commit/a49de62c670274cccfa8b94fb86e88b36fc716d3))
+
+## [0.30.0](https://github.com/substrait-io/substrait-java/compare/v0.29.1...v0.30.0) (2024-04-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* ParameterizedTypeVisitor has new visit methods
+* TypeExpressionVisitor has new visit methods
+* TypeVisitor has new visit methods
+* BaseProtoTypes has new visit methods
+
+### Bug Fixes
+
+* handle FetchRels with only offset set ([#252](https://github.com/substrait-io/substrait-java/issues/252)) ([b334e1d](https://github.com/substrait-io/substrait-java/commit/b334e1d4004ebc4598cab7bc076f3d477e97a52a))
+
+
+### Miscellaneous Chores
+
+* update to substrait 0.48.0 ([#250](https://github.com/substrait-io/substrait-java/issues/250)) ([572fe57](https://github.com/substrait-io/substrait-java/commit/572fe57ccf473e3d680f8928dd5f6833583350cc))
+
+## [0.29.1](https://github.com/substrait-io/substrait-java/compare/v0.29.0...v0.29.1) (2024-03-31)
+
+
+### Bug Fixes
+
+* correct function compound names for IntervalDay and IntervalYear [#240](https://github.com/substrait-io/substrait-java/issues/240) ([#242](https://github.com/substrait-io/substrait-java/issues/242)) ([856331b](https://github.com/substrait-io/substrait-java/commit/856331bae9901e618663622bbf60eaf923dea5b8))
+
+## [0.29.0](https://github.com/substrait-io/substrait-java/compare/v0.28.1...v0.29.0) (2024-03-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** method ExpressionCreator.cast(Type, Expression) has been removed
+
+### Features
+
+* **isthmus:** support for safe casting ([#236](https://github.com/substrait-io/substrait-java/issues/236)) ([72785ad](https://github.com/substrait-io/substrait-java/commit/72785ad1a4bd1ba8481d75ddaf4f1a822bf9bf6b))
+
+## [0.28.1](https://github.com/substrait-io/substrait-java/compare/v0.28.0...v0.28.1) (2024-03-10)
+
+
+### Bug Fixes
+
+* use coercive function matcher before least restrictive matcher ([#237](https://github.com/substrait-io/substrait-java/issues/237)) ([e7aa8ff](https://github.com/substrait-io/substrait-java/commit/e7aa8ff1fe11dd784074138bf75c1afa140b59db))
+
 ## [0.28.0](https://github.com/substrait-io/substrait-java/compare/v0.27.0...v0.28.0) (2024-02-25)
 
 

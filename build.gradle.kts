@@ -9,18 +9,23 @@ plugins {
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.11.0"
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+  id("org.cyclonedx.bom") version "1.8.2"
 }
+
+var IMMUTABLES_VERSION = properties.get("immutables.version")
+var JUNIT_VERSION = properties.get("junit.version")
+var SLF4J_VERSION = properties.get("slf4j.version")
 
 repositories { mavenCentral() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-  implementation("org.slf4j:slf4j-jdk14:1.7.30")
-  annotationProcessor("org.immutables:value:2.8.8")
-  compileOnly("org.immutables:value-annotations:2.8.8")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
+  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
+  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
+  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
@@ -62,6 +67,21 @@ allprojects {
         trimTrailingWhitespace()
         targetExclude("**/build/**")
       }
+    }
+  }
+
+  if (listOf("core", "isthmus", "isthmus-cli").contains(project.name)) {
+    apply(plugin = "org.cyclonedx.bom")
+    tasks.cyclonedxBom {
+      setIncludeConfigs(listOf("runtimeClasspath"))
+      setSkipConfigs(listOf("compileClasspath", "testCompileClasspath"))
+      setProjectType("library")
+      setSchemaVersion("1.5")
+      setDestination(project.file("build/reports"))
+      setOutputName("bom")
+      setOutputFormat("json")
+      setIncludeBomSerialNumber(false)
+      setIncludeLicenseText(false)
     }
   }
 }

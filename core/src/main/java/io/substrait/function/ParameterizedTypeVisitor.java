@@ -11,6 +11,10 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
 
   R visit(ParameterizedType.Decimal expr) throws E;
 
+  R visit(ParameterizedType.PrecisionTimestamp expr) throws E;
+
+  R visit(ParameterizedType.PrecisionTimestampTZ expr) throws E;
+
   R visit(ParameterizedType.Struct expr) throws E;
 
   R visit(ParameterizedType.ListType expr) throws E;
@@ -43,6 +47,16 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
 
     @Override
     public R visit(ParameterizedType.Decimal expr) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(ParameterizedType.PrecisionTimestamp expr) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(ParameterizedType.PrecisionTimestampTZ expr) throws E {
       throw t();
     }
 

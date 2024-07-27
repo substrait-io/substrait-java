@@ -12,6 +12,7 @@ import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
 import io.substrait.expression.ImmutableExpression.Switch;
 import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
@@ -38,6 +39,7 @@ import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -108,14 +110,30 @@ public class SubstraitBuilder {
   }
 
   public Fetch fetch(long offset, long count, Rel input) {
-    return fetch(offset, count, Optional.empty(), input);
+    return fetch(offset, OptionalLong.of(count), Optional.empty(), input);
   }
 
   public Fetch fetch(long offset, long count, Rel.Remap remap, Rel input) {
-    return fetch(offset, count, Optional.of(remap), input);
+    return fetch(offset, OptionalLong.of(count), Optional.of(remap), input);
   }
 
-  private Fetch fetch(long offset, long count, Optional<Rel.Remap> remap, Rel input) {
+  public Fetch limit(long limit, Rel input) {
+    return fetch(0, OptionalLong.of(limit), Optional.empty(), input);
+  }
+
+  public Fetch limit(long limit, Rel.Remap remap, Rel input) {
+    return fetch(0, OptionalLong.of(limit), Optional.of(remap), input);
+  }
+
+  public Fetch offset(long offset, Rel input) {
+    return fetch(offset, OptionalLong.empty(), Optional.empty(), input);
+  }
+
+  public Fetch offset(long offset, Rel.Remap remap, Rel input) {
+    return fetch(offset, OptionalLong.empty(), Optional.of(remap), input);
+  }
+
+  private Fetch fetch(long offset, OptionalLong count, Optional<Rel.Remap> remap, Rel input) {
     return Fetch.builder().offset(offset).count(count).input(input).remap(remap).build();
   }
 
@@ -334,6 +352,10 @@ public class SubstraitBuilder {
 
   public Expression.I32Literal i32(int v) {
     return Expression.I32Literal.builder().value(v).build();
+  }
+
+  public Expression.FP64Literal fp64(double v) {
+    return Expression.FP64Literal.builder().value(v).build();
   }
 
   public Expression cast(Expression input, Type type) {
@@ -596,6 +618,30 @@ public class SubstraitBuilder {
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
+        .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
+        .build();
+  }
+
+  public Expression.WindowFunctionInvocation windowFn(
+      String namespace,
+      String key,
+      Type outputType,
+      Expression.AggregationPhase aggregationPhase,
+      Expression.AggregationInvocation invocation,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      Expression... args) {
+    var declaration =
+        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+    return Expression.WindowFunctionInvocation.builder()
+        .declaration(declaration)
+        .outputType(outputType)
+        .aggregationPhase(aggregationPhase)
+        .invocation(invocation)
+        .boundsType(boundsType)
+        .lowerBound(lowerBound)
+        .upperBound(upperBound)
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
         .build();
   }

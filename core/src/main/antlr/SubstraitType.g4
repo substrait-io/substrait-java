@@ -51,6 +51,8 @@ IntervalYear: I N T E R V A L '_' Y E A R;
 IntervalDay: I N T E R V A L '_' D A Y;
 UUID     : U U I D;
 Decimal  : D E C I M A L;
+PrecisionTimestamp: P R E C I S I O N '_' T I M E S T A M P;
+PrecisionTimestampTZ: P R E C I S I O N '_' T I M E S T A M P '_' T Z;
 FixedChar: F I X E D C H A R;
 VarChar  : V A R C H A R;
 FixedBinary: F I X E D B I N A R Y;
@@ -97,7 +99,7 @@ SingleQuote: '\'';
 
 
 Number
-  :  '-'? Int
+  : '-'? Int
   ;
 
 Identifier
@@ -105,73 +107,75 @@ Identifier
   ;
 
 LineComment
-	:	'//' ~[\r\n]* -> channel(HIDDEN)
-	;
+  : '//' ~[\r\n]* -> channel(HIDDEN)
+  ;
 
 BlockComment
-	:	(	'/*'
-			(	'/'* BlockComment
-			|	~[/*]
-			|	'/'+ ~[/*]
-			|	'*'+ ~[/*]
-			)*
-			'*'*
-			'*/'
-		) -> channel(HIDDEN)
-	;
+  : (  '/*'
+      ( '/'* BlockComment
+      | ~[/*]
+      | '/'+ ~[/*]
+      | '*'+ ~[/*]
+      )*
+      '*'*
+      '*/'
+   ) -> channel(HIDDEN)
+  ;
 
 Whitespace
-	:	[ \t]+ -> channel(HIDDEN)
-	;
+  : [ \t]+ -> channel(HIDDEN)
+  ;
 
 Newline
-	:	(	'\r' '\n'?
-		|	'\n'
-		)
-	;
+  : ( '\r' '\n'?
+    | '\n'
+    )
+  ;
 
 
 fragment Int
-  :  '1'..'9' Digit*
-  |  '0'
+  : '1'..'9' Digit*
+  | '0'
   ;
 
 fragment Digit
-  :  '0'..'9'
+  : '0'..'9'
   ;
 
 start: expr EOF;
 
 scalarType
-	: Boolean #Boolean
-	| I8 #i8
-	| I16 #i16
-	| I32 #i32
-	| I64 #i64
-	| FP32 #fp32
-	| FP64 #fp64
-	| String #string
-	| Binary #binary
-	| Timestamp #timestamp
-	| TimestampTZ #timestampTz
-	| Date #date
-	| Time #time
-	| IntervalDay #intervalDay
-	| IntervalYear #intervalYear
-	| UUID #uuid
-	| UserDefined Identifier #userDefined
-	;
+  : Boolean #Boolean
+  | I8 #i8
+  | I16 #i16
+  | I32 #i32
+  | I64 #i64
+  | FP32 #fp32
+  | FP64 #fp64
+  | String #string
+  | Binary #binary
+  | Timestamp #timestamp
+  | TimestampTZ #timestampTz
+  | Date #date
+  | Time #time
+  | IntervalDay #intervalDay
+  | IntervalYear #intervalYear
+  | UUID #uuid
+  | UserDefined Identifier #userDefined
+  ;
 
 parameterizedType
-	: FixedChar isnull='?'? Lt len=numericParameter Gt #fixedChar
-	| VarChar isnull='?'? Lt len=numericParameter Gt #varChar
-	| FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
-	| Decimal isnull='?'? Lt precision=numericParameter Comma scale=numericParameter Gt #decimal
-	| Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
-	| NStruct isnull='?'? Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
-	| List isnull='?'? Lt expr Gt #list
-	| Map isnull='?'? Lt key=expr Comma value=expr Gt #map
-	;
+  : FixedChar isnull='?'? Lt len=numericParameter Gt #fixedChar
+  | VarChar isnull='?'? Lt len=numericParameter Gt #varChar
+  | FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
+  | Decimal isnull='?'? Lt precision=numericParameter Comma scale=numericParameter Gt #decimal
+  | PrecisionTimestamp isnull='?'? Lt precision=numericParameter Gt #precisionTimestamp
+  | PrecisionTimestampTZ isnull='?'? Lt precision=numericParameter Gt #precisionTimestampTZ
+  | Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
+  | NStruct isnull='?'? Lt Identifier expr (Comma Identifier expr)* Gt #nStruct
+  | List isnull='?'? Lt expr Gt #list
+  | Map isnull='?'? Lt key=expr Comma value=expr Gt #map
+  ;
 
 numericParameter
   : Number #numericLiteral

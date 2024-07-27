@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -75,10 +76,18 @@ public class ExpressionCreator {
     return Expression.TimeLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(boolean nullable, long value) {
     return Expression.TimestampLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
     var epochMicro =
         TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
@@ -86,6 +95,10 @@ public class ExpressionCreator {
     return timestamp(nullable, epochMicro);
   }
 
+  /**
+   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
+   */
+  @Deprecated
   public static Expression.TimestampLiteral timestamp(
       boolean nullable,
       int year,
@@ -101,15 +114,41 @@ public class ExpressionCreator {
             .withNano((int) TimeUnit.MICROSECONDS.toNanos(micros)));
   }
 
+  /**
+   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
+   */
+  @Deprecated
   public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, long value) {
     return Expression.TimestampTZLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
+   */
+  @Deprecated
   public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, Instant value) {
     var epochMicro =
         TimeUnit.SECONDS.toMicros(value.getEpochSecond())
             + TimeUnit.NANOSECONDS.toMicros(value.getNano());
     return timestampTZ(nullable, epochMicro);
+  }
+
+  public static Expression.PrecisionTimestampLiteral precisionTimestamp(
+      boolean nullable, long value, int precision) {
+    return Expression.PrecisionTimestampLiteral.builder()
+        .nullable(nullable)
+        .value(value)
+        .precision(precision)
+        .build();
+  }
+
+  public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
+      boolean nullable, long value, int precision) {
+    return Expression.PrecisionTimestampTZLiteral.builder()
+        .nullable(nullable)
+        .value(value)
+        .precision(precision)
+        .build();
   }
 
   public static Expression.IntervalYearLiteral intervalYear(
@@ -284,13 +323,13 @@ public class ExpressionCreator {
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
       FunctionArg... arguments) {
-    return Expression.ScalarFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .addArguments(arguments)
-        .build();
+    return scalarFunction(declaration, outputType, Arrays.asList(arguments));
   }
 
+  /**
+   * Use {@link Expression.ScalarFunctionInvocation#builder()} directly to specify other parameters,
+   * e.g. options
+   */
   public static Expression.ScalarFunctionInvocation scalarFunction(
       SimpleExtension.ScalarFunctionVariant declaration,
       Type outputType,
@@ -302,6 +341,10 @@ public class ExpressionCreator {
         .build();
   }
 
+  /**
+   * Use {@link AggregateFunctionInvocation#builder()} directly to specify other parameters, e.g.
+   * options
+   */
   public static AggregateFunctionInvocation aggregateFunction(
       SimpleExtension.AggregateFunctionVariant declaration,
       Type outputType,
@@ -326,16 +369,14 @@ public class ExpressionCreator {
       List<Expression.SortField> sort,
       Expression.AggregationInvocation invocation,
       FunctionArg... arguments) {
-    return AggregateFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .addArguments(arguments)
-        .build();
+    return aggregateFunction(
+        declaration, outputType, phase, sort, invocation, Arrays.asList(arguments));
   }
 
+  /**
+   * Use {@link Expression.WindowFunctionInvocation#builder()} directly to specify other parameters,
+   * e.g. options
+   */
   public static Expression.WindowFunctionInvocation windowFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
@@ -361,6 +402,10 @@ public class ExpressionCreator {
         .build();
   }
 
+  /**
+   * Use {@link ConsistentPartitionWindow.WindowRelFunctionInvocation#builder()} directly to specify
+   * other parameters, e.g. options
+   */
   public static ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunction(
       SimpleExtension.WindowFunctionVariant declaration,
       Type outputType,
@@ -393,22 +438,17 @@ public class ExpressionCreator {
       WindowBound lowerBound,
       WindowBound upperBound,
       FunctionArg... arguments) {
-    return Expression.WindowFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(outputType)
-        .aggregationPhase(phase)
-        .sort(sort)
-        .invocation(invocation)
-        .partitionBy(partitionBy)
-        .boundsType(boundsType)
-        .lowerBound(lowerBound)
-        .upperBound(upperBound)
-        .addArguments(arguments)
-        .build();
-  }
-
-  public static Expression cast(Type type, Expression expression) {
-    return cast(type, expression, Expression.FailureBehavior.UNSPECIFIED);
+    return windowFunction(
+        declaration,
+        outputType,
+        phase,
+        sort,
+        invocation,
+        partitionBy,
+        boundsType,
+        lowerBound,
+        upperBound,
+        Arrays.asList(arguments));
   }
 
   public static Expression cast(

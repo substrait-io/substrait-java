@@ -1,5 +1,3 @@
-import com.google.protobuf.gradle.protobuf
-import com.google.protobuf.gradle.protoc
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
@@ -7,8 +5,9 @@ plugins {
   id("java")
   id("idea")
   id("antlr")
-  id("com.google.protobuf") version "0.8.17"
+  id("com.google.protobuf") version "0.9.4"
   id("com.diffplug.spotless") version "6.11.0"
+  id("com.github.johnrengelman.shadow") version "8.1.1"
   signing
 }
 
@@ -45,8 +44,8 @@ publishing {
   repositories {
     maven {
       name = "local"
-      val releasesRepoUrl = "$buildDir/repos/releases"
-      val snapshotsRepoUrl = "$buildDir/repos/snapshots"
+      val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
+      val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
   }
@@ -67,24 +66,54 @@ signing {
   sign(publishing.publications["maven-publish"])
 }
 
+val ANTLR_VERSION = properties.get("antlr.version")
+val IMMUTABLES_VERSION = properties.get("immutables.version")
+val JACKSON_VERSION = properties.get("jackson.version")
+val JUNIT_VERSION = properties.get("junit.version")
+val SLF4J_VERSION = properties.get("slf4j.version")
+val PROTOBUF_VERSION = properties.get("protobuf.version")
+
+// This allows specifying deps to be shadowed so that they don't get included in the POM file
+val shadowImplementation by configurations.creating
+
+configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
+
+configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
+
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-  implementation("com.google.protobuf:protobuf-java:3.17.3")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.4")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.13.4")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.4")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
+  testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
+  implementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
+  implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
   implementation("com.google.code.findbugs:jsr305:3.0.2")
 
-  antlr("org.antlr:antlr4:4.9.2")
-  implementation("org.slf4j:slf4j-jdk14:1.7.30")
-  implementation("org.antlr:antlr4-runtime:4.9.2")
-  annotationProcessor("org.immutables:value:2.8.8")
-  compileOnly("org.immutables:value-annotations:2.8.8")
+  antlr("org.antlr:antlr4:${ANTLR_VERSION}")
+  shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
+  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
+  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
+  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+}
+
+configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
+  // Workaround for https://github.com/gradle/gradle/issues/820
+  apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter { it.name != "antlr" })
+}
+
+tasks {
+  shadowJar {
+    archiveClassifier.set("") // to override ".jar" instead of producing "-all.jar"
+    minimize()
+    // bundle the deps from shadowImplementation into the jar
+    configurations = listOf(shadowImplementation)
+    // rename the shadowed deps so that they don't conflict with consumer's own deps
+    relocate("org.antlr.v4.runtime", "io.substrait.org.antlr.v4.runtime")
+  }
 }
 
 java {
@@ -128,7 +157,8 @@ tasks.named<AntlrTask>("generateGrammarSource") {
   arguments.add("-Werror")
   arguments.add("-Xexact-output-dir")
   setSource(fileTree("src/main/antlr/SubstraitType.g4"))
-  outputDirectory = File(buildDir, "generated/sources/antlr/main/java/io/substrait/type")
+  outputDirectory =
+    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:3.17.3" } }
+protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }

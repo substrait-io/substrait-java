@@ -1,6 +1,6 @@
 rootProject.name = "substrait"
 
-include("bom", "core", "isthmus")
+include("bom", "core", "isthmus", "isthmus-cli", "spark")
 
 pluginManagement {
   plugins {

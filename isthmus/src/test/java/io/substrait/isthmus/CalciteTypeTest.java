@@ -51,13 +51,22 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void fp32(boolean nullable) {
-    testType(Type.withNullability(nullable).FP32, SqlTypeName.FLOAT, nullable);
+    testType(Type.withNullability(nullable).FP32, SqlTypeName.REAL, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void fp64(boolean nullable) {
     testType(Type.withNullability(nullable).FP64, SqlTypeName.DOUBLE, nullable);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void calciteFloatToFp64(boolean nullable) {
+    assertEquals(
+        Type.withNullability(nullable).FP64,
+        TypeConverter.DEFAULT.toSubstrait(
+            type.createTypeWithNullability(type.createSqlType(SqlTypeName.FLOAT), nullable)));
   }
 
   @ParameterizedTest
@@ -74,18 +83,26 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void timestamp(boolean nullable) {
-    testType(Type.withNullability(nullable).TIMESTAMP, SqlTypeName.TIMESTAMP, nullable, 6);
+  void precisionTimeStamp(boolean nullable) {
+    for (int precision : new int[] {0, 3, 6}) {
+      testType(
+          Type.withNullability(nullable).precisionTimestamp(precision),
+          SqlTypeName.TIMESTAMP,
+          nullable,
+          precision);
+    }
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void timestamptz(boolean nullable) {
-    testType(
-        Type.withNullability(nullable).TIMESTAMP_TZ,
-        SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
-        nullable,
-        6);
+  void precisionTimestamptz(boolean nullable) {
+    for (int precision : new int[] {0, 3, 6}) {
+      testType(
+          Type.withNullability(nullable).precisionTimestampTZ(precision),
+          SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+          nullable,
+          precision);
+    }
   }
 
   @ParameterizedTest
