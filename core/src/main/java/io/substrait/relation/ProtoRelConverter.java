@@ -117,7 +117,7 @@ public class ProtoRelConverter {
     }
   }
 
-  private Rel newRead(ReadRel rel) {
+  protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       var virtualTable = rel.getVirtualTable();
       if (virtualTable.getValuesCount() == 0) {
@@ -136,7 +136,7 @@ public class ProtoRelConverter {
     }
   }
 
-  private Filter newFilter(FilterRel rel) {
+  protected Filter newFilter(FilterRel rel) {
     var input = from(rel.getInput());
     var builder =
         Filter.builder()
@@ -154,7 +154,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private NamedStruct newNamedStruct(ReadRel rel) {
+  protected NamedStruct newNamedStruct(ReadRel rel) {
     var namedStruct = rel.getBaseSchema();
     var struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
@@ -170,7 +170,7 @@ public class ProtoRelConverter {
         .build();
   }
 
-  private EmptyScan newEmptyScan(ReadRel rel) {
+  protected EmptyScan newEmptyScan(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
     var builder =
         EmptyScan.builder()
@@ -192,7 +192,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
+  protected ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
     Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
     var builder =
         ExtensionLeaf.from(detail)
@@ -201,7 +201,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
+  protected ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
     Extension.SingleRelDetail detail = detailFromExtensionSingleRel(rel.getDetail());
     Rel input = from(rel.getInput());
     var builder =
@@ -211,7 +211,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
+  protected ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
     Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
     var builder =
@@ -224,7 +224,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private NamedScan newNamedScan(ReadRel rel) {
+  protected NamedScan newNamedScan(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
     var builder =
         NamedScan.builder()
@@ -247,7 +247,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ExtensionTable newExtensionTable(ReadRel rel) {
+  protected ExtensionTable newExtensionTable(ReadRel rel) {
     Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
     var builder = ExtensionTable.from(detail);
@@ -261,7 +261,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private LocalFiles newLocalFiles(ReadRel rel) {
+  protected LocalFiles newLocalFiles(ReadRel rel) {
     var namedStruct = newNamedStruct(rel);
 
     var builder =
@@ -288,7 +288,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
+  protected FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
     ImmutableFileOrFiles.Builder builder =
         ImmutableFileOrFiles.builder()
             .partitionIndex(file.getPartitionIndex())
@@ -318,7 +318,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private VirtualTableScan newVirtualTable(ReadRel rel) {
+  protected VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
     var virtualTableSchema = newNamedStruct(rel);
     var converter =
@@ -349,7 +349,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Fetch newFetch(FetchRel rel) {
+  protected Fetch newFetch(FetchRel rel) {
     var input = from(rel.getInput());
     var builder = Fetch.builder().input(input).offset(rel.getOffset());
     if (rel.getCount() != -1) {
@@ -367,7 +367,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Project newProject(ProjectRel rel) {
+  protected Project newProject(ProjectRel rel) {
     var input = from(rel.getInput());
     var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     var builder =
@@ -387,7 +387,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Aggregate newAggregate(AggregateRel rel) {
+  protected Aggregate newAggregate(AggregateRel rel) {
     var input = from(rel.getInput());
     var protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
@@ -432,7 +432,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Sort newSort(SortRel rel) {
+  protected Sort newSort(SortRel rel) {
     var input = from(rel.getInput());
     var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     var builder =
@@ -457,7 +457,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Join newJoin(JoinRel rel) {
+  protected Join newJoin(JoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
     Type.Struct leftStruct = left.getRecordType();
@@ -483,7 +483,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Rel newCross(CrossRel rel) {
+  protected Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
     var builder = Cross.builder().left(left).right(right);
@@ -497,7 +497,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Set newSet(SetRel rel) {
+  protected Set newSet(SetRel rel) {
     List<Rel> inputs =
         rel.getInputsList().stream()
             .map(inputRel -> from(inputRel))
@@ -513,7 +513,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Rel newHashJoin(HashJoinRel rel) {
+  protected Rel newHashJoin(HashJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
     var leftKeys = rel.getLeftKeysList();
@@ -545,7 +545,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Rel newMergeJoin(MergeJoinRel rel) {
+  protected Rel newMergeJoin(MergeJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
     var leftKeys = rel.getLeftKeysList();
@@ -577,7 +577,7 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
+  protected NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
     Type.Struct leftStruct = left.getRecordType();
@@ -604,7 +604,8 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private ConsistentPartitionWindow newConsistentPartitionWindow(ConsistentPartitionWindowRel rel) {
+  protected ConsistentPartitionWindow newConsistentPartitionWindow(
+      ConsistentPartitionWindowRel rel) {
 
     var input = from(rel.getInput());
     var protoExpressionConverter =
@@ -639,12 +640,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
+  protected static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasEmit() ? Rel.Remap.of(relCommon.getEmit().getOutputMappingList()) : null);
   }
 
-  private Optional<AdvancedExtension> optionalAdvancedExtension(
+  protected Optional<AdvancedExtension> optionalAdvancedExtension(
       io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasAdvancedExtension()
@@ -652,7 +653,7 @@ public class ProtoRelConverter {
             : null);
   }
 
-  private AdvancedExtension advancedExtension(
+  protected AdvancedExtension advancedExtension(
       io.substrait.proto.AdvancedExtension advancedExtension) {
     var builder = AdvancedExtension.builder();
     if (advancedExtension.hasEnhancement()) {
