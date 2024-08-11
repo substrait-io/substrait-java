@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.38.0](https://github.com/substrait-io/substrait-java/compare/v0.37.0...v0.38.0) (2024-08-11)
+
+### Features
+
+* make ProtoRelConverter utility methods protected ([#285](https://github.com/substrait-io/substrait-java/issues/285)) ([3864710](https://github.com/substrait-io/substrait-java/commit/386471036d7cf93bd86a19b8511f20979aa7f23f))
+
 ## [0.37.0](https://github.com/substrait-io/substrait-java/compare/v0.36.0...v0.37.0) (2024-07-21)
 
 ### ⚠ BREAKING CHANGES
