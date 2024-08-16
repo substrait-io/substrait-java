@@ -29,7 +29,7 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
         .struct(
             Stream.concat(
                 initial.fields().stream(),
-                getPartitionExpressions().stream().map(Expression::getType)));
+                getWindowFunctions().stream().map(WindowRelFunctionInvocation::outputType)));
   }
 
   @Override
