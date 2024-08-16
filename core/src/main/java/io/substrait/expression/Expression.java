@@ -584,7 +584,13 @@ public interface Expression extends FunctionArg {
     public abstract Expression elseClause();
 
     public Type getType() {
-      return elseClause().getType();
+      Type elseType = elseClause().getType();
+
+      // If any of the clauses are nullable, the whole expression is also nullable.
+      if (ifClauses().stream().anyMatch(clause -> clause.then().getType().nullable())) {
+        return TypeCreator.asNullable(elseType);
+      }
+      return elseType;
     }
 
     public static ImmutableExpression.IfThen.Builder builder() {
