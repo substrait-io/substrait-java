@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.38.1](https://github.com/substrait-io/substrait-java/compare/v0.38.0...v0.38.1) (2024-08-18)
+
+### Bug Fixes
+
+* **core:** output nullability of IfThen depends on all possible outputs ([a0ca17b](https://github.com/substrait-io/substrait-java/commit/a0ca17bdb12aa7c3acbf9b5700fd546434bb2899))
+* **core:** wrong type derivation for ConsistentPartitionWindow ([#286](https://github.com/substrait-io/substrait-java/issues/286)) ([60575b3](https://github.com/substrait-io/substrait-java/commit/60575b3ddc6f9abd7040ccc3d70be69bdf19403f))
+
 ## [0.38.0](https://github.com/substrait-io/substrait-java/compare/v0.37.0...v0.38.0) (2024-08-11)
 
 ### Features
