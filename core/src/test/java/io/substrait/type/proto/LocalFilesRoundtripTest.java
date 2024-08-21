@@ -75,6 +75,7 @@ public class LocalFilesRoundtripTest extends TestBase {
       case ARROW -> builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
       case ORC -> builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
       case DWRF -> builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
+      case TEXT -> builder; // TODO
       case EXTENSION -> builder.fileFormat(
           ImmutableFileFormat.Extension.builder()
               .extension(com.google.protobuf.Any.newBuilder().build())
