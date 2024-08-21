@@ -333,14 +333,45 @@ public interface Expression extends FunctionArg {
 
     public abstract int seconds();
 
-    public abstract int microseconds();
+    public abstract long subseconds();
+
+    public abstract int precision();
 
     public Type getType() {
-      return Type.withNullability(nullable()).INTERVAL_DAY;
+      return Type.withNullability(nullable()).intervalDay(precision());
     }
 
     public static ImmutableExpression.IntervalDayLiteral.Builder builder() {
       return ImmutableExpression.IntervalDayLiteral.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
+  abstract static class IntervalCompoundLiteral implements Literal {
+    // Flattened IntervalYearLiteral
+    public abstract int years();
+
+    public abstract int months();
+
+    // Flattened IntervalDayLiteral
+    public abstract int days();
+
+    public abstract int seconds();
+
+    public abstract long subseconds();
+
+    public abstract int precision();
+
+    public Type getType() {
+      return Type.withNullability(nullable()).intervalCompound(precision());
+    }
+
+    public static ImmutableExpression.IntervalCompoundLiteral.Builder builder() {
+      return ImmutableExpression.IntervalCompoundLiteral.builder();
     }
 
     public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {

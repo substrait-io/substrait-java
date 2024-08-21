@@ -161,16 +161,36 @@ public class ExpressionCreator {
   }
 
   public static Expression.IntervalDayLiteral intervalDay(boolean nullable, int days, int seconds) {
-    return intervalDay(nullable, days, seconds, 0);
+    return intervalDay(nullable, days, seconds, 0, 0);
   }
 
   public static Expression.IntervalDayLiteral intervalDay(
-      boolean nullable, int days, int seconds, int microseconds) {
+      boolean nullable, int days, int seconds, long subseconds, int precision) {
     return Expression.IntervalDayLiteral.builder()
         .nullable(nullable)
         .days(days)
         .seconds(seconds)
-        .microseconds(microseconds)
+        .subseconds(subseconds)
+        .precision(precision)
+        .build();
+  }
+
+  public static Expression.IntervalCompoundLiteral intervalCompound(
+      boolean nullable,
+      int years,
+      int months,
+      int days,
+      int seconds,
+      long subseconds,
+      int precision) {
+    return Expression.IntervalCompoundLiteral.builder()
+        .nullable(nullable)
+        .years(years)
+        .months(months)
+        .days(days)
+        .seconds(seconds)
+        .subseconds(subseconds)
+        .precision(precision)
         .build();
   }
 
