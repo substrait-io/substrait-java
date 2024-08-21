@@ -33,7 +33,9 @@ public class ProtoTypeConverter {
       case TIME -> n(type.getTime().getNullability()).TIME;
       case INTERVAL_YEAR -> n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
       case INTERVAL_DAY -> n(type.getIntervalDay().getNullability())
-          .intervalDay(type.getIntervalDay().getPrecision());
+          // precision defaults to 6 (micros) for backwards compatibility, see protobuf
+          .intervalDay(
+              type.getIntervalDay().hasPrecision() ? type.getIntervalDay().getPrecision() : 6);
       case INTERVAL_COMPOUND -> n(type.getIntervalCompound().getNullability())
           .intervalCompound(type.getIntervalCompound().getPrecision());
       case TIMESTAMP_TZ -> n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;

@@ -229,17 +229,17 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
         new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
   }
 
-  private static final long MICROS_IN_DAY = TimeUnit.DAYS.toMicros(1);
+  private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
 
   @Override
   public RexNode visit(Expression.IntervalDayLiteral expr) throws RuntimeException {
+    long milliseconds =
+        expr.precision() > 3
+            ? (expr.subseconds() / (int) Math.pow(10, expr.precision() - 3))
+            : (expr.subseconds() * (int) Math.pow(10, 3 - expr.precision()));
     return rexBuilder.makeIntervalLiteral(
         // Current Calcite behavior is to store milliseconds since Epoch
-        // microseconds version: new BigDecimal(expr.days() * MICROS_IN_DAY + expr.seconds() *
-        // 100000L + expr.microseconds()), DAY_SECOND_INTERVAL);
-        new BigDecimal(
-            (expr.days() * MICROS_IN_DAY + expr.seconds() * 1_000_000L + expr.microseconds())
-                / 1000L),
+        new BigDecimal((expr.days() * MILLIS_IN_DAY + expr.seconds() * 1_000L + milliseconds)),
         DAY_SECOND_INTERVAL);
   }
 

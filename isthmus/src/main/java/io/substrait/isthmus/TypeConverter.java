@@ -102,7 +102,7 @@ public class TypeConverter {
           INTERVAL_HOUR_SECOND,
           INTERVAL_MINUTE,
           INTERVAL_MINUTE_SECOND,
-          INTERVAL_SECOND -> creator.INTERVAL_DAY;
+          INTERVAL_SECOND -> creator.intervalDay(type.getScale());
       case VARBINARY -> creator.BINARY;
       case BINARY -> creator.fixedBinary(type.getPrecision());
       case MAP -> {

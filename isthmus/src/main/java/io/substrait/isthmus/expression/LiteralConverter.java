@@ -172,6 +172,7 @@ public class LiteralConverter {
           INTERVAL_MINUTE_SECOND,
           INTERVAL_SECOND -> {
         // we need to convert to microseconds.
+        // TODO: don't need to anymore
         int scale = literal.getType().getScale();
         var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
         var adjustedLength =
@@ -182,7 +183,7 @@ public class LiteralConverter {
         var totalMicroseconds = adjustedLength - days * MICROS_IN_DAY;
         var seconds = totalMicroseconds / 1_000_000;
         var microseconds = totalMicroseconds - 1_000_000 * seconds;
-        yield intervalDay(n, (int) days, (int) seconds, (int) microseconds);
+        yield intervalDay(n, (int) days, (int) seconds, microseconds, 6 /* micros */);
       }
 
       case ROW -> {

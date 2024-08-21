@@ -341,8 +341,8 @@ public class ProtoExpressionConverter {
           literal.getIntervalYearToMonth().getYears(),
           literal.getIntervalYearToMonth().getMonths());
       case INTERVAL_DAY_TO_SECOND -> {
-        // Handle deprecated version that doesn't provide precision and that uses microseconds instead
-        // of subseconds, for backwards compatibility
+        // Handle deprecated version that doesn't provide precision and that uses microseconds
+        // instead of subseconds, for backwards compatibility
         int precision =
             literal.getIntervalDayToSecond().hasPrecision()
                 ? literal.getIntervalDayToSecond().getPrecision()

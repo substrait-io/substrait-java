@@ -211,7 +211,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.SECOND,
                 3,
                 SqlParserPos.ZERO));
-    var intervalDaySecondExpr = intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000);
+    var intervalDaySecondExpr = intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
     bitest(intervalDaySecondExpr, intervalDaySecond);
   }
 
