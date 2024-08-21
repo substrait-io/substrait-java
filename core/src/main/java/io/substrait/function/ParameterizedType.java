@@ -107,6 +107,36 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   @Value.Immutable
+  abstract static class IntervalDay extends BaseParameterizedType implements NullableType {
+    public abstract StringLiteral precision();
+
+    @Override
+    <R, E extends Throwable> R accept(final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor)
+        throws E {
+      return parameterizedTypeVisitor.visit(this);
+    }
+
+    public static ImmutableParameterizedType.IntervalDay.Builder builder() {
+      return ImmutableParameterizedType.IntervalDay.builder();
+    }
+  }
+
+  @Value.Immutable
+  abstract static class IntervalCompound extends BaseParameterizedType implements NullableType {
+    public abstract StringLiteral precision();
+
+    @Override
+    <R, E extends Throwable> R accept(final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor)
+        throws E {
+      return parameterizedTypeVisitor.visit(this);
+    }
+
+    public static ImmutableParameterizedType.IntervalCompound.Builder builder() {
+      return ImmutableParameterizedType.IntervalCompound.builder();
+    }
+  }
+
+  @Value.Immutable
   abstract static class PrecisionTimestamp extends BaseParameterizedType implements NullableType {
     public abstract StringLiteral precision();
 

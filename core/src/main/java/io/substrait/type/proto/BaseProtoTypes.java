@@ -19,7 +19,6 @@ abstract class BaseProtoTypes<T, I> {
   public final T TIMESTAMP_TZ;
   public final T DATE;
   public final T TIME;
-  public final T INTERVAL_DAY;
   public final T INTERVAL_YEAR;
   public final T UUID;
 
@@ -38,7 +37,6 @@ abstract class BaseProtoTypes<T, I> {
     TIMESTAMP_TZ = wrap(Type.TimestampTZ.newBuilder().setNullability(nullability).build());
     DATE = wrap(Type.Date.newBuilder().setNullability(nullability).build());
     TIME = wrap(Type.Time.newBuilder().setNullability(nullability).build());
-    INTERVAL_DAY = wrap(Type.IntervalDay.newBuilder().setNullability(nullability).build());
     INTERVAL_YEAR = wrap(Type.IntervalYear.newBuilder().setNullability(nullability).build());
     UUID = wrap(Type.UUID.newBuilder().setNullability(nullability).build());
   }
@@ -81,6 +79,14 @@ abstract class BaseProtoTypes<T, I> {
     return decimal(i(scale), precision);
   }
 
+  public final T intervalDay(int precision) {
+    return intervalDay(i(precision));
+  }
+
+  public final T intervalCompound(int precision) {
+    return intervalCompound(i(precision));
+  }
+
   public final T precisionTimestamp(int precision) {
     return precisionTimestamp(i(precision));
   }
@@ -102,6 +108,10 @@ abstract class BaseProtoTypes<T, I> {
   public abstract T precisionTimestamp(I precision);
 
   public abstract T precisionTimestampTZ(I precision);
+
+  public abstract T intervalDay(I precision);
+
+  public abstract T intervalCompound(I precision);
 
   public final T struct(T... types) {
     return struct(Arrays.asList(types));

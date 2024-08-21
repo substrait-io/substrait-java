@@ -10,6 +10,10 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
 
   R visit(TypeExpression.Decimal expr) throws E;
 
+  R visit(TypeExpression.IntervalDay expr) throws E;
+
+  R visit(TypeExpression.IntervalCompound expr) throws E;
+
   R visit(TypeExpression.PrecisionTimestamp expr) throws E;
 
   R visit(TypeExpression.PrecisionTimestampTZ expr) throws E;
@@ -65,6 +69,16 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
 
     @Override
     public R visit(TypeExpression.PrecisionTimestampTZ expr) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(TypeExpression.IntervalDay expr) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(TypeExpression.IntervalCompound expr) throws E {
       throw t();
     }
 

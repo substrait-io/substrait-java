@@ -35,6 +35,17 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
+  public TypeExpression intervalDayE(TypeExpression precision) {
+    return TypeExpression.IntervalDay.builder().nullable(nullable).precision(precision).build();
+  }
+
+  public TypeExpression intervalCompoundE(TypeExpression precision) {
+    return TypeExpression.IntervalCompound.builder()
+        .nullable(nullable)
+        .precision(precision)
+        .build();
+  }
+
   public TypeExpression precisionTimestampE(TypeExpression precision) {
     return TypeExpression.PrecisionTimestamp.builder()
         .nullable(nullable)
