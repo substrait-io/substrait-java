@@ -54,6 +54,11 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   }
 
   @Override
+  public OUTPUT visit(Expand expand) throws EXCEPTION {
+    return visitFallback(expand);
+  }
+
+  @Override
   public OUTPUT visit(Sort sort) throws EXCEPTION {
     return visitFallback(sort);
   }

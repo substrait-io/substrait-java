@@ -10,6 +10,7 @@ import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
@@ -50,7 +51,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
-    return expressions.stream().map(this::toProto).collect(java.util.stream.Collectors.toList());
+    return expressions.stream().map(this::toProto).collect(Collectors.toList());
   }
 
   private io.substrait.proto.Expression toProto(Expression expression) {
@@ -74,7 +75,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .setExpr(toProto(s.expr()))
                   .build();
             })
-        .collect(java.util.stream.Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
@@ -88,13 +89,9 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
             .addAllGroupings(
-                aggregate.getGroupings().stream()
-                    .map(this::toProto)
-                    .collect(java.util.stream.Collectors.toList()))
+                aggregate.getGroupings().stream().map(this::toProto).collect(Collectors.toList()))
             .addAllMeasures(
-                aggregate.getMeasures().stream()
-                    .map(this::toProto)
-                    .collect(java.util.stream.Collectors.toList()));
+                aggregate.getMeasures().stream().map(this::toProto).collect(Collectors.toList()));
 
     aggregate.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setAggregate(builder).build();
@@ -113,14 +110,14 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .addAllArguments(
                 IntStream.range(0, args.size())
                     .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
-                    .collect(java.util.stream.Collectors.toList()))
+                    .collect(Collectors.toList()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
                 functionCollector.getFunctionReference(measure.getFunction().declaration()))
             .addAllOptions(
                 measure.getFunction().options().stream()
                     .map(ExpressionProtoConverter::from)
-                    .collect(java.util.stream.Collectors.toList()));
+                    .collect(Collectors.toList()));
 
     var builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 
@@ -226,7 +223,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .addAllItems(
                         localFiles.getItems().stream()
                             .map(FileOrFiles::toProto)
-                            .collect(java.util.stream.Collectors.toList()))
+                            .collect(Collectors.toList()))
                     .build())
             .setBaseSchema(localFiles.getInitialSchema().toProto(typeProtoConverter));
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
@@ -350,7 +347,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
               var options =
                   f.options().stream()
                       .map(ExpressionProtoConverter::from)
-                      .collect(java.util.stream.Collectors.toList());
+                      .collect(Collectors.toList());
 
               return ConsistentPartitionWindowRel.WindowRelFunction.newBuilder()
                   .setInvocation(f.invocation().toProto())
@@ -364,7 +361,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .setUpperBound(BoundConverter.convert(f.upperBound()))
                   .build();
             })
-        .collect(java.util.stream.Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -374,12 +371,43 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
             .addAllExpressions(
-                project.getExpressions().stream()
-                    .map(this::toProto)
-                    .collect(java.util.stream.Collectors.toList()));
+                project.getExpressions().stream().map(this::toProto).collect(Collectors.toList()));
 
     project.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setProject(builder).build();
+  }
+
+  @Override
+  public Rel visit(Expand expand) throws RuntimeException {
+    var builder =
+        ExpandRel.newBuilder().setCommon(common(expand)).setInput(toProto(expand.getInput()));
+
+    expand
+        .getFields()
+        .forEach(
+            expandField -> {
+              if (expandField instanceof Expand.ConsistentField cf) {
+                builder.addFields(
+                    ExpandRel.ExpandField.newBuilder()
+                        .setConsistentField(toProto(cf.getExpression()))
+                        .build());
+
+              } else if (expandField instanceof Expand.SwitchingField sf) {
+                builder.addFields(
+                    ExpandRel.ExpandField.newBuilder()
+                        .setSwitchingField(
+                            ExpandRel.SwitchingField.newBuilder()
+                                .addAllDuplicates(
+                                    sf.getDuplicates().stream()
+                                        .map(this::toProto)
+                                        .collect(Collectors.toList())))
+                        .build());
+              } else {
+                throw new RuntimeException(
+                    "Consistent or Switching fields must be set for the Expand relation.");
+              }
+            });
+    return Rel.newBuilder().setExpand(builder).build();
   }
 
   @Override
@@ -417,7 +445,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                         virtualTableScan.getRows().stream()
                             .map(this::toProto)
                             .map(t -> t.getLiteral().getStruct())
-                            .collect(java.util.stream.Collectors.toList()))
+                            .collect(Collectors.toList()))
                     .build())
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
@@ -469,6 +497,9 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     } else {
       builder.setDirect(RelCommon.Direct.getDefaultInstance());
     }
+
+    rel.getHint().ifPresent(md -> builder.setHint(md.toProto()));
+
     return builder.build();
   }
 }

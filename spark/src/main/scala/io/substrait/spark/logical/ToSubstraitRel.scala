@@ -18,7 +18,6 @@ package io.substrait.spark.logical
 
 import io.substrait.spark.{SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions._
@@ -29,18 +28,17 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
 import org.apache.spark.sql.types.StructType
 import ToSubstraitType.toNamedStruct
-
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
-import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
+import io.substrait.expression.{ExpressionCreator, Expression => SExpression}
 import io.substrait.extension.ExtensionCollector
+import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutablePlan, ImmutableRoot, Plan}
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 
-import java.util.Collections
-
+import java.util.{Collections, Optional}
 import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -72,7 +70,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val substraitExps = expression.aggregateFunction.children.map(toExpression(output))
     val invocation =
       SparkExtension.toAggregateFunction.apply(expression, substraitExps)
-    relation.Aggregate.Measure.builder.function(invocation).build()
+    val filter = expression.filter map toExpression(output)
+    relation.Aggregate.Measure.builder.function(invocation).preMeasureFilter(Optional.ofNullable(filter.orNull)).build()
   }
 
   private def collectAggregates(
@@ -232,6 +231,23 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     relation.Project.builder
       .remap(relation.Rel.Remap.offset(p.child.output.size, expressions.size))
       .expressions(expressions.asJava)
+      .input(visit(p.child))
+      .build()
+  }
+
+  override def visitExpand(p: Expand): relation.Rel = {
+    val fields = p.projections.map(proj => {
+      relation.Expand.SwitchingField.builder.duplicates(
+        proj.map(toExpression(p.child.output)).asJava
+      ).build()
+    })
+
+    val names = p.output.map(_.name)
+
+    relation.Expand.builder
+      .remap(relation.Rel.Remap.offset(p.child.output.size, names.size))
+      .fields(fields.asJava)
+      .hint(Hint.builder.addAllOutputNames(names.asJava).build())
       .input(visit(p.child))
       .build()
   }

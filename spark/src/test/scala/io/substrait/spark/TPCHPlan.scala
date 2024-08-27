@@ -16,6 +16,7 @@
  */
 package io.substrait.spark
 
+import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 import org.apache.spark.sql.TPCHBase
 
 class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
@@ -101,7 +102,7 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
         " from lineitem group by l_partkey + l_orderkey")
   }
 
-  ignore("avg(distinct)") {
+  test("avg(distinct)") {
     assertSqlSubstraitRelRoundTrip(
       "select l_partkey, sum(l_tax), sum(distinct l_tax)," +
         " avg(l_discount), avg(distinct l_discount) from lineitem group by l_partkey")
@@ -112,7 +113,7 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
       "select l_partkey, sum(l_extendedprice * (1.0-l_discount)) from lineitem group by l_partkey")
   }
 
-  ignore("simpleTestAggFilter") {
+  test("simpleTestAggFilter") {
     assertSqlSubstraitRelRoundTrip(
       "select sum(l_tax) filter(WHERE l_orderkey > l_partkey) from lineitem")
     // cast is added to avoid the difference by implicit cast
@@ -149,7 +150,7 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
         " where l_shipdate < date '1998-01-01' ")
   }
 
-  ignore("simpleTestGroupingSets [has Expand]") {
+  test("simpleTestGroupingSets [has Expand]") {
     assertSqlSubstraitRelRoundTrip(
       "select sum(l_discount) from lineitem group by grouping sets " +
         "((l_orderkey, L_COMMITDATE), l_shipdate)")

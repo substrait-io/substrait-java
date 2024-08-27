@@ -7,9 +7,11 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.hint.Hint;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
 import io.substrait.proto.ExtensionSingleRel;
@@ -87,6 +89,9 @@ public class ProtoRelConverter {
       case PROJECT -> {
         return newProject(rel.getProject());
       }
+      case EXPAND -> {
+        return newExpand(rel.getExpand());
+      }
       case CROSS -> {
         return newCross(rel.getCross());
       }
@@ -155,7 +160,10 @@ public class ProtoRelConverter {
   }
 
   protected NamedStruct newNamedStruct(ReadRel rel) {
-    var namedStruct = rel.getBaseSchema();
+    return newNamedStruct(rel.getBaseSchema());
+  }
+
+  protected NamedStruct newNamedStruct(io.substrait.proto.NamedStruct namedStruct) {
     var struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
         .names(namedStruct.getNamesList())
@@ -386,6 +394,38 @@ public class ProtoRelConverter {
     if (rel.hasAdvancedExtension()) {
       builder.extension(advancedExtension(rel.getAdvancedExtension()));
     }
+    return builder.build();
+  }
+
+  protected Expand newExpand(ExpandRel rel) {
+    var input = from(rel.getInput());
+    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    var builder =
+        Expand.builder()
+            .input(input)
+            .fields(
+                rel.getFieldsList().stream()
+                    .map(
+                        expandField ->
+                            switch (expandField.getFieldTypeCase()) {
+                              case CONSISTENT_FIELD -> Expand.ConsistentField.builder()
+                                  .expression(converter.from(expandField.getConsistentField()))
+                                  .build();
+                              case SWITCHING_FIELD -> Expand.SwitchingField.builder()
+                                  .duplicates(
+                                      expandField.getSwitchingField().getDuplicatesList().stream()
+                                          .map(converter::from)
+                                          .collect(java.util.stream.Collectors.toList()))
+                                  .build();
+                              case FIELDTYPE_NOT_SET -> throw new UnsupportedOperationException(
+                                  "Expand fields not set");
+                            })
+                    .collect(java.util.stream.Collectors.toList()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
     return builder.build();
   }
 
@@ -645,6 +685,16 @@ public class ProtoRelConverter {
   protected static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasEmit() ? Rel.Remap.of(relCommon.getEmit().getOutputMappingList()) : null);
+  }
+
+  protected static Optional<Hint> optionalHint(io.substrait.proto.RelCommon relCommon) {
+    if (!relCommon.hasHint()) return Optional.empty();
+    var hint = relCommon.getHint();
+    var builder = Hint.builder().addAllOutputNames(hint.getOutputNamesList());
+    if (!hint.getAlias().isEmpty()) {
+      builder.alias(hint.getAlias());
+    }
+    return Optional.of(builder.build());
   }
 
   protected Optional<AdvancedExtension> optionalAdvancedExtension(

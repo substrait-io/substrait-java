@@ -21,6 +21,7 @@ import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
+import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
@@ -311,6 +312,23 @@ public class SubstraitBuilder {
       Rel input) {
     var expressions = expressionsFn.apply(input);
     return Project.builder().input(input).expressions(expressions).remap(remap).build();
+  }
+
+  public Expand expand(Function<Rel, Iterable<? extends Expand.ExpandField>> fieldsFn, Rel input) {
+    return expand(fieldsFn, Optional.empty(), input);
+  }
+
+  public Expand expand(
+      Function<Rel, Iterable<? extends Expand.ExpandField>> fieldsFn, Rel.Remap remap, Rel input) {
+    return expand(fieldsFn, Optional.of(remap), input);
+  }
+
+  private Expand expand(
+      Function<Rel, Iterable<? extends Expand.ExpandField>> fieldsFn,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    var fields = fieldsFn.apply(input);
+    return Expand.builder().input(input).fields(fields).remap(remap).build();
   }
 
   public Set set(Set.SetOp op, Rel... inputs) {
