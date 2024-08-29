@@ -10,6 +10,7 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
+import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +38,14 @@ public class WindowFunctionConverter
   public WindowFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
+  }
+
+  public WindowFunctionConverter(
+      List<SimpleExtension.WindowFunctionVariant> functions,
+      List<FunctionMappings.Sig> additionalSignatures,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override
