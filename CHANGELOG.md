@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.39.0](https://github.com/substrait-io/substrait-java/compare/v0.38.1...v0.39.0) (2024-09-01)
+
+### Features
+
+* **isthmus:** injectable TypeConverter for window fn converters ([#291](https://github.com/substrait-io/substrait-java/issues/291)) ([d625648](https://github.com/substrait-io/substrait-java/commit/d6256487f75032e2e8fc803976d916e4a5bc44bd))
+
 ## [0.38.1](https://github.com/substrait-io/substrait-java/compare/v0.38.0...v0.38.1) (2024-08-18)
 
 ### Bug Fixes
