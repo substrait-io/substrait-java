@@ -6,7 +6,7 @@ plugins {
   id("idea")
   id("antlr")
   id("com.google.protobuf") version "0.9.4"
-  id("com.diffplug.spotless") version "6.11.0"
+  id("com.diffplug.spotless") version "6.19.0"
   id("com.github.johnrengelman.shadow") version "8.1.1"
   signing
 }

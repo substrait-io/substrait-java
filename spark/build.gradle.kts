@@ -3,7 +3,7 @@ plugins {
   id("java")
   id("scala")
   id("idea")
-  id("com.diffplug.spotless") version "6.11.0"
+  id("com.diffplug.spotless") version "6.19.0"
   signing
 }
 
