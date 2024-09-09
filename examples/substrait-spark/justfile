@@ -1,0 +1,56 @@
+# Main justfile to run all the development scripts
+# To install 'just' see https://github.com/casey/just#installation
+
+# Ensure all properties are exported as shell env-vars
+set export
+set dotenv-load
+
+# set the current directory, and the location of the test dats
+CWDIR := justfile_directory()
+
+SPARK_VERSION := "3.5.1"
+
+SPARK_MASTER_CONTAINER := "subtrait-spark-spark-1"
+
+_default:
+  @just -f {{justfile()}} --list
+
+buildapp:
+    #!/bin/bash
+    set -e -o pipefail
+
+    ${CWDIR}/gradlew build
+
+    # need to let the SPARK user be able to write to the _data mount
+    mkdir -p ${CWDIR}/_data  && chmod g+w ${CWDIR}/_data
+    mkdir -p ${CWDIR}/_apps
+
+    cp ${CWDIR}/app/build/libs/app.jar ${CWDIR}/_apps
+    cp ${CWDIR}/app/src/main/resources/*.csv ${CWDIR}/_data
+
+dataset:
+    #!/bin/bash
+    set -e -o pipefail
+
+    docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkDataset"
+
+sql:
+    #!/bin/bash
+    set -e -o pipefail
+
+    docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkSQL"
+
+consume arg:
+    #!/bin/bash
+    set -e -o pipefail
+
+    docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkConsumeSubstrait {{arg}}"
+
+
+spark:
+    #!/bin/bash
+    set -e -o pipefail
+
+    export MY_UID=$(id -u)
+    export MY_GID=$(id -g)
+    docker compose up

@@ -8,3 +8,4 @@ gen
 out/**
 *.iws
 .vscode
+.pmdCache
