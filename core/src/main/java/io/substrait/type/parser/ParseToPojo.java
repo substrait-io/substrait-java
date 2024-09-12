@@ -261,6 +261,16 @@ public class ParseToPojo {
         return withNullP(nullable).decimalE((String) precision, (String) scale);
       }
 
+      if (precision instanceof String && scale instanceof Integer) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).decimalE((String) precision, String.valueOf(scale));
+      }
+
+      if (precision instanceof Integer && scale instanceof String) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).decimalE(String.valueOf(precision), (String) scale);
+      }
+
       checkExpression();
       return withNullE(nullable).decimalE(ctx.precision.accept(this), ctx.scale.accept(this));
     }

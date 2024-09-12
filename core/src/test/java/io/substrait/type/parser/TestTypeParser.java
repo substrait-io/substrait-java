@@ -119,6 +119,9 @@ public class TestTypeParser {
     test(v, pn.listE(pr.parameter("any")), "list?<any>");
     test(v, pn.listE(pn.parameter("any")), "list?<any?>");
     test(v, pn.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT?<i8, i16, i8?, K>");
+    test(v, pr.decimalE("P", "S"), "DECIMAL<P, S>");
+    test(v, pr.decimalE("P", "0"), "DECIMAL<P, 0>");
+    test(v, pr.decimalE("14", "S"), "DECIMAL<14, S>");
   }
 
   private static void test(ParseToPojo.Visitor visitor, TypeExpression expected, String toParse) {
