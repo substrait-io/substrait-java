@@ -48,6 +48,7 @@ public class TestTypeRoundtrip {
   private ProtoTypeConverter protoTypeConverter =
       new ProtoTypeConverter(
           lookup, ImmutableSimpleExtension.ExtensionCollection.builder().build());
+
   /*
    * Test a type pojo -> proto -> pojo roundtrip.
    *

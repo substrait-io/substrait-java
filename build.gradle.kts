@@ -7,7 +7,7 @@ plugins {
   id("java")
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
-  id("com.diffplug.spotless") version "6.11.0"
+  id("com.diffplug.spotless") version "6.19.0"
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
   id("org.cyclonedx.bom") version "1.8.2"
 }
