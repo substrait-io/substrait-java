@@ -302,6 +302,8 @@ public class ProtoRelConverter {
       builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
     } else if (file.hasDwrf()) {
       builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
+    } else if (file.hasText()) {
+      throw new RuntimeException("Delimiter separated text files not supported yet"); // TODO
     } else if (file.hasExtension()) {
       builder.fileFormat(
           ImmutableFileFormat.Extension.builder().extension(file.getExtension()).build());

@@ -91,6 +91,11 @@ public class ToTypeString
   }
 
   @Override
+  public String visit(final Type.IntervalCompound expr) {
+    return "icompound";
+  }
+
+  @Override
   public String visit(final Type.UUID expr) {
     return "uuid";
   }
@@ -163,6 +168,16 @@ public class ToTypeString
   @Override
   public String visit(ParameterizedType.Decimal expr) throws RuntimeException {
     return "dec";
+  }
+
+  @Override
+  public String visit(ParameterizedType.IntervalDay expr) throws RuntimeException {
+    return "iday";
+  }
+
+  @Override
+  public String visit(ParameterizedType.IntervalCompound expr) throws RuntimeException {
+    return "icompound";
   }
 
   @Override

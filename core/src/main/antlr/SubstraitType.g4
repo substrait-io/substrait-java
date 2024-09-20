@@ -49,6 +49,7 @@ Date     : D A T E;
 Time     : T I M E;
 IntervalYear: I N T E R V A L '_' Y E A R;
 IntervalDay: I N T E R V A L '_' D A Y;
+IntervalCompound: I N T E R V A L '_' C O M P O U N D;
 UUID     : U U I D;
 Decimal  : D E C I M A L;
 PrecisionTimestamp: P R E C I S I O N '_' T I M E S T A M P;
@@ -158,7 +159,6 @@ scalarType
   | TimestampTZ #timestampTz
   | Date #date
   | Time #time
-  | IntervalDay #intervalDay
   | IntervalYear #intervalYear
   | UUID #uuid
   | UserDefined Identifier #userDefined
@@ -169,6 +169,8 @@ parameterizedType
   | VarChar isnull='?'? Lt len=numericParameter Gt #varChar
   | FixedBinary isnull='?'? Lt len=numericParameter Gt #fixedBinary
   | Decimal isnull='?'? Lt precision=numericParameter Comma scale=numericParameter Gt #decimal
+  | IntervalDay isnull='?'? Lt precision=numericParameter Gt #intervalDay
+  | IntervalCompound isnull='?'? Lt precision=numericParameter Gt #intervalCompound
   | PrecisionTimestamp isnull='?'? Lt precision=numericParameter Gt #precisionTimestamp
   | PrecisionTimestampTZ isnull='?'? Lt precision=numericParameter Gt #precisionTimestampTZ
   | Struct isnull='?'? Lt expr (Comma expr)* Gt #struct
@@ -205,4 +207,3 @@ expr
   | (Bang) expr #NotExpr
   | ifExpr=expr QMark thenExpr=expr Colon elseExpr=expr #Ternary
   ;
-

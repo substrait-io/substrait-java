@@ -22,7 +22,6 @@ public class TypeCreator {
   public final Type TIMESTAMP_TZ;
   public final Type DATE;
   public final Type TIME;
-  public final Type INTERVAL_DAY;
   public final Type INTERVAL_YEAR;
   public final Type UUID;
 
@@ -41,7 +40,6 @@ public class TypeCreator {
     TIMESTAMP_TZ = Type.TimestampTZ.builder().nullable(nullable).build();
     DATE = Type.Date.builder().nullable(nullable).build();
     TIME = Type.Time.builder().nullable(nullable).build();
-    INTERVAL_DAY = Type.IntervalDay.builder().nullable(nullable).build();
     INTERVAL_YEAR = Type.IntervalYear.builder().nullable(nullable).build();
     UUID = Type.UUID.builder().nullable(nullable).build();
   }
@@ -72,6 +70,14 @@ public class TypeCreator {
 
   public final Type precisionTimestampTZ(int precision) {
     return Type.PrecisionTimestampTZ.builder().nullable(nullable).precision(precision).build();
+  }
+
+  public final Type intervalDay(int precision) {
+    return Type.IntervalDay.builder().nullable(nullable).precision(precision).build();
+  }
+
+  public final Type intervalCompound(int precision) {
+    return Type.IntervalCompound.builder().nullable(nullable).precision(precision).build();
   }
 
   public Type.Struct struct(Iterable<? extends Type> types) {
@@ -196,6 +202,11 @@ public class TypeCreator {
     @Override
     public Type visit(Type.IntervalDay type) throws RuntimeException {
       return Type.IntervalDay.builder().from(type).nullable(nullability).build();
+    }
+
+    @Override
+    public Type visit(Type.IntervalCompound type) throws RuntimeException {
+      return Type.IntervalCompound.builder().from(type).nullable(nullability).build();
     }
 
     @Override

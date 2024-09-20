@@ -141,6 +141,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     }
 
     @Override
+    public Integer visit(Type.IntervalCompound type) throws RuntimeException {
+      return 0;
+    }
+
+    @Override
     public Integer visit(Type.UUID type) throws RuntimeException {
       return 0;
     }

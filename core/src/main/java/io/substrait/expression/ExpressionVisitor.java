@@ -39,6 +39,8 @@ public interface ExpressionVisitor<R, E extends Throwable> {
 
   R visit(Expression.IntervalDayLiteral expr) throws E;
 
+  R visit(Expression.IntervalCompoundLiteral expr) throws E;
+
   R visit(Expression.UUIDLiteral expr) throws E;
 
   R visit(Expression.FixedCharLiteral expr) throws E;

@@ -85,6 +85,11 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
   }
 
   @Override
+  public String visit(Type.IntervalCompound type) throws RuntimeException {
+    return "interval_compound" + n(type);
+  }
+
+  @Override
   public String visit(Type.UUID type) throws RuntimeException {
     return "uuid" + n(type);
   }

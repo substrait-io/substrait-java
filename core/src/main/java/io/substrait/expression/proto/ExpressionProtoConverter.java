@@ -159,7 +159,27 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                     Expression.Literal.IntervalDayToSecond.newBuilder()
                         .setDays(expr.days())
                         .setSeconds(expr.seconds())
-                        .setMicroseconds(expr.microseconds())));
+                        .setSubseconds(expr.subseconds())
+                        .setPrecision(expr.precision())));
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.IntervalCompoundLiteral expr) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setIntervalCompound(
+                    Expression.Literal.IntervalCompound.newBuilder()
+                        .setIntervalYearToMonth(
+                            Expression.Literal.IntervalYearToMonth.newBuilder()
+                                .setYears(expr.years())
+                                .setMonths(expr.months()))
+                        .setIntervalDayToSecond(
+                            Expression.Literal.IntervalDayToSecond.newBuilder()
+                                .setDays(expr.days())
+                                .setSeconds(expr.seconds())
+                                .setSubseconds(expr.subseconds())
+                                .setPrecision(expr.precision()))));
   }
 
   @Override

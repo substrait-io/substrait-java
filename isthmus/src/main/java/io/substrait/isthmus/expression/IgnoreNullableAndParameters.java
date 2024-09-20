@@ -85,7 +85,14 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(Type.IntervalDay type) {
-    return typeToMatch instanceof Type.IntervalDay;
+    return typeToMatch instanceof Type.IntervalDay
+        || typeToMatch instanceof ParameterizedType.IntervalDay;
+  }
+
+  @Override
+  public Boolean visit(Type.IntervalCompound type) {
+    return typeToMatch instanceof Type.IntervalCompound
+        || typeToMatch instanceof ParameterizedType.IntervalCompound;
   }
 
   @Override
@@ -169,6 +176,18 @@ public class IgnoreNullableAndParameters
   @Override
   public Boolean visit(ParameterizedType.Decimal expr) throws RuntimeException {
     return typeToMatch instanceof Type.Decimal || typeToMatch instanceof ParameterizedType.Decimal;
+  }
+
+  @Override
+  public Boolean visit(ParameterizedType.IntervalDay expr) throws RuntimeException {
+    return typeToMatch instanceof Type.IntervalDay
+        || typeToMatch instanceof ParameterizedType.IntervalDay;
+  }
+
+  @Override
+  public Boolean visit(ParameterizedType.IntervalCompound expr) throws RuntimeException {
+    return typeToMatch instanceof Type.IntervalCompound
+        || typeToMatch instanceof ParameterizedType.IntervalCompound;
   }
 
   @Override

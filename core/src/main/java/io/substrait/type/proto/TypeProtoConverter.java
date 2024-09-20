@@ -61,6 +61,22 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    public Type intervalDay(Integer precision) {
+      return wrap(
+          Type.IntervalDay.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    public Type intervalCompound(Integer precision) {
+      return wrap(
+          Type.IntervalCompound.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
     public Type precisionTimestamp(Integer precision) {
       return wrap(
           Type.PrecisionTimestamp.newBuilder()
@@ -129,6 +145,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setIntervalYear(t).build();
       } else if (o instanceof Type.IntervalDay t) {
         return bldr.setIntervalDay(t).build();
+      } else if (o instanceof Type.IntervalCompound t) {
+        return bldr.setIntervalCompound(t).build();
       } else if (o instanceof Type.FixedChar t) {
         return bldr.setFixedChar(t).build();
       } else if (o instanceof Type.VarChar t) {

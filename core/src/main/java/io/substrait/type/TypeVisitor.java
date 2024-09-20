@@ -37,6 +37,8 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.IntervalDay type) throws E;
 
+  R visit(Type.IntervalCompound type) throws E;
+
   R visit(Type.UUID type) throws E;
 
   R visit(Type.FixedChar type) throws E;
@@ -140,6 +142,11 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.IntervalDay type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.IntervalCompound type) throws E {
       throw t();
     }
 

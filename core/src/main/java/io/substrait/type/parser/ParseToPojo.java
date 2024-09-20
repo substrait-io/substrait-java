@@ -152,13 +152,41 @@ public class ParseToPojo {
     }
 
     @Override
-    public Type visitIntervalDay(final SubstraitTypeParser.IntervalDayContext ctx) {
-      return withNull(ctx).INTERVAL_DAY;
+    public Type visitIntervalYear(final SubstraitTypeParser.IntervalYearContext ctx) {
+      return withNull(ctx).INTERVAL_YEAR;
     }
 
     @Override
-    public Type visitIntervalYear(final SubstraitTypeParser.IntervalYearContext ctx) {
-      return withNull(ctx).INTERVAL_YEAR;
+    public TypeExpression visitIntervalDay(final SubstraitTypeParser.IntervalDayContext ctx) {
+      boolean nullable = ctx.isnull != null;
+      Object precision = i(ctx.precision);
+      if (precision instanceof Integer p) {
+        return withNull(nullable).intervalDay(p);
+      }
+      if (precision instanceof String s) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).intervalDayE(s);
+      }
+
+      checkExpression();
+      return withNullE(nullable).intervalDayE(ctx.precision.accept(this));
+    }
+
+    @Override
+    public TypeExpression visitIntervalCompound(
+        final SubstraitTypeParser.IntervalCompoundContext ctx) {
+      boolean nullable = ctx.isnull != null;
+      Object precision = i(ctx.precision);
+      if (precision instanceof Integer p) {
+        return withNull(nullable).intervalCompound(p);
+      }
+      if (precision instanceof String s) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).intervalCompoundE(s);
+      }
+
+      checkExpression();
+      return withNullE(nullable).intervalCompoundE(ctx.precision.accept(this));
     }
 
     @Override
@@ -231,6 +259,16 @@ public class ParseToPojo {
       if (precision instanceof String && scale instanceof String) {
         checkParameterizedOrExpression();
         return withNullP(nullable).decimalE((String) precision, (String) scale);
+      }
+
+      if (precision instanceof String && scale instanceof Integer) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).decimalE((String) precision, String.valueOf(scale));
+      }
+
+      if (precision instanceof Integer && scale instanceof String) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).decimalE(String.valueOf(precision), (String) scale);
       }
 
       checkExpression();

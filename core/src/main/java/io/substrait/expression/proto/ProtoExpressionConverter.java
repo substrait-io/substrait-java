@@ -340,11 +340,38 @@ public class ProtoExpressionConverter {
           literal.getNullable(),
           literal.getIntervalYearToMonth().getYears(),
           literal.getIntervalYearToMonth().getMonths());
-      case INTERVAL_DAY_TO_SECOND -> ExpressionCreator.intervalDay(
-          literal.getNullable(),
-          literal.getIntervalDayToSecond().getDays(),
-          literal.getIntervalDayToSecond().getSeconds(),
-          literal.getIntervalDayToSecond().getMicroseconds());
+      case INTERVAL_DAY_TO_SECOND -> {
+        // Handle deprecated version that doesn't provide precision and that uses microseconds
+        // instead of subseconds, for backwards compatibility
+        int precision =
+            literal.getIntervalDayToSecond().hasPrecision()
+                ? literal.getIntervalDayToSecond().getPrecision()
+                : 6; // microseconds
+        long subseconds =
+            literal.getIntervalDayToSecond().hasPrecision()
+                ? literal.getIntervalDayToSecond().getSubseconds()
+                : literal.getIntervalDayToSecond().getMicroseconds();
+        yield ExpressionCreator.intervalDay(
+            literal.getNullable(),
+            literal.getIntervalDayToSecond().getDays(),
+            literal.getIntervalDayToSecond().getSeconds(),
+            subseconds,
+            precision);
+      }
+      case INTERVAL_COMPOUND -> {
+        if (!literal.getIntervalCompound().getIntervalDayToSecond().hasPrecision()) {
+          throw new RuntimeException(
+              "Interval compound with deprecated version of interval day (ie. no precision) is not supported");
+        }
+        yield ExpressionCreator.intervalCompound(
+            literal.getNullable(),
+            literal.getIntervalCompound().getIntervalYearToMonth().getYears(),
+            literal.getIntervalCompound().getIntervalYearToMonth().getMonths(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getDays(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getSeconds(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getSubseconds(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
+      }
       case FIXED_CHAR -> ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
       case VAR_CHAR -> ExpressionCreator.varChar(
           literal.getNullable(), literal.getVarChar().getValue(), literal.getVarChar().getLength());

@@ -95,6 +95,11 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
+  public OUTPUT visit(Expression.IntervalCompoundLiteral expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
   public OUTPUT visit(Expression.UUIDLiteral expr) throws EXCEPTION {
     return visitFallback(expr);
   }

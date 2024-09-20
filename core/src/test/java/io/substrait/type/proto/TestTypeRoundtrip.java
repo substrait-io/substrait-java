@@ -28,12 +28,15 @@ public class TestTypeRoundtrip {
     t(creator(n).TIMESTAMP);
     t(creator(n).TIMESTAMP_TZ);
     t(creator(n).INTERVAL_YEAR);
-    t(creator(n).INTERVAL_DAY);
     t(creator(n).UUID);
     t(creator(n).fixedChar(25));
     t(creator(n).varChar(35));
     t(creator(n).fixedBinary(45));
     t(creator(n).decimal(34, 3));
+    t(creator(n).intervalDay(6));
+    t(creator(n).intervalCompound(3));
+    t(creator(n).precisionTimestamp(1));
+    t(creator(n).precisionTimestampTZ(2));
     t(creator(n).map(creator(n).I8, creator(n).I16));
     t(creator(n).list(creator(n).TIME));
     t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));

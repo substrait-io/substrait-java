@@ -118,7 +118,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ValueSource(booleans = {true, false})
   void intervalDay(boolean nullable) {
     testType(
-        Type.withNullability(nullable).INTERVAL_DAY,
+        Type.withNullability(nullable).intervalDay(6),
         type.createSqlIntervalType(SubstraitTypeSystem.DAY_SECOND_INTERVAL),
         nullable);
   }
