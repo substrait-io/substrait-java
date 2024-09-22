@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.40.0](https://github.com/substrait-io/substrait-java/compare/v0.39.0...v0.40.0) (2024-09-22)
+
+### ⚠ BREAKING CHANGES
+
+* IntervalDay now has "subsecond" and "precision" fields instead
+of "microseconds". Old protobufs should be still read correctly.
+
+### Features
+
+* support new IntervalCompound and updated IntervalDay types ([#288](https://github.com/substrait-io/substrait-java/issues/288)) ([e24ce6f](https://github.com/substrait-io/substrait-java/commit/e24ce6f3288f247c80f8162135ee4feddd705ff3))
+
 ## [0.39.0](https://github.com/substrait-io/substrait-java/compare/v0.38.1...v0.39.0) (2024-09-01)
 
 ### Features
