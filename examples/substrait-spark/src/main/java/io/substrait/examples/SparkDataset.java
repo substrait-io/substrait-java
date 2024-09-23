@@ -15,10 +15,6 @@ import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 /** Minimal Spark application */
 public class SparkDataset implements App.Action {
 
-  public SparkDataset() {
-
-  }
-
   @Override
   public void run(String arg) {
 
@@ -32,8 +28,8 @@ public class SparkDataset implements App.Action {
       String vehiclesFile = Paths.get(ROOT_DIR, VEHICLES_CSV).toString();
       String testsFile = Paths.get(ROOT_DIR, TESTS_CSV).toString();
 
-      System.out.println("Reading "+vehiclesFile);
-      System.out.println("Reading "+testsFile);
+      System.out.println("Reading " + vehiclesFile);
+      System.out.println("Reading " + testsFile);
 
       dsVehicles = spark.read().option("delimiter", ",").option("header", "true").csv(vehiclesFile);
       dsVehicles.show();
@@ -61,6 +57,11 @@ public class SparkDataset implements App.Action {
     }
   }
 
+  /**
+   * Create substrait plan and save to file based on logical plan
+   *
+   * @param enginePlan logical plan
+   */
   public void createSubstrait(LogicalPlan enginePlan) {
     ToSubstraitRel toSubstrait = new ToSubstraitRel();
     io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
@@ -70,8 +71,8 @@ public class SparkDataset implements App.Action {
     PlanProtoConverter planToProto = new PlanProtoConverter();
     byte[] buffer = planToProto.toProto(plan).toByteArray();
     try {
-      Files.write(Paths.get(ROOT_DIR,"spark_dataset_substrait.plan"), buffer);
-      System.out.println("File written to "+Paths.get(ROOT_DIR,"spark_sql_substrait.plan"));
+      Files.write(Paths.get(ROOT_DIR, "spark_dataset_substrait.plan"), buffer);
+      System.out.println("File written to " + Paths.get(ROOT_DIR, "spark_sql_substrait.plan"));
     } catch (IOException e) {
       e.printStackTrace(System.out);
     }

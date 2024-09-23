@@ -1,20 +1,26 @@
 package io.substrait.examples;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
+/** Main class */
+public final class App {
 
-import io.substrait.plan.Plan;
-import io.substrait.plan.ProtoPlanConverter;
+    /** Implemented by all examples */
+    public interface Action {
 
-public class App {
-
-    public static interface Action {
-        public void run(String arg);
+        /** Run
+         *
+         * @param arg argument
+         */
+        void run(String arg);
     }
 
     private App() {
     }
 
+    /**
+     * Traditional main method
+     *
+     * @param args string[]
+     */
     public static void main(String args[]) {
         try {
 

@@ -17,8 +17,7 @@ import static io.substrait.examples.SparkHelper.ROOT_DIR;
 /** Minimal Spark application */
 public class SparkConsumeSubstrait implements App.Action {
 
-  public SparkConsumeSubstrait() {
-  }
+
 
   @Override
   public void run(String arg) {

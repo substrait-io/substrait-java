@@ -1,7 +1,6 @@
 # Introduction to the Substrait-Spark library
 
-The Substrait-Spark library was recently added to the [substrait-java](https://github.com/substrait-io/substrait-java) project; this library allows Substrait plans to convert to and from Spark Plans.
-
+The Substrait-Spark library allows Substrait plans to convert to and from Spark Plans. This example will show how this can be used.
 
 ## How does this work in practice?
 
@@ -27,7 +26,7 @@ To run these you will need:
 - Java 17 or greater
 - Docker to start a test Spark Cluster
   - you could use your own cluster, but would need to adjust file locations defined in [SparkHelper](./app/src/main/java/io/substrait/examples/SparkHelper.java)
-- [just task runner](https://github.com/casey/just#installation) optional, but very helpful to run the bash commands
+- The [just task runner](https://github.com/casey/just#installation) is optional, but very helpful to run the bash commands
 - [Two datafiles](./app/src/main/resources/) are provided (CSV format)
 
 For building using the `substrait-spark` library youself, using the [mvn repository](https://mvnrepository.com/artifact/io.substrait/spark)

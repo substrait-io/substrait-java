@@ -9,3 +9,5 @@ out/**
 *.iws
 .vscode
 .pmdCache
+
+*/bin
