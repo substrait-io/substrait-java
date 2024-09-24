@@ -82,11 +82,15 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
         )
         throw new IllegalArgumentException(msg)
       })
+
+    val filter = Option(measure.getPreMeasureFilter.orElse(null))
+      .map(_.accept(expressionConverter))
+
     AggregateExpression(
       aggregateFunction,
       ToAggregateFunction.toSpark(function.aggregationPhase()),
       ToAggregateFunction.toSpark(function.invocation()),
-      None
+      filter
     )
   }
 
