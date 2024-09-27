@@ -131,6 +131,15 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
+  override def visit(expand: Expand): String = {
+    withBuilder(expand, 8)(
+      builder => {
+        builder
+          .append("fields=")
+          .append(expand.getFields)
+      })
+  }
+
   override def visit(aggregate: Aggregate): String = {
     withBuilder(aggregate, 10)(
       builder => {

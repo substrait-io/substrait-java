@@ -18,11 +18,9 @@ package io.substrait.spark.expression
 
 import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, ToSubstraitType}
 import io.substrait.spark.logical.ToLogicalPlan
-
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, NamedExpression, ScalarSubquery}
-import org.apache.spark.sql.types.Decimal
+import org.apache.spark.sql.types.{Decimal, NullType}
 import org.apache.spark.unsafe.types.UTF8String
-
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
@@ -75,6 +73,10 @@ class ToSparkExpression(
   }
   override def visit(expr: SExpression.DateLiteral): Expression = {
     Literal(expr.value(), ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.NullLiteral): Expression = {
+    Literal(null, ToSubstraitType.convert(expr.getType))
   }
 
   override def visit(expr: SExpression.Cast): Expression = {

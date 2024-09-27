@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.extension.AdvancedExtension;
+import io.substrait.hint.Hint;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
@@ -20,6 +21,8 @@ public interface Rel {
   Type.Struct getRecordType();
 
   List<Rel> getInputs();
+
+  Optional<Hint> getHint();
 
   @Value.Immutable
   public abstract static class Remap {

@@ -23,6 +23,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
 
   OUTPUT visit(Project project) throws EXCEPTION;
 
+  OUTPUT visit(Expand expand) throws EXCEPTION;
+
   OUTPUT visit(Sort sort) throws EXCEPTION;
 
   OUTPUT visit(Cross cross) throws EXCEPTION;

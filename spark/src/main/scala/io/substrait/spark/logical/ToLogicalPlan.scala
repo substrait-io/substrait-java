@@ -18,7 +18,6 @@ package io.substrait.spark.logical
 
 import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
-
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.expressions._
@@ -29,13 +28,13 @@ import org.apache.spark.sql.catalyst.util.toPrettySQL
 import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
-import org.apache.spark.sql.types.{DataTypes, IntegerType, StructType}
-
+import org.apache.spark.sql.types.{DataTypes, IntegerType, StructField, StructType}
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
 import io.substrait.relation
+import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.LocalFiles
 import org.apache.hadoop.fs.Path
 
@@ -82,11 +81,15 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
         )
         throw new IllegalArgumentException(msg)
       })
+
+    val filter = Option(measure.getPreMeasureFilter.orElse(null))
+      .map(_.accept(expressionConverter))
+
     AggregateExpression(
       aggregateFunction,
       ToAggregateFunction.toSpark(function.aggregationPhase()),
       ToAggregateFunction.toSpark(function.invocation()),
-      None
+      filter
     )
   }
 
@@ -190,6 +193,27 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
         val aggregate: Aggregate = child.asInstanceOf[Aggregate]
         aggregate.copy(aggregateExpressions = projectList)
       }
+    }
+  }
+
+  override def visit(expand: relation.Expand): LogicalPlan = {
+    val child = expand.getInput.accept(this)
+    val names = expand.getHint.get().getOutputNames.asScala
+
+    withChild(child) {
+      val projections = expand.getFields.asScala
+        .map {
+          case sf: SwitchingField => sf.getDuplicates.asScala
+            .map(expr => expr.accept(expressionConverter))
+            .map(toNamedExpression)
+          case _: ConsistentField => throw new UnsupportedOperationException("ConsistentField not currently supported")
+        }
+
+      val output = projections.head.zip(names)
+        .map { case (t, name) => StructField(name, t.dataType, t.nullable) }
+        .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+
+      Expand(projections, output, child)
     }
   }
 

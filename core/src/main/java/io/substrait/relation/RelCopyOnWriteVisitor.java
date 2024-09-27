@@ -202,6 +202,11 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
+  public Optional<Rel> visit(Expand expand) throws EXCEPTION {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public Optional<Rel> visit(Sort sort) throws EXCEPTION {
     var input = sort.getInput().accept(this);
     var sortFields = transformList(sort.getSortFields(), this::visitSortField);

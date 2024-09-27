@@ -67,6 +67,7 @@ class FunctionMappings {
     s[Count]("count"),
     s[Min]("min"),
     s[Max]("max"),
+    s[First]("any_value"),
     s[HyperLogLogPlusPlus]("approx_count_distinct")
   )
 

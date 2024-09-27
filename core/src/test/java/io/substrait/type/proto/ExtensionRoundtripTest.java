@@ -7,6 +7,7 @@ import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
+import io.substrait.relation.Expand;
 import io.substrait.relation.ExtensionLeaf;
 import io.substrait.relation.ExtensionMulti;
 import io.substrait.relation.ExtensionSingle;
@@ -229,6 +230,16 @@ public class ExtensionRoundtripTest extends TestBase {
             .from(b.project(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void expand() {
+    Rel rel =
+        Expand.builder()
+            .from(b.expand(__ -> Collections.emptyList(), commonTable))
+            .commonExtension(commonExtension)
             .build();
     verifyRoundTrip(rel);
   }
