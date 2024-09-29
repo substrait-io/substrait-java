@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.41.0](https://github.com/substrait-io/substrait-java/compare/v0.40.0...v0.41.0) (2024-09-29)
+
+### Features
+
+* add ExpandRel support to core and Spark ([#295](https://github.com/substrait-io/substrait-java/issues/295)) ([32fea18](https://github.com/substrait-io/substrait-java/commit/32fea180e68ad7b0954e649a870e5e0ba8d7a6ed))
+
 ## [0.40.0](https://github.com/substrait-io/substrait-java/compare/v0.39.0...v0.40.0) (2024-09-22)
 
 ### ⚠ BREAKING CHANGES
