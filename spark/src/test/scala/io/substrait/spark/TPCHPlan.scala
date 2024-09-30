@@ -73,10 +73,16 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
         "order by l_shipdate asc, l_discount desc nulls last")
   }
 
-  ignore("simpleOffsetClause") { // TODO need to implement the 'offset' clause for this to pass
+  test("simpleOffsetClause") {
     assertSqlSubstraitRelRoundTrip(
       "select l_partkey from lineitem where l_shipdate < date '1998-01-01' " +
         "order by l_shipdate asc, l_discount desc limit 100 offset 1000")
+    assertSqlSubstraitRelRoundTrip(
+      "select l_partkey from lineitem where l_shipdate < date '1998-01-01' " +
+        "order by l_shipdate asc, l_discount desc offset 1000")
+    assertSqlSubstraitRelRoundTrip(
+      "select l_partkey from lineitem where l_shipdate < date '1998-01-01' " +
+        "order by l_shipdate asc, l_discount desc limit 100")
   }
 
   test("simpleTest") {

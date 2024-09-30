@@ -170,23 +170,37 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case other => throw new UnsupportedOperationException(s"Unknown type: $other")
   }
 
-  private def fetchBuilder(limit: Long, global: Boolean): relation.ImmutableFetch.Builder = {
-    val offset = if (global) 1L else -1L
-    relation.Fetch
-      .builder()
-      .count(limit)
+  private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
+    relation.Fetch.builder()
+      .input(visit(child))
       .offset(offset)
-  }
-  override def visitGlobalLimit(p: GlobalLimit): relation.Rel = {
-    fetchBuilder(asLong(p.limitExpr), global = true)
-      .input(visit(p.child))
+      .count(limit)
       .build()
   }
 
+  override def visitGlobalLimit(p: GlobalLimit): relation.Rel = {
+    p match {
+      case OffsetAndLimit((offset, limit, child)) => fetch(child, offset, limit)
+      case GlobalLimit(IntegerLiteral(globalLimit), LocalLimit(IntegerLiteral(localLimit), child))
+        if globalLimit == localLimit => fetch(child, 0, localLimit)
+      case _ =>
+        throw new UnsupportedOperationException(s"Unable to convert the limit expression: $p")
+    }
+  }
+
   override def visitLocalLimit(p: LocalLimit): relation.Rel = {
-    fetchBuilder(asLong(p.limitExpr), global = false)
-      .input(visit(p.child))
-      .build()
+    val localLimit = asLong(p.limitExpr)
+    p.child match {
+      case OffsetAndLimit((offset, limit, child)) if localLimit >= limit =>
+        fetch(child, offset, limit)
+      case GlobalLimit(IntegerLiteral(globalLimit), child) if localLimit >= globalLimit =>
+        fetch(child, 0, globalLimit)
+      case _ => fetch(p.child, 0, localLimit)
+    }
+  }
+
+  override def visitOffset(p: Offset): relation.Rel = {
+    fetch(p.child, asLong(p.offsetExpr))
   }
 
   override def visitFilter(p: Filter): relation.Rel = {
