@@ -1,16 +1,18 @@
 package io.substrait.examples;
 
+import static io.substrait.examples.SparkHelper.ROOT_DIR;
+import static io.substrait.examples.SparkHelper.TESTS_CSV;
+import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
+
+import io.substrait.plan.PlanProtoConverter;
+import io.substrait.spark.logical.ToSubstraitRel;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import java.io.IOException;
-import java.nio.file.*;
-import io.substrait.plan.PlanProtoConverter;
-import io.substrait.spark.logical.ToSubstraitRel;
-import static io.substrait.examples.SparkHelper.ROOT_DIR;
-import static io.substrait.examples.SparkHelper.TESTS_CSV;
-import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 
 /** Minimal Spark application */
 public class SparkDataset implements App.Action {
@@ -38,10 +40,12 @@ public class SparkDataset implements App.Action {
       dsTests.show();
 
       // created the joined dataset
-      Dataset<Row> joinedDs = dsVehicles.join(dsTests, dsVehicles.col("vehicle_id").equalTo(dsTests.col("vehicle_id")))
-          .filter(dsTests.col("test_result").equalTo("P"))
-          .groupBy(dsVehicles.col("colour"))
-          .count();
+      Dataset<Row> joinedDs =
+          dsVehicles
+              .join(dsTests, dsVehicles.col("vehicle_id").equalTo(dsTests.col("vehicle_id")))
+              .filter(dsTests.col("test_result").equalTo("P"))
+              .groupBy(dsVehicles.col("colour"))
+              .count();
 
       joinedDs = joinedDs.orderBy(joinedDs.col("count"));
       joinedDs.show();
@@ -77,5 +81,4 @@ public class SparkDataset implements App.Action {
       e.printStackTrace(System.out);
     }
   }
-
 }

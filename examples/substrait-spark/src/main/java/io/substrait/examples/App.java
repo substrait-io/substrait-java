@@ -3,44 +3,43 @@ package io.substrait.examples;
 /** Main class */
 public final class App {
 
-    /** Implemented by all examples */
-    public interface Action {
-
-        /** Run
-         *
-         * @param arg argument
-         */
-        void run(String arg);
-    }
-
-    private App() {
-    }
+  /** Implemented by all examples */
+  public interface Action {
 
     /**
-     * Traditional main method
+     * Run
      *
-     * @param args string[]
+     * @param arg argument
      */
-    public static void main(String args[]) {
-        try {
+    void run(String arg);
+  }
 
-            if (args.length == 0) {
-                args = new String[] { "SparkDataset" };
-            }
-            String exampleClass = args[0];
+  private App() {}
 
-            var clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
-            var action = (Action) clz.getDeclaredConstructor().newInstance();
+  /**
+   * Traditional main method
+   *
+   * @param args string[]
+   */
+  public static void main(String args[]) {
+    try {
 
-            if (args.length == 2) {
-                action.run(args[1]);
-            } else {
-                action.run(null);
-            }
+      if (args.length == 0) {
+        args = new String[] {"SparkDataset"};
+      }
+      String exampleClass = args[0];
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+      var clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
+      var action = (Action) clz.getDeclaredConstructor().newInstance();
+
+      if (args.length == 2) {
+        action.run(args[1]);
+      } else {
+        action.run(null);
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-
+  }
 }

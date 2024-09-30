@@ -6,15 +6,13 @@ import static io.substrait.examples.SparkHelper.TESTS_TABLE;
 import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 import static io.substrait.examples.SparkHelper.VEHICLE_TABLE;
 
+import io.substrait.plan.PlanProtoConverter;
+import io.substrait.spark.logical.ToSubstraitRel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-
-import io.substrait.plan.PlanProtoConverter;
-import io.substrait.spark.logical.ToSubstraitRel;
 
 /** Minimal Spark application */
 public class SparkSQL implements App.Action {
@@ -33,19 +31,28 @@ public class SparkSQL implements App.Action {
       System.out.println("Reading " + vehiclesFile);
       System.out.println("Reading " + testsFile);
 
-      spark.read().option("delimiter", ",").option("header", "true").csv(vehiclesFile)
+      spark
+          .read()
+          .option("delimiter", ",")
+          .option("header", "true")
+          .csv(vehiclesFile)
           .createOrReplaceTempView(VEHICLE_TABLE);
-      spark.read().option("delimiter", ",").option("header", "true").csv(testsFile)
-        .createOrReplaceTempView(TESTS_TABLE);
+      spark
+          .read()
+          .option("delimiter", ",")
+          .option("header", "true")
+          .csv(testsFile)
+          .createOrReplaceTempView(TESTS_TABLE);
 
-      String sqlQuery = "SELECT vehicles.colour, count(*) as colourcount"+
-           " FROM vehicles"+
-           " INNER JOIN tests ON vehicles.vehicle_id=tests.vehicle_id"+
-           " WHERE tests.test_result = 'P'"+
-           " GROUP BY vehicles.colour"+
-           " ORDER BY count(*)";
+      String sqlQuery =
+          "SELECT vehicles.colour, count(*) as colourcount"
+              + " FROM vehicles"
+              + " INNER JOIN tests ON vehicles.vehicle_id=tests.vehicle_id"
+              + " WHERE tests.test_result = 'P'"
+              + " GROUP BY vehicles.colour"
+              + " ORDER BY count(*)";
 
-          var result = spark.sql(sqlQuery);
+      var result = spark.sql(sqlQuery);
       result.show();
 
       LogicalPlan logical = result.logicalPlan();
@@ -61,7 +68,9 @@ public class SparkSQL implements App.Action {
     }
   }
 
-  /** creates a substrait plan based on the logical plan
+  /**
+   * creates a substrait plan based on the logical plan
+   *
    * @param enginePlan Spark Local PLan
    */
   public void createSubstrait(LogicalPlan enginePlan) {
@@ -72,12 +81,11 @@ public class SparkSQL implements App.Action {
     PlanProtoConverter planToProto = new PlanProtoConverter();
     byte[] buffer = planToProto.toProto(plan).toByteArray();
     try {
-      Files.write(Paths.get(ROOT_DIR,"spark_sql_substrait.plan"), buffer);
-      System.out.println("File written to "+Paths.get(ROOT_DIR,"spark_sql_substrait.plan"));
+      Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"), buffer);
+      System.out.println("File written to " + Paths.get(ROOT_DIR, "spark_sql_substrait.plan"));
 
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
-
 }

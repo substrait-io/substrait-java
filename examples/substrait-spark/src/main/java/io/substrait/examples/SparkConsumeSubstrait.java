@@ -1,23 +1,19 @@
 package io.substrait.examples;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import static io.substrait.examples.SparkHelper.ROOT_DIR;
 
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.spark.logical.ToLogicalPlan;
-
-import static io.substrait.examples.SparkHelper.ROOT_DIR;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 
 /** Minimal Spark application */
 public class SparkConsumeSubstrait implements App.Action {
-
-
 
   @Override
   public void run(String arg) {
@@ -44,5 +40,4 @@ public class SparkConsumeSubstrait implements App.Action {
       e.printStackTrace();
     }
   }
-
 }
