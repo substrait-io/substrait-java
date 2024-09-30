@@ -35,6 +35,7 @@ import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutablePlan, ImmutableRoot, Plan}
 import io.substrait.relation.RelProtoConverter
+import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 
@@ -266,6 +267,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val input = visit(sort.child)
     val fields = sort.order.map(toSortField(sort.child.output)).asJava
     relation.Sort.builder.addAllSortFields(fields).input(input).build
+  }
+
+  override def visitUnion(union: Union): relation.Rel = {
+    if (union.byName) {
+      throw new UnsupportedOperationException("Union by column name is not supported")
+    }
+    relation.Set.builder
+      .inputs(union.children.map(c => visit(c)).asJava)
+      .setOp(SetOp.UNION_ALL)
+      .build()
   }
 
   private def toExpression(output: Seq[Attribute])(e: Expression): SExpression = {

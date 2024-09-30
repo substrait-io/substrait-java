@@ -36,6 +36,7 @@ import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.LocalFiles
+import io.substrait.relation.Set.SetOp
 import org.apache.hadoop.fs.Path
 
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -222,6 +223,16 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     withChild(child) {
       val condition = filter.getCondition.accept(expressionConverter)
       Filter(condition, child)
+    }
+  }
+
+  override def visit(set: relation.Set): LogicalPlan = {
+    val children = set.getInputs.asScala.map(_.accept(this))
+    withOutput(children.flatMap(_.output)) {
+      set.getSetOp match {
+        case SetOp.UNION_ALL => Union(children, byName = false, allowMissingCol = false)
+        case op => throw new UnsupportedOperationException(s"Operation not currently supported: $op")
+      }
     }
   }
 
