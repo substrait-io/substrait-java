@@ -26,8 +26,10 @@ import scala.collection.JavaConverters
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 object SparkExtension {
+  final val uri = "/spark.yml"
+
   private val SparkImpls: SimpleExtension.ExtensionCollection =
-    SimpleExtension.load(Collections.singletonList("/spark.yml"))
+    SimpleExtension.load(Collections.singletonList(uri))
 
   private val EXTENSION_COLLECTION: SimpleExtension.ExtensionCollection =
     SimpleExtension.loadDefaults()

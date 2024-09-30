@@ -16,10 +16,10 @@
  */
 package io.substrait.spark.expression
 
-import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, ToSubstraitType}
+import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtension, ToSubstraitType}
 import io.substrait.spark.logical.ToLogicalPlan
-import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, NamedExpression, ScalarSubquery}
-import org.apache.spark.sql.types.{Decimal, NullType}
+import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.types.Decimal
 import org.apache.spark.unsafe.types.UTF8String
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
@@ -131,23 +131,32 @@ class ToSparkExpression(
         arg.accept(expr.declaration(), i, this)
     }
 
-    scalarFunctionConverter
-      .getSparkExpressionFromSubstraitFunc(expr.declaration().key(), expr.outputType())
-      .flatMap(sig => Option(sig.makeCall(args)))
-      .getOrElse({
-        val msg = String.format(
-          "Unable to convert scalar function %s(%s).",
-          expr.declaration.name,
-          expr.arguments.asScala
-            .map {
-              case ea: exp.EnumArg => ea.value.toString
-              case e: SExpression => e.getType.accept(new StringTypeVisitor)
-              case t: Type => t.accept(new StringTypeVisitor)
-              case a => throw new IllegalStateException("Unexpected value: " + a)
-            }
-            .mkString(", ")
-        )
-        throw new IllegalArgumentException(msg)
-      })
+    expr.declaration.name match {
+      case "make_decimal" if expr.declaration.uri == SparkExtension.uri => expr.outputType match {
+        // Need special case handing of this internal function.
+        // Because the precision and scale arguments are extracted from the output type,
+        // we can't use the generic scalar function conversion mechanism here.
+        case d: Type.Decimal => MakeDecimal(args.head, d.precision, d.scale)
+        case _ => throw new IllegalArgumentException("Output type of MakeDecimal must be a decimal type")
+      }
+      case _ => scalarFunctionConverter
+        .getSparkExpressionFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+        .flatMap(sig => Option(sig.makeCall(args)))
+        .getOrElse({
+          val msg = String.format(
+            "Unable to convert scalar function %s(%s).",
+            expr.declaration.name,
+            expr.arguments.asScala
+              .map {
+                case ea: exp.EnumArg => ea.value.toString
+                case e: SExpression => e.getType.accept(new StringTypeVisitor)
+                case t: Type => t.accept(new StringTypeVisitor)
+                case a => throw new IllegalStateException("Unexpected value: " + a)
+              }
+              .mkString(", ")
+          )
+          throw new IllegalArgumentException(msg)
+        })
+    }
   }
 }

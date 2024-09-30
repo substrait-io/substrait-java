@@ -58,6 +58,7 @@ class FunctionMappings {
     s[Year]("year"),
 
     // internal
+    s[MakeDecimal]("make_decimal"),
     s[UnscaledValue]("unscaled")
   )
 
