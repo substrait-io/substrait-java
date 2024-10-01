@@ -6,6 +6,7 @@ import static io.substrait.examples.SparkHelper.TESTS_TABLE;
 import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 import static io.substrait.examples.SparkHelper.VEHICLE_TABLE;
 
+import io.substrait.examples.util.SubstraitStringify;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.spark.logical.ToSubstraitRel;
 import java.io.IOException;
@@ -76,7 +77,8 @@ public class SparkSQL implements App.Action {
   public void createSubstrait(LogicalPlan enginePlan) {
     ToSubstraitRel toSubstrait = new ToSubstraitRel();
     io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
-    System.out.println(plan);
+
+    SubstraitStringify.explain(plan).forEach(System.out::println);
 
     PlanProtoConverter planToProto = new PlanProtoConverter();
     byte[] buffer = planToProto.toProto(plan).toByteArray();

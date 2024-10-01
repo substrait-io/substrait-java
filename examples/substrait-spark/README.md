@@ -95,8 +95,16 @@ The `justfile` has three targets to make it easy to run the examples
 - `just dataset` runs the Dataset API and produces `spark_dataset_substrait.plan`
 - `just sql` runs the SQL api and produces `spark_sql_substrait.plan`
 - `just consume <planfile>` runs the specified plan (from the `_data` directory)
-
-
+- run `just` without arguments to get a summary of the targets available.
+```
+just
+Available recipes:
+    buildapp    # Builds the application into a JAR file
+    consume arg # Consumes the Substrait plan file passed as the argument
+    dataset     # Runs a Spark dataset api query and produces a Substrait plan
+    spark       # Starts a simple Spark cluster locally in docker
+    sql         # Runs a Spark SQL api query and produces a Substrait plan
+```
 
 
 ## Creating a Substrait Plan
@@ -266,7 +274,7 @@ The `io.substrait.plan.Plan` object is a high-level Substrait POJO representing 
 
 For the dataset approach, the `spark_dataset_substrait.plan` is created, and for the SQL approach the `spark_sql_substrait.plan` is created.  These Intermediate Representations of the query can be saved, transferred and reloaded into a Data Engine.
 
-We can also review the Substrait plan's structure; the canonical format of the Substrait plan is the binary protobuf format, but it's possible to produce a textual version, an example is below. Both the Substrait plans from the Dataset or SQL APIs generate the same output.
+We can also review the Substrait plan's structure; the canonical format of the Substrait plan is the binary protobuf format, but it's possible to produce a textual version, an example is below (please see the [SubstraitStringify utility class](./src/main/java/io/substrait/examples/util/SubstraitStringify.java); it's also a good example of how to use some if the vistor patterns).  Both the Substrait plans from the Dataset or SQL APIs generate the same output.
 
 ```
 <Substrait Plan>
@@ -318,7 +326,9 @@ Loading the binary protobuf file is the reverse of the writing process (in the c
       ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
       Plan plan = protoToPlan.from(proto);
 ```
-The loaded byte array is first converted into the protobuf Plan, and then into the Substrait Plan object. Note it can be useful to name the variables, and/or use the pull class names to keep track of it's the ProtoBuf Plan or the high-level POJO Plan.
+
+The loaded byte array is first converted into the protobuf Plan, and then into the Substrait Plan object. Note it can be useful to name the variables, and/or use the full class names to keep track of it's the ProtoBuf Plan or the high-level POJO Plan. For example `io.substrait.proto.Plan` or `io.substrait.Plan`
+
 
 Finally this can be converted to a Spark Plan:
 
@@ -395,6 +405,9 @@ When converted to Substrait the Sort and Aggregate is in the same order, but the
       +- Aggregate:: FieldRef#/Str/StructField{offset=0}
 ```
 
+These look different due to two factors. Firstly the Spark optimizer has swapped the project and aggregate functions.
+Secondly projects within the Substrait plan joined the fields together but don't reduce the number of fields. Any such filtering is done on the outer relations.
+
 ### Inner Join
 
 Spark's inner join is taking as inputs the two filtered relations; it's ensuring the join key is not null but also the `test_result==p` check.
@@ -408,7 +421,7 @@ Spark's inner join is taking as inputs the two filtered relations; it's ensuring
                +- Filter ((isnotnull(test_result#14) AND (test_result#14 = P)) AND isnotnull(vehicle_id#10))
 ```
 
-The Substrait Representation looks longer, but is showing the same structure. (note that this format is a custom format implemented as [SubstraitStingify](...) as the standard text output can be hard to read).
+The Substrait Representation looks longer, but is showing the same structure. (note that this format is a custom format implemented as [SubstraitStingify](./src/main/java/io/substrait/examples/util/SubstraitStringify.java) as the standard text output can be hard to read).
 
 ```
             +- Join:: INNER <ScalarFn>equal:any_any

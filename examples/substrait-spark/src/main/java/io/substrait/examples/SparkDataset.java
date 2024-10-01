@@ -4,6 +4,7 @@ import static io.substrait.examples.SparkHelper.ROOT_DIR;
 import static io.substrait.examples.SparkHelper.TESTS_CSV;
 import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 
+import io.substrait.examples.util.SubstraitStringify;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.spark.logical.ToSubstraitRel;
 import java.io.IOException;
@@ -70,7 +71,7 @@ public class SparkDataset implements App.Action {
     ToSubstraitRel toSubstrait = new ToSubstraitRel();
     io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
 
-    System.out.println(plan);
+    SubstraitStringify.explain(plan).forEach(System.out::println);
 
     PlanProtoConverter planToProto = new PlanProtoConverter();
     byte[] buffer = planToProto.toProto(plan).toByteArray();

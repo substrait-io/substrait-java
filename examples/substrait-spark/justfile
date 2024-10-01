@@ -15,6 +15,7 @@ SPARK_MASTER_CONTAINER := "substrait-spark-spark-1"
 _default:
   @just -f {{justfile()}} --list
 
+# Builds the application into a JAR file
 buildapp:
     #!/bin/bash
     set -e -o pipefail
@@ -28,25 +29,28 @@ buildapp:
     cp ${CWDIR}/build/libs/substrait-spark*.jar ${CWDIR}/_apps/app.jar
     cp ${CWDIR}/src/main/resources/*.csv ${CWDIR}/_data
 
+# Runs a Spark dataset api query and produces a Substrait plan
 dataset:
     #!/bin/bash
     set -e -o pipefail
 
     docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkDataset"
 
+# Runs a Spark SQL api query and produces a Substrait plan
 sql:
     #!/bin/bash
     set -e -o pipefail
 
     docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkSQL"
 
+# Consumes the Substrait plan file passed as the argument
 consume arg:
     #!/bin/bash
     set -e -o pipefail
 
     docker exec -it ${SPARK_MASTER_CONTAINER} bash -c "/opt/bitnami/spark/bin/spark-submit --master spark://${SPARK_MASTER_CONTAINER}:7077  --driver-memory 1G --executor-memory 1G /opt/spark-apps/app.jar SparkConsumeSubstrait {{arg}}"
 
-
+# Starts a simple Spark cluster locally in docker
 spark:
     #!/bin/bash
     set -e -o pipefail

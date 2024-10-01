@@ -2,6 +2,7 @@ package io.substrait.examples;
 
 import static io.substrait.examples.SparkHelper.ROOT_DIR;
 
+import io.substrait.examples.util.SubstraitStringify;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.spark.logical.ToLogicalPlan;
@@ -27,6 +28,8 @@ public class SparkConsumeSubstrait implements App.Action {
       io.substrait.proto.Plan proto = io.substrait.proto.Plan.parseFrom(buffer);
       ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
       Plan plan = protoToPlan.from(proto);
+
+      SubstraitStringify.explain(plan).forEach(System.out::println);
 
       ToLogicalPlan substraitConverter = new ToLogicalPlan(spark);
       LogicalPlan sparkPlan = substraitConverter.convert(plan);
