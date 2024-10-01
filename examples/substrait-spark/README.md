@@ -4,7 +4,7 @@ The Substrait-Spark library allows Substrait plans to convert to and from Spark 
 
 ## How does this work in practice?
 
-Once Spark SQL and Spark DataFrame APIs queries have been created, Spark's optimized query plan can be used generate Substrait plans; and Substrait Plans can be executed on a Spark cluster. Below is a description of how to use this library; there are two sample datasets included for demonstration.
+Once Spark SQL and Spark DataFrame APIs queries have been created, Spark's optimized query plan can be used to generate Substrait plans; and Substrait Plans can be executed on a Spark cluster. Below is a description of how to use this library; there are two sample datasets included for demonstration.
 
 The most commonly used logical relations are supported, including those generated from all the TPC-H queries, but there are currently some gaps in support that prevent all the TPC-DS queries from being translatable.
 
@@ -25,13 +25,13 @@ To run these you will need:
 
 - Java 17 or greater
 - Docker to start a test Spark Cluster
-  - you could use your own cluster, but would need to adjust file locations defined in [SparkHelper](./app/src/main/java/io/substrait/examples/SparkHelper.java)
+  - You could use your own cluster, but would need to adjust file locations defined in [SparkHelper](./app/src/main/java/io/substrait/examples/SparkHelper.java)
 - The [just task runner](https://github.com/casey/just#installation) is optional, but very helpful to run the bash commands
 - [Two datafiles](./app/src/main/resources/) are provided (CSV format)
 
 For building using the `substrait-spark` library youself, using the [mvn repository](https://mvnrepository.com/artifact/io.substrait/spark)
 
-Using maven:
+Using Maven:
 ```xml
 <!-- https://mvnrepository.com/artifact/io.substrait/spark -->
 <dependency>
@@ -41,7 +41,7 @@ Using maven:
 </dependency>
 ```
 
-Using Gradle (groovy)
+Using Gradle (Groovy)
 ```groovy
 // https://mvnrepository.com/artifact/io.substrait/spark
 implementation 'io.substrait:spark:0.36.0'
@@ -49,7 +49,7 @@ implementation 'io.substrait:spark:0.36.0'
 
 ### Setup configuration
 
-Firstly the application needs to be built; this is a simple Java application. As well issuing the `gradle` build command it also creates two directories `_apps` and `_data`. The JAR file and will be copied to the `_apps` directory and the datafiles to the `_data`. Note that the permissions on the `_data` directory are set to group write - this allows the spark process in the docker container to write the output plan
+Firstly the application needs to be built; this is a simple Java application. As well issuing the `gradle` build command it also creates two directories `_apps` and `_data`. The JAR file and will be copied to the `_apps` directory and the datafiles to the `_data`. Note that the permissions on the `_data` directory are set to group write - this allows the Spark process in the docker container to write the output plan
 
 To run using `just`
 ```
@@ -152,7 +152,7 @@ If we were to just run this as-is, the output table would be below.
 
 ### Logical and Optimized Query Plans
 
-THe next step is to look at the logical and optimised query plans that Spark has constructed.
+The next step is to look at the logical and optimised query plans that Spark has constructed.
 
 ```java
       LogicalPlan logical = result.logicalPlan();
@@ -160,7 +160,6 @@ THe next step is to look at the logical and optimised query plans that Spark has
 
       LogicalPlan optimised = result.queryExecution().optimizedPlan();
       System.out.println(optimised);
-
 ```
 
 The logical plan will be:
@@ -310,7 +309,7 @@ As `Substrait Spark` library also allows plans to be loaded and executed, so the
 
 The [`SparkConsumeSubstrait`](./app/src/main/java/io/substrait/examples/SparkConsumeSubstrait.java) code shows how to load this file, and most importantly how to convert it to a Spark engine plan to execute
 
-Loading the binary protobuf file is the reverse of the writing process (in the code the file name comes from a command line argument, here we're showing the hardcode file name )
+Loading the binary protobuf file is the reverse of the writing process (in the code the file name comes from a command line argument, here we're showing the hardcoded file name )
 
 ```java
       byte[] buffer = Files.readAllBytes(Paths.get("spark_sql_substrait.plan"));
@@ -318,7 +317,6 @@ Loading the binary protobuf file is the reverse of the writing process (in the c
 
       ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
       Plan plan = protoToPlan.from(proto);
-
 ```
 The loaded byte array is first converted into the protobuf Plan, and then into the Substrait Plan object. Note it can be useful to name the variables, and/or use the pull class names to keep track of it's the ProtoBuf Plan or the high-level POJO Plan.
 
@@ -342,10 +340,9 @@ If you were to print out this plan, it has the identical structure to the plan s
             +- Project [vehicle_id#10]
                +- Filter ((isnotnull(test_result#14) AND (test_result#14 = P)) AND isnotnull(vehicle_id#10))
                   +- Relation [test_id#9,vehicle_id#10,test_date#11,test_class#12,test_type#13,test_result#14,test_mileage#15,postcode_area#16] csv
-
 ```
 
-Executed of this plan is then simple `Dataset.ofRows(spark, sparkPlan).show();` giving the output of
+Execution of this plan is then a simple `Dataset.ofRows(spark, sparkPlan).show();` giving the output of
 
 ```java
 +------+-----+
@@ -409,7 +406,6 @@ Spark's inner join is taking as inputs the two filtered relations; it's ensuring
 
             +- Project [vehicle_id#10]
                +- Filter ((isnotnull(test_result#14) AND (test_result#14 = P)) AND isnotnull(vehicle_id#10))
-
 ```
 
 The Substrait Representation looks longer, but is showing the same structure. (note that this format is a custom format implemented as [SubstraitStingify](...) as the standard text output can be hard to read).
@@ -483,7 +479,6 @@ For example the above plan can be handled with PyArrow or DuckDB (as an example 
             table_provider=self.simple_provider,
         )
       result = reader.read_all()
-
 ```
 
 When run with the plan pyarrow instantly rejects it with
@@ -533,7 +528,7 @@ As names is a array, we can check the final part of the name and return the matc
 ```
 
 
-When run the output is along these lines (the query is slightly different here for simplicity); we can see the tables being request and the schema expected. Nothing is done with the schema here but could be useful for ensuring that the expectations of the plan match the schema of the data held in the engine.
+When run the output is along these lines (the query is slightly different here for simplicity); we can see the tables being requested and the schema expected. Nothing is done with the schema here but could be useful for ensuring that the expectations of the plan match the schema of the data held in the engine.
 
 ```
 == Requesting table ['spark_catalog', 'default', 'vehicles'] with schema:
@@ -578,9 +573,3 @@ In the case of Spark for example, identical plans can be created with the Spark 
 Logical references to a 'table' via a `NamedScan` gives more flexibility; but the structure of the reference still needs to be properly understood and agreed upon.
 
 Once common understanding is agreed upon, transferring plans between engines brings great flexibility and potential.
-
-
-
-
-
-
