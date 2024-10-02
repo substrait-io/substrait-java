@@ -32,3 +32,12 @@ scalar_functions:
       - args:
           - value: DECIMAL<P,S>
         return: i64
+  -
+    name: make_decimal
+    description:  >-
+      Return the Decimal value of an unscaled Long.
+      Note: this expression is internal and created only by the optimizer,
+    impls:
+      - args:
+          - value: i64
+        return: DECIMAL<P,S>
