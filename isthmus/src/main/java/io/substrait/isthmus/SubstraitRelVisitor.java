@@ -217,14 +217,15 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Intersect intersect) {
     var inputs = apply(intersect.getInputs());
-    var setOp = intersect.all ? Set.SetOp.INTERSECTION_MULTISET : Set.SetOp.INTERSECTION_PRIMARY;
+    var setOp =
+        intersect.all ? Set.SetOp.INTERSECTION_MULTISET_ALL : Set.SetOp.INTERSECTION_MULTISET;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Minus minus) {
     var inputs = apply(minus.getInputs());
-    var setOp = minus.all ? Set.SetOp.MINUS_MULTISET : Set.SetOp.MINUS_PRIMARY;
+    var setOp = minus.all ? Set.SetOp.MINUS_PRIMARY_ALL : Set.SetOp.MINUS_PRIMARY;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
