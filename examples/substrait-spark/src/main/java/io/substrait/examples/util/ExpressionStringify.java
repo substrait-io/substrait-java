@@ -114,7 +114,7 @@ public class ExpressionStringify extends ParentStringify
 
   @Override
   public String visit(TimestampTZLiteral expr) throws RuntimeException {
-    return "<TimestampeTXLiteral " + expr.value() + ">";
+    return "<TimestampTZLiteral " + expr.value() + ">";
   }
 
   @Override

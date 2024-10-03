@@ -127,7 +127,7 @@ Firstly the filenames are created, and the CSV files read. Temporary views need 
 
 ### Creating the SQL query
 
-The standard SQL query string as an example will find the counts of all cars (arranged by colour) of all vehicles that have passed the vehicle safety test.
+The following standard SQL query string finds the counts of all cars (grouped by colour) of all vehicles that have passed the vehicle safety test.
 
 ```java
       String sqlQuery = """
@@ -202,7 +202,7 @@ Sort [colourcount#30L ASC NULLS FIRST], true
 
 ### Dataset API
 
-Alternatively, the dataset API can be used to create the plans, the code for this in [`SparkDataset`](./app/src/main/java/io/substrait/examples/SparkDataset.java).  The overall flow of the code is very similar
+Alternatively, the Dataset API can be used to create the plans, the code for this in [`SparkDataset`](./app/src/main/java/io/substrait/examples/SparkDataset.java).  The overall flow of the code is very similar
 
 Rather than create a temporary view, the reference to the datasets are kept in `dsVehicles` and `dsTests`
 ```java
@@ -242,7 +242,7 @@ Sort [count#189L ASC NULLS FIRST], true
 
 ### Substrait Creation
 
-This optimized plan is the best starting point to produce a Substrait Plan; there's a `createSubstrait(..)` function that does the work and writes a binary protobuf file (`spark)
+This optimized plan is the best starting point to produce a Substrait Plan; there's a `createSubstrait(..)` function that does the work and produces a binary protobuf Substrait file.
 
 ```
     LogicalPlan optimised = result.queryExecution().optimizedPlan();
@@ -258,7 +258,7 @@ Let's look at the APIs in the `createSubstrait(...)` method to see how it's usin
     io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
 ```
 
-`ToSubstraitRel` is the main class and provides the convert method; this takes the Spark plan (optimized plan is best) and produce the Substrait Plan.  The most common relations are supported currently - and the optimized plan is more likely to use these.
+`ToSubstraitRel` is the main class and provides the convert method; this takes the Spark plan (optimized plan is best) and produces the Substrait Plan.  The most common relations are supported currently - and the optimized plan is more likely to use these.
 
 The `io.substrait.plan.Plan` object is a high-level Substrait POJO representing a plan. This could be used directly or more likely be persisted. protobuf is the canonical serialization form.  It's easy to convert this and store in a file
 
@@ -274,7 +274,7 @@ The `io.substrait.plan.Plan` object is a high-level Substrait POJO representing 
 
 For the dataset approach, the `spark_dataset_substrait.plan` is created, and for the SQL approach the `spark_sql_substrait.plan` is created.  These Intermediate Representations of the query can be saved, transferred and reloaded into a Data Engine.
 
-We can also review the Substrait plan's structure; the canonical format of the Substrait plan is the binary protobuf format, but it's possible to produce a textual version, an example is below (please see the [SubstraitStringify utility class](./src/main/java/io/substrait/examples/util/SubstraitStringify.java); it's also a good example of how to use some if the vistor patterns).  Both the Substrait plans from the Dataset or SQL APIs generate the same output.
+We can also review the Substrait plan's structure; the canonical format of the Substrait plan is the binary protobuf format, but it's possible to produce a textual version, an example is below (please see the [SubstraitStringify utility class](./src/main/java/io/substrait/examples/util/SubstraitStringify.java); it's also a good example of how to use some of the visitor patterns).  Both the Substrait plans from the Dataset or SQL APIs generate the same output.
 
 ```
 <Substrait Plan>
@@ -306,16 +306,16 @@ Root ::  ImmutableSort [colour, count]
                          :  file:///opt/spark-data/tests_subset_2023.csv len=1491 partition=0 start=0
 ```
 
-There is a more detail in this version that the Spark versions; details of the functions called for example are included. However, the structure of the overall plan is identical with 1 exception. There is an additional `project` relation included between the `sort` and `aggregate` - this is necessary to get the correct types of the output data.
+There is more detail in this version than the Spark version; details of the functions called for example are included. However, the structure of the overall plan is identical with 1 exception. There is an additional `project` relation included between the `sort` and `aggregate` - this is necessary to get the correct types of the output data.
 
 We can also see in this case as the plan came from Spark directly it's also included the location of the datafiles. Below when we reload this into Spark, the locations of the files don't need to be explicitly included.
 
 
-As `Substrait Spark` library also allows plans to be loaded and executed, so the next step is to consume these Substrait plans.
+As the `Substrait Spark` library also allows plans to be loaded and executed, so the next step is to consume these Substrait plans.
 
 ## Consuming a Substrait Plan
 
-The [`SparkConsumeSubstrait`](./app/src/main/java/io/substrait/examples/SparkConsumeSubstrait.java) code shows how to load this file, and most importantly how to convert it to a Spark engine plan to execute
+The [`SparkConsumeSubstrait`](./app/src/main/java/io/substrait/examples/SparkConsumeSubstrait.java) code shows how to load this file, and most importantly how to convert it to a Spark engine plan to execute.
 
 Loading the binary protobuf file is the reverse of the writing process (in the code the file name comes from a command line argument, here we're showing the hardcoded file name )
 
@@ -327,7 +327,7 @@ Loading the binary protobuf file is the reverse of the writing process (in the c
       Plan plan = protoToPlan.from(proto);
 ```
 
-The loaded byte array is first converted into the protobuf Plan, and then into the Substrait Plan object. Note it can be useful to name the variables, and/or use the full class names to keep track of it's the ProtoBuf Plan or the high-level POJO Plan. For example `io.substrait.proto.Plan` or `io.substrait.Plan`
+The loaded byte array is first converted into the protobuf Plan, and then into the Substrait Plan object. Note it can be useful to name the variables, and/or use the full class names to keep track whether it's the ProtoBuf Plan or the high-level POJO Plan. For example `io.substrait.proto.Plan` or `io.substrait.Plan`
 
 
 Finally this can be converted to a Spark Plan:

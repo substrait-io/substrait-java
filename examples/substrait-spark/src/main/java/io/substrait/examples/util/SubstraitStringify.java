@@ -43,6 +43,8 @@ import java.util.stream.Collectors;
  *
  * There is scope for improving this output; there are some gaps in the lesser used relations This
  * is not a replacement for any canoncial form and is only for ease of debugging
+ *
+ * TODO: https://github.com/substrait-io/substrait-java/issues/302 which tracks the full implementation of this
  */
 public class SubstraitStringify extends ParentStringify
     implements RelVisitor<String, RuntimeException> {

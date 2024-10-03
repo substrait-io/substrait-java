@@ -6,7 +6,7 @@ import io.substrait.expression.FunctionArg.FuncArgVisitor;
 import io.substrait.extension.SimpleExtension.Function;
 import io.substrait.type.Type;
 
-/** FunctionArgStrngify produces a simple debug string for Funcation Arguments */
+/** FunctionArgStringify produces a simple debug string for Function Arguments */
 public class FunctionArgStringify extends ParentStringify
     implements FuncArgVisitor<String, RuntimeException> {
 

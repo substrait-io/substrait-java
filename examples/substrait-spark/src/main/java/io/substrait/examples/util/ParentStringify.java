@@ -1,7 +1,7 @@
 package io.substrait.examples.util;
 
 /**
- * Parent class of all stringifiers Created as it seemed there could be a an optimization to share
+ * Parent class of all stringifiers Created as it seemed there could be an optimization to share
  * formatting fns between the various stringifiers
  */
 public class ParentStringify {
