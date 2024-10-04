@@ -8,3 +8,6 @@ gen
 out/**
 *.iws
 .vscode
+.pmdCache
+
+*/bin
