@@ -21,12 +21,12 @@ public class SetUtils {
     String opString =
         switch (op) {
           case MINUS_PRIMARY -> "EXCEPT";
-          case MINUS_PRIMARY_ALL, MINUS_MULTISET -> "EXCEPT ALL";
-          case INTERSECTION_PRIMARY, INTERSECTION_MULTISET -> "INTERSECT";
+          case MINUS_PRIMARY_ALL -> "EXCEPT ALL";
+          case INTERSECTION_MULTISET -> "INTERSECT";
           case INTERSECTION_MULTISET_ALL -> "INTERSECT ALL";
           case UNION_DISTINCT -> "UNION";
           case UNION_ALL -> "UNION ALL";
-          case UNKNOWN -> throw new UnsupportedOperationException(
+          default -> throw new UnsupportedOperationException(
               "Unknown set operation is not supported");
         };
 
@@ -50,9 +50,14 @@ public class SetUtils {
   }
 
   // Generate all combinations excluding the UNKNOWN operator
+  // MINUS_MULTISET and INTERSECTION_PRIMARY are set to be removed (substrait-io/substrait/pull/708)
   public static Stream<Arguments> setTestConfig() {
     return Arrays.stream(Set.SetOp.values())
-        .filter(op -> op != Set.SetOp.UNKNOWN)
+        .filter(
+            op ->
+                op != Set.SetOp.UNKNOWN
+                    && op != Set.SetOp.MINUS_MULTISET
+                    && op != Set.SetOp.INTERSECTION_PRIMARY)
         .flatMap(op -> Stream.of(arguments(op, false), arguments(op, true)));
   }
 }

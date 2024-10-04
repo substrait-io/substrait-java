@@ -211,6 +211,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
             input -> {
               relBuilder.push(input.accept(this));
             });
+    // MINUS_MULTISET and INTERSECTION_PRIMARY are set to be removed
+    // (substrait-io/substrait/pull/708)
     var builder =
         switch (set.getSetOp()) {
           case MINUS_PRIMARY -> relBuilder.minus(false, numInputs);
