@@ -388,25 +388,6 @@ To recap on the steps above
 
 The structure of the query plans for both Spark and Substrait are structurally very similar.
 
-### Aggregate and Sort
-
-Spark's plan has a Project that filters down to the colour, followed by the Aggregation and Sort.
-```
-+- Sort [count(1)#18L ASC NULLS FIRST], true
-   +- Aggregate [colour#5], [colour#5, count(1) AS count(1)#18L]
-      +- Project [colour#5]
-```
-
-When converted to Substrait the Sort and Aggregate is in the same order, but there are additional projects; it's not reduced the number of fields as early.
-
-```
-+- Sort:: FieldRef#/I64/StructField{offset=1}  ASC_NULLS_FIRST
-   +- Project:: [Str, I64, Str, I64]
-      +- Aggregate:: FieldRef#/Str/StructField{offset=0}
-```
-
-These look different due to two factors. Firstly the Spark optimizer has swapped the project and aggregate functions.
-Secondly projects within the Substrait plan joined the fields together but don't reduce the number of fields. Any such filtering is done on the outer relations.
 
 ### Inner Join
 
