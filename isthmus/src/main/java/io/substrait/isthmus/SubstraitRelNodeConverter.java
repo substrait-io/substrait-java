@@ -211,12 +211,17 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
             input -> {
               relBuilder.push(input.accept(this));
             });
+    // TODO: MINUS_MULTISET and INTERSECTION_PRIMARY mappings are set to be removed as they do not
+    //   correspond to the Calcite relations they are associated with. They are retained for now
+    //   to enable users to migrate off of them.
+    //   See:  https://github.com/substrait-io/substrait-java/issues/303
     var builder =
         switch (set.getSetOp()) {
           case MINUS_PRIMARY -> relBuilder.minus(false, numInputs);
-          case MINUS_MULTISET -> relBuilder.minus(true, numInputs);
-          case INTERSECTION_PRIMARY -> relBuilder.intersect(false, numInputs);
-          case INTERSECTION_MULTISET -> relBuilder.intersect(true, numInputs);
+          case MINUS_PRIMARY_ALL, MINUS_MULTISET -> relBuilder.minus(true, numInputs);
+          case INTERSECTION_PRIMARY, INTERSECTION_MULTISET -> relBuilder.intersect(
+              false, numInputs);
+          case INTERSECTION_MULTISET_ALL -> relBuilder.intersect(true, numInputs);
           case UNION_DISTINCT -> relBuilder.union(false, numInputs);
           case UNION_ALL -> relBuilder.union(true, numInputs);
           case UNKNOWN -> throw new UnsupportedOperationException(

@@ -21,12 +21,12 @@ public class SetUtils {
     String opString =
         switch (op) {
           case MINUS_PRIMARY -> "EXCEPT";
-          case MINUS_MULTISET -> "EXCEPT ALL";
-          case INTERSECTION_PRIMARY -> "INTERSECT";
-          case INTERSECTION_MULTISET -> "INTERSECT ALL";
+          case MINUS_PRIMARY_ALL -> "EXCEPT ALL";
+          case INTERSECTION_MULTISET -> "INTERSECT";
+          case INTERSECTION_MULTISET_ALL -> "INTERSECT ALL";
           case UNION_DISTINCT -> "UNION";
           case UNION_ALL -> "UNION ALL";
-          case UNKNOWN -> throw new UnsupportedOperationException(
+          default -> throw new UnsupportedOperationException(
               "Unknown set operation is not supported");
         };
 
@@ -49,10 +49,16 @@ public class SetUtils {
     }
   }
 
-  // Generate all combinations excluding the UNKNOWN operator
+  // Generate all SetOp types excluding:
+  // * MINUS_MULTISET, INTERSECTION_PRIMARY: do not map to Calcite relations
+  // * UNKNOWN: invalid
   public static Stream<Arguments> setTestConfig() {
     return Arrays.stream(Set.SetOp.values())
-        .filter(op -> op != Set.SetOp.UNKNOWN)
+        .filter(
+            op ->
+                op != Set.SetOp.UNKNOWN
+                    && op != Set.SetOp.MINUS_MULTISET
+                    && op != Set.SetOp.INTERSECTION_PRIMARY)
         .flatMap(op -> Stream.of(arguments(op, false), arguments(op, true)));
   }
 }
