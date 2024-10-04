@@ -50,7 +50,7 @@ public class SetUtils {
   }
 
   // Generate all combinations excluding the UNKNOWN operator
-  // MINUS_MULTISET and INTERSECTION_PRIMARY are set to be removed (substrait-io/substrait/pull/708)
+  // Note: MINUS_MULTISET and INTERSECTION_PRIMARY mappings to Calcite are set to be removed due to no direct SQL mapping (substrait-io/substrait/pull/708)
   public static Stream<Arguments> setTestConfig() {
     return Arrays.stream(Set.SetOp.values())
         .filter(
