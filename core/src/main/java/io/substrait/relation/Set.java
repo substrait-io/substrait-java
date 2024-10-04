@@ -8,7 +8,6 @@ import org.immutables.value.Value;
 public abstract class Set extends AbstractRel implements HasExtension {
   public abstract Set.SetOp getSetOp();
 
-  // MINUS_MULTISET and INTERSECTION_PRIMARY mappings are set to be removed due to no direct SQL mapping (substrait-io/substrait/pull/708)
   public static enum SetOp {
     UNKNOWN(SetRel.SetOp.SET_OP_UNSPECIFIED),
     MINUS_PRIMARY(SetRel.SetOp.SET_OP_MINUS_PRIMARY),

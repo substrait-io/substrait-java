@@ -49,8 +49,9 @@ public class SetUtils {
     }
   }
 
-  // Generate all combinations excluding the UNKNOWN operator
-  // Note: MINUS_MULTISET and INTERSECTION_PRIMARY mappings to Calcite are set to be removed due to no direct SQL mapping (substrait-io/substrait/pull/708)
+  // Generate all SetOp types excluding:
+  // * MINUS_MULTISET, INTERSECTION_PRIMARY: do not map to Calcite relations
+  // * UNKNOWN: invalid
   public static Stream<Arguments> setTestConfig() {
     return Arrays.stream(Set.SetOp.values())
         .filter(
