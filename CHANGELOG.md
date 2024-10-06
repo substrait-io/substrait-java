@@ -1,6 +1,21 @@
 Release Notes
 ---
 
+## [0.42.0](https://github.com/substrait-io/substrait-java/compare/v0.41.0...v0.42.0) (2024-10-06)
+
+### ⚠ BREAKING CHANGES
+
+* EXCEPT ALL and INTERSECT ALL now output different SetOps
+
+### Features
+
+* **spark:** add MakeDecimal support ([#298](https://github.com/substrait-io/substrait-java/issues/298)) ([eec9727](https://github.com/substrait-io/substrait-java/commit/eec97274dc4b008335d59fc8d131de09ad818e67))
+* **spark:** support UNION ALL in SparkSql ([#301](https://github.com/substrait-io/substrait-java/issues/301)) ([b55d8b0](https://github.com/substrait-io/substrait-java/commit/b55d8b04e007a112fff090b50db6b7c06c7bb63e))
+
+### Miscellaneous Chores
+
+* update to substrait v0.57.0 ([#300](https://github.com/substrait-io/substrait-java/issues/300)) ([eb484a3](https://github.com/substrait-io/substrait-java/commit/eb484a3037e50f6abfbb783aa36c4e9bb5449432))
+
 ## [0.41.0](https://github.com/substrait-io/substrait-java/compare/v0.40.0...v0.41.0) (2024-09-29)
 
 ### Features
