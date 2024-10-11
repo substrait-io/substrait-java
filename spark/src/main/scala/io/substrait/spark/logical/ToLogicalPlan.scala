@@ -161,11 +161,20 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
   override def visit(fetch: relation.Fetch): LogicalPlan = {
     val child = fetch.getInput.accept(this)
-    val limit = Literal(fetch.getCount.getAsLong.intValue(), IntegerType)
-    fetch.getOffset match {
-      case 1L => GlobalLimit(limitExpr = limit, child = child)
-      case -1L => LocalLimit(limitExpr = limit, child = child)
-      case _ => visitFallback(fetch)
+    val limit = fetch.getCount.getAsLong.intValue()
+    val offset = fetch.getOffset.intValue()
+    val toLiteral = (i: Int) => Literal(i, IntegerType)
+    if (limit >= 0) {
+      val limitExpr = toLiteral(limit)
+      if (offset > 0) {
+        GlobalLimit(limitExpr,
+          Offset(toLiteral(offset),
+            LocalLimit(toLiteral(offset + limit), child)))
+      } else {
+        GlobalLimit(limitExpr, LocalLimit(limitExpr, child))
+      }
+    } else {
+        Offset(toLiteral(offset), child)
     }
   }
   override def visit(sort: relation.Sort): LogicalPlan = {
