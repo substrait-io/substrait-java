@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.43.0](https://github.com/substrait-io/substrait-java/compare/v0.42.0...v0.43.0) (2024-10-13)
+
+### Features
+
+* **spark:** support for FetchRel offset field ([#296](https://github.com/substrait-io/substrait-java/issues/296)) ([d22c07f](https://github.com/substrait-io/substrait-java/commit/d22c07f474bcc6d7894f455f8b4f723b313638a8))
+
 ## [0.42.0](https://github.com/substrait-io/substrait-java/compare/v0.41.0...v0.42.0) (2024-10-06)
 
 ### ⚠ BREAKING CHANGES
