@@ -47,6 +47,7 @@ class FunctionMappings {
     s[GreaterThan]("gt"),
     s[GreaterThanOrEqual]("gte"),
     s[EqualTo]("equal"),
+    s[EqualNullSafe]("is_not_distinct_from"),
     // s[BitwiseXor]("xor"),
     s[IsNull]("is_null"),
     s[IsNotNull]("is_not_null"),
