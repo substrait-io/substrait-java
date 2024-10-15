@@ -44,6 +44,8 @@ private class ToSparkType
   override def visit(expr: Type.FixedChar): DataType = StringType
 
   override def visit(expr: Type.VarChar): DataType = StringType
+
+  override def visit(expr: Type.Bool): DataType = BooleanType
 }
 class ToSubstraitType {
 
