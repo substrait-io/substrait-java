@@ -31,7 +31,7 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
     spark.conf.set("spark.sql.readSideCharPadding", "false")
   }
 
-  // "q9" failed in spark 3.3
+  // spotless:off
   val successfulSQL: Set[String] = Set("q1", "q3", "q4", "q7",
     "q11", "q13", "q14b", "q15", "q16", "q18", "q19",
     "q21", "q22", "q23a", "q23b", "q25", "q26", "q28", "q29",
@@ -42,6 +42,7 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
     "q71", "q73", "q76", "q79",
     "q81", "q82", "q85", "q87", "q88",
     "q90", "q91", "q92", "q93", "q94", "q95", "q96", "q97", "q99")
+  // spotless:on
 
   tpcdsQueries.foreach {
     q =>

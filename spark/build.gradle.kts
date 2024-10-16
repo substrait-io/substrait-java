@@ -105,6 +105,13 @@ dependencies {
   testImplementation("org.apache.spark:spark-catalyst_2.12:${SPARK_VERSION}:tests")
 }
 
+spotless {
+  scala {
+    scalafmt().configFile(".scalafmt.conf")
+    toggleOffOn()
+  }
+}
+
 tasks {
   test {
     dependsOn(":core:shadowJar")

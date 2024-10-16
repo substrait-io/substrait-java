@@ -18,6 +18,7 @@ package io.substrait.spark.logical
 
 import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.expressions._
@@ -29,6 +30,7 @@ import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.types.{DataTypes, IntegerType, StructField, StructType}
+
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
@@ -167,14 +169,14 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     if (limit >= 0) {
       val limitExpr = toLiteral(limit)
       if (offset > 0) {
-        GlobalLimit(limitExpr,
-          Offset(toLiteral(offset),
-            LocalLimit(toLiteral(offset + limit), child)))
+        GlobalLimit(
+          limitExpr,
+          Offset(toLiteral(offset), LocalLimit(toLiteral(offset + limit), child)))
       } else {
         GlobalLimit(limitExpr, LocalLimit(limitExpr, child))
       }
     } else {
-        Offset(toLiteral(offset), child)
+      Offset(toLiteral(offset), child)
     }
   }
   override def visit(sort: relation.Sort): LogicalPlan = {
@@ -213,13 +215,16 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     withChild(child) {
       val projections = expand.getFields.asScala
         .map {
-          case sf: SwitchingField => sf.getDuplicates.asScala
-            .map(expr => expr.accept(expressionConverter))
-            .map(toNamedExpression)
-          case _: ConsistentField => throw new UnsupportedOperationException("ConsistentField not currently supported")
+          case sf: SwitchingField =>
+            sf.getDuplicates.asScala
+              .map(expr => expr.accept(expressionConverter))
+              .map(toNamedExpression)
+          case _: ConsistentField =>
+            throw new UnsupportedOperationException("ConsistentField not currently supported")
         }
 
-      val output = projections.head.zip(names)
+      val output = projections.head
+        .zip(names)
         .map { case (t, name) => StructField(name, t.dataType, t.nullable) }
         .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
@@ -240,7 +245,8 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     withOutput(children.flatMap(_.output)) {
       set.getSetOp match {
         case SetOp.UNION_ALL => Union(children, byName = false, allowMissingCol = false)
-        case op => throw new UnsupportedOperationException(s"Operation not currently supported: $op")
+        case op =>
+          throw new UnsupportedOperationException(s"Operation not currently supported: $op")
       }
     }
   }

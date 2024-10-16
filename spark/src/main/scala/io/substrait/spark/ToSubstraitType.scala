@@ -16,11 +16,12 @@
  */
 package io.substrait.spark
 
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.types._
+
 import io.substrait.`type`.{NamedStruct, Type, TypeVisitor}
 import io.substrait.function.TypeExpression
 import io.substrait.utils.Util
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters.asScalaBufferConverter

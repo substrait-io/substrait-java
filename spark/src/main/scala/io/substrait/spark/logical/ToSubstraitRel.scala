@@ -18,6 +18,7 @@ package io.substrait.spark.logical
 
 import io.substrait.spark.{SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions._
@@ -27,10 +28,11 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
 import org.apache.spark.sql.types.StructType
+
 import ToSubstraitType.toNamedStruct
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
-import io.substrait.expression.{ExpressionCreator, Expression => SExpression}
+import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutablePlan, ImmutableRoot, Plan}
@@ -40,6 +42,7 @@ import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 
 import java.util.{Collections, Optional}
+
 import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -71,8 +74,11 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val substraitExps = expression.aggregateFunction.children.map(toExpression(output))
     val invocation =
       SparkExtension.toAggregateFunction.apply(expression, substraitExps)
-    val filter = expression.filter map toExpression(output)
-    relation.Aggregate.Measure.builder.function(invocation).preMeasureFilter(Optional.ofNullable(filter.orNull)).build()
+    val filter = expression.filter.map(toExpression(output))
+    relation.Aggregate.Measure.builder
+      .function(invocation)
+      .preMeasureFilter(Optional.ofNullable(filter.orNull))
+      .build()
   }
 
   private def collectAggregates(
@@ -172,7 +178,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
-    relation.Fetch.builder()
+    relation.Fetch
+      .builder()
       .input(visit(child))
       .offset(offset)
       .count(limit)
@@ -183,7 +190,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     p match {
       case OffsetAndLimit((offset, limit, child)) => fetch(child, offset, limit)
       case GlobalLimit(IntegerLiteral(globalLimit), LocalLimit(IntegerLiteral(localLimit), child))
-        if globalLimit == localLimit => fetch(child, 0, localLimit)
+          if globalLimit == localLimit =>
+        fetch(child, 0, localLimit)
       case _ =>
         throw new UnsupportedOperationException(s"Unable to convert the limit expression: $p")
     }
@@ -251,11 +259,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitExpand(p: Expand): relation.Rel = {
-    val fields = p.projections.map(proj => {
-      relation.Expand.SwitchingField.builder.duplicates(
-        proj.map(toExpression(p.child.output)).asJava
-      ).build()
-    })
+    val fields = p.projections.map(
+      proj => {
+        relation.Expand.SwitchingField.builder
+          .duplicates(
+            proj.map(toExpression(p.child.output)).asJava
+          )
+          .build()
+      })
 
     val names = p.output.map(_.name)
 

@@ -16,6 +16,8 @@
  */
 package io.substrait.spark.expression
 
+import io.substrait.spark.ToSubstraitType
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.SQLConfHelper
 import org.apache.spark.sql.catalyst.analysis.{AnsiTypeCoercion, TypeCoercion}
@@ -29,7 +31,6 @@ import io.substrait.expression.{Expression => SExpression, ExpressionCreator, Fu
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.extension.SimpleExtension
 import io.substrait.function.{ParameterizedType, ToTypeString}
-import io.substrait.spark.ToSubstraitType
 import io.substrait.utils.Util
 
 import java.{util => ju}

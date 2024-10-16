@@ -56,10 +56,12 @@ class IgnoreNullableAndParameters(val typeToMatch: ParameterizedType)
     typeToMatch.isInstanceOf[Type.IntervalYear]
 
   override def visit(`type`: Type.IntervalDay): Boolean =
-    typeToMatch.isInstanceOf[Type.IntervalDay] || typeToMatch.isInstanceOf[ParameterizedType.IntervalDay]
+    typeToMatch.isInstanceOf[Type.IntervalDay] || typeToMatch
+      .isInstanceOf[ParameterizedType.IntervalDay]
 
   override def visit(`type`: Type.IntervalCompound): Boolean =
-    typeToMatch.isInstanceOf[Type.IntervalCompound] || typeToMatch.isInstanceOf[ParameterizedType.IntervalCompound]
+    typeToMatch.isInstanceOf[Type.IntervalCompound] || typeToMatch
+      .isInstanceOf[ParameterizedType.IntervalCompound]
 
   override def visit(`type`: Type.UUID): Boolean = typeToMatch.isInstanceOf[Type.UUID]
 
@@ -109,11 +111,13 @@ class IgnoreNullableAndParameters(val typeToMatch: ParameterizedType)
 
   @throws[RuntimeException]
   override def visit(expr: ParameterizedType.IntervalDay): Boolean =
-    typeToMatch.isInstanceOf[Type.IntervalDay] || typeToMatch.isInstanceOf[ParameterizedType.IntervalDay]
+    typeToMatch.isInstanceOf[Type.IntervalDay] || typeToMatch
+      .isInstanceOf[ParameterizedType.IntervalDay]
 
   @throws[RuntimeException]
   override def visit(expr: ParameterizedType.IntervalCompound): Boolean =
-    typeToMatch.isInstanceOf[Type.IntervalCompound] || typeToMatch.isInstanceOf[ParameterizedType.IntervalCompound]
+    typeToMatch.isInstanceOf[Type.IntervalCompound] || typeToMatch
+      .isInstanceOf[ParameterizedType.IntervalCompound]
 
   @throws[RuntimeException]
   override def visit(expr: ParameterizedType.Struct): Boolean =
