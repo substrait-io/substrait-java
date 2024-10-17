@@ -16,7 +16,7 @@
  */
 package io.substrait.spark
 
-import io.substrait.spark.expression.ToAggregateFunction
+import io.substrait.spark.expression.{ToAggregateFunction, ToWindowFunction}
 
 import io.substrait.extension.SimpleExtension
 
@@ -43,4 +43,8 @@ object SparkExtension {
 
   val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(
     JavaConverters.asScalaBuffer(EXTENSION_COLLECTION.aggregateFunctions()))
+
+  val toWindowFunction: ToWindowFunction = ToWindowFunction(
+    JavaConverters.asScalaBuffer(EXTENSION_COLLECTION.windowFunctions())
+  )
 }

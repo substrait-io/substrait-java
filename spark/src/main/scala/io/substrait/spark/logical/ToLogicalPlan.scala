@@ -118,6 +118,59 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     }
   }
 
+  override def visit(window: relation.ConsistentPartitionWindow): LogicalPlan = {
+    val child = window.getInput.accept(this)
+    withChild(child) {
+      val partitions = window.getPartitionExpressions.asScala
+        .map(expr => expr.accept(expressionConverter))
+      val sortOrders = window.getSorts.asScala.map(toSortOrder)
+      val windowExpressions = window.getWindowFunctions.asScala
+        .map(
+          func => {
+            val arguments = func.arguments().asScala.zipWithIndex.map {
+              case (arg, i) =>
+                arg.accept(func.declaration(), i, expressionConverter)
+            }
+            val windowFunction = SparkExtension.toWindowFunction
+              .getSparkExpressionFromSubstraitFunc(func.declaration.key, func.outputType)
+              .map(sig => sig.makeCall(arguments))
+              .map {
+                case win: WindowFunction => win
+                case agg: AggregateFunction =>
+                  AggregateExpression(
+                    agg,
+                    ToAggregateFunction.toSpark(func.aggregationPhase()),
+                    ToAggregateFunction.toSpark(func.invocation()),
+                    None)
+              }
+              .getOrElse({
+                val msg = String.format(
+                  "Unable to convert Window function %s(%s).",
+                  func.declaration.name,
+                  func.arguments.asScala
+                    .map {
+                      case ea: exp.EnumArg => ea.value.toString
+                      case e: SExpression => e.getType.accept(new StringTypeVisitor)
+                      case t: Type => t.accept(new StringTypeVisitor)
+                      case a => throw new IllegalStateException("Unexpected value: " + a)
+                    }
+                    .mkString(", ")
+                )
+                throw new IllegalArgumentException(msg)
+              })
+            val frame = SpecifiedWindowFrame(
+              ToWindowFunction.toSpark(func.boundsType),
+              ToWindowFunction.toSparkPreceding(func.lowerBound()),
+              ToWindowFunction.toSparkFollowing(func.upperBound())
+            )
+            val spec = WindowSpecDefinition(partitions, sortOrders, frame)
+            WindowExpression(windowFunction, spec)
+          })
+        .map(toNamedExpression)
+      Window(windowExpressions, partitions, sortOrders, child)
+    }
+  }
+
   override def visit(join: relation.Join): LogicalPlan = {
     val left = join.getLeft.accept(this)
     val right = join.getRight.accept(this)
@@ -161,6 +214,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     }
     SortOrder(expression, direction, nullOrdering, Seq.empty)
   }
+
   override def visit(fetch: relation.Fetch): LogicalPlan = {
     val child = fetch.getInput.accept(this)
     val limit = fetch.getCount.getAsLong.intValue()
@@ -179,6 +233,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
       Offset(toLiteral(offset), child)
     }
   }
+
   override def visit(sort: relation.Sort): LogicalPlan = {
     val child = sort.getInput.accept(this)
     withChild(child) {
