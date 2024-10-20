@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.44.0](https://github.com/substrait-io/substrait-java/compare/v0.43.0...v0.44.0) (2024-10-20)
+
+### Features
+
+* **spark:** map EqualNullSafe fn to is_not_distinct_from ([#306](https://github.com/substrait-io/substrait-java/issues/306)) ([357cc01](https://github.com/substrait-io/substrait-java/commit/357cc01a087cc7b6efe699d4921a688a11eeddb3))
+* **spark:** support conversion of boolean types ([#305](https://github.com/substrait-io/substrait-java/issues/305)) ([d5452ad](https://github.com/substrait-io/substrait-java/commit/d5452add8815ab19d13a72a71305deefc06aff05))
+
 ## [0.43.0](https://github.com/substrait-io/substrait-java/compare/v0.42.0...v0.43.0) (2024-10-13)
 
 ### Features
