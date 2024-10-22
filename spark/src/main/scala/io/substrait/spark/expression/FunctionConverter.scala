@@ -21,7 +21,7 @@ import io.substrait.spark.ToSubstraitType
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.SQLConfHelper
 import org.apache.spark.sql.catalyst.analysis.{AnsiTypeCoercion, TypeCoercion}
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{Expression, WindowExpression}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.types.DataType
 
@@ -238,7 +238,6 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
     val parent: FunctionConverter[F, T]) {
 
   def attemptMatch(expression: Expression, operands: Seq[SExpression]): Option[T] = {
-
     val opTypes = operands.map(_.getType)
     val outputType = ToSubstraitType.apply(expression.dataType, expression.nullable)
     val opTypesStr = opTypes.map(t => t.accept(ToTypeString.INSTANCE))
@@ -250,17 +249,23 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
       .map(name + ":" + _)
       .find(k => directMap.contains(k))
 
-    if (directMatchKey.isDefined) {
+    if (operands.isEmpty) {
+      val variant = directMap(name + ":")
+      variant.validateOutputType(JavaConverters.bufferAsJavaList(operands.toBuffer), outputType)
+      Option(parent.generateBinding(expression, variant, operands, outputType))
+    } else if (directMatchKey.isDefined) {
       val variant = directMap(directMatchKey.get)
       variant.validateOutputType(JavaConverters.bufferAsJavaList(operands.toBuffer), outputType)
       val funcArgs: Seq[FunctionArg] = operands
       Option(parent.generateBinding(expression, variant, funcArgs, outputType))
     } else if (singularInputType.isDefined) {
-      val types = expression match {
-        case agg: AggregateExpression => agg.aggregateFunction.children.map(_.dataType)
-        case other => other.children.map(_.dataType)
+      val children = expression match {
+        case agg: AggregateExpression => agg.aggregateFunction.children
+        case win: WindowExpression => win.windowFunction.children
+        case other => other.children
       }
-      val nullable = expression.children.exists(e => e.nullable)
+      val types = children.map(_.dataType)
+      val nullable = children.exists(e => e.nullable)
       FunctionFinder
         .leastRestrictive(types)
         .flatMap(
@@ -298,6 +303,4 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
         }
       })
   }
-
-  def allowedArgCount(count: Int): Boolean = true
 }

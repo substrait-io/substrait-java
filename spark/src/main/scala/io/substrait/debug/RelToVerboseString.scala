@@ -152,6 +152,19 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
+  override def visit(window: ConsistentPartitionWindow): String = {
+    withBuilder(window, 10)(
+      builder => {
+        builder
+          .append("functions=")
+          .append(window.getWindowFunctions)
+          .append("partitions=")
+          .append(window.getPartitionExpressions)
+          .append("sorts=")
+          .append(window.getSorts)
+      })
+  }
+
   override def visit(localFiles: LocalFiles): String = {
     withBuilder(localFiles, 10)(
       builder => {
