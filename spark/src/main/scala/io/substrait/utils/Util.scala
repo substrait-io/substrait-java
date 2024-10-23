@@ -21,6 +21,22 @@ import scala.collection.mutable.ArrayBuffer
 
 object Util {
 
+  val SECONDS_PER_DAY: Long = 24 * 60 * 60;
+  val MICROSECOND_PRECISION = 6; // for PrecisionTimestamp(TZ) types
+
+  def toMicroseconds(value: Long, precision: Int): Long = {
+    // Spark uses microseconds as a Long value for most time things
+    val factor = MICROSECOND_PRECISION - precision
+    // Doing this in a way that avoids floating point math
+    if (factor == 0) {
+      value
+    } else if (factor > 0) {
+      value * math.pow(10, factor).toLong
+    } else {
+      value / math.pow(10, -factor).toLong
+    }
+  }
+
   /**
    * Compute the cartesian product for n lists.
    *

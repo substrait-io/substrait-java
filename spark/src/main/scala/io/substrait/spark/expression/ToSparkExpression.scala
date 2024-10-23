@@ -28,8 +28,9 @@ import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.util.DecimalUtil
+import io.substrait.utils.Util
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
 class ToSparkExpression(
     val scalarFunctionConverter: ToScalarFunction,
@@ -61,6 +62,10 @@ class ToSparkExpression(
     Literal(expr.value(), ToSubstraitType.convert(expr.getType))
   }
 
+  override def visit(expr: SExpression.FP32Literal): Literal = {
+    Literal(expr.value(), ToSubstraitType.convert(expr.getType))
+  }
+
   override def visit(expr: SExpression.FP64Literal): Expression = {
     Literal(expr.value(), ToSubstraitType.convert(expr.getType))
   }
@@ -77,13 +82,67 @@ class ToSparkExpression(
     Literal(UTF8String.fromString(expr.value()), ToSubstraitType.convert(expr.getType))
   }
 
+  override def visit(expr: SExpression.BinaryLiteral): Literal = {
+    Literal(expr.value().toByteArray, ToSubstraitType.convert(expr.getType))
+  }
+
   override def visit(expr: SExpression.DecimalLiteral): Expression = {
     val value = expr.value.toByteArray
     val decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale, 16)
     Literal(Decimal(decimal), ToSubstraitType.convert(expr.getType))
   }
+
   override def visit(expr: SExpression.DateLiteral): Expression = {
     Literal(expr.value(), ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.PrecisionTimestampLiteral): Literal = {
+    Literal(
+      Util.toMicroseconds(expr.value(), expr.precision()),
+      ToSubstraitType.convert(expr.getType))
+
+  }
+
+  override def visit(expr: SExpression.PrecisionTimestampTZLiteral): Literal = {
+    Literal(
+      Util.toMicroseconds(expr.value(), expr.precision()),
+      ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.IntervalDayLiteral): Literal = {
+    val micros =
+      (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROSECOND_PRECISION +
+        Util.toMicroseconds(expr.subseconds(), expr.precision())
+    Literal(micros, ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.IntervalYearLiteral): Literal = {
+    val months = expr.years() * 12 + expr.months()
+    Literal(months, ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.ListLiteral): Literal = {
+    val array = expr.values().asScala.map(value => value.accept(this).asInstanceOf[Literal].value)
+    Literal.create(array, ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.EmptyListLiteral): Expression = {
+    Literal.default(ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.MapLiteral): Literal = {
+    val map = expr.values().asScala.map {
+      case (key, value) =>
+        (
+          key.accept(this).asInstanceOf[Literal].value,
+          value.accept(this).asInstanceOf[Literal].value
+        )
+    }
+    Literal.create(map, ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.EmptyMapLiteral): Literal = {
+    Literal.default(ToSubstraitType.convert(expr.getType))
   }
 
   override def visit(expr: SExpression.NullLiteral): Expression = {
@@ -98,6 +157,7 @@ class ToSparkExpression(
   override def visit(expr: exp.FieldReference): Expression = {
     withFieldReference(expr)(i => currentOutput(i).clone())
   }
+
   override def visit(expr: SExpression.IfThen): Expression = {
     val branches = expr
       .ifClauses()
