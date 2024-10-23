@@ -144,6 +144,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
             "org.apache.spark.sql.catalyst.expressions.PromotePrecision") =>
         translateUp(p.children.head)
       case CaseWhen(branches, elseValue) => translateCaseWhen(branches, elseValue)
+      case InSet(value, set) => translateIn(value, set.toSeq.map(v => Literal(v)))
       case scalar @ ScalarFunction(children) =>
         Util
           .seqToOption(children.map(translateUp))

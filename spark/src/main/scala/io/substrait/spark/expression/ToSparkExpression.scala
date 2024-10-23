@@ -44,6 +44,15 @@ class ToSparkExpression(
       Literal.FalseLiteral
     }
   }
+
+  override def visit(expr: SExpression.I8Literal): Expression = {
+    Literal(expr.value().asInstanceOf[Byte], ToSubstraitType.convert(expr.getType))
+  }
+
+  override def visit(expr: SExpression.I16Literal): Expression = {
+    Literal(expr.value().asInstanceOf[Short], ToSubstraitType.convert(expr.getType))
+  }
+
   override def visit(expr: SExpression.I32Literal): Expression = {
     Literal(expr.value(), ToSubstraitType.convert(expr.getType))
   }

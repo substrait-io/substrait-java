@@ -48,7 +48,6 @@ class FunctionMappings {
     s[GreaterThanOrEqual]("gte"),
     s[EqualTo]("equal"),
     s[EqualNullSafe]("is_not_distinct_from"),
-    // s[BitwiseXor]("xor"),
     s[IsNull]("is_null"),
     s[IsNotNull]("is_not_null"),
     s[EndsWith]("ends_with"),
@@ -57,6 +56,10 @@ class FunctionMappings {
     s[StartsWith]("starts_with"),
     s[Substring]("substring"),
     s[Year]("year"),
+    s[ShiftRight]("shift_right"),
+    s[BitwiseAnd]("bitwise_and"),
+    s[BitwiseOr]("bitwise_or"),
+    s[BitwiseXor]("bitwise_xor"),
 
     // internal
     s[MakeDecimal]("make_decimal"),
