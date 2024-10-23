@@ -35,6 +35,8 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
       case BinaryExpression(left, right) => Some(Seq(left, right))
       case UnaryExpression(child) => Some(Seq(child))
       case t: TernaryExpression => Some(Seq(t.first, t.second, t.third))
+      case Coalesce(children) => Some(children.toList)
+      case Concat(children) => Some(children.toList)
       case _ => None
     }
   }
