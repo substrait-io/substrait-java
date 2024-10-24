@@ -128,7 +128,7 @@ class ToSubstraitType {
     )
   }
 
-  def toAttribute(namedStruct: NamedStruct): Seq[AttributeReference] = {
+  def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
     namedStruct
       .struct()
       .fields()

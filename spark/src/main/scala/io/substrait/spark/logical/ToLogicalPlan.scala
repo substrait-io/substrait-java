@@ -20,6 +20,7 @@ import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction}
@@ -252,8 +253,20 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
 
   override def visit(emptyScan: relation.EmptyScan): LogicalPlan = {
-    LocalRelation(ToSubstraitType.toAttribute(emptyScan.getInitialSchema))
+    LocalRelation(ToSubstraitType.toAttributeSeq(emptyScan.getInitialSchema))
   }
+
+  override def visit(virtualTableScan: relation.VirtualTableScan): LogicalPlan = {
+    val rows = virtualTableScan.getRows.asScala.map(
+      row =>
+        InternalRow.fromSeq(
+          row
+            .fields()
+            .asScala
+            .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)))
+    LocalRelation(ToSubstraitType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
+  }
+
   override def visit(namedScan: relation.NamedScan): LogicalPlan = {
     resolve(UnresolvedRelation(namedScan.getNames.asScala)) match {
       case m: MultiInstanceRelation => m.newInstance()
