@@ -333,7 +333,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
                 var idx = 0
                 val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
                 while (idx < row.numFields) {
-                  val l = Literal.apply(row.get(idx, localRelation.schema(idx).dataType))
+                  val dt = localRelation.schema(idx).dataType
+                  val l = Literal.apply(row.get(idx, dt), dt)
                   buf += ToSubstraitLiteral.apply(l)
                   idx += 1
                 }
