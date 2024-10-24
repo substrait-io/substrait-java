@@ -499,6 +499,25 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
+  abstract static class EmptyMapLiteral implements Literal {
+    public abstract Type keyType();
+
+    public abstract Type valueType();
+
+    public Type getType() {
+      return Type.withNullability(nullable()).map(keyType(), valueType());
+    }
+
+    public static ImmutableExpression.EmptyMapLiteral.Builder builder() {
+      return ImmutableExpression.EmptyMapLiteral.builder();
+    }
+
+    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract static class ListLiteral implements Literal {
     public abstract List<Literal> values();
 
