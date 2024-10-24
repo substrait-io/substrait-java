@@ -242,6 +242,21 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   @Override
+  public Expression visit(io.substrait.expression.Expression.EmptyMapLiteral expr) {
+    return lit(
+        bldr -> {
+          var protoMapType = expr.getType().accept(typeProtoConverter);
+          bldr.setEmptyMap(protoMapType.getMap())
+              // For empty maps, the Literal message's own nullable field should be ignored
+              // in favor of the nullability of the Type.Map in the literal's
+              // empty_map field. But for safety we set the literal's nullable field
+              // to match in case any readers either look in the wrong location
+              // or want to verify that they are consistent.
+              .setNullable(expr.nullable());
+        });
+  }
+
+  @Override
   public Expression visit(io.substrait.expression.Expression.ListLiteral expr) {
     return lit(
         bldr -> {

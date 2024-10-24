@@ -53,6 +53,8 @@ public interface ExpressionVisitor<R, E extends Throwable> {
 
   R visit(Expression.MapLiteral expr) throws E;
 
+  R visit(Expression.EmptyMapLiteral expr) throws E;
+
   R visit(Expression.ListLiteral expr) throws E;
 
   R visit(Expression.EmptyListLiteral expr) throws E;

@@ -57,8 +57,7 @@ public class ProtoTypeConverter {
                   .map(this::from)
                   .collect(java.util.stream.Collectors.toList()));
       case LIST -> fromList(type.getList());
-      case MAP -> n(type.getMap().getNullability())
-          .map(from(type.getMap().getKey()), from(type.getMap().getValue()));
+      case MAP -> fromMap(type.getMap());
       case USER_DEFINED -> {
         var userDefined = type.getUserDefined();
         var t = lookup.getType(userDefined.getTypeReference(), extensions);
@@ -72,6 +71,10 @@ public class ProtoTypeConverter {
 
   public Type.ListType fromList(io.substrait.proto.Type.List list) {
     return n(list.getNullability()).list(from(list.getType()));
+  }
+
+  public Type.Map fromMap(io.substrait.proto.Type.Map map) {
+    return n(map.getNullability()).map(from(map.getKey()), from(map.getValue()));
   }
 
   public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {

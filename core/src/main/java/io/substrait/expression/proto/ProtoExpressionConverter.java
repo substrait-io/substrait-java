@@ -391,6 +391,12 @@ public class ProtoExpressionConverter {
           literal.getNullable(),
           literal.getMap().getKeyValuesList().stream()
               .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
+      case EMPTY_MAP -> {
+        // literal.getNullable() is intentionally ignored in favor of the nullability
+        // specified in the literal.getEmptyMap() type.
+        var mapType = protoTypeConverter.fromMap(literal.getEmptyMap());
+        yield ExpressionCreator.emptyMap(mapType.nullable(), mapType.key(), mapType.value());
+      }
       case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
       case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
       case LIST -> ExpressionCreator.list(

@@ -95,7 +95,7 @@ public class TypeCreator {
     return Type.ListType.builder().nullable(nullable).elementType(type).build();
   }
 
-  public Type map(Type key, Type value) {
+  public Type.Map map(Type key, Type value) {
     return Type.Map.builder().nullable(nullable).key(key).value(value).build();
   }
 

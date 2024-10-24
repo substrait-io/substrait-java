@@ -130,6 +130,11 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
+  public OUTPUT visit(Expression.EmptyMapLiteral expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
   public OUTPUT visit(Expression.ListLiteral expr) throws EXCEPTION {
     return visitFallback(expr);
   }

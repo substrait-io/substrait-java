@@ -72,4 +72,8 @@ class ExpressionToString extends DefaultExpressionVisitor[String] {
   override def visit(expr: Expression.UserDefinedLiteral): String = {
     expr.toString
   }
+
+  override def visit(expr: Expression.EmptyMapLiteral): String = {
+    expr.toString
+  }
 }
