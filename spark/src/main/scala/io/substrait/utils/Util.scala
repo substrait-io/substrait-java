@@ -21,6 +21,18 @@ import scala.collection.mutable.ArrayBuffer
 
 object Util {
 
+  val SECONDS_PER_DAY: Long = 24 * 60 * 60
+  val MICROS_PER_SECOND: Long = 1000 * 1000
+  val MICROSECOND_PRECISION = 6 // for PrecisionTimestamp(TZ) and IntervalDay types
+
+  def assertMicroseconds(precision: Int): Unit = {
+    // Spark uses microseconds as a Long value as the "physical" type for most time things
+    if (precision != MICROSECOND_PRECISION) {
+      throw new UnsupportedOperationException(
+        s"Unsupported precision: $precision. Only microsecond precision ($MICROSECOND_PRECISION) is supported")
+    }
+  }
+
   /**
    * Compute the cartesian product for n lists.
    *

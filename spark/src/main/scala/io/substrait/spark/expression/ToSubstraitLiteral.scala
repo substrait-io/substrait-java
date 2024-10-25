@@ -19,11 +19,15 @@ package io.substrait.spark.expression
 import io.substrait.spark.ToSubstraitType
 
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.util.{ArrayData, MapData}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.expression.ExpressionCreator._
+import io.substrait.utils.Util
+
+import scala.collection.JavaConverters
 
 class ToSubstraitLiteral {
 
@@ -34,6 +38,34 @@ class ToSubstraitLiteral {
         scale: Int): SExpression.Literal =
       decimal(false, d.toJavaBigDecimal, precision, scale)
 
+    private def sparkArray2Substrait(
+        arrayData: ArrayData,
+        elementType: DataType,
+        containsNull: Boolean): SExpression.Literal = {
+      val elements = arrayData.array.map(any => apply(Literal(any, elementType)))
+      if (elements.isEmpty) {
+        return emptyList(false, ToSubstraitType.convert(elementType, nullable = containsNull).get)
+      }
+      list(false, JavaConverters.asJavaIterable(elements)) // TODO: handle containsNull
+    }
+
+    private def sparkMap2Substrait(
+        mapData: MapData,
+        keyType: DataType,
+        valueType: DataType,
+        valueContainsNull: Boolean): SExpression.Literal = {
+      val keys = mapData.keyArray().array.map(any => apply(Literal(any, keyType)))
+      val values = mapData.valueArray().array.map(any => apply(Literal(any, valueType)))
+      if (keys.isEmpty) {
+        return emptyMap(
+          false,
+          ToSubstraitType.convert(keyType, nullable = false).get,
+          ToSubstraitType.convert(valueType, nullable = valueContainsNull).get)
+      }
+      // TODO: handle valueContainsNull
+      map(false, JavaConverters.mapAsJavaMap(keys.zip(values).toMap))
+    }
+
     val _bool: Boolean => SExpression.Literal = bool(false, _)
     val _i8: Byte => SExpression.Literal = i8(false, _)
     val _i16: Short => SExpression.Literal = i16(false, _)
@@ -43,7 +75,21 @@ class ToSubstraitLiteral {
     val _fp64: Double => SExpression.Literal = fp64(false, _)
     val _decimal: (Decimal, Int, Int) => SExpression.Literal = sparkDecimal2Substrait
     val _date: Int => SExpression.Literal = date(false, _)
+    val _timestamp: Long => SExpression.Literal =
+      precisionTimestamp(false, _, Util.MICROSECOND_PRECISION) // Spark ts is in microseconds
+    val _timestampTz: Long => SExpression.Literal =
+      precisionTimestampTZ(false, _, Util.MICROSECOND_PRECISION) // Spark ts is in microseconds
+    val _intervalDay: Long => SExpression.Literal = (ms: Long) => {
+      val days = (ms / Util.MICROS_PER_SECOND / Util.SECONDS_PER_DAY).toInt
+      val seconds = (ms / Util.MICROS_PER_SECOND % Util.SECONDS_PER_DAY).toInt
+      val micros = ms % Util.MICROS_PER_SECOND
+      intervalDay(false, days, seconds, micros, Util.MICROSECOND_PRECISION)
+    }
+    val _intervalYear: Int => SExpression.Literal = (m: Int) => intervalYear(false, m / 12, m % 12)
     val _string: String => SExpression.Literal = string(false, _)
+    val _binary: Array[Byte] => SExpression.Literal = binary(false, _)
+    val _array: (ArrayData, DataType, Boolean) => SExpression.Literal = sparkArray2Substrait
+    val _map: (MapData, DataType, DataType, Boolean) => SExpression.Literal = sparkMap2Substrait
   }
 
   private def convertWithValue(literal: Literal): Option[SExpression.Literal] = {
@@ -59,7 +105,16 @@ class ToSubstraitLiteral {
         case Literal(d: Decimal, dataType: DecimalType) =>
           Nonnull._decimal(d, dataType.precision, dataType.scale)
         case Literal(d: Integer, DateType) => Nonnull._date(d)
+        case Literal(t: Long, TimestampType) => Nonnull._timestampTz(t)
+        case Literal(t: Long, TimestampNTZType) => Nonnull._timestamp(t)
+        case Literal(d: Long, DayTimeIntervalType.DEFAULT) => Nonnull._intervalDay(d)
+        case Literal(ym: Int, YearMonthIntervalType.DEFAULT) => Nonnull._intervalYear(ym)
         case Literal(u: UTF8String, StringType) => Nonnull._string(u.toString)
+        case Literal(b: Array[Byte], BinaryType) => Nonnull._binary(b)
+        case Literal(a: ArrayData, ArrayType(et, containsNull)) =>
+          Nonnull._array(a, et, containsNull)
+        case Literal(m: MapData, MapType(keyType, valueType, valueContainsNull)) =>
+          Nonnull._map(m, keyType, valueType, valueContainsNull)
         case _ => null
       }
     )

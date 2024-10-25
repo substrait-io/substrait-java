@@ -252,6 +252,15 @@ public class ExpressionCreator {
     return Expression.MapLiteral.builder().nullable(nullable).putAllValues(values).build();
   }
 
+  public static Expression.EmptyMapLiteral emptyMap(
+      boolean nullable, Type keyType, Type valueType) {
+    return Expression.EmptyMapLiteral.builder()
+        .keyType(keyType)
+        .valueType(valueType)
+        .nullable(nullable)
+        .build();
+  }
+
   public static Expression.ListLiteral list(boolean nullable, Expression.Literal... values) {
     return Expression.ListLiteral.builder().nullable(nullable).addValues(values).build();
   }

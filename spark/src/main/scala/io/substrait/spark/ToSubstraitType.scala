@@ -44,11 +44,38 @@ private class ToSparkType
 
   override def visit(expr: Type.Str): DataType = StringType
 
+  override def visit(expr: Type.Binary): DataType = BinaryType
+
   override def visit(expr: Type.FixedChar): DataType = StringType
 
   override def visit(expr: Type.VarChar): DataType = StringType
 
   override def visit(expr: Type.Bool): DataType = BooleanType
+
+  override def visit(expr: Type.PrecisionTimestamp): DataType = {
+    Util.assertMicroseconds(expr.precision())
+    TimestampNTZType
+  }
+  override def visit(expr: Type.PrecisionTimestampTZ): DataType = {
+    Util.assertMicroseconds(expr.precision())
+    TimestampType
+  }
+
+  override def visit(expr: Type.IntervalDay): DataType = {
+    Util.assertMicroseconds(expr.precision())
+    DayTimeIntervalType.DEFAULT
+  }
+
+  override def visit(expr: Type.IntervalYear): DataType = YearMonthIntervalType.DEFAULT
+
+  override def visit(expr: Type.ListType): DataType =
+    ArrayType(expr.elementType().accept(this), containsNull = expr.elementType().nullable())
+
+  override def visit(expr: Type.Map): DataType =
+    MapType(
+      expr.key().accept(this),
+      expr.value().accept(this),
+      valueContainsNull = expr.value().nullable())
 }
 class ToSubstraitType {
 
@@ -81,10 +108,12 @@ class ToSubstraitType {
       case charType: CharType => Some(creator.fixedChar(charType.length))
       case varcharType: VarcharType => Some(creator.varChar(varcharType.length))
       case StringType => Some(creator.STRING)
-      case DateType => Some(creator.DATE)
-      case TimestampType => Some(creator.TIMESTAMP)
-      case TimestampNTZType => Some(creator.TIMESTAMP_TZ)
       case BinaryType => Some(creator.BINARY)
+      case DateType => Some(creator.DATE)
+      case TimestampNTZType => Some(creator.precisionTimestamp(Util.MICROSECOND_PRECISION))
+      case TimestampType => Some(creator.precisionTimestampTZ(Util.MICROSECOND_PRECISION))
+      case DayTimeIntervalType.DEFAULT => Some(creator.intervalDay(Util.MICROSECOND_PRECISION))
+      case YearMonthIntervalType.DEFAULT => Some(creator.INTERVAL_YEAR)
       case ArrayType(elementType, containsNull) =>
         convert(elementType, Seq.empty, containsNull).map(creator.list)
       case MapType(keyType, valueType, valueContainsNull) =>
