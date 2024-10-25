@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{NullType, StructType}
 
 import ToSubstraitType.toNamedStruct
 import io.substrait.{proto, relation}
@@ -169,6 +169,37 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .remap(relation.Rel.Remap.offset(newOutput.size, projects.size))
       .expressions(projects.asJava)
       .input(substraitAgg)
+      .build()
+  }
+
+  private def fromWindowCall(
+      expression: WindowExpression,
+      output: Seq[Attribute]): relation.ConsistentPartitionWindow.WindowRelFunctionInvocation = {
+    val children = expression.windowFunction match {
+      case agg: AggregateExpression => agg.aggregateFunction.children
+      case _: RankLike => Seq.empty
+      case other => other.children
+    }
+    val substraitExps = children.filter(_ != Literal(null, NullType)).map(toExpression(output))
+    SparkExtension.toWindowFunction.apply(expression, substraitExps)
+  }
+
+  override def visitWindow(window: Window): relation.Rel = {
+    val windowExpressions = window.windowExpressions.map {
+      case w: WindowExpression => fromWindowCall(w, window.child.output)
+      case a: Alias if a.child.isInstanceOf[WindowExpression] =>
+        fromWindowCall(a.child.asInstanceOf[WindowExpression], window.child.output)
+      case other =>
+        throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+    }.asJava
+
+    val partitionExpressions = window.partitionSpec.map(toExpression(window.child.output)).asJava
+    val sorts = window.orderSpec.map(toSortField(window.child.output)).asJava
+    relation.ConsistentPartitionWindow.builder
+      .input(visit(window.child))
+      .addAllWindowFunctions(windowExpressions)
+      .addAllPartitionExpressions(partitionExpressions)
+      .addAllSorts(sorts)
       .build()
   }
 

@@ -42,7 +42,6 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
 
   def convert(expression: Expression, operands: Seq[SExpression]): Option[SExpression] = {
     Option(signatures.get(expression.getClass))
-      .filter(m => m.allowedArgCount(2))
       .flatMap(m => m.attemptMatch(expression, operands))
   }
 }
