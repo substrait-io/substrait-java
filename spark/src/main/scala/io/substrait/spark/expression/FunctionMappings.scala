@@ -60,6 +60,10 @@ class FunctionMappings {
     s[Concat]("concat"),
     s[Coalesce]("coalesce"),
     s[Year]("year"),
+    s[ShiftRight]("shift_right"),
+    s[BitwiseAnd]("bitwise_and"),
+    s[BitwiseOr]("bitwise_or"),
+    s[BitwiseXor]("bitwise_xor"),
 
     // internal
     s[MakeDecimal]("make_decimal"),
