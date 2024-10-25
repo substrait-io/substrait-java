@@ -53,6 +53,13 @@ public class AggregateRoundtripTest extends TestBase {
                                 .name("option")
                                 .addValues("VALUE1", "VALUE2")
                                 .build()))
+                    .sort(
+                        Arrays.asList(
+                            Expression.SortField.builder()
+                                // SORT BY decimal
+                                .expr(b.fieldReference(input, 0))
+                                .direction(Expression.SortDirection.ASC_NULLS_LAST)
+                                .build()))
                     .build())
             .build();
 
