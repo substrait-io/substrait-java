@@ -111,7 +111,9 @@ class ToSparkExpression(
   override def visit(expr: SExpression.IntervalDayLiteral): Literal = {
     Util.assertMicroseconds(expr.precision())
     // Spark uses a single microseconds Long as the "physical" type for DayTimeInterval
-    val micros = (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROS_PER_SECOND + expr.subseconds()
+    val micros =
+      (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROS_PER_SECOND +
+        expr.subseconds()
     Literal(micros, ToSubstraitType.convert(expr.getType))
   }
 
