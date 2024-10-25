@@ -41,3 +41,22 @@ scalar_functions:
       - args:
           - value: i64
         return: DECIMAL<P,S>
+  - name: shift_right
+    description: >-
+      Bitwise (signed) shift right.
+      Params:
+        base – the base number to shift.
+        shift – number of bits to right shift.
+    impls:
+      - args:
+          - name: base
+            value: i64
+          - name: shift
+            value: i32
+        return: i64
+      - args:
+          - name: base
+            value: i32
+          - name: shift
+            value: i32
+        return: i32

@@ -32,9 +32,9 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
   }
 
   // spotless:off
-  val successfulSQL: Set[String] = Set("q1", "q3", "q4", "q7",
+  val successfulSQL: Set[String] = Set("q1", "q3", "q4", "q7", "q8",
     "q11", "q13", "q14a", "q14b", "q15", "q16", "q18", "q19",
-    "q21", "q22", "q23a", "q23b", "q24a", "q24b", "q25", "q26", "q28", "q29",
+    "q21", "q22", "q23a", "q23b", "q24a", "q24b", "q25", "q26", "q27", "q28", "q29",
     "q30", "q31", "q32", "q33", "q37", "q38",
     "q40", "q41", "q42", "q43", "q46", "q48",
     "q50", "q52", "q54", "q55", "q56", "q58", "q59",
