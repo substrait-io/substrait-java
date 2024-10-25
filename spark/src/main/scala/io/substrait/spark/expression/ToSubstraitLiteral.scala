@@ -79,8 +79,12 @@ class ToSubstraitLiteral {
       precisionTimestamp(false, _, Util.MICROSECOND_PRECISION) // Spark ts is in microseconds
     val _timestampTz: Long => SExpression.Literal =
       precisionTimestampTZ(false, _, Util.MICROSECOND_PRECISION) // Spark ts is in microseconds
-    val _intervalDay: Long => SExpression.Literal = (ms: Long) =>
-      intervalDay(false, 0, 0, ms, Util.MICROSECOND_PRECISION)
+    val _intervalDay: Long => SExpression.Literal = (ms: Long) => {
+      val days = (ms / Util.MICROS_PER_SECOND / Util.SECONDS_PER_DAY).toInt
+      val seconds = (ms / Util.MICROS_PER_SECOND % Util.SECONDS_PER_DAY).toInt
+      val micros = ms % Util.MICROS_PER_SECOND
+      intervalDay(false, days, seconds, micros, Util.MICROSECOND_PRECISION)
+    }
     val _intervalYear: Int => SExpression.Literal = (m: Int) => intervalYear(false, m / 12, m % 12)
     val _string: String => SExpression.Literal = string(false, _)
     val _binary: Array[Byte] => SExpression.Literal = binary(false, _)

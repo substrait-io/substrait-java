@@ -21,19 +21,15 @@ import scala.collection.mutable.ArrayBuffer
 
 object Util {
 
-  val SECONDS_PER_DAY: Long = 24 * 60 * 60;
-  val MICROSECOND_PRECISION = 6; // for PrecisionTimestamp(TZ) types
+  val SECONDS_PER_DAY: Long = 24 * 60 * 60
+  val MICROS_PER_SECOND: Long = 1000 * 1000
+  val MICROSECOND_PRECISION = 6 // for PrecisionTimestamp(TZ) and IntervalDay types
 
-  def toMicroseconds(value: Long, precision: Int): Long = {
-    // Spark uses microseconds as a Long value for most time things
-    val factor = MICROSECOND_PRECISION - precision
-    // Doing this in a way that avoids floating point math
-    if (factor == 0) {
-      value
-    } else if (factor > 0) {
-      value * math.pow(10, factor).toLong
-    } else {
-      value / math.pow(10, -factor).toLong
+  def assertMicroseconds(precision: Int): Unit = {
+    // Spark uses microseconds as a Long value as the "physical" type for most time things
+    if (precision != MICROSECOND_PRECISION) {
+      throw new UnsupportedOperationException(
+        s"Unsupported precision: $precision. Only microsecond precision ($MICROSECOND_PRECISION) is supported")
     }
   }
 

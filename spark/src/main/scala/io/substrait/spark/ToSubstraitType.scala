@@ -53,25 +53,16 @@ private class ToSparkType
   override def visit(expr: Type.Bool): DataType = BooleanType
 
   override def visit(expr: Type.PrecisionTimestamp): DataType = {
-    if (expr.precision() != Util.MICROSECOND_PRECISION) {
-      throw new UnsupportedOperationException(
-        s"Unsupported precision for timestamp: ${expr.precision()}")
-    }
+    Util.assertMicroseconds(expr.precision())
     TimestampNTZType
   }
   override def visit(expr: Type.PrecisionTimestampTZ): DataType = {
-    if (expr.precision() != Util.MICROSECOND_PRECISION) {
-      throw new UnsupportedOperationException(
-        s"Unsupported precision for timestamp: ${expr.precision()}")
-    }
+    Util.assertMicroseconds(expr.precision())
     TimestampType
   }
 
   override def visit(expr: Type.IntervalDay): DataType = {
-    if (expr.precision() != Util.MICROSECOND_PRECISION) {
-      throw new UnsupportedOperationException(
-        s"Unsupported precision for intervalDay: ${expr.precision()}")
-    }
+    Util.assertMicroseconds(expr.precision())
     DayTimeIntervalType.DEFAULT
   }
 

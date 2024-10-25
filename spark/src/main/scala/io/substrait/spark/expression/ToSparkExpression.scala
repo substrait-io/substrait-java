@@ -97,26 +97,26 @@ class ToSparkExpression(
   }
 
   override def visit(expr: SExpression.PrecisionTimestampLiteral): Literal = {
-    Literal(
-      Util.toMicroseconds(expr.value(), expr.precision()),
-      ToSubstraitType.convert(expr.getType))
-
+    // Spark timestamps are stored as a microseconds Long
+    Util.assertMicroseconds(expr.precision())
+    Literal(expr.value(), ToSubstraitType.convert(expr.getType))
   }
 
   override def visit(expr: SExpression.PrecisionTimestampTZLiteral): Literal = {
-    Literal(
-      Util.toMicroseconds(expr.value(), expr.precision()),
-      ToSubstraitType.convert(expr.getType))
+    // Spark timestamps are stored as a microseconds Long
+    Util.assertMicroseconds(expr.precision())
+    Literal(expr.value(), ToSubstraitType.convert(expr.getType))
   }
 
   override def visit(expr: SExpression.IntervalDayLiteral): Literal = {
-    val micros =
-      (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROSECOND_PRECISION +
-        Util.toMicroseconds(expr.subseconds(), expr.precision())
+    Util.assertMicroseconds(expr.precision())
+    // Spark uses a single microseconds Long as the "physical" type for DayTimeInterval
+    val micros = (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROS_PER_SECOND + expr.subseconds()
     Literal(micros, ToSubstraitType.convert(expr.getType))
   }
 
   override def visit(expr: SExpression.IntervalYearLiteral): Literal = {
+    // Spark uses a single months Int as the "physical" type for YearMonthInterval
     val months = expr.years() * 12 + expr.months()
     Literal(months, ToSubstraitType.convert(expr.getType))
   }
