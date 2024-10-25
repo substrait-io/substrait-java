@@ -29,6 +29,7 @@ object Util {
    * Thomas Preissler</a></a>
    */
   def crossProduct[T](lists: Seq[Seq[T]]): Seq[Seq[T]] = {
+    if (lists.isEmpty) return lists
 
     /** list [a, b], element 1 =>  list + element => [a, b, 1] */
     val appendElementToList: (Seq[T], T) => Seq[T] =

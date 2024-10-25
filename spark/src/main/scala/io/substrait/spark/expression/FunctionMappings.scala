@@ -80,9 +80,22 @@ class FunctionMappings {
     s[HyperLogLogPlusPlus]("approx_count_distinct")
   )
 
+  val WINDOW_SIGS: Seq[Sig] = Seq(
+    s[RowNumber]("row_number"),
+    s[Rank]("rank"),
+    s[DenseRank]("dense_rank"),
+    s[PercentRank]("percent_rank"),
+    s[CumeDist]("cume_dist"),
+    s[NTile]("ntile"),
+    s[Lead]("lead"),
+    s[Lag]("lag"),
+    s[NthValue]("nth_value")
+  )
+
   lazy val scalar_functions_map: Map[Class[_], Sig] = SCALAR_SIGS.map(s => (s.expClass, s)).toMap
   lazy val aggregate_functions_map: Map[Class[_], Sig] =
     AGGREGATE_SIGS.map(s => (s.expClass, s)).toMap
+  lazy val window_functions_map: Map[Class[_], Sig] = WINDOW_SIGS.map(s => (s.expClass, s)).toMap
 }
 
 object FunctionMappings extends FunctionMappings

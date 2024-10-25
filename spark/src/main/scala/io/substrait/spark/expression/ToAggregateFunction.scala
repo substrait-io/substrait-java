@@ -53,7 +53,6 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
       expression: AggregateExpression,
       operands: Seq[SExpression]): Option[AggregateFunctionInvocation] = {
     Option(signatures.get(expression.aggregateFunction.getClass))
-      .filter(m => m.allowedArgCount(2))
       .flatMap(m => m.attemptMatch(expression, operands))
   }
 
