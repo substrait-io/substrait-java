@@ -53,6 +53,10 @@ public class ProtoAggregateFunctionConverter {
         measure.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
+    List<Expression.SortField> sorts =
+        measure.getSortsList().stream()
+            .map(protoExpressionConverter::fromSortField)
+            .collect(Collectors.toList());
     return AggregateFunctionInvocation.builder()
         .arguments(functionArgs)
         .declaration(aggregateFunction)
@@ -60,6 +64,7 @@ public class ProtoAggregateFunctionConverter {
         .aggregationPhase(Expression.AggregationPhase.fromProto(measure.getPhase()))
         .invocation(Expression.AggregationInvocation.fromProto(measure.getInvocation()))
         .options(options)
+        .sort(sorts)
         .build();
   }
 }
