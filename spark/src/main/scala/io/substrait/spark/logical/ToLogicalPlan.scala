@@ -224,9 +224,12 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
             throw new UnsupportedOperationException("ConsistentField not currently supported")
         }
 
-      val output = projections.head
+      // An output column is nullable if any of the projections can assign null to it
+      val types = projections.transpose.map(p => (p.head.dataType, p.exists(_.nullable)))
+
+      val output = types
         .zip(names)
-        .map { case (t, name) => StructField(name, t.dataType, t.nullable) }
+        .map { case (t, name) => StructField(name, t._1, t._2) }
         .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
       Expand(projections, output, child)
