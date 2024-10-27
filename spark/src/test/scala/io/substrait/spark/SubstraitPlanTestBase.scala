@@ -26,7 +26,7 @@ import io.substrait.debug.TreePrinter
 import io.substrait.extension.ExtensionCollector
 import io.substrait.plan.{Plan, PlanProtoConverter, ProtoPlanConverter}
 import io.substrait.proto
-import io.substrait.relation.RelProtoConverter
+import io.substrait.relation.{ProtoRelConverter, RelProtoConverter}
 import org.scalactic.Equality
 import org.scalactic.source.Position
 import org.scalatest.Succeeded
@@ -92,6 +92,10 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
     val logicalPlan2 = pojoRel.accept(converter);
     require(logicalPlan2.resolved);
     val pojoRel2 = new ToSubstraitRel().visit(logicalPlan2)
+
+    val extensionCollector = new ExtensionCollector;
+    val proto = new RelProtoConverter(extensionCollector).toProto(pojoRel)
+    new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(proto)
 
     pojoRel2.shouldEqualPlainly(pojoRel)
     logicalPlan2
