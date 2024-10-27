@@ -134,7 +134,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val aggregates = collectAggregates(actualResultExprs, aggExprToOutputOrdinal)
     val aggOutputMap = aggregates.zipWithIndex.map {
       case (e, i) =>
-        AttributeReference(s"agg_func_$i", e.dataType)() -> e
+        AttributeReference(s"agg_func_$i", e.dataType, nullable = e.nullable)() -> e
     }
     val aggOutput = aggOutputMap.map(_._1)
 
