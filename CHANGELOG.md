@@ -1,6 +1,28 @@
 Release Notes
 ---
 
+## [0.45.0](https://github.com/substrait-io/substrait-java/compare/v0.44.0...v0.45.0) (2024-10-27)
+
+### ⚠ BREAKING CHANGES
+
+* **spark:** Spark TimestampNTZType is now emitted as Substrait PrecisionTimestamp
+* **spark:** Spark TimestampType is now emitted as Substrait PrecisionTimestampTZ
+
+feat(core): added support for Expression.EmptyMapLiteral
+
+### Features
+
+* **spark:** add Window support ([#307](https://github.com/substrait-io/substrait-java/issues/307)) ([b3f61a2](https://github.com/substrait-io/substrait-java/commit/b3f61a20606b20e950e62180c9b140b31c82414d))
+* **spark:** additional type and literal support ([#311](https://github.com/substrait-io/substrait-java/issues/311)) ([513a049](https://github.com/substrait-io/substrait-java/commit/513a04951e2fd3c2bf6767ad2eedb913df8d893e))
+* **spark:** bitwise functions ([#309](https://github.com/substrait-io/substrait-java/issues/309)) ([b8ccd8b](https://github.com/substrait-io/substrait-java/commit/b8ccd8b0af4f95d6a27d8512607ee912d249df0a))
+* **spark:** convert VirtualTableScan to LocalRelation ([#312](https://github.com/substrait-io/substrait-java/issues/312)) ([3f2cc1e](https://github.com/substrait-io/substrait-java/commit/3f2cc1e3bb136251c794999d3592690e00b31ddb))
+* **spark:** enable upper/lower/concat/coalesce string functions ([#308](https://github.com/substrait-io/substrait-java/issues/308)) ([fc8a764](https://github.com/substrait-io/substrait-java/commit/fc8a764f2f18ef7ae33eed86102b3f7d1bbb1b90))
+
+### Bug Fixes
+
+* propagate sorts in aggregate function invocation proto->rel ([#313](https://github.com/substrait-io/substrait-java/issues/313)) ([75ebac2](https://github.com/substrait-io/substrait-java/commit/75ebac26290cc5ebee5cde4c59d3a829a2f5c05b))
+* **spark:** nullability of output columns of expand relation ([#310](https://github.com/substrait-io/substrait-java/issues/310)) ([6413e55](https://github.com/substrait-io/substrait-java/commit/6413e55925f680d9a1b56b1213838ddd06c3a547))
+
 ## [0.44.0](https://github.com/substrait-io/substrait-java/compare/v0.43.0...v0.44.0) (2024-10-20)
 
 ### Features
