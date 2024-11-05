@@ -277,14 +277,13 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
         }
 
       // An output column is nullable if any of the projections can assign null to it
-      val types = projections.transpose.map(p => (p.head.dataType, p.exists(_.nullable)))
-
-      val output = types
+      val output = projections
+        .map(p => (p.head.dataType, p.exists(_.nullable)))
         .zip(names)
         .map { case (t, name) => StructField(name, t._1, t._2) }
         .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
-      Expand(projections, output, child)
+      Expand(projections.transpose, output, child)
     }
   }
 

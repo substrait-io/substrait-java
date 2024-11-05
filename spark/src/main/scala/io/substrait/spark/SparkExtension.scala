@@ -34,6 +34,8 @@ object SparkExtension {
   private val EXTENSION_COLLECTION: SimpleExtension.ExtensionCollection =
     SimpleExtension.loadDefaults()
 
+  val COLLECTION: SimpleExtension.ExtensionCollection = EXTENSION_COLLECTION.merge(SparkImpls)
+
   lazy val SparkScalarFunctions: Seq[SimpleExtension.ScalarFunctionVariant] = {
     val ret = new collection.mutable.ArrayBuffer[SimpleExtension.ScalarFunctionVariant]()
     ret.appendAll(EXTENSION_COLLECTION.scalarFunctions().asScala)

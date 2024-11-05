@@ -4,7 +4,6 @@ import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
-import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 @Value.Enclosing
@@ -18,7 +17,7 @@ public abstract class Expand extends SingleInputRel {
   public Type.Struct deriveRecordType() {
     Type.Struct initial = getInput().getRecordType();
     return TypeCreator.of(initial.nullable())
-        .struct(Stream.concat(initial.fields().stream(), Stream.of(TypeCreator.REQUIRED.I64)));
+        .struct(getFields().stream().map(ExpandField::getType));
   }
 
   @Override
@@ -52,7 +51,9 @@ public abstract class Expand extends SingleInputRel {
     public abstract List<Expression> getDuplicates();
 
     public Type getType() {
-      return getDuplicates().get(0).getType();
+      var nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
+      var type = getDuplicates().get(0).getType();
+      return nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
     }
 
     public static ImmutableExpand.SwitchingField.Builder builder() {
