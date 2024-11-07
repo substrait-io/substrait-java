@@ -32,21 +32,18 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
   }
 
   // spotless:off
-  val successfulSQL: Set[String] = Set("q1", "q3", "q4", "q5", "q7", "q8",
-    "q11", "q12", "q13", "q14a", "q14b", "q15", "q16", "q18", "q19",
-    "q20", "q21", "q22", "q23a", "q23b", "q24a", "q24b", "q25", "q26", "q27", "q28", "q29",
-    "q30", "q31", "q32", "q33", "q36", "q37", "q38",
-    "q40", "q41", "q42", "q43", "q44", "q46", "q48", "q49",
-    "q50", "q52", "q54", "q55", "q56", "q58", "q59",
-    "q60", "q61", "q62", "q65", "q66", "q67", "q68", "q69",
-    "q70", "q71", "q73", "q76", "q77", "q79",
-    "q80", "q81", "q82", "q85", "q86", "q87", "q88",
-    "q90", "q91", "q92", "q93", "q94", "q95", "q96", "q97", "q98", "q99")
+  val failingSQL: Set[String] = Set(
+    "q2", // because round() isn't defined in substrait to work with Decimal. https://github.com/substrait-io/substrait/pull/713
+    "q9", // requires implementation of named_struct()
+    "q10", "q35", "q45", // Unsupported join type ExistenceJoin (this is an internal spark type)
+    "q51", "q83", "q84", // TBD
+    "q72" //requires implementation of date_add()
+  )
   // spotless:on
 
   tpcdsQueries.foreach {
     q =>
-      if (runAllQueriesIncludeFailed || successfulSQL.contains(q)) {
+      if (runAllQueriesIncludeFailed || !failingSQL.contains(q)) {
         test(s"check simplified (tpcds-v1.4/$q)") {
           testQuery("tpcds", q)
         }

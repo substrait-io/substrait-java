@@ -39,6 +39,26 @@ class FunctionMappings {
     s[Subtract]("subtract"),
     s[Multiply]("multiply"),
     s[Divide]("divide"),
+    s[Abs]("abs"),
+    s[Remainder]("modulus"),
+    s[Pow]("power"),
+    s[Exp]("exp"),
+    s[Sqrt]("sqrt"),
+    s[Sin]("sin"),
+    s[Cos]("cos"),
+    s[Tan]("tan"),
+    s[Asin]("asin"),
+    s[Acos]("acos"),
+    s[Atan]("atan"),
+    s[Atan2]("atan2"),
+    s[Sinh]("sinh"),
+    s[Cosh]("cosh"),
+    s[Tanh]("tanh"),
+    s[Asinh]("asinh"),
+    s[Acosh]("acosh"),
+    s[Atanh]("atanh"),
+    s[Log]("ln"),
+    s[Log10]("log10"),
     s[And]("and"),
     s[Or]("or"),
     s[Not]("not"),
@@ -77,7 +97,8 @@ class FunctionMappings {
     s[Min]("min"),
     s[Max]("max"),
     s[First]("any_value"),
-    s[HyperLogLogPlusPlus]("approx_count_distinct")
+    s[HyperLogLogPlusPlus]("approx_count_distinct"),
+    s[StddevSamp]("std_dev")
   )
 
   val WINDOW_SIGS: Seq[Sig] = Seq(
