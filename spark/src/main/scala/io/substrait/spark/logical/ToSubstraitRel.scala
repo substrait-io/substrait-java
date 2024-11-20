@@ -290,7 +290,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitExpand(p: Expand): relation.Rel = {
-    val fields = p.projections.map(
+    val fields = p.projections.transpose.map(
       proj => {
         relation.Expand.SwitchingField.builder
           .duplicates(
@@ -302,7 +302,6 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val names = p.output.map(_.name)
 
     relation.Expand.builder
-      .remap(relation.Rel.Remap.offset(p.child.output.size, names.size))
       .fields(fields.asJava)
       .hint(Hint.builder.addAllOutputNames(names.asJava).build())
       .input(visit(p.child))
