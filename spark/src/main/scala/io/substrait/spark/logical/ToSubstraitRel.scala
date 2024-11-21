@@ -212,12 +212,15 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
-    relation.Fetch
+    val builder = relation.Fetch
       .builder()
       .input(visit(child))
       .offset(offset)
-      .count(limit)
-      .build()
+    if (limit != -1) {
+      builder.count(limit)
+    }
+
+      builder.build()
   }
 
   override def visitGlobalLimit(p: GlobalLimit): relation.Rel = {
