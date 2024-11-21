@@ -197,15 +197,20 @@ public class ProtoExpressionConverter {
             var rel = protoRelConverter.from(expr.getSubquery().getScalar().getInput());
             yield ImmutableExpression.ScalarSubquery.builder()
                 .input(rel)
-                .type(rel.getRecordType().accept(new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>("Expected struct field") {
-                    @Override
-                    public Type visit(Type.Struct type) throws RuntimeException {
-                        if (type.fields().size() != 1) {
-                            throw new UnsupportedOperationException("Scalar subquery must have exactly one field");
-                        }
-                        return type.fields().get(0);
-                    }
-                }))
+                .type(
+                    rel.getRecordType()
+                        .accept(
+                            new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>(
+                                "Expected struct field") {
+                              @Override
+                              public Type visit(Type.Struct type) throws RuntimeException {
+                                if (type.fields().size() != 1) {
+                                  throw new UnsupportedOperationException(
+                                      "Scalar subquery must have exactly one field");
+                                }
+                                return type.fields().get(0);
+                              }
+                            }))
                 .build();
           }
           case IN_PREDICATE -> {
