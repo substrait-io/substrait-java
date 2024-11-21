@@ -95,7 +95,8 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
     val extensionCollector = new ExtensionCollector;
     val proto = new RelProtoConverter(extensionCollector).toProto(pojoRel)
-    new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(proto)
+    val pojoFromProto = new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(proto)
+    assertResult(pojoRel)(pojoFromProto)
 
     pojoRel2.shouldEqualPlainly(pojoRel)
     logicalPlan2
