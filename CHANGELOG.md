@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.45.1](https://github.com/substrait-io/substrait-java/compare/v0.45.0...v0.45.1) (2024-11-24)
+
+### Bug Fixes
+
+* **spark:** incorrect conversion of expand relation ([#316](https://github.com/substrait-io/substrait-java/issues/316)) ([6c78d48](https://github.com/substrait-io/substrait-java/commit/6c78d48126859e72a402b4bdab45c877db77ae18))
+
 ## [0.45.0](https://github.com/substrait-io/substrait-java/compare/v0.44.0...v0.45.0) (2024-10-27)
 
 ### ⚠ BREAKING CHANGES
