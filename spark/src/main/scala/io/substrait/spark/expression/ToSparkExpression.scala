@@ -20,7 +20,8 @@ import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtens
 import io.substrait.spark.logical.ToLogicalPlan
 
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
-import org.apache.spark.sql.types.Decimal
+import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.types.{DateType, Decimal}
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -153,7 +154,12 @@ class ToSparkExpression(
 
   override def visit(expr: SExpression.Cast): Expression = {
     val childExp = expr.input().accept(this)
-    Cast(childExp, ToSubstraitType.convert(expr.getType))
+    val tt = ToSubstraitType.convert(expr.getType)
+    val tz = childExp.dataType match {
+      case DateType => Some(SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
+      case _ => None
+    }
+    Cast(childExp, tt, tz)
   }
 
   override def visit(expr: exp.FieldReference): Expression = {
@@ -197,6 +203,7 @@ class ToSparkExpression(
     val list = expr.options().asScala.map(e => e.accept(this))
     In(value, list)
   }
+
   override def visit(expr: SExpression.ScalarFunctionInvocation): Expression = {
     val eArgs = expr.arguments().asScala
     val args = eArgs.zipWithIndex.map {
