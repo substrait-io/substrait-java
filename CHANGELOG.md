@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.46.0](https://github.com/substrait-io/substrait-java/compare/v0.45.1...v0.46.0) (2024-12-01)
+
+### Features
+
+* **spark:** add some numeric function mappings ([#317](https://github.com/substrait-io/substrait-java/issues/317)) ([6bb46ac](https://github.com/substrait-io/substrait-java/commit/6bb46ac46ba63fc38d15b8913fb3b3b09f9939b3))
+
 ## [0.45.1](https://github.com/substrait-io/substrait-java/compare/v0.45.0...v0.45.1) (2024-11-24)
 
 ### Bug Fixes
