@@ -940,6 +940,7 @@ public interface Expression extends FunctionArg {
   }
 
   enum AggregationPhase {
+    UNSPECIFIED(io.substrait.proto.AggregationPhase.AGGREGATION_PHASE_UNSPECIFIED),
     INITIAL_TO_INTERMEDIATE(
         io.substrait.proto.AggregationPhase.AGGREGATION_PHASE_INITIAL_TO_INTERMEDIATE),
     INTERMEDIATE_TO_INTERMEDIATE(
