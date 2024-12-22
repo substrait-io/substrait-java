@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.46.1](https://github.com/substrait-io/substrait-java/compare/v0.46.0...v0.46.1) (2024-12-22)
+
+### Bug Fixes
+
+* **spark:** casting date/time requires timezone ([#318](https://github.com/substrait-io/substrait-java/issues/318)) ([af5a615](https://github.com/substrait-io/substrait-java/commit/af5a6153892b474ada1876a85fd2c203ba8fe90a))
+
 ## [0.46.0](https://github.com/substrait-io/substrait-java/compare/v0.45.1...v0.46.0) (2024-12-01)
 
 ### Features
