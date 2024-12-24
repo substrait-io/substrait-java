@@ -74,6 +74,8 @@ object ToAggregateFunction {
     case other => throw new UnsupportedOperationException(s"not currently supported: $other.")
   }
   def toSpark(phase: SExpression.AggregationPhase): AggregateMode = phase match {
+    case SExpression.AggregationPhase.UNSPECIFIED =>
+      Final // UNSPECIFIED implies INTERMEDIATE_TO_RESULT
     case SExpression.AggregationPhase.INITIAL_TO_INTERMEDIATE => Partial
     case SExpression.AggregationPhase.INTERMEDIATE_TO_INTERMEDIATE => PartialMerge
     case SExpression.AggregationPhase.INTERMEDIATE_TO_RESULT => Final
