@@ -171,7 +171,7 @@ public class ComplexSortTest extends PlanTestBase {
   @Test
   void handleComplex2ExpressionSort() {
     // CREATE TABLE example (a VARCHAR, b INT)
-    // SELECT b, a FROM example ORDER BY a::INT > 0 DESC, -b + 42 ASC NULLS LAST
+    // SELECT b, a FROM example ORDER BY a::INT DESC, -b + 42 ASC NULLS LAST
 
     Rel rel =
         b.project(
@@ -184,16 +184,16 @@ public class ComplexSortTest extends PlanTestBase {
                             b.cast(b.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.DESC_NULLS_FIRST),
                         b.sortField(
-                            b.add(b.negate(b.cast(b.fieldReference(input, 0), R.I32)), b.i32(42)),
+                            b.add(b.negate(b.fieldReference(input, 1)), b.i32(42)),
                             Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.STRING, R.I64))));
+                b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.STRING, R.I32))));
 
     String expected =
         """
         LogicalProject(a0=[$0], b0=[$1])
           Collation: [2 DESC, 3]
           LogicalSort(sort0=[$2], sort1=[$3], dir0=[DESC], dir1=[ASC])
-            LogicalProject(a=[$0], b=[$1], a0=[CAST($0):INTEGER NOT NULL], $f3=[+(-(CAST($0):INTEGER NOT NULL), 42)])
+            LogicalProject(a=[$0], b=[$1], a0=[CAST($0):INTEGER NOT NULL], $f3=[+(-($1), 42)])
               LogicalTableScan(table=[[example]])
         """;
 
