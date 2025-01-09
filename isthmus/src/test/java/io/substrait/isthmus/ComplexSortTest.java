@@ -10,6 +10,7 @@ import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -25,6 +26,10 @@ public class ComplexSortTest extends PlanTestBase {
   final SubstraitToCalcite substraitToCalcite =
       new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
+  /**
+   * A {@link RelWriterImpl} that annotates each {@link RelNode} with its {@link RelCollation} trait
+   * information. A {@link RelNode} is only annotated if its {@link RelCollation} is not empty.
+   */
   public static class CollationRelWriter extends RelWriterImpl {
     public CollationRelWriter(StringWriter sw) {
       super(new PrintWriter(sw), SqlExplainLevel.EXPPLAN_ATTRIBUTES, false);
