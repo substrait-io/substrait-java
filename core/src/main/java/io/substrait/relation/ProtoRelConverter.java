@@ -311,7 +311,17 @@ public class ProtoRelConverter {
     } else if (file.hasDwrf()) {
       builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
     } else if (file.hasText()) {
-      throw new RuntimeException("Delimiter separated text files not supported yet"); // TODO
+      var ffBuilder =
+          ImmutableFileFormat.DelimiterSeparatedTextReadOptions.builder()
+              .fieldDelimiter(file.getText().getFieldDelimiter())
+              .maxLineSize(file.getText().getMaxLineSize())
+              .quote(file.getText().getQuote())
+              .headerLinesToSkip(file.getText().getHeaderLinesToSkip())
+              .escape(file.getText().getEscape());
+      if (file.getText().hasValueTreatedAsNull()) {
+        ffBuilder.valueTreatedAsNull(file.getText().getValueTreatedAsNull());
+      }
+      builder.fileFormat(ffBuilder.build());
     } else if (file.hasExtension()) {
       builder.fileFormat(
           ImmutableFileFormat.Extension.builder().extension(file.getExtension()).build());

@@ -43,6 +43,17 @@ public interface FileOrFiles {
               } else if (fileFormat instanceof FileFormat.DwrfReadOptions options) {
                 builder.setDwrf(
                     ReadRel.LocalFiles.FileOrFiles.DwrfReadOptions.newBuilder().build());
+              } else if (fileFormat
+                  instanceof FileFormat.DelimiterSeparatedTextReadOptions options) {
+                var optionsBuilder =
+                    ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions.newBuilder()
+                        .setFieldDelimiter(options.getFieldDelimiter())
+                        .setMaxLineSize(options.getMaxLineSize())
+                        .setQuote(options.getQuote())
+                        .setHeaderLinesToSkip(options.getHeaderLinesToSkip())
+                        .setEscape(options.getEscape());
+                options.getValueTreatedAsNull().ifPresent(optionsBuilder::setValueTreatedAsNull);
+                builder.setText(optionsBuilder.build());
               } else if (fileFormat instanceof FileFormat.Extension options) {
                 builder.setExtension(options.getExtension());
               } else {

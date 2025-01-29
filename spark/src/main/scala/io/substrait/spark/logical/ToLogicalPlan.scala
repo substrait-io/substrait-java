@@ -30,6 +30,8 @@ import org.apache.spark.sql.catalyst.util.toPrettySQL
 import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
+import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
+import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.types.{DataTypes, IntegerType, StructField, StructType}
 
 import io.substrait.`type`.{StringTypeVisitor, Type}
@@ -40,6 +42,7 @@ import io.substrait.relation
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.LocalFiles
 import io.substrait.relation.Set.SetOp
+import io.substrait.relation.files.FileFormat
 import org.apache.hadoop.fs.Path
 
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -331,6 +334,33 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   override def visit(localFiles: LocalFiles): LogicalPlan = {
     val schema = ToSubstraitType.toStructType(localFiles.getInitialSchema)
     val output = schema.map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+
+    // spark requires that all files have the same format
+    val formats = localFiles.getItems.asScala.map(i => i.getFileFormat.orElse(null)).distinct
+    if (formats.length != 1) {
+      throw new UnsupportedOperationException(s"All files must have the same format")
+    }
+    val (format, options) = formats.head match {
+      case csv: FileFormat.DelimiterSeparatedTextReadOptions =>
+        val opts = scala.collection.mutable.Map[String, String](
+          "delimiter" -> csv.getFieldDelimiter,
+          "quote" -> csv.getQuote,
+          "header" -> (csv.getHeaderLinesToSkip match {
+            case 0 => "false"
+            case 1 => "true"
+            case _ =>
+              throw new UnsupportedOperationException(
+                s"Cannot configure CSV reader to skip ${csv.getHeaderLinesToSkip} rows")
+          }),
+          "escape" -> csv.getEscape
+        )
+        csv.getValueTreatedAsNull.ifPresent(nullValue => opts("nullValue") = nullValue)
+        (new CSVFileFormat, opts.toMap)
+      case _: FileFormat.ParquetReadOptions => (new ParquetFileFormat(), Map.empty[String, String])
+      case _: FileFormat.OrcReadOptions => (new OrcFileFormat(), Map.empty[String, String])
+      case format =>
+        throw new UnsupportedOperationException(s"File format not currently supported: $format")
+    }
     new LogicalRelation(
       relation = HadoopFsRelation(
         location = new InMemoryFileIndex(
@@ -341,8 +371,8 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
         partitionSchema = new StructType(),
         dataSchema = schema,
         bucketSpec = None,
-        fileFormat = new CSVFileFormat(),
-        options = Map()
+        fileFormat = format,
+        options = options
       )(spark),
       output = output,
       catalogTable = None,

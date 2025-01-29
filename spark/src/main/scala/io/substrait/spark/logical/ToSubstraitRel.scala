@@ -26,6 +26,9 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
+import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
+import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
+import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
 import org.apache.spark.sql.types.{NullType, StructType}
 
@@ -378,8 +381,24 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   private def buildLocalFileScan(fsRelation: HadoopFsRelation): relation.AbstractReadRel = {
     val namedStruct = toNamedStruct(fsRelation.schema)
 
-    val ff = new FileFormat.ParquetReadOptions {
-      override def toString: String = "csv" // TODO this is hardcoded at the moment
+    val format = fsRelation.fileFormat match {
+      case _: CSVFileFormat =>
+        new FileFormat.DelimiterSeparatedTextReadOptions {
+          // default values for options specified here:
+          // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
+          override def getFieldDelimiter: String = fsRelation.options.getOrElse("delimiter", ",")
+          override def getMaxLineSize: Long = 0 // No Spark equivalent. Assign proto default of 0
+          override def getQuote: String = fsRelation.options.getOrElse("quote", "\"")
+          override def getHeaderLinesToSkip: Long =
+            if (fsRelation.options.getOrElse("header", false) == false) 0 else 1
+          override def getEscape: String = fsRelation.options.getOrElse("escape", "\\")
+          override def getValueTreatedAsNull: Optional[String] =
+            Optional.ofNullable(fsRelation.options.get("nullValue").orNull)
+        }
+      case _: ParquetFileFormat => new FileFormat.ParquetReadOptions {}
+      case _: OrcFileFormat => new FileFormat.OrcReadOptions {}
+      case format =>
+        throw new UnsupportedOperationException(s"File format not currently supported: $format")
     }
 
     relation.LocalFiles
@@ -391,7 +410,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             file => {
               ImmutableFileOrFiles
                 .builder()
-                .fileFormat(ff)
+                .fileFormat(format)
                 .partitionIndex(0)
                 .start(0)
                 .length(fsRelation.sizeInBytes)
