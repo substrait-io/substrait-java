@@ -69,7 +69,7 @@ jobs:
         with:
           name: cyclonedx-sbom
       - name: Scan
-        run: docker run --rm -v "${PWD}/${{ matrix.project }}/build/reports/bom.json:/bom.json" ghcr.io/google/osv-scanner --sbom /bom.json
+        run: docker run --rm -v "${PWD}/${{ matrix.project }}/build/reports/bom.json:/bom.json" ghcr.io/google/osv-scanner:v1.9.2 --sbom /bom.json
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
@@ -130,7 +130,9 @@ jobs:
     - name: Install GraalVM native image
       run: gu install native-image
     - name: Build with Gradle
-      run: gradle nativeImage
+      run: |
+        ln -s isthmus-cli/proxies.json
+        gradle nativeImage
     - name: Smoke Test
       run: |
         ./isthmus-cli/src/test/script/smoke.sh
