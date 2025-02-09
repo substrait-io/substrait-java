@@ -1,6 +1,21 @@
 Release Notes
 ---
 
+## [0.47.0](https://github.com/substrait-io/substrait-java/compare/v0.46.1...v0.47.0) (2025-02-09)
+
+### ⚠ BREAKING CHANGES
+
+* **pojo:** AggregationPhase enum has a new allowed value
+
+### Features
+
+* **pojo:** add UNSPECIFIED value to AggregationPhase enum ([#320](https://github.com/substrait-io/substrait-java/issues/320)) ([a0ef1dd](https://github.com/substrait-io/substrait-java/commit/a0ef1dd2cd79df43dbecf4ec28f64fa8c7216993))
+* **spark:** add support for DelimiterSeparatedTextReadOptions ([#323](https://github.com/substrait-io/substrait-java/issues/323)) ([13da183](https://github.com/substrait-io/substrait-java/commit/13da1839dfb75f09e5fe7b61b7301efca5bcbef6))
+
+### Bug Fixes
+
+* **isthmus:** more standard SQL for TPCDS query 72 ([#326](https://github.com/substrait-io/substrait-java/issues/326)) ([b4afdb2](https://github.com/substrait-io/substrait-java/commit/b4afdb25364eefa2094c7d86c2c19581a8054e1b))
+
 ## [0.46.1](https://github.com/substrait-io/substrait-java/compare/v0.46.0...v0.46.1) (2024-12-22)
 
 ### Bug Fixes
