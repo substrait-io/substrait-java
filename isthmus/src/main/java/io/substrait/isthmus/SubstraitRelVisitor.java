@@ -179,6 +179,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           case FULL -> Join.JoinType.OUTER;
           case SEMI -> Join.JoinType.SEMI;
           case ANTI -> Join.JoinType.ANTI;
+          case ASOF -> throw new RuntimeException("ASOF join not supported");
+          case LEFT_ASOF -> throw new RuntimeException("LEFT ASOF join not supported");
         };
 
     if (joinType == Join.JoinType.INNER
