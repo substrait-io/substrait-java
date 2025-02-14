@@ -333,15 +333,26 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   @Override
   public RelNode visit(Sort sort) throws RuntimeException {
     RelNode child = sort.getInput().accept(this);
-    List<RelFieldCollation> relFieldCollations =
+    List<RexNode> sortExpressions =
         sort.getSortFields().stream()
-            .map(sortField -> toRelFieldCollation(sortField))
+            .map(this::directedRexNode)
             .collect(java.util.stream.Collectors.toList());
-    if (relFieldCollations.isEmpty()) {
-      return relBuilder.push(child).sort(Collections.EMPTY_LIST).build();
-    }
-    RelNode node = relBuilder.push(child).sort(RelCollations.of(relFieldCollations)).build();
+    RelNode node = relBuilder.push(child).sort(sortExpressions).build();
     return applyRemap(node, sort.getRemap());
+  }
+
+  private RexNode directedRexNode(Expression.SortField sortField) {
+    var expression = sortField.expr();
+    var rexNode = expression.accept(expressionRexConverter);
+    var sortDirection = sortField.direction();
+    return switch (sortDirection) {
+      case ASC_NULLS_FIRST -> relBuilder.nullsFirst(rexNode);
+      case ASC_NULLS_LAST -> relBuilder.nullsLast(rexNode);
+      case DESC_NULLS_FIRST -> relBuilder.nullsFirst(relBuilder.desc(rexNode));
+      case DESC_NULLS_LAST -> relBuilder.nullsLast(relBuilder.desc(rexNode));
+      case CLUSTERED -> throw new RuntimeException(
+          String.format("Unexpected Expression.SortDirection: Clustered!"));
+    };
   }
 
   @Override
