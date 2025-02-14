@@ -86,19 +86,30 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
     // TODO need a more robust way of testing this than round-tripping.
-    val logicalPlan = plan(query)
-    val pojoRel = new ToSubstraitRel().visit(logicalPlan)
-    val converter = new ToLogicalPlan(spark = spark);
-    val logicalPlan2 = pojoRel.accept(converter);
-    require(logicalPlan2.resolved);
-    val pojoRel2 = new ToSubstraitRel().visit(logicalPlan2)
+    val sparkPlan = plan(query)
 
-    val extensionCollector = new ExtensionCollector;
-    val proto = new RelProtoConverter(extensionCollector).toProto(pojoRel)
-    new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(proto)
+    // convert spark logical plan to substrait
+    val substraitPlan = new ToSubstraitRel().visit(sparkPlan)
 
-    pojoRel2.shouldEqualPlainly(pojoRel)
-    logicalPlan2
+    // Serialize to protobuf byte array
+    val extensionCollector = new ExtensionCollector
+    val bytes = new RelProtoConverter(extensionCollector).toProto(substraitPlan).toByteArray
+
+    // Read it back
+    val protoPlan = io.substrait.proto.Rel.parseFrom(bytes)
+    val substraitPlan2 =
+      new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(protoPlan)
+
+    // convert substrait back to spark plan
+    val sparkPlan2 = substraitPlan2.accept(new ToLogicalPlan(spark))
+    require(sparkPlan2.resolved)
+
+    // and back to substrait again
+    val substraitPlan3 = new ToSubstraitRel().visit(sparkPlan2)
+
+    // compare with original substrait plan to ensure it round-tripped (via proto bytes) correctly
+    substraitPlan3.shouldEqualPlainly(substraitPlan)
+    sparkPlan2
   }
 
   def plan(sql: String): LogicalPlan = {
