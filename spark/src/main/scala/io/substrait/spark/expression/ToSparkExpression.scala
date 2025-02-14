@@ -19,9 +19,11 @@ package io.substrait.spark.expression
 import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtension, ToSubstraitType}
 import io.substrait.spark.logical.ToLogicalPlan
 
-import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, CaseWhen, Cast, EqualTo, Expression, In, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.plans.ExistenceJoin
+import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types.{DateType, Decimal}
+import org.apache.spark.sql.types.{BooleanType, DateType, Decimal}
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -38,6 +40,12 @@ class ToSparkExpression(
     val toLogicalPlan: Option[ToLogicalPlan] = None)
   extends DefaultExpressionVisitor[Expression]
   with HasOutputStack[Seq[NamedExpression]] {
+
+  private val existenceJoins = scala.collection.mutable.Map[AttributeReference, LogicalPlan]()
+
+  def lookupExists(attr: AttributeReference): Option[LogicalPlan] = {
+    existenceJoins.get(attr)
+  }
 
   override def visit(expr: SExpression.BoolLiteral): Expression = {
     if (expr.value()) {
@@ -198,6 +206,25 @@ class ToSparkExpression(
       .getOrElse(visitFallback(expr))
   }
 
+  private def existenceJoin(expr: SExpression.InPredicate): AttributeReference = {
+    val dataType = ToSubstraitType.convert(expr.getType)
+    require(dataType == BooleanType)
+    val needles = expr.needles().asScala.map(e => e.accept(this))
+    val haystack = expr.haystack().accept(toLogicalPlan.get)
+    val exists = AttributeReference("exists", BooleanType, nullable = false)()
+    val joinType = ExistenceJoin(exists)
+    require(
+      needles.size == haystack.output.size,
+      "The number of needles must match the number of haystack outputs")
+    val condition = needles
+      .zip(haystack.output)
+      .map { case (needle, hay) => EqualTo(needle, hay) }
+      .reduce[Expression] { case (lhs, rhs) => And(lhs, rhs) }
+    val join = Join(null, haystack, joinType, Some(condition), JoinHint.NONE)
+    existenceJoins.put(exists, join)
+    exists
+  }
+
   override def visit(expr: SExpression.SingleOrList): Expression = {
     val value = expr.condition().accept(this)
     val list = expr.options().asScala.map(e => e.accept(this))
@@ -208,7 +235,12 @@ class ToSparkExpression(
     val eArgs = expr.arguments().asScala
     val args = eArgs.zipWithIndex.map {
       case (arg, i) =>
-        arg.accept(expr.declaration(), i, this)
+        arg match {
+          case ip: SExpression.InPredicate =>
+            existenceJoin(ip)
+          case _ =>
+            arg.accept(expr.declaration(), i, this)
+        }
     }
 
     expr.declaration.name match {

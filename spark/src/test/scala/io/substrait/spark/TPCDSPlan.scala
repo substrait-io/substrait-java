@@ -35,8 +35,7 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
   val failingSQL: Set[String] = Set(
     "q2", // because round() isn't defined in substrait to work with Decimal. https://github.com/substrait-io/substrait/pull/713
     "q9", // requires implementation of named_struct()
-    "q10", "q35", "q45", // Unsupported join type ExistenceJoin (this is an internal spark type)
-    "q51", "q84", // TBD
+    "q35", "q51", "q84", // These fail when comparing the round-tripped query plans, but are actually equivalent (due to aliases being ignored by substrait)
     "q72" //requires implementation of date_add()
   )
   // spotless:on
