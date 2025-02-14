@@ -16,8 +16,6 @@
  */
 package io.substrait.spark
 
-import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
-
 import org.apache.spark.sql.TPCHBase
 
 class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
@@ -176,6 +174,39 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
     assertSqlSubstraitRelRoundTrip(
       "select sum(l_discount) from lineitem group by grouping sets " +
         "((l_orderkey, L_COMMITDATE), (l_orderkey, L_COMMITDATE, l_linestatus), l_shipdate, ())")
+  }
+
+  test("in_subquery") {
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice from part where p_comment in (select o_comment from orders)")
+  }
+
+  test("exists") {
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice from part where exists (select o_comment from orders)")
+  }
+
+  test("ExistenceJoin") {
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice from part where p_partkey > 0 or p_comment in (select o_comment from orders)")
+
+    assertSqlSubstraitRelRoundTrip("select p_retailprice from part where p_partkey > 0 or " +
+      "(p_comment in (select o_comment from orders) or p_comment in (select r_comment from region))")
+
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice, sum(p_retailprice) from part " +
+        "where p_partkey > 0 or p_comment in (select o_comment from orders) " +
+        "group by p_retailprice")
+
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice from part where p_partkey > 0 or " +
+        "(p_comment, p_retailprice) in (select o_comment, o_totalprice from orders)"
+    )
+
+    assertSqlSubstraitRelRoundTrip(
+      "select p_retailprice from part where p_partkey > 0 or " +
+        "(upper(p_comment), p_retailprice * 1.2) in (select upper(o_comment), o_totalprice from orders)"
+    )
   }
 
   test("tpch_q1_variant") {

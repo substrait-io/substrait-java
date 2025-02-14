@@ -21,7 +21,7 @@ import io.substrait.spark.DefaultExpressionVisitor
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 
 import io.substrait.expression.{Expression, FieldReference}
-import io.substrait.expression.Expression.{DateLiteral, DecimalLiteral, I32Literal, StrLiteral}
+import io.substrait.expression.Expression.{DateLiteral, DecimalLiteral, I32Literal, I64Literal, StrLiteral}
 import io.substrait.function.ToTypeString
 import io.substrait.util.DecimalUtil
 
@@ -40,6 +40,10 @@ class ExpressionToString extends DefaultExpressionVisitor[String] {
   }
 
   override def visit(expr: I32Literal): String = {
+    expr.value().toString
+  }
+
+  override def visit(expr: I64Literal): String = {
     expr.value().toString
   }
 
@@ -74,6 +78,18 @@ class ExpressionToString extends DefaultExpressionVisitor[String] {
   }
 
   override def visit(expr: Expression.EmptyMapLiteral): String = {
+    expr.toString
+  }
+
+  override def visit(expr: Expression.Cast): String = {
+    expr.getType.toString
+  }
+
+  override def visit(expr: Expression.InPredicate): String = {
+    expr.toString
+  }
+
+  override def visit(expr: Expression.ScalarSubquery): String = {
     expr.toString
   }
 }

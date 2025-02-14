@@ -19,7 +19,7 @@ package io.substrait.spark.expression
 import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtension, ToSubstraitType}
 import io.substrait.spark.logical.ToLogicalPlan
 
-import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, InSubquery, ListQuery, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DateType, Decimal}
 import org.apache.spark.substrait.SparkTypeUtil
@@ -202,6 +202,14 @@ class ToSparkExpression(
     val value = expr.condition().accept(this)
     val list = expr.options().asScala.map(e => e.accept(this))
     In(value, list)
+  }
+
+  override def visit(expr: SExpression.InPredicate): Expression = {
+    val needles = expr.needles().asScala.map(e => e.accept(this))
+    val haystack = expr.haystack().accept(toLogicalPlan.get)
+    new InSubquery(needles, ListQuery(haystack, childOutputs = haystack.output)) {
+      override def nullable: Boolean = expr.getType.nullable()
+    }
   }
 
   override def visit(expr: SExpression.ScalarFunctionInvocation): Expression = {
