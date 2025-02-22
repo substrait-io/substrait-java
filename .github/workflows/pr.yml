@@ -131,7 +131,6 @@ jobs:
       run: gu install native-image
     - name: Build with Gradle
       run: |
-        ln -s isthmus-cli/proxies.json
         gradle nativeImage
     - name: Smoke Test
       run: |

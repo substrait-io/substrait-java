@@ -133,7 +133,7 @@ graal {
   option("-H:IncludeResources=.*yaml")
   option("--report-unsupported-elements-at-runtime")
   option("-H:+ReportExceptionStackTraces")
-  option("-H:DynamicProxyConfigurationFiles=proxies.json")
+  option("-H:DynamicProxyConfigurationFiles=${project.file("proxies.json")}")
   option("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
   option("-J--enable-preview")
 }
