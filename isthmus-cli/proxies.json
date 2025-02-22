@@ -10,6 +10,7 @@
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$ExplainVisibility$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$MaxRowCount$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$MinRowCount$Handler"],
+  ["org.apache.calcite.rel.metadata.BuiltInMetadata$Measure$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$Memory$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$NonCumulativeCost$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$Parallelism$Handler"],
