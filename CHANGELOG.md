@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.48.0](https://github.com/substrait-io/substrait-java/compare/v0.47.0...v0.48.0) (2025-02-24)
+
+### Features
+
+* **isthmus:** support full expressions in SortRel ([#322](https://github.com/substrait-io/substrait-java/issues/322)) ([80f8678](https://github.com/substrait-io/substrait-java/commit/80f867891450f8ecb24c9e363ff6d161fc0e5b0b))
+
 ## [0.47.0](https://github.com/substrait-io/substrait-java/compare/v0.46.1...v0.47.0) (2025-02-09)
 
 ### ⚠ BREAKING CHANGES
