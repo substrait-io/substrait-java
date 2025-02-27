@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
   `maven-publish`
-  id("java")
+  id("java-library")
   id("idea")
   id("com.diffplug.spotless") version "6.19.0"
   id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -79,8 +79,8 @@ val SLF4J_VERSION = properties.get("slf4j.version")
 val PROTOBUF_VERSION = properties.get("protobuf.version")
 
 dependencies {
-  implementation(project(":core"))
-  implementation("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
+  api(project(":core"))
+  api("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
   // calcite-core 1.37.0 brings in net.minidev:json-smart:2.5.0 which has a CVE associated with it.
   // See: https://osv.dev/vulnerability/GHSA-pq2g-wx69-c263
   // This causes the build to fail. Pull in the fixed version until Calcite is updated
