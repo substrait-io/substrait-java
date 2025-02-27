@@ -2,7 +2,7 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
   `maven-publish`
-  id("java")
+  id("java-library")
   id("idea")
   id("antlr")
   id("com.google.protobuf") version "0.9.4"
@@ -84,7 +84,7 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
-  implementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
+  api("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
