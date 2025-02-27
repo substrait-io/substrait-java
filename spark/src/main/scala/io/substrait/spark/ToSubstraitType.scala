@@ -68,6 +68,12 @@ private class ToSparkType
 
   override def visit(expr: Type.IntervalYear): DataType = YearMonthIntervalType.DEFAULT
 
+  override def visit(expr: Type.Struct): DataType = {
+    StructType(
+      expr.fields.asScala.map(f => StructField(f.toString, f.accept(this), f.nullable()))
+    )
+  }
+
   override def visit(expr: Type.ListType): DataType =
     ArrayType(expr.elementType().accept(this), containsNull = expr.elementType().nullable())
 

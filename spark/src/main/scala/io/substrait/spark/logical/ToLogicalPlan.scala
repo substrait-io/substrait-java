@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction}
-import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftAnti, LeftOuter, LeftSemi, RightOuter}
+import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, FullOuter, Inner, LeftAnti, LeftOuter, LeftSemi, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.toPrettySQL
 import org.apache.spark.sql.execution.QueryExecution
@@ -46,6 +46,7 @@ import io.substrait.relation.files.FileFormat
 import org.apache.hadoop.fs.Path
 
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -218,7 +219,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
 
   override def visit(fetch: relation.Fetch): LogicalPlan = {
     val child = fetch.getInput.accept(this)
-    val limit = fetch.getCount.getAsLong.intValue()
+    val limit = fetch.getCount.orElse(-1).intValue() // -1 means unassigned here
     val offset = fetch.getOffset.intValue()
     val toLiteral = (i: Int) => Literal(i, IntegerType)
     if (limit >= 0) {
@@ -291,10 +292,34 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
 
   override def visit(filter: relation.Filter): LogicalPlan = {
-    val child = filter.getInput.accept(this)
+    var child = filter.getInput.accept(this)
     withChild(child) {
       val condition = filter.getCondition.accept(expressionConverter)
+      val existenceJoins = mutable.ListBuffer[AttributeReference]()
+      findExistenceJoins(condition, existenceJoins)
+      existenceJoins.foreach {
+        exists =>
+          expressionConverter.lookupExists(exists) match {
+            case Some(Join(_, right, joinType, condition, hint)) =>
+              // the filter child now becomes the join's left child
+              // and the join becomes the filter's child.
+              child = Join(child, right, joinType, condition, hint)
+            case _ => // should not get here!
+              throw new UnsupportedOperationException(
+                s"Expression not currently supported: $condition")
+          }
+      }
       Filter(condition, child)
+    }
+  }
+
+  private def findExistenceJoins(
+      expression: Expression,
+      attributes: mutable.ListBuffer[AttributeReference]): Unit = {
+    expression.children.foreach {
+      case attr: AttributeReference if expressionConverter.lookupExists(attr).isDefined =>
+        attributes.append(attr)
+      case child => findExistenceJoins(child, attributes)
     }
   }
 

@@ -247,8 +247,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitFilter(p: Filter): relation.Rel = {
+    val input = visit(p.child)
     val condition = toExpression(p.child.output)(p.condition)
-    relation.Filter.builder().condition(condition).input(visit(p.child)).build()
+    relation.Filter.builder().condition(condition).input(input).build()
   }
 
   private def toSubstraitJoin(joinType: JoinType): relation.Join.JoinType = joinType match {
@@ -262,33 +263,73 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitJoin(p: Join): relation.Rel = {
-    val left = visit(p.left)
-    val right = visit(p.right)
-    val condition = p.condition.map(toExpression(p.left.output ++ p.right.output)).getOrElse(TRUE)
-    val joinType = toSubstraitJoin(p.joinType)
+    p match {
+      case Join(left, right, ExistenceJoin(exists), where, _) =>
+        convertExistenceJoin(left, right, where, exists)
+      case _ =>
+        val left = visit(p.left)
+        val right = visit(p.right)
+        val condition =
+          p.condition.map(toExpression(p.left.output ++ p.right.output)).getOrElse(TRUE)
+        val joinType = toSubstraitJoin(p.joinType)
 
-    if (joinType == relation.Join.JoinType.INNER && TRUE == condition) {
-      relation.Cross.builder
-        .left(left)
-        .right(right)
-        .build
-    } else {
-      relation.Join.builder
-        .condition(condition)
-        .joinType(joinType)
-        .left(left)
-        .right(right)
-        .build
+        if (joinType == relation.Join.JoinType.INNER && TRUE == condition) {
+          relation.Cross.builder
+            .left(left)
+            .right(right)
+            .build
+        } else {
+          relation.Join.builder
+            .condition(condition)
+            .joinType(joinType)
+            .left(left)
+            .right(right)
+            .build
+        }
     }
+  }
+
+  private def convertExistenceJoin(
+      left: LogicalPlan,
+      right: LogicalPlan,
+      condition: Option[Expression],
+      exists: Attribute): relation.Rel = {
+    // An ExistenceJoin is an internal spark join type that is injected by the catalyst
+    // optimiser. It doesn't directly map to any SQL join type, but can be modelled using
+    // a Substrait `InPredicate` within a Filter condition.
+
+    // The 'exists' attribute in the parent filter condition will be associated with this.
+
+    // extract the needle expressions from the join condition
+    def findNeedles(expr: Expression): Iterable[Expression] = expr match {
+      case And(lhs, rhs) => findNeedles(lhs) ++ findNeedles(rhs)
+      case EqualTo(lhs, _) => Seq(lhs)
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"Unable to convert the ExistenceJoin condition: $expr")
+    }
+    val needles = condition.toIterable
+      .flatMap(w => findNeedles(w))
+      .map(toExpression(left.output))
+      .asJava
+
+    val haystack = visit(right)
+
+    val inPredicate =
+      SExpression.InPredicate.builder().needles(needles).haystack(haystack).build()
+    // put this in a map exists->inPredicate for later lookup
+    toSubstraitExp.existenceJoins.put(exists.exprId.id, inPredicate)
+    // return the left child, which will become the child of the enclosing filter
+    visit(left)
   }
 
   override def visitProject(p: Project): relation.Rel = {
     val expressions = p.projectList.map(toExpression(p.child.output)).toList
-
+    val child = visit(p.child)
     relation.Project.builder
-      .remap(relation.Rel.Remap.offset(p.child.output.size, expressions.size))
+      .remap(relation.Rel.Remap.offset(child.getRecordType.fields.size, expressions.size))
       .expressions(expressions.asJava)
-      .input(visit(p.child))
+      .input(child)
       .build()
   }
 
@@ -492,6 +533,8 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
   override protected val toScalarFunction: ToScalarFunction =
     ToScalarFunction(SparkExtension.SparkScalarFunctions)
 
+  val existenceJoins = scala.collection.mutable.Map[Long, SExpression.InPredicate]()
+
   override protected def translateSubQuery(expr: PlanExpression[_]): Option[SExpression] = {
     expr match {
       case s: ScalarSubquery if s.outerAttrs.isEmpty && s.joinCond.isEmpty =>
@@ -502,6 +545,13 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
             .`type`(ToSubstraitType.apply(s.dataType, s.nullable))
             .build())
       case other => default(other)
+    }
+  }
+
+  override protected def translateAttribute(a: AttributeReference): Option[SExpression] = {
+    existenceJoins.get(a.exprId.id) match {
+      case Some(exists) => Some(exists)
+      case None => super.translateAttribute(a)
     }
   }
 }
