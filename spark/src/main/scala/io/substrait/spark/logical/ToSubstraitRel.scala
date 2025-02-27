@@ -134,7 +134,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val aggregates = collectAggregates(actualResultExprs, aggExprToOutputOrdinal)
     val aggOutputMap = aggregates.zipWithIndex.map {
       case (e, i) =>
-        AttributeReference(s"agg_func_$i", e.dataType)() -> e
+        AttributeReference(s"agg_func_$i", e.dataType, nullable = e.nullable)() -> e
     }
     val aggOutput = aggOutputMap.map(_._1)
 
@@ -148,7 +148,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     }
     val groupOutputMap = actualGroupExprs.zipWithIndex.map {
       case (e, i) =>
-        AttributeReference(s"group_col_$i", e.dataType)() -> e
+        AttributeReference(s"group_col_$i", e.dataType, nullable = e.nullable)() -> e
     }
     val groupOutput = groupOutputMap.map(_._1)
 
@@ -188,13 +188,10 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitWindow(window: Window): relation.Rel = {
-    val windowExpressions = window.windowExpressions.map {
-      case w: WindowExpression => fromWindowCall(w, window.child.output)
-      case a: Alias if a.child.isInstanceOf[WindowExpression] =>
-        fromWindowCall(a.child.asInstanceOf[WindowExpression], window.child.output)
-      case other =>
-        throw new UnsupportedOperationException(s"Unsupported window expression: $other")
-    }.asJava
+    val windowExpressions = window.windowExpressions
+      .flatMap(expr => expr.collect { case w: WindowExpression => w })
+      .map(fromWindowCall(_, window.child.output))
+      .asJava
 
     val partitionExpressions = window.partitionSpec.map(toExpression(window.child.output)).asJava
     val sorts = window.orderSpec.map(toSortField(window.child.output)).asJava
@@ -212,12 +209,15 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
-    relation.Fetch
+    val builder = relation.Fetch
       .builder()
       .input(visit(child))
       .offset(offset)
-      .count(limit)
-      .build()
+    if (limit != -1) {
+      builder.count(limit)
+    }
+
+    builder.build()
   }
 
   override def visitGlobalLimit(p: GlobalLimit): relation.Rel = {
