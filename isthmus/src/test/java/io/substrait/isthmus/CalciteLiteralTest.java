@@ -216,6 +216,29 @@ public class CalciteLiteralTest extends CalciteObjs {
   }
 
   @Test
+  void tIntervalDay() {
+    // Calcite always uses milliseconds
+    BigDecimal bd = new BigDecimal(TimeUnit.DAYS.toMillis(5));
+    RexLiteral intervalDayLiteral =
+        rex.makeIntervalLiteral(
+            bd,
+            new SqlIntervalQualifier(
+                org.apache.calcite.avatica.util.TimeUnit.DAY, -1, null, -1, SqlParserPos.ZERO));
+    var intervalDayExpr = intervalDay(false, 5, 0, 0, 6);
+
+    // rex --> expression
+    var convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
+    assertEquals(intervalDayExpr, convertedExpr);
+
+    // expression -> rex
+    RexLiteral convertedRex = (RexLiteral) intervalDayExpr.accept(expressionRexConverter);
+
+    // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
+    assertEquals(
+        intervalDayLiteral.getValueAs(BigDecimal.class), convertedRex.getValueAs(BigDecimal.class));
+  }
+
+  @Test
   void tIntervalYear() {
     BigDecimal bd = new BigDecimal(123 * 12); // '123' year(3)
     RexLiteral intervalYear =
