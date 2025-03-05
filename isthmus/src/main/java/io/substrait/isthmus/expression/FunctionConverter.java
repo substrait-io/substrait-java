@@ -25,6 +25,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -347,9 +348,9 @@ public abstract class FunctionConverter<
        * to a EnumArg.
        */
       var operands =
-          call.getOperands().map(topLevelConverter).collect(java.util.stream.Collectors.toList());
+          call.getOperands().map(topLevelConverter).collect(Collectors.toList());
       var opTypes =
-          operands.stream().map(Expression::getType).collect(java.util.stream.Collectors.toList());
+          operands.stream().map(Expression::getType).collect(Collectors.toList());
 
       var outputType = typeConverter.toSubstrait(call.getType());
 
@@ -357,12 +358,12 @@ public abstract class FunctionConverter<
       var typeStrings =
           opTypes.stream().map(t -> t.accept(ToTypeString.INSTANCE)).collect(Collectors.toList());
       var possibleKeys =
-          matchKeys(call.getOperands().collect(java.util.stream.Collectors.toList()), typeStrings);
+          matchKeys(call.getOperands().collect(Collectors.toList()), typeStrings);
 
       var directMatchKey =
           possibleKeys
               .map(argList -> name + ":" + argList)
-              .filter(k -> directMap.containsKey(k))
+              .filter(directMap::containsKey)
               .findFirst();
 
       if (directMatchKey.isPresent()) {
@@ -375,13 +376,13 @@ public abstract class FunctionConverter<
                     operands.stream(),
                     (r, o) -> {
                       if (EnumConverter.isEnumValue(r)) {
-                        return EnumConverter.fromRex(variant, (RexLiteral) r).orElseGet(() -> null);
+                        return EnumConverter.fromRex(variant, (RexLiteral) r).orElse(null);
                       } else {
                         return o;
                       }
                     })
-                .collect(java.util.stream.Collectors.toList());
-        var allArgsMapped = funcArgs.stream().filter(e -> e == null).findFirst().isEmpty();
+                .collect(Collectors.toList());
+        var allArgsMapped = funcArgs.stream().filter(Objects::isNull).findFirst().isEmpty();
         if (allArgsMapped) {
           return Optional.of(generateBinding(call, variant, funcArgs, outputType));
         } else {
@@ -411,7 +412,7 @@ public abstract class FunctionConverter<
         return Optional.empty();
       }
       Type type = typeConverter.toSubstrait(leastRestrictive);
-      var out = singularInputType.get().tryMatch(type, outputType);
+      var out = singularInputType.orElseThrow().tryMatch(type, outputType);
 
       if (out.isPresent()) {
         var declaration = out.get();
@@ -421,7 +422,7 @@ public abstract class FunctionConverter<
             generateBinding(
                 call,
                 out.get(),
-                coercedArgs.stream().map(FunctionArg.class::cast).collect(Collectors.toList()),
+                coercedArgs,
                 outputType));
       }
       return Optional.empty();
@@ -453,7 +454,7 @@ public abstract class FunctionConverter<
             generateBinding(
                 call,
                 matchFunction.get(),
-                coerced.stream().map(FunctionArg.class::cast).collect(Collectors.toList()),
+                coerced,
                 outputType));
       }
 
@@ -492,7 +493,7 @@ public abstract class FunctionConverter<
   }
 
   protected abstract T generateBinding(
-      C call, F function, List<FunctionArg> arguments, Type outputType);
+      C call, F function, List<? extends FunctionArg> arguments, Type outputType);
 
   public interface SingularArgumentMatcher<F> {
     Optional<F> tryMatch(Type type, Type outputType);
