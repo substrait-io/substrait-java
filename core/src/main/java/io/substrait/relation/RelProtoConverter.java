@@ -208,6 +208,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setBaseSchema(namedScan.getInitialSchema().toProto(typeProtoConverter));
 
     namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
+    namedScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
     namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
@@ -227,6 +228,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .build())
             .setBaseSchema(localFiles.getInitialSchema().toProto(typeProtoConverter));
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
+    localFiles.getBestEffortFilter().ifPresent(t -> builder.setBestEffortFilter(toProto(t)));
 
     localFiles.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder.build()).build();
@@ -450,6 +452,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
     virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
+    virtualTableScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
     virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
     return Rel.newBuilder().setRead(builder).build();
