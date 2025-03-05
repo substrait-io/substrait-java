@@ -183,6 +183,13 @@ public class ProtoRelConverter {
     var builder =
         EmptyScan.builder()
             .initialSchema(namedStruct)
+            .bestEffortFilter(
+                Optional.ofNullable(
+                    rel.hasBestEffortFilter()
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
+                            .from(rel.getBestEffortFilter())
+                        : null))
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
@@ -238,6 +245,13 @@ public class ProtoRelConverter {
         NamedScan.builder()
             .initialSchema(namedStruct)
             .names(rel.getNamedTable().getNamesList())
+            .bestEffortFilter(
+                Optional.ofNullable(
+                    rel.hasBestEffortFilter()
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
+                            .from(rel.getBestEffortFilter())
+                        : null))
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
@@ -279,6 +293,13 @@ public class ProtoRelConverter {
                 rel.getLocalFiles().getItemsList().stream()
                     .map(this::newFileOrFiles)
                     .collect(java.util.stream.Collectors.toList()))
+            .bestEffortFilter(
+                Optional.ofNullable(
+                    rel.hasBestEffortFilter()
+                        ? new ProtoExpressionConverter(
+                                lookup, extensions, namedStruct.struct(), this)
+                            .from(rel.getBestEffortFilter())
+                        : null))
             .filter(
                 Optional.ofNullable(
                     rel.hasFilter()
@@ -356,6 +377,9 @@ public class ProtoRelConverter {
 
     var builder =
         VirtualTableScan.builder()
+            .bestEffortFilter(
+                Optional.ofNullable(
+                    rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
             .rows(structLiterals);

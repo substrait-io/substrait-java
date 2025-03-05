@@ -25,6 +25,8 @@ public class ReadRelRoundtripTest extends TestBase {
     namedScan =
         NamedScan.builder()
             .from(namedScan)
+            .bestEffortFilter(
+                b.equal(b.fieldReference(namedScan, 0), b.fieldReference(namedScan, 1)))
             .filter(b.equal(b.fieldReference(namedScan, 0), b.fieldReference(namedScan, 1)))
             .build();
 
@@ -55,6 +57,8 @@ public class ReadRelRoundtripTest extends TestBase {
     virtTable =
         VirtualTableScan.builder()
             .from(virtTable)
+            .bestEffortFilter(
+                b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
             .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
             .build();
     verifyRoundTrip(virtTable);
