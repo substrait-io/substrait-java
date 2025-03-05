@@ -51,7 +51,7 @@ public class WindowRelFunctionConverter
   protected ConsistentPartitionWindow.WindowRelFunctionInvocation generateBinding(
       WrappedWindowRelCall call,
       SimpleExtension.WindowFunctionVariant function,
-      List<FunctionArg> arguments,
+      List<? extends FunctionArg> arguments,
       Type outputType) {
     Window.RexWinAggCall over = call.getWinAggCall();
 

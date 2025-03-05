@@ -1,9 +1,11 @@
 package io.substrait.isthmus;
 
 import com.google.protobuf.util.JsonFormat;
+import java.util.Set;
+import java.util.stream.IntStream;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  *
@@ -27,33 +29,24 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 public class TpcdsQueryNoValidation extends PlanTestBase {
 
+  static final Set<Integer> EXCLUDED =
+      Set.of(2, 9, 12, 20, 27, 36, 47, 51, 53, 57, 63, 70, 86, 89, 98);
+
+  static IntStream testCases() {
+    return IntStream.rangeClosed(1, 99).filter(n -> !EXCLUDED.contains(n));
+  }
+
   /**
    * This test only validates that generating substrait plans for TPC-DS queries does not fail. As
    * of now this test does not validate correctness of the generated plan
    */
-  private void testQuery(int i) throws Exception {
+  @ParameterizedTest
+  @MethodSource("testCases")
+  void testQuery(int i) throws Exception {
     SqlToSubstrait s = new SqlToSubstrait();
     TpcdsSchema schema = new TpcdsSchema(1.0);
     String sql = asString(String.format("tpcds/queries/%02d.sql", i));
     var plan = s.execute(sql, "tpcds", schema);
     System.out.println(JsonFormat.printer().print(plan));
-  }
-
-  @ParameterizedTest
-  @ValueSource(
-      ints = {
-        1, 3, 4, 6, 7, 8, 10, 11, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 28, 29, 30,
-        31, 32, 33, 34, 35, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 54, 55, 56, 58,
-        59, 60, 61, 62, 64, 65, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 85, 87,
-        88, 90, 92, 93, 94, 95, 96, 97, 99
-      })
-  public void tpcdsSuccess(int query) throws Exception {
-    testQuery(query);
-  }
-
-  @ParameterizedTest
-  @ValueSource(ints = {2, 5, 9, 12, 20, 27, 36, 47, 51, 53, 57, 63, 66, 70, 80, 84, 86, 89, 91, 98})
-  public void tpcdsFailure(int query) throws Exception {
-    // testQuery(query);
   }
 }

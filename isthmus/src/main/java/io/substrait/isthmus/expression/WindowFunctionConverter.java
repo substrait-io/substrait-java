@@ -52,7 +52,7 @@ public class WindowFunctionConverter
   protected Expression.WindowFunctionInvocation generateBinding(
       WrappedWindowCall call,
       SimpleExtension.WindowFunctionVariant function,
-      List<FunctionArg> arguments,
+      List<? extends FunctionArg> arguments,
       Type outputType) {
     RexOver over = call.over;
     RexWindow window = over.getWindow();
