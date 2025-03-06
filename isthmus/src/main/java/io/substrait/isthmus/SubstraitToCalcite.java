@@ -1,10 +1,12 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.NamedStruct;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,8 +14,14 @@ import java.util.function.Function;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
+import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 
@@ -97,6 +105,32 @@ public class SubstraitToCalcite {
     RelBuilder relBuilder = createRelBuilder(rootSchema);
     SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
     return rel.accept(converter);
+  }
+
+  /**
+   * Converts a Substrait {@link Plan.Root} to a Calcite {@link RelRoot}
+   *
+   * <p>Generates a {@link RelDataType} row type with the final field names of the {@link Plan.Root}
+   * and creates a Calcite {@link RelRoot} with it.
+   *
+   * <p>TODO: revisit this code when support for WriteRel is added to substrait-java
+   *
+   * @param root {@link Plan.Root} to convert
+   * @return {@link RelRoot}
+   */
+  public RelRoot convert(Plan.Root root) {
+    RelNode input = convert(root.getInput());
+    RelDataType inputRowType = input.getRowType();
+    List<RelDataTypeField> fields = new ArrayList<>(inputRowType.getFieldCount());
+    for (RelDataTypeField field : inputRowType.getFieldList()) {
+      RelDataTypeFieldImpl renamedField =
+          new RelDataTypeFieldImpl(
+              root.getNames().get(field.getIndex()), field.getIndex(), field.getType());
+      fields.add(renamedField);
+    }
+
+    RelRoot calciteRoot = RelRoot.of(input, new RelRecordType(fields), SqlKind.SELECT);
+    return calciteRoot;
   }
 
   private static class NamedStructGatherer extends AbstractRelVisitor<Void, RuntimeException> {
