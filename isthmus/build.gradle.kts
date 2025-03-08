@@ -6,6 +6,7 @@ plugins {
   id("idea")
   id("com.diffplug.spotless") version "6.19.0"
   id("com.github.johnrengelman.shadow") version "8.1.1"
+  id("com.google.protobuf") version "0.9.4"
   signing
 }
 
@@ -104,6 +105,7 @@ dependencies {
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
+  testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
 }
 
 tasks {
@@ -116,3 +118,7 @@ tasks {
 }
 
 tasks { build { dependsOn(shadowJar) } }
+
+sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
+
+protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }
