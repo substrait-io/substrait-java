@@ -50,11 +50,11 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);
   }
 
-  private List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
+  public List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
     return expressions.stream().map(this::toProto).collect(Collectors.toList());
   }
 
-  private io.substrait.proto.Expression toProto(Expression expression) {
+  public io.substrait.proto.Expression toProto(Expression expression) {
     return expression.accept(exprProtoConverter);
   }
 
@@ -62,7 +62,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     return rel.accept(this);
   }
 
-  private io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+  public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return type.accept(typeProtoConverter);
   }
 
@@ -93,7 +93,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .addAllMeasures(
                 aggregate.getMeasures().stream().map(this::toProto).collect(Collectors.toList()));
 
-    aggregate.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    aggregate.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setAggregate(builder).build();
   }
 
@@ -153,7 +153,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             // -1 is used as a sentinel value to signal LIMIT ALL
             .setCount(fetch.getCount().orElse(-1));
 
-    fetch.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    fetch.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setFetch(builder).build();
   }
 
@@ -165,7 +165,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setInput(toProto(filter.getInput()))
             .setCondition(filter.getCondition().accept(exprProtoConverter));
 
-    filter.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    filter.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setFilter(builder).build();
   }
 
@@ -182,7 +182,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     join.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setJoin(builder).build();
   }
 
@@ -195,7 +195,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
               builder.addInputs(toProto(inputRel));
             });
 
-    set.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    set.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setSet(builder).build();
   }
 
@@ -210,7 +210,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     namedScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
-    namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -230,21 +230,21 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
     localFiles.getBestEffortFilter().ifPresent(t -> builder.setBestEffortFilter(toProto(t)));
 
-    localFiles.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    localFiles.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setRead(builder.build()).build();
   }
 
   @Override
   public Rel visit(ExtensionTable extensionTable) throws RuntimeException {
     ReadRel.ExtensionTable.Builder extensionTableBuilder =
-        ReadRel.ExtensionTable.newBuilder().setDetail(extensionTable.getDetail().toProto());
+        ReadRel.ExtensionTable.newBuilder().setDetail(extensionTable.getDetail().toProto(this));
     var builder =
         ReadRel.newBuilder()
             .setCommon(common(extensionTable))
             .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
             .setExtensionTable(extensionTableBuilder);
 
-    extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -269,7 +269,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setHashJoin(builder).build();
   }
 
@@ -294,7 +294,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    mergeJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    mergeJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setMergeJoin(builder).build();
   }
 
@@ -308,7 +308,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setExpression(toProto(nestedLoopJoin.getCondition()))
             .setType(nestedLoopJoin.getJoinType().toProto());
 
-    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
@@ -326,7 +326,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
     consistentPartitionWindow
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+        .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
 
     return Rel.newBuilder().setWindow(builder).build();
   }
@@ -375,7 +375,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .addAllExpressions(
                 project.getExpressions().stream().map(this::toProto).collect(Collectors.toList()));
 
-    project.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    project.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setProject(builder).build();
   }
 
@@ -420,7 +420,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setInput(toProto(sort.getInput()))
             .addAllSorts(toProtoS(sort.getSortFields()));
 
-    sort.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    sort.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setSort(builder).build();
   }
 
@@ -432,7 +432,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setLeft(toProto(cross.getLeft()))
             .setRight(toProto(cross.getRight()));
 
-    cross.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    cross.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setCross(builder).build();
   }
 
@@ -454,7 +454,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     virtualTableScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
-    virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto()));
+    virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -463,7 +463,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     var builder =
         ExtensionLeafRel.newBuilder()
             .setCommon(common(extensionLeaf))
-            .setDetail(extensionLeaf.getDetail().toProto());
+            .setDetail(extensionLeaf.getDetail().toProto(this));
     return Rel.newBuilder().setExtensionLeaf(builder).build();
   }
 
@@ -473,7 +473,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         ExtensionSingleRel.newBuilder()
             .setCommon(common(extensionSingle))
             .setInput(toProto(extensionSingle.getInput()))
-            .setDetail(extensionSingle.getDetail().toProto());
+            .setDetail(extensionSingle.getDetail().toProto(this));
     return Rel.newBuilder().setExtensionSingle(builder).build();
   }
 
@@ -485,14 +485,14 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         ExtensionMultiRel.newBuilder()
             .setCommon(common(extensionMulti))
             .addAllInputs(inputs)
-            .setDetail(extensionMulti.getDetail().toProto());
+            .setDetail(extensionMulti.getDetail().toProto(this));
     return Rel.newBuilder().setExtensionMulti(builder).build();
   }
 
   private RelCommon common(io.substrait.relation.Rel rel) {
     var builder = RelCommon.newBuilder();
     rel.getCommonExtension()
-        .ifPresent(extension -> builder.setAdvancedExtension(extension.toProto()));
+        .ifPresent(extension -> builder.setAdvancedExtension(extension.toProto(this)));
 
     var remap = rel.getRemap().orElse(null);
     if (remap != null) {
