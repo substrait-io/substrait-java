@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.49.0](https://github.com/substrait-io/substrait-java/compare/v0.48.0...v0.49.0) (2025-03-09)
+
+### Features
+
+* **pojo:** support best_effort_filter on ReadRel messages ([780a0bb](https://github.com/substrait-io/substrait-java/commit/780a0bb22a6cc625cd118eeb59a5f013bc468ba0))
+
 ## [0.48.0](https://github.com/substrait-io/substrait-java/compare/v0.47.0...v0.48.0) (2025-02-24)
 
 ### Features
