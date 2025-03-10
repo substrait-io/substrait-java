@@ -1,5 +1,6 @@
 package io.substrait.isthmus.expression;
 
+import io.substrait.expression.Expression.FixedCharLiteral;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeVisitor;
 import io.substrait.type.Type;
@@ -108,13 +109,20 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(Type.FixedChar type) {
+    return isStringType();
+  }
+
+  private boolean isStringType() {
     return typeToMatch instanceof Type.FixedChar
-        || typeToMatch instanceof ParameterizedType.FixedChar;
+        || typeToMatch instanceof ParameterizedType.FixedChar
+        || typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof ParameterizedType.VarChar
+        || typeToMatch instanceof FixedCharLiteral;
   }
 
   @Override
   public Boolean visit(Type.VarChar type) {
-    return typeToMatch instanceof Type.VarChar || typeToMatch instanceof ParameterizedType.VarChar;
+    return isStringType();
   }
 
   @Override
@@ -158,13 +166,12 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(ParameterizedType.FixedChar expr) throws RuntimeException {
-    return typeToMatch instanceof Type.FixedChar
-        || typeToMatch instanceof ParameterizedType.FixedChar;
+    return isStringType();
   }
 
   @Override
   public Boolean visit(ParameterizedType.VarChar expr) throws RuntimeException {
-    return typeToMatch instanceof Type.VarChar || typeToMatch instanceof ParameterizedType.VarChar;
+    return isStringType();
   }
 
   @Override
