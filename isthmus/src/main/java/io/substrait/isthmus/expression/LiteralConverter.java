@@ -15,8 +15,8 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
@@ -31,8 +31,6 @@ public class LiteralConverter {
   public LiteralConverter(TypeConverter typeConverter) {
     this.typeConverter = typeConverter;
   }
-
-  private static final long MICROS_IN_DAY = TimeUnit.DAYS.toMicros(1);
 
   static final DateTimeFormatter CALCITE_LOCAL_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
   static final DateTimeFormatter CALCITE_LOCAL_TIME_FORMATTER =
@@ -96,7 +94,7 @@ public class LiteralConverter {
       case SMALLINT -> i16(n, i(literal).intValue());
       case INTEGER -> i32(n, i(literal).intValue());
       case BIGINT -> i64(n, i(literal).longValue());
-      case BOOLEAN -> bool(n, (Boolean) literal.getValue());
+      case BOOLEAN -> bool(n, literal.getValueAs(Boolean.class));
       case CHAR -> {
         var val = literal.getValue();
         if (val instanceof NlsString nls) {
@@ -104,8 +102,9 @@ public class LiteralConverter {
         }
         throw new UnsupportedOperationException("Unable to handle char type: " + val);
       }
-      case FLOAT, DOUBLE -> fp64(n, ((Number) literal.getValue()).doubleValue());
-      case REAL -> fp32(n, ((Number) literal.getValue()).floatValue());
+      case FLOAT, DOUBLE -> fp64(n, literal.getValueAs(Double.class));
+      case REAL -> fp32(n, literal.getValueAs(Float.class));
+
       case DECIMAL -> {
         BigDecimal bd = bd(literal);
         yield decimal(n, bd, literal.getType().getPrecision(), literal.getType().getScale());
@@ -155,7 +154,7 @@ public class LiteralConverter {
         yield timestamp(n, ldt);
       }
       case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> {
-        var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
+        long intervalLength = Objects.requireNonNull(literal.getValueAs(Long.class));
         var years = intervalLength / 12;
         var months = intervalLength - years * 12;
         yield intervalYear(n, (int) years, (int) months);
@@ -170,19 +169,15 @@ public class LiteralConverter {
           INTERVAL_MINUTE,
           INTERVAL_MINUTE_SECOND,
           INTERVAL_SECOND -> {
-        // we need to convert to microseconds.
-        // TODO: don't need to anymore
-        int scale = literal.getType().getScale();
-        var intervalLength = literal.getValueAs(BigDecimal.class).longValue();
-        var adjustedLength =
-            scale > 6
-                ? intervalLength / ((int) Math.pow(10, scale - 6))
-                : intervalLength * ((int) Math.pow(10, 6 - scale));
-        var days = adjustedLength / MICROS_IN_DAY;
-        var totalMicroseconds = adjustedLength - days * MICROS_IN_DAY;
-        var seconds = totalMicroseconds / 1_000_000;
-        var microseconds = totalMicroseconds - 1_000_000 * seconds;
-        yield intervalDay(n, (int) days, (int) seconds, microseconds, 6 /* micros */);
+        // Calcite represents day/time intervals in milliseconds, despite a default scale of 6.
+        var totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
+        var interval = Duration.ofMillis(totalMillis);
+
+        var days = interval.toDays();
+        var seconds = interval.minusDays(days).toSeconds();
+        var micros = interval.toMillisPart() * 1000;
+
+        yield intervalDay(n, (int) days, (int) seconds, micros, 6);
       }
 
       case ROW -> {
