@@ -65,6 +65,8 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
 
   protected def translateSubQuery(expr: PlanExpression[_]): Option[SExpression] = default(expr)
 
+  protected def translateInSubquery(expr: InSubquery): Option[SExpression] = default(expr)
+
   protected def translateAttribute(a: AttributeReference): Option[SExpression] = {
     val bindReference =
       BindReferences.bindReference[Expression](a, currentOutput, allowFailures = false)
@@ -141,10 +143,6 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
       case SubstraitLiteral(substraitLiteral) => Some(substraitLiteral)
       case a: AttributeReference if currentOutput.nonEmpty => translateAttribute(a)
       case a: Alias => translateUp(a.child)
-      case p
-          if p.getClass.getCanonicalName.equals( // removed in spark-3.3
-            "org.apache.spark.sql.catalyst.expressions.PromotePrecision") =>
-        translateUp(p.children.head)
       case CaseWhen(branches, elseValue) => translateCaseWhen(branches, elseValue)
       case In(value, list) => translateIn(value, list)
       case InSet(value, set) => translateIn(value, set.toSeq.map(v => Literal(v)))
@@ -153,6 +151,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
           .seqToOption(children.map(translateUp))
           .flatMap(toScalarFunction.convert(scalar, _))
       case p: PlanExpression[_] => translateSubQuery(p)
+      case in: InSubquery => translateInSubquery(in)
       case other => default(other)
     }
   }
