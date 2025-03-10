@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
@@ -11,6 +12,7 @@ import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
+import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
@@ -37,6 +39,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -150,6 +153,14 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   @Override
   public RelNode visit(LocalFiles localFiles) throws RuntimeException {
     return visitFallback(localFiles);
+  }
+
+  @Override
+  public RelNode visit(EmptyScan emptyScan) throws RuntimeException {
+    RelDataType rowType =
+        typeConverter.toCalcite(relBuilder.getTypeFactory(), emptyScan.getInitialSchema().struct());
+    RelNode node = LogicalValues.create(relBuilder.getCluster(), rowType, ImmutableList.of());
+    return applyRemap(node, emptyScan.getRemap());
   }
 
   @Override
