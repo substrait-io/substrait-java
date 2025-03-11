@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import com.google.protobuf.util.JsonFormat;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -56,5 +57,10 @@ public class TpcdsQueryNoValidation extends PlanTestBase {
       ints = {2, 9, 12, 17, 20, 24, 27, 36, 39, 47, 51, 53, 57, 63, 70, 78, 86, 89, 91, 98})
   public void tpcdsFailure(int query) throws Exception {
     // testQuery(query);
+  }
+
+  @Test
+  void concatTest() throws Exception {
+    testQuery(0);
   }
 }

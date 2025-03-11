@@ -66,17 +66,17 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void concatStringLiteralAndVarchar() throws IOException, SqlParseException {
+  public void concatStringLiteralAndVarchar() throws Exception {
     assertFullRoundTrip("select 'part_'||P_NAME from PART");
   }
 
   @Test
-  public void concatCharAndVarchar() throws IOException, SqlParseException {
+  public void concatCharAndVarchar() throws Exception {
     assertFullRoundTrip("select P_BRAND||P_NAME from PART");
   }
 
   @Test
-  public void concatStringLiteralAndChar() throws IOException, SqlParseException {
+  public void concatStringLiteralAndChar() throws Exception {
     assertFullRoundTrip("select 'brand_'||P_BRAND from PART");
   }
 
