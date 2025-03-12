@@ -21,7 +21,7 @@ import io.substrait.spark.expression._
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.analysis.{caseSensitiveResolution, MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction}
 import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftAnti, LeftOuter, LeftSemi, RightOuter}
@@ -32,9 +32,10 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFil
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
-import org.apache.spark.sql.types.{DataTypes, IntegerType, StructField, StructType}
+import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.types.{ArrayType, DataType, DataTypes, IntegerType, MapType, StructField, StructType}
 
-import io.substrait.`type`.{StringTypeVisitor, Type}
+import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
@@ -401,26 +402,63 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     }
   }
 
+  def convert(rel: relation.Rel): LogicalPlan = {
+    val logicalPlan = rel.accept(this)
+    require(logicalPlan.resolved)
+    logicalPlan
+  }
+
   def convert(plan: Plan): LogicalPlan = {
+    require(plan.getRoots.size() == 1)
     val root = plan.getRoots.get(0)
-    val names = root.getNames.asScala
-    val output = names.map(name => AttributeReference(name, DataTypes.StringType)())
-    withOutput(output) {
-      val logicalPlan = root.getInput.accept(this);
-      val projectList: List[NamedExpression] = logicalPlan.output.zipWithIndex
-        .map(
-          z => {
-            val (e, i) = z;
-            if (e.name == names(i)) {
-              e
-            } else {
-              Alias(e, names(i))()
-            }
-          })
-        .toList
-      val wrapper = Project(projectList, logicalPlan)
-      require(wrapper.resolved)
-      wrapper
+    val logicalPlan = convert(root.getInput)
+
+    // Substrait plans do not have column names within the plan, only at the leaf (ReadRel) level and root level.
+    // So we need to do some mangling at the end to ensure the output schema is correct.
+    // The final names in the root are given as a depth-first traversal of the schema, including inner struct fields
+    val targetSchema =
+      ToSparkType.toStructType(NamedStruct.of(root.getNames, root.getInput.getRecordType))
+
+    // Short-circuit: if schema matches already, then we don't need to do anything
+    if (
+      DataType.equalsStructurallyByName(logicalPlan.schema, targetSchema, caseSensitiveResolution)
+    ) {
+      return logicalPlan
     }
+
+    val renameAndCastExprs = (old: Seq[NamedExpression]) =>
+      old.zip(targetSchema.fields).map {
+        case (oldNamedExpr, targetField) =>
+          if (
+            !DataType.equalsStructurallyByName(
+              oldNamedExpr.dataType,
+              targetField.dataType,
+              caseSensitiveResolution)
+          ) {
+            Alias(
+              Cast(oldNamedExpr, targetField.dataType, Some(SQLConf.get.sessionLocalTimeZone)),
+              targetField.name)()
+          } else if (!oldNamedExpr.name.equals(targetField.name)) {
+            Alias(oldNamedExpr, targetField.name)()
+          } else {
+            oldNamedExpr
+          }
+      }
+
+    val renamedLogicalPlan = logicalPlan match {
+      // If the plan ends in a relation that produces columns, we bake in the new names to that existing relation
+      // This is helps a bit with round-trip testing and plan readability
+      case project: Project => Project(renameAndCastExprs(project.projectList), project.child)
+      case aggregate: Aggregate =>
+        Aggregate(
+          aggregate.groupingExpressions,
+          renameAndCastExprs(aggregate.aggregateExpressions),
+          aggregate.child)
+      // Otherwise we add a project to enforce correct names in the output
+      case _ => Project(renameAndCastExprs(logicalPlan.output), logicalPlan)
+    }
+
+    require(renamedLogicalPlan.resolved)
+    renamedLogicalPlan
   }
 }
