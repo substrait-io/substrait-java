@@ -38,7 +38,12 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     StructType(
       Seq( // match automatic naming
         StructField("col1", IntegerType, nullable = false),
-        StructField("col2", StringType, nullable = false))
+        StructField("col2", StringType, nullable = false),
+        StructField(
+          "col3",
+          StructType(Seq(StructField("col1", IntegerType, nullable = false))),
+          nullable = false)
+      )
     )
   )
 
@@ -131,5 +136,74 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     val sparkValues =
       sparkLiteral.value.asInstanceOf[MapData].valueArray().toArray[UTF8String](StringType)
     assert(originalValues.sorted.sameElements(sparkValues.sorted))
+  }
+
+  test(s"test named struct") {
+    // The types test above doesn't cover names so we need to test it separately
+    val dt = StructType(
+      Seq(
+        StructField("integer_col", IntegerType, nullable = false),
+        StructField("string_col", StringType, nullable = false),
+
+        // Nested in struct
+        StructField(
+          "struct_col",
+          StructType(
+            Seq(
+              StructField("nested_integer_col", IntegerType, nullable = false),
+              StructField("nested_string_col", StringType, nullable = false)
+            )
+          ),
+          nullable = false
+        ),
+
+        // Struct in array
+        StructField(
+          "array_col",
+          ArrayType(
+            StructType(
+              Seq(
+                StructField("array_integer_col", IntegerType, nullable = false),
+                StructField("array_string_col", StringType, nullable = false)
+              )
+            ),
+            containsNull = false
+          ),
+          nullable = false
+        ),
+
+        // Struct in map
+        StructField(
+          "map_col",
+          MapType(
+            StructType(
+              Seq(
+                StructField("map_key_integer_col", IntegerType, nullable = false),
+                StructField("map_key_string_col", StringType, nullable = false)
+              )
+            ),
+            StructType(
+              Seq(
+                StructField("map_value_integer_col", IntegerType, nullable = false),
+                StructField("map_value_string_col", StringType, nullable = false)
+              )
+            ),
+            valueContainsNull = false
+          ),
+          nullable = false
+        ),
+
+        // Struct in a struct
+        StructField(
+          "nested_struct_col",
+          StructType(Seq(StructField("integer_col", IntegerType, nullable = false))),
+          nullable = false)
+      )
+    )
+
+    val substraitType = ToSubstraitType.toNamedStruct(dt)
+    val sparkType = ToSparkType.toStructType(substraitType)
+
+    assert(dt == sparkType)
   }
 }
