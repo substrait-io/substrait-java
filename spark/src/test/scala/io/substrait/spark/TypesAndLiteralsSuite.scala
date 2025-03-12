@@ -3,6 +3,7 @@ package io.substrait.spark
 import io.substrait.spark.expression.{ToSparkExpression, ToSubstraitLiteral}
 
 import org.apache.spark.SparkFunSuite
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.util.MapData
 import org.apache.spark.sql.types._
@@ -33,7 +34,12 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     ArrayType(IntegerType, containsNull = false),
     ArrayType(IntegerType, containsNull = true),
     MapType(IntegerType, StringType, valueContainsNull = false),
-    MapType(IntegerType, StringType, valueContainsNull = true)
+    MapType(IntegerType, StringType, valueContainsNull = true),
+    StructType(
+      Seq( // match automatic naming
+        StructField("col1", IntegerType, nullable = false),
+        StructField("col2", StringType, nullable = false))
+    )
   )
 
   types.foreach(
@@ -41,7 +47,7 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
       test(s"test type: $t") {
         // Nullability doesn't matter as in Spark it's not a property of the type
         val substraitType = ToSubstraitType.convert(t, nullable = true).get
-        val sparkType = ToSubstraitType.convert(substraitType)
+        val sparkType = ToSparkType.convert(substraitType)
 
         println("Before: " + t)
         println("After: " + sparkType)
@@ -73,8 +79,17 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     ), // DayTimeInterval
     Literal(Period.ofYears(1)), // YearMonthInterval
     Literal(Period.of(1, 2, 0)), // YearMonthInterval, days are ignored
-    Literal.create(Array(1, 2, 3), ArrayType(IntegerType, containsNull = false))
+    Literal.create(Array(1, 2, 3), ArrayType(IntegerType, containsNull = false)),
 //    Literal.create(Array(1, null, 3), ArrayType(IntegerType, containsNull = true)) // TODO: handle containsNulls
+    Literal.create(
+      Row(1, "a"),
+      StructType(
+        Seq( // match automatic naming
+          StructField("col1", IntegerType, nullable = false),
+          StructField("col2", StringType, nullable = false)
+        ) // TODO: handle nullable = true
+      )
+    )
   )
 
   (defaultLiterals ++ literals).foreach(

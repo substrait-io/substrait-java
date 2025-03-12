@@ -76,13 +76,43 @@ private class ToSparkType
       expr.key().accept(this),
       expr.value().accept(this),
       valueContainsNull = expr.value().nullable())
-}
-class ToSubstraitType {
 
+  override def visit(expr: Type.Struct): DataType = {
+    StructType(
+      expr.fields.asScala.zipWithIndex
+        .map { case (t, i) => StructField(s"col${i + 1}", t.accept(this), t.nullable()) }
+    )
+  }
+
+  def convert(typeExpression: TypeExpression): DataType = {
+    typeExpression.accept(this)
+  }
+}
+
+object ToSparkType {
   def convert(typeExpression: TypeExpression): DataType = {
     typeExpression.accept(new ToSparkType)
   }
 
+  def toStructType(namedStruct: NamedStruct): StructType = {
+    StructType(
+      fields = namedStruct
+        .struct()
+        .fields()
+        .asScala
+        .map(t => (t, convert(t)))
+        .zip(namedStruct.names().asScala)
+        .map { case ((t, d), name) => StructField(name, d, t.nullable()) }
+    )
+  }
+
+  def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
+    toStructType(namedStruct).fields
+      .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+  }
+}
+
+class ToSubstraitType {
   def convert(dataType: DataType, nullable: Boolean): Option[Type] = {
     convert(dataType, Seq.empty, nullable)
   }
@@ -122,8 +152,15 @@ class ToSubstraitType {
             keyT =>
               convert(valueType, Seq.empty, valueContainsNull)
                 .map(valueT => creator.map(keyT, valueT)))
-      case _ =>
-        None
+      case StructType(fields) =>
+        if (fields.isEmpty) {
+          Some(creator.struct(JavaConverters.asJavaIterable(Seq.empty)))
+        } else {
+          Util
+            .seqToOption(fields.map(f => convert(f.dataType, f.nullable)))
+            .map(l => creator.struct(JavaConverters.asJavaIterable(l)))
+        }
+      case _ => None
     }
   }
   def toNamedStruct(output: Seq[Attribute]): Option[NamedStruct] = {
@@ -145,29 +182,6 @@ class ToSubstraitType {
       })
     val struct = creator.struct(children)
     NamedStruct.of(names, struct)
-  }
-
-  def toStructType(namedStruct: NamedStruct): StructType = {
-    StructType(
-      fields = namedStruct
-        .struct()
-        .fields()
-        .asScala
-        .map(t => (t, convert(t)))
-        .zip(namedStruct.names().asScala)
-        .map { case ((t, d), name) => StructField(name, d, t.nullable()) }
-    )
-  }
-
-  def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
-    namedStruct
-      .struct()
-      .fields()
-      .asScala
-      .map(t => (t, convert(t)))
-      .zip(namedStruct.names().asScala)
-      .map { case ((t, d), name) => StructField(name, d, t.nullable()) }
-      .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
   }
 }
 

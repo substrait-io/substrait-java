@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSubstraitType}
+import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSparkType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.sql.SparkSession
@@ -310,7 +310,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
 
   override def visit(emptyScan: relation.EmptyScan): LogicalPlan = {
-    LocalRelation(ToSubstraitType.toAttributeSeq(emptyScan.getInitialSchema))
+    LocalRelation(ToSparkType.toAttributeSeq(emptyScan.getInitialSchema))
   }
 
   override def visit(virtualTableScan: relation.VirtualTableScan): LogicalPlan = {
@@ -321,7 +321,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
             .fields()
             .asScala
             .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)))
-    LocalRelation(ToSubstraitType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
+    LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
   }
 
   override def visit(namedScan: relation.NamedScan): LogicalPlan = {
@@ -332,7 +332,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
 
   override def visit(localFiles: LocalFiles): LogicalPlan = {
-    val schema = ToSubstraitType.toStructType(localFiles.getInitialSchema)
+    val schema = ToSparkType.toStructType(localFiles.getInitialSchema)
     val output = schema.map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
     // spark requires that all files have the same format

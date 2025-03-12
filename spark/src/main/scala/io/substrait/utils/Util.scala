@@ -64,9 +64,9 @@ object Util {
     @tailrec
     def seqToOptionHelper(s: Seq[Option[T]], accum: Seq[T] = Seq[T]()): Option[Seq[T]] = {
       s match {
-        case Some(head) :: Nil =>
+        case Seq(Some(head)) =>
           Option(accum :+ head)
-        case Some(head) :: tail =>
+        case Seq(Some(head), tail @ _*) =>
           seqToOptionHelper(tail, accum :+ head)
         case _ => None
       }
