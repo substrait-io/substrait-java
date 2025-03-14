@@ -95,11 +95,11 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
     val extensionCollector = new ExtensionCollector
     val bytes = new RelProtoConverter(extensionCollector).toProto(substraitPlan).toByteArray
 
-    // Read it back
+    // Read it back and ensure the proto roundtrip doesn't modify the plan
     val protoPlan = io.substrait.proto.Rel.parseFrom(bytes)
     val substraitPlan2 =
       new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(protoPlan)
-    assertResult(substraitPlan)(substraitPlan2)
+    substraitPlan2.shouldEqualPlainly(substraitPlan)
 
     // convert substrait back to spark plan
     val sparkPlan2 = substraitPlan2.accept(new ToLogicalPlan(spark))
