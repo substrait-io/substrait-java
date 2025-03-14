@@ -34,7 +34,7 @@ import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.types.{DataTypes, IntegerType, StructField, StructType}
 
-import io.substrait.`type`.{StringTypeVisitor, Type}
+import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
@@ -310,7 +310,10 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
   }
 
   override def visit(emptyScan: relation.EmptyScan): LogicalPlan = {
-    LocalRelation(ToSubstraitType.toAttributeSeq(emptyScan.getInitialSchema))
+    emptyScan.getInitialSchema match {
+      case ns: NamedStruct if ns.names().isEmpty => OneRowRelation()
+      case _ => LocalRelation(ToSubstraitType.toAttributeSeq(emptyScan.getInitialSchema))
+    }
   }
 
   override def visit(virtualTableScan: relation.VirtualTableScan): LogicalPlan = {

@@ -22,4 +22,10 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
     )
   }
 
+  test("one_row_relation") {
+    assertSqlSubstraitRelRoundTrip(
+      "select 1 + 1"
+    )
+  }
+
 }
