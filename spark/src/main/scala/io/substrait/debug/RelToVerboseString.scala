@@ -181,6 +181,26 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
+  override def visit(set: Set): String = {
+    withBuilder(set, 8)(
+      builder => {
+        builder
+          .append("operation=")
+          .append(set.getSetOp)
+      })
+  }
+
+  override def visit(cross: Cross): String = {
+    withBuilder(cross, 10)(
+      builder => {
+        builder
+          .append("left=")
+          .append(cross.getLeft)
+          .append("right=")
+          .append(cross.getRight)
+      })
+  }
+
   override def visit(localFiles: LocalFiles): String = {
     withBuilder(localFiles, 10)(
       builder => {

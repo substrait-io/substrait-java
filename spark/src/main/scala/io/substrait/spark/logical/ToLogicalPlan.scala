@@ -218,7 +218,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
 
   override def visit(fetch: relation.Fetch): LogicalPlan = {
     val child = fetch.getInput.accept(this)
-    val limit = fetch.getCount.orElse(-1).intValue()
+    val limit = fetch.getCount.orElse(-1).intValue() // -1 means unassigned here
     val offset = fetch.getOffset.intValue()
     val toLiteral = (i: Int) => Literal(i, IntegerType)
     if (limit >= 0) {
