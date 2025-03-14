@@ -3,6 +3,7 @@ package io.substrait.relation.extensions;
 import com.google.protobuf.Any;
 import io.substrait.relation.Extension;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -20,7 +21,7 @@ public class EmptyDetail
         Extension.ExtensionTableDetail {
 
   @Override
-  public Any toProto() {
+  public Any toProto(RelProtoConverter converter) {
     return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
   }
 

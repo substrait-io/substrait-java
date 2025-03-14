@@ -3,6 +3,7 @@ package io.substrait.relation.utils;
 import com.google.protobuf.Any;
 import io.substrait.relation.Extension;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -31,7 +32,7 @@ public class StringHolder
   }
 
   @Override
-  public Any toProto() {
+  public Any toProto(RelProtoConverter relProtoConverter) {
     return com.google.protobuf.Any.pack(com.google.protobuf.StringValue.of(this.value));
   }
 
