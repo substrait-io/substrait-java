@@ -87,36 +87,40 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
   }
 
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
-    val logicalPlan = plan(query)
+    val sparkPlan = plan(query)
 
     // We do two separate round trips to test for specific things, first without names, to test that the Substrait
     // conversion can be reversed and repeated leading to same plan:
-    val pojoRel = new ToSubstraitRel().convert(logicalPlan)
-    val rel = pojoRel.getRoots.get(0).getInput
-    val converter = new ToLogicalPlan(spark = spark);
-    val logicalPlan2WithoutNames = converter.convert(rel);
-    require(logicalPlan2WithoutNames.resolved);
-    val pojoRel2WithoutNames = new ToSubstraitRel().visit(logicalPlan2WithoutNames)
+    val substraitPlan = new ToSubstraitRel().convert(sparkPlan)
 
-    pojoRel2WithoutNames.shouldEqualPlainly(rel)
+    // Serialize to protobuf byte array and read it back to ensure the proto-roundtrip
+    val bytes = new PlanProtoConverter().toProto(substraitPlan).toByteArray
+    val substraitPlan2 = new ProtoPlanConverter(SparkExtension.COLLECTION).from(io.substrait.proto.Plan.parseFrom(bytes)))
+    // TODO: assert substraitPlan2 == substraitPlan
+
+    val substraitRel2 = substraitPlan2.getRoots.get(0).getInput
+    val converter = new ToLogicalPlan(spark = spark);
+    val sparkPlan2WithoutNames = converter.convert(substraitRel2);
+    require(sparkPlan2WithoutNames.resolved);
+    val substraitRel3WithoutNames = new ToSubstraitRel().visit(sparkPlan2WithoutNames)
+
+    // compare with original substrait plan to ensure it round-tripped (via proto bytes) correctly
+    substraitRel3WithoutNames.shouldEqualPlainly(substraitRel2)
 
     // Second, with names, to test that the Spark schemas match. This in some cases adds an extra Project
     // to rename fields, which then would break the round trip test we do above.
-    val logicalPlan2 = converter.convert(pojoRel);
-    require(logicalPlan2.resolved);
+    val sparkPlan2 = converter.convert(substraitPlan);
+    require(sparkPlan2.resolved);
 
     assert(
       DataType.equalsStructurallyByName(
-        logicalPlan.schema,
-        logicalPlan2.schema,
+        sparkPlan.schema,
+        sparkPlan2.schema,
         caseSensitiveResolution),
-      "Expected: " + logicalPlan.schema + ", but got: " + logicalPlan2.schema
+      "Expected: " + sparkPlan.schema + ", but got: " + sparkPlan2.schema
     )
 
-    val proto = new PlanProtoConverter().toProto(pojoRel)
-    new ProtoPlanConverter(SparkExtension.COLLECTION).from(proto)
-
-    logicalPlan2
+    sparkPlan2
   }
 
   def plan(sql: String): LogicalPlan = {
