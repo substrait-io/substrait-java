@@ -15,6 +15,7 @@ import io.substrait.proto.SortField;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
@@ -208,7 +209,8 @@ public class ProtoExpressionConverter {
                                   throw new UnsupportedOperationException(
                                       "Scalar subquery must have exactly one field");
                                 }
-                                return type.fields().get(0);
+                                // Result can be null if the query returns no rows
+                                return TypeCreator.asNullable(type.fields().get(0));
                               }
                             }))
                 .build();
