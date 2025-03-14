@@ -18,7 +18,7 @@ package io.substrait.spark.expression
 
 import io.substrait.spark.ToSubstraitType
 
-import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, Literal}
 import org.apache.spark.sql.catalyst.util.{ArrayData, MapData}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
@@ -66,6 +66,15 @@ class ToSubstraitLiteral {
       map(false, JavaConverters.mapAsJavaMap(keys.zip(values).toMap))
     }
 
+    private def sparkStruct2Substrait(
+        structData: GenericInternalRow,
+        fields: Array[StructField]): SExpression.Literal =
+      struct(
+        false,
+        JavaConverters.asJavaIterable(fields.zip(structData.values).map {
+          case (field, any) => apply(Literal(any, field.dataType))
+        }))
+
     val _bool: Boolean => SExpression.Literal = bool(false, _)
     val _i8: Byte => SExpression.Literal = i8(false, _)
     val _i16: Short => SExpression.Literal = i16(false, _)
@@ -90,6 +99,8 @@ class ToSubstraitLiteral {
     val _binary: Array[Byte] => SExpression.Literal = binary(false, _)
     val _array: (ArrayData, DataType, Boolean) => SExpression.Literal = sparkArray2Substrait
     val _map: (MapData, DataType, DataType, Boolean) => SExpression.Literal = sparkMap2Substrait
+    val _struct: (GenericInternalRow, Array[StructField]) => SExpression.Literal =
+      sparkStruct2Substrait
   }
 
   private def convertWithValue(literal: Literal): Option[SExpression.Literal] = {
@@ -115,6 +126,7 @@ class ToSubstraitLiteral {
           Nonnull._array(a, et, containsNull)
         case Literal(m: MapData, MapType(keyType, valueType, valueContainsNull)) =>
           Nonnull._map(m, keyType, valueType, valueContainsNull)
+        case Literal(s: GenericInternalRow, StructType(fields)) => Nonnull._struct(s, fields)
         case _ => null
       }
     )

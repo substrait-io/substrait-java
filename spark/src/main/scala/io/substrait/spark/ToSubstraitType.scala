@@ -26,8 +26,15 @@ import io.substrait.utils.Util
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters.asScalaBufferConverter
 
-private class ToSparkType
+/**
+ * @param dfsNames
+ *   a flattened depth-first listing of column/struct field names. If empty, names are
+ *   auto-generated.
+ */
+private class ToSparkType(dfsNames: Seq[String])
   extends TypeVisitor.TypeThrowsVisitor[DataType, RuntimeException]("Unknown expression type.") {
+
+  var nameIdx: Int = 0 // where in dfsNames we're currently at
 
   override def visit(expr: Type.I8): DataType = ByteType
   override def visit(expr: Type.I16): DataType = ShortType
@@ -68,13 +75,6 @@ private class ToSparkType
 
   override def visit(expr: Type.IntervalYear): DataType = YearMonthIntervalType.DEFAULT
 
-  override def visit(expr: Type.Struct): DataType = {
-    StructType(
-      expr.fields.asScala.zipWithIndex
-        .map { case (t, i) => StructField(s"col${i + 1}", t.accept(this), t.nullable()) }
-    )
-  }
-
   override def visit(expr: Type.ListType): DataType =
     ArrayType(expr.elementType().accept(this), containsNull = expr.elementType().nullable())
 
@@ -83,13 +83,47 @@ private class ToSparkType
       expr.key().accept(this),
       expr.value().accept(this),
       valueContainsNull = expr.value().nullable())
-}
-class ToSubstraitType {
+
+  override def visit(expr: Type.Struct): DataType =
+    StructType(
+      expr.fields.asScala.zipWithIndex
+        .map {
+          case (f, i) =>
+            val name = if (dfsNames.nonEmpty) {
+              require(nameIdx < dfsNames.size)
+              val n = dfsNames(nameIdx)
+              nameIdx += 1
+              n
+            } else {
+              // If names are not given, default to "col1", "col2", ... like Spark
+              s"col${i + 1}"
+            }
+            StructField(name, f.accept(this), f.nullable())
+        })
 
   def convert(typeExpression: TypeExpression): DataType = {
-    typeExpression.accept(new ToSparkType)
+    typeExpression.accept(this)
+  }
+}
+
+object ToSparkType {
+  def convert(typeExpression: TypeExpression): DataType = {
+    typeExpression.accept(new ToSparkType(Seq.empty))
   }
 
+  def toStructType(namedStruct: NamedStruct): StructType = {
+    new ToSparkType(namedStruct.names().asScala)
+      .visit(namedStruct.struct())
+      .asInstanceOf[StructType]
+  }
+
+  def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
+    toStructType(namedStruct).fields
+      .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+  }
+}
+
+class ToSubstraitType {
   def convert(dataType: DataType, nullable: Boolean): Option[Type] = {
     convert(dataType, Seq.empty, nullable)
   }
@@ -129,52 +163,35 @@ class ToSubstraitType {
             keyT =>
               convert(valueType, Seq.empty, valueContainsNull)
                 .map(valueT => creator.map(keyT, valueT)))
-      case _ =>
-        None
+      case StructType(fields) =>
+        if (fields.isEmpty) {
+          Some(creator.struct(JavaConverters.asJavaIterable(Seq.empty)))
+        } else {
+          Util
+            .seqToOption(fields.map(f => convert(f.dataType, f.nullable)))
+            .map(l => creator.struct(JavaConverters.asJavaIterable(l)))
+        }
+      case _ => None
     }
   }
-  def toNamedStruct(output: Seq[Attribute]): Option[NamedStruct] = {
-    val names = JavaConverters.seqAsJavaList(output.map(_.name))
-    val creator = Type.withNullability(false)
-    Util
-      .seqToOption(output.map(a => convert(a.dataType, a.nullable)))
-      .map(l => creator.struct(JavaConverters.asJavaIterable(l)))
-      .map(NamedStruct.of(names, _))
-  }
+
   def toNamedStruct(schema: StructType): NamedStruct = {
-    val creator = Type.withNullability(false)
-    val names = new java.util.ArrayList[String]
-    val children = new java.util.ArrayList[Type]
-    schema.fields.foreach(
-      field => {
-        names.add(field.name)
-        children.add(apply(field.dataType, field.nullable))
-      })
-    val struct = creator.struct(children)
-    NamedStruct.of(names, struct)
+    val dfsNames = JavaConverters.seqAsJavaList(fieldNamesDfs(schema))
+    val types = JavaConverters.seqAsJavaList(
+      schema.fields.map(field => apply(field.dataType, field.nullable)))
+    val struct = Type.withNullability(false).struct(types)
+    NamedStruct.of(dfsNames, struct)
   }
 
-  def toStructType(namedStruct: NamedStruct): StructType = {
-    StructType(
-      fields = namedStruct
-        .struct()
-        .fields()
-        .asScala
-        .map(t => (t, convert(t)))
-        .zip(namedStruct.names().asScala)
-        .map { case ((t, d), name) => StructField(name, d, t.nullable()) }
-    )
-  }
-
-  def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
-    namedStruct
-      .struct()
-      .fields()
-      .asScala
-      .map(t => (t, convert(t)))
-      .zip(namedStruct.names().asScala)
-      .map { case ((t, d), name) => StructField(name, d, t.nullable()) }
-      .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+  private def fieldNamesDfs(dtype: DataType): Seq[String] = {
+    // NamedStruct expects a flattened list of the full tree of names, including subtype names
+    dtype match {
+      case StructType(fields) =>
+        fields.flatMap(field => Seq(field.name) ++ fieldNamesDfs(field.dataType))
+      case ArrayType(elementType, _) => fieldNamesDfs(elementType)
+      case MapType(keyType, valueType, _) => fieldNamesDfs(keyType) ++ fieldNamesDfs(valueType)
+      case _ => Seq()
+    }
   }
 }
 
