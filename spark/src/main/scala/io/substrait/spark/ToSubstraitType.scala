@@ -75,13 +75,6 @@ private class ToSparkType(dfsNames: Seq[String])
 
   override def visit(expr: Type.IntervalYear): DataType = YearMonthIntervalType.DEFAULT
 
-  override def visit(expr: Type.Struct): DataType = {
-    StructType(
-      expr.fields.asScala.zipWithIndex
-        .map { case (t, i) => StructField(s"col${i + 1}", t.accept(this), t.nullable()) }
-    )
-  }
-
   override def visit(expr: Type.ListType): DataType =
     ArrayType(expr.elementType().accept(this), containsNull = expr.elementType().nullable())
 

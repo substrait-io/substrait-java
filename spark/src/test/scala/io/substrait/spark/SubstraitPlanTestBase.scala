@@ -17,18 +17,16 @@
 package io.substrait.spark
 
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
-
 import org.apache.spark.sql.catalyst.analysis.caseSensitiveResolution
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.DataType
-
 import io.substrait.debug.TreePrinter
 import io.substrait.extension.ExtensionCollector
 import io.substrait.plan.{Plan, PlanProtoConverter, ProtoPlanConverter}
 import io.substrait.proto
-import io.substrait.relation.RelProtoConverter
+import io.substrait.relation.{ProtoRelConverter, RelProtoConverter}
 import org.scalactic.Equality
 import org.scalactic.source.Position
 import org.scalatest.Succeeded
@@ -89,38 +87,46 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
     val sparkPlan = plan(query)
 
-    // We do two separate round trips to test for specific things, first without names, to test that the Substrait
-    // conversion can be reversed and repeated leading to same plan:
-    val substraitPlan = new ToSubstraitRel().convert(sparkPlan)
 
-    // Serialize to protobuf byte array and read it back to ensure the proto-roundtrip
-    val bytes = new PlanProtoConverter().toProto(substraitPlan).toByteArray
-    val substraitPlan2 = new ProtoPlanConverter(SparkExtension.COLLECTION).from(io.substrait.proto.Plan.parseFrom(bytes)))
-    // TODO: assert substraitPlan2 == substraitPlan
+    // convert spark logical plan to substrait
+    val substraitRel = new ToSubstraitRel().visit(sparkPlan)
 
-    val substraitRel2 = substraitPlan2.getRoots.get(0).getInput
-    val converter = new ToLogicalPlan(spark = spark);
-    val sparkPlan2WithoutNames = converter.convert(substraitRel2);
-    require(sparkPlan2WithoutNames.resolved);
-    val substraitRel3WithoutNames = new ToSubstraitRel().visit(sparkPlan2WithoutNames)
+    // Serialize to protobuf byte array
+    val extensionCollector = new ExtensionCollector
+    val bytes = new RelProtoConverter(extensionCollector).toProto(substraitRel).toByteArray
+
+    // Read it back
+    val protoPlan = io.substrait.proto.Rel.parseFrom(bytes)
+    val substraitRel2 =
+      new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(protoPlan)
+
+    // convert substrait back to spark plan
+    val toLogicalPlan = new ToLogicalPlan(spark);
+    val sparkPlan2 = substraitRel2.accept(toLogicalPlan)
+    require(sparkPlan2.resolved)
+
+    // and back to substrait again
+    val substraitRel3 = new ToSubstraitRel().visit(sparkPlan2)
 
     // compare with original substrait plan to ensure it round-tripped (via proto bytes) correctly
-    substraitRel3WithoutNames.shouldEqualPlainly(substraitRel2)
+    substraitRel3.shouldEqualPlainly(substraitRel)
 
-    // Second, with names, to test that the Spark schemas match. This in some cases adds an extra Project
+    // Do one more roundtrip, this time with Substrait Plan object which contains also names,
+    // to test that the Spark schemas match. This in some cases adds an extra Project
     // to rename fields, which then would break the round trip test we do above.
-    val sparkPlan2 = converter.convert(substraitPlan);
-    require(sparkPlan2.resolved);
+    val substraitPlan = new ToSubstraitRel().convert(sparkPlan)
+    val sparkPlan3 = toLogicalPlan.convert(substraitPlan);
+    require(sparkPlan3.resolved);
 
     assert(
       DataType.equalsStructurallyByName(
         sparkPlan.schema,
-        sparkPlan2.schema,
+        sparkPlan3.schema,
         caseSensitiveResolution),
-      "Expected: " + sparkPlan.schema + ", but got: " + sparkPlan2.schema
+      "Expected: " + sparkPlan.schema + ", but got: " + sparkPlan3.schema
     )
 
-    sparkPlan2
+    sparkPlan3
   }
 
   def plan(sql: String): LogicalPlan = {
