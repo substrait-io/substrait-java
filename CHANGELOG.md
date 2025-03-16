@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.50.0](https://github.com/substrait-io/substrait-java/compare/v0.49.0...v0.50.0) (2025-03-16)
+
+### Features
+
+* **isthmus:** convert Substrait EmptyScan to Calcite Values relation ([#340](https://github.com/substrait-io/substrait-java/issues/340)) ([1ec0c57](https://github.com/substrait-io/substrait-java/commit/1ec0c577ea3f4dad32ac15301cf237173796d47b))
+* **isthmus:** support converting Substrait Plan.Root to Calcite RelRoot ([#339](https://github.com/substrait-io/substrait-java/issues/339)) ([42b87ae](https://github.com/substrait-io/substrait-java/commit/42b87ae885e809404204a166d2addb5e4780150a))
+* **spark:** support ExistenceJoin internal join type ([#333](https://github.com/substrait-io/substrait-java/issues/333)) ([59270f2](https://github.com/substrait-io/substrait-java/commit/59270f2abf92e2b2362f583238eddafb25e5ef91))
+
+### Bug Fixes
+
+* **isthmus:** sql day/time interval conversion ([#335](https://github.com/substrait-io/substrait-java/issues/335)) ([9900782](https://github.com/substrait-io/substrait-java/commit/990078222f8a45e55cb4d2f9a4d4253d20ee5621))
+
 ## [0.49.0](https://github.com/substrait-io/substrait-java/compare/v0.48.0...v0.49.0) (2025-03-09)
 
 ### Features
