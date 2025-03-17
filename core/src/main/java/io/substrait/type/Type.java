@@ -299,6 +299,20 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
+  abstract static class PrecisionTime implements Type {
+    public abstract int precision();
+
+    public static ImmutableType.PrecisionTime.Builder builder() {
+      return ImmutableType.PrecisionTime.builder();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract static class PrecisionTimestamp implements Type {
     public abstract int precision();
 

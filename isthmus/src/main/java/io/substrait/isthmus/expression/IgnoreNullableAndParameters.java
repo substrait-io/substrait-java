@@ -129,6 +129,12 @@ public class IgnoreNullableAndParameters
   }
 
   @Override
+  public Boolean visit(Type.PrecisionTime type) {
+    return typeToMatch instanceof Type.PrecisionTime
+        || typeToMatch instanceof ParameterizedType.PrecisionTime;
+  }
+
+  @Override
   public Boolean visit(Type.PrecisionTimestamp type) {
     return typeToMatch instanceof Type.PrecisionTimestamp
         || typeToMatch instanceof ParameterizedType.PrecisionTimestamp;
@@ -188,6 +194,12 @@ public class IgnoreNullableAndParameters
   public Boolean visit(ParameterizedType.IntervalCompound expr) throws RuntimeException {
     return typeToMatch instanceof Type.IntervalCompound
         || typeToMatch instanceof ParameterizedType.IntervalCompound;
+  }
+
+  @Override
+  public Boolean visit(ParameterizedType.PrecisionTime expr) throws RuntimeException {
+    return typeToMatch instanceof Type.PrecisionTime
+        || typeToMatch instanceof ParameterizedType.PrecisionTime;
   }
 
   @Override

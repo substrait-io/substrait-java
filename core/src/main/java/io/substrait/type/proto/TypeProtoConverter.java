@@ -77,6 +77,14 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    public Type precisionTime(Integer precision) {
+      return wrap(
+          Type.PrecisionTime.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
     public Type precisionTimestamp(Integer precision) {
       return wrap(
           Type.PrecisionTimestamp.newBuilder()
