@@ -50,7 +50,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);
   }
 
-  public List<io.substrait.proto.Expression> toProto(Collection<Expression> expressions) {
+  public List<io.substrait.proto.Expression> toProto(List<Expression> expressions) {
     return expressions.stream().map(this::toProto).collect(Collectors.toList());
   }
 

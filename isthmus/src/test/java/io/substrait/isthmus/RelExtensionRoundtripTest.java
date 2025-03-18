@@ -66,13 +66,11 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
   }
 
   void roundtrip(Rel pojo1) throws IOException {
-    var extensionCollector = new ExtensionCollector();
-
     // Substrait POJO 1 -> Substrait Proto
-    io.substrait.proto.Rel proto = pojo1.accept(new RelProtoConverter(extensionCollector));
+    io.substrait.proto.Rel proto = pojo1.accept(new RelProtoConverter(new ExtensionCollector()));
 
     // Substrait Proto -> Substrait POJO 2
-    var pojo2 = (new CustomProtoRelConverter(extensionCollector)).from(proto);
+    var pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
@@ -120,6 +118,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
 
     @Override
     public Any toProto(RelProtoConverter converter) {
+      // the conversion of the literal in the detail requires the presence of the RelProtoConverter
       io.substrait.proto.Expression lit = converter.toProto(this.literal);
       var inner =
           io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.newBuilder()
