@@ -17,11 +17,13 @@
 package io.substrait.spark
 
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
+
 import org.apache.spark.sql.catalyst.analysis.caseSensitiveResolution
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.DataType
+
 import io.substrait.debug.TreePrinter
 import io.substrait.extension.ExtensionCollector
 import io.substrait.plan.{Plan, PlanProtoConverter, ProtoPlanConverter}
@@ -86,7 +88,6 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
     val sparkPlan = plan(query)
-
 
     // convert spark logical plan to substrait
     val substraitRel = new ToSubstraitRel().visit(sparkPlan)
