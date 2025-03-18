@@ -22,4 +22,14 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
     )
   }
 
+  test("local_relation_struct") {
+    assertSqlSubstraitRelRoundTrip(
+      "select * from (values (1, struct(2, 'a')) as table(int_col, struct_col))"
+    )
+
+    assertSqlSubstraitRelRoundTrip(
+      // the struct() cast gets evaluated into a literal struct value by spark
+      "select * from (values (1, cast(struct(1, 'a') as struct<f1: int, f2: string>)) as table(int_col, col))"
+    )
+  }
 }
