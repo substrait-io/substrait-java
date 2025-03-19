@@ -209,6 +209,11 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
     )
   }
 
+  test("simpleTestRound") {
+    val query = "select round(p_size, 4) from part where p_partkey > cast(100 as bigint)"
+    assertSqlSubstraitRelRoundTrip(query)
+  }
+
   test("tpch_q1_variant") {
     // difference from tpch_q1 : 1) remove order by clause; 2) remove interval date literal
     assertSqlSubstraitRelRoundTrip(

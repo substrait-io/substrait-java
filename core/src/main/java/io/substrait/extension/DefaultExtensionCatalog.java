@@ -11,6 +11,7 @@ public class DefaultExtensionCatalog {
   public static final String FUNCTIONS_GEOMETRY = "/functions_geometry.yaml";
   public static final String FUNCTIONS_LOGARITHMIC = "/functions_logarithmic.yaml";
   public static final String FUNCTIONS_ROUNDING = "/functions_rounding.yaml";
+  public static final String FUNCTIONS_ROUNDING_DECIMAL = "/functions_rounding_decimal.yaml";
   public static final String FUNCTIONS_SET = "/functions_set.yaml";
   public static final String FUNCTIONS_STRING = "/functions_string.yaml";
 }
