@@ -33,6 +33,7 @@ import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, Data
 import org.apache.spark.sql.types.{NullType, StructType}
 
 import ToSubstraitType.toNamedStruct
+import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
@@ -45,6 +46,7 @@ import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 import io.substrait.utils.Util
 
+import java.util
 import java.util.{Collections, Optional}
 
 import scala.collection.JavaConverters.asJavaIterableConverter
@@ -501,6 +503,13 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
               s"******* Unable to convert the plan to a substrait relation: " +
                 s"${logicalRelation.relation.toString}")
         }
+      case _: OneRowRelation =>
+        relation.VirtualTableScan
+          .builder()
+          .initialSchema(NamedStruct
+            .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
+          .addRows(ExpressionCreator.struct(false))
+          .build()
       case _ =>
         throw new UnsupportedOperationException(
           s"******* Unable to convert the plan to a substrait NamedScan: $plan")
