@@ -126,6 +126,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     }
 
     @Override
+    public Integer visit(Type.PrecisionTime type) throws RuntimeException {
+      return 0;
+    }
+
+    @Override
     public Integer visit(Type.PrecisionTimestampTZ type) throws RuntimeException {
       return 0;
     }

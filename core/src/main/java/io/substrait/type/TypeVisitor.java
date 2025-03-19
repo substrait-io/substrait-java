@@ -29,6 +29,8 @@ public interface TypeVisitor<R, E extends Throwable> {
   @Deprecated
   R visit(Type.Timestamp type) throws E;
 
+  R visit(Type.PrecisionTime type) throws E;
+
   R visit(Type.PrecisionTimestamp type) throws E;
 
   R visit(Type.PrecisionTimestampTZ type) throws E;
@@ -177,6 +179,11 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.PrecisionTimestamp type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.PrecisionTime type) throws E {
       throw t();
     }
 

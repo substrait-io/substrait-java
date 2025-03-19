@@ -256,6 +256,15 @@ public class TypeExpressionProtoVisitor
     }
 
     @Override
+    public DerivationExpression precisionTime(DerivationExpression precision) {
+      return wrap(
+          DerivationExpression.ExpressionPrecisionTime.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    @Override
     public DerivationExpression precisionTimestamp(DerivationExpression precision) {
       return wrap(
           DerivationExpression.ExpressionPrecisionTimestamp.newBuilder()

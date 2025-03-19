@@ -205,6 +205,15 @@ public class ParameterizedProtoConverter
     }
 
     @Override
+    public ParameterizedType precisionTime(ParameterizedType.IntegerOption precision) {
+      return wrap(
+          ParameterizedType.ParameterizedPrecisionTime.newBuilder()
+              .setPrecision(precision)
+              .setNullability(nullability)
+              .build());
+    }
+
+    @Override
     public ParameterizedType precisionTimestamp(ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedPrecisionTimestamp.newBuilder()
