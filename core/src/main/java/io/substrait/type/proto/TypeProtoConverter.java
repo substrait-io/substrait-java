@@ -5,11 +5,13 @@ import io.substrait.proto.Type;
 
 /** Convert from {@link io.substrait.type.Type} to {@link io.substrait.proto.Type} */
 public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(TypeProtoConverter.class);
 
   public TypeProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Type literals cannot contain parameters or expressions.");
+  }
+
+  public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+    return type.accept(this);
   }
 
   private static final BaseProtoTypes<Type, Integer> NULLABLE =

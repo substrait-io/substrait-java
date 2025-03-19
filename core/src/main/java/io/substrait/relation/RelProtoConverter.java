@@ -40,33 +40,43 @@ import java.util.stream.IntStream;
 /** Converts from {@link io.substrait.relation.Rel} to {@link io.substrait.proto.Rel} */
 public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
-  private final ExpressionProtoConverter exprProtoConverter;
-  private final TypeProtoConverter typeProtoConverter;
-  private final ExtensionCollector functionCollector;
+  protected final ExpressionProtoConverter exprProtoConverter;
+  protected final TypeProtoConverter typeProtoConverter;
 
-  public RelProtoConverter(ExtensionCollector functionCollector) {
-    this.functionCollector = functionCollector;
-    this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, this);
-    this.typeProtoConverter = new TypeProtoConverter(functionCollector);
+  protected final ExtensionCollector extensionCollector;
+
+  public RelProtoConverter(ExtensionCollector extensionCollector) {
+    this.extensionCollector = extensionCollector;
+    this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
+    this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
   }
 
-  public List<io.substrait.proto.Expression> toProto(List<Expression> expressions) {
-    return expressions.stream().map(this::toProto).collect(Collectors.toList());
+  public ExpressionProtoConverter getExpressionProtoConverter() {
+    return this.exprProtoConverter;
   }
 
-  public io.substrait.proto.Expression toProto(Expression expression) {
-    return expression.accept(exprProtoConverter);
+  public TypeProtoConverter getTypeProtoConverter() {
+    return this.typeProtoConverter;
   }
 
   public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
     return rel.accept(this);
   }
 
-  public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
-    return type.accept(typeProtoConverter);
+  protected io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
+    return exprProtoConverter.toProto(expression);
   }
 
-  private List<SortField> toProtoS(Collection<Expression.SortField> sorts) {
+  protected List<io.substrait.proto.Expression> toProto(
+      List<io.substrait.expression.Expression> expression) {
+    return exprProtoConverter.toProto(expression);
+  }
+
+  protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+    return typeProtoConverter.toProto(type);
+  }
+
+  private List<io.substrait.proto.SortField> toProtoS(List<Expression.SortField> sorts) {
     return sorts.stream()
         .map(
             s -> {
@@ -79,7 +89,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
   }
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
-    return fieldReference.accept(exprProtoConverter).getSelection();
+    return toProto((Expression) fieldReference).getSelection();
   }
 
   @Override
@@ -113,7 +123,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     .collect(Collectors.toList()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
-                functionCollector.getFunctionReference(measure.getFunction().declaration()))
+                extensionCollector.getFunctionReference(measure.getFunction().declaration()))
             .addAllOptions(
                 measure.getFunction().options().stream()
                     .map(ExpressionProtoConverter::from)
@@ -163,7 +173,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         FilterRel.newBuilder()
             .setCommon(common(filter))
             .setInput(toProto(filter.getInput()))
-            .setCondition(filter.getCondition().accept(exprProtoConverter));
+            .setCondition(toProto(filter.getCondition()));
 
     filter.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setFilter(builder).build();
@@ -357,7 +367,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                   .setOutputType(toProto(f.outputType()))
                   .addAllArguments(arguments)
                   .addAllOptions(options)
-                  .setFunctionReference(functionCollector.getFunctionReference(f.declaration()))
+                  .setFunctionReference(extensionCollector.getFunctionReference(f.declaration()))
                   .setBoundsType(f.boundsType().toProto())
                   .setLowerBound(BoundConverter.convert(f.lowerBound()))
                   .setUpperBound(BoundConverter.convert(f.upperBound()))
@@ -372,8 +382,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         ProjectRel.newBuilder()
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
-            .addAllExpressions(
-                project.getExpressions().stream().map(this::toProto).collect(Collectors.toList()));
+            .addAllExpressions(toProto(project.getExpressions()));
 
     project.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
     return Rel.newBuilder().setProject(builder).build();
@@ -399,10 +408,7 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
                     ExpandRel.ExpandField.newBuilder()
                         .setSwitchingField(
                             ExpandRel.SwitchingField.newBuilder()
-                                .addAllDuplicates(
-                                    sf.getDuplicates().stream()
-                                        .map(this::toProto)
-                                        .collect(Collectors.toList())))
+                                .addAllDuplicates(toProto(sf.getDuplicates())))
                         .build());
               } else {
                 throw new RuntimeException(

@@ -119,7 +119,8 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     @Override
     public Any toProto(RelProtoConverter converter) {
       // the conversion of the literal in the detail requires the presence of the RelProtoConverter
-      io.substrait.proto.Expression lit = converter.toProto(this.literal);
+      io.substrait.proto.Expression lit =
+          converter.getExpressionProtoConverter().toProto(this.literal);
       var inner =
           io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.newBuilder()
               .setLiteral(lit.getLiteral())
