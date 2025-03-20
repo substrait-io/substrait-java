@@ -704,6 +704,7 @@ public class SimpleExtension {
                 "datetime",
                 "logarithmic",
                 "rounding",
+                "rounding_decimal",
                 "string")
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
