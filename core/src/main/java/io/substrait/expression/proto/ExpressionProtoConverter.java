@@ -11,35 +11,59 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Expression;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.FunctionOption;
-import io.substrait.proto.Rel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.Type;
-import io.substrait.relation.RelVisitor;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Converts from {@link io.substrait.expression.Expression} to {@link io.substrait.proto.Expression}
  */
 public class ExpressionProtoConverter implements ExpressionVisitor<Expression, RuntimeException> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ExpressionProtoConverter.class);
 
-  private final ExtensionCollector extensionCollector;
-  private final RelVisitor<Rel, RuntimeException> relVisitor;
-  private final TypeProtoConverter typeProtoConverter;
+  protected final RelProtoConverter relProtoConverter;
+  protected final TypeProtoConverter typeProtoConverter;
+
+  protected final ExtensionCollector extensionCollector;
 
   public ExpressionProtoConverter(
-      ExtensionCollector extensionCollector, RelVisitor<Rel, RuntimeException> relVisitor) {
+      ExtensionCollector extensionCollector, RelProtoConverter relProtoConverter) {
     this.extensionCollector = extensionCollector;
-    this.relVisitor = relVisitor;
+    this.relProtoConverter = relProtoConverter;
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
+  }
+
+  public RelProtoConverter getRelProtoConverter() {
+    return this.relProtoConverter;
+  }
+
+  public TypeProtoConverter getTypeProtoConverter() {
+    return this.typeProtoConverter;
+  }
+
+  public io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
+    return expression.accept(this);
+  }
+
+  public List<io.substrait.proto.Expression> toProto(
+      List<io.substrait.expression.Expression> expressions) {
+    return expressions.stream().map(this::toProto).collect(Collectors.toList());
+  }
+
+  protected io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
+    return relProtoConverter.toProto(rel);
+  }
+
+  protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+    return typeProtoConverter.toProto(type);
   }
 
   @Override
   public Expression visit(io.substrait.expression.Expression.NullLiteral expr) {
-    return lit(bldr -> bldr.setNull(expr.type().accept(typeProtoConverter)));
+    return lit(bldr -> bldr.setNull(toProto(expr.type())));
   }
 
   private Expression lit(Consumer<Expression.Literal.Builder> consumer) {
@@ -245,7 +269,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   public Expression visit(io.substrait.expression.Expression.EmptyMapLiteral expr) {
     return lit(
         bldr -> {
-          var protoMapType = expr.getType().accept(typeProtoConverter);
+          var protoMapType = toProto(expr.getType());
           bldr.setEmptyMap(protoMapType.getMap())
               // For empty maps, the Literal message's own nullable field should be ignored
               // in favor of the nullability of the Type.Map in the literal's
@@ -274,7 +298,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
       throws RuntimeException {
     return lit(
         builder -> {
-          var protoListType = expr.getType().accept(typeProtoConverter);
+          var protoListType = toProto(expr.getType());
           builder
               .setEmptyList(protoListType.getList())
               // For empty lists, the Literal message's own nullable field should be ignored
@@ -319,7 +343,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
   }
 
   private Expression.Literal toLiteral(io.substrait.expression.Expression expression) {
-    var e = expression.accept(this);
+    var e = toProto(expression);
     assert e.getRexTypeCase() == Expression.RexTypeCase.LITERAL;
     return e.getLiteral();
   }
@@ -332,15 +356,15 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 s ->
                     Expression.SwitchExpression.IfValue.newBuilder()
                         .setIf(toLiteral(s.condition()))
-                        .setThen(s.then().accept(this))
+                        .setThen(toProto(s.then()))
                         .build())
             .collect(java.util.stream.Collectors.toList());
     return Expression.newBuilder()
         .setSwitchExpression(
             Expression.SwitchExpression.newBuilder()
-                .setMatch(expr.match().accept(this))
+                .setMatch(toProto(expr.match()))
                 .addAllIfs(clauses)
-                .setElse(expr.defaultClause().accept(this)))
+                .setElse(toProto(expr.defaultClause())))
         .build();
   }
 
@@ -351,15 +375,13 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
             .map(
                 s ->
                     Expression.IfThen.IfClause.newBuilder()
-                        .setIf(s.condition().accept(this))
-                        .setThen(s.then().accept(this))
+                        .setIf(toProto(s.condition()))
+                        .setThen(toProto(s.then()))
                         .build())
             .collect(java.util.stream.Collectors.toList());
     return Expression.newBuilder()
         .setIfThen(
-            Expression.IfThen.newBuilder()
-                .addAllIfs(clauses)
-                .setElse(expr.elseClause().accept(this)))
+            Expression.IfThen.newBuilder().addAllIfs(clauses).setElse(toProto(expr.elseClause())))
         .build();
   }
 
@@ -371,7 +393,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return Expression.newBuilder()
         .setScalarFunction(
             Expression.ScalarFunction.newBuilder()
-                .setOutputType(expr.getType().accept(typeProtoConverter))
+                .setOutputType(toProto(expr.getType()))
                 .setFunctionReference(extensionCollector.getFunctionReference(expr.declaration()))
                 .addAllArguments(
                     expr.arguments().stream()
@@ -396,18 +418,10 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return Expression.newBuilder()
         .setCast(
             Expression.Cast.newBuilder()
-                .setInput(expr.input().accept(this))
-                .setType(expr.getType().accept(typeProtoConverter))
+                .setInput(toProto(expr.input()))
+                .setType(toProto(expr.getType()))
                 .setFailureBehavior(expr.failureBehavior().toProto()))
         .build();
-  }
-
-  private Expression from(io.substrait.expression.Expression expr) {
-    return expr.accept(this);
-  }
-
-  private List<Expression> from(List<io.substrait.expression.Expression> expr) {
-    return expr.stream().map(this::from).collect(java.util.stream.Collectors.toList());
   }
 
   @Override
@@ -416,8 +430,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return Expression.newBuilder()
         .setSingularOrList(
             Expression.SingularOrList.newBuilder()
-                .setValue(expr.condition().accept(this))
-                .addAllOptions(from(expr.options())))
+                .setValue(toProto(expr.condition()))
+                .addAllOptions(toProto(expr.options())))
         .build();
   }
 
@@ -427,13 +441,13 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return Expression.newBuilder()
         .setMultiOrList(
             Expression.MultiOrList.newBuilder()
-                .addAllValue(from(expr.conditions()))
+                .addAllValue(toProto(expr.conditions()))
                 .addAllOptions(
                     expr.optionCombinations().stream()
                         .map(
                             r ->
                                 Expression.MultiOrList.Record.newBuilder()
-                                    .addAllFields(from(r.values()))
+                                    .addAllFields(toProto(r.values()))
                                     .build())
                         .collect(java.util.stream.Collectors.toList())))
         .build();
@@ -473,7 +487,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     var out = Expression.FieldReference.newBuilder().setDirectReference(seg);
 
     if (expr.inputExpression().isPresent()) {
-      out.setExpression(from(expr.inputExpression().get()));
+      out.setExpression(toProto(expr.inputExpression().get()));
     } else if (expr.outerReferenceStepsOut().isPresent()) {
       out.setOuterReference(
           io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
@@ -494,7 +508,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 .setSetPredicate(
                     Expression.Subquery.SetPredicate.newBuilder()
                         .setPredicateOp(expr.predicateOp().toProto())
-                        .setTuples(expr.tuples().accept(this.relVisitor))
+                        .setTuples(toProto(expr.tuples()))
                         .build())
                 .build())
         .build();
@@ -507,9 +521,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         .setSubquery(
             Expression.Subquery.newBuilder()
                 .setScalar(
-                    Expression.Subquery.Scalar.newBuilder()
-                        .setInput(expr.input().accept(this.relVisitor))
-                        .build())
+                    Expression.Subquery.Scalar.newBuilder().setInput(toProto(expr.input())).build())
                 .build())
         .build();
   }
@@ -522,8 +534,8 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
             Expression.Subquery.newBuilder()
                 .setInPredicate(
                     Expression.Subquery.InPredicate.newBuilder()
-                        .setHaystack(expr.haystack().accept(this.relVisitor))
-                        .addAllNeedles(from(expr.needles()))
+                        .setHaystack(toProto(expr.haystack()))
+                        .addAllNeedles(toProto(expr.needles()))
                         .build())
                 .build())
         .build();
@@ -536,12 +548,9 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
         expr.arguments().stream()
             .map(a -> a.accept(expr.declaration(), 0, argVisitor))
             .collect(java.util.stream.Collectors.toList());
-    Type outputType = expr.getType().accept(typeProtoConverter);
+    Type outputType = toProto(expr.getType());
 
-    List<Expression> partitionExprs =
-        expr.partitionBy().stream()
-            .map(e -> e.accept(this))
-            .collect(java.util.stream.Collectors.toList());
+    List<Expression> partitionExprs = toProto(expr.partitionBy());
 
     List<SortField> sortFields =
         expr.sort().stream()
@@ -549,7 +558,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
                 s ->
                     SortField.newBuilder()
                         .setDirection(s.direction().toProto())
-                        .setExpr(s.expr().accept(this))
+                        .setExpr(toProto(s.expr()))
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
