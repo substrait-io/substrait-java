@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import com.google.protobuf.util.JsonFormat;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -42,10 +43,10 @@ public class TpcdsQueryNoValidation extends PlanTestBase {
   @ParameterizedTest
   @ValueSource(
       ints = {
-        1, 3, 4, 6, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 21, 22, 23, 25, 26, 28, 29, 30, 31, 32,
+        1, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 21, 22, 23, 25, 26, 28, 29, 30, 31, 32,
         33, 34, 35, 37, 38, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 54, 55, 56, 58, 59, 60, 61,
-        62, 64, 65, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 79, 81, 82, 83, 85, 87, 88, 90, 92, 93,
-        94, 95, 96, 97, 99
+        62, 64, 65, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 79, 80, 81, 82, 83, 84, 85, 87, 88,
+        90, 92, 93, 94, 95, 96, 97, 99
       })
   public void tpcdsSuccess(int query) throws Exception {
     testQuery(query);
@@ -53,10 +54,13 @@ public class TpcdsQueryNoValidation extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(
-      ints = {
-        2, 5, 9, 12, 17, 20, 24, 27, 36, 39, 47, 51, 53, 57, 63, 66, 70, 78, 80, 84, 86, 89, 91, 98
-      })
+      ints = {2, 9, 12, 17, 20, 24, 27, 36, 39, 47, 51, 53, 57, 63, 70, 78, 86, 89, 91, 98})
   public void tpcdsFailure(int query) throws Exception {
     // testQuery(query);
+  }
+
+  @Test
+  void concatTest() throws Exception {
+    testQuery(0);
   }
 }

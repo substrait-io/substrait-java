@@ -66,6 +66,21 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
+  public void concatStringLiteralAndVarchar() throws Exception {
+    assertFullRoundTrip("select 'part_'||P_NAME from PART");
+  }
+
+  @Test
+  public void concatCharAndVarchar() throws Exception {
+    assertFullRoundTrip("select P_BRAND||P_NAME from PART");
+  }
+
+  @Test
+  public void concatStringLiteralAndChar() throws Exception {
+    assertFullRoundTrip("select 'brand_'||P_BRAND from PART");
+  }
+
+  @Test
   public void singleOrList() {
     Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
     RexNode rexNode = singleOrList.accept(converter);
