@@ -117,7 +117,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
-    assertPlanRoundrip(newPlan);
+    assertPlanRoundtrip(newPlan);
   }
 
   @Test
@@ -131,7 +131,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
-    assertPlanRoundrip(newPlan);
+    assertPlanRoundtrip(newPlan);
 
     // convert newPlan back to sql
     var pojoRel = newPlan.getRoots().get(0).getInput();
@@ -160,7 +160,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
-    assertPlanRoundrip(newPlan);
+    assertPlanRoundtrip(newPlan);
   }
 
   private static class HasTableReference {
@@ -257,7 +257,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   private static class ReplaceCountDistinctWithApprox {
     private final ReplaceCountDistinctWithApproxVisitor visitor;
 
-    public ReplaceCountDistinctWithApprox() throws IOException {
+    public ReplaceCountDistinctWithApprox() {
       visitor = new ReplaceCountDistinctWithApproxVisitor(SimpleExtension.loadDefaults());
     }
 

@@ -692,7 +692,7 @@ public class SimpleExtension {
     }
   }
 
-  public static ExtensionCollection loadDefaults() throws IOException {
+  public static ExtensionCollection loadDefaults() {
     var defaultFiles =
         Arrays.asList(
                 "boolean",

@@ -52,7 +52,7 @@ public class ExtendedExpressionTestBase {
   }
 
   private static void asserProtoExtendedExpression(
-      io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial) throws IOException {
+      io.substrait.proto.ExtendedExpression extendedExpressionProtoInitial) {
     // pojo final extended expression
     io.substrait.extendedexpression.ExtendedExpression extendedExpressionPojoFinal =
         new ProtoExtendedExpressionConverter().from(extendedExpressionProtoInitial);
