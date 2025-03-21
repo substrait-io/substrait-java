@@ -8,7 +8,6 @@ import io.substrait.relation.Aggregate;
 import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,8 +30,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   @ParameterizedTest
   @MethodSource("expressionReferenceProvider")
-  public void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference)
-      throws IOException {
+  public void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference) {
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
     ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
@@ -139,8 +137,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   private static void assertExtendedExpressionOperation(
       List<ExtendedExpression.ExpressionReferenceBase> expressionReferences,
-      ImmutableNamedStruct namedStruct)
-      throws IOException {
+      ImmutableNamedStruct namedStruct) {
 
     // initial pojo
     ExtendedExpression extendedExpressionPojoInitial =

@@ -19,7 +19,6 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,27 +44,27 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
           .build();
 
   @Test
-  void extensionLeafRelDetailTest() throws IOException {
+  void extensionLeafRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(1));
     var rel = ExtensionLeaf.from(detail).build();
     roundtrip(rel);
   }
 
   @Test
-  void extensionSingleRelDetailTest() throws IOException {
+  void extensionSingleRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(2));
     var rel = ExtensionSingle.from(detail, EMPTY_TABLE).build();
     roundtrip(rel);
   }
 
   @Test
-  void extensionMultiRelDetailTest() throws IOException {
+  void extensionMultiRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(3));
     var rel = ExtensionMulti.from(detail, EMPTY_TABLE, EMPTY_TABLE).build();
     roundtrip(rel);
   }
 
-  void roundtrip(Rel pojo1) throws IOException {
+  void roundtrip(Rel pojo1) {
     // Substrait POJO 1 -> Substrait Proto
     io.substrait.proto.Rel proto = pojo1.accept(new RelProtoConverter(new ExtensionCollector()));
 
@@ -152,7 +151,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
    */
   static class CustomProtoRelConverter extends ProtoRelConverter {
 
-    public CustomProtoRelConverter(ExtensionLookup lookup) throws IOException {
+    public CustomProtoRelConverter(ExtensionLookup lookup) {
       super(lookup);
     }
 

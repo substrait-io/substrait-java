@@ -8,7 +8,6 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.proto.ProtoTypeConverter;
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -24,8 +23,7 @@ public class ProtoAggregateFunctionConverter {
   private final ProtoExpressionConverter protoExpressionConverter;
 
   public ProtoAggregateFunctionConverter(
-      ExtensionLookup lookup, ProtoExpressionConverter protoExpressionConverter)
-      throws IOException {
+      ExtensionLookup lookup, ProtoExpressionConverter protoExpressionConverter) {
     this(lookup, SimpleExtension.loadDefaults(), protoExpressionConverter);
   }
 

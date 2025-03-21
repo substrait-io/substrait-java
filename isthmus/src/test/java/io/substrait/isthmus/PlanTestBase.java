@@ -34,16 +34,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Assertions;
 
 public class PlanTestBase {
-  protected final SimpleExtension.ExtensionCollection extensions;
-
-  {
-    try {
-      extensions = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
+  protected final SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RexBuilder rex = creator.rex();
@@ -87,7 +78,7 @@ public class PlanTestBase {
     return plan;
   }
 
-  protected void assertPlanRoundrip(Plan plan) throws IOException, SqlParseException {
+  protected void assertPlanRoundtrip(Plan plan) {
     io.substrait.proto.Plan protoPlan1 = new PlanProtoConverter().toProto(plan);
     io.substrait.proto.Plan protoPlan2 =
         new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan1));
