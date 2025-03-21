@@ -34,7 +34,6 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
   // spotless:off
   val failingSQL: Set[String] = Set(
     "q9", // requires implementation of named_struct()
-    "q35", "q51", "q84", // These fail when comparing the round-tripped query plans, but are actually equivalent (due to aliases being ignored by substrait)
     "q72" //requires implementation of date_add()
   )
   // spotless:on

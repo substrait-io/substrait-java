@@ -174,10 +174,12 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         }
     }
     val projects = projectExpressions.map(toExpression(newOutput))
+    val names = actualResultExprs.map(_.name)
 
     relation.Project.builder
       .remap(relation.Rel.Remap.offset(newOutput.size, projects.size))
       .expressions(projects.asJava)
+      .hint(Hint.builder.addAllOutputNames(names.asJava).build())
       .input(substraitAgg)
       .build()
   }
@@ -338,9 +340,12 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       p.child.output.count(o => !existenceJoins.contains(o.exprId.id)),
       expressions.size
     )
+    val names = p.output.map(_.name)
+
     relation.Project.builder
       .remap(remap)
       .expressions(expressions.asJava)
+      .hint(Hint.builder.addAllOutputNames(names.asJava).build())
       .input(child)
       .build()
   }
