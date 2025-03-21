@@ -54,7 +54,7 @@ class SqlConverterBase {
   final FeatureBoard featureBoard;
 
   protected SqlConverterBase(FeatureBoard features) {
-    this.factory = new JavaTypeFactoryImpl();
+    this.factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
