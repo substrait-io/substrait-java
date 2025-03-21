@@ -5,6 +5,7 @@ import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ImmutableExpressionReference;
 import io.substrait.extendedexpression.ImmutableExtendedExpression;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.proto.ExtendedExpression;
@@ -145,8 +146,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
+        List<SubstraitTable> tList = parseCreateTable(factory, validator, tableDef);
+        for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
             nameToTypeMap.merge( // to validate the sql expression tree
