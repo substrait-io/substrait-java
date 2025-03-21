@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
+import io.substrait.isthmus.calcite.SubstraitTable;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -20,7 +21,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -79,8 +79,8 @@ class SqlConverterBase {
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
+        List<SubstraitTable> tList = parseCreateTable(factory, validator, tableDef);
+        for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
         }
       }
@@ -97,10 +97,10 @@ class SqlConverterBase {
     return new CalciteCatalogReader(rootSchema, List.of(), factory, config);
   }
 
-  protected List<DefinedTable> parseCreateTable(
+  protected List<SubstraitTable> parseCreateTable(
       RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
-    List<DefinedTable> definedTableList = new ArrayList<>();
+    List<SubstraitTable> tableList = new ArrayList<>();
 
     SqlNodeList nodeList = parser.parseStmtList();
     for (SqlNode parsed : nodeList) {
@@ -140,12 +140,12 @@ class SqlConverterBase {
         columnTypes.add(col.dataType.deriveType(validator));
       }
 
-      definedTableList.add(
-          new DefinedTable(
-              create.name.names.get(0), factory, factory.createStructType(columnTypes, names)));
+      tableList.add(
+          new SubstraitTable(
+              create.name.names.get(0), factory.createStructType(columnTypes, names)));
     }
 
-    return definedTableList;
+    return tableList;
   }
 
   protected static SqlParseException fail(String text, SqlParserPos pos) {
@@ -171,32 +171,6 @@ class SqlConverterBase {
         SqlValidatorCatalogReader validatorCatalog,
         SqlValidator.Config config) {
       return new Validator(SubstraitOperatorTable.INSTANCE, validatorCatalog, factory, config);
-    }
-  }
-
-  /** A fully defined pre-specified table. */
-  protected static final class DefinedTable extends AbstractTable {
-
-    private final String name;
-    private final RelDataTypeFactory factory;
-    private final RelDataType type;
-
-    public DefinedTable(String name, RelDataTypeFactory factory, RelDataType type) {
-      this.name = name;
-      this.factory = factory;
-      this.type = type;
-    }
-
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-      //      if (factory != typeFactory) {
-      //        throw new IllegalStateException("Different type factory than previously used.");
-      //      }
-      return type;
-    }
-
-    public String getName() {
-      return name;
     }
   }
 }
