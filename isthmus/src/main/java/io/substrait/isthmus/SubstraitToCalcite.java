@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -64,9 +65,8 @@ public class SubstraitToCalcite {
           if (table == null) {
             return null;
           }
-          return new SqlConverterBase.DefinedTable(
+          return new SubstraitTable(
               id.get(id.size() - 1),
-              typeFactory,
               typeConverter.toCalcite(typeFactory, table.struct(), table.names()));
         };
     return LookupCalciteSchema.createRootSchema(lookup);
