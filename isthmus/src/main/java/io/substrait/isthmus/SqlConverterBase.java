@@ -68,6 +68,7 @@ class SqlConverterBase {
     featureBoard = features == null ? FEATURES_DEFAULT : features;
     parserConfig =
         SqlParser.Config.DEFAULT
+            .withUnquotedCasing(featureBoard.unquotedCasing())
             .withParserFactory(SqlDdlParserImpl.FACTORY)
             .withConformance(featureBoard.sqlConformanceMode());
   }
