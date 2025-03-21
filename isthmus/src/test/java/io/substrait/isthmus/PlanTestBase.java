@@ -101,26 +101,29 @@ public class PlanTestBase {
   protected List<RelNode> assertSqlSubstraitRelRoundTrip(String query, List<String> creates)
       throws Exception {
     // sql <--> substrait round trip test.
-    // Assert (sql -> substrait) and (sql -> substrait -> calcite rel -> substrait) are same.
-    // Return list of sql -> substrait rel -> Calcite rel.
+    // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
+    // Return list of sql -> Substrait rel -> Calcite rel.
     List<RelNode> relNodeList = new ArrayList<>();
 
-    // 1. sql -> substrait rel
+    var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
+
     SqlToSubstrait s = new SqlToSubstrait();
+
+    // 1. SQL -> Calcite RelRoot
     for (RelRoot relRoot : s.sqlToRelNode(query, creates)) {
-      Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+      // 2. Calcite RelRoot  -> Substrait Rel
+      Rel pojo1 = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
-      // 2. substrait rel -> Calcite Rel
-      RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
+      // 3. Substrait Rel -> Calcite RelNode
+      RelNode relNode = substraitToCalcite.convert(pojo1);
 
-      relNodeList.add(relnodeRoot);
+      relNodeList.add(relNode);
 
-      // 3. Calcite Rel -> substrait rel
-      Rel pojoRel2 =
-          SubstraitRelVisitor.convert(
-              RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
+      // 4. Calcite RelNode -> Substrait Rel
+      Rel pojo2 =
+          SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-      Assertions.assertEquals(pojoRel, pojoRel2);
+      Assertions.assertEquals(pojo1, pojo2);
     }
     return relNodeList;
   }
