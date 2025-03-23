@@ -1,6 +1,29 @@
 Release Notes
 ---
 
+## [0.51.0](https://github.com/substrait-io/substrait-java/compare/v0.50.0...v0.51.0) (2025-03-23)
+
+### ⚠ BREAKING CHANGES
+
+* parsed SQL no longer uses the default Calcite type system
+* ToProto#toProto now consumes a RelProtoConverter
+
+build: enable protobuf compilation for use with Isthmus tests
+test: add RelExtensionRoundtripTest
+
+Helps verify that substrait-java can handle Extension relations from
+protobuf to Calcite and back
+
+### Features
+
+* allow for more ergonomic conversion of Extension relations ([#341](https://github.com/substrait-io/substrait-java/issues/341)) ([d705f5a](https://github.com/substrait-io/substrait-java/commit/d705f5afb56cef28221aed0904da55541e3c2a6e))
+* **spark:** support round, floor and ceil functions ([#347](https://github.com/substrait-io/substrait-java/issues/347)) ([2d7fd37](https://github.com/substrait-io/substrait-java/commit/2d7fd37b39c3be4366d48e7eeadc30644645f2ed))
+* **spark:** support SELECT without FROM clause ([#344](https://github.com/substrait-io/substrait-java/issues/344)) ([d91b44f](https://github.com/substrait-io/substrait-java/commit/d91b44fd7c7fbea7f75046f188eb63ada6d77a7a))
+
+### Bug Fixes
+
+* use SubstraitTypeSystem when parsing SQL ([#350](https://github.com/substrait-io/substrait-java/issues/350)) ([128d497](https://github.com/substrait-io/substrait-java/commit/128d497ed87ad7cd45cc96e5eeb5fa73870b7b65))
+
 ## [0.50.0](https://github.com/substrait-io/substrait-java/compare/v0.49.0...v0.50.0) (2025-03-16)
 
 ### Features
