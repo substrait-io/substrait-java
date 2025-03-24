@@ -6,6 +6,7 @@ import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.Expression.ScalarSubquery;
+import io.substrait.expression.Expression.SetPredicate;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.FieldReference;
@@ -544,5 +545,21 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   public RexNode visit(ScalarSubquery expr) throws RuntimeException {
     RelNode inputRelnode = expr.input().accept(relNodeConverter);
     return RexSubQuery.scalar(inputRelnode);
+  }
+
+  @Override
+  public RexNode visit(SetPredicate expr) throws RuntimeException {
+    RelNode inputRelnode = expr.tuples().accept(relNodeConverter);
+    switch (expr.predicateOp()) {
+      case PREDICATE_OP_EXISTS:
+        return RexSubQuery.exists(inputRelnode);
+      case PREDICATE_OP_UNIQUE:
+        return RexSubQuery.unique(inputRelnode);
+      case PREDICATE_OP_UNSPECIFIED:
+      default:
+        throw new UnsupportedOperationException(
+            String.format(
+                "Cannot handle SetPredicate when PredicateOp is %s.", expr.predicateOp().name()));
+    }
   }
 }
