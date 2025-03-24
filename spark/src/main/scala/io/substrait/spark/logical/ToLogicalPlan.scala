@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSparkType}
+import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSparkType, ToSubstraitType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.sql.SparkSession
@@ -33,7 +33,7 @@ import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types.{ArrayType, DataType, DataTypes, IntegerType, MapType, StructField, StructType}
+import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructType}
 
 import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
@@ -244,18 +244,43 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     }
   }
 
+  /**
+   * Returns the top level field (column) names for the given relation, if they have been specified
+   * in the optional `hint` message. Does not include the field names of any inner structs.
+   * @param rel
+   * @return
+   *   Optional list of names.
+   */
+  private def fieldNames(rel: relation.Rel): Option[Seq[String]] = {
+    if (rel.getHint.isPresent && !rel.getHint.get().getOutputNames.isEmpty) {
+      Some(
+        ToSubstraitType
+          .toNamedStruct(ToSparkType.toStructType(
+            NamedStruct.of(rel.getHint.get.getOutputNames, rel.getRecordType)))
+          .names
+          .asScala)
+    } else {
+      None
+    }
+  }
+
   override def visit(project: relation.Project): LogicalPlan = {
     val child = project.getInput.accept(this)
     val (output, createProject) = child match {
       case a: Aggregate => (a.aggregateExpressions, false)
       case other => (other.output, true)
     }
+    val names = fieldNames(project).getOrElse(List.empty)
 
     withOutput(output) {
-      val projectList =
+      val projectExprs =
         project.getExpressions.asScala
           .map(expr => expr.accept(expressionConverter))
-          .map(toNamedExpression)
+      val projectList = if (names.size == projectExprs.size) {
+        projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
+      } else {
+        projectExprs.map(toNamedExpression)
+      }
       if (createProject) {
         Project(projectList, child)
       } else {
@@ -267,7 +292,9 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
 
   override def visit(expand: relation.Expand): LogicalPlan = {
     val child = expand.getInput.accept(this)
-    val names = expand.getHint.get().getOutputNames.asScala
+    val names = fieldNames(expand).getOrElse(
+      expand.getFields.asScala.zipWithIndex.map { case (_, i) => s"col$i" }
+    )
 
     withChild(child) {
       val projections = expand.getFields.asScala
