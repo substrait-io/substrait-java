@@ -2,14 +2,15 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
-import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.type.NamedStruct;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.LookupCalciteSchema;
@@ -179,10 +180,11 @@ public class SubstraitToCalcite {
     }
   }
 
-  private static class NamedStructGatherer extends AbstractRelVisitor<Void, RuntimeException> {
+  private static class NamedStructGatherer extends RelCopyOnWriteVisitor<RuntimeException> {
     Map<List<String>, NamedStruct> tableMap;
 
     private NamedStructGatherer() {
+      super();
       this.tableMap = new HashMap<>();
     }
 
@@ -193,16 +195,13 @@ public class SubstraitToCalcite {
     }
 
     @Override
-    public Void visit(NamedScan namedScan) {
+    public Optional<Rel> visit(NamedScan namedScan) {
+      Optional<Rel> result = super.visit(namedScan);
+
       List<String> tableName = namedScan.getNames();
       tableMap.put(tableName, namedScan.getInitialSchema());
-      return null;
-    }
 
-    @Override
-    public Void visitFallback(Rel rel) {
-      for (Rel input : rel.getInputs()) input.accept(this);
-      return null;
+      return result;
     }
   }
 }

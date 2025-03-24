@@ -9,7 +9,6 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Extension;
 import io.substrait.relation.ExtensionLeaf;
 import io.substrait.relation.ExtensionMulti;
@@ -17,7 +16,6 @@ import io.substrait.relation.ExtensionSingle;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
-import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,12 +35,6 @@ import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Test;
 
 public class RelExtensionRoundtripTest extends PlanTestBase {
-
-  static final EmptyScan EMPTY_TABLE =
-      EmptyScan.builder()
-          .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
-          .build();
-
   @Test
   void extensionLeafRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(1));
@@ -53,14 +45,16 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionSingleRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(2));
-    var rel = ExtensionSingle.from(detail, EMPTY_TABLE).build();
+    var rel = ExtensionSingle.from(detail, substraitBuilder.emptyScan()).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionMultiRelDetailTest() {
     var detail = new ColumnAppendDetail(substraitBuilder.i32(3));
-    var rel = ExtensionMulti.from(detail, EMPTY_TABLE, EMPTY_TABLE).build();
+    var rel =
+        ExtensionMulti.from(detail, substraitBuilder.emptyScan(), substraitBuilder.emptyScan())
+            .build();
     roundtrip(rel);
   }
 
