@@ -19,6 +19,7 @@ package io.substrait.spark.expression
 import io.substrait.spark.{HasOutputStack, ToSubstraitType}
 
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Project}
 import org.apache.spark.substrait.SparkTypeUtil
 
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator, FieldReference, ImmutableExpression}
@@ -37,6 +38,48 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
       case t: TernaryExpression => Some(Seq(t.first, t.second, t.third))
       case Coalesce(children) => Some(children.toList)
       case Concat(children) => Some(children.toList)
+      case _ => None
+    }
+  }
+
+  object MergedStruct {
+    // This matches the structure produced by the spark optimizer and translates it back to
+    // its original form to make it substrait friendly.
+    // https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/MergeScalarSubqueries.scala#L76
+    def unapply(e: Expression): Option[ScalarSubquery] = e match {
+      case GetStructField(
+            ScalarSubquery(
+              Project(Seq(Alias(CreateNamedStruct(args), "mergedValue")), child),
+              _,
+              _,
+              _,
+              _,
+              _),
+            ordinal,
+            _) =>
+        val (name, value) =
+          args.grouped(2).map { case Seq(name, value) => (name, value) }.toArray.apply(ordinal)
+
+        child match {
+          case Aggregate(groupingExpressions, aggregateExpressions, child)
+              if aggregateExpressions.forall(e => e.isInstanceOf[Alias]) =>
+            val used = value match {
+              case ref: AttributeReference => ref.exprId.id
+              case _ => throw new UnsupportedOperationException(s"Cannot convert expression: $e")
+            }
+            val filteredAggExprs = aggregateExpressions.filter(ae => used == ae.exprId.id)
+            Some(
+              ScalarSubquery(
+                Aggregate(groupingExpressions, filteredAggExprs, child)
+              )
+            )
+          case _ =>
+            Some(
+              ScalarSubquery(
+                Project(Seq(Alias(value, name.toString())()), child)
+              )
+            )
+        }
       case _ => None
     }
   }
@@ -148,6 +191,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
             "org.apache.spark.sql.catalyst.expressions.PromotePrecision" =>
         translateUp(p.children.head)
       case CaseWhen(branches, elseValue) => translateCaseWhen(branches, elseValue)
+      case MergedStruct(replacement) => translateUp(replacement)
       case In(value, list) => translateIn(value, list)
       case InSet(value, set) => translateIn(value, set.toSeq.map(v => Literal(v)))
       case scalar @ ScalarFunction(children) =>
