@@ -423,7 +423,8 @@ public class ProtoRelConverter {
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()));
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.extension(advancedExtension(rel.getAdvancedExtension()));
     }
