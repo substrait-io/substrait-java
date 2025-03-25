@@ -321,7 +321,8 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
             .collect(java.util.stream.Collectors.toList());
 
-    return rexBuilder.makeCall(operator, args);
+    RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
+    return rexBuilder.makeCall(returnType, operator, args);
   }
 
   private String callConversionFailureMessage(
