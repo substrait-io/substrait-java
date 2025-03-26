@@ -1,6 +1,8 @@
 rootProject.name = "substrait"
 
-include("bom", "core", "isthmus", "isthmus-cli", "spark", "examples:substrait-spark")
+include("bom", "core", "isthmus", "isthmus-cli", "spark", "examples:substrait-spark", "examples:api-examples")
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
   plugins {

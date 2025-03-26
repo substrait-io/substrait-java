@@ -105,6 +105,8 @@ jobs:
           pwd
           ls -lart
           just -f ./examples/substrait-spark/justfile buildapp
+      - name: Build with Gradle
+        run: gradle :examples:api-examples:build
 
   isthmus-native-image-mac-linux:
     name: Build Isthmus Native Image

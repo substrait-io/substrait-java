@@ -1,17 +1,23 @@
 package io.substrait.isthmus;
 
-import io.substrait.relation.Rel;
-import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.parser.SqlParseException;
+
+import io.substrait.extension.SimpleExtension;
+import io.substrait.plan.Plan;
+import io.substrait.relation.Rel;
+import io.substrait.type.NamedStruct;
 
 public class SubstraitToSql extends SqlConverterBase {
 
@@ -34,31 +40,46 @@ public class SubstraitToSql extends SqlConverterBase {
   }
 
   // DEFAULT_SQL_DIALECT uses Calcite's EMPTY_CONTEXT with setting:
-  //   identifierQuoteString : null, identifierEscapeQuoteString : null
-  //   quotedCasing : UNCHANGED, unquotedCasing : TO_UPPER
-  //   caseSensitive: true
-  //   supportsApproxCountDistinct is true
-  private static final SqlDialect DEFAULT_SQL_DIALECT =
-      new SqlDialect(SqlDialect.EMPTY_CONTEXT) {
-        @Override
-        public boolean supportsApproxCountDistinct() {
-          return true;
-        }
-      };
+  // identifierQuoteString : null, identifierEscapeQuoteString : null
+  // quotedCasing : UNCHANGED, unquotedCasing : TO_UPPER
+  // caseSensitive: true
+  // supportsApproxCountDistinct is true
+  private static final SqlDialect DEFAULT_SQL_DIALECT = new SqlDialect(SqlDialect.EMPTY_CONTEXT) {
+    @Override
+    public boolean supportsApproxCountDistinct() {
+      return true;
+    }
+  };
 
   public static String toSql(RelNode root) {
     return toSql(root, DEFAULT_SQL_DIALECT);
+  }
+
+  public static List<String> toSql(Plan plan) {
+    return toSql(plan, DEFAULT_SQL_DIALECT);
+  }
+
+  public static List<String> toSql(Plan plan, SqlDialect dialect) {
+    SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
+
+    SubstraitToCalcite substrait2Calcite = new SubstraitToCalcite(
+        extensions, new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
+
+    return plan.getRoots().stream().map(root -> {
+      var calciteRel = substrait2Calcite.convert(root).project();
+      return SubstraitToSql.toSql(calciteRel);
+    }).collect(Collectors.toList());
+
   }
 
   public static String toSql(RelNode root, SqlDialect dialect) {
     return toSql(
         root,
         dialect,
-        c ->
-            c.withAlwaysUseParentheses(false)
-                .withSelectListItemsOnSeparateLines(false)
-                .withUpdateSetListNewline(false)
-                .withIndentation(0));
+        c -> c.withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withUpdateSetListNewline(false)
+            .withIndentation(0));
   }
 
   private static String toSql(
