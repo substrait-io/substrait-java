@@ -21,6 +21,7 @@ import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
+import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
@@ -38,6 +39,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -295,6 +297,12 @@ public class SubstraitBuilder {
     var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
     var namedStruct = NamedStruct.of(columnNames, struct);
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
+  }
+
+  public EmptyScan emptyScan() {
+    return EmptyScan.builder()
+        .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
+        .build();
   }
 
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {

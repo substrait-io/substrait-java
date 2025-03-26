@@ -2,12 +2,10 @@ package io.substrait.type.proto;
 
 import io.substrait.TestBase;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,10 +33,7 @@ public class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void emptyScan() {
-    var emptyScan =
-        EmptyScan.builder()
-            .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
-            .build();
+    var emptyScan = b.emptyScan();
     verifyRoundTrip(emptyScan);
   }
 

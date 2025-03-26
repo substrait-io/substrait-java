@@ -5,6 +5,7 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
+import io.substrait.expression.Expression.ScalarSubquery;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.FieldReference;
@@ -537,5 +538,11 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
                     String.format(
                         "EnumArg(value=%s) not handled by visitor type %s.",
                         e.value(), this.getClass().getCanonicalName())));
+  }
+
+  @Override
+  public RexNode visit(ScalarSubquery expr) throws RuntimeException {
+    RelNode inputRelnode = expr.input().accept(relNodeConverter);
+    return RexSubQuery.scalar(inputRelnode);
   }
 }
