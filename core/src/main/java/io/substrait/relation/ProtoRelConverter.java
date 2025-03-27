@@ -37,7 +37,6 @@ import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -52,7 +51,7 @@ public class ProtoRelConverter {
   protected final SimpleExtension.ExtensionCollection extensions;
   private final ProtoTypeConverter protoTypeConverter;
 
-  public ProtoRelConverter(ExtensionLookup lookup) throws IOException {
+  public ProtoRelConverter(ExtensionLookup lookup) {
     this(lookup, SimpleExtension.loadDefaults());
   }
 

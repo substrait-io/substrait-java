@@ -1,0 +1,14 @@
+syntax="proto3";
+
+package isthmus;
+
+import "substrait/algebra.proto";
+import "substrait/type.proto";
+
+option java_package = "io.substrait.isthmus.extensions.test.protobuf";
+option java_multiple_files = true;
+
+// Append the literal to the output rows of the relation
+message ColumnAppendDetail {
+  substrait.Expression.Literal literal = 1;
+}

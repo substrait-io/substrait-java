@@ -7,13 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.util.function.Consumer;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexNode;
@@ -24,7 +22,8 @@ import org.junit.jupiter.api.Test;
 public class CalciteCallTest extends CalciteObjs {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteCallTest.class);
 
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
+  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      SimpleExtension.loadDefaults();
   private final ScalarFunctionConverter functionConverter =
       new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);
   private final RexExpressionConverter rexExpressionConverter =
@@ -32,18 +31,6 @@ public class CalciteCallTest extends CalciteObjs {
 
   private final ExpressionRexConverter expressionRexConverter =
       new ExpressionRexConverter(type, functionConverter, null, TypeConverter.DEFAULT);
-
-  static {
-    SimpleExtension.ExtensionCollection defaults =
-        ImmutableSimpleExtension.ExtensionCollection.builder().build();
-    try {
-      defaults = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException("Failure while loading defaults.", e);
-    }
-
-    EXTENSION_COLLECTION = defaults;
-  }
 
   @Test
   public void extract() {

@@ -22,6 +22,12 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
     )
   }
 
+  test("one_row_relation") {
+    assertSqlSubstraitRelRoundTrip(
+      "select 1 + 1"
+    )
+  }
+
   test("local_relation_struct") {
     assertSqlSubstraitRelRoundTrip(
       "select * from (values (1, struct(2, 'a')) as table(int_col, struct_col))"

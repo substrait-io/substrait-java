@@ -3,7 +3,6 @@ package io.substrait.isthmus;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.NamedStruct;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -54,7 +53,7 @@ class SqlConverterBase {
   final FeatureBoard featureBoard;
 
   protected SqlConverterBase(FeatureBoard features) {
-    this.factory = new JavaTypeFactoryImpl();
+    this.factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
@@ -69,22 +68,13 @@ class SqlConverterBase {
     featureBoard = features == null ? FEATURES_DEFAULT : features;
     parserConfig =
         SqlParser.Config.DEFAULT
+            .withUnquotedCasing(featureBoard.unquotedCasing())
             .withParserFactory(SqlDdlParserImpl.FACTORY)
             .withConformance(featureBoard.sqlConformanceMode());
   }
 
-  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION;
-
-  static {
-    SimpleExtension.ExtensionCollection defaults;
-    try {
-      defaults = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException("Failure while loading defaults.", e);
-    }
-
-    EXTENSION_COLLECTION = defaults;
-  }
+  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      SimpleExtension.loadDefaults();
 
   Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
       throws SqlParseException {

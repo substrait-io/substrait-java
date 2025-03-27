@@ -140,4 +140,22 @@ class LocalFiles extends SharedSparkSession {
 
     assertRoundTrip(both)
   }
+
+  test("Struct from sub-queries") {
+    val csv = spark.read
+      .option("header", true)
+      .option("inferSchema", true)
+      .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
+
+    csv.createOrReplaceTempView("csv")
+    val data = spark.sql("""
+                           |select
+                           |   (select sum(ID) from csv) sum,
+                           |   (select count(ID) from csv) count
+                           |
+                           |""".stripMargin)
+
+    val result = assertRoundTrip(data)
+    assertResult(Row(55, 10))(result.head())
+  }
 }

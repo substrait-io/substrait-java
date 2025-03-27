@@ -34,16 +34,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Assertions;
 
 public class PlanTestBase {
-  protected final SimpleExtension.ExtensionCollection extensions;
-
-  {
-    try {
-      extensions = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
+  protected final SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RexBuilder rex = creator.rex();
@@ -87,7 +78,7 @@ public class PlanTestBase {
     return plan;
   }
 
-  protected void assertPlanRoundrip(Plan plan) throws IOException, SqlParseException {
+  protected void assertPlanRoundtrip(Plan plan) {
     io.substrait.proto.Plan protoPlan1 = new PlanProtoConverter().toProto(plan);
     io.substrait.proto.Plan protoPlan2 =
         new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan1));
@@ -101,26 +92,29 @@ public class PlanTestBase {
   protected List<RelNode> assertSqlSubstraitRelRoundTrip(String query, List<String> creates)
       throws Exception {
     // sql <--> substrait round trip test.
-    // Assert (sql -> substrait) and (sql -> substrait -> calcite rel -> substrait) are same.
-    // Return list of sql -> substrait rel -> Calcite rel.
+    // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
+    // Return list of sql -> Substrait rel -> Calcite rel.
     List<RelNode> relNodeList = new ArrayList<>();
 
-    // 1. sql -> substrait rel
+    var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
+
     SqlToSubstrait s = new SqlToSubstrait();
+
+    // 1. SQL -> Calcite RelRoot
     for (RelRoot relRoot : s.sqlToRelNode(query, creates)) {
-      Rel pojoRel = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+      // 2. Calcite RelRoot  -> Substrait Rel
+      Rel pojo1 = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
-      // 2. substrait rel -> Calcite Rel
-      RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
+      // 3. Substrait Rel -> Calcite RelNode
+      RelNode relNode = substraitToCalcite.convert(pojo1);
 
-      relNodeList.add(relnodeRoot);
+      relNodeList.add(relNode);
 
-      // 3. Calcite Rel -> substrait rel
-      Rel pojoRel2 =
-          SubstraitRelVisitor.convert(
-              RelRoot.of(relnodeRoot, SqlKind.SELECT), EXTENSION_COLLECTION);
+      // 4. Calcite RelNode -> Substrait Rel
+      Rel pojo2 =
+          SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-      Assertions.assertEquals(pojoRel, pojoRel2);
+      Assertions.assertEquals(pojo1, pojo2);
     }
     return relNodeList;
   }

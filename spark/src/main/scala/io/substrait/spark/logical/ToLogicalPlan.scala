@@ -322,7 +322,12 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
             .fields()
             .asScala
             .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)))
-    LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
+    virtualTableScan.getInitialSchema match {
+      case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
+        OneRowRelation()
+      case _ =>
+        LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
+    }
   }
 
   override def visit(namedScan: relation.NamedScan): LogicalPlan = {
