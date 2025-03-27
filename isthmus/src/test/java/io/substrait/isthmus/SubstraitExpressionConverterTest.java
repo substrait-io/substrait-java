@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
@@ -53,16 +54,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
 
   @Test
   public void scalarSubQuery() {
-    Rel subQueryRel =
-        b.project(
-            input -> List.of(b.fieldReference(input, 0)),
-            Remap.of(List.of(3)),
-            b.filter(
-                input ->
-                    b.equal(
-                        b.fieldReference(input, 2),
-                        Expression.StrLiteral.builder().nullable(false).value("EUROPE").build()),
-                commonTable));
+    Rel subQueryRel = createSubQueryRel();
 
     Expression.ScalarSubquery expr =
         Expression.ScalarSubquery.builder()
@@ -79,6 +71,92 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
     List<RexNode> calciteProjectExpr = ((LogicalProject) calciteRel).getProjects();
     assertEquals(1, calciteProjectExpr.size());
     assertEquals(SqlKind.SCALAR_QUERY, calciteProjectExpr.get(0).getKind());
+  }
+
+  @Test
+  public void existsSetPredicate() {
+    Rel subQueryRel = createSubQueryRel();
+
+    Expression.SetPredicate expr =
+        Expression.SetPredicate.builder()
+            .predicateOp(Expression.PredicateOp.PREDICATE_OP_EXISTS)
+            .tuples(subQueryRel)
+            .build();
+
+    Project query = b.project(input -> List.of(expr), b.emptyScan());
+
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    RelNode calciteRel = substraitToCalcite.convert(query);
+
+    assertInstanceOf(LogicalProject.class, calciteRel);
+    List<RexNode> calciteProjectExpr = ((LogicalProject) calciteRel).getProjects();
+    assertEquals(1, calciteProjectExpr.size());
+    assertEquals(SqlKind.EXISTS, calciteProjectExpr.get(0).getKind());
+  }
+
+  @Test
+  public void uniqueSetPredicate() {
+    Rel subQueryRel = createSubQueryRel();
+
+    Expression.SetPredicate expr =
+        Expression.SetPredicate.builder()
+            .predicateOp(Expression.PredicateOp.PREDICATE_OP_UNIQUE)
+            .tuples(subQueryRel)
+            .build();
+
+    Project query = b.project(input -> List.of(expr), b.emptyScan());
+
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    RelNode calciteRel = substraitToCalcite.convert(query);
+
+    assertInstanceOf(LogicalProject.class, calciteRel);
+    List<RexNode> calciteProjectExpr = ((LogicalProject) calciteRel).getProjects();
+    assertEquals(1, calciteProjectExpr.size());
+    assertEquals(SqlKind.UNIQUE, calciteProjectExpr.get(0).getKind());
+  }
+
+  @Test
+  public void unspecifiedSetPredicate() {
+    Rel subQueryRel = createSubQueryRel();
+
+    Expression.SetPredicate expr =
+        Expression.SetPredicate.builder()
+            .predicateOp(Expression.PredicateOp.PREDICATE_OP_UNSPECIFIED)
+            .tuples(subQueryRel)
+            .build();
+
+    Project query = b.project(input -> List.of(expr), b.emptyScan());
+
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    Exception exception =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> {
+              substraitToCalcite.convert(query);
+            });
+
+    assertEquals(
+        "Cannot handle SetPredicate when PredicateOp is PREDICATE_OP_UNSPECIFIED.",
+        exception.getMessage());
+  }
+
+  /**
+   * Creates a Substrait {@link Rel} equivalent to the following SQL query:
+   *
+   * <p>select a from example where c = 'EUROPE'
+   *
+   * @return the Substrait {@link Rel} equivalent of the above SQL query
+   */
+  Rel createSubQueryRel() {
+    return b.project(
+        input -> List.of(b.fieldReference(input, 0)),
+        Remap.of(List.of(3)),
+        b.filter(
+            input ->
+                b.equal(
+                    b.fieldReference(input, 2),
+                    Expression.StrLiteral.builder().nullable(false).value("EUROPE").build()),
+            commonTable));
   }
 
   void assertTypeMatch(RelDataType actual, Type expected) {
