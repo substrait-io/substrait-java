@@ -1,10 +1,11 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.substrait.extension.ExtensionCollector;
+import io.substrait.plan.ImmutablePlan.Builder;
+import io.substrait.plan.ImmutableVersion;
+import io.substrait.plan.Plan.Version;
+import io.substrait.plan.PlanProtoConverter;
 import io.substrait.proto.Plan;
-import io.substrait.proto.PlanRel;
-import io.substrait.relation.RelProtoConverter;
 import java.util.List;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -56,22 +57,18 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    var plan = Plan.newBuilder();
-    ExtensionCollector functionCollector = new ExtensionCollector();
-    var relProtoConverter = new RelProtoConverter(functionCollector);
+    Builder builder = io.substrait.plan.Plan.builder();
+    builder.version(
+        ImmutableVersion.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
+
     // TODO: consider case in which one sql passes conversion while others don't
-    sqlToRelNode(sql, validator, catalogReader)
-        .forEach(
-            root -> {
-              plan.addRelations(
-                  PlanRel.newBuilder()
-                      .setRoot(
-                          relProtoConverter.toProto(
-                              SubstraitRelVisitor.convert(
-                                  root, EXTENSION_COLLECTION, featureBoard))));
-            });
-    functionCollector.addExtensionsToPlan(plan);
-    return plan.build();
+    sqlToRelNode(sql, validator, catalogReader).stream()
+        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+        .forEach(root -> builder.addRoots(root));
+
+    PlanProtoConverter planToProto = new PlanProtoConverter();
+
+    return planToProto.toProto(builder.build());
   }
 
   private List<RelRoot> sqlToRelNode(

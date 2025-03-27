@@ -38,7 +38,7 @@ import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
-import io.substrait.plan.{ImmutableRoot, Plan}
+import io.substrait.plan.{ImmutableRoot, ImmutableVersion, Plan}
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
@@ -543,6 +543,12 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   def convert(p: LogicalPlan): Plan = {
     val rel = visit(p)
     Plan.builder
+      .version(
+        ImmutableVersion
+          .builder()
+          .from(Plan.Version.DEFAULT_VERSION)
+          .producer("substrait-spark")
+          .build())
       .roots(
         Collections.singletonList(
           ImmutableRoot
