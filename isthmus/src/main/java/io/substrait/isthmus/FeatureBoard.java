@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.immutables.value.Value;
@@ -38,5 +39,13 @@ public abstract class FeatureBoard {
   @Value.Default
   public CrossJoinPolicy crossJoinPolicy() {
     return CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
+  }
+
+  /**
+   * @return Calcite's identifier casing policy for unquoted identifiers.
+   */
+  @Value.Default
+  public Casing unquotedCasing() {
+    return Casing.TO_UPPER;
   }
 }

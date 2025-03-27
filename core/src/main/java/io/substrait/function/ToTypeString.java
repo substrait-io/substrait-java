@@ -121,6 +121,11 @@ public class ToTypeString
   }
 
   @Override
+  public String visit(final Type.PrecisionTime expr) {
+    return "pt";
+  }
+
+  @Override
   public String visit(final Type.PrecisionTimestamp expr) {
     return "pts";
   }

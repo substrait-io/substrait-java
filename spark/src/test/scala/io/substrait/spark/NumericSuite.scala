@@ -37,4 +37,9 @@ class NumericSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     )
   }
 
+  test("decimal rounding") {
+    assertSqlSubstraitRelRoundTrip(
+      "select floor(num), ceil(num), round(num, 0), round(num, 1) from (values (0.5), (-0.5)) as table(num)"
+    )
+  }
 }

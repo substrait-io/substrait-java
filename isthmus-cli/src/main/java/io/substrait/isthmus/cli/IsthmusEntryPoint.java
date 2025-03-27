@@ -19,6 +19,7 @@ import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import picocli.CommandLine;
 
@@ -69,6 +70,11 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"--crossjoinpolicy"},
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private CrossJoinPolicy crossJoinPolicy = CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
+
+  @Option(
+      names = {"--unquotedcasing"},
+      description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
+  private Casing unquotedCasing = Casing.TO_UPPER;
 
   public static void main(String... args) {
     CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
@@ -122,6 +128,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
         .allowsSqlBatch(allowMultiStatement)
         .sqlConformanceMode(sqlConformanceMode)
         .crossJoinPolicy(crossJoinPolicy)
+        .unquotedCasing(unquotedCasing)
         .build();
   }
 }

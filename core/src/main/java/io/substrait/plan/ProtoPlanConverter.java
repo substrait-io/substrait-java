@@ -6,7 +6,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +17,7 @@ public class ProtoPlanConverter {
 
   protected final SimpleExtension.ExtensionCollection extensionCollection;
 
-  public ProtoPlanConverter() throws IOException {
+  public ProtoPlanConverter() {
     this(SimpleExtension.loadDefaults());
   }
 

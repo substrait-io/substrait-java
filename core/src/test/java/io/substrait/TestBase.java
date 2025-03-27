@@ -9,19 +9,11 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 
 public abstract class TestBase {
 
-  protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection;
-
-  static {
-    try {
-      defaultExtensionCollection = SimpleExtension.loadDefaults();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
+  protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
+      SimpleExtension.loadDefaults();
 
   protected TypeCreator R = TypeCreator.REQUIRED;
 

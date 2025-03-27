@@ -73,7 +73,7 @@ public class NestedStructQueryTest extends PlanTestBase {
 
     ProtoPlanConverter converter = new ProtoPlanConverter();
     io.substrait.plan.Plan plan2 = converter.from(plan);
-    assertPlanRoundrip(plan2);
+    assertPlanRoundtrip(plan2);
   }
 
   @Test

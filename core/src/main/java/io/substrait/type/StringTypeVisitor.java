@@ -115,6 +115,11 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
   }
 
   @Override
+  public String visit(Type.PrecisionTime type) throws RuntimeException {
+    return String.format("precision_time<%d>%s", type.precision(), n(type));
+  }
+
+  @Override
   public String visit(Type.PrecisionTimestamp type) throws RuntimeException {
     return String.format("precision_timestamp<%d>%s", type.precision(), n(type));
   }

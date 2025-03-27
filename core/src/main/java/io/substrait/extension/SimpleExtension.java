@@ -692,7 +692,7 @@ public class SimpleExtension {
     }
   }
 
-  public static ExtensionCollection loadDefaults() throws IOException {
+  public static ExtensionCollection loadDefaults() {
     var defaultFiles =
         Arrays.asList(
                 "boolean",
@@ -704,6 +704,7 @@ public class SimpleExtension {
                 "datetime",
                 "logarithmic",
                 "rounding",
+                "rounding_decimal",
                 "string")
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))

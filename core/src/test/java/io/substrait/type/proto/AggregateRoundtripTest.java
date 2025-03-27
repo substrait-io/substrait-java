@@ -16,7 +16,6 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
@@ -72,7 +71,7 @@ public class AggregateRoundtripTest extends TestBase {
   }
 
   @Test
-  void aggregateInvocationRoundtrip() throws IOException {
+  void aggregateInvocationRoundtrip() {
     for (var invocation : Expression.AggregationInvocation.values()) {
       assertAggregateRoundtrip(invocation);
     }

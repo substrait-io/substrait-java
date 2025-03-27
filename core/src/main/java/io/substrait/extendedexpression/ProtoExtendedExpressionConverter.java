@@ -11,7 +11,6 @@ import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
 import io.substrait.relation.ProtoAggregateFunctionConverter;
 import io.substrait.type.proto.ProtoTypeConverter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +19,7 @@ import java.util.Optional;
 public class ProtoExtendedExpressionConverter {
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
-  public ProtoExtendedExpressionConverter() throws IOException {
+  public ProtoExtendedExpressionConverter() {
     this(SimpleExtension.loadDefaults());
   }
 
