@@ -10,6 +10,7 @@ import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Root;
 import io.substrait.plan.PlanProtoConverter;
@@ -277,6 +278,6 @@ public class PlanTestBase {
     Root root = roots.get(0);
     RelRoot relRoot = new SubstraitToCalcite(extensions, typeFactory).convert(root);
     RelNode project = relRoot.project(true);
-    return SubstraitToSql.toSql(project);
+    return SubstraitSqlDialect.toSql(project).getSql();
   }
 }
