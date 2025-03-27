@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
@@ -139,7 +140,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
             .filter(t -> !t.trim().isBlank())
             .collect(java.util.stream.Collectors.toList());
     RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
-    String newSql = SubstraitToSql.toSql(relnodeRoot);
+    String newSql = SubstraitSqlDialect.toSql(relnodeRoot).getSql();
     assertTrue(newSql.toUpperCase().contains("APPROX_COUNT_DISTINCT"));
   }
 
