@@ -44,8 +44,8 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
         throw new TestFailedException(
           (e: StackDepthException) =>
             Some(
-              s"${implicitly[TreePrinter[T]].tree(actual)}" +
-                s" did not equal ${implicitly[TreePrinter[T]].tree(expected)}"),
+              s"Actual ${implicitly[TreePrinter[T]].tree(actual)}" +
+                s" did not equal expected ${implicitly[TreePrinter[T]].tree(expected)}"),
           None,
           Position.here
         )
