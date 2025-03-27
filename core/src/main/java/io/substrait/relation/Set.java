@@ -68,32 +68,64 @@ public abstract class Set extends AbstractRel implements HasExtension {
     return switch (getSetOp()) {
       case UNKNOWN -> first; // alternative would be to throw an exception
       case MINUS_PRIMARY, MINUS_PRIMARY_ALL, MINUS_MULTISET -> first;
-      case INTERSECTION_PRIMARY -> coalesceNullability(first, rest, true);
-      case INTERSECTION_MULTISET,
-          INTERSECTION_MULTISET_ALL,
-          UNION_DISTINCT,
-          UNION_ALL -> coalesceNullability(first, rest, false);
+      case INTERSECTION_PRIMARY -> coalesceNullabilityIntersectionPrimary(first, rest);
+      case INTERSECTION_MULTISET, INTERSECTION_MULTISET_ALL -> coalesceNullabilityIntersection(
+          first, rest);
+      case UNION_DISTINCT, UNION_ALL -> coalesceNullabilityUnion(first, rest);
     };
   }
 
-  private Type.Struct coalesceNullability(
-      Type.Struct first, List<Type.Struct> rest, boolean prioritizeFirst) {
+  /** If field is nullable in any of the inputs, it's nullable in the output */
+  private Type.Struct coalesceNullabilityUnion(Type.Struct first, List<Type.Struct> rest) {
+
     List<Type> fields = new ArrayList<>();
     for (int i = 0; i < first.fields().size(); i++) {
       Type typeA = first.fields().get(i);
       int finalI = i;
-      boolean anyOtherIsNullable = rest.stream().anyMatch(t -> t.fields().get(finalI).nullable());
-      if (prioritizeFirst && !anyOtherIsNullable) {
-        // For INTERSECTION_PRIMARY: if no other field is nullable, type shouldn't be nullable
-        fields.add(TypeCreator.asNotNullable(typeA));
-      } else if (!prioritizeFirst && anyOtherIsNullable) {
-        // For other INTERSECTIONs and UNIONs: if any other field is nullable, type should be
-        // nullable
-        fields.add(TypeCreator.asNullable(typeA));
-      } else {
-        // Can keep nullability as-is
+      fields.add(
+          rest.stream()
+              .map(struct -> struct.fields().get(finalI))
+              .reduce(
+                  typeA, (curr, next) -> next.nullable() ? TypeCreator.asNullable(curr) : curr));
+    }
+    return Type.Struct.builder().fields(fields).nullable(first.nullable()).build();
+  }
+
+  /**
+   * If field is nullable in primary input and in any of the other of the inputs, it's nullable in
+   * the output
+   */
+  private Type.Struct coalesceNullabilityIntersectionPrimary(
+      Type.Struct first, List<Type.Struct> rest) {
+
+    List<Type> fields = new ArrayList<>();
+    for (int i = 0; i < first.fields().size(); i++) {
+      Type typeA = first.fields().get(i);
+      if (!typeA.nullable()) {
+        // Just to make this case explicit and to short-circuit, logic below would work without too
         fields.add(typeA);
+        continue;
       }
+      int finalI = i;
+      boolean anyOtherIsNullable = rest.stream().anyMatch(t -> t.fields().get(finalI).nullable());
+      fields.add(anyOtherIsNullable ? typeA : TypeCreator.asNotNullable(typeA));
+    }
+    return Type.Struct.builder().fields(fields).nullable(first.nullable()).build();
+  }
+
+  /** If field is required in any of the inputs, it's required in the output */
+  private Type.Struct coalesceNullabilityIntersection(Type.Struct first, List<Type.Struct> rest) {
+    List<Type> fields = new ArrayList<>();
+    for (int i = 0; i < first.fields().size(); i++) {
+      Type typeA = first.fields().get(i);
+      if (!typeA.nullable()) {
+        // Just to make this case explicit and to short-circuit, logic below would work without too
+        fields.add(typeA);
+        continue;
+      }
+      int finalI = i;
+      boolean anyOtherIsRequired = rest.stream().anyMatch(t -> !t.fields().get(finalI).nullable());
+      fields.add(anyOtherIsRequired ? TypeCreator.asNotNullable(typeA) : typeA);
     }
     return Type.Struct.builder().fields(fields).nullable(first.nullable()).build();
   }
