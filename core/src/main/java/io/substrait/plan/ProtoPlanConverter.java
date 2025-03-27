@@ -39,11 +39,29 @@ public class ProtoPlanConverter {
       Rel rel = relConverter.from(root.getInput());
       roots.add(Plan.Root.builder().input(rel).names(root.getNamesList()).build());
     }
+
+    ImmutableVersion.Builder versionBuilder =
+        ImmutableVersion.builder()
+            .major(plan.getVersion().getMajorNumber())
+            .minor(plan.getVersion().getMinorNumber())
+            .patch(plan.getVersion().getPatchNumber());
+
+    // protobuf field 'git_hash' is an empty string by default
+    if (!"".equals(plan.getVersion().getGitHash())) {
+      versionBuilder.gitHash(Optional.of(plan.getVersion().getGitHash()));
+    }
+
+    // protobuf field 'producer' is an empty string by default
+    if (!"".equals(plan.getVersion().getProducer())) {
+      versionBuilder.producer(Optional.of(plan.getVersion().getProducer()));
+    }
+
     return Plan.builder()
         .roots(roots)
         .expectedTypeUrls(plan.getExpectedTypeUrlsList())
         .advancedExtension(
             Optional.ofNullable(plan.hasAdvancedExtensions() ? plan.getAdvancedExtensions() : null))
+        .version(versionBuilder.build())
         .build();
   }
 }

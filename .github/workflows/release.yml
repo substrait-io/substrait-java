@@ -35,7 +35,11 @@ jobs:
       - name: Install GraalVM native image
         run: gu install native-image
       - name: Build with Gradle
-        run: gradle nativeImage
+        run: |
+          # fetch submodule tags since actions/checkout@v4 does not
+          git submodule foreach 'git fetch --unshallow || true'
+
+          gradle nativeImage
       - name: Smoke Test
         run: |
           ./isthmus-cli/src/test/script/smoke.sh
