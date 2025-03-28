@@ -100,6 +100,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
         builder.append("commonExtension=").append(commonExtension)
       })
   }
+
   override def visit(namedScan: NamedScan): String = {
     withBuilder(namedScan, 10)(
       builder => {
@@ -108,6 +109,21 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
         builder.append("names=").append(namedScan.getNames)
 
         namedScan.getExtension.ifPresent(
+          extension => {
+            builder.append(", ")
+            builder.append("extension=").append(extension)
+          })
+      })
+  }
+
+  override def visit(virtualTableScan: VirtualTableScan): String = {
+    withBuilder(virtualTableScan, 10)(
+      builder => {
+        fillReadRel(virtualTableScan, builder)
+        builder.append(", ")
+        builder.append("rows=").append(virtualTableScan.getRows)
+
+        virtualTableScan.getExtension.ifPresent(
           extension => {
             builder.append(", ")
             builder.append("extension=").append(extension)

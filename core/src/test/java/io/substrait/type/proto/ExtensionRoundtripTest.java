@@ -312,7 +312,7 @@ public class ExtensionRoundtripTest extends TestBase {
                   Stream.of(
                           Expression.ScalarSubquery.builder()
                               .input(relWithEnhancement)
-                              .type(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64))
+                              .type(TypeCreator.REQUIRED.I64)
                               .build())
                       .collect(Collectors.toList()),
               commonTable);

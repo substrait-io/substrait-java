@@ -15,6 +15,7 @@ import io.substrait.proto.SortField;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.Type;
+import io.substrait.type.TypeVisitor;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -196,7 +197,21 @@ public class ProtoExpressionConverter {
             var rel = protoRelConverter.from(expr.getSubquery().getScalar().getInput());
             yield ImmutableExpression.ScalarSubquery.builder()
                 .input(rel)
-                .type(rel.getRecordType())
+                .type(
+                    rel.getRecordType()
+                        .accept(
+                            new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>(
+                                "Expected struct field") {
+                              @Override
+                              public Type visit(Type.Struct type) throws RuntimeException {
+                                if (type.fields().size() != 1) {
+                                  throw new UnsupportedOperationException(
+                                      "Scalar subquery must have exactly one field");
+                                }
+                                // Result can be null if the query returns no rows
+                                return type.fields().get(0);
+                              }
+                            }))
                 .build();
           }
           case IN_PREDICATE -> {

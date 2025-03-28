@@ -141,7 +141,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val aggregates = collectAggregates(actualResultExprs, aggExprToOutputOrdinal)
     val aggOutputMap = aggregates.zipWithIndex.map {
       case (e, i) =>
-        AttributeReference(s"agg_func_$i", e.dataType)() -> e
+        AttributeReference(s"agg_func_$i", e.dataType, nullable = e.nullable)() -> e
     }
     val aggOutput = aggOutputMap.map(_._1)
 
@@ -155,7 +155,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     }
     val groupOutputMap = actualGroupExprs.zipWithIndex.map {
       case (e, i) =>
-        AttributeReference(s"group_col_$i", e.dataType)() -> e
+        AttributeReference(s"group_col_$i", e.dataType, nullable = e.nullable)() -> e
     }
     val groupOutput = groupOutputMap.map(_._1)
 
@@ -219,12 +219,15 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
-    relation.Fetch
+    val builder = relation.Fetch
       .builder()
       .input(visit(child))
       .offset(offset)
-      .count(limit)
-      .build()
+    if (limit != -1) {
+      builder.count(limit)
+    }
+
+    builder.build()
   }
 
   override def visitGlobalLimit(p: GlobalLimit): relation.Rel = {
@@ -556,10 +559,12 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
     expr match {
       case s: ScalarSubquery if s.outerAttrs.isEmpty && s.joinCond.isEmpty =>
         val rel = toSubstraitRel.visit(s.plan)
+        val t =
+          s.plan.schema.fields.head // Using this instead of s.dataType/s.nullable to get correct nullability
         Some(
           SExpression.ScalarSubquery.builder
             .input(rel)
-            .`type`(ToSubstraitType.apply(s.dataType, s.nullable))
+            .`type`(ToSubstraitType.apply(t.dataType, t.nullable))
             .build())
       case other => default(other)
     }
