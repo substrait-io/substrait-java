@@ -59,6 +59,7 @@ public abstract class Join extends BiRel implements HasExtension {
         switch (getJoinType()) {
           case LEFT, OUTER -> getRight().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case SEMI, ANTI -> Stream.of(); // these are left joins which ignore right side columns
           default -> getRight().getRecordType().fields().stream();
         };
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));

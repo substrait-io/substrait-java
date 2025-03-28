@@ -62,10 +62,10 @@ allprojects {
     configure<SpotlessExtension> {
       kotlinGradle { ktfmt().googleStyle() }
       java {
+        target("src/*/java/**/*.java")
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        targetExclude("**/build/**")
       }
     }
   }
