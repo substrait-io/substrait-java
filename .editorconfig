@@ -10,7 +10,7 @@ trim_trailing_whitespace = true
 [*.{yaml,yml}]
 indent_size = 2
 
-[{**/*.sql,**/OuterReferenceResolver.md,**gradlew.bat,**/*.parquet,**/*.orc}]
+[{**/*.sql,**/OuterReferenceResolver.md,**gradlew.bat,**/*.parquet,**/*.orc,**/*.plan}]
 charset = unset
 end_of_line = unset
 insert_final_newline = unset

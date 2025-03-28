@@ -148,6 +148,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
    * @return the Substrait {@link Rel} equivalent of the above SQL query
    */
   Rel createSubQueryRel() {
+
     return b.project(
         input -> List.of(b.fieldReference(input, 0)),
         Remap.of(List.of(3)),
