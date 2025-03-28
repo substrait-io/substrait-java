@@ -5,10 +5,13 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
+import io.substrait.expression.Expression.PrecisionTimestampLiteral;
+import io.substrait.expression.Expression.PrecisionTimestampTZLiteral;
 import io.substrait.expression.Expression.ScalarSubquery;
 import io.substrait.expression.Expression.SetPredicate;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
+import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
@@ -209,20 +212,65 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
   @Override
   public RexNode visit(Expression.TimestampLiteral expr) throws RuntimeException {
-    // Expression.TimestampLiteral is microseconds
-    // Construct a TimeStampString :
-    // 1. Truncate microseconds to seconds
-    // 2. Get the fraction seconds in precision of nanoseconds.
-    // 3. Construct TimeStampString :  seconds  + fraction_seconds part.
-    long microSec = expr.value();
-    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
-    int fracSecondsInNano =
-        (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
+    return rexBuilder.makeLiteral(
+        getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
 
-    TimestampString tsString =
-        TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
-            .withNanos(fracSecondsInNano);
-    return rexBuilder.makeLiteral(tsString, typeConverter.toCalcite(typeFactory, expr.getType()));
+  @Override
+  public RexNode visit(TimestampTZLiteral expr) throws RuntimeException {
+    return rexBuilder.makeLiteral(
+        getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(PrecisionTimestampLiteral expr) throws RuntimeException {
+    return rexBuilder.makeLiteral(
+        getTimestampString(expr.value(), expr.precision()),
+        typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(PrecisionTimestampTZLiteral expr) throws RuntimeException {
+    return rexBuilder.makeLiteral(
+        getTimestampString(expr.value(), expr.precision()),
+        typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  private TimestampString getTimestampString(long microSec) {
+    return getTimestampString(microSec, 6);
+  }
+
+  private TimestampString getTimestampString(long value, int precision) {
+    switch (precision) {
+      case 0:
+        return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(value));
+      case 3:
+        {
+          long seconds = TimeUnit.MILLISECONDS.toSeconds(value);
+          int fracSecondsInNano =
+              (int) (TimeUnit.MILLISECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
+          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      case 6:
+        {
+          long seconds = TimeUnit.MICROSECONDS.toSeconds(value);
+          int fracSecondsInNano =
+              (int) (TimeUnit.MICROSECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
+          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      case 9:
+        {
+          long seconds = TimeUnit.NANOSECONDS.toSeconds(value);
+          int fracSecondsInNano = (int) (value - TimeUnit.SECONDS.toNanos(seconds));
+          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      default:
+        throw new UnsupportedOperationException(
+            String.format("Cannot handle PrecisionTimestamp with precision %d.", precision));
+    }
   }
 
   @Override

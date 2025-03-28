@@ -1,10 +1,13 @@
 package io.substrait.isthmus.expression;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import io.substrait.expression.EnumArg;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.SimpleExtension.Argument;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -25,16 +28,34 @@ import org.apache.calcite.sql.type.SqlTypeName;
  */
 public class EnumConverter {
 
-  private static final BiMap<Class<? extends Enum>, ArgAnchor> calciteEnumMap = HashBiMap.create();
+  private static final Map<ArgAnchor, Class<? extends Enum<?>>> calciteEnumMap = new HashMap<>();
 
   static {
+    // deprecated {@link io.substrait.type.Type.Timestamp}
     calciteEnumMap.put(
-        TimeUnitRange.class,
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_ts", 0));
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_ts", 0),
+        TimeUnitRange.class);
+    // deprecated {@link io.substrait.type.Type.TimestampTZ}
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_tstz_str", 0),
+        TimeUnitRange.class);
+
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_pts", 0),
+        TimeUnitRange.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_ptstz_str", 0),
+        TimeUnitRange.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_date", 0),
+        TimeUnitRange.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_time", 0),
+        TimeUnitRange.class);
   }
 
-  private static Optional<Enum> constructValue(
-      Class<? extends Enum> cls, Supplier<Optional<String>> option) {
+  private static Optional<Enum<?>> constructValue(
+      Class<? extends Enum<?>> cls, Supplier<Optional<String>> option) {
     if (cls.isAssignableFrom(TimeUnitRange.class)) {
       return option.get().map(TimeUnitRange::valueOf);
     } else {
@@ -44,8 +65,9 @@ public class EnumConverter {
 
   static Optional<RexLiteral> toRex(
       RexBuilder rexBuilder, SimpleExtension.Function fnDef, int argIdx, EnumArg e) {
-    var aAnch = argAnchor(fnDef, argIdx);
-    var v = Optional.ofNullable(calciteEnumMap.inverse().getOrDefault(aAnch, null));
+    ArgAnchor aAnch = argAnchor(fnDef, argIdx);
+    Optional<Class<? extends Enum<?>>> v =
+        Optional.ofNullable(calciteEnumMap.getOrDefault(aAnch, null));
 
     Supplier<Optional<String>> sOptionVal =
         () -> {
@@ -66,11 +88,11 @@ public class EnumConverter {
       return Optional.empty();
     } else {
 
-      var args = function.args();
+      List<Argument> args = function.args();
       if (args.size() <= enumAnchor.argIdx) {
         return Optional.empty();
       }
-      var arg = args.get(enumAnchor.argIdx);
+      Argument arg = args.get(enumAnchor.argIdx);
       if (arg instanceof SimpleExtension.EnumArgument ea) {
         return Optional.of(ea);
       } else {
@@ -79,17 +101,15 @@ public class EnumConverter {
     }
   }
 
-  static Optional<EnumArg> fromRex(SimpleExtension.Function function, RexLiteral literal) {
+  static Optional<EnumArg> fromRex(
+      SimpleExtension.Function function, RexLiteral literal, int argIdx) {
     return switch (literal.getType().getSqlTypeName()) {
       case SYMBOL -> {
         Object v = literal.getValue();
         if (!literal.isNull() && (v instanceof Enum)) {
-          Enum value = (Enum) v;
-          Optional<ArgAnchor> enumAnchor =
-              Optional.ofNullable(calciteEnumMap.getOrDefault(value.getClass(), null));
-          yield enumAnchor
-              .flatMap(en -> findEnumArg(function, en))
-              .map(ea -> EnumArg.of(ea, value.name()));
+          Enum<?> value = (Enum<?>) v;
+          ArgAnchor enumAnchor = argAnchor(function, argIdx);
+          yield findEnumArg(function, enumAnchor).map(ea -> EnumArg.of(ea, value.name()));
         } else {
           yield Optional.empty();
         }
@@ -98,8 +118,8 @@ public class EnumConverter {
     };
   }
 
-  static boolean canConvert(Enum value) {
-    return value != null && calciteEnumMap.containsKey(value.getClass());
+  static boolean canConvert(Enum<?> value) {
+    return value != null && calciteEnumMap.containsValue(value.getClass());
   }
 
   static boolean isEnumValue(RexNode value) {
@@ -115,6 +135,23 @@ public class EnumConverter {
     public ArgAnchor(final SimpleExtension.FunctionAnchor fn, final int argIdx) {
       this.fn = fn;
       this.argIdx = argIdx;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(fn, argIdx);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (!(obj instanceof ArgAnchor)) {
+        return false;
+      }
+      ArgAnchor other = (ArgAnchor) obj;
+      return Objects.equals(fn, other.fn) && argIdx == other.argIdx;
     }
   }
 

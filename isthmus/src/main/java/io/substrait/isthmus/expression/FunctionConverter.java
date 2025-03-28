@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -124,7 +125,7 @@ public abstract class FunctionConverter<
                 operator ->
                     resolver.containsKey(operator)
                         && resolver.get(operator).types().contains(outputTypeStr))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
     // only one SqlOperator is possible
     if (resolvedOperators.size() == 1) {
       return Optional.of(resolvedOperators.get(0));
@@ -331,7 +332,7 @@ public abstract class FunctionConverter<
                       }
                       return isOption ? List.of("req", "opt") : List.of(opType);
                     })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         return Utils.crossProduct(argTypeLists)
             .map(typList -> typList.stream().collect(Collectors.joining("_")));
@@ -346,42 +347,43 @@ public abstract class FunctionConverter<
        * Once a FunctionVariant is resolved we can map the String Literal
        * to a EnumArg.
        */
-      var operands =
-          call.getOperands().map(topLevelConverter).collect(java.util.stream.Collectors.toList());
-      var opTypes =
-          operands.stream().map(Expression::getType).collect(java.util.stream.Collectors.toList());
+      List<RexNode> operandsList = call.getOperands().collect(Collectors.toList());
+      List<Expression> operands =
+          call.getOperands().map(topLevelConverter).collect(Collectors.toList());
+      List<Type> opTypes = operands.stream().map(Expression::getType).collect(Collectors.toList());
 
-      var outputType = typeConverter.toSubstrait(call.getType());
+      Type outputType = typeConverter.toSubstrait(call.getType());
 
       // try to do a direct match
-      var typeStrings =
+      List<String> typeStrings =
           opTypes.stream().map(t -> t.accept(ToTypeString.INSTANCE)).collect(Collectors.toList());
-      var possibleKeys =
-          matchKeys(call.getOperands().collect(java.util.stream.Collectors.toList()), typeStrings);
+      Stream<String> possibleKeys =
+          matchKeys(call.getOperands().collect(Collectors.toList()), typeStrings);
 
-      var directMatchKey =
+      Optional<String> directMatchKey =
           possibleKeys
               .map(argList -> name + ":" + argList)
               .filter(k -> directMap.containsKey(k))
               .findFirst();
 
       if (directMatchKey.isPresent()) {
-        var variant = directMap.get(directMatchKey.get());
+        F variant = directMap.get(directMatchKey.get());
         variant.validateOutputType(operands, outputType);
-
         List<FunctionArg> funcArgs =
-            Streams.zip(
-                    call.getOperands(),
-                    operands.stream(),
-                    (r, o) -> {
+            IntStream.range(0, operandsList.size())
+                .mapToObj(
+                    i -> {
+                      RexNode r = operandsList.get(i);
+                      Expression o = operands.get(i);
                       if (EnumConverter.isEnumValue(r)) {
-                        return EnumConverter.fromRex(variant, (RexLiteral) r).orElseGet(() -> null);
+                        return EnumConverter.fromRex(variant, (RexLiteral) r, i)
+                            .orElseGet(() -> null);
                       } else {
                         return o;
                       }
                     })
-                .collect(java.util.stream.Collectors.toList());
-        var allArgsMapped = funcArgs.stream().filter(e -> e == null).findFirst().isEmpty();
+                .collect(Collectors.toList());
+        boolean allArgsMapped = funcArgs.stream().filter(e -> e == null).findFirst().isEmpty();
         if (allArgsMapped) {
           return Optional.of(generateBinding(call, variant, funcArgs, outputType));
         } else {
