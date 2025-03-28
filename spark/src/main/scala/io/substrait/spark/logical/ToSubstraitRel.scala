@@ -32,7 +32,6 @@ import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
 import org.apache.spark.sql.types.{NullType, StructType}
 
-import ToSubstraitType.toNamedStruct
 import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
@@ -398,7 +397,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def buildNamedScan(schema: StructType, tableNames: List[String]): relation.NamedScan = {
-    val namedStruct = toNamedStruct(schema)
+    val namedStruct = ToSubstraitType.toNamedStruct(schema)
 
     val namedScan = relation.NamedScan.builder
       .initialSchema(namedStruct)
@@ -407,7 +406,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     namedScan
   }
   private def buildVirtualTableScan(localRelation: LocalRelation): relation.AbstractReadRel = {
-    val namedStruct = toNamedStruct(localRelation.schema)
+    val namedStruct = ToSubstraitType.toNamedStruct(localRelation.schema)
 
     if (localRelation.data.isEmpty) {
       relation.EmptyScan.builder().initialSchema(namedStruct).build()
@@ -435,7 +434,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def buildLocalFileScan(fsRelation: HadoopFsRelation): relation.AbstractReadRel = {
-    val namedStruct = toNamedStruct(fsRelation.schema)
+    val namedStruct = ToSubstraitType.toNamedStruct(fsRelation.schema)
 
     val format = fsRelation.fileFormat match {
       case _: CSVFileFormat =>
@@ -523,7 +522,11 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     ImmutablePlan.builder
       .roots(
         Collections.singletonList(
-          ImmutableRoot.builder().input(rel).addAllNames(p.output.map(_.name).asJava).build()
+          ImmutableRoot
+            .builder()
+            .input(rel)
+            .addAllNames(ToSubstraitType.toNamedStruct(p.schema).names())
+            .build()
         ))
       .build()
   }
