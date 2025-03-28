@@ -100,7 +100,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
     val protoPlan = io.substrait.proto.Rel.parseFrom(bytes)
     val substraitRel2 =
       new ProtoRelConverter(extensionCollector, SparkExtension.COLLECTION).from(protoPlan)
-    substraitPlan2.shouldEqualPlainly(substraitPlan)
+    substraitRel2.shouldEqualPlainly(substraitRel)
 
     // convert substrait back to spark plan
     val toLogicalPlan = new ToLogicalPlan(spark);
