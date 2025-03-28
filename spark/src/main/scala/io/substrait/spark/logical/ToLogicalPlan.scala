@@ -250,12 +250,21 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
       case a: Aggregate => (a.aggregateExpressions, false)
       case other => (other.output, true)
     }
+    val names = if (project.getHint.isPresent) {
+      project.getHint.get().getOutputNames.asScala
+    } else {
+      List.empty
+    }
 
     withOutput(output) {
-      val projectList =
+      val projectExprs =
         project.getExpressions.asScala
           .map(expr => expr.accept(expressionConverter))
-          .map(toNamedExpression)
+      val projectList = if (names.size == projectExprs.size) {
+        projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
+      } else {
+        projectExprs.map(toNamedExpression)
+      }
       if (createProject) {
         Project(projectList, child)
       } else {
@@ -267,7 +276,11 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
 
   override def visit(expand: relation.Expand): LogicalPlan = {
     val child = expand.getInput.accept(this)
-    val names = expand.getHint.get().getOutputNames.asScala
+    val names = if (expand.getHint.isPresent) {
+      expand.getHint.get().getOutputNames.asScala
+    } else {
+      expand.getFields.asScala.zipWithIndex.map { case (_, i) => s"col$i" }
+    }
 
     withChild(child) {
       val projections = expand.getFields.asScala
