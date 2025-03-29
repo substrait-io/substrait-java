@@ -1,8 +1,8 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.calcite.SubstraitTable;
+import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -23,7 +23,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
 import org.apache.calcite.sql.ddl.SqlKeyConstraint;
@@ -33,8 +32,6 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 class SqlConverterBase {
@@ -76,7 +73,7 @@ class SqlConverterBase {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     if (tables != null) {
       for (String tableDef : tables) {
         List<SubstraitTable> tList = parseCreateTable(factory, validator, tableDef);
@@ -154,23 +151,5 @@ class SqlConverterBase {
 
   protected static SqlParseException fail(String text) {
     return fail(text, SqlParserPos.ZERO);
-  }
-
-  protected static final class Validator extends SqlValidatorImpl {
-
-    private Validator(
-        SqlOperatorTable opTab,
-        SqlValidatorCatalogReader catalogReader,
-        RelDataTypeFactory typeFactory,
-        Config config) {
-      super(opTab, catalogReader, typeFactory, config);
-    }
-
-    public static Validator create(
-        RelDataTypeFactory factory,
-        SqlValidatorCatalogReader validatorCatalog,
-        SqlValidator.Config config) {
-      return new Validator(SubstraitOperatorTable.INSTANCE, validatorCatalog, factory, config);
-    }
   }
 }
