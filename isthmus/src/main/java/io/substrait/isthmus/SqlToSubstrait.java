@@ -48,8 +48,8 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   // Package protected for testing
-  List<RelRoot> sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
-    Prepare.CatalogReader catalogReader = registerCreateTables(tables);
+  List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
+      throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return sqlToRelNode(sql, validator, catalogReader);
   }
