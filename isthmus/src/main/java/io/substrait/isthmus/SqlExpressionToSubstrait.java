@@ -7,6 +7,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
@@ -140,7 +141,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     if (tables != null) {
       for (String tableDef : tables) {
         List<SubstraitTable> tList = parseCreateTable(factory, validator, tableDef);
