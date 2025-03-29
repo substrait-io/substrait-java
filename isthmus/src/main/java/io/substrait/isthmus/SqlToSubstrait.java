@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.RelProtoConverter;
@@ -32,25 +33,25 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
     CalciteCatalogReader catalogReader = registerCreateTables(tables);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return executeInner(sql, validator, catalogReader);
   }
 
   public Plan execute(String sql, String name, Schema schema) throws SqlParseException {
     CalciteCatalogReader catalogReader = registerSchema(name, schema);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return executeInner(sql, validator, catalogReader);
   }
 
   public Plan execute(String sql, Prepare.CatalogReader catalogReader) throws SqlParseException {
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return executeInner(sql, validator, catalogReader);
   }
 
   // Package protected for testing
   List<RelRoot> sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
     Prepare.CatalogReader catalogReader = registerCreateTables(tables);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return sqlToRelNode(sql, validator, catalogReader);
   }
 
