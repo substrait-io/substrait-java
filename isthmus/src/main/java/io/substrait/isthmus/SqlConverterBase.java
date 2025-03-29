@@ -135,16 +135,16 @@ class SqlConverterBase {
     SqlNodeList nodeList = parser.parseStmtList();
     for (SqlNode parsed : nodeList) {
       if (!(parsed instanceof SqlCreateTable)) {
-        fail("Not a valid CREATE TABLE statement.");
+        throw fail("Not a valid CREATE TABLE statement.");
       }
 
       SqlCreateTable create = (SqlCreateTable) parsed;
       if (create.name.names.size() > 1) {
-        fail("Only simple table names are allowed.", create.name.getParserPosition());
+        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
       }
 
       if (create.query != null) {
-        fail("CTAS not supported.", create.name.getParserPosition());
+        throw fail("CTAS not supported.", create.name.getParserPosition());
       }
 
       List<String> names = new ArrayList<>();
@@ -158,12 +158,12 @@ class SqlConverterBase {
             continue;
           }
 
-          fail("Unexpected column list construction.", node.getParserPosition());
+          throw fail("Unexpected column list construction.", node.getParserPosition());
         }
 
         SqlColumnDeclaration col = (SqlColumnDeclaration) node;
         if (col.name.names.size() != 1) {
-          fail("Expected simple column names.", col.name.getParserPosition());
+          throw fail("Expected simple column names.", col.name.getParserPosition());
         }
 
         names.add(col.name.names.get(0));
