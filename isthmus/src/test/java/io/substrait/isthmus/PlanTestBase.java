@@ -11,6 +11,7 @@ import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -22,6 +23,8 @@ import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
@@ -45,11 +48,16 @@ public class PlanTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  public static List<String> tpchSchemaCreateStatements() throws IOException {
-    String[] values = asString("tpch/schema.sql").split(";");
-    return Arrays.stream(values)
-        .filter(t -> !t.trim().isBlank())
-        .collect(java.util.stream.Collectors.toList());
+  protected static CalciteCatalogReader TPCH_CATALOG;
+
+  static {
+    try {
+      String tpchCreateStatements = asString("tpch/schema.sql");
+      TPCH_CATALOG =
+          SubstraitCreateStatementParser.processCreateStatementsToCatalog(tpchCreateStatements);
+    } catch (IOException | SqlParseException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   protected Plan assertProtoPlanRoundrip(String query) throws IOException, SqlParseException {
@@ -58,16 +66,17 @@ public class PlanTestBase {
 
   protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s)
       throws IOException, SqlParseException {
-    return assertProtoPlanRoundrip(query, s, tpchSchemaCreateStatements());
+    return assertProtoPlanRoundrip(query, s, TPCH_CATALOG);
   }
 
-  protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s, List<String> creates)
+  protected Plan assertProtoPlanRoundrip(
+      String query, SqlToSubstrait s, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
+    io.substrait.proto.Plan protoPlan1 = s.execute(query, catalogReader);
     Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
-    var rootRels = s.sqlToRelNode(query, creates);
+    var rootRels = s.sqlToRelNode(query, catalogReader);
     assertEquals(rootRels.size(), plan.getRoots().size());
     for (int i = 0; i < rootRels.size(); i++) {
       Plan.Root rootRel = SubstraitRelVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
@@ -85,11 +94,19 @@ public class PlanTestBase {
   }
 
   protected RelRoot assertSqlSubstraitRelRoundTrip(String query) throws Exception {
-    return assertSqlSubstraitRelRoundTrip(query, tpchSchemaCreateStatements());
+    return assertSqlSubstraitRelRoundTrip(query, TPCH_CATALOG);
   }
 
-  protected RelRoot assertSqlSubstraitRelRoundTrip(String query, List<String> creates)
+  protected RelRoot assertSqlSubstraitRelRoundTrip(String query, List<String> createStatements)
       throws Exception {
+    CalciteCatalogReader catalogReader =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            String.join(";", createStatements));
+    return assertSqlSubstraitRelRoundTrip(query, catalogReader);
+  }
+
+  protected RelRoot assertSqlSubstraitRelRoundTrip(
+      String query, Prepare.CatalogReader catalogReader) throws Exception {
     // sql <--> substrait round trip test.
     // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
     // Return list of sql -> Substrait rel -> Calcite rel.
@@ -99,7 +116,7 @@ public class PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
 
     // 1. SQL -> Calcite RelRoot
-    List<RelRoot> relRoots = s.sqlToRelNode(query, creates);
+    List<RelRoot> relRoots = s.sqlToRelNode(query, catalogReader);
     assertEquals(1, relRoots.size());
     RelRoot relRoot1 = relRoots.get(0);
 
@@ -118,7 +135,15 @@ public class PlanTestBase {
 
   @Beta
   protected void assertFullRoundTrip(String query) throws IOException, SqlParseException {
-    assertFullRoundTrip(query, tpchSchemaCreateStatements());
+    assertFullRoundTrip(query, TPCH_CATALOG);
+  }
+
+  @Beta
+  protected void assertFullRoundTrip(String query, String createStatements)
+      throws IOException, SqlParseException {
+    CalciteCatalogReader catalogReader =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
+    assertFullRoundTrip(query, catalogReader);
   }
 
   /**
@@ -134,13 +159,13 @@ public class PlanTestBase {
    *   <li>Substrait POJO 2 == Substrait POJO 3
    * </ul>
    */
-  protected void assertFullRoundTrip(String sqlQuery, List<String> createStatements)
+  protected void assertFullRoundTrip(String sqlQuery, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     SqlToSubstrait sqlConverter = new SqlToSubstrait();
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // SQL -> Calcite 1
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, createStatements);
+    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, catalogReader);
     assertEquals(1, relRoots.size());
     RelRoot calcite1 = relRoots.get(0);
 
