@@ -1,6 +1,28 @@
 Release Notes
 ---
 
+## [0.52.0](https://github.com/substrait-io/substrait-java/compare/v0.51.0...v0.52.0) (2025-03-30)
+
+### ⚠ BREAKING CHANGES
+
+* **spark:** root names for plans now include nested names
+* type derivation for Set now matches spec
+* type derivation for Join now handles ANTI and SEMI
+* validate and refine ScalarSubquery return type during proto conversion
+* set nullability of aggregate references and groupings coming from Spark
+
+### Features
+
+* add `unquotedcasing` option to Isthmus CLI ([#351](https://github.com/substrait-io/substrait-java/issues/351)) ([f859c2e](https://github.com/substrait-io/substrait-java/commit/f859c2e9f64cd9ff8873b06aa4e45bde8b7071ae))
+* **isthmus:** add support for scalar subqueries ([#353](https://github.com/substrait-io/substrait-java/issues/353)) ([5b12f9b](https://github.com/substrait-io/substrait-java/commit/5b12f9b42852424f68d90ffc8a24b506ac5ab2ae))
+* **isthmus:** support exists and unique set predicates ([#354](https://github.com/substrait-io/substrait-java/issues/354)) ([424e8b3](https://github.com/substrait-io/substrait-java/commit/424e8b3ced43917ef3c43441eca8d081a3e80d0e))
+* **spark:** support for Struct types and literals ([#342](https://github.com/substrait-io/substrait-java/issues/342)) ([f27004a](https://github.com/substrait-io/substrait-java/commit/f27004af97381f04faa2c921092534b88120f870))
+* **spark:** support merged structures ([#346](https://github.com/substrait-io/substrait-java/issues/346)) ([9e4afb9](https://github.com/substrait-io/substrait-java/commit/9e4afb9dc0be63a77f73b3270ef02264f4cee15f))
+
+### Bug Fixes
+
+* added protobuf roundtrip testing to Spark and fixed surfaced issued ([#315](https://github.com/substrait-io/substrait-java/issues/315)) ([fd74922](https://github.com/substrait-io/substrait-java/commit/fd74922e0cf2b2c1643b9bc2920e836c8559f1e2))
+
 ## [0.51.0](https://github.com/substrait-io/substrait-java/compare/v0.50.0...v0.51.0) (2025-03-23)
 
 ### ⚠ BREAKING CHANGES
