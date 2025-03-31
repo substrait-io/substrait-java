@@ -7,7 +7,13 @@ plugins {
   id("com.diffplug.spotless") version "6.19.0"
   id("com.github.johnrengelman.shadow") version "8.1.1"
   id("com.google.protobuf") version "0.9.4"
+  id("com.adarshr.test-logger") version "4.0.0"
   signing
+}
+
+testlogger {
+  showStandardStreams = false
+  showFailedStandardStreams = true
 }
 
 publishing {

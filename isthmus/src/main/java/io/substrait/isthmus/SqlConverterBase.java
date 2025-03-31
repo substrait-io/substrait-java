@@ -10,7 +10,6 @@ import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -23,7 +22,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -95,19 +93,13 @@ class SqlConverterBase {
 
   Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(
       Function<List<String>, NamedStruct> tableLookup) throws SqlParseException {
-    Function<List<String>, Table> lookup =
-        id -> {
-          NamedStruct table = tableLookup.apply(id);
-          if (table == null) {
-            return null;
-          }
-          return new DefinedTable(
-              id.get(id.size() - 1),
-              factory,
-              TypeConverter.DEFAULT.toCalcite(factory, table.struct(), table.names()));
-        };
-
-    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
+    CalciteSchema rootSchema =
+        SubstraitCalciteSchema.builder()
+            .withTableLookup(tableLookup)
+            .withTypeFactory(factory)
+            .withTypeConverter(TypeConverter.DEFAULT)
+            .build()
+            .getRootSchema();
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
     SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
@@ -153,7 +145,8 @@ class SqlConverterBase {
       for (SqlNode node : create.columnList) {
         if (!(node instanceof SqlColumnDeclaration)) {
           if (node instanceof SqlKeyConstraint) {
-            // key constraints declarations, like primary key declaration, are valid and should not
+            // key constraints declarations, like primary key declaration, are valid and
+            // should not
             // result in parse exceptions. Ignore the constraint declaration.
             continue;
           }
@@ -217,9 +210,6 @@ class SqlConverterBase {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-      //      if (factory != typeFactory) {
-      //        throw new IllegalStateException("Different type factory than previously used.");
-      //      }
       return type;
     }
 
