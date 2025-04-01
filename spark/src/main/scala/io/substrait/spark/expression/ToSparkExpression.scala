@@ -22,13 +22,14 @@ import io.substrait.spark.logical.ToLogicalPlan
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, InSubquery, ListQuery, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types.{DateType, Decimal}
+import org.apache.spark.sql.types.Decimal
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
 import io.substrait.`type`.{StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
-import io.substrait.expression.{Expression => SExpression}
+import io.substrait.expression.{EnumArg, Expression => SExpression}
+import io.substrait.extension.SimpleExtension
 import io.substrait.util.DecimalUtil
 import io.substrait.utils.Util
 
@@ -162,10 +163,11 @@ class ToSparkExpression(
   override def visit(expr: SExpression.Cast): Expression = {
     val childExp = expr.input().accept(this)
     val tt = ToSparkType.convert(expr.getType)
-    val tz = childExp.dataType match {
-      case DateType => Some(SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
-      case _ => None
-    }
+    val tz =
+      if (Cast.needsTimeZone(childExp.dataType, tt))
+        Some(SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
+      else
+        None
     Cast(childExp, tt, tz)
   }
 
@@ -219,12 +221,19 @@ class ToSparkExpression(
     }
   }
 
+  override def visitEnumArg(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      e: EnumArg): Expression = {
+    Enum(e.value.orElse(""))
+  }
+
   override def visit(expr: SExpression.ScalarFunctionInvocation): Expression = {
     val eArgs = expr.arguments().asScala
     val args = eArgs.zipWithIndex.map {
       case (arg, i) =>
         arg.accept(expr.declaration(), i, this)
-    }
+    }.toList
 
     expr.declaration.name match {
       case "make_decimal" if expr.declaration.uri == SparkExtension.uri =>
@@ -238,8 +247,7 @@ class ToSparkExpression(
         }
       case _ =>
         scalarFunctionConverter
-          .getSparkExpressionFromSubstraitFunc(expr.declaration().key(), expr.outputType())
-          .flatMap(sig => Option(sig.makeCall(args)))
+          .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
           .getOrElse({
             val msg = String.format(
               "Unable to convert scalar function %s(%s).",

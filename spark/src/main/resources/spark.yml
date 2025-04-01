@@ -16,13 +16,6 @@
 ---
 scalar_functions:
   -
-    name: year
-    description: Returns the year component of the date/timestamp
-    impls:
-      - args:
-          - value: date
-        return: i32
-  -
     name: unscaled
     description:  >-
       Return the unscaled Long value of a Decimal, assuming it fits in a Long.

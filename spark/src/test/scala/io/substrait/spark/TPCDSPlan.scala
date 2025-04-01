@@ -21,7 +21,6 @@ import org.apache.spark.sql.internal.SQLConf
 
 class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
 
-  private val runAllQueriesIncludeFailed = false
   override def beforeAll(): Unit = {
     super.beforeAll()
     sparkContext.setLogLevel("WARN")
@@ -31,22 +30,10 @@ class TPCDSPlan extends TPCDSBase with SubstraitPlanTestBase {
     spark.conf.set("spark.sql.readSideCharPadding", "false")
   }
 
-  // spotless:off
-  val failingSQL: Set[String] = Set(
-    "q72" //requires implementation of date_add()
-  )
-  // spotless:on
-
   tpcdsQueries.foreach {
     q =>
-      if (runAllQueriesIncludeFailed || !failingSQL.contains(q)) {
-        test(s"check simplified (tpcds-v1.4/$q)") {
-          testQuery("tpcds", q)
-        }
-      } else {
-        ignore(s"check simplified (tpcds-v1.4/$q)") {
-          testQuery("tpcds", q)
-        }
+      test(s"check simplified (tpcds-v1.4/$q)") {
+        testQuery("tpcds", q)
       }
   }
 

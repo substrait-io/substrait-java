@@ -71,8 +71,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
     }
 
     val aggregateFunction = SparkExtension.toAggregateFunction
-      .getSparkExpressionFromSubstraitFunc(function.declaration.key, function.outputType)
-      .map(sig => sig.makeCall(arguments))
+      .getSparkExpressionFromSubstraitFunc(function.declaration.key, arguments)
       .map(_.asInstanceOf[AggregateFunction])
       .getOrElse({
         val msg = String.format(
@@ -137,8 +136,7 @@ class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] 
                 arg.accept(func.declaration(), i, expressionConverter)
             }
             val windowFunction = SparkExtension.toWindowFunction
-              .getSparkExpressionFromSubstraitFunc(func.declaration.key, func.outputType)
-              .map(sig => sig.makeCall(arguments))
+              .getSparkExpressionFromSubstraitFunc(func.declaration.key, arguments)
               .map {
                 case win: WindowFunction => win
                 case agg: AggregateFunction =>
