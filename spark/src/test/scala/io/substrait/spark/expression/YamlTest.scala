@@ -22,11 +22,7 @@ import org.apache.spark.SparkFunSuite
 
 class YamlTest extends SparkFunSuite {
 
-  test("has_year_definition") {
-    assert(
-      SparkExtension.SparkScalarFunctions
-        .map(f => f.key())
-        .exists(p => p.equals("year:date")))
+  test("has_unscaled_definition") {
     assert(
       SparkExtension.SparkScalarFunctions
         .map(f => f.key())

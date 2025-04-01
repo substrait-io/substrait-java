@@ -19,19 +19,75 @@ package io.substrait.spark.expression
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistryBase
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.types.{DayTimeIntervalType, IntegerType}
+
+import io.substrait.utils.Util
 
 import scala.reflect.ClassTag
 
-case class Sig(expClass: Class[_], name: String, builder: Seq[Expression] => Expression) {
-  def makeCall(args: Seq[Expression]): Expression =
+trait Sig {
+  def name: String
+  def expClass: Class[_]
+  def makeCall(args: Seq[Expression]): Expression
+}
+
+case class GenericSig(expClass: Class[_], name: String, builder: Seq[Expression] => Expression)
+  extends Sig {
+  override def makeCall(args: Seq[Expression]): Expression = {
     builder(args)
+  }
+}
+
+case class SpecialSig(
+    expClass: Class[_],
+    name: String,
+    key: Option[String],
+    builder: Seq[Expression] => Expression)
+  extends Sig {
+  override def makeCall(args: Seq[Expression]): Expression = {
+    builder(args)
+  }
+}
+
+object DateFunction {
+  def unapply(e: Expression): Option[Seq[Expression]] = e match {
+    case DateAdd(startDate, days) => Some(Seq(startDate, days))
+    // The following map to the Substrait `extract` function.
+    case Year(date) => Some(Seq(Enum("YEAR"), date))
+    case Quarter(date) => Some(Seq(Enum("QUARTER"), Enum("ONE"), date))
+    case Month(date) => Some(Seq(Enum("MONTH"), Enum("ONE"), date))
+    case DayOfMonth(date) => Some(Seq(Enum("DAY"), Enum("ONE"), date))
+    case _ => None
+  }
+
+  def unapply(name_args: (String, Seq[Expression])): Option[Expression] = name_args match {
+    case ("add:date_i32", Seq(startDate, days)) => Some(DateAdd(startDate, days))
+    case ("extract", Seq(Enum("YEAR"), date)) => Some(Year(date))
+    case ("extract", Seq(Enum("QUARTER"), Enum("ONE"), date)) => Some(Quarter(date))
+    case ("extract", Seq(Enum("MONTH"), Enum("ONE"), date)) => Some(Month(date))
+    case ("extract", Seq(Enum("DAY"), Enum("ONE"), date)) => Some(DayOfMonth(date))
+    case _ => None
+  }
 }
 
 class FunctionMappings {
 
-  private def s[T <: Expression: ClassTag](name: String): Sig = {
+  private def s[T <: Expression: ClassTag](name: String): GenericSig = {
     val builder = FunctionRegistryBase.build[T](name, None)._2
-    Sig(scala.reflect.classTag[T].runtimeClass, name, builder)
+    GenericSig(scala.reflect.classTag[T].runtimeClass, name, builder)
+  }
+
+  private def ss[T <: Expression: ClassTag](signature: String): SpecialSig = {
+    val (name, key) = if (signature.contains(":")) {
+      (signature.split(':').head, Some(signature))
+    } else {
+      (signature, None)
+    }
+    val builder = (args: Seq[Expression]) =>
+      (signature, args) match {
+        case DateFunction(expr) => expr
+      }
+    SpecialSig(scala.reflect.classTag[T].runtimeClass, name, key, builder)
   }
 
   val SCALAR_SIGS: Seq[Sig] = Seq(
@@ -82,11 +138,17 @@ class FunctionMappings {
     s[Lower]("lower"),
     s[Concat]("concat"),
     s[Coalesce]("coalesce"),
-    s[Year]("year"),
     s[ShiftRight]("shift_right"),
     s[BitwiseAnd]("bitwise_and"),
     s[BitwiseOr]("bitwise_or"),
     s[BitwiseXor]("bitwise_xor"),
+
+    // date/time functions require special handling
+    ss[DateAdd]("add:date_i32"),
+    ss[Year]("extract"),
+    ss[Quarter]("extract"),
+    ss[Month]("extract"),
+    ss[DayOfMonth]("extract"),
 
     // internal
     s[MakeDecimal]("make_decimal"),
@@ -115,11 +177,6 @@ class FunctionMappings {
     s[Lag]("lag"),
     s[NthValue]("nth_value")
   )
-
-  lazy val scalar_functions_map: Map[Class[_], Sig] = SCALAR_SIGS.map(s => (s.expClass, s)).toMap
-  lazy val aggregate_functions_map: Map[Class[_], Sig] =
-    AGGREGATE_SIGS.map(s => (s.expClass, s)).toMap
-  lazy val window_functions_map: Map[Class[_], Sig] = WINDOW_SIGS.map(s => (s.expClass, s)).toMap
 }
 
 object FunctionMappings extends FunctionMappings

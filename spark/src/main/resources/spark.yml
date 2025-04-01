@@ -16,13 +16,6 @@
 ---
 scalar_functions:
   -
-    name: year
-    description: Returns the year component of the date/timestamp
-    impls:
-      - args:
-          - value: date
-        return: i32
-  -
     name: unscaled
     description:  >-
       Return the unscaled Long value of a Decimal, assuming it fits in a Long.
@@ -41,6 +34,16 @@ scalar_functions:
       - args:
           - value: i64
         return: DECIMAL<P,S>
+  - name: add
+    description: >-
+      Adds days to a date
+    impls:
+      - args:
+          - name: start_date
+            value: date
+          - name: days
+            value: i32
+        return: date
   - name: shift_right
     description: >-
       Bitwise (signed) shift right.
