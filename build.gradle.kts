@@ -69,21 +69,6 @@ allprojects {
       }
     }
   }
-
-  if (listOf("core", "isthmus", "isthmus-cli").contains(project.name)) {
-    apply(plugin = "org.cyclonedx.bom")
-    tasks.cyclonedxBom {
-      setIncludeConfigs(listOf("runtimeClasspath"))
-      setSkipConfigs(listOf("compileClasspath", "testCompileClasspath"))
-      setProjectType("library")
-      setSchemaVersion("1.5")
-      setDestination(project.file("build/reports"))
-      setOutputName("bom")
-      setOutputFormat("json")
-      setIncludeBomSerialNumber(false)
-      setIncludeLicenseText(false)
-    }
-  }
 }
 
 nexusPublishing {

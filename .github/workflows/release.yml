@@ -29,7 +29,7 @@ jobs:
           # helps avoid rate-limiting issues
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
       - name: Report Java Version
         run: java -version
       - name: Install GraalVM native image
@@ -67,7 +67,7 @@ jobs:
         with:
           node-version: '20'
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
       - name: Download isthmus-ubuntu-latest binary
         uses: actions/download-artifact@v4
         with:
