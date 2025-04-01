@@ -5,14 +5,12 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.RelProtoConverter;
-import io.substrait.type.NamedStruct;
 import java.util.List;
-import java.util.function.Function;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -32,40 +30,31 @@ public class SqlToSubstrait extends SqlConverterBase {
     super(features);
   }
 
-  public Plan execute(String sql, Function<List<String>, NamedStruct> tableLookup)
-      throws SqlParseException {
-    var pair = registerCreateTables(tableLookup);
-    return executeInner(sql, factory, pair.left, pair.right);
-  }
-
   public Plan execute(String sql, List<String> tables) throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return executeInner(sql, factory, pair.left, pair.right);
+    CalciteCatalogReader catalogReader = registerCreateTables(tables);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return executeInner(sql, validator, catalogReader);
   }
 
   public Plan execute(String sql, String name, Schema schema) throws SqlParseException {
-    var pair = registerSchema(name, schema);
-    return executeInner(sql, factory, pair.left, pair.right);
+    CalciteCatalogReader catalogReader = registerSchema(name, schema);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return executeInner(sql, validator, catalogReader);
+  }
+
+  public Plan execute(String sql, Prepare.CatalogReader catalogReader) throws SqlParseException {
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return executeInner(sql, validator, catalogReader);
   }
 
   // Package protected for testing
   List<RelRoot> sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return sqlToRelNode(sql, pair.left, pair.right);
+    Prepare.CatalogReader catalogReader = registerCreateTables(tables);
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return sqlToRelNode(sql, validator, catalogReader);
   }
 
-  // Package protected for testing
-  List<RelRoot> sqlToRelNode(String sql, Function<List<String>, NamedStruct> tableLookup)
-      throws SqlParseException {
-    var pair = registerCreateTables(tableLookup);
-    return sqlToRelNode(sql, pair.left, pair.right);
-  }
-
-  private Plan executeInner(
-      String sql,
-      RelDataTypeFactory factory,
-      SqlValidator validator,
-      CalciteCatalogReader catalogReader)
+  private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     var plan = Plan.newBuilder();
     ExtensionCollector functionCollector = new ExtensionCollector();
@@ -92,7 +81,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   private List<RelRoot> sqlToRelNode(
-      String sql, SqlValidator validator, CalciteCatalogReader catalogReader)
+      String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     var parsedList = parser.parseStmtList();
@@ -109,7 +98,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   @VisibleForTesting
   SqlToRelConverter createSqlToRelConverter(
-      SqlValidator validator, CalciteCatalogReader catalogReader) {
+      SqlValidator validator, Prepare.CatalogReader catalogReader) {
     SqlToRelConverter converter =
         new SqlToRelConverter(
             null,
