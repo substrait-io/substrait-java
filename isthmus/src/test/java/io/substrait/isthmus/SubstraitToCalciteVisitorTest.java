@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class SubstraitRelNodeConverterTest extends PlanTestBase {
+public class SubstraitToCalciteVisitorTest extends PlanTestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
