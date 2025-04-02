@@ -12,6 +12,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Root;
 import io.substrait.plan.PlanProtoConverter;
@@ -81,7 +82,7 @@ public class PlanTestBase {
     Plan plan = new ProtoPlanConverter(extensions).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
-    var rootRels = s.sqlToRelNode(query, catalogReader);
+    var rootRels = SubstraitSqlToCalcite.convertSelects(query, catalogReader);
     assertEquals(rootRels.size(), plan.getRoots().size());
     for (int i = 0; i < rootRels.size(); i++) {
       Plan.Root rootRel = SubstraitRelVisitor.convert(rootRels.get(i), extensions);
@@ -120,9 +121,7 @@ public class PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
 
     // 1. SQL -> Calcite RelRoot
-    List<RelRoot> relRoots = s.sqlToRelNode(query, catalogReader);
-    assertEquals(1, relRoots.size());
-    RelRoot relRoot1 = relRoots.get(0);
+    RelRoot relRoot1 = SubstraitSqlToCalcite.convertSelect(query, catalogReader);
 
     // 2. Calcite RelRoot  -> Substrait Rel
     Plan.Root pojo1 = SubstraitRelVisitor.convert(relRoot1, extensions);
@@ -165,13 +164,10 @@ public class PlanTestBase {
    */
   protected void assertFullRoundTrip(String sqlQuery, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    SqlToSubstrait sqlConverter = new SqlToSubstrait();
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // SQL -> Calcite 1
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, catalogReader);
-    assertEquals(1, relRoots.size());
-    RelRoot calcite1 = relRoots.get(0);
+    RelRoot calcite1 = SubstraitSqlToCalcite.convertSelect(sqlQuery, catalogReader);
 
     // Calcite 1 -> Substrait POJO 1
     Plan.Root pojo1 = SubstraitRelVisitor.convert(calcite1, extensions);
