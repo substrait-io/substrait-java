@@ -2,10 +2,9 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import java.io.IOException;
-import java.util.List;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
@@ -24,11 +23,8 @@ public class OptimizerIntegrationTest extends PlanTestBase {
     // verify that the query works generally
     assertFullRoundTrip(query);
 
-    SqlToSubstrait sqlConverter = new SqlToSubstrait();
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(query, TPCH_CATALOG);
-    assertEquals(1, relRoots.size());
-    RelRoot planRoot = relRoots.get(0);
-    RelNode originalPlan = planRoot.rel;
+    RelRoot relRoot = SubstraitSqlToCalcite.convertSelect(query, TPCH_CATALOG);
+    RelNode originalPlan = relRoot.rel;
 
     // Create a program to apply the AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN rule.
     // This will introduce a SqlSumEmptyIsZeroAggFunction to the plan.
@@ -46,6 +42,6 @@ public class OptimizerIntegrationTest extends PlanTestBase {
     assertDoesNotThrow(
         () ->
             // Conversion of the new plan should succeed
-            SubstraitRelVisitor.convert(RelRoot.of(newPlan, planRoot.kind), EXTENSION_COLLECTION));
+            SubstraitRelVisitor.convert(RelRoot.of(newPlan, relRoot.kind), EXTENSION_COLLECTION));
   }
 }
