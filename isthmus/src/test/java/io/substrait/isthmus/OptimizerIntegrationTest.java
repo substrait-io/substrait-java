@@ -42,6 +42,7 @@ public class OptimizerIntegrationTest extends PlanTestBase {
     assertDoesNotThrow(
         () ->
             // Conversion of the new plan should succeed
-            SubstraitRelVisitor.convert(RelRoot.of(newPlan, relRoot.kind), EXTENSION_COLLECTION));
+            CalciteToSubstraitVisitor.convert(
+                RelRoot.of(newPlan, relRoot.kind), EXTENSION_COLLECTION));
   }
 }

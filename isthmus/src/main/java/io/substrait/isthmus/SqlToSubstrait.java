@@ -42,7 +42,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertSelects(sql, catalogReader).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+        .map(root -> CalciteToSubstraitVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
         .forEach(root -> builder.addRoots(root));
 
     PlanProtoConverter planToProto = new PlanProtoConverter();
