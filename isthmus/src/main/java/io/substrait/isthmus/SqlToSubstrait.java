@@ -53,7 +53,8 @@ public class SqlToSubstrait extends SqlConverterBase {
                   .setRoot(
                       io.substrait.proto.RelRoot.newBuilder()
                           .setInput(
-                              SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard)
+                              CalciteToSubstraitVisitor.convert(
+                                      root, EXTENSION_COLLECTION, featureBoard)
                                   .accept(relProtoConverter))
                           .addAllNames(
                               TypeConverter.DEFAULT.toNamedStruct(root.validatedRowType).names())));

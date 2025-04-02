@@ -2,8 +2,8 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.isthmus.CalciteToSubstraitVisitor;
 import io.substrait.isthmus.CallConverter;
-import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.StringTypeVisitor;
@@ -36,11 +36,12 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       org.slf4j.LoggerFactory.getLogger(RexExpressionConverter.class);
 
   private final List<CallConverter> callConverters;
-  private final SubstraitRelVisitor relVisitor;
+  private final CalciteToSubstraitVisitor relVisitor;
   private final TypeConverter typeConverter;
   private WindowFunctionConverter windowFunctionConverter;
 
-  public RexExpressionConverter(SubstraitRelVisitor relVisitor, CallConverter... callConverters) {
+  public RexExpressionConverter(
+      CalciteToSubstraitVisitor relVisitor, CallConverter... callConverters) {
     this(relVisitor, Arrays.asList(callConverters), null, TypeConverter.DEFAULT);
   }
 
@@ -49,7 +50,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   public RexExpressionConverter(
-      SubstraitRelVisitor relVisitor,
+      CalciteToSubstraitVisitor relVisitor,
       List<CallConverter> callConverters,
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter) {

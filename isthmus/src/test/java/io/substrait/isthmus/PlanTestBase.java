@@ -81,7 +81,7 @@ public class PlanTestBase {
     var rootRels = SubstraitSqlToCalcite.convertSelects(query, catalogReader);
     assertEquals(rootRels.size(), plan.getRoots().size());
     for (int i = 0; i < rootRels.size(); i++) {
-      var rootRel = SubstraitRelVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
+      var rootRel = CalciteToSubstraitVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
       assertEquals(rootRel.getRecordType(), plan.getRoots().get(i).getInput().getRecordType());
     }
     return plan;
@@ -119,14 +119,15 @@ public class PlanTestBase {
     RelRoot relRoot = SubstraitSqlToCalcite.convertSelect(query, catalogReader);
 
     // 2. Calcite RelRoot  -> Substrait Rel
-    Rel pojo1 = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+    Rel pojo1 = CalciteToSubstraitVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
     // 3. Substrait Rel -> Calcite RelNode
     RelNode relNode = substraitToCalcite.convert(pojo1);
 
     // 4. Calcite RelNode -> Substrait Rel
     Rel pojo2 =
-        SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
+        CalciteToSubstraitVisitor.convert(
+            RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
 
     Assertions.assertEquals(pojo1, pojo2);
     return relNode;
@@ -165,7 +166,8 @@ public class PlanTestBase {
     var extensionCollector = new ExtensionCollector();
 
     // Calcite 1 -> Substrait POJO 1
-    io.substrait.relation.Rel pojo1 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
+    io.substrait.relation.Rel pojo1 =
+        CalciteToSubstraitVisitor.convert(calcite1, EXTENSION_COLLECTION);
 
     // Substrait POJO 1 -> Substrait Proto
     io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
@@ -185,7 +187,8 @@ public class PlanTestBase {
 
     // Calcite 2 -> Substrait POJO 3
     io.substrait.relation.Rel pojo3 =
-        SubstraitRelVisitor.convert(RelRoot.of(calcite2, calcite1.kind), EXTENSION_COLLECTION);
+        CalciteToSubstraitVisitor.convert(
+            RelRoot.of(calcite2, calcite1.kind), EXTENSION_COLLECTION);
 
     // Verify that POJOs are the same
     assertEquals(pojo1, pojo3);
@@ -218,7 +221,8 @@ public class PlanTestBase {
     // Calcite -> Substrait POJO 3
     io.substrait.relation.Rel pojo3 =
         // SqlKind.SELECT is used because the majority of our tests are SELECT queries
-        SubstraitRelVisitor.convert(RelRoot.of(calcite, SqlKind.SELECT), EXTENSION_COLLECTION);
+        CalciteToSubstraitVisitor.convert(
+            RelRoot.of(calcite, SqlKind.SELECT), EXTENSION_COLLECTION);
 
     // Verify that POJOs are the same
     assertEquals(pojo1, pojo3);
