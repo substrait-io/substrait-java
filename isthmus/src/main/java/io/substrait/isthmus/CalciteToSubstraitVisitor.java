@@ -44,10 +44,10 @@ import org.immutables.value.Value;
 
 @SuppressWarnings("UnstableApiUsage")
 @Value.Enclosing
-public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
+public class CalciteToSubstraitVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(SubstraitRelVisitor.class);
+      org.slf4j.LoggerFactory.getLogger(CalciteToSubstraitVisitor.class);
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
@@ -57,12 +57,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   protected final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
-  public SubstraitRelVisitor(
+  public CalciteToSubstraitVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
     this(typeFactory, extensions, FEATURES_DEFAULT);
   }
 
-  public SubstraitRelVisitor(
+  public CalciteToSubstraitVisitor(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
@@ -80,7 +80,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.featureBoard = features;
   }
 
-  public SubstraitRelVisitor(
+  public CalciteToSubstraitVisitor(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
@@ -386,8 +386,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   public static Plan.Root convert(
       RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
+    CalciteToSubstraitVisitor visitor =
+        new CalciteToSubstraitVisitor(
+            relRoot.rel.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
@@ -403,8 +404,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   public static Rel convert(
       RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features);
+    CalciteToSubstraitVisitor visitor =
+        new CalciteToSubstraitVisitor(relNode.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(relNode);
     return visitor.apply(relNode);
   }
