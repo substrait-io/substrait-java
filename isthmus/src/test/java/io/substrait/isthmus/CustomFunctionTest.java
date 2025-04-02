@@ -275,8 +275,8 @@ public class CustomFunctionTest extends PlanTestBase {
       new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
 
   // Create a SubstraitRelVisitor that uses the custom Function Converters
-  final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
+  final CalciteToSubstraitVisitor calciteToSubstrait =
+      new CalciteToSubstraitVisitor(
           typeFactory,
           scalarFunctionConverter,
           aggregateFunctionConverter,

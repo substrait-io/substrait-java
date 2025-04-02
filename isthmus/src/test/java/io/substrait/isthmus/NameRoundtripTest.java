@@ -32,7 +32,7 @@ public class NameRoundtripTest extends PlanTestBase {
     assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
 
     io.substrait.plan.Plan.Root substraitRelRoot =
-        SubstraitRelVisitor.convert(calciteRelRoot1, EXTENSION_COLLECTION);
+        CalciteToSubstraitVisitor.convert(calciteRelRoot1, EXTENSION_COLLECTION);
     assertEquals(expectedNames, substraitRelRoot.getNames());
 
     org.apache.calcite.rel.RelRoot calciteRelRoot2 = substraitToCalcite.convert(substraitRelRoot);

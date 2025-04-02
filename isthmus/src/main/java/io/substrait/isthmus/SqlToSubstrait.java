@@ -52,7 +52,8 @@ public class SqlToSubstrait extends SqlConverterBase {
               PlanRel.newBuilder()
                   .setRoot(
                       relProtoConverter.toProto(
-                          SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))));
+                          CalciteToSubstraitVisitor.convert(
+                              root, EXTENSION_COLLECTION, featureBoard))));
         });
     functionCollector.addExtensionsToPlan(plan);
     return plan.build();
