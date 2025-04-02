@@ -12,6 +12,7 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -21,7 +22,6 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -78,7 +78,7 @@ public class PlanTestBase {
     Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
-    var rootRels = s.sqlToRelNode(query, catalogReader);
+    var rootRels = SubstraitSqlToCalcite.convertSelects(query, catalogReader);
     assertEquals(rootRels.size(), plan.getRoots().size());
     for (int i = 0; i < rootRels.size(); i++) {
       var rootRel = SubstraitRelVisitor.convert(rootRels.get(i), EXTENSION_COLLECTION);
@@ -94,45 +94,42 @@ public class PlanTestBase {
     assertEquals(protoPlan1, protoPlan2);
   }
 
-  protected List<RelNode> assertSqlSubstraitRelRoundTrip(String query) throws Exception {
+  protected RelNode assertSqlSubstraitRelRoundTrip(String query) throws Exception {
     return assertSqlSubstraitRelRoundTrip(query, TPCH_CATALOG);
   }
 
-  protected List<RelNode> assertSqlSubstraitRelRoundTrip(String query, String createStatements)
+  protected RelNode assertSqlSubstraitRelRoundTrip(String query, String createStatements)
       throws Exception {
     CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
     return assertSqlSubstraitRelRoundTrip(query, catalogReader);
   }
 
-  protected List<RelNode> assertSqlSubstraitRelRoundTrip(
+  protected RelNode assertSqlSubstraitRelRoundTrip(
       String query, Prepare.CatalogReader catalogReader) throws Exception {
     // sql <--> substrait round trip test.
     // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
-    // Return list of sql -> Substrait rel -> Calcite rel.
-    List<RelNode> relNodeList = new ArrayList<>();
+    // Return the Calcite rel.
 
     var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
     SqlToSubstrait s = new SqlToSubstrait();
 
     // 1. SQL -> Calcite RelRoot
-    for (RelRoot relRoot : s.sqlToRelNode(query, catalogReader)) {
-      // 2. Calcite RelRoot  -> Substrait Rel
-      Rel pojo1 = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
+    RelRoot relRoot = SubstraitSqlToCalcite.convertSelect(query, catalogReader);
 
-      // 3. Substrait Rel -> Calcite RelNode
-      RelNode relNode = substraitToCalcite.convert(pojo1);
+    // 2. Calcite RelRoot  -> Substrait Rel
+    Rel pojo1 = SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION);
 
-      relNodeList.add(relNode);
+    // 3. Substrait Rel -> Calcite RelNode
+    RelNode relNode = substraitToCalcite.convert(pojo1);
 
-      // 4. Calcite RelNode -> Substrait Rel
-      Rel pojo2 =
-          SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
+    // 4. Calcite RelNode -> Substrait Rel
+    Rel pojo2 =
+        SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), EXTENSION_COLLECTION);
 
-      Assertions.assertEquals(pojo1, pojo2);
-    }
-    return relNodeList;
+    Assertions.assertEquals(pojo1, pojo2);
+    return relNode;
   }
 
   @Beta
@@ -163,38 +160,35 @@ public class PlanTestBase {
    */
   protected void assertFullRoundTrip(String sqlQuery, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    SqlToSubstrait sqlConverter = new SqlToSubstrait();
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, catalogReader);
+    RelRoot calcite1 = SubstraitSqlToCalcite.convertSelect(sqlQuery, catalogReader);
 
-    for (RelRoot calcite1 : relRoots) {
-      var extensionCollector = new ExtensionCollector();
+    var extensionCollector = new ExtensionCollector();
 
-      // Calcite 1 -> Substrait POJO 1
-      io.substrait.relation.Rel pojo1 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
+    // Calcite 1 -> Substrait POJO 1
+    io.substrait.relation.Rel pojo1 = SubstraitRelVisitor.convert(calcite1, EXTENSION_COLLECTION);
 
-      // Substrait POJO 1 -> Substrait Proto
-      io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
+    // Substrait POJO 1 -> Substrait Proto
+    io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
 
-      // Substrait Proto -> Substrait Pojo 2
-      io.substrait.relation.Rel pojo2 =
-          new ProtoRelConverter(extensionCollector, EXTENSION_COLLECTION).from(proto);
+    // Substrait Proto -> Substrait Pojo 2
+    io.substrait.relation.Rel pojo2 =
+        new ProtoRelConverter(extensionCollector, EXTENSION_COLLECTION).from(proto);
 
-      // Verify that POJOs are the same
-      assertEquals(pojo1, pojo2);
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo2);
 
-      // Substrait POJO 2 -> Calcite 2
-      RelNode calcite2 = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
-      // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
-      // do so
-      assertNotNull(calcite2);
+    // Substrait POJO 2 -> Calcite 2
+    RelNode calcite2 = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
+    // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
+    // do so
+    assertNotNull(calcite2);
 
-      // Calcite 2 -> Substrait POJO 3
-      io.substrait.relation.Rel pojo3 =
-          SubstraitRelVisitor.convert(RelRoot.of(calcite2, calcite1.kind), EXTENSION_COLLECTION);
+    // Calcite 2 -> Substrait POJO 3
+    io.substrait.relation.Rel pojo3 =
+        SubstraitRelVisitor.convert(RelRoot.of(calcite2, calcite1.kind), EXTENSION_COLLECTION);
 
-      // Verify that POJOs are the same
-      assertEquals(pojo1, pojo3);
-    }
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo3);
   }
 
   /**
