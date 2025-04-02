@@ -260,8 +260,8 @@ public class CustomFunctionTest extends PlanTestBase {
     }
 
     @Override
-    protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-      return new SubstraitRelNodeConverter(
+    protected SubstraitToCalciteVisitor createSubstraitRelNodeConverter(RelBuilder relBuilder) {
+      return new SubstraitToCalciteVisitor(
           typeFactory,
           relBuilder,
           scalarFunctionConverter,
