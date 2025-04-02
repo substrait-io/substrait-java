@@ -16,10 +16,10 @@ public class SubstraitToSql extends SqlConverterBase {
   public RelNode substraitRelToCalciteRel(Rel relRoot, List<String> tables)
       throws SqlParseException {
     CalciteCatalogReader catalogReader = registerCreateTables(tables);
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalogReader, parserConfig);
+    return SubstraitToCalciteVisitor.convert(relRoot, relOptCluster, catalogReader, parserConfig);
   }
 
   public RelNode substraitRelToCalciteRel(Rel relRoot, Prepare.CatalogReader catalog) {
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalog, parserConfig);
+    return SubstraitToCalciteVisitor.convert(relRoot, relOptCluster, catalog, parserConfig);
   }
 }

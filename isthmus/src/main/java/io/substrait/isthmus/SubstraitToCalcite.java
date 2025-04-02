@@ -29,7 +29,7 @@ import org.apache.calcite.util.Pair;
 /**
  * Converts between Substrait {@link Rel}s and Calcite {@link RelNode}s.
  *
- * <p>Can be extended to customize the {@link RelBuilder} and {@link SubstraitRelNodeConverter} used
+ * <p>Can be extended to customize the {@link RelBuilder} and {@link SubstraitToCalciteVisitor} used
  * in the conversion.
  */
 public class SubstraitToCalcite {
@@ -82,12 +82,12 @@ public class SubstraitToCalcite {
   }
 
   /**
-   * Creates a {@link SubstraitRelNodeConverter} from the {@link RelBuilder}
+   * Creates a {@link SubstraitToCalciteVisitor} from the {@link RelBuilder}
    *
-   * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
+   * <p>Override this method to customize the {@link SubstraitToCalciteVisitor}.
    */
-  protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-    return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder);
+  protected SubstraitToCalciteVisitor createSubstraitRelNodeConverter(RelBuilder relBuilder) {
+    return new SubstraitToCalciteVisitor(extensions, typeFactory, relBuilder);
   }
 
   /**
@@ -95,7 +95,7 @@ public class SubstraitToCalcite {
    *
    * <p>Generates a {@link CalciteSchema} based on the contents of the {@link Rel}, which will be
    * used to construct a {@link RelBuilder} with the required schema information to build {@link
-   * RelNode}s, and a then a {@link SubstraitRelNodeConverter} to perform the actual conversion.
+   * RelNode}s, and a then a {@link SubstraitToCalciteVisitor} to perform the actual conversion.
    *
    * @param rel {@link Rel} to convert
    * @return {@link RelNode}
@@ -103,7 +103,7 @@ public class SubstraitToCalcite {
   public RelNode convert(Rel rel) {
     CalciteSchema rootSchema = toSchema(rel);
     RelBuilder relBuilder = createRelBuilder(rootSchema);
-    SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
+    SubstraitToCalciteVisitor converter = createSubstraitRelNodeConverter(relBuilder);
     return rel.accept(converter);
   }
 

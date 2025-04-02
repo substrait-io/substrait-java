@@ -56,7 +56,7 @@ import org.apache.calcite.tools.RelBuilder;
  * RelVisitor to convert Substrait Rel plan to Calcite RelNode plan. Unsupported Rel node will call
  * visitFallback and throw UnsupportedOperationException.
  */
-public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
+public class SubstraitToCalciteVisitor extends AbstractRelVisitor<RelNode, RuntimeException> {
 
   protected final RelDataTypeFactory typeFactory;
 
@@ -68,7 +68,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   protected final RexBuilder rexBuilder;
   private final TypeConverter typeConverter;
 
-  public SubstraitRelNodeConverter(
+  public SubstraitToCalciteVisitor(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
@@ -81,7 +81,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
         TypeConverter.DEFAULT);
   }
 
-  public SubstraitRelNodeConverter(
+  public SubstraitToCalciteVisitor(
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder,
       ScalarFunctionConverter scalarFunctionConverter,
@@ -99,7 +99,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
             typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter));
   }
 
-  public SubstraitRelNodeConverter(
+  public SubstraitToCalciteVisitor(
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder,
       ScalarFunctionConverter scalarFunctionConverter,
@@ -132,7 +132,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 .build());
 
     return relRoot.accept(
-        new SubstraitRelNodeConverter(
+        new SubstraitToCalciteVisitor(
             EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder));
   }
 
