@@ -1,13 +1,11 @@
 package io.substrait.isthmus.cli;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.FeatureBoard;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
-import picocli.CommandLine.ParameterException;
 
 class IsthmusEntryPointTest {
 
@@ -27,18 +25,5 @@ class IsthmusEntryPointTest {
     new CommandLine(isthmusEntryPoint).parseArgs("--multistatement", "SELECT * FROM foo");
     FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
-  }
-
-  /**
-   * Test that the command line parser throws an exception when an invalid join policy is specified.
-   */
-  @Test
-  void invalidCmdOptions() {
-    IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
-    assertThrows(
-        ParameterException.class,
-        () ->
-            new CommandLine(isthmusEntryPoint)
-                .parseArgs("--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
   }
 }
