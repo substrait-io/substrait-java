@@ -87,7 +87,7 @@ dependencies {
   // calcite-core 1.37.0 brings in net.minidev:json-smart:2.5.0 which has a CVE associated with it.
   // See: https://osv.dev/vulnerability/GHSA-pq2g-wx69-c263
   // This causes the build to fail. Pull in the fixed version until Calcite is updated
-  implementation("net.minidev:json-smart:2.5.2")
+  implementation("net.minidev:json-smart:2.5.0")
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter:${JUNIT_VERSION}")
   implementation("org.reflections:reflections:0.9.12")
