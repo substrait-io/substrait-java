@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -31,14 +30,6 @@ public abstract class FeatureBoard {
   @Value.Default
   public SqlConformance sqlConformanceMode() {
     return SqlConformanceEnum.DEFAULT;
-  }
-
-  /**
-   * @return the selected cross join policy
-   */
-  @Value.Default
-  public CrossJoinPolicy crossJoinPolicy() {
-    return CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
   }
 
   /**

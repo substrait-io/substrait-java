@@ -13,7 +13,6 @@ import io.substrait.isthmus.FeatureBoard;
 import io.substrait.isthmus.ImmutableFeatureBoard;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.isthmus.SqlToSubstrait;
-import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
@@ -65,11 +64,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"--sqlconformancemode"},
       description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
   private SqlConformanceEnum sqlConformanceMode = SqlConformanceEnum.DEFAULT;
-
-  @Option(
-      names = {"--crossjoinpolicy"},
-      description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
-  private CrossJoinPolicy crossJoinPolicy = CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 
   @Option(
       names = {"--unquotedcasing"},
@@ -127,7 +121,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     return ImmutableFeatureBoard.builder()
         .allowsSqlBatch(allowMultiStatement)
         .sqlConformanceMode(sqlConformanceMode)
-        .crossJoinPolicy(crossJoinPolicy)
         .unquotedCasing(unquotedCasing)
         .build();
   }
