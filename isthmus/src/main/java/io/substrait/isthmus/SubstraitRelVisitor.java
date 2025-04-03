@@ -398,11 +398,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
-    SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(
-            relNode.getCluster().getTypeFactory(), extensions, FEATURES_DEFAULT);
-    visitor.popFieldAccessDepthMap(relNode);
-    return visitor.apply(relNode);
+    return convert(relNode, extensions, FEATURES_DEFAULT);
   }
 
   public static Rel convert(
