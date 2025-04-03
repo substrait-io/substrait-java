@@ -1,8 +1,6 @@
 package io.substrait.isthmus;
 
 import org.apache.calcite.avatica.util.Casing;
-import org.apache.calcite.sql.validate.SqlConformance;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.immutables.value.Value;
 
 /**
@@ -18,18 +16,6 @@ public abstract class FeatureBoard {
   @Value.Default
   public boolean allowsSqlBatch() {
     return false;
-  }
-
-  /**
-   * Returns Calcite's SQL conformance mode used for the current request. For e.g. APPLY is only
-   * supported in SQL Server mode. Calcite's parser will throw an exception if the selected mode is
-   * not SQL Server and the SQL statement contains APPLY.
-   *
-   * @return the selected built-in Calcite SQL compatibility mode.
-   */
-  @Value.Default
-  public SqlConformance sqlConformanceMode() {
-    return SqlConformanceEnum.DEFAULT;
   }
 
   /**

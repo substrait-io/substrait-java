@@ -1,13 +1,10 @@
 package io.substrait.isthmus.cli;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.FeatureBoard;
-import org.apache.calcite.sql.validate.SqlConformance;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
@@ -21,19 +18,15 @@ class IsthmusEntryPointTest {
     new CommandLine(isthmusEntryPoint);
     FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertFalse(features.allowsSqlBatch());
-    assertEquals(SqlConformanceEnum.DEFAULT, features.sqlConformanceMode());
   }
 
   /** Test that the command line options are correctly parsed into the {@link FeatureBoard}. */
   @Test
   void customFeatureBoard() {
     IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
-    new CommandLine(isthmusEntryPoint)
-        .parseArgs("--multistatement", "--sqlconformancemode=SQL_SERVER_2008", "SELECT * FROM foo");
+    new CommandLine(isthmusEntryPoint).parseArgs("--multistatement", "SELECT * FROM foo");
     FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
-    assertEquals(
-        (SqlConformance) SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
   }
 
   /**
@@ -46,8 +39,6 @@ class IsthmusEntryPointTest {
         ParameterException.class,
         () ->
             new CommandLine(isthmusEntryPoint)
-                .parseArgs(
-                    "--sqlconformancemode=SQL_SERVER_2008",
-                    "--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
+                .parseArgs("--crossjoinpolicy=REWRITE_TO_INNER_JOIN"));
   }
 }
