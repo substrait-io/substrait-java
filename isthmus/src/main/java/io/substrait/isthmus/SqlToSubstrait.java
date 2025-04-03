@@ -66,15 +66,9 @@ public class SqlToSubstrait extends SqlConverterBase {
               plan.addRelations(
                   PlanRel.newBuilder()
                       .setRoot(
-                          io.substrait.proto.RelRoot.newBuilder()
-                              .setInput(
-                                  SubstraitRelVisitor.convert(
-                                          root, EXTENSION_COLLECTION, featureBoard)
-                                      .accept(relProtoConverter))
-                              .addAllNames(
-                                  TypeConverter.DEFAULT
-                                      .toNamedStruct(root.validatedRowType)
-                                      .names())));
+                          relProtoConverter.toProto(
+                              SubstraitRelVisitor.convert(
+                                  root, EXTENSION_COLLECTION, featureBoard))));
             });
     functionCollector.addExtensionsToPlan(plan);
     return plan.build();

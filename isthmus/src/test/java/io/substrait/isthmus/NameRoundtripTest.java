@@ -23,12 +23,14 @@ public class NameRoundtripTest extends PlanTestBase {
     List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, creates);
     assertEquals(1, calciteRelRoots.size());
 
-    org.apache.calcite.rel.RelRoot calciteRelRoot = calciteRelRoots.get(0);
-    assertEquals(expectedNames, calciteRelRoot.validatedRowType.getFieldNames());
+    org.apache.calcite.rel.RelRoot calciteRelRoot1 = calciteRelRoots.get(0);
+    assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
 
-    io.substrait.relation.Rel substraitRel =
-        SubstraitRelVisitor.convert(calciteRelRoot, EXTENSION_COLLECTION);
-    org.apache.calcite.rel.RelNode relNode = substraitToCalcite.convert(substraitRel);
-    assertEquals(expectedNames, relNode.getRowType().getFieldNames());
+    io.substrait.plan.Plan.Root substraitRelRoot =
+        SubstraitRelVisitor.convert(calciteRelRoot1, EXTENSION_COLLECTION);
+    assertEquals(expectedNames, substraitRelRoot.getNames());
+
+    org.apache.calcite.rel.RelRoot calciteRelRoot2 = substraitToCalcite.convert(substraitRelRoot);
+    assertEquals(expectedNames, calciteRelRoot2.validatedRowType.getFieldNames());
   }
 }

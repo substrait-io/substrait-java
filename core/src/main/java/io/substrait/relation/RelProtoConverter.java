@@ -6,6 +6,7 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
@@ -24,6 +25,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
 import io.substrait.proto.RelCommon;
+import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
@@ -57,6 +59,13 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
 
   public TypeProtoConverter getTypeProtoConverter() {
     return this.typeProtoConverter;
+  }
+
+  public io.substrait.proto.RelRoot toProto(Plan.Root relRoot) {
+    return RelRoot.newBuilder()
+        .setInput(toProto(relRoot.getInput()))
+        .addAllNames(relRoot.getNames())
+        .build();
   }
 
   public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
