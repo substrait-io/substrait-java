@@ -11,6 +11,8 @@ java {
   withSourcesJar()
 }
 
+configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
+
 val CALCITE_VERSION = properties.get("calcite.version")
 val GUAVA_VERSION = properties.get("guava.version")
 val IMMUTABLES_VERSION = properties.get("immutables.version")

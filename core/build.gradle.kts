@@ -124,6 +124,8 @@ java {
   }
 }
 
+configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
+
 tasks.named("sourcesJar") { mustRunAfter("generateGrammarSource") }
 
 sourceSets {

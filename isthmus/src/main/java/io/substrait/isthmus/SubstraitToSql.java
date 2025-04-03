@@ -1,11 +1,10 @@
 package io.substrait.isthmus;
 
 import io.substrait.relation.Rel;
-import io.substrait.type.NamedStruct;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
@@ -17,20 +16,16 @@ public class SubstraitToSql extends SqlConverterBase {
 
   public SubstraitToSql() {
     super(FEATURES_DEFAULT);
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
   }
 
   public RelNode substraitRelToCalciteRel(Rel relRoot, List<String> tables)
       throws SqlParseException {
-    var pair = registerCreateTables(tables);
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, pair.right, parserConfig);
+    CalciteCatalogReader catalogReader = registerCreateTables(tables);
+    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalogReader, parserConfig);
   }
 
-  public RelNode substraitRelToCalciteRel(
-      Rel relRoot, Function<List<String>, NamedStruct> tableLookup) throws SqlParseException {
-    var pair = registerCreateTables(tableLookup);
-
-    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, pair.right, parserConfig);
+  public RelNode substraitRelToCalciteRel(Rel relRoot, Prepare.CatalogReader catalog) {
+    return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalog, parserConfig);
   }
 
   // DEFAULT_SQL_DIALECT uses Calcite's EMPTY_CONTEXT with setting:

@@ -2,10 +2,13 @@ package io.substrait.isthmus;
 
 import java.util.Map;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -13,11 +16,13 @@ public class ApplyJoinPlanTest {
 
   private static RelRoot getCalcitePlan(SqlToSubstrait s, TpcdsSchema schema, String sql)
       throws SqlParseException {
-    var pair = s.registerSchema("tpcds", schema);
-    var converter = s.createSqlToRelConverter(pair.left, pair.right);
+    CalciteCatalogReader catalogReader = s.registerSchema("tpcds", schema);
+    SqlConverterBase.Validator validator =
+        SqlConverterBase.Validator.create(
+            catalogReader.getTypeFactory(), catalogReader, SqlValidator.Config.DEFAULT);
+    SqlToRelConverter converter = s.createSqlToRelConverter(validator, catalogReader);
     SqlParser parser = SqlParser.create(sql, s.parserConfig);
-    var root = s.getBestExpRelRoot(converter, parser.parseQuery());
-    return root;
+    return s.getBestExpRelRoot(converter, parser.parseQuery());
   }
 
   private static void validateOuterRef(
