@@ -2,15 +2,12 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
-import io.substrait.type.NamedStruct;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -23,7 +20,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -39,7 +35,6 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.calcite.util.Pair;
 
 class SqlConverterBase {
   final RelDataTypeFactory factory;
@@ -76,8 +71,7 @@ class SqlConverterBase {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       SimpleExtension.loadDefaults();
 
-  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(List<String> tables)
-      throws SqlParseException {
+  CalciteCatalogReader registerCreateTables(List<String> tables) throws SqlParseException {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
@@ -90,41 +84,16 @@ class SqlConverterBase {
         }
       }
     }
-    return Pair.of(validator, catalogReader);
+    return catalogReader;
   }
 
-  Pair<SqlValidator, CalciteCatalogReader> registerCreateTables(
-      Function<List<String>, NamedStruct> tableLookup) throws SqlParseException {
-    Function<List<String>, Table> lookup =
-        id -> {
-          NamedStruct table = tableLookup.apply(id);
-          if (table == null) {
-            return null;
-          }
-          return new DefinedTable(
-              id.get(id.size() - 1),
-              factory,
-              TypeConverter.DEFAULT.toCalcite(factory, table.struct(), table.names()));
-        };
-
-    CalciteSchema rootSchema = LookupCalciteSchema.createRootSchema(lookup);
-    CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-    return Pair.of(validator, catalogReader);
-  }
-
-  Pair<SqlValidator, CalciteCatalogReader> registerSchema(String name, Schema schema) {
+  CalciteCatalogReader registerSchema(String name, Schema schema) {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     if (schema != null) {
       rootSchema.add(name, schema);
       rootSchema = rootSchema.getSubSchema(name, false);
     }
-    CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-
-    return Pair.of(validator, catalogReader);
+    return new CalciteCatalogReader(rootSchema, List.of(), factory, config);
   }
 
   protected List<DefinedTable> parseCreateTable(
@@ -197,8 +166,10 @@ class SqlConverterBase {
     }
 
     public static Validator create(
-        RelDataTypeFactory factory, CalciteCatalogReader catalog, SqlValidator.Config config) {
-      return new Validator(SubstraitOperatorTable.INSTANCE, catalog, factory, config);
+        RelDataTypeFactory factory,
+        SqlValidatorCatalogReader validatorCatalog,
+        SqlValidator.Config config) {
+      return new Validator(SubstraitOperatorTable.INSTANCE, validatorCatalog, factory, config);
     }
   }
 
