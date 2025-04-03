@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan.Root;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -20,7 +19,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
   void testConvertRootSingleColumn() {
     Iterable<Type> types = List.of(TypeCreator.REQUIRED.STRING);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(substraitBuilder.namedScan(List.of("stores"), List.of("s"), types))
             .addNames("store")
             .build();
@@ -34,7 +33,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
   void testConvertRootMultipleColumns() {
     Iterable<Type> types = List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(substraitBuilder.namedScan(List.of("stores"), List.of("s_store_id", "s"), types))
             .addNames("s_store_id", "store")
             .build();
@@ -50,7 +49,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
         TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     Iterable<Type> types = List.of(structType);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(
                 substraitBuilder.namedScan(
                     List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
@@ -78,7 +77,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
     final Type arrayType = TypeCreator.REQUIRED.list(structType);
     Set<Type> types = Set.of(arrayType);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(
                 substraitBuilder.namedScan(
                     List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
@@ -108,7 +107,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
     final Type mapValueType = TypeCreator.REQUIRED.map(TypeCreator.REQUIRED.I64, structType);
     Set<Type> types = Set.of(mapValueType);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(
                 substraitBuilder.namedScan(
                     List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
@@ -138,7 +137,7 @@ public class SubstraitToCalciteTest extends PlanTestBase {
     final Type mapKeyType = TypeCreator.REQUIRED.map(structType, TypeCreator.REQUIRED.I64);
     Set<Type> types = Set.of(mapKeyType);
     Root root =
-        ImmutableRoot.builder()
+        Root.builder()
             .input(
                 substraitBuilder.namedScan(
                     List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))

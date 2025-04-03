@@ -8,7 +8,6 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class Plan {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Plan.class);
 
   public abstract List<Root> getRoots();
 
@@ -16,10 +15,18 @@ public abstract class Plan {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
+  public static ImmutablePlan.Builder builder() {
+    return ImmutablePlan.builder();
+  }
+
   @Value.Immutable
   public abstract static class Root {
     public abstract Rel getInput();
 
     public abstract List<String> getNames();
+
+    public static ImmutableRoot.Builder builder() {
+      return ImmutableRoot.builder();
+    }
   }
 }
