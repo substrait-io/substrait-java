@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.FeatureBoard;
-import io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,6 @@ class IsthmusEntryPointTest {
     FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertFalse(features.allowsSqlBatch());
     assertEquals(SqlConformanceEnum.DEFAULT, features.sqlConformanceMode());
-    assertEquals(CrossJoinPolicy.KEEP_AS_CROSS_JOIN, features.crossJoinPolicy());
   }
 
   /** Test that the command line options are correctly parsed into the {@link FeatureBoard}. */
@@ -31,16 +29,11 @@ class IsthmusEntryPointTest {
   void customFeatureBoard() {
     IsthmusEntryPoint isthmusEntryPoint = new IsthmusEntryPoint();
     new CommandLine(isthmusEntryPoint)
-        .parseArgs(
-            "--multistatement",
-            "--sqlconformancemode=SQL_SERVER_2008",
-            "--crossjoinpolicy=CONVERT_TO_INNER_JOIN",
-            "SELECT * FROM foo");
+        .parseArgs("--multistatement", "--sqlconformancemode=SQL_SERVER_2008", "SELECT * FROM foo");
     FeatureBoard features = isthmusEntryPoint.buildFeatureBoard();
     assertTrue(features.allowsSqlBatch());
     assertEquals(
         (SqlConformance) SqlConformanceEnum.SQL_SERVER_2008, features.sqlConformanceMode());
-    assertEquals(CrossJoinPolicy.CONVERT_TO_INNER_JOIN, features.crossJoinPolicy());
   }
 
   /**

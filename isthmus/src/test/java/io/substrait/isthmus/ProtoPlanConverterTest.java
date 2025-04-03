@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.isthmus.utils.SetUtils;
@@ -73,36 +72,41 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   @Test
   public void crossJoin() throws IOException, SqlParseException {
     int[] counter = new int[1];
-    var visitor =
+    var crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
           public Optional<Rel> visit(Cross cross) throws RuntimeException {
             counter[0]++;
             return super.visit(cross);
           }
         };
-    FeatureBoard featureBoard =
-        ImmutableFeatureBoard.builder().crossJoinPolicy(KEEP_AS_CROSS_JOIN).build();
+    var featureBoard = ImmutableFeatureBoard.builder().build();
+
     Plan plan1 =
         assertProtoPlanRoundrip(
-            "select\n"
-                + "  c.c_custKey,\n"
-                + "  o.o_custkey\n"
-                + "from\n"
-                + "  \"customer\" c cross join\n"
-                + "  \"orders\" o",
+            """
+            select
+              c.c_custKey,
+              o.o_custkey
+            from
+              "customer" c cross join
+              "orders" o
+            """,
             new SqlToSubstrait(featureBoard));
-    plan1.getRoots().forEach(t -> t.getInput().accept(visitor));
+    plan1.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor));
     assertEquals(1, counter[0]);
+
     Plan plan2 =
         assertProtoPlanRoundrip(
-            "select\n"
-                + "  c.c_custKey,\n"
-                + "  o.o_custkey\n"
-                + "from\n"
-                + "  \"customer\" c,\n"
-                + "  \"orders\" o",
+            """
+            select
+              c.c_custKey,
+              o.o_custkey
+            from
+              "customer" c,
+              "orders" o
+            """,
             new SqlToSubstrait(featureBoard));
-    plan2.getRoots().forEach(t -> t.getInput().accept(visitor));
+    plan2.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor));
     assertEquals(2, counter[0]);
   }
 

@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SubstraitRelVisitor.CrossJoinPolicy.KEEP_AS_CROSS_JOIN;
-
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
@@ -183,9 +181,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
               "Unsupported join type: " + join.getJoinType());
         };
 
-    if (joinType == Join.JoinType.INNER
-        && TRUE.equals(condition)
-        && featureBoard.crossJoinPolicy().equals(KEEP_AS_CROSS_JOIN)) {
+    // An INNER JOIN with a join condition of TRUE can be encoded as a Substrait Cross relation
+    if (joinType == Join.JoinType.INNER && TRUE.equals(condition)) {
       return Cross.builder().left(left).right(right).build();
     }
     return Join.builder().condition(condition).joinType(joinType).left(left).right(right).build();
@@ -397,30 +394,5 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(rel);
     return visitor.apply(rel);
-  }
-
-  public enum CrossJoinPolicy {
-    KEEP_AS_CROSS_JOIN,
-    CONVERT_TO_INNER_JOIN
-  };
-
-  public static class Options {
-    private final CrossJoinPolicy crossJoinPolicy;
-
-    public Options() {
-      this(CrossJoinPolicy.CONVERT_TO_INNER_JOIN);
-    }
-
-    public Options(CrossJoinPolicy crossJoinPolicy) {
-      this.crossJoinPolicy = crossJoinPolicy;
-    }
-
-    /**
-     * Returns the {@code crossJoinAsInnerJoin} option. Controls whether to cross joins are
-     * represented as inner joins with a true condition.
-     */
-    public CrossJoinPolicy getCrossJoinPolicy() {
-      return crossJoinPolicy;
-    }
   }
 }
