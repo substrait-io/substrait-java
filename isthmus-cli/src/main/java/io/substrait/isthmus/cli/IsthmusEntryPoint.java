@@ -43,11 +43,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   private List<String> createStatements;
 
   @Option(
-      names = {"-m", "--multistatement"},
-      description = "Allow multiple statements terminated with a semicolon")
-  private boolean allowMultiStatement;
-
-  @Option(
       names = {"--outputformat"},
       defaultValue = "PROTOJSON",
       description = "Set the output format for the generated plan: ${COMPLETION-CANDIDATES}")
@@ -112,9 +107,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @VisibleForTesting
   FeatureBoard buildFeatureBoard() {
-    return ImmutableFeatureBoard.builder()
-        .allowsSqlBatch(allowMultiStatement)
-        .unquotedCasing(unquotedCasing)
-        .build();
+    return ImmutableFeatureBoard.builder().unquotedCasing(unquotedCasing).build();
   }
 }

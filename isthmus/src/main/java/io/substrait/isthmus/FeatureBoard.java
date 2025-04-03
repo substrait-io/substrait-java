@@ -11,14 +11,6 @@ import org.immutables.value.Value;
 public abstract class FeatureBoard {
 
   /**
-   * @return true if parsing sql batch (multiple input sql statements) is enabled
-   */
-  @Value.Default
-  public boolean allowsSqlBatch() {
-    return false;
-  }
-
-  /**
    * @return Calcite's identifier casing policy for unquoted identifiers.
    */
   @Value.Default

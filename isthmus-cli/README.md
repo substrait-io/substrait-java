@@ -27,25 +27,24 @@ isthmus 0.1
 ```
 $ ./isthmus-cli/build/graal/isthmus --help
 
-Usage: isthmus [-hmV] [--outputformat=<outputFormat>]
+Usage: isthmus [-hV] [--outputformat=<outputFormat>]
                [--unquotedcasing=<unquotedCasing>] [-c=<createStatements>]...
                [-e=<sqlExpressions>...]... [<sql>]
 Convert SQL Queries and SQL Expressions to Substrait
-      [<sql>]            A SQL query
+      [<sql>]     A SQL query
   -c, --create=<createStatements>
-                         One or multiple create table statements e.g. CREATE
-                           TABLE T1(foo int, bar bigint)
+                  One or multiple create table statements e.g. CREATE
+                    TABLE T1(foo int, bar bigint)
   -e, --expression=<sqlExpressions>...
-                         One or more SQL expressions e.g. col + 1
-  -h, --help             Show this help message and exit.
-  -m, --multistatement   Allow multiple statements terminated with a semicolon
+                  One or more SQL expressions e.g. col + 1
+  -h, --help      Show this help message and exit.
       --outputformat=<outputFormat>
-                         Set the output format for the generated plan:
-                           PROTOJSON, PROTOTEXT, BINARY
+                  Set the output format for the generated plan:
+                    PROTOJSON, PROTOTEXT, BINARY
       --unquotedcasing=<unquotedCasing>
-                         Calcite's casing policy for unquoted identifiers:
-                           UNCHANGED, TO_UPPER, TO_LOWER
-  -V, --version          Print version information and exit.
+                  Calcite's casing policy for unquoted identifiers:
+                    UNCHANGED, TO_UPPER, TO_LOWER
+  -V, --version   Print version information and exit.
 ```
 
 ## Example
