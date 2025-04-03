@@ -178,6 +178,7 @@ public class PlanTestBase {
    * </ul>
    */
   protected void assertFullRoundTrip(Rel pojo1) {
+    // TODO: reuse the Plan.Root based assertFullRoundTrip by generating names
     var extensionCollector = new ExtensionCollector();
 
     // Substrait POJO 1 -> Substrait Proto
@@ -195,6 +196,37 @@ public class PlanTestBase {
 
     // Calcite -> Substrait POJO 3
     io.substrait.relation.Rel pojo3 = SubstraitRelVisitor.convert(calcite, EXTENSION_COLLECTION);
+
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo3);
+  }
+
+  /**
+   * Verifies that the given POJO can be converted:
+   *
+   * <ul>
+   *   <li>From POJO to Proto and back
+   *   <li>From POJO to Calcite and back
+   * </ul>
+   */
+  protected void assertFullRoundTrip(Plan.Root pojo1) {
+    var extensionCollector = new ExtensionCollector();
+
+    // Substrait POJO 1 -> Substrait Proto
+    io.substrait.proto.RelRoot proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
+
+    // Substrait Proto -> Substrait Pojo 2
+    io.substrait.plan.Plan.Root pojo2 =
+        new ProtoRelConverter(extensionCollector, EXTENSION_COLLECTION).from(proto);
+
+    // Verify that POJOs are the same
+    assertEquals(pojo1, pojo2);
+
+    // Substrait POJO 2 -> Calcite
+    RelRoot calcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo2);
+
+    // Calcite -> Substrait POJO 3
+    io.substrait.plan.Plan.Root pojo3 = SubstraitRelVisitor.convert(calcite, EXTENSION_COLLECTION);
 
     // Verify that POJOs are the same
     assertEquals(pojo1, pojo3);
