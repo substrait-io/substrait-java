@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -52,17 +50,9 @@ public class SimplePlansTest extends PlanTestBase {
 
   @Test
   public void multiStatement() throws IOException, SqlParseException {
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> {
-          assertProtoPlanRoundrip(
-              "select l_orderkey from lineitem; select l_partkey from lineitem WHERE L_ORDERKEY > 20;");
-        },
-        "SQL must contain only a single statement");
-    var features = ImmutableFeatureBoard.builder().allowsSqlBatch(true).build();
     assertProtoPlanRoundrip(
         "select l_orderkey from lineitem; select l_partkey from lineitem WHERE L_ORDERKEY > 20;",
-        new SqlToSubstrait(features));
+        new SqlToSubstrait());
   }
 
   @Test

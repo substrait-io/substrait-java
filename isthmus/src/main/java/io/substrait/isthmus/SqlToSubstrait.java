@@ -85,9 +85,6 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
     var parsedList = parser.parseStmtList();
-    if (!featureBoard.allowsSqlBatch() && parsedList.size() > 1) {
-      throw new UnsupportedOperationException("SQL must contain only a single statement: " + sql);
-    }
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
     List<RelRoot> roots =
         parsedList.stream()
