@@ -31,6 +31,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
@@ -65,7 +66,7 @@ class SqlConverterBase {
         SqlParser.Config.DEFAULT
             .withUnquotedCasing(featureBoard.unquotedCasing())
             .withParserFactory(SqlDdlParserImpl.FACTORY)
-            .withConformance(featureBoard.sqlConformanceMode());
+            .withConformance(SqlConformanceEnum.LENIENT);
   }
 
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =

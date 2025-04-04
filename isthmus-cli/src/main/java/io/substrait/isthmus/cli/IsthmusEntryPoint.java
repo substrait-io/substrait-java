@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import picocli.CommandLine;
 
 @Command(
@@ -59,11 +58,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     PROTOTEXT, // protobuf text format
     BINARY, // protobuf BINARY format
   }
-
-  @Option(
-      names = {"--sqlconformancemode"},
-      description = "One of built-in Calcite SQL compatibility modes: ${COMPLETION-CANDIDATES}")
-  private SqlConformanceEnum sqlConformanceMode = SqlConformanceEnum.DEFAULT;
 
   @Option(
       names = {"--unquotedcasing"},
@@ -120,7 +114,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   FeatureBoard buildFeatureBoard() {
     return ImmutableFeatureBoard.builder()
         .allowsSqlBatch(allowMultiStatement)
-        .sqlConformanceMode(sqlConformanceMode)
         .unquotedCasing(unquotedCasing)
         .build();
   }

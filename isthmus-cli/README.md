@@ -27,18 +27,14 @@ isthmus 0.1
 ```
 $ ./isthmus-cli/build/graal/isthmus --help
 
-Usage: isthmus [-hmV] [--crossjoinpolicy=<crossJoinPolicy>]
-               [--outputformat=<outputFormat>]
-               [--sqlconformancemode=<sqlConformanceMode>]
-               [-c=<createStatements>]... [-e=<sqlExpressions>...]... [<sql>]
+Usage: isthmus [-hmV] [--outputformat=<outputFormat>]
+               [--unquotedcasing=<unquotedCasing>] [-c=<createStatements>]...
+               [-e=<sqlExpressions>...]... [<sql>]
 Convert SQL Queries and SQL Expressions to Substrait
       [<sql>]            A SQL query
   -c, --create=<createStatements>
                          One or multiple create table statements e.g. CREATE
                            TABLE T1(foo int, bar bigint)
-      --crossjoinpolicy=<crossJoinPolicy>
-                         One of built-in Calcite SQL compatibility modes:
-                           KEEP_AS_CROSS_JOIN, CONVERT_TO_INNER_JOIN
   -e, --expression=<sqlExpressions>...
                          One or more SQL expressions e.g. col + 1
   -h, --help             Show this help message and exit.
@@ -46,12 +42,9 @@ Convert SQL Queries and SQL Expressions to Substrait
       --outputformat=<outputFormat>
                          Set the output format for the generated plan:
                            PROTOJSON, PROTOTEXT, BINARY
-      --sqlconformancemode=<sqlConformanceMode>
-                         One of built-in Calcite SQL compatibility modes:
-                           DEFAULT, LENIENT, BABEL, STRICT_92, STRICT_99,
-                           PRAGMATIC_99, BIG_QUERY, MYSQL_5, ORACLE_10,
-                           ORACLE_12, STRICT_2003, PRAGMATIC_2003, PRESTO,
-                           SQL_SERVER_2008
+      --unquotedcasing=<unquotedCasing>
+                         Calcite's casing policy for unquoted identifiers:
+                           UNCHANGED, TO_UPPER, TO_LOWER
   -V, --version          Print version information and exit.
 ```
 

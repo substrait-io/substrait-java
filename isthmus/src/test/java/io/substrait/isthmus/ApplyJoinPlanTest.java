@@ -7,7 +7,6 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.junit.jupiter.api.Assertions;
@@ -88,10 +87,7 @@ public class ApplyJoinPlanTest {
             FROM store_sales OUTER APPLY
               (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
 
-    FeatureBoard featureBoard =
-        ImmutableFeatureBoard.builder()
-            .sqlConformanceMode(SqlConformanceEnum.SQL_SERVER_2008)
-            .build();
+    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);
     RelRoot root = getCalcitePlan(s, schema, sql);
 
@@ -133,10 +129,7 @@ public class ApplyJoinPlanTest {
                 LogicalFilter(condition=[AND(=($4, $cor0.I_ITEM_SK), =($4, $cor2.SS_ITEM_SK))])
                   LogicalTableScan(table=[[tpcds, PROMOTION]])
      */
-    FeatureBoard featureBoard =
-        ImmutableFeatureBoard.builder()
-            .sqlConformanceMode(SqlConformanceEnum.SQL_SERVER_2008)
-            .build();
+    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);
     RelRoot root = getCalcitePlan(s, schema, sql);
 
@@ -163,10 +156,7 @@ public class ApplyJoinPlanTest {
             FROM store_sales CROSS APPLY
               (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
 
-    FeatureBoard featureBoard =
-        ImmutableFeatureBoard.builder()
-            .sqlConformanceMode(SqlConformanceEnum.SQL_SERVER_2008)
-            .build();
+    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);
 
     // TODO validate end to end conversion
