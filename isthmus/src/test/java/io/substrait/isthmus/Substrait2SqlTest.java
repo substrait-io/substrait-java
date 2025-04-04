@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.relation.Set;
-import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -142,10 +141,9 @@ public class Substrait2SqlTest extends PlanTestBase {
   @Test
   public void simpleTestApproxCountDistinct() throws Exception {
     String query = "select approx_count_distinct(l_tax)  from lineitem";
-    List<RelNode> relNodeList = assertSqlSubstraitRelRoundTrip(query);
+    RelNode relNode = assertSqlSubstraitRelRoundTrip(query);
 
     // Assert converted Calcite RelNode has `approx_count_distinct`
-    RelNode relNode = relNodeList.get(0);
     assertTrue(relNode instanceof LogicalAggregate);
     LogicalAggregate aggregate = (LogicalAggregate) relNode;
     assertTrue(

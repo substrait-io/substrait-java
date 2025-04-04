@@ -5,8 +5,11 @@ import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ImmutableExpressionReference;
 import io.substrait.extendedexpression.ImmutableExtendedExpression;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -142,11 +145,11 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
+        List<SubstraitTable> tList =
+            SubstraitCreateStatementParser.processCreateStatements(tableDef);
+        for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
             nameToTypeMap.merge( // to validate the sql expression tree
@@ -167,6 +170,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         }
       }
     }
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
 
