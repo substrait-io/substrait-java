@@ -37,9 +37,9 @@ public class ProtoPlanConverter {
     for (PlanRel planRel : plan.getRelationsList()) {
       io.substrait.proto.RelRoot root = planRel.getRoot();
       Rel rel = relConverter.from(root.getInput());
-      roots.add(ImmutableRoot.builder().input(rel).names(root.getNamesList()).build());
+      roots.add(Plan.Root.builder().input(rel).names(root.getNamesList()).build());
     }
-    return ImmutablePlan.builder()
+    return Plan.builder()
         .roots(roots)
         .expectedTypeUrls(plan.getExpectedTypeUrlsList())
         .advancedExtension(

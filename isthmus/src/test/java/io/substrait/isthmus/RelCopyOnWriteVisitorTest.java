@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.plan.ImmutablePlan;
-import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
@@ -267,8 +265,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
               t ->
                   t.getInput()
                       .accept(visitor)
-                      .map(u -> ImmutableRoot.builder().from(t).input(u).build()))
-          .map(t -> ImmutablePlan.builder().from(plan).roots(t).build());
+                      .map(u -> Plan.Root.builder().from(t).input(u).build()))
+          .map(t -> Plan.builder().from(plan).roots(t).build());
     }
 
     private static class ReplaceCountDistinctWithApproxVisitor
