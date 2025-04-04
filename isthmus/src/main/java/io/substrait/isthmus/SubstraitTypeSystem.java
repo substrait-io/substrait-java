@@ -39,6 +39,11 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
     return 38;
   }
 
+  @Override
+  public boolean shouldConvertRaggedUnionTypesToVarying() {
+    return true;
+  }
+
   public static RelDataTypeFactory createTypeFactory() {
     return new JavaTypeFactoryImpl(TYPE_SYSTEM);
   }
