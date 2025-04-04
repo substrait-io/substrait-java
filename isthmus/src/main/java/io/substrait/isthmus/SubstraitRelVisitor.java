@@ -10,6 +10,7 @@ import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.plan.Plan;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -379,20 +380,32 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  public static Rel convert(RelRoot root, SimpleExtension.ExtensionCollection extensions) {
-    return convert(root.rel, extensions, FEATURES_DEFAULT);
+  public static Plan.Root convert(RelRoot relRoot, SimpleExtension.ExtensionCollection extensions) {
+    return convert(relRoot, extensions, FEATURES_DEFAULT);
+  }
+
+  public static Plan.Root convert(
+      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    SubstraitRelVisitor visitor =
+        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
+    visitor.popFieldAccessDepthMap(relRoot.rel);
+    Rel rel = visitor.apply(relRoot.project());
+
+    // Avoid using the names from relRoot.validatedRowType because if there are
+    // nested types (i.e ROW, MAP, etc) the typeConverter will pad names correctly
+    List<String> names = visitor.typeConverter.toNamedStruct(relRoot.validatedRowType).names();
+    return Plan.Root.builder().input(rel).names(names).build();
+  }
+
+  public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
+    return convert(relNode, extensions, FEATURES_DEFAULT);
   }
 
   public static Rel convert(
-      RelRoot root, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    return convert(root.rel, extensions, features);
-  }
-
-  private static Rel convert(
-      RelNode rel, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(rel.getCluster().getTypeFactory(), extensions, features);
-    visitor.popFieldAccessDepthMap(rel);
-    return visitor.apply(rel);
+        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features);
+    visitor.popFieldAccessDepthMap(relNode);
+    return visitor.apply(relNode);
   }
 }

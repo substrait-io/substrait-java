@@ -8,6 +8,7 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
+import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
@@ -59,6 +60,10 @@ public class ProtoRelConverter {
     this.lookup = lookup;
     this.extensions = extensions;
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
+  }
+
+  public Plan.Root from(io.substrait.proto.RelRoot rel) {
+    return Plan.Root.builder().input(from(rel.getInput())).addAllNames(rel.getNamesList()).build();
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
