@@ -1,6 +1,27 @@
 Release Notes
 ---
 
+## [0.53.0](https://github.com/substrait-io/substrait-java/compare/v0.52.0...v0.53.0) (2025-04-06)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** removed AllowsSqlBatch from FeatureBoard
+* **isthmus:** removed SqlConformance from FeatureBoard
+* **isthmus:** removed CrossJoinPolicy from FeatureBoard
+* removed function-based table lookup conversion methods
+
+### Features
+
+* **isthmus:** always allow batch queries ([#372](https://github.com/substrait-io/substrait-java/issues/372)) ([2d17d58](https://github.com/substrait-io/substrait-java/commit/2d17d58d8ba4c2ae089f0c0acb1e6ab5d2de54e9))
+* **isthmus:** always emit Cross relation when possible ([#367](https://github.com/substrait-io/substrait-java/issues/367)) ([7705243](https://github.com/substrait-io/substrait-java/commit/77052432237bc1d529a49f8b05b7577c854b93bc))
+* **isthmus:** parse SQL using SqlConformanceEnum.LENIENT  ([#368](https://github.com/substrait-io/substrait-java/issues/368)) ([2ce3501](https://github.com/substrait-io/substrait-java/commit/2ce3501c516bdc8021d772983cbaba12ff88a2f1))
+* new Prepare.CatalogReader based APIs for SQL to/from Substrait ([#363](https://github.com/substrait-io/substrait-java/issues/363)) ([3852640](https://github.com/substrait-io/substrait-java/commit/385264096cd6f33997e53bf64d6b1bcbcff1fec3))
+
+### Bug Fixes
+
+* missing throws for CREATE statement conversion failures ([#364](https://github.com/substrait-io/substrait-java/issues/364)) ([339b59c](https://github.com/substrait-io/substrait-java/commit/339b59ce9dd348bb6ddbc770f40582bc09b61958))
+* **spark:** enable aliased expressions to round-trip ([#348](https://github.com/substrait-io/substrait-java/issues/348)) ([791f7ce](https://github.com/substrait-io/substrait-java/commit/791f7ceefbaa070678e980271693590bb680ef02))
+
 ## [0.52.0](https://github.com/substrait-io/substrait-java/compare/v0.51.0...v0.52.0) (2025-03-30)
 
 ### ⚠ BREAKING CHANGES
