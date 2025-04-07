@@ -382,6 +382,10 @@ public class SubstraitBuilder {
     return Expression.FP64Literal.builder().value(v).build();
   }
 
+  public Expression.StrLiteral str(String s) {
+    return Expression.StrLiteral.builder().value(s).build();
+  }
+
   public Expression cast(Expression input, Type type) {
     return Cast.builder()
         .input(input)
