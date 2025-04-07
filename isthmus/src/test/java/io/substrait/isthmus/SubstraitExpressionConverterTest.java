@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.ScalarFunctionInvocation;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
@@ -157,6 +160,32 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
                     b.fieldReference(input, 2),
                     Expression.StrLiteral.builder().nullable(false).value("EUROPE").build()),
             commonTable));
+  }
+
+  /**
+   * Test that checks that we use the explicit return type provided in the Substrait plan instead of
+   * relying on the return type inference by Calcite. Would throw an
+   * java.lang.ArrayIndexOutOfBoundsException otherwise.
+   */
+  @Test
+  public void subtractDateTimeExplicitReturnTypeTest() {
+    ScalarFunctionInvocation expr =
+        b.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            "subtract:date_iday",
+            TypeCreator.REQUIRED.DATE,
+            ExpressionCreator.date(false, 10561),
+            ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
+
+    Project query = b.project(input -> List.of(expr), b.emptyScan());
+
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    RelNode calciteRel = substraitToCalcite.convert(query);
+    RexNode calciteExpr = ((LogicalProject) calciteRel).getProjects().get(0);
+
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
+        calciteExpr.getType());
   }
 
   void assertTypeMatch(RelDataType actual, Type expected) {
