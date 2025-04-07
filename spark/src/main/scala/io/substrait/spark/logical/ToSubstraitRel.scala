@@ -521,7 +521,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
   def convert(p: LogicalPlan): Plan = {
     val rel = visit(p)
-    ImmutablePlan.builder
+    Plan.builder
       .roots(
         Collections.singletonList(
           ImmutableRoot

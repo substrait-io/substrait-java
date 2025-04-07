@@ -16,8 +16,6 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
-import io.substrait.plan.ImmutablePlan;
-import io.substrait.plan.ImmutableRoot;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
@@ -685,11 +683,11 @@ public class SubstraitBuilder {
   // Misc
 
   public Plan.Root root(Rel rel) {
-    return ImmutableRoot.builder().input(rel).build();
+    return Plan.Root.builder().input(rel).build();
   }
 
   public Plan plan(Plan.Root root) {
-    return ImmutablePlan.builder().addRoots(root).build();
+    return Plan.builder().addRoots(root).build();
   }
 
   public Rel.Remap remap(Integer... fields) {
