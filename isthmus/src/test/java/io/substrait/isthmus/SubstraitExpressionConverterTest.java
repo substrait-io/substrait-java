@@ -6,10 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
-import io.substrait.expression.Expression.ScalarFunctionInvocation;
-import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
@@ -60,10 +61,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
     Rel subQueryRel = createSubQueryRel();
 
     Expression.ScalarSubquery expr =
-        Expression.ScalarSubquery.builder()
-            .type(TypeCreator.REQUIRED.I64)
-            .input(subQueryRel)
-            .build();
+        Expression.ScalarSubquery.builder().type(R.I64).input(subQueryRel).build();
 
     Project query = b.project(input -> List.of(expr), b.emptyScan());
 
@@ -154,38 +152,50 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
     return b.project(
         input -> List.of(b.fieldReference(input, 0)),
         Remap.of(List.of(3)),
-        b.filter(
-            input ->
-                b.equal(
-                    b.fieldReference(input, 2),
-                    Expression.StrLiteral.builder().nullable(false).value("EUROPE").build()),
-            commonTable));
+        b.filter(input -> b.equal(b.fieldReference(input, 2), b.str("EUROPE")), commonTable));
   }
 
-  /**
-   * Test that checks that we use the explicit return type provided in the Substrait plan instead of
-   * relying on the return type inference by Calcite. Would throw an
-   * java.lang.ArrayIndexOutOfBoundsException otherwise.
-   */
+  final ExpressionRexConverter expressionRexConverter =
+      new ExpressionRexConverter(
+          typeFactory,
+          new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+          TypeConverter.DEFAULT);
+
   @Test
-  public void subtractDateTimeExplicitReturnTypeTest() {
-    ScalarFunctionInvocation expr =
+  public void useSubstraitReturnTypeDuringScalarFunctionConversion() {
+    Expression.ScalarFunctionInvocation expr =
         b.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "subtract:date_iday",
-            TypeCreator.REQUIRED.DATE,
-            ExpressionCreator.date(false, 10561),
-            ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
+            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+            "add:i32_i32",
+            // THIS IS (INTENTIONALLY) THE WRONG OUTPUT TYPE
+            // SHOULD BE R.I32
+            R.FP32,
+            b.i32(7),
+            b.i32(42));
 
-    Project query = b.project(input -> List.of(expr), b.emptyScan());
+    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.FP32), calciteExpr.getType());
+  }
 
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
-    RelNode calciteRel = substraitToCalcite.convert(query);
-    RexNode calciteExpr = ((LogicalProject) calciteRel).getProjects().get(0);
+  @Test
+  public void useSubstraitReturnTypeDuringWindowFunctionConversion() {
+    Expression.WindowFunctionInvocation expr =
+        b.windowFn(
+            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+            "row_number:",
+            // THIS IS (INTENTIONALLY) THE WRONG OUTPUT TYPE
+            // SHOULD BE R.I64
+            R.STRING,
+            Expression.AggregationPhase.INITIAL_TO_RESULT,
+            Expression.AggregationInvocation.ALL,
+            Expression.WindowBoundsType.RANGE,
+            WindowBound.UNBOUNDED,
+            WindowBound.UNBOUNDED,
+            b.i32(42));
 
-    assertEquals(
-        TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
-        calciteExpr.getType());
+    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
   }
 
   void assertTypeMatch(RelDataType actual, Type expected) {
