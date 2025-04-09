@@ -80,7 +80,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
   def assertProtoPlanRoundrip(sql: String): Plan = {
     val protoPlan1 = sqlToProtoPlan(sql)
     val plan = new ProtoPlanConverter().from(protoPlan1)
-    val protoPlan2 = new PlanProtoConverter().toProto(plan)
+    val protoPlan2 = plan.toProto()
     assertResult(protoPlan1)(protoPlan2)
     assertResult(1)(plan.getRoots.size())
     plan
@@ -136,8 +136,8 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
   }
 
   def assertPlanRoundrip(plan: Plan): Unit = {
-    val protoPlan1 = new PlanProtoConverter().toProto(plan)
-    val protoPlan2 = new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan1))
+    val protoPlan1 = plan.toProto()
+    val protoPlan2 = new ProtoPlanConverter().from(protoPlan1).toProto()
     assertResult(protoPlan1)(protoPlan2)
   }
 

@@ -263,8 +263,7 @@ Let's look at the APIs in the `createSubstrait(...)` method to see how it's usin
 The `io.substrait.plan.Plan` object is a high-level Substrait POJO representing a plan. This could be used directly or more likely be persisted. protobuf is the canonical serialization form.  It's easy to convert this and store in a file
 
 ```java
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    byte[] buffer = planToProto.toProto(plan).toByteArray();
+    byte[] buffer = plan.toProto().toByteArray();
     try {
       Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"),buffer);
     } catch (IOException e){

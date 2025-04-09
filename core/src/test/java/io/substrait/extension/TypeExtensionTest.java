@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.plan.Plan;
-import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -40,7 +39,6 @@ public class TypeExtensionTest {
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
   Type customType1 = b.userDefinedType(NAMESPACE, "customType1");
   Type customType2 = b.userDefinedType(NAMESPACE, "customType2");
-  final PlanProtoConverter planProtoConverter = new PlanProtoConverter();
   final ProtoPlanConverter protoPlanConverter = new ProtoPlanConverter(extensionCollection);
 
   @Test
@@ -73,7 +71,7 @@ public class TypeExtensionTest {
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
 
-    var protoPlan = planProtoConverter.toProto(plan);
+    var protoPlan = plan.toProto();
     var planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
@@ -99,7 +97,7 @@ public class TypeExtensionTest {
                                     b.fieldReference(input, 0)))
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
-    var protoPlan = planProtoConverter.toProto(plan);
+    var protoPlan = plan.toProto();
     var planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }

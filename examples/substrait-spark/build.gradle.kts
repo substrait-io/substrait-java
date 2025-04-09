@@ -9,16 +9,18 @@ repositories {
   mavenCentral()
 }
 
+var SPARK_VERSION = properties.get("spark.version")
+
 dependencies {
-  implementation("org.apache.spark:spark-core_2.12:3.5.1")
-  implementation("io.substrait:spark:0.36.0")
-  implementation("io.substrait:core:0.36.0")
-  implementation("org.apache.spark:spark-sql_2.12:3.5.1")
+  implementation("org.apache.spark:spark-core_2.12:${SPARK_VERSION}")
+  implementation(project(":spark"))
+  implementation(project(":core"))
+  implementation("org.apache.spark:spark-sql_2.12:${SPARK_VERSION}")
 
   // For a real Spark application, these would not be required since they would be in the Spark
   // server classpath
-  runtimeOnly("org.apache.spark:spark-core_2.12:3.5.1")
-  runtimeOnly("org.apache.spark:spark-hive_2.12:3.5.1")
+  runtimeOnly("org.apache.spark:spark-core_2.12:${SPARK_VERSION}")
+  runtimeOnly("org.apache.spark:spark-hive_2.12:${SPARK_VERSION}")
 }
 
 tasks.jar {
@@ -30,6 +32,8 @@ tasks.jar {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   manifest.attributes["Main-Class"] = "io.substrait.examples.App"
   from(configurations.runtimeClasspath.get().map({ if (it.isDirectory) it else zipTree(it) }))
+
+  dependsOn(":core:shadowJar", ":core:jar")
 }
 
 tasks.named<Test>("test") {

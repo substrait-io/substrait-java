@@ -12,7 +12,6 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
-import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
@@ -65,7 +64,7 @@ public class PlanTestBase {
       throws SqlParseException {
     io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
     Plan plan = new ProtoPlanConverter(EXTENSION_COLLECTION).from(protoPlan1);
-    io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
+    io.substrait.proto.Plan protoPlan2 = plan.toProto();
     assertEquals(protoPlan1, protoPlan2);
     var rootRels = s.sqlToRelNode(query, creates);
     assertEquals(rootRels.size(), plan.getRoots().size());
@@ -78,9 +77,8 @@ public class PlanTestBase {
   }
 
   protected void assertPlanRoundtrip(Plan plan) {
-    io.substrait.proto.Plan protoPlan1 = new PlanProtoConverter().toProto(plan);
-    io.substrait.proto.Plan protoPlan2 =
-        new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan1));
+    io.substrait.proto.Plan protoPlan1 = plan.toProto();
+    io.substrait.proto.Plan protoPlan2 = new ProtoPlanConverter().from(protoPlan1).toProto();
     assertEquals(protoPlan1, protoPlan2);
   }
 

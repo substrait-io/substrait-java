@@ -4,6 +4,7 @@ import io.substrait.relation.Aggregate;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
+import io.substrait.relation.Expand;
 import io.substrait.relation.ExtensionLeaf;
 import io.substrait.relation.ExtensionMulti;
 import io.substrait.relation.ExtensionSingle;
@@ -334,6 +335,12 @@ public class SubstraitStringify extends ParentStringify
   @Override
   public String visit(ConsistentPartitionWindow consistentPartitionWindow) throws RuntimeException {
     StringBuilder sb = getIndent().append("consistentPartitionWindow:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(Expand expand) throws RuntimeException {
+    StringBuilder sb = getIndent().append("expand:: ");
     return getOutdent(sb);
   }
 }
