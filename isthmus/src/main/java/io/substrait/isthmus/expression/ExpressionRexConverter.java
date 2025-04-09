@@ -22,8 +22,10 @@ import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -34,6 +36,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -46,6 +49,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
@@ -468,7 +472,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     return RexSubQuery.in(rel, ImmutableList.copyOf(needles));
   }
 
-  static class ToRexWindowBound
+  static final class ToRexWindowBound
       implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
 
     static RexWindowBound lowerBound(RexBuilder rexBuilder, WindowBound bound) {
@@ -538,20 +542,37 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   @Override
   public RexNode visit(FieldReference expr) throws RuntimeException {
     if (expr.isSimpleRootReference()) {
+      Optional<Integer> outerref = expr.outerReferenceStepsOut();
       var segment = expr.segments().get(0);
+      if (outerref.isPresent()) {
+        if (segment instanceof FieldReference.StructField) {
+          FieldReference.StructField f = (FieldReference.StructField) segment;
+          var node = referenceRelList.get(outerref.get() - 1).get();
 
-      RexInputRef rexInputRef;
-      if (segment instanceof FieldReference.StructField f) {
-        rexInputRef =
-            new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+          return rexBuilder.makeFieldAccess(node, f.offset());
+        }
       } else {
-        throw new IllegalArgumentException("Unhandled type: " + segment);
+        RexInputRef rexInputRef;
+        if (segment instanceof FieldReference.StructField f) {
+          rexInputRef =
+              new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        } else {
+          throw new IllegalArgumentException("Unhandled type: " + segment);
+        }
+        return rexInputRef;
       }
-
-      return rexInputRef;
     }
-
     return visitFallback(expr);
+  }
+
+  protected List<Holder<RexCorrelVariable>> referenceRelList = new ArrayList<>();
+
+  public void addCorrelVariable(Holder<RexCorrelVariable> correlVaraible) {
+    referenceRelList.add(correlVaraible);
+  }
+
+  public Holder<RexCorrelVariable> getOuterRef(int i) {
+    return referenceRelList.get(i);
   }
 
   @Override

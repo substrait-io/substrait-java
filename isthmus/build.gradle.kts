@@ -14,11 +14,10 @@ plugins {
 // Useful test logger when debugging, will output stdout/stderr to console
 // saves time launching the HTML test reports
 testlogger {
-  showStandardStreams = true
-  showPassedStandardStreams  = false
+  showStandardStreams = false
+  showPassedStandardStreams = true
   showFailedStandardStreams = true
 }
-
 
 publishing {
   publications {
