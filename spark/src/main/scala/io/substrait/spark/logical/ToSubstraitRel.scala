@@ -38,7 +38,7 @@ import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
-import io.substrait.plan.{ImmutablePlan, ImmutableRoot, Plan}
+import io.substrait.plan.{ImmutableRoot, Plan}
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
@@ -440,20 +440,19 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
 
     val format = fsRelation.fileFormat match {
       case _: CSVFileFormat =>
-        new FileFormat.DelimiterSeparatedTextReadOptions {
-          // default values for options specified here:
-          // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
-          override def getFieldDelimiter: String = fsRelation.options.getOrElse("delimiter", ",")
-          override def getMaxLineSize: Long = 0 // No Spark equivalent. Assign proto default of 0
-          override def getQuote: String = fsRelation.options.getOrElse("quote", "\"")
-          override def getHeaderLinesToSkip: Long =
-            if (fsRelation.options.getOrElse("header", false) == false) 0 else 1
-          override def getEscape: String = fsRelation.options.getOrElse("escape", "\\")
-          override def getValueTreatedAsNull: Optional[String] =
-            Optional.ofNullable(fsRelation.options.get("nullValue").orNull)
-        }
-      case _: ParquetFileFormat => new FileFormat.ParquetReadOptions {}
-      case _: OrcFileFormat => new FileFormat.OrcReadOptions {}
+        // default values for options specified here:
+        // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
+        FileFormat.DelimiterSeparatedTextReadOptions
+          .builder()
+          .fieldDelimiter(fsRelation.options.getOrElse("delimiter", ","))
+          .maxLineSize(0)
+          .quote(fsRelation.options.getOrElse("quote", "\""))
+          .headerLinesToSkip(if (fsRelation.options.getOrElse("header", false) == false) 0 else 1)
+          .escape(fsRelation.options.getOrElse("escape", "\\"))
+          .valueTreatedAsNull(Optional.ofNullable(fsRelation.options.get("nullValue").orNull))
+          .build()
+      case _: ParquetFileFormat => FileFormat.ParquetReadOptions.builder().build()
+      case _: OrcFileFormat => FileFormat.OrcReadOptions.builder().build()
       case format =>
         throw new UnsupportedOperationException(s"File format not currently supported: $format")
     }

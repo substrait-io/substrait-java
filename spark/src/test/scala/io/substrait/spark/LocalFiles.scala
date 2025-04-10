@@ -38,7 +38,7 @@ class LocalFiles extends SharedSparkSession {
     spark.conf.set("spark.sql.readSideCharPadding", "false")
   }
 
-  def assertRoundTrip(data: Dataset[Row]): Dataset[Row] = {
+  def assertRoundTrip(data: Dataset[Row], comparePlans: Boolean = false): Dataset[Row] = {
     val toSubstrait = new ToSubstraitRel
     val sparkPlan = data.queryExecution.optimizedPlan
     val substraitPlan = toSubstrait.convert(sparkPlan)
@@ -61,6 +61,13 @@ class LocalFiles extends SharedSparkSession {
     data.collect().zip(result.collect()).foreach {
       case (before, after) => assertResult(before)(after)
     }
+
+    if (comparePlans) {
+      // extra check to assert the query plans round-trip as well
+      val roundTrippedPlan = toSubstrait.convert(sparkPlan2)
+      assertResult(substraitPlan)(roundTrippedPlan)
+    }
+
     result
   }
 
@@ -106,21 +113,21 @@ class LocalFiles extends SharedSparkSession {
       .option("inferSchema", true)
       .csv(Paths.get("src/test/resources/csv/").toAbsolutePath.toString)
 
-    assertRoundTrip(table)
+    assertRoundTrip(table, true)
   }
 
   test("Read parquet file") {
     val table = spark.read
       .parquet(Paths.get("src/test/resources/dataset-a.parquet").toAbsolutePath.toString)
 
-    assertRoundTrip(table)
+    assertRoundTrip(table, true)
   }
 
   test("Read orc file") {
     val table = spark.read
       .orc(Paths.get("src/test/resources/dataset-a.orc").toAbsolutePath.toString)
 
-    assertRoundTrip(table)
+    assertRoundTrip(table, true)
   }
 
   test("Join tables from different formats") {
