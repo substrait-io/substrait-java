@@ -53,7 +53,8 @@ import scala.collection.mutable.ArrayBuffer
  * RelVisitor to convert Substrait Rel plan to [[LogicalPlan]]. Unsupported Rel node will call
  * visitFallback and throw UnsupportedOperationException.
  */
-class ToLogicalPlan(spark: SparkSession) extends DefaultRelVisitor[LogicalPlan] {
+class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
+  extends DefaultRelVisitor[LogicalPlan] {
 
   private val expressionConverter =
     new ToSparkExpression(ToScalarFunction(SparkExtension.SparkScalarFunctions), Some(this))
