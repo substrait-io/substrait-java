@@ -2,24 +2,15 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
-import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelCopyOnWriteVisitor;
-import io.substrait.type.NamedStruct;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
@@ -57,19 +48,12 @@ public class SubstraitToCalcite {
    * <p>Override this method to customize schema extraction.
    */
   protected CalciteSchema toSchema(Rel rel) {
-    Map<List<String>, NamedStruct> tableMap = NamedStructGatherer.gatherTables(rel);
-    Function<List<String>, Table> lookup =
-        id -> {
-          NamedStruct table = tableMap.get(id);
-          if (table == null) {
-            return null;
-          }
-          return new SqlConverterBase.DefinedTable(
-              id.get(id.size() - 1),
-              typeFactory,
-              typeConverter.toCalcite(typeFactory, table.struct(), table.names()));
-        };
-    return LookupCalciteSchema.createRootSchema(lookup);
+    return SubstraitCalciteSchema.builder()
+        .withSubstraitRel(rel)
+        .withTypeFactory(typeFactory)
+        .withTypeConverter(typeConverter)
+        .build()
+        .getRootSchema();
   }
 
   /**
@@ -177,31 +161,6 @@ public class SubstraitToCalcite {
             typeFactory.createMapType(renamedKeyType.right, renamedValueType.right));
       default:
         return Pair.of(currentIndex, type);
-    }
-  }
-
-  private static class NamedStructGatherer extends RelCopyOnWriteVisitor<RuntimeException> {
-    Map<List<String>, NamedStruct> tableMap;
-
-    private NamedStructGatherer() {
-      super();
-      this.tableMap = new HashMap<>();
-    }
-
-    public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
-      var visitor = new NamedStructGatherer();
-      rel.accept(visitor);
-      return visitor.tableMap;
-    }
-
-    @Override
-    public Optional<Rel> visit(NamedScan namedScan) {
-      Optional<Rel> result = super.visit(namedScan);
-
-      List<String> tableName = namedScan.getNames();
-      tableMap.put(tableName, namedScan.getInitialSchema());
-
-      return result;
     }
   }
 }
