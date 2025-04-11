@@ -54,38 +54,6 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
       } else Succeeded
   }
 
-  def sqlToProtoPlan(sql: String): proto.Plan = {
-    val convert = new ToSubstraitRel()
-    val logicalPlan = plan(sql)
-    val substraitRel = convert.visit(logicalPlan)
-
-    val extensionCollector = new ExtensionCollector
-    val relProtoConverter = new RelProtoConverter(extensionCollector)
-    val builder = proto.Plan
-      .newBuilder()
-      .addRelations(
-        proto.PlanRel
-          .newBuilder()
-          .setRoot(
-            proto.RelRoot
-              .newBuilder()
-              .setInput(substraitRel
-                .accept(relProtoConverter))
-          )
-      )
-    extensionCollector.addExtensionsToPlan(builder)
-    builder.build()
-  }
-
-  def assertProtoPlanRoundrip(sql: String): Plan = {
-    val protoPlan1 = sqlToProtoPlan(sql)
-    val plan = new ProtoPlanConverter().from(protoPlan1)
-    val protoPlan2 = new PlanProtoConverter().toProto(plan)
-    assertResult(protoPlan1)(protoPlan2)
-    assertResult(1)(plan.getRoots.size())
-    plan
-  }
-
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
     val sparkPlan = plan(query)
 
@@ -133,12 +101,6 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
   def plan(sql: String): LogicalPlan = {
     spark.sql(sql).queryExecution.optimizedPlan
-  }
-
-  def assertPlanRoundrip(plan: Plan): Unit = {
-    val protoPlan1 = new PlanProtoConverter().toProto(plan)
-    val protoPlan2 = new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan1))
-    assertResult(protoPlan1)(protoPlan2)
   }
 
   def testQuery(group: String, query: String, suffix: String = ""): Unit = {
