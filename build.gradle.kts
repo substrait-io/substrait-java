@@ -43,15 +43,11 @@ allprojects {
   tasks.configureEach<Test> {
     val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()
-    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(17)) })
   }
   tasks.withType<JavaCompile> {
     sourceCompatibility = "17"
-    if (project.name != "core") {
-      options.release.set(11)
-    } else {
-      options.release.set(8)
-    }
+    options.release.set(17)
     dependsOn(submodulesUpdate)
   }
 

@@ -116,5 +116,6 @@ tasks {
   test {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
+    jvmArgs(listOf("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED"))
   }
 }
