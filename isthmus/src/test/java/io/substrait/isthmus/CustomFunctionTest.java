@@ -260,8 +260,8 @@ public class CustomFunctionTest extends PlanTestBase {
     }
 
     @Override
-    protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-      return new SubstraitRelNodeConverter(
+    protected SubstraitToCalciteVisitor createSubstraitRelNodeConverter(RelBuilder relBuilder) {
+      return new SubstraitToCalciteVisitor(
           typeFactory,
           relBuilder,
           scalarFunctionConverter,
@@ -275,8 +275,8 @@ public class CustomFunctionTest extends PlanTestBase {
       new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
 
   // Create a SubstraitRelVisitor that uses the custom Function Converters
-  final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
+  final CalciteToSubstraitVisitor calciteToSubstrait =
+      new CalciteToSubstraitVisitor(
           typeFactory,
           scalarFunctionConverter,
           aggregateFunctionConverter,
