@@ -26,5 +26,9 @@ public interface EnumArg extends FunctionArg {
     return ImmutableEnumArg.builder().value(Optional.of(option)).build();
   }
 
+  static EnumArg of(String value) {
+    return ImmutableEnumArg.builder().value(Optional.of(value)).build();
+  }
+
   EnumArg UNSPECIFIED_ENUM_ARG = ImmutableEnumArg.builder().value(Optional.empty()).build();
 }

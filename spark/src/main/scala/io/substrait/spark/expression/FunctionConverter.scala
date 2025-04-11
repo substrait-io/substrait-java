@@ -27,7 +27,7 @@ import org.apache.spark.sql.types.DataType
 
 import com.google.common.collect.{ArrayListMultimap, Multimap}
 import io.substrait.`type`.Type
-import io.substrait.expression.{Expression => SExpression, ExpressionCreator, FunctionArg}
+import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FunctionArg}
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.extension.SimpleExtension
 import io.substrait.function.{ParameterizedType, ToTypeString}
@@ -93,14 +93,28 @@ abstract class FunctionConverter[F <: SimpleExtension.Function, T](functions: Se
     (matcherMap, keyMap)
   }
 
-  def getSparkExpressionFromSubstraitFunc(key: String, outputType: Type): Option[Sig] = {
-    val sigs = substraitFuncKeyToSig.get(key)
-    sigs.size() match {
-      case 0 => None
-      case 1 => Some(sigs.iterator().next())
-      case _ => None
+  def getSparkExpressionFromSubstraitFunc(
+      key: String,
+      args: Seq[Expression]): Option[Expression] = {
+    val candidates = substraitFuncKeyToSig.get(key).asScala.toList
+    val sigs = if (candidates.length > 1) {
+      // attempt to disambiguate with the key (if it's been set)
+      val specific = candidates.filter {
+        case SpecialSig(_, _, Some(sig), _) if sig == key => true
+        case _ => false
+      }
+      if (specific.nonEmpty) {
+        specific
+      } else {
+        // no matching signature, so select the generic one(s)
+        candidates
+      }
+    } else {
+      candidates
     }
+    sigs.headOption.map(sig => sig.makeCall(args))
   }
+
   private def createFinder(name: String, functions: Seq[F]): FunctionFinder[F, T] = {
     new FunctionFinder[F, T](
       name,
@@ -237,10 +251,14 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
     val singularInputType: Option[SingularArgumentMatcher[F]],
     val parent: FunctionConverter[F, T]) {
 
-  def attemptMatch(expression: Expression, operands: Seq[SExpression]): Option[T] = {
-    val opTypes = operands.map(_.getType)
+  def attemptMatch(expression: Expression, operands: Seq[FunctionArg]): Option[T] = {
     val outputType = ToSubstraitType.apply(expression.dataType, expression.nullable)
-    val opTypesStr = opTypes.map(t => t.accept(ToTypeString.INSTANCE))
+
+    val opTypesStr = operands.map {
+      case e: SExpression => e.getType.accept(ToTypeString.INSTANCE)
+      case t: Type => t.accept(ToTypeString.INSTANCE)
+      case _: EnumArg => "req"
+    }
 
     val possibleKeys =
       Util.crossProduct(opTypesStr.map(s => Seq(s))).map(list => list.mkString("_"))
@@ -251,11 +269,11 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
 
     if (operands.isEmpty) {
       val variant = directMap(name + ":")
-      variant.validateOutputType(JavaConverters.bufferAsJavaList(operands.toBuffer), outputType)
+      // TODO validate the output type
       Option(parent.generateBinding(expression, variant, operands, outputType))
     } else if (directMatchKey.isDefined) {
       val variant = directMap(directMatchKey.get)
-      variant.validateOutputType(JavaConverters.bufferAsJavaList(operands.toBuffer), outputType)
+      // TODO validate the output type
       val funcArgs: Seq[FunctionArg] = operands
       Option(parent.generateBinding(expression, variant, funcArgs, outputType))
     } else if (singularInputType.isDefined) {
@@ -277,9 +295,7 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
               .map(
                 declaration => {
                   val coercedArgs = coerceArguments(operands, leastRestrictiveSubstraitT)
-                  declaration.validateOutputType(
-                    JavaConverters.bufferAsJavaList(coercedArgs.toBuffer),
-                    outputType)
+                  // TODO validate the output type
                   val funcArgs: Seq[FunctionArg] = coercedArgs
                   parent.generateBinding(expression, declaration, funcArgs, outputType)
                 })
@@ -293,14 +309,15 @@ class FunctionFinder[F <: SimpleExtension.Function, T](
    * Coerced types according to an expected output type. Coercion is only done for type mismatches,
    * not for nullability or parameter mismatches.
    */
-  private def coerceArguments(arguments: Seq[SExpression], t: Type): Seq[SExpression] = {
-    arguments.map(
-      a => {
+  private def coerceArguments(arguments: Seq[FunctionArg], t: Type): Seq[FunctionArg] = {
+    arguments.map {
+      case a: SExpression =>
         if (FunctionFinder.isMatch(t, a.getType)) {
           a
         } else {
           ExpressionCreator.cast(t, a, FailureBehavior.THROW_EXCEPTION)
         }
-      })
+      case other => other
+    }
   }
 }

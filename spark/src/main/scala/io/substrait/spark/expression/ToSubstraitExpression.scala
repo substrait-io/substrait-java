@@ -22,9 +22,11 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Project}
 import org.apache.spark.substrait.SparkTypeUtil
 
-import io.substrait.expression.{Expression => SExpression, ExpressionCreator, FieldReference, ImmutableExpression}
+import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FieldReference, ImmutableEnumArg, ImmutableExpression}
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.utils.Util
+
+import java.util.Optional
 
 import scala.collection.JavaConverters.asJavaIterableConverter
 
@@ -33,6 +35,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
 
   object ScalarFunction {
     def unapply(e: Expression): Option[Seq[Expression]] = e match {
+      case DateFunction(arguments) => Some(arguments)
       case BinaryExpression(left, right) => Some(Seq(left, right))
       case UnaryExpression(child) => Some(Seq(child))
       case t: TernaryExpression => Some(Seq(t.first, t.second, t.third))
@@ -196,7 +199,10 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
       case InSet(value, set) => translateIn(value, set.toSeq.map(v => Literal(v)))
       case scalar @ ScalarFunction(children) =>
         Util
-          .seqToOption(children.map(translateUp))
+          .seqToOption(children.map {
+            case Enum(value) => Some(EnumArg.of(value))
+            case child: Expression => translateUp(child)
+          })
           .flatMap(toScalarFunction.convert(scalar, _))
       case p: PlanExpression[_] => translateSubQuery(p)
       case in: InSubquery => translateInSubquery(in)
