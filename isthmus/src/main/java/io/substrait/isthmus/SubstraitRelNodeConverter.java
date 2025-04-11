@@ -1,6 +1,6 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
@@ -44,6 +44,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
@@ -51,6 +52,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.calcite.util.Holder;
 
 /**
  * RelVisitor to convert Substrait Rel plan to Calcite RelNode plan. Unsupported Rel node will call
@@ -139,8 +141,12 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   @Override
   public RelNode visit(Filter filter) throws RuntimeException {
     RelNode input = filter.getInput().accept(this);
+    final Holder<RexCorrelVariable> v = Holder.empty();
+    expressionRexConverter.addCorrelVariable(v);
+
+    RelBuilder r1 = relBuilder.push(input).variable(v::set);
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter);
-    RelNode node = relBuilder.push(input).filter(filterCondition).build();
+    RelNode node = r1.filter(List.of(v.get().id), filterCondition).build();
     return applyRemap(node, filter.getRemap());
   }
 
