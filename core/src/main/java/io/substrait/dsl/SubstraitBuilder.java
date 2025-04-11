@@ -8,6 +8,7 @@ import io.substrait.expression.Expression.IfClause;
 import io.substrait.expression.Expression.IfThen;
 import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression.Cast;
 import io.substrait.expression.ImmutableExpression.SingleOrList;
 import io.substrait.expression.ImmutableExpression.Switch;
@@ -640,7 +641,7 @@ public class SubstraitBuilder {
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
-      String namespace, String key, Type outputType, Expression... args) {
+      String namespace, String key, Type outputType, FunctionArg... args) {
     var declaration =
         extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
     return Expression.ScalarFunctionInvocation.builder()

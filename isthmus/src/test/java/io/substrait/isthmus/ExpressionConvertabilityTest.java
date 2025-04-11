@@ -3,6 +3,8 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.expression.CallConverters.CASE;
 import static io.substrait.isthmus.expression.CallConverters.CREATE_SEARCH_CONV;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
@@ -19,6 +21,7 @@ import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.List;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -129,5 +132,105 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
     // helps verify that the protobuf conversion is not broken
     assertEquals(
         expected.accept(expressionProtoConverter), actual.accept(expressionProtoConverter));
+  }
+
+  @Test
+  public void supportedPrecisionForPrecisionTimestampLiteral() {
+    assertPrecisionTimestampLiteral(0);
+    assertPrecisionTimestampLiteral(3);
+    assertPrecisionTimestampLiteral(6);
+  }
+
+  void assertPrecisionTimestampLiteral(int precision) {
+    RexNode calciteExpr =
+        Expression.PrecisionTimestampLiteral.builder()
+            .value(0)
+            .precision(precision)
+            .build()
+            .accept(converter);
+    assertInstanceOf(RexLiteral.class, calciteExpr);
+  }
+
+  @Test
+  public void supportedPrecisionForPrecisionTimestampTZLiteral() {
+    assertPrecisionTimestampTZLiteral(0);
+    assertPrecisionTimestampTZLiteral(3);
+    assertPrecisionTimestampTZLiteral(6);
+  }
+
+  void assertPrecisionTimestampTZLiteral(int precision) {
+    RexNode calciteExpr =
+        Expression.PrecisionTimestampTZLiteral.builder()
+            .value(0)
+            .precision(precision)
+            .build()
+            .accept(converter);
+    assertInstanceOf(RexLiteral.class, calciteExpr);
+  }
+
+  @Test
+  public void unsupportedPrecisionForPrecisionTimestampLiteral() {
+    // test different edge case precision values
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(-1);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(1);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(2);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(4);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(5);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(7);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(8);
+
+    // this would be nanoseconds which are supported in Substrait but not in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(9);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(10);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(11);
+
+    // this would be picoseconds which are supported in Substrait but not in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(12);
+
+    // everything above 12 is neither supported in Substrait nor in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(13);
+  }
+
+  void assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(int precision) {
+    assertThrowsExpressionLiteral(
+        Expression.PrecisionTimestampLiteral.builder().value(0).precision(precision).build());
+  }
+
+  @Test
+  public void unsupportedPrecisionPrecisionTimestampTZLiteral() {
+    // test different edge case precision values
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(-1);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(1);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(2);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(4);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(5);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(7);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(8);
+
+    // this would be nanoseconds which are supported in Substrait but not in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(9);
+
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(10);
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(11);
+
+    // this would be picoseconds which are supported in Substrait but not in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(12);
+
+    // everything above 12 is neither supported in Substrait nor in Calcite
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(13);
+  }
+
+  void assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(int precision) {
+    assertThrowsExpressionLiteral(
+        Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(precision).build());
+  }
+
+  void assertThrowsExpressionLiteral(Expression.Literal expr) {
+    assertThrows(UnsupportedOperationException.class, () -> expr.accept(converter));
   }
 }
