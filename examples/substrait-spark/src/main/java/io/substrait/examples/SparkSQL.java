@@ -7,7 +7,6 @@ import static io.substrait.examples.SparkHelper.VEHICLES_CSV;
 import static io.substrait.examples.SparkHelper.VEHICLE_TABLE;
 
 import io.substrait.examples.util.SubstraitStringify;
-import io.substrait.plan.PlanProtoConverter;
 import io.substrait.spark.logical.ToSubstraitRel;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -80,8 +79,7 @@ public class SparkSQL implements App.Action {
 
     SubstraitStringify.explain(plan).forEach(System.out::println);
 
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    byte[] buffer = planToProto.toProto(plan).toByteArray();
+    byte[] buffer = plan.toProto().toByteArray();
     try {
       Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"), buffer);
       System.out.println("File written to " + Paths.get(ROOT_DIR, "spark_sql_substrait.plan"));

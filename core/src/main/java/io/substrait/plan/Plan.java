@@ -1,5 +1,7 @@
 package io.substrait.plan;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import io.substrait.proto.AdvancedExtension;
 import io.substrait.relation.Rel;
 import java.util.List;
@@ -27,6 +29,28 @@ public abstract class Plan {
 
     public static ImmutableRoot.Builder builder() {
       return ImmutableRoot.builder();
+    }
+  }
+
+  /**
+   * Serializes this plan as protobuf.
+   *
+   * @return this plan in protobuf format
+   */
+  public io.substrait.proto.Plan toProto() {
+    return new PlanProtoConverter().toProto(this);
+  }
+
+  /**
+   * Serializes this plan as a protobuf JSON string.
+   *
+   * @return this plan as a protobuf JSON string
+   */
+  public String toJsonString() {
+    try {
+      return JsonFormat.printer().includingDefaultValueFields().print(this.toProto());
+    } catch (InvalidProtocolBufferException e) {
+      throw new IllegalStateException("Can not generate JSON from proto.", e);
     }
   }
 }

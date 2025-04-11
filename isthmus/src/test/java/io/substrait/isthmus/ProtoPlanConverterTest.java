@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.plan.Plan;
-import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.relation.Cross;
@@ -60,8 +59,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
     String distinctQuery = "select count(DISTINCT L_ORDERKEY) from lineitem";
     io.substrait.proto.Plan protoPlan = getProtoPlan(distinctQuery);
     assertAggregateInvocationDistinct(protoPlan);
-    assertAggregateInvocationDistinct(
-        new PlanProtoConverter().toProto(new ProtoPlanConverter().from(protoPlan)));
+    assertAggregateInvocationDistinct(new ProtoPlanConverter().from(protoPlan).toProto());
   }
 
   @Test

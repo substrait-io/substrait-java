@@ -44,8 +44,8 @@ class LocalFiles extends SharedSparkSession {
     val substraitPlan = toSubstrait.convert(sparkPlan)
 
     // Serialize to proto buffer
-    val bytes = new PlanProtoConverter()
-      .toProto(substraitPlan)
+    val bytes = substraitPlan
+      .toProto()
       .toByteArray
 
     // Read it back

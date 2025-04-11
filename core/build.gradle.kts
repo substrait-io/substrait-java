@@ -90,6 +90,10 @@ dependencies {
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
   implementation("com.google.code.findbugs:jsr305:3.0.2")
+  implementation("com.google.protobuf:protobuf-java-util:${PROTOBUF_VERSION}") {
+    exclude("com.google.guava", "guava")
+      .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
+  }
 
   antlr("org.antlr:antlr4:${ANTLR_VERSION}")
   shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")

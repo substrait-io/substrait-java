@@ -6,6 +6,7 @@ import io.substrait.expression.Expression.Cast;
 import io.substrait.expression.Expression.DateLiteral;
 import io.substrait.expression.Expression.DecimalLiteral;
 import io.substrait.expression.Expression.EmptyListLiteral;
+import io.substrait.expression.Expression.EmptyMapLiteral;
 import io.substrait.expression.Expression.FP32Literal;
 import io.substrait.expression.Expression.FP64Literal;
 import io.substrait.expression.Expression.FixedBinaryLiteral;
@@ -16,12 +17,15 @@ import io.substrait.expression.Expression.I64Literal;
 import io.substrait.expression.Expression.I8Literal;
 import io.substrait.expression.Expression.IfThen;
 import io.substrait.expression.Expression.InPredicate;
+import io.substrait.expression.Expression.IntervalCompoundLiteral;
 import io.substrait.expression.Expression.IntervalDayLiteral;
 import io.substrait.expression.Expression.IntervalYearLiteral;
 import io.substrait.expression.Expression.ListLiteral;
 import io.substrait.expression.Expression.MapLiteral;
 import io.substrait.expression.Expression.MultiOrList;
 import io.substrait.expression.Expression.NullLiteral;
+import io.substrait.expression.Expression.PrecisionTimestampLiteral;
+import io.substrait.expression.Expression.PrecisionTimestampTZLiteral;
 import io.substrait.expression.Expression.ScalarFunctionInvocation;
 import io.substrait.expression.Expression.ScalarSubquery;
 import io.substrait.expression.Expression.SetPredicate;
@@ -124,7 +128,7 @@ public class ExpressionStringify extends ParentStringify
 
   @Override
   public String visit(IntervalDayLiteral expr) throws RuntimeException {
-    return "<IntervalYearLiteral " + expr.seconds() + " " + expr.days() + ">";
+    return "<IntervalDayLiteral " + expr.seconds() + " " + expr.days() + ">";
   }
 
   @Override
@@ -272,5 +276,33 @@ public class ExpressionStringify extends ParentStringify
     var sb = new StringBuilder("InPredicate#");
 
     return sb.toString();
+  }
+
+  @Override
+  public String visit(PrecisionTimestampLiteral expr) throws RuntimeException {
+    return "<PrecisionTimestampLiteral " + expr.value() + ">";
+  }
+
+  @Override
+  public String visit(PrecisionTimestampTZLiteral expr) throws RuntimeException {
+    return "<PrecisionTimestampTZLiteral " + expr.value() + ">";
+  }
+
+  @Override
+  public String visit(IntervalCompoundLiteral expr) throws RuntimeException {
+    return "<IntervalCompoundLiteral "
+        + expr.months()
+        + " "
+        + expr.years()
+        + " "
+        + expr.seconds()
+        + " "
+        + expr.days()
+        + ">";
+  }
+
+  @Override
+  public String visit(EmptyMapLiteral expr) throws RuntimeException {
+    return "<EmptyMapLiteral >";
   }
 }
