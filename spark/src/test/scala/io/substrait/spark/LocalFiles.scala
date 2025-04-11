@@ -53,7 +53,7 @@ class LocalFiles extends SharedSparkSession {
       .parseFrom(bytes)
     val substraitPlan2 = new ProtoPlanConverter().from(protoPlan)
 
-    val sparkPlan2 = new ToLogicalPlan(spark).convert(substraitPlan2)
+    val sparkPlan2 = new ToLogicalPlan().convert(substraitPlan2)
     val result = DatasetUtil.fromLogicalPlan(spark, sparkPlan2)
 
     assertResult(data.columns)(result.columns)
