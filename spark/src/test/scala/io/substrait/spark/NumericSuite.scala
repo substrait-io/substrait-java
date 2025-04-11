@@ -42,4 +42,9 @@ class NumericSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
       "select floor(num), ceil(num), round(num, 0), round(num, 1) from (values (0.5), (-0.5)) as table(num)"
     )
   }
+
+  test("decimal aggregation") {
+    assertSqlSubstraitRelRoundTrip(
+      "select sum(num), avg(num)from (values (2.5), (-0.5)) as table(num)")
+  }
 }

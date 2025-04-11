@@ -235,34 +235,22 @@ class ToSparkExpression(
         arg.accept(expr.declaration(), i, this)
     }.toList
 
-    expr.declaration.name match {
-      case "make_decimal" if expr.declaration.uri == SparkExtension.uri =>
-        expr.outputType match {
-          // Need special case handing of this internal function.
-          // Because the precision and scale arguments are extracted from the output type,
-          // we can't use the generic scalar function conversion mechanism here.
-          case d: Type.Decimal => MakeDecimal(args.head, d.precision, d.scale)
-          case _ =>
-            throw new IllegalArgumentException("Output type of MakeDecimal must be a decimal type")
-        }
-      case _ =>
-        scalarFunctionConverter
-          .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
-          .getOrElse({
-            val msg = String.format(
-              "Unable to convert scalar function %s(%s).",
-              expr.declaration.name,
-              expr.arguments.asScala
-                .map {
-                  case ea: exp.EnumArg => ea.value.toString
-                  case e: SExpression => e.getType.accept(new StringTypeVisitor)
-                  case t: Type => t.accept(new StringTypeVisitor)
-                  case a => throw new IllegalStateException("Unexpected value: " + a)
-                }
-                .mkString(", ")
-            )
-            throw new IllegalArgumentException(msg)
-          })
-    }
+    scalarFunctionConverter
+      .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
+      .getOrElse({
+        val msg = String.format(
+          "Unable to convert scalar function %s(%s).",
+          expr.declaration.name,
+          expr.arguments.asScala
+            .map {
+              case ea: exp.EnumArg => ea.value.toString
+              case e: SExpression => e.getType.accept(new StringTypeVisitor)
+              case t: Type => t.accept(new StringTypeVisitor)
+              case a => throw new IllegalStateException("Unexpected value: " + a)
+            }
+            .mkString(", ")
+        )
+        throw new IllegalArgumentException(msg)
+      })
   }
 }

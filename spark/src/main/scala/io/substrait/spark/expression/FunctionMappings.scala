@@ -148,11 +148,7 @@ class FunctionMappings {
     ss[Year]("extract"),
     ss[Quarter]("extract"),
     ss[Month]("extract"),
-    ss[DayOfMonth]("extract"),
-
-    // internal
-    s[MakeDecimal]("make_decimal"),
-    s[UnscaledValue]("unscaled")
+    ss[DayOfMonth]("extract")
   )
 
   val AGGREGATE_SIGS: Seq[Sig] = Seq(

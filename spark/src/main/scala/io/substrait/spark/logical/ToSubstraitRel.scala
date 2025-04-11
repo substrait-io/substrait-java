@@ -22,7 +22,7 @@ import io.substrait.spark.expression._
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
@@ -133,7 +133,30 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
    */
   override def visitAggregate(agg: Aggregate): relation.Rel = {
     val input = visit(agg.child)
-    val actualResultExprs = agg.aggregateExpressions
+    val actualResultExprs = agg.aggregateExpressions.map {
+      // eliminate the internal MakeDecimal and UnscaledValue functions by undoing the spark optimisation:
+      // https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala#L2223
+      case Alias(expr, name) =>
+        Alias(
+          expr.transform {
+            case MakeDecimal(
+                  ae @ AggregateExpression(Sum(UnscaledValue(e), _), _, _, _, _),
+                  _,
+                  _,
+                  _) =>
+              ae.copy(aggregateFunction = Sum(e))
+            case Cast(
+                  Divide(ae @ AggregateExpression(Average(UnscaledValue(e), _), _, _, _, _), _, _),
+                  _,
+                  _,
+                  _) =>
+              ae.copy(aggregateFunction = Average(e))
+            case e => e
+          },
+          name
+        )()
+      case e => e
+    }
     val actualGroupExprs = agg.groupingExpressions
 
     val aggExprToOutputOrdinal = mutable.HashMap.empty[Expression, Int]
@@ -198,8 +221,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   override def visitWindow(window: Window): relation.Rel = {
     val windowExpressions = window.windowExpressions.map {
       case w: WindowExpression => fromWindowCall(w, window.child.output)
-      case a: Alias if a.child.isInstanceOf[WindowExpression] =>
-        fromWindowCall(a.child.asInstanceOf[WindowExpression], window.child.output)
+      case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
       case other =>
         throw new UnsupportedOperationException(s"Unsupported window expression: $other")
     }.asJava

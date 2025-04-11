@@ -20,6 +20,7 @@ import io.substrait.spark.{HasOutputStack, ToSubstraitType}
 
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Project}
+import org.apache.spark.sql.types.LongType
 import org.apache.spark.substrait.SparkTypeUtil
 
 import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FieldReference, ImmutableEnumArg, ImmutableExpression}
@@ -172,6 +173,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
         translateUp(child)
           .map(ExpressionCreator
             .cast(ToSubstraitType.apply(dataType, c.nullable), _, FailureBehavior.THROW_EXCEPTION))
+      case UnscaledValue(value) => translateUp(Cast(value, LongType))
       case c @ CheckOverflow(child, dataType, _) =>
         // CheckOverflow similar with cast
         translateUp(child)
