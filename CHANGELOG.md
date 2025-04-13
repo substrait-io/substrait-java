@@ -1,6 +1,26 @@
 Release Notes
 ---
 
+## [0.54.0](https://github.com/substrait-io/substrait-java/compare/v0.53.0...v0.54.0) (2025-04-13)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** converting a Calcite RelRoot no longer produces a Substrait Rel
+
+### Features
+
+* **isthmus:** convert Calcite RelRoot to Substrait Plan.Root ([#370](https://github.com/substrait-io/substrait-java/issues/370)) ([b7abddd](https://github.com/substrait-io/substrait-java/commit/b7abddd4f05d9d45a37f163f398c611f39228f87))
+* **isthmus:** support more datetime extract variants ([#360](https://github.com/substrait-io/substrait-java/issues/360)) ([134c224](https://github.com/substrait-io/substrait-java/commit/134c22400003d7eea71c701344a9e4c8dedb9ba8))
+* **pojo:** add builder methods to Plan and Plan.Root ([#374](https://github.com/substrait-io/substrait-java/issues/374)) ([ae70dc4](https://github.com/substrait-io/substrait-java/commit/ae70dc4fe62813b30059e61015cf94231ba937b6))
+* **spark:** add some date functions ([#373](https://github.com/substrait-io/substrait-java/issues/373)) ([2ece486](https://github.com/substrait-io/substrait-java/commit/2ece486585845f518af9f5317c4df3a543cfa9ed))
+* **spark:** make SparkSession optional ([#385](https://github.com/substrait-io/substrait-java/issues/385)) ([b67599e](https://github.com/substrait-io/substrait-java/commit/b67599ebd558b84f3249c0cf7d7ec0a733cceb76))
+
+### Bug Fixes
+
+* **isthmus:** use explicit return type for scalar function expressions ([#355](https://github.com/substrait-io/substrait-java/issues/355)) ([867697c](https://github.com/substrait-io/substrait-java/commit/867697c030410a0334800e9c107733078f9c4805))
+* **spark:** remove internal functions MakeDecimal and UnscaledValue ([#386](https://github.com/substrait-io/substrait-java/issues/386)) ([7a689e9](https://github.com/substrait-io/substrait-java/commit/7a689e906d7579bff6dd10797796855adaa2e989))
+* **spark:** use ImmutableFileFormat builders ([#384](https://github.com/substrait-io/substrait-java/issues/384)) ([7b520a7](https://github.com/substrait-io/substrait-java/commit/7b520a77ad1798effadb014ce9791c8e4ebd76da))
+
 ## [0.53.0](https://github.com/substrait-io/substrait-java/compare/v0.52.0...v0.53.0) (2025-04-06)
 
 ### ⚠ BREAKING CHANGES
