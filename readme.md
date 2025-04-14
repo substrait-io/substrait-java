@@ -37,7 +37,7 @@ SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
 
 The [examples](./examples) folder contains examples on using Substrait with Java; please check each example for specific details of the requirements and how to run. The examples are aimed to be tested within the github workflow; depending on the setup required it might be only possible to validate compilation.
 
-- [Substrait-Spark](./examples/subtrait-spark/README.md) Using Substrait to produce and consume plans within Apache Spark
+- [Substrait-Spark](./examples/substrait-spark/README.md) Using Substrait to produce and consume plans within Apache Spark
 
 ## Getting Involved
 To learn more, head over [Substrait](https://substrait.io/), our parent project and join our [community](https://substrait.io/community/)
