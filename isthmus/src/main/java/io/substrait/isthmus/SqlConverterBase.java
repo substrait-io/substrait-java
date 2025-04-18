@@ -1,8 +1,8 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.calcite.SubstraitOperatorTable;
-import java.util.ArrayList;
+import io.substrait.isthmus.calcite.SubstraitTable;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import java.util.List;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -16,25 +16,13 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
-import org.apache.calcite.sql.ddl.SqlCreateTable;
-import org.apache.calcite.sql.ddl.SqlKeyConstraint;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 class SqlConverterBase {
@@ -76,11 +64,11 @@ class SqlConverterBase {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
     if (tables != null) {
       for (String tableDef : tables) {
-        List<DefinedTable> tList = parseCreateTable(factory, validator, tableDef);
-        for (DefinedTable t : tList) {
+        List<SubstraitTable> tList =
+            SubstraitCreateStatementParser.processCreateStatements(tableDef);
+        for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
         }
       }
@@ -95,108 +83,5 @@ class SqlConverterBase {
       rootSchema = rootSchema.getSubSchema(name, false);
     }
     return new CalciteCatalogReader(rootSchema, List.of(), factory, config);
-  }
-
-  protected List<DefinedTable> parseCreateTable(
-      RelDataTypeFactory factory, SqlValidator validator, String sql) throws SqlParseException {
-    SqlParser parser = SqlParser.create(sql, parserConfig);
-    List<DefinedTable> definedTableList = new ArrayList<>();
-
-    SqlNodeList nodeList = parser.parseStmtList();
-    for (SqlNode parsed : nodeList) {
-      if (!(parsed instanceof SqlCreateTable)) {
-        throw fail("Not a valid CREATE TABLE statement.");
-      }
-
-      SqlCreateTable create = (SqlCreateTable) parsed;
-      if (create.name.names.size() > 1) {
-        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
-      }
-
-      if (create.query != null) {
-        throw fail("CTAS not supported.", create.name.getParserPosition());
-      }
-
-      List<String> names = new ArrayList<>();
-      List<RelDataType> columnTypes = new ArrayList<>();
-
-      for (SqlNode node : create.columnList) {
-        if (!(node instanceof SqlColumnDeclaration)) {
-          if (node instanceof SqlKeyConstraint) {
-            // key constraints declarations, like primary key declaration, are valid and should not
-            // result in parse exceptions. Ignore the constraint declaration.
-            continue;
-          }
-
-          throw fail("Unexpected column list construction.", node.getParserPosition());
-        }
-
-        SqlColumnDeclaration col = (SqlColumnDeclaration) node;
-        if (col.name.names.size() != 1) {
-          throw fail("Expected simple column names.", col.name.getParserPosition());
-        }
-
-        names.add(col.name.names.get(0));
-        columnTypes.add(col.dataType.deriveType(validator));
-      }
-
-      definedTableList.add(
-          new DefinedTable(
-              create.name.names.get(0), factory, factory.createStructType(columnTypes, names)));
-    }
-
-    return definedTableList;
-  }
-
-  protected static SqlParseException fail(String text, SqlParserPos pos) {
-    return new SqlParseException(text, pos, null, null, new RuntimeException("fake lineage"));
-  }
-
-  protected static SqlParseException fail(String text) {
-    return fail(text, SqlParserPos.ZERO);
-  }
-
-  protected static final class Validator extends SqlValidatorImpl {
-
-    private Validator(
-        SqlOperatorTable opTab,
-        SqlValidatorCatalogReader catalogReader,
-        RelDataTypeFactory typeFactory,
-        Config config) {
-      super(opTab, catalogReader, typeFactory, config);
-    }
-
-    public static Validator create(
-        RelDataTypeFactory factory,
-        SqlValidatorCatalogReader validatorCatalog,
-        SqlValidator.Config config) {
-      return new Validator(SubstraitOperatorTable.INSTANCE, validatorCatalog, factory, config);
-    }
-  }
-
-  /** A fully defined pre-specified table. */
-  protected static final class DefinedTable extends AbstractTable {
-
-    private final String name;
-    private final RelDataTypeFactory factory;
-    private final RelDataType type;
-
-    public DefinedTable(String name, RelDataTypeFactory factory, RelDataType type) {
-      this.name = name;
-      this.factory = factory;
-      this.type = type;
-    }
-
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-      //      if (factory != typeFactory) {
-      //        throw new IllegalStateException("Different type factory than previously used.");
-      //      }
-      return type;
-    }
-
-    public String getName() {
-      return name;
-    }
   }
 }

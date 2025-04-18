@@ -37,8 +37,8 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   final Rel commonTable =
       b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
 
-  final SubstraitRelNodeConverter relNodeConverter =
-      new SubstraitRelNodeConverter(extensions, typeFactory, builder);
+  final SubstraitToCalciteVisitor relNodeConverter =
+      new SubstraitToCalciteVisitor(extensions, typeFactory, builder);
 
   public SubstraitExpressionConverterTest() {
     converter = relNodeConverter.expressionRexConverter;
