@@ -11,15 +11,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.LookupCalciteSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
@@ -57,19 +54,8 @@ public class SubstraitToCalcite {
    * <p>Override this method to customize schema extraction.
    */
   protected CalciteSchema toSchema(Rel rel) {
-    Map<List<String>, NamedStruct> tableMap = NamedStructGatherer.gatherTables(rel);
-    Function<List<String>, Table> lookup =
-        id -> {
-          NamedStruct table = tableMap.get(id);
-          if (table == null) {
-            return null;
-          }
-          return new SqlConverterBase.DefinedTable(
-              id.get(id.size() - 1),
-              typeFactory,
-              typeConverter.toCalcite(typeFactory, table.struct(), table.names()));
-        };
-    return LookupCalciteSchema.createRootSchema(lookup);
+    SchemaCollector schemaCollector = new SchemaCollector(typeFactory, typeConverter);
+    return schemaCollector.toSchema(rel);
   }
 
   /**
