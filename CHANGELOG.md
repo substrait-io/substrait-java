@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.54.1](https://github.com/substrait-io/substrait-java/compare/v0.54.0...v0.54.1) (2025-04-20)
+
+### Bug Fixes
+
+* broken link in readme.md ([#389](https://github.com/substrait-io/substrait-java/issues/389)) ([5d8e148](https://github.com/substrait-io/substrait-java/commit/5d8e148b180a26cb4a4f24b6425cac35db2ae41b))
+
 ## [0.54.0](https://github.com/substrait-io/substrait-java/compare/v0.53.0...v0.54.0) (2025-04-13)
 
 ### ⚠ BREAKING CHANGES
