@@ -52,7 +52,7 @@ public class AggregateFunctionConverter
   protected AggregateFunctionInvocation generateBinding(
       WrappedAggregateCall call,
       SimpleExtension.AggregateFunctionVariant function,
-      List<FunctionArg> arguments,
+      List<? extends FunctionArg> arguments,
       Type outputType) {
     AggregateCall agg = call.getUnderlying();
 

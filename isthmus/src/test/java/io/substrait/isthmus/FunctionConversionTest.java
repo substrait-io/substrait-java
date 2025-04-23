@@ -258,4 +258,19 @@ public class FunctionConversionTest extends PlanTestBase {
     assertThrows(
         UnsupportedOperationException.class, () -> reqReqDateFn.accept(expressionRexConverter));
   }
+
+  @Test
+  public void concatStringLiteralAndVarchar() throws Exception {
+    assertProtoPlanRoundrip("select 'part_'||P_NAME from PART");
+  }
+
+  @Test
+  public void concatCharAndVarchar() throws Exception {
+    assertProtoPlanRoundrip("select P_BRAND||P_NAME from PART");
+  }
+
+  @Test
+  public void concatStringLiteralAndChar() throws Exception {
+    assertProtoPlanRoundrip("select 'brand_'||P_BRAND from PART");
+  }
 }

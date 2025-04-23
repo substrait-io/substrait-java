@@ -60,7 +60,7 @@ public class ScalarFunctionConverter
   protected Expression generateBinding(
       WrappedScalarCall call,
       SimpleExtension.ScalarFunctionVariant function,
-      List<FunctionArg> arguments,
+      List<? extends FunctionArg> arguments,
       Type outputType) {
     return Expression.ScalarFunctionInvocation.builder()
         .outputType(outputType)
