@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class TpcdsQueryNoValidation extends PlanTestBase {
 
   static final Set<Integer> EXCLUDED =
-      Set.of(2, 9, 12, 20, 27, 36, 47, 51, 53, 57, 63, 70, 86, 89, 98);
+      Set.of(9, 12, 20, 27, 36, 47, 51, 53, 57, 63, 70, 86, 89, 98);
 
   static IntStream testCases() {
     return IntStream.rangeClosed(1, 99).filter(n -> !EXCLUDED.contains(n));
