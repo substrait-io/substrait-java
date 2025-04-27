@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.55.0](https://github.com/substrait-io/substrait-java/compare/v0.54.1...v0.55.0) (2025-04-27)
+
+### Features
+
+* **isthmus:** enable CHAR upcasting in Calcite function calls ([#338](https://github.com/substrait-io/substrait-java/issues/338)) ([a1fbe53](https://github.com/substrait-io/substrait-java/commit/a1fbe53be4a3dd29ac20f061e9cb30fbe728c010))
+
 ## [0.54.1](https://github.com/substrait-io/substrait-java/compare/v0.54.0...v0.54.1) (2025-04-20)
 
 ### Bug Fixes
