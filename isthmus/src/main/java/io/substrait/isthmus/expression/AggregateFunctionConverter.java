@@ -7,7 +7,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
-import io.substrait.isthmus.SubstraitRelVisitor;
+import io.substrait.isthmus.CalciteToSubstraitVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.Collections;
@@ -59,7 +59,7 @@ public class AggregateFunctionConverter
     List<Expression.SortField> sorts =
         agg.getCollation() != null
             ? agg.getCollation().getFieldCollations().stream()
-                .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
+                .map(r -> CalciteToSubstraitVisitor.toSortField(r, call.inputType))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
     Expression.AggregationInvocation invocation =

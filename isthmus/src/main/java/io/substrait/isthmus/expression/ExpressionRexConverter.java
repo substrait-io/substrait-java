@@ -16,7 +16,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.SubstraitRelNodeConverter;
+import io.substrait.isthmus.SubstraitToCalciteVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
@@ -60,7 +60,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
   protected final RexBuilder rexBuilder;
   protected final ScalarFunctionConverter scalarFunctionConverter;
   protected final WindowFunctionConverter windowFunctionConverter;
-  protected SubstraitRelNodeConverter relNodeConverter;
+  protected SubstraitToCalciteVisitor relNodeConverter;
 
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
@@ -90,8 +90,8 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
     this.windowFunctionConverter = windowFunctionConverter;
   }
 
-  public void setRelNodeConverter(final SubstraitRelNodeConverter substraitRelNodeConverter) {
-    this.relNodeConverter = substraitRelNodeConverter;
+  public void setRelNodeConverter(final SubstraitToCalciteVisitor substraitToCalciteVisitor) {
+    this.relNodeConverter = substraitToCalciteVisitor;
   }
 
   @Override
