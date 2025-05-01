@@ -20,8 +20,10 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
@@ -45,11 +47,28 @@ public class PlanTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  public static List<String> tpchSchemaCreateStatements() throws IOException {
-    String[] values = asString("tpch/schema.sql").split(";");
-    return Arrays.stream(values)
-        .filter(t -> !t.trim().isBlank())
-        .collect(java.util.stream.Collectors.toList());
+  /** Holder class to load TPC-H create statements only once on first access. */
+  private static final class TpchCreateStatementsHolder {
+    static final List<String> createStatements;
+
+    static {
+      final String[] values;
+      try {
+        values = asString("tpch/schema.sql").split(";");
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+
+      createStatements =
+          Arrays.stream(values)
+              .map(String::trim)
+              .filter(s -> !s.isBlank())
+              .collect(Collectors.toList());
+    }
+  }
+
+  public static List<String> tpchSchemaCreateStatements() {
+    return TpchCreateStatementsHolder.createStatements;
   }
 
   protected Plan assertProtoPlanRoundrip(String query) throws IOException, SqlParseException {
