@@ -9,7 +9,6 @@ plugins {
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.19.0"
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-  id("org.cyclonedx.bom") version "1.8.2"
 }
 
 var IMMUTABLES_VERSION = properties.get("immutables.version")
@@ -31,7 +30,7 @@ dependencies {
 }
 
 val submodulesUpdate by
-  tasks.creating(Exec::class) {
+  tasks.registering(Exec::class) {
     group = "Build Setup"
     description = "Updates (and inits) substrait git submodule"
     commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
