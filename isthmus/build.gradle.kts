@@ -84,10 +84,10 @@ val PROTOBUF_VERSION = properties.get("protobuf.version")
 dependencies {
   api(project(":core"))
   api("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
-  // calcite-core 1.37.0 brings in net.minidev:json-smart:2.5.0 which has a CVE associated with it.
-  // See: https://osv.dev/vulnerability/GHSA-pq2g-wx69-c263
+  // calcite-core 1.38.0 brings in org.apache.httpcomponents.client5:httpclient5  which has a CVE associated with it.
+  // See: https://osv.dev/GHSA-73m2-qfq3-56cx
   // This causes the build to fail. Pull in the fixed version until Calcite is updated
-  implementation("net.minidev:json-smart:2.5.2")
+  implementation("org.apache.httpcomponents.client5:httpclient5:5.4.4")
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
   testImplementation("org.junit.jupiter:junit-jupiter:${JUNIT_VERSION}")
   implementation("org.reflections:reflections:0.9.12")
