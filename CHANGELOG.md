@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.56.0](https://github.com/substrait-io/substrait-java/compare/v0.55.0...v0.56.0) (2025-05-04)
+
+### ⚠ BREAKING CHANGES
+
+* LookupCalciteSchema has been removed
+
+### Features
+
+* introduce SchemaCollector ([#391](https://github.com/substrait-io/substrait-java/issues/391)) ([5d3abd8](https://github.com/substrait-io/substrait-java/commit/5d3abd8ede1d694d9c9d50e5ad6c581cc7fcc97f))
+* **isthmus:** upgrade to Calcite 1.39.0 ([#393](https://github.com/substrait-io/substrait-java/issues/393)) ([4d3640d](https://github.com/substrait-io/substrait-java/commit/4d3640d52291ea2dec2bfbf76f8f9f972ab98a7f))
+
 ## [0.55.0](https://github.com/substrait-io/substrait-java/compare/v0.54.1...v0.55.0) (2025-04-27)
 
 ### Features
