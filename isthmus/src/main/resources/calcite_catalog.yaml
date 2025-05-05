@@ -1,0 +1,36 @@
+%YAML 1.2
+---
+mappings:
+  -
+    uri: "functions_arithmetic"
+    scalar_functions:
+      - name: "add"
+        variants:
+          - signature: "i64_i64"
+            options:
+              overflow:
+                values: [ SILENT ]
+          - signature: "i64_i64"
+            options:
+              overflow:
+                values: [ ERROR ]
+            meta:
+              SqlStdOperatorTable: CHECKED_PLUS
+          - signature: "fp64_fp64"
+            options:
+              overflow:
+                values: [ SILENT ]
+        meta:
+          SqlStdOperatorTable: PLUS
+      - name: "multiply"
+        variants:
+          - signature: "i64_i64"
+            options:
+              overflow:
+                values: [ SILENT ]
+          - signature: "fp64_fp64"
+            options:
+              overflow:
+                values: [ SILENT ]
+        meta:
+          SqlStdOperatorTable: MULTIPLY

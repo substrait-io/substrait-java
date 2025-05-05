@@ -124,6 +124,9 @@ tasks {
 
 tasks { build { dependsOn(shadowJar) } }
 
-sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
+sourceSets {
+  //  main { resources.srcDir("src/main/resources") }
+  test { proto.srcDirs("src/test/resources/extensions") }
+}
 
 protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }
