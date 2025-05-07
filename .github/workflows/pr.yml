@@ -52,10 +52,8 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: Create Gradle lockfile
-        run: ./gradlew :${{ matrix.project }}:dependencies --write-locks
       - name: Scan
-        run: docker run --rm -v "${PWD}/${{ matrix.project }}/gradle.lockfile:/gradle.lockfile" ghcr.io/google/osv-scanner:v2.0.0 scan --lockfile /gradle.lockfile
+        run: make component=${{ matrix.project }} scan
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
