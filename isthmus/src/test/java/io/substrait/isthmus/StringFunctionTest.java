@@ -4,7 +4,7 @@ import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class StringFunctionTest extends PlanTestBase {
+public final class StringFunctionTest extends PlanTestBase {
 
   static List<String> CREATES = List.of("CREATE TABLE strings (c16 CHAR(16), vc32 VARCHAR(32))");
   static List<String> REPLACE_CREATES =
@@ -72,6 +72,62 @@ public class StringFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"c16", "vc32"})
   void substringFromFor(String column) throws Exception {
     String query = String.format("SELECT substring(%s FROM 42 FOR 5) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trim(String column) throws Exception {
+    String query = String.format("SELECT TRIM(%s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimSpecifiedCharacter(String column) throws Exception {
+    String query = String.format("SELECT TRIM(' ' FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimBoth(String column) throws Exception {
+    String query = String.format("SELECT TRIM(BOTH FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimBothSpecifiedCharacter(String column) throws Exception {
+    String query = String.format("SELECT TRIM(BOTH ' ' FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimLeading(String column) throws Exception {
+    String query = String.format("SELECT TRIM(LEADING FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimLeadingSpecifiedCharacter(String column) throws Exception {
+    String query = String.format("SELECT TRIM(LEADING ' ' FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimTrailing(String column) throws Exception {
+    String query = String.format("SELECT TRIM(TRAILING FROM %s) FROM strings", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void trimTrailingSpecifiedCharacter(String column) throws Exception {
+    String query = String.format("SELECT TRIM(TRAILING ' ' FROM %s) FROM strings", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 }

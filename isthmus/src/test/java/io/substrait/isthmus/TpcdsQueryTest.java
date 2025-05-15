@@ -19,7 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpcdsQueryTest extends PlanTestBase {
-  private static final Set<Integer> toSubstraitExclusions = Set.of(9, 27, 36, 70, 86, 98);
+  private static final Set<Integer> toSubstraitExclusions = Set.of(9, 27, 36, 70, 86);
   private static final Set<Integer> fromSubstraitExclusions = Set.of(6, 8, 67);
 
   private final TpcdsSchema schema = new TpcdsSchema(1.0);
@@ -45,7 +45,7 @@ public class TpcdsQueryTest extends PlanTestBase {
     }
   }
 
-  private Plan toSubstraitPlan(String sql) throws SqlParseException, IOException {
+  private Plan toSubstraitPlan(String sql) throws SqlParseException {
     return new SqlToSubstrait().execute(sql, "tpcds", schema);
   }
 
