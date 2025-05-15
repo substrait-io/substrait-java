@@ -67,7 +67,7 @@ public abstract class FunctionConverter<
     signatures.addAll(additionalSignatures);
     signatures.addAll(getSigs());
     this.typeFactory = typeFactory;
-    this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.<String, SqlOperator>create();
+    this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.create();
 
     var alm = ArrayListMultimap.<String, F>create();
     for (var f : functions) {
@@ -78,22 +78,19 @@ public abstract class FunctionConverter<
         signatures.stream()
             .collect(
                 Multimaps.toMultimap(
-                    FunctionMappings.Sig::name, f -> f, () -> ArrayListMultimap.create()));
+                    FunctionMappings.Sig::name, Function.identity(), ArrayListMultimap::create));
     var matcherMap = new IdentityHashMap<SqlOperator, FunctionFinder>();
     for (String key : alm.keySet()) {
       var sigs = calciteOperators.get(key);
-      if (sigs == null) {
-        logger.atInfo().log("Dropping function due to no binding: {}", key);
-        continue;
+      if (sigs.isEmpty()) {
+        logger.atInfo().log("No binding for function: {}", key);
       }
 
       for (var sig : sigs) {
         var implList = alm.get(key);
-        if (implList == null || implList.isEmpty()) {
-          continue;
+        if (!implList.isEmpty()) {
+          matcherMap.put(sig.operator(), new FunctionFinder(key, sig.operator(), implList));
         }
-
-        matcherMap.put(sig.operator(), new FunctionFinder(key, sig.operator(), implList));
       }
     }
 
@@ -110,14 +107,16 @@ public abstract class FunctionConverter<
 
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
     var resolver = getTypeBasedResolver();
-    if (!substraitFuncKeyToSqlOperatorMap.containsKey(key)) {
+    var operators = substraitFuncKeyToSqlOperatorMap.get(key);
+    if (operators.isEmpty()) {
       return Optional.empty();
     }
-    var operators = substraitFuncKeyToSqlOperatorMap.get(key);
+
     // only one SqlOperator is possible
     if (operators.size() == 1) {
       return Optional.of(operators.iterator().next());
     }
+
     // at least 2 operators. Use output type to resolve SqlOperator.
     String outputTypeStr = outputType.accept(ToTypeString.INSTANCE);
     var resolvedOperators =

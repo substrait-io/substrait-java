@@ -28,16 +28,13 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
-import org.junit.jupiter.api.Assertions;
 
 public class PlanTestBase {
   protected final SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
-  protected final RexBuilder rex = creator.rex();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
   protected final SubstraitBuilder substraitBuilder = new SubstraitBuilder(extensions);
   protected static final TypeCreator R = TypeCreator.of(false);
@@ -75,8 +72,7 @@ public class PlanTestBase {
     return assertProtoPlanRoundrip(query, new SqlToSubstrait());
   }
 
-  protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s)
-      throws IOException, SqlParseException {
+  protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s) throws SqlParseException {
     return assertProtoPlanRoundrip(query, s, tpchSchemaCreateStatements());
   }
 
@@ -131,7 +127,7 @@ public class PlanTestBase {
     // 4. Calcite RelNode -> Substrait Rel
     Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, EXTENSION_COLLECTION);
 
-    Assertions.assertEquals(pojo1, pojo2);
+    assertEquals(pojo1, pojo2);
     return relRoot2;
   }
 

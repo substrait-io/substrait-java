@@ -1,6 +1,7 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import com.diffplug.gradle.spotless.SpotlessPlugin
 import com.github.vlsi.gradle.dsl.configureEach
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
   `maven-publish`
@@ -43,6 +44,7 @@ allprojects {
     val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()
     javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
+    testLogging { exceptionFormat = TestExceptionFormat.FULL }
   }
   tasks.withType<JavaCompile> {
     sourceCompatibility = "17"
