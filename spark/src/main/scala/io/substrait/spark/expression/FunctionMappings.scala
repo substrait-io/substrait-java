@@ -70,6 +70,24 @@ object DateFunction {
   }
 }
 
+object TrimFunction {
+  def unapply(e: Expression): Option[Seq[Expression]] = e match {
+    case StringTrim(srcStr, trimStr) => Some(Seq(srcStr) ++ trimStr)
+    case StringTrimLeft(srcStr, trimStr) => Some(Seq(srcStr) ++ trimStr)
+    case StringTrimRight(srcStr, trimStr) => Some(Seq(srcStr) ++ trimStr)
+    case _ => None
+  }
+
+  def unapply(name_args: (String, Seq[Expression])): Option[Expression] = name_args match {
+    case ("trim", Seq(srcStr)) => Some(StringTrim(srcStr))
+    case ("trim", Seq(srcStr, trimStr)) => Some(StringTrim(srcStr, trimStr))
+    case ("ltrim", Seq(srcStr)) => Some(StringTrimLeft(srcStr))
+    case ("ltrim", Seq(srcStr, trimStr)) => Some(StringTrimLeft(srcStr, trimStr))
+    case ("rtrim", Seq(srcStr)) => Some(StringTrimRight(srcStr))
+    case ("rtrim", Seq(srcStr, trimStr)) => Some(StringTrimRight(srcStr, trimStr))
+  }
+}
+
 class FunctionMappings {
 
   private def s[T <: Expression: ClassTag](name: String): GenericSig = {
@@ -86,6 +104,7 @@ class FunctionMappings {
     val builder = (args: Seq[Expression]) =>
       (signature, args) match {
         case DateFunction(expr) => expr
+        case TrimFunction(expr) => expr
       }
     SpecialSig(scala.reflect.classTag[T].runtimeClass, name, key, builder)
   }
@@ -142,6 +161,11 @@ class FunctionMappings {
     s[BitwiseAnd]("bitwise_and"),
     s[BitwiseOr]("bitwise_or"),
     s[BitwiseXor]("bitwise_xor"),
+
+    // trim functions require special handling
+    ss[StringTrim]("trim"),
+    ss[StringTrimLeft]("ltrim"),
+    ss[StringTrimRight]("rtrim"),
 
     // date/time functions require special handling
     ss[DateAdd]("add:date_i32"),
