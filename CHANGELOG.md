@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.57.0](https://github.com/substrait-io/substrait-java/compare/v0.56.0...v0.57.0) (2025-05-25)
+
+### Features
+
+* **spark:** add support for trim functions ([#400](https://github.com/substrait-io/substrait-java/issues/400)) ([ea961a0](https://github.com/substrait-io/substrait-java/commit/ea961a0859bc93c777a89e2db38851de0058ce4f))
+
 ## [0.56.0](https://github.com/substrait-io/substrait-java/compare/v0.55.0...v0.56.0) (2025-05-04)
 
 ### ⚠ BREAKING CHANGES
