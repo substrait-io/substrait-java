@@ -207,8 +207,12 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
           case OUTER -> JoinRelType.FULL;
           case SEMI -> JoinRelType.SEMI;
           case ANTI -> JoinRelType.ANTI;
+          case LEFT_SEMI -> JoinRelType.SEMI;
+          case LEFT_ANTI -> JoinRelType.ANTI;
           case UNKNOWN -> throw new UnsupportedOperationException(
               "Unknown join type is not supported");
+          default -> throw new UnsupportedOperationException(
+              "Unsupported join type: " + join.getJoinType().name());
         };
     RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
     return applyRemap(node, join.getRemap());
