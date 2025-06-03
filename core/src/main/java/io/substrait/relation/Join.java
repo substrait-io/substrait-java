@@ -23,7 +23,20 @@ public abstract class Join extends BiRel implements HasExtension {
     OUTER(JoinRel.JoinType.JOIN_TYPE_OUTER),
     LEFT(JoinRel.JoinType.JOIN_TYPE_LEFT),
     RIGHT(JoinRel.JoinType.JOIN_TYPE_RIGHT),
+    LEFT_SEMI(JoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
+    LEFT_ANTI(JoinRel.JoinType.JOIN_TYPE_LEFT_ANTI),
+    LEFT_SINGLE(JoinRel.JoinType.JOIN_TYPE_LEFT_SINGLE),
+    RIGHT_SEMI(JoinRel.JoinType.JOIN_TYPE_RIGHT_SEMI),
+    RIGHT_ANTI(JoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI),
+    RIGHT_SINGLE(JoinRel.JoinType.JOIN_TYPE_RIGHT_SINGLE),
+    LEFT_MARK(JoinRel.JoinType.JOIN_TYPE_LEFT_MARK),
+    RIGHT_MARK(JoinRel.JoinType.JOIN_TYPE_RIGHT_MARK),
+    // deprecated values last to not get them looked up first in fromProto()
+    /** use {@link #LEFT_SEMI} instead */
+    @Deprecated
     SEMI(JoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
+    /** use {@link #LEFT_ANTI} instead */
+    @Deprecated
     ANTI(JoinRel.JoinType.JOIN_TYPE_LEFT_ANTI);
 
     private JoinRel.JoinType proto;
@@ -51,15 +64,26 @@ public abstract class Join extends BiRel implements HasExtension {
   protected Type.Struct deriveRecordType() {
     Stream<Type> leftTypes =
         switch (getJoinType()) {
-          case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
+          case RIGHT, OUTER, RIGHT_SINGLE -> getLeft().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
+          case RIGHT_SEMI, RIGHT_ANTI -> Stream
+              .of(); // these are right joins which ignore left side columns
+          case RIGHT_MARK -> Stream.of(
+              TypeCreator.REQUIRED
+                  .BOOLEAN); // right mark join keeps all fields from right and adds a boolean mark
+            // field
           default -> getLeft().getRecordType().fields().stream();
         };
     Stream<Type> rightTypes =
         switch (getJoinType()) {
-          case LEFT, OUTER -> getRight().getRecordType().fields().stream()
+          case LEFT, OUTER, LEFT_SINGLE -> getRight().getRecordType().fields().stream()
               .map(TypeCreator::asNullable);
-          case SEMI, ANTI -> Stream.of(); // these are left joins which ignore right side columns
+          case SEMI, ANTI, LEFT_SEMI, LEFT_ANTI -> Stream
+              .of(); // these are left joins which ignore right side columns
+          case LEFT_MARK -> Stream.of(
+              TypeCreator.REQUIRED
+                  .BOOLEAN); // left mark join keeps all fields from left and adds a boolean mark
+            // field
           default -> getRight().getRecordType().fields().stream();
         };
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));

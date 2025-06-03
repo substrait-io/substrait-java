@@ -290,8 +290,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case LeftOuter => relation.Join.JoinType.LEFT
     case RightOuter => relation.Join.JoinType.RIGHT
     case FullOuter => relation.Join.JoinType.OUTER
-    case LeftSemi => relation.Join.JoinType.SEMI
-    case LeftAnti => relation.Join.JoinType.ANTI
+    case LeftSemi => relation.Join.JoinType.LEFT_SEMI
+    case LeftAnti => relation.Join.JoinType.LEFT_ANTI
     case other => throw new UnsupportedOperationException(s"Unsupported join type $other")
   }
 

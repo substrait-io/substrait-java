@@ -186,8 +186,12 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
         case relation.Join.JoinType.OUTER => FullOuter
         case relation.Join.JoinType.SEMI => LeftSemi
         case relation.Join.JoinType.ANTI => LeftAnti
+        case relation.Join.JoinType.LEFT_SEMI => LeftSemi
+        case relation.Join.JoinType.LEFT_ANTI => LeftAnti
         case relation.Join.JoinType.UNKNOWN =>
           throw new UnsupportedOperationException("Unknown join type is not supported")
+        case other =>
+          throw new UnsupportedOperationException(s"Unsupported join type $other")
       }
       Join(left, right, joinType, condition, hint = JoinHint.NONE)
     }
