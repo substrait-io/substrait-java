@@ -5,7 +5,7 @@ plugins {
   id("java-library")
   id("idea")
   id("com.diffplug.spotless") version "6.19.0"
-  id("com.github.johnrengelman.shadow") version "8.1.1"
+  id("com.gradleup.shadow") version "8.3.6"
   id("com.google.protobuf") version "0.9.4"
   signing
 }
