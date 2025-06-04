@@ -26,6 +26,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileOrFiles;
@@ -120,6 +121,9 @@ public class ProtoRelConverter {
       case WINDOW -> {
         return newConsistentPartitionWindow(rel.getWindow());
       }
+      case WRITE -> {
+        return newWrite(rel.getWrite());
+      }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
@@ -145,7 +149,55 @@ public class ProtoRelConverter {
     }
   }
 
-  protected Filter newFilter(FilterRel rel) {
+  protected Rel newWrite(WriteRel rel) {
+    var relType = rel.getWriteTypeCase();
+    switch (relType) {
+      case NAMED_TABLE -> {
+        return newNamedWrite(rel);
+      }
+      case EXTENSION_TABLE -> {
+        return newExtensionWrite(rel);
+      }
+      default -> throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
+    }
+  }
+
+  protected NamedWrite newNamedWrite(WriteRel rel) {
+    var input = from(rel.getInput());
+    var builder =
+        NamedWrite.builder()
+            .input(input)
+            .names(rel.getNamedTable().getNamesList())
+            .tableSchema(newNamedStruct(rel.getTableSchema()))
+            .createMode(NamedWrite.CreateMode.fromProto(rel.getCreateMode()))
+            .outputMode(NamedWrite.OutputMode.fromProto(rel.getOutput()))
+            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    return builder.build();
+  }
+
+  protected Rel newExtensionWrite(WriteRel rel) {
+    var input = from(rel.getInput());
+    var detail = detailFromWriteExtensionObject(rel.getExtensionTable().getDetail());
+    var builder =
+        ExtensionWrite.builder()
+            .input(input)
+            .detail(detail)
+            .tableSchema(newNamedStruct(rel.getTableSchema()))
+            .createMode(NamedWrite.CreateMode.fromProto(rel.getCreateMode()))
+            .outputMode(NamedWrite.OutputMode.fromProto(rel.getOutput()))
+            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()));
+    return builder.build();
+  }
+
+  private Filter newFilter(FilterRel rel) {
     var input = from(rel.getInput());
     var builder =
         Filter.builder()
@@ -795,6 +847,11 @@ public class ProtoRelConverter {
    * io.substrait.proto.ReadRel.ExtensionTable#getDetail()} data
    */
   protected Extension.ExtensionTableDetail detailFromExtensionTable(com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  protected Extension.WriteExtensionObject detailFromWriteExtensionObject(
+      com.google.protobuf.Any any) {
     return emptyDetail();
   }
 

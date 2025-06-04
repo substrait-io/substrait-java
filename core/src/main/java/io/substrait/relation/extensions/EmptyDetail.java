@@ -18,7 +18,8 @@ public class EmptyDetail
     implements Extension.LeafRelDetail,
         Extension.MultiRelDetail,
         Extension.SingleRelDetail,
-        Extension.ExtensionTableDetail {
+        Extension.ExtensionTableDetail,
+        Extension.WriteExtensionObject {
 
   @Override
   public Any toProto(RelProtoConverter converter) {

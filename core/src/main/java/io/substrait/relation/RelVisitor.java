@@ -46,4 +46,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
 
   OUTPUT visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION;
+
+  OUTPUT visit(NamedWrite write) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionWrite write) throws EXCEPTION;
 }

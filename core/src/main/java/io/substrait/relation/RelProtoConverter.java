@@ -14,12 +14,14 @@ import io.substrait.proto.CrossRel;
 import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
+import io.substrait.proto.ExtensionObject;
 import io.substrait.proto.ExtensionSingleRel;
 import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
 import io.substrait.proto.MergeJoinRel;
+import io.substrait.proto.NamedObjectWrite;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
@@ -29,6 +31,7 @@ import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
@@ -348,6 +351,37 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
         .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
 
     return Rel.newBuilder().setWindow(builder).build();
+  }
+
+  @Override
+  public Rel visit(NamedWrite write) throws RuntimeException {
+    var builder =
+        WriteRel.newBuilder()
+            .setCommon(common(write))
+            .setInput(toProto(write.getInput()))
+            .setNamedTable(NamedObjectWrite.newBuilder().addAllNames(write.getNames()))
+            .setTableSchema(write.getTableSchema().toProto(typeProtoConverter))
+            .setOp(write.getOperation().toProto())
+            .setCreateMode(write.getCreateMode().toProto())
+            .setOutput(write.getOutputMode().toProto());
+
+    return Rel.newBuilder().setWrite(builder).build();
+  }
+
+  @Override
+  public Rel visit(ExtensionWrite write) throws RuntimeException {
+    var builder =
+        WriteRel.newBuilder()
+            .setCommon(common(write))
+            .setInput(toProto(write.getInput()))
+            .setExtensionTable(
+                ExtensionObject.newBuilder().setDetail(write.getDetail().toProto(this)))
+            .setTableSchema(write.getTableSchema().toProto(typeProtoConverter))
+            .setOp(write.getOperation().toProto())
+            .setCreateMode(write.getCreateMode().toProto())
+            .setOutput(write.getOutputMode().toProto());
+
+    return Rel.newBuilder().setWrite(builder).build();
   }
 
   private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
