@@ -15,10 +15,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -26,7 +26,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.fun.SqlTrimFunction.Flag;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 public class ScalarFunctionConverter
@@ -37,14 +37,14 @@ public class ScalarFunctionConverter
     implements CallConverter {
 
   private enum Trim {
-    TRIM("trim", Flag.BOTH),
-    LTRIM("ltrim", Flag.LEADING),
-    RTRIM("rtrim", Flag.TRAILING);
+    TRIM("trim", SqlTrimFunction.Flag.BOTH),
+    LTRIM("ltrim", SqlTrimFunction.Flag.LEADING),
+    RTRIM("rtrim", SqlTrimFunction.Flag.TRAILING);
 
     private final String substraitName;
-    private final Flag flag;
+    private final SqlTrimFunction.Flag flag;
 
-    Trim(String substraitName, Flag flag) {
+    Trim(String substraitName, SqlTrimFunction.Flag flag) {
       this.substraitName = substraitName;
       this.flag = flag;
     }
@@ -53,16 +53,16 @@ public class ScalarFunctionConverter
       return substraitName;
     }
 
-    public Flag getFlag() {
+    public SqlTrimFunction.Flag getFlag() {
       return flag;
     }
 
-    public static Optional<Trim> from(Flag flag) {
+    public static Optional<Trim> from(SqlTrimFunction.Flag flag) {
       return Arrays.stream(values()).filter(t -> t.flag == flag).findAny();
     }
   }
 
-  private final Map<Trim, ScalarFunctionVariant> trimFunctions;
+  private final Map<Trim, List<ScalarFunctionVariant>> trimFunctions;
 
   public ScalarFunctionConverter(
       List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
@@ -76,17 +76,21 @@ public class ScalarFunctionConverter
       TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
 
-    var trims = new HashMap<Trim, ScalarFunctionVariant>();
+    var trims = new HashMap<Trim, List<ScalarFunctionVariant>>();
     for (var t : Trim.values()) {
-      var function = findFunction(t.getSubstraitName(), functions);
-      function.ifPresent(f -> trims.put(t, f));
+      var funcs = findFunction(t.getSubstraitName(), functions);
+      if (!funcs.isEmpty()) {
+        trims.put(t, funcs);
+      }
     }
     trimFunctions = Collections.unmodifiableMap(trims);
   }
 
-  private Optional<ScalarFunctionVariant> findFunction(
+  private List<ScalarFunctionVariant> findFunction(
       String name, Collection<ScalarFunctionVariant> functions) {
-    return functions.stream().filter(f -> name.equals(f.name().toLowerCase(Locale.ROOT))).findAny();
+    return functions.stream()
+        .filter(f -> name.equals(f.name()))
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override
@@ -104,11 +108,17 @@ public class ScalarFunctionConverter
   private Optional<Expression> customConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
     if (SqlStdOperatorTable.TRIM.equals(call.op)) {
-      var trim = getTrimFunction(call);
+      var trimType = getTrimCallType(call);
 
-      return trim.map(
-          f -> {
-            var finder = new FunctionFinder(f.name(), call.op, List.of(f));
+      return trimType.map(
+          trim -> {
+            var name = trim.getSubstraitName();
+            var funcs = trimFunctions.getOrDefault(trim, List.of());
+            if (funcs.isEmpty()) {
+              return null;
+            }
+
+            var finder = new FunctionFinder(name, call.op, funcs);
             if (!finder.allowedArgCount(call.getOperands().size() - 1)) {
               return null;
             }
@@ -128,19 +138,18 @@ public class ScalarFunctionConverter
     return Optional.empty();
   }
 
-  private Optional<SimpleExtension.ScalarFunctionVariant> getTrimFunction(RexCall call) {
+  private Optional<Trim> getTrimCallType(RexCall call) {
     var trimType = call.operands.get(0);
     if (trimType.getType().getSqlTypeName() != SqlTypeName.SYMBOL) {
       return Optional.empty();
     }
 
     var value = ((RexLiteral) trimType).getValue();
-    if (!(value instanceof Flag)) {
+    if (!(value instanceof SqlTrimFunction.Flag)) {
       return Optional.empty();
     }
 
-    var trim = Trim.from((Flag) value);
-    return trim.map(trimFunctions::get);
+    return Trim.from((SqlTrimFunction.Flag) value);
   }
 
   private Optional<Expression> standardConvert(
@@ -178,7 +187,7 @@ public class ScalarFunctionConverter
         .filter(t -> t.getSubstraitName().equals(name))
         .findAny()
         .map(Trim::getFlag)
-        .map(Flag::name)
+        .map(SqlTrimFunction.Flag::name)
         .map(EnumArg::of)
         .ifPresent(result::addFirst);
 

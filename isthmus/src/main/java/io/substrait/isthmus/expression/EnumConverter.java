@@ -14,7 +14,7 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.fun.SqlTrimFunction.Flag;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
@@ -55,19 +55,25 @@ public class EnumConverter {
         TimeUnitRange.class);
 
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:vchar_vchar", 0), Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:vchar_vchar", 0), Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:str_str", 0), SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:vchar_vchar", 0), Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:str_str", 0), SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0), SqlTrimFunction.Flag.class);
   }
 
   private static Optional<Enum<?>> constructValue(
       Class<? extends Enum<?>> cls, Supplier<Optional<String>> option) {
     if (cls.isAssignableFrom(TimeUnitRange.class)) {
       return option.get().map(TimeUnitRange::valueOf);
-    } else if (cls.isAssignableFrom(Flag.class)) {
-      return option.get().map(Flag::valueOf);
+    } else if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
+      return option.get().map(SqlTrimFunction.Flag::valueOf);
     } else {
       return Optional.empty();
     }
