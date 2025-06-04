@@ -55,17 +55,23 @@ public class EnumConverter {
         TimeUnitRange.class);
 
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:str_str", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:str_str", 0),
+        SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:str_str", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:str_str", 0),
+        SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:vchar_vchar", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0), SqlTrimFunction.Flag.class);
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0),
+        SqlTrimFunction.Flag.class);
   }
 
   private static Optional<Enum<?>> constructValue(
@@ -139,9 +145,7 @@ public class EnumConverter {
   }
 
   static boolean isEnumValue(RexNode value) {
-    return value != null
-        && (value instanceof RexLiteral)
-        && value.getType().getSqlTypeName() == SqlTypeName.SYMBOL;
+    return value instanceof RexLiteral && value.getType().getSqlTypeName() == SqlTypeName.SYMBOL;
   }
 
   private static class ArgAnchor {
