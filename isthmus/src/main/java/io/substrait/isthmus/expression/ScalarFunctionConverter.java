@@ -4,16 +4,14 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.extension.SimpleExtension.ScalarFunctionVariant;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -44,13 +42,6 @@ public class ScalarFunctionConverter
     mappers = List.of(new TrimFunctionMapper(functions));
   }
 
-  private List<ScalarFunctionVariant> findFunction(
-      String name, Collection<ScalarFunctionVariant> functions) {
-    return functions.stream()
-        .filter(f -> name.equals(f.name()))
-        .collect(Collectors.toUnmodifiableList());
-  }
-
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.SCALAR_SIGS;
@@ -77,10 +68,6 @@ public class ScalarFunctionConverter
       RexCall call,
       Function<RexNode, Expression> topLevelConverter) {
     var finder = new FunctionFinder(mapping.name(), call.op, mapping.functions());
-    if (!finder.allowedArgCount(mapping.operands().size())) {
-      return null;
-    }
-
     var wrapped =
         new WrappedScalarCall(call) {
           @Override
@@ -89,21 +76,30 @@ public class ScalarFunctionConverter
           }
         };
 
-    return finder.attemptMatch(wrapped, topLevelConverter);
+    return attemptMatch(finder, wrapped, topLevelConverter);
   }
 
   private Optional<Expression> defaultConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    FunctionFinder m = signatures.get(call.op);
-    if (m == null) {
-      return Optional.empty();
-    }
-    if (!m.allowedArgCount(call.operands.size())) {
+    FunctionFinder finder = signatures.get(call.op);
+    var wrapped = new WrappedScalarCall(call);
+
+    return attemptMatch(finder, wrapped, topLevelConverter);
+  }
+
+  private Optional<Expression> attemptMatch(
+      FunctionFinder finder,
+      WrappedScalarCall call,
+      Function<RexNode, Expression> topLevelConverter) {
+    if (!isPotentialFunctionMatch(finder, call)) {
       return Optional.empty();
     }
 
-    var wrapped = new WrappedScalarCall(call);
-    return m.attemptMatch(wrapped, topLevelConverter);
+    return finder.attemptMatch(call, topLevelConverter);
+  }
+
+  private boolean isPotentialFunctionMatch(FunctionFinder finder, WrappedScalarCall call) {
+    return Objects.nonNull(finder) && finder.allowedArgCount((int) call.getOperands().count());
   }
 
   @Override
@@ -132,7 +128,7 @@ public class ScalarFunctionConverter
         .orElse(Optional.empty());
   }
 
-  static class WrappedScalarCall implements GenericCall {
+  protected static class WrappedScalarCall implements GenericCall {
 
     private final RexCall delegate;
 
