@@ -1,4 +1,9 @@
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.slf4j.LoggerFactory
 
 plugins {
   `maven-publish`
@@ -105,6 +110,71 @@ configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
   apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter { it.name != "antlr" })
 }
 
+abstract class SubstraitSpecVersionValueSource :
+  ValueSource<String, SubstraitSpecVersionValueSource.Parameters> {
+  companion object {
+    val logger = LoggerFactory.getLogger("SubstraitSpecVersionValueSource")
+  }
+
+  interface Parameters : ValueSourceParameters {
+    val substraitDirectory: Property<File>
+  }
+
+  @get:Inject abstract val execOperations: ExecOperations
+
+  override fun obtain(): String {
+    val stdOutput = ByteArrayOutputStream()
+    val errOutput = ByteArrayOutputStream()
+    execOperations.exec {
+      commandLine("git", "describe", "--tags")
+      standardOutput = stdOutput
+      errorOutput = errOutput
+      setIgnoreExitValue(true)
+      workingDir = parameters.substraitDirectory.get()
+    }
+
+    // capturing the error output and logging it to avoid issues with VS Code Spotless plugin
+    val error = String(errOutput.toByteArray())
+    if (error != "") {
+      logger.warn(error)
+    }
+
+    val cmdOut = String(stdOutput.toByteArray()).trim()
+
+    if (cmdOut.startsWith("v")) {
+      return cmdOut.substring(1)
+    }
+
+    return cmdOut
+  }
+}
+
+tasks.register("writeManifest") {
+  doLast {
+    val substraitSpecVersionProvider =
+      providers.of(SubstraitSpecVersionValueSource::class) {
+        parameters.substraitDirectory.set(project(":").file("substrait"))
+      }
+
+    val manifestFile =
+      layout.buildDirectory
+        .file("generated/sources/manifest/META-INF/MANIFEST.MF")
+        .get()
+        .getAsFile()
+    manifestFile.getParentFile().mkdirs()
+
+    manifestFile.printWriter(StandardCharsets.UTF_8).use {
+      it.println("Manifest-Version: 1.0")
+      it.println("Implementation-Title: substrait-java")
+      it.println("Implementation-Version: " + project.version)
+      it.println("Specification-Title: substrait")
+      it.println("Specification-Version: " + substraitSpecVersionProvider.get())
+    }
+  }
+}
+
+tasks.named("compileJava") { dependsOn("writeManifest") }
+
 tasks {
   shadowJar {
     archiveClassifier.set("") // to override ".jar" instead of producing "-all.jar"
@@ -114,6 +184,8 @@ tasks {
     // rename the shadowed deps so that they don't conflict with consumer's own deps
     relocate("org.antlr.v4.runtime", "io.substrait.org.antlr.v4.runtime")
   }
+
+  jar { manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") } }
 }
 
 java {
@@ -132,6 +204,7 @@ sourceSets {
   main {
     proto.srcDir("../substrait/proto")
     resources.srcDir("../substrait/extensions")
+    resources.srcDir("build/generated/sources/manifest/")
     java.srcDir(file("build/generated/sources/antlr/main/java/"))
   }
 }
