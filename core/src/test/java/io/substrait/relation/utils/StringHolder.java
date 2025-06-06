@@ -23,7 +23,8 @@ public class StringHolder
         Extension.LeafRelDetail,
         Extension.SingleRelDetail,
         Extension.MultiRelDetail,
-        Extension.ExtensionTableDetail {
+        Extension.ExtensionTableDetail,
+        Extension.WriteExtensionObject {
 
   private final String value;
 
