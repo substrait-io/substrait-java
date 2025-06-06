@@ -4,7 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.relation.*;
+import io.substrait.relation.ExtensionWrite;
+import io.substrait.relation.NamedWrite;
+import io.substrait.relation.ProtoRelConverter;
+import io.substrait.relation.Rel;
+import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.utils.StringHolder;
 import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
