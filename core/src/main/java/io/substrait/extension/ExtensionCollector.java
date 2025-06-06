@@ -23,7 +23,8 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
   private final BidiMap<Integer, String> uriMap;
 
-  private int counter = -1;
+  // start at 0 to make sure functionAnchors start with 1 according to spec
+  private int counter = 0;
 
   public ExtensionCollector() {
     super(new HashMap<>(), new HashMap<>());
