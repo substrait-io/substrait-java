@@ -92,7 +92,9 @@ dependencies {
     implementation("net.minidev:json-smart:2.5.2")
   }
   implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
-  testImplementation("org.junit.jupiter:junit-jupiter:${JUNIT_VERSION}")
+  testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
+  testImplementation("org.junit.jupiter:junit-jupiter")
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:${GUAVA_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")

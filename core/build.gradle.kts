@@ -81,9 +81,9 @@ configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImp
 configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
 
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:${JUNIT_VERSION}")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
+  testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
+  testImplementation("org.junit.jupiter:junit-jupiter")
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
   api("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
