@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.58.0](https://github.com/substrait-io/substrait-java/compare/v0.57.0...v0.58.0) (2025-06-08)
+
+### Features
+
+* add new join types ([#402](https://github.com/substrait-io/substrait-java/issues/402)) ([5907815](https://github.com/substrait-io/substrait-java/commit/59078154160a08e356276d16c5c50739325cc4ee))
+* **core:** add WriteRel ([#404](https://github.com/substrait-io/substrait-java/issues/404)) ([e0cd29f](https://github.com/substrait-io/substrait-java/commit/e0cd29f8f0ece0781fa94f1473e32ce93ddc9944))
+* **isthmus:** upgrade Apache Calcite to 1.40.0 ([#403](https://github.com/substrait-io/substrait-java/issues/403)) ([bbe77ef](https://github.com/substrait-io/substrait-java/commit/bbe77efdae98738a16ecdff6d40c990a1061de79))
+
+### Bug Fixes
+
+* **core:** start functionAnchors at 1 instead of 0 ([#408](https://github.com/substrait-io/substrait-java/issues/408)) ([007accf](https://github.com/substrait-io/substrait-java/commit/007accf75f71576cc91cd8d52e97fab771b5cfd1))
+
 ## [0.57.0](https://github.com/substrait-io/substrait-java/compare/v0.56.0...v0.57.0) (2025-05-25)
 
 ### Features
