@@ -50,4 +50,8 @@ public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
   OUTPUT visit(NamedWrite write) throws EXCEPTION;
 
   OUTPUT visit(ExtensionWrite write) throws EXCEPTION;
+
+  OUTPUT visit(NamedDdl ddl) throws EXCEPTION;
+
+  OUTPUT visit(ExtensionDdl ddl) throws EXCEPTION;
 }

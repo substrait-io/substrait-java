@@ -62,4 +62,9 @@ public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
   protected Extension.WriteExtensionObject detailFromWriteExtensionObject(Any any) {
     return asStringHolder(any);
   }
+
+  @Override
+  protected Extension.DdlExtensionObject detailFromDdlExtensionObject(Any any) {
+    return asStringHolder(any);
+  }
 }

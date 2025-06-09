@@ -11,6 +11,7 @@ import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.DdlRel;
 import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
@@ -382,6 +383,41 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
             .setOutput(write.getOutputMode().toProto());
 
     return Rel.newBuilder().setWrite(builder).build();
+  }
+
+  @Override
+  public Rel visit(NamedDdl ddl) throws RuntimeException {
+    var builder =
+        DdlRel.newBuilder()
+            .setCommon(common(ddl))
+            .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
+            .setTableDefaults(toProto(ddl.getTableDefaults()).getLiteral().getStruct())
+            .setNamedObject(NamedObjectWrite.newBuilder().addAllNames(ddl.getNames()))
+            .setObject(ddl.getObject().toProto())
+            .setOp(ddl.getOperation().toProto());
+    if (ddl.getViewDefinition().isPresent()) {
+      builder.setViewDefinition(toProto(ddl.getViewDefinition().get()));
+    }
+
+    return Rel.newBuilder().setDdl(builder).build();
+  }
+
+  @Override
+  public Rel visit(ExtensionDdl ddl) throws RuntimeException {
+    var builder =
+        DdlRel.newBuilder()
+            .setCommon(common(ddl))
+            .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
+            .setTableDefaults(toProto(ddl.getTableDefaults()).getLiteral().getStruct())
+            .setExtensionObject(
+                ExtensionObject.newBuilder().setDetail(ddl.getDetail().toProto(this)))
+            .setObject(ddl.getObject().toProto())
+            .setOp(ddl.getOperation().toProto());
+    if (ddl.getViewDefinition().isPresent()) {
+      builder.setViewDefinition(toProto(ddl.getViewDefinition().get()));
+    }
+
+    return Rel.newBuilder().setDdl(builder).build();
   }
 
   private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(

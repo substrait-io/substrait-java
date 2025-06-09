@@ -12,6 +12,7 @@ import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
+import io.substrait.proto.DdlRel;
 import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
@@ -124,6 +125,9 @@ public class ProtoRelConverter {
       case WRITE -> {
         return newWrite(rel.getWrite());
       }
+      case DDL -> {
+        return newDdl(rel.getDdl());
+      }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
       }
@@ -197,7 +201,64 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  private Filter newFilter(FilterRel rel) {
+  protected Rel newDdl(DdlRel rel) {
+    var relType = rel.getWriteTypeCase();
+    switch (relType) {
+      case NAMED_OBJECT -> {
+        return newNamedDdl(rel);
+      }
+      case EXTENSION_OBJECT -> {
+        return newExtensionDdl(rel);
+      }
+      default -> throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
+    }
+  }
+
+  protected NamedDdl newNamedDdl(DdlRel rel) {
+    var tableSchema = newNamedStruct(rel.getTableSchema());
+    return NamedDdl.builder()
+        .names(rel.getNamedObject().getNamesList())
+        .tableSchema(tableSchema)
+        .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
+        .operation(NamedDdl.DdlOp.fromProto(rel.getOp()))
+        .object(NamedDdl.DdlObject.fromProto(rel.getObject()))
+        .viewDefinition(optionalViewDefinition(rel))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .build();
+  }
+
+  protected ExtensionDdl newExtensionDdl(DdlRel rel) {
+    var detail = detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
+    var tableSchema = newNamedStruct(rel.getTableSchema());
+    return ExtensionDdl.builder()
+        .detail(detail)
+        .tableSchema(newNamedStruct(rel.getTableSchema()))
+        .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
+        .operation(ExtensionDdl.DdlOp.fromProto(rel.getOp()))
+        .object(ExtensionDdl.DdlObject.fromProto(rel.getObject()))
+        .viewDefinition(optionalViewDefinition(rel))
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .build();
+  }
+
+  protected Optional<Rel> optionalViewDefinition(DdlRel rel) {
+    return Optional.ofNullable(rel.hasViewDefinition() ? from(rel.getViewDefinition()) : null);
+  }
+
+  protected Expression.StructLiteral tableDefaults(
+      io.substrait.proto.Expression.Literal.Struct struct, NamedStruct tableSchema) {
+    var converter = new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    return Expression.StructLiteral.builder()
+        .fields(
+            struct.getFieldsList().stream()
+                .map(converter::from)
+                .collect(java.util.stream.Collectors.toList()))
+        .build();
+  }
+
+  protected Filter newFilter(FilterRel rel) {
     var input = from(rel.getInput());
     var builder =
         Filter.builder()
@@ -852,6 +913,10 @@ public class ProtoRelConverter {
 
   protected Extension.WriteExtensionObject detailFromWriteExtensionObject(
       com.google.protobuf.Any any) {
+    return emptyDetail();
+  }
+
+  protected Extension.DdlExtensionObject detailFromDdlExtensionObject(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
