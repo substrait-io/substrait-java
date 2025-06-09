@@ -24,7 +24,8 @@ public class StringHolder
         Extension.SingleRelDetail,
         Extension.MultiRelDetail,
         Extension.ExtensionTableDetail,
-        Extension.WriteExtensionObject {
+        Extension.WriteExtensionObject,
+        Extension.DdlExtensionObject {
 
   private final String value;
 

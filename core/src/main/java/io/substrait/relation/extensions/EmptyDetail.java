@@ -19,7 +19,8 @@ public class EmptyDetail
         Extension.MultiRelDetail,
         Extension.SingleRelDetail,
         Extension.ExtensionTableDetail,
-        Extension.WriteExtensionObject {
+        Extension.WriteExtensionObject,
+        Extension.DdlExtensionObject {
 
   @Override
   public Any toProto(RelProtoConverter converter) {
