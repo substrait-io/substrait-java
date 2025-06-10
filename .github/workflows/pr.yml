@@ -69,7 +69,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
-        run: gradle build --rerun-tasks
+        run: |
+          # fetch submodule tags since actions/checkout@v4 does not
+          git submodule foreach 'git fetch --unshallow || true'
+
+          gradle build --rerun-tasks
   examples:
     name: Build Examples
     runs-on: ubuntu-latest
@@ -115,6 +119,9 @@ jobs:
       run: gu install native-image
     - name: Build with Gradle
       run: |
+        # fetch submodule tags since actions/checkout@v4 does not
+        git submodule foreach 'git fetch --unshallow || true'
+
         gradle nativeImage
     - name: Smoke Test
       run: |

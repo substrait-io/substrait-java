@@ -4,6 +4,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
+import io.substrait.proto.Version;
 import io.substrait.relation.RelProtoConverter;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +35,18 @@ public class PlanProtoConverter {
     if (plan.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
     }
+
+    Version.Builder versionBuilder =
+        Version.newBuilder()
+            .setMajorNumber(plan.getVersion().getMajor())
+            .setMinorNumber(plan.getVersion().getMinor())
+            .setPatchNumber(plan.getVersion().getPatch());
+
+    plan.getVersion().getGitHash().ifPresent(gh -> versionBuilder.setGitHash(gh));
+    plan.getVersion().getProducer().ifPresent(p -> versionBuilder.setProducer(p));
+
+    builder.setVersion(versionBuilder);
+
     return builder.build();
   }
 }
