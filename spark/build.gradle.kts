@@ -113,6 +113,13 @@ spotless {
 }
 
 tasks {
+  jar {
+    manifest {
+      from("../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
+      attributes("Implementation-Title" to "substrait-spark")
+    }
+  }
+
   test {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
