@@ -122,6 +122,13 @@ tasks {
   }
 
   classes { dependsOn(":core:shadowJar") }
+
+  jar {
+    manifest {
+      from("../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
+      attributes("Implementation-Title" to "isthmus")
+    }
+  }
 }
 
 tasks { build { dependsOn(shadowJar) } }
