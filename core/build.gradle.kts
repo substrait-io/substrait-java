@@ -139,9 +139,11 @@ abstract class SubstraitSpecVersionValueSource :
       logger.warn(error)
     }
 
-    val cmdOut = String(stdOutput.toByteArray()).trim()
+    var cmdOut = String(stdOutput.toByteArray()).trim()
 
-    if (cmdOut.startsWith("v")) {
+    if (cmdOut == "") {
+      cmdOut = "0.0.0"
+    } else if (cmdOut.startsWith("v")) {
       return cmdOut.substring(1)
     }
 
@@ -169,6 +171,22 @@ tasks.register("writeManifest") {
       it.println("Implementation-Version: " + project.version)
       it.println("Specification-Title: substrait")
       it.println("Specification-Version: " + substraitSpecVersionProvider.get())
+    }
+
+    val substraitVersionClass =
+      layout.buildDirectory
+        .file("generated/sources/version/io/substrait/SubstraitVersion.java")
+        .get()
+        .getAsFile()
+    substraitVersionClass.getParentFile().mkdirs()
+
+    substraitVersionClass.printWriter(StandardCharsets.UTF_8).use {
+      it.println("package io.substrait;\n")
+      it.println("public class SubstraitVersion {")
+      it.println(
+        "  public static final String VERSION = \"" + substraitSpecVersionProvider.get() + "\";"
+      )
+      it.println("}")
     }
   }
 }
@@ -206,6 +224,7 @@ sourceSets {
     resources.srcDir("../substrait/extensions")
     resources.srcDir("build/generated/sources/manifest/")
     java.srcDir(file("build/generated/sources/antlr/main/java/"))
+    java.srcDir("build/generated/sources/version/")
   }
 }
 
