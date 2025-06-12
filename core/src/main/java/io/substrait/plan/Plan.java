@@ -69,6 +69,10 @@ public abstract class Plan {
         }
       }
 
+      if (specificationVersion == null) {
+        specificationVersion = "0.0.0";
+      }
+
       return specificationVersion.split("\\.");
     }
   }
