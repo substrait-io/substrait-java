@@ -48,13 +48,13 @@ public class SimpleExtension {
         .setInjectableValues(iv);
   }
 
-  enum Nullability {
+  public enum Nullability {
     MIRROR,
     DECLARED_OUTPUT,
     DISCRETE
   }
 
-  enum Decomposability {
+  public enum Decomposability {
     NONE,
     ONE,
     MANY
