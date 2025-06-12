@@ -13,8 +13,10 @@ plugins {
   id("com.google.protobuf") version "0.9.4"
   id("com.diffplug.spotless") version "6.19.0"
   id("com.gradleup.shadow") version "8.3.6"
-  signing
+  id("org.jreleaser")
 }
+
+val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))
 
 publishing {
   publications {
@@ -35,7 +37,8 @@ publishing {
         }
         developers {
           developer {
-            // TBD Get the list of
+            id = "vbarua"
+            name = "Victor Barua"
           }
         }
         scm {
@@ -53,22 +56,39 @@ publishing {
       val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
+    maven {
+      name = "staging"
+      url = stagingRepositoryUrl
+    }
   }
 }
 
-signing {
-  setRequired({ gradle.taskGraph.hasTask("publishToSonatype") })
-  val signingKeyId =
-    System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
-      ?: extra["SIGNING_KEY_ID"].toString()
-  val signingPassword =
-    System.getenv("SIGNING_PASSWORD").takeUnless { it.isNullOrEmpty() }
-      ?: extra["SIGNING_PASSWORD"].toString()
-  val signingKey =
-    System.getenv("SIGNING_KEY").takeUnless { it.isNullOrEmpty() }
-      ?: extra["SIGNING_KEY"].toString()
-  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-  sign(publishing.publications["maven-publish"])
+jreleaser {
+  gitRootSearch = true
+  signing {
+    active = org.jreleaser.model.Active.ALWAYS
+    armored = true
+    verify = false
+  }
+  deploy {
+    maven {
+      mavenCentral {
+        register("sonatype") {
+          active = org.jreleaser.model.Active.ALWAYS
+          url = "https://central.sonatype.com/api/v1/publisher"
+          stagingRepository(file(stagingRepositoryUrl).toString())
+          retryDelay = 60
+        }
+      }
+    }
+  }
+  release {
+    github {
+      skipRelease = true
+      skipTag = true
+      token = "EMPTY"
+    }
+  }
 }
 
 val ANTLR_VERSION = properties.get("antlr.version")

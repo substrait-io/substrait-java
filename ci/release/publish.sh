@@ -7,4 +7,6 @@ set -euo pipefail
 git submodule foreach 'git fetch --unshallow || true'
 
 gradle wrapper
-./gradlew clean :core:publishToSonatype :isthmus:publishToSonatype :spark:publishToSonatype closeAndReleaseSonatypeStagingRepository
+./gradlew clean
+./gradlew publishAllPublicationsToStagingRepository
+./gradlew jreleaserDeploy
