@@ -44,14 +44,9 @@ Create these actions secrets used by release process:
 
 ## Repository Manager
 
-The artifacts are deployed to Sonatype OSSRH (Sonatype Open Source Software Repository Manager).
+The artifacts are deployed to Sonatype [Central Publishing Portal](https://central.sonatype.com/).
 
-These are the repositories availables:
-- Snapshots: https://s01.oss.sonatype.org/content/repositories/snapshots
-- Staging: https://s01.oss.sonatype.org/content/repositories/staging
-- Releases: https://s01.oss.sonatype.org/content/repositories/releases
-
-![repositories](img/repositories.png)
+Documentation: https://central.sonatype.org/register/central-portal/
 
 ## Release Process
 

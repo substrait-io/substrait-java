@@ -86,8 +86,10 @@ jobs:
         run: ./ci/release/run.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.SIGNING_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.SIGNING_PASSWORD }}
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ MAVEN_CENTRAL_USER }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ MAVEN_CENTRAL_KEY }}
