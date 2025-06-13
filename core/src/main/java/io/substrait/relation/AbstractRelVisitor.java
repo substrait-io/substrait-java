@@ -122,4 +122,14 @@ public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
   public OUTPUT visit(ExtensionWrite write) throws EXCEPTION {
     return visitFallback(write);
   }
+
+  @Override
+  public OUTPUT visit(NamedDdl ddl) throws EXCEPTION {
+    return visitFallback(ddl);
+  }
+
+  @Override
+  public OUTPUT visit(ExtensionDdl ddl) throws EXCEPTION {
+    return visitFallback(ddl);
+  }
 }
