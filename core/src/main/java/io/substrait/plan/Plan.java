@@ -1,12 +1,10 @@
 package io.substrait.plan;
 
+import io.substrait.SubstraitVersion;
 import io.substrait.proto.AdvancedExtension;
 import io.substrait.relation.Rel;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.jar.Attributes.Name;
-import java.util.jar.Manifest;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -32,14 +30,7 @@ public abstract class Plan {
     public static final Version DEFAULT_VERSION;
 
     static {
-      final String[] versionComponents = loadVersion();
-      DEFAULT_VERSION =
-          ImmutableVersion.builder()
-              .major(Integer.parseInt(versionComponents[0]))
-              .minor(Integer.parseInt(versionComponents[1]))
-              .patch(Integer.parseInt(versionComponents[2]))
-              .producer(Optional.of("substrait-java"))
-              .build();
+      DEFAULT_VERSION = loadVersion();
     }
 
     public abstract int getMajor();
@@ -52,28 +43,15 @@ public abstract class Plan {
 
     public abstract Optional<String> getProducer();
 
-    private static String[] loadVersion() {
-      // load the specification version from the JAR manifest
-      String specificationVersion = Version.class.getPackage().getSpecificationVersion();
+    private static Version loadVersion() {
+      final String[] versionComponents = SubstraitVersion.VERSION.split("\\.");
 
-      // load the manifest directly from the classpath if the specification version is null which is
-      // the case if the Version class is not in a JAR, e.g. during the Gradle build
-      if (specificationVersion == null) {
-        try {
-          Manifest manifest =
-              new Manifest(
-                  Version.class.getClassLoader().getResourceAsStream("META-INF/MANIFEST.MF"));
-          specificationVersion = manifest.getMainAttributes().getValue(Name.SPECIFICATION_VERSION);
-        } catch (IOException e) {
-          throw new IllegalStateException("Could not load version from manifest", e);
-        }
-      }
-
-      if (specificationVersion == null) {
-        specificationVersion = "0.0.0";
-      }
-
-      return specificationVersion.split("\\.");
+      return ImmutableVersion.builder()
+          .major(Integer.parseInt(versionComponents[0]))
+          .minor(Integer.parseInt(versionComponents[1]))
+          .patch(Integer.parseInt(versionComponents[2]))
+          .producer(Optional.of("substrait-java"))
+          .build();
     }
   }
 
