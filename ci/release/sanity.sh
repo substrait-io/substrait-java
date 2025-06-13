@@ -4,12 +4,13 @@
 set -euo pipefail
 export GPG_TTY=$(tty)
 
-echo "Validate Sonatype OSSRH Credentials."
-CODE=$(curl -u "$SONATYPE_USER:$SONATYPE_PASSWORD" -sSL -w '%{http_code}' -o /dev/null https://s01.oss.sonatype.org/service/local/staging/profiles)
+echo "Validate Central Publisher API credentials."
+BEARER=$(printf "%s:%s" "${SONATYPE_USER}" "${SONATYPE_PASSWORD}" | base64)
+CODE=$(curl --request GET 'https://central.sonatype.com/api/v1/publisher/published?namespace=io.substrait&name=core&version=0.1.0' --header 'accept: application/json' --header "Authorization: Bearer ${BEARER}" -sSL -w '%{http_code}' -o /dev/null)
 if [[ "$CODE" =~ ^2 ]]; then
-    echo "Sonatype OSSRH Credentials configured successfully."
+    echo "Central Publisher API credentials configured successfully."
 else
-    echo "Error to validate Sonatype OSSRH Credentials. Server returned HTTP code $CODE."
+    echo "Error to validate Central Publisher API credentials. Server returned HTTP code ${CODE}."
 fi
 
 echo "Validate Signing Private/Public Key."
