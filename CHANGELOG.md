@@ -1,6 +1,19 @@
 Release Notes
 ---
 
+## [0.59.0](https://github.com/substrait-io/substrait-java/compare/v0.58.0...v0.59.0) (2025-06-15)
+
+### Features
+
+* expose Nullability and Decomposability enums ([#415](https://github.com/substrait-io/substrait-java/issues/415)) ([e445a50](https://github.com/substrait-io/substrait-java/commit/e445a504d807eaff687e06b7aac1d404ea7735a0))
+* support Version field in plans ([#406](https://github.com/substrait-io/substrait-java/issues/406)) ([de8bf2a](https://github.com/substrait-io/substrait-java/commit/de8bf2abce302dadbcead2364f6f950fc5ad6673))
+
+### Bug Fixes
+
+* add fallback to version lookup ([#413](https://github.com/substrait-io/substrait-java/issues/413)) ([ac707e2](https://github.com/substrait-io/substrait-java/commit/ac707e2738df9465685b8214a9e53e01415971f3))
+* **core:** create and use SubstraitVersion Java class ([#416](https://github.com/substrait-io/substrait-java/issues/416)) ([1cb2eec](https://github.com/substrait-io/substrait-java/commit/1cb2eec1e61ce645fb8bcfe3a8cce5e62ecebaf0))
+* **isthmus,spark:** add MANIFEST.MF specification version to JAR ([#412](https://github.com/substrait-io/substrait-java/issues/412)) ([33c83dc](https://github.com/substrait-io/substrait-java/commit/33c83dc2babb4114607333d8299eced88e4afa01))
+
 ## [0.58.0](https://github.com/substrait-io/substrait-java/compare/v0.57.0...v0.58.0) (2025-06-08)
 
 ### Features
