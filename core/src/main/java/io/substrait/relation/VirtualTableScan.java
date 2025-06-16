@@ -4,12 +4,13 @@ import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeVisitor;
 import java.util.List;
+import java.util.Objects;
 import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
-  public abstract List<Expression.StructLiteral> getRows();
+  public abstract List<Expression> getRows();
 
   /**
    *
@@ -29,9 +30,9 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
     var rows = getRows();
 
-    assert rows.size() > 0
-        && names.stream().noneMatch(s -> s == null)
-        && rows.stream().noneMatch(r -> r == null)
+    assert !rows.isEmpty()
+        && names.stream().noneMatch(Objects::isNull)
+        && rows.stream().noneMatch(Objects::isNull)
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
   }

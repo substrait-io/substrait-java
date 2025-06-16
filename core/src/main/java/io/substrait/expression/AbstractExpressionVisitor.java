@@ -150,6 +150,11 @@ public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Except
   }
 
   @Override
+  public OUTPUT visit(Expression.StructNested expr) throws EXCEPTION {
+    return visitFallback(expr);
+  }
+
+  @Override
   public OUTPUT visit(Expression.Switch expr) throws EXCEPTION {
     return visitFallback(expr);
   }
