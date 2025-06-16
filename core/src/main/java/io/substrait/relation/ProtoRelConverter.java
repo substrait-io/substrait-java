@@ -418,14 +418,26 @@ public class ProtoRelConverter {
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
     var virtualTableSchema = newNamedStruct(rel);
+
     var converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
-    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
+
+    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
               .fields(
                   struct.getFieldsList().stream()
+                      .map(converter::from)
+                      .collect(java.util.stream.Collectors.toList()))
+              .build());
+    }
+    for (var struct : virtualTable.getExpressionList()) {
+      structLiterals.add(
+          ImmutableExpression.StructLiteral.builder()
+              .fields(
+                  struct.getFieldsList().stream()
+                      .map(io.substrait.proto.Expression::getLiteral)
                       .map(converter::from)
                       .collect(java.util.stream.Collectors.toList()))
               .build());
