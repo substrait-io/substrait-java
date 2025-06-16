@@ -361,16 +361,22 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     LocalRelation(ToSparkType.toAttributeSeq(emptyScan.getInitialSchema))
   }
 
-  override def visit(
-      virtualTableScan: relation.VirtualTableScan,
-      context: EmptyVisitationContext): LogicalPlan = {
-    val rows = virtualTableScan.getRows.asScala.map(
-      row =>
+  override def visit(virtualTableScan: relation.VirtualTableScan,  context: EmptyVisitationContext): LogicalPlan = {
+    val rows = virtualTableScan.getRows.asScala.map {
+      case structLit: SExpression.StructLiteral =>
         InternalRow.fromSeq(
-          row
-            .fields()
-            .asScala
-            .map(field => field.accept(expressionConverter, context).asInstanceOf[Literal].value)))
+          structLit.fields.asScala
+            .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)
+        )
+      case structNested: SExpression.StructNested =>
+        InternalRow.fromSeq(
+          structNested.fields.asScala
+            .map(expr => expr.accept(expressionConverter))
+        )
+      case other =>
+        throw new UnsupportedOperationException(
+          s"Unsupported row type in VirtualTableScan: ${other.getClass}")
+    }
     virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
         OneRowRelation()
