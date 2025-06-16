@@ -422,7 +422,7 @@ public class ProtoRelConverter {
     var converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 
-    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionCount());
+    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
