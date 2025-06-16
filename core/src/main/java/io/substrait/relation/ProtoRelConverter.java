@@ -133,7 +133,7 @@ public class ProtoRelConverter {
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       var virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0) {
+      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionCount() == 0) {
         return newEmptyScan(rel);
       } else {
         return newVirtualTable(rel);
