@@ -75,6 +75,12 @@ public class ExpressionProtoConverter
     return Expression.newBuilder().setLiteral(builder).build();
   }
 
+  private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
+    var builder = Expression.Nested.newBuilder();
+    consumer.accept(builder);
+    return Expression.newBuilder().setNested(builder).build();
+  }
+
   @Override
   public Expression visit(
       io.substrait.expression.Expression.BoolLiteral expr, EmptyVisitationContext context) {
@@ -354,6 +360,18 @@ public class ExpressionProtoConverter
                   .collect(java.util.stream.Collectors.toList());
           bldr.setNullable(expr.nullable())
               .setStruct(Expression.Literal.Struct.newBuilder().addAllFields(values));
+        });
+  }
+
+  @Override
+  public Expression visit(io.substrait.expression.Expression.StructNested expr) {
+    return nested(
+        bldr -> {
+          var values =
+              expr.expressions().stream()
+                  .map(this::toProto)
+                  .collect(java.util.stream.Collectors.toList());
+          bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values));
         });
   }
 

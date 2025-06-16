@@ -407,6 +407,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Expression> visit(Expression.StructNested expr) throws EXCEPTION {
+    var expressions = visitExprList(expr.expressions());
+    return expressions.map(
+        expressionList ->
+            Expression.StructNested.builder().from(expr).expressions(expressionList).build());
+  }
+
   // utilities
 
   protected Optional<List<Expression>> visitExprList(
