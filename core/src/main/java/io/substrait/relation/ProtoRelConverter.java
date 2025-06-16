@@ -439,13 +439,11 @@ public class ProtoRelConverter {
               .build());
     }
 
-    for (var expression : virtualTable.getExpressionsList()) {
+    for (var expr : virtualTable.getExpressionsList()) {
       expressions.add(
           ImmutableExpression.StructNested.builder()
-              .expressions(
-                  expression.getFieldsList().stream()
-                      .map(converter::from)
-                      .collect(Collectors.toList()))
+              .fields(
+                  expr.getFieldsList().stream().map(converter::from).collect(Collectors.toList()))
               .build());
     }
 

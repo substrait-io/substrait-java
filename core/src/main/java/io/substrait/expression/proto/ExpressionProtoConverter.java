@@ -334,7 +334,7 @@ public class ExpressionProtoConverter implements ExpressionVisitor<Expression, R
     return nested(
         bldr -> {
           var values =
-              expr.expressions().stream()
+              expr.fields().stream()
                   .map(this::toProto)
                   .collect(java.util.stream.Collectors.toList());
           bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values));

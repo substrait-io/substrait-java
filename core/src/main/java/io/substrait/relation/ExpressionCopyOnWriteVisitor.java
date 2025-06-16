@@ -174,6 +174,14 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.StructNested expr) throws EXCEPTION {
+    var expressions = visitExprList(expr.fields());
+    return expressions.map(
+        expressionList ->
+            Expression.StructNested.builder().from(expr).fields(expressionList).build());
+  }
+
+  @Override
   public Optional<Expression> visit(Expression.UserDefinedLiteral expr) throws EXCEPTION {
     return visitLiteral(expr);
   }
@@ -360,14 +368,6 @@ public class ExpressionCopyOnWriteVisitor<EXCEPTION extends Exception>
             .haystack(haystack.orElse(inPredicate.haystack()))
             .needles(needles.orElse(inPredicate.needles()))
             .build());
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.StructNested expr) throws EXCEPTION {
-    var expressions = visitExprList(expr.expressions());
-    return expressions.map(
-        expressionList ->
-            Expression.StructNested.builder().from(expr).expressions(expressionList).build());
   }
 
   // utilities

@@ -576,12 +576,12 @@ public interface Expression extends FunctionArg {
 
   @Value.Immutable
   abstract static class StructNested implements Expression {
-    public abstract List<Expression> expressions();
+    public abstract List<Expression> fields();
 
     public Type getType() {
       return Type.withNullability(false)
           .struct(
-              expressions().stream()
+              fields().stream()
                   .map(Expression::getType)
                   .collect(java.util.stream.Collectors.toList()));
     }

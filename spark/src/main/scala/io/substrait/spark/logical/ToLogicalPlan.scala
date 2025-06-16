@@ -353,7 +353,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
         )
       case structNested: SExpression.StructNested =>
         InternalRow.fromSeq(
-          structNested.expressions.asScala
+          structNested.fields.asScala
             .map(expr => expr.accept(expressionConverter).asInstanceOf[Literal].value)
         )
       case other =>
