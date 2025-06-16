@@ -133,7 +133,7 @@ public class ProtoRelConverter {
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       var virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionCount() == 0) {
+      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
         return newEmptyScan(rel);
       } else {
         return newVirtualTable(rel);
@@ -432,7 +432,7 @@ public class ProtoRelConverter {
                       .collect(java.util.stream.Collectors.toList()))
               .build());
     }
-    for (var struct : virtualTable.getExpressionList()) {
+    for (var struct : virtualTable.getExpressionsList()) {
       structLiterals.add(
           ImmutableExpression.StructLiteral.builder()
               .fields(
