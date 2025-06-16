@@ -27,6 +27,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.extensions.EmptyOptimization;
@@ -127,6 +128,9 @@ public class ProtoRelConverter {
       }
       case DDL -> {
         return newDdl(rel.getDdl());
+      }
+      case UPDATE -> {
+        return newUpdate(rel.getUpdate());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -260,6 +264,41 @@ public class ProtoRelConverter {
                 .map(converter::from)
                 .collect(java.util.stream.Collectors.toList()))
         .build();
+  }
+
+  protected Rel newUpdate(UpdateRel rel) {
+    var relType = rel.getUpdateTypeCase();
+    switch (relType) {
+      case NAMED_TABLE -> {
+        return newNamedUpdate(rel);
+      }
+      default -> throw new UnsupportedOperationException(
+          "Unsupported UpdateTypeCase of " + relType);
+    }
+  }
+
+  protected Rel newNamedUpdate(UpdateRel rel) {
+    var tableSchema = newNamedStruct(rel.getTableSchema());
+    var converter = new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    List<NamedUpdate.TransformExpression> transformations =
+        new ArrayList<>(rel.getTransformationsCount());
+    for (var transformation : rel.getTransformationsList()) {
+      transformations.add(
+          NamedUpdate.TransformExpression.builder()
+              .transformation(converter.from(transformation.getTransformation()))
+              .columnTarget(transformation.getColumnTarget())
+              .build());
+    }
+    var builder =
+        NamedUpdate.builder()
+            .names(rel.getNamedTable().getNamesList())
+            .tableSchema(tableSchema)
+            .addAllTransformations(transformations)
+            .condition(converter.from(rel.getCondition()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+    }
+    return builder.build();
   }
 
   protected Filter newFilter(FilterRel rel) {
