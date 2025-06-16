@@ -27,6 +27,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.extensions.EmptyOptimization;
@@ -127,6 +128,9 @@ public class ProtoRelConverter {
       }
       case DDL -> {
         return newDdl(rel.getDdl());
+      }
+      case UPDATE -> {
+        return newUpdate(rel.getUpdate());
       }
       default -> {
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
@@ -255,6 +259,26 @@ public class ProtoRelConverter {
             struct.getFieldsList().stream()
                 .map(converter::from)
                 .collect(java.util.stream.Collectors.toList()))
+        .build();
+  }
+
+  protected Rel newUpdate(UpdateRel rel) {
+    var tableSchema = newNamedStruct(rel.getTableSchema());
+    var converter = new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    List<Update.TransformExpression> transformations =
+        new ArrayList<>(rel.getTransformationsCount());
+    for (var transformation : rel.getTransformationsList()) {
+      transformations.add(
+          Update.TransformExpression.builder()
+              .transformation(converter.from(transformation.getTransformation()))
+              .columnTarget(transformation.getColumnTarget())
+              .build());
+    }
+    return Update.builder()
+        .names(rel.getNamedTable().getNamesList())
+        .tableSchema(tableSchema)
+        .addAllTransformations(transformations)
+        .condition(converter.from(rel.getCondition()))
         .build();
   }
 
