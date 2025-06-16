@@ -354,7 +354,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       case structNested: SExpression.StructNested =>
         InternalRow.fromSeq(
           structNested.fields.asScala
-            .map(expr => expr.accept(expressionConverter).asInstanceOf[Literal].value)
+            .map(expr => expr.accept(expressionConverter))
         )
       case other =>
         throw new UnsupportedOperationException(
