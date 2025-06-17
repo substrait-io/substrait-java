@@ -417,7 +417,14 @@ public class ProtoRelConverter {
 
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     var virtualTable = rel.getVirtualTable();
+    // If both values and expressions are set, raise an error
+    if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
+      throw new IllegalArgumentException(
+          "Virtual table cannot have both values and expressions set");
+    }
+
     var virtualTableSchema = newNamedStruct(rel);
+
     var converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
