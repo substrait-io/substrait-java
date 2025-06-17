@@ -52,10 +52,7 @@ public class Extension {
     NamedStruct deriveSchema();
   }
 
-  public interface WriteExtensionObject extends ToProto<com.google.protobuf.Any> {
-    /**
-     * @return the table schema for the associated {@link ExtensionWrite} relation
-     */
-    NamedStruct deriveSchema();
-  }
+  public interface WriteExtensionObject extends ToProto<com.google.protobuf.Any> {}
+
+  public interface DdlExtensionObject extends ToProto<com.google.protobuf.Any> {}
 }
