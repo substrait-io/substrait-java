@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.60.0](https://github.com/substrait-io/substrait-java/compare/v0.59.0...v0.60.0) (2025-06-18)
+
+### Features
+
+* **core:** add DdlRel ([#410](https://github.com/substrait-io/substrait-java/issues/410)) ([18a12d5](https://github.com/substrait-io/substrait-java/commit/18a12d5b8c14ee3101c34af2211104e462e9ffb2))
+
 ## [0.59.0](https://github.com/substrait-io/substrait-java/compare/v0.58.0...v0.59.0) (2025-06-15)
 
 ### Features
