@@ -8,7 +8,7 @@ plugins {
   id("idea")
   id("com.github.vlsi.gradle-extensions") version "1.74"
   id("com.diffplug.spotless") version "6.19.0"
-  id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+  id("org.jreleaser") version "1.18.0" apply false
 }
 
 var IMMUTABLES_VERSION = properties.get("immutables.version")
@@ -66,24 +66,6 @@ allprojects {
         removeUnusedImports()
         trimTrailingWhitespace()
       }
-    }
-  }
-}
-
-nexusPublishing {
-  repositories {
-    create("sonatype") {
-      val sonatypeUser =
-        System.getenv("SONATYPE_USER").takeUnless { it.isNullOrEmpty() }
-          ?: extra["SONATYPE_USER"].toString()
-      val sonatypePassword =
-        System.getenv("SONATYPE_PASSWORD").takeUnless { it.isNullOrEmpty() }
-          ?: extra["SONATYPE_PASSWORD"].toString()
-      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-
-      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-      username.set(sonatypeUser)
-      password.set(sonatypePassword)
     }
   }
 }

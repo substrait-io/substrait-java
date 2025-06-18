@@ -17,15 +17,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macOS-latest ]
+        os: [ubuntu-latest, macOS-latest]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '17'
-          distribution: 'graalvm'
+          java-version: "17"
+          distribution: "graalvm"
           # helps avoid rate-limiting issues
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Gradle
@@ -65,11 +65,11 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Download isthmus-ubuntu-latest binary
@@ -86,8 +86,10 @@ jobs:
         run: ./ci/release/run.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.SIGNING_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.SIGNING_PASSWORD }}
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USER }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_KEY }}
