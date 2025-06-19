@@ -175,7 +175,8 @@ public class ProtoRelConverter {
             .tableSchema(newNamedStruct(rel.getTableSchema()))
             .createMode(NamedWrite.CreateMode.fromProto(rel.getCreateMode()))
             .outputMode(NamedWrite.OutputMode.fromProto(rel.getOutput()))
-            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()));
+            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -193,7 +194,8 @@ public class ProtoRelConverter {
             .tableSchema(newNamedStruct(rel.getTableSchema()))
             .createMode(NamedWrite.CreateMode.fromProto(rel.getCreateMode()))
             .outputMode(NamedWrite.OutputMode.fromProto(rel.getOutput()))
-            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()));
+            .operation(NamedWrite.WriteOp.fromProto(rel.getOp()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -225,6 +227,7 @@ public class ProtoRelConverter {
         .viewDefinition(optionalViewDefinition(rel))
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()))
         .build();
   }
 
@@ -240,6 +243,7 @@ public class ProtoRelConverter {
         .viewDefinition(optionalViewDefinition(rel))
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()))
         .build();
   }
 
@@ -265,7 +269,8 @@ public class ProtoRelConverter {
             .input(input)
             .condition(
                 new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this)
-                    .from(rel.getCondition()));
+                    .from(rel.getCondition()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -313,7 +318,8 @@ public class ProtoRelConverter {
                         ? new ProtoExpressionConverter(
                                 lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
-                        : null));
+                        : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -329,7 +335,8 @@ public class ProtoRelConverter {
     var builder =
         ExtensionLeaf.from(detail)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-            .remap(optionalRelmap(rel.getCommon()));
+            .remap(optionalRelmap(rel.getCommon()))
+            .hint(optionalHint(rel.getCommon()));
     return builder.build();
   }
 
@@ -339,7 +346,8 @@ public class ProtoRelConverter {
     var builder =
         ExtensionSingle.from(detail, input)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-            .remap(optionalRelmap(rel.getCommon()));
+            .remap(optionalRelmap(rel.getCommon()))
+            .hint(optionalHint(rel.getCommon()));
     return builder.build();
   }
 
@@ -349,7 +357,8 @@ public class ProtoRelConverter {
     var builder =
         ExtensionMulti.from(detail, inputs)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-            .remap(optionalRelmap(rel.getCommon()));
+            .remap(optionalRelmap(rel.getCommon()))
+            .hint(optionalHint(rel.getCommon()));
     if (rel.hasDetail()) {
       builder.detail(detailFromExtensionMultiRel(rel.getDetail()));
     }
@@ -375,7 +384,8 @@ public class ProtoRelConverter {
                         ? new ProtoExpressionConverter(
                                 lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
-                        : null));
+                        : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -389,7 +399,7 @@ public class ProtoRelConverter {
   protected ExtensionTable newExtensionTable(ReadRel rel) {
     Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
-    var builder = ExtensionTable.from(detail);
+    var builder = ExtensionTable.from(detail).hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -423,7 +433,8 @@ public class ProtoRelConverter {
                         ? new ProtoExpressionConverter(
                                 lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
-                        : null));
+                        : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -499,7 +510,8 @@ public class ProtoRelConverter {
                     rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
-            .rows(structLiterals);
+            .rows(structLiterals)
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -512,7 +524,8 @@ public class ProtoRelConverter {
 
   protected Fetch newFetch(FetchRel rel) {
     var input = from(rel.getInput());
-    var builder = Fetch.builder().input(input).offset(rel.getOffset());
+    var builder =
+        Fetch.builder().input(input).offset(rel.getOffset()).hint(optionalHint(rel.getCommon()));
     if (rel.getCount() != -1) {
       // -1 is used as a sentinel value to signal LIMIT ALL
       // count only needs to be set when it is not -1
@@ -615,7 +628,12 @@ public class ProtoRelConverter {
                       measure.hasFilter() ? protoExprConverter.from(measure.getFilter()) : null))
               .build());
     }
-    var builder = Aggregate.builder().input(input).groupings(groupings).measures(measures);
+    var builder =
+        Aggregate.builder()
+            .input(input)
+            .groupings(groupings)
+            .measures(measures)
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -640,7 +658,8 @@ public class ProtoRelConverter {
                                 .direction(Expression.SortDirection.fromProto(field.getDirection()))
                                 .expr(converter.from(field.getExpr()))
                                 .build())
-                    .collect(java.util.stream.Collectors.toList()));
+                    .collect(java.util.stream.Collectors.toList()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -666,7 +685,8 @@ public class ProtoRelConverter {
             .joinType(Join.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -680,7 +700,7 @@ public class ProtoRelConverter {
   protected Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    var builder = Cross.builder().left(left).right(right);
+    var builder = Cross.builder().left(left).right(right).hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -696,7 +716,11 @@ public class ProtoRelConverter {
         rel.getInputsList().stream()
             .map(inputRel -> from(inputRel))
             .collect(java.util.stream.Collectors.toList());
-    var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
+    var builder =
+        Set.builder()
+            .inputs(inputs)
+            .setOp(Set.SetOp.fromProto(rel.getOp()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -728,7 +752,8 @@ public class ProtoRelConverter {
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -760,7 +785,8 @@ public class ProtoRelConverter {
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -787,7 +813,8 @@ public class ProtoRelConverter {
                 rel.hasExpression()
                     ? converter.from(rel.getExpression())
                     : Expression.BoolLiteral.builder().value(true).build())
-            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()));
+            .joinType(NestedLoopJoin.JoinType.fromProto(rel.getType()))
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -823,7 +850,8 @@ public class ProtoRelConverter {
             .input(input)
             .partitionExpressions(partitionExprs)
             .sorts(sortFields)
-            .windowFunctions(windowRelFunctions);
+            .windowFunctions(windowRelFunctions)
+            .hint(optionalHint(rel.getCommon()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

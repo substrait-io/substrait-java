@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.extension.AdvancedExtension;
+import io.substrait.hint.Hint;
 import io.substrait.relation.utils.StringHolder;
+import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -121,6 +123,35 @@ public class ProtoRelConverterTest extends TestBase {
       Rel relReturned = protoRelConverter.from(protoRel);
 
       assertNotEquals(rel, relReturned);
+    }
+  }
+
+  /** Verify that hints are correctly transmitted in proto<->pojo */
+  @Nested
+  class HintsTest {
+
+    @Test
+    void relWithHint() {
+      Rel relWithHints =
+          NamedScan.builder()
+              .from(commonTable)
+              .hint(Hint.builder().addOutputNames("Test hint").build())
+              .build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithHints);
+      Rel relReturned = protoRelConverter.from(protoRel);
+      assertEquals(relWithHints, relReturned);
+    }
+
+    @Test
+    void relWithHints() {
+      Rel relWithHints =
+          NamedScan.builder()
+              .from(commonTable)
+              .hint(Hint.builder().addAllOutputNames(Arrays.asList("Hint 1", "Hint 2")).build())
+              .build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithHints);
+      Rel relReturned = protoRelConverter.from(protoRel);
+      assertEquals(relWithHints, relReturned);
     }
   }
 }
