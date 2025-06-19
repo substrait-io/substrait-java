@@ -7,7 +7,9 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -23,9 +25,15 @@ public class ScalarFunctionConverter
         ScalarFunctionConverter.WrappedScalarCall>
     implements CallConverter {
 
+  /**
+   * Function mappers provide a hook point for any custom mapping to Substrait functions and
+   * arguments.
+   */
+  private final List<ScalarFunctionMapper> mappers;
+
   public ScalarFunctionConverter(
       List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
-    super(functions, typeFactory);
+    this(functions, Collections.emptyList(), typeFactory, TypeConverter.DEFAULT);
   }
 
   public ScalarFunctionConverter(
@@ -34,6 +42,8 @@ public class ScalarFunctionConverter
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
+
+    mappers = List.of(new TrimFunctionMapper(functions));
   }
 
   @Override
@@ -44,16 +54,57 @@ public class ScalarFunctionConverter
   @Override
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    FunctionFinder m = signatures.get(call.op);
-    if (m == null) {
-      return Optional.empty();
-    }
-    if (!m.allowedArgCount(call.getOperands().size())) {
+    // If a mapping applies to this call, use it; otherwise default behavior.
+    return getMappingForCall(call)
+        .map(mapping -> mappedConvert(mapping, call, topLevelConverter))
+        .orElseGet(() -> defaultConvert(call, topLevelConverter));
+  }
+
+  private Optional<SubstraitFunctionMapping> getMappingForCall(final RexCall call) {
+    return mappers.stream()
+        .map(mapper -> mapper.toSubstrait(call))
+        .filter(Optional::isPresent)
+        .findFirst()
+        .orElse(Optional.empty());
+  }
+
+  private Optional<Expression> mappedConvert(
+      SubstraitFunctionMapping mapping,
+      RexCall call,
+      Function<RexNode, Expression> topLevelConverter) {
+    var finder = new FunctionFinder(mapping.substraitName(), call.op, mapping.functions());
+    var wrapped =
+        new WrappedScalarCall(call) {
+          @Override
+          public Stream<RexNode> getOperands() {
+            return mapping.operands().stream();
+          }
+        };
+
+    return attemptMatch(finder, wrapped, topLevelConverter);
+  }
+
+  private Optional<Expression> defaultConvert(
+      RexCall call, Function<RexNode, Expression> topLevelConverter) {
+    FunctionFinder finder = signatures.get(call.op);
+    var wrapped = new WrappedScalarCall(call);
+
+    return attemptMatch(finder, wrapped, topLevelConverter);
+  }
+
+  private Optional<Expression> attemptMatch(
+      FunctionFinder finder,
+      WrappedScalarCall call,
+      Function<RexNode, Expression> topLevelConverter) {
+    if (!isPotentialFunctionMatch(finder, call)) {
       return Optional.empty();
     }
 
-    var wrapped = new WrappedScalarCall(call);
-    return m.attemptMatch(wrapped, topLevelConverter);
+    return finder.attemptMatch(call, topLevelConverter);
+  }
+
+  private boolean isPotentialFunctionMatch(FunctionFinder finder, WrappedScalarCall call) {
+    return Objects.nonNull(finder) && finder.allowedArgCount((int) call.getOperands().count());
   }
 
   @Override
@@ -69,7 +120,22 @@ public class ScalarFunctionConverter
         .build();
   }
 
-  static class WrappedScalarCall implements GenericCall {
+  public List<FunctionArg> getExpressionArguments(Expression.ScalarFunctionInvocation expression) {
+    // If a mapping applies to this expression, use it to get the arguments; otherwise default
+    // behavior.
+    return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
+  }
+
+  private Optional<List<FunctionArg>> getMappedExpressionArguments(
+      Expression.ScalarFunctionInvocation expression) {
+    return mappers.stream()
+        .map(mapper -> mapper.getExpressionArguments(expression))
+        .filter(Optional::isPresent)
+        .findFirst()
+        .orElse(Optional.empty());
+  }
+
+  protected static class WrappedScalarCall implements GenericCall {
 
     private final RexCall delegate;
 

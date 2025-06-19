@@ -29,7 +29,7 @@ public class AggregateFunctionConverterTest extends PlanTestBase {
                 typeFactory.createSqlType(SqlTypeName.VARCHAR),
                 null));
     assertNotNull(functionFinder);
-    assertEquals("sum0", functionFinder.getName());
+    assertEquals("sum0", functionFinder.getSubstraitName());
     assertEquals(AggregateFunctions.SUM0, functionFinder.getOperator());
   }
 }
