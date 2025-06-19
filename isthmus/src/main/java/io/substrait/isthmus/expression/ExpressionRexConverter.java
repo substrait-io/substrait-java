@@ -363,7 +363,7 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
                         callConversionFailureMessage(
                             "scalar", expr.declaration().name(), expr.arguments())));
 
-    var eArgs = scalarFunctionConverter.getRexArguments(expr);
+    var eArgs = scalarFunctionConverter.getExpressionArguments(expr);
     var args =
         IntStream.range(0, eArgs.size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))

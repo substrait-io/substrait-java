@@ -4,23 +4,27 @@ import io.substrait.extension.SimpleExtension.ScalarFunctionVariant;
 import java.util.List;
 import org.apache.calcite.rex.RexNode;
 
+/**
+ * Associates operands with a matching Substrait function and possible matching function
+ * implementations.
+ */
 class SubstraitFunctionMapping {
 
-  private final String name;
+  private final String substraitName;
   private final List<RexNode> operands;
   private final List<ScalarFunctionVariant> functions;
 
   public SubstraitFunctionMapping(
-      final String name,
+      final String substraitName,
       final List<RexNode> operands,
       final List<ScalarFunctionVariant> functions) {
-    this.name = name;
+    this.substraitName = substraitName;
     this.operands = operands;
     this.functions = functions;
   }
 
-  String name() {
-    return name;
+  String substraitName() {
+    return substraitName;
   }
 
   List<RexNode> operands() {

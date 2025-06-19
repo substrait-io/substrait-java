@@ -19,6 +19,17 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+/**
+ * Custom mapping for the Calcite TRIM function to various Substrait functions. The first TRIM
+ * operand indicates the Substrait function to which it should be mapped. The first operand is then
+ * omitted from the arguments supplied to the Substrait function.
+ *
+ * <ul>
+ *   <li>TRIM('BOTH', characters, string) -> trim(characters, string)
+ *   <li>TRIM('LEADING', characters, string) -> ltrim(characters, string)
+ *   <li>TRIM('TRAILING', .characters, string) -> rtrim(characters, string)
+ * </ul>
+ */
 final class TrimFunctionMapper implements ScalarFunctionMapper {
 
   private enum Trim {
@@ -108,7 +119,7 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
   }
 
   @Override
-  public Optional<List<FunctionArg>> getRexArguments(
+  public Optional<List<FunctionArg>> getExpressionArguments(
       final Expression.ScalarFunctionInvocation expression) {
     var name = expression.declaration().name();
     return Trim.fromSubstraitName(name)

@@ -78,11 +78,13 @@ public class EnumConverter {
       Class<? extends Enum<?>> cls, Supplier<Optional<String>> option) {
     if (cls.isAssignableFrom(TimeUnitRange.class)) {
       return option.get().map(TimeUnitRange::valueOf);
-    } else if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
-      return option.get().map(SqlTrimFunction.Flag::valueOf);
-    } else {
-      return Optional.empty();
     }
+
+    if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
+      return option.get().map(SqlTrimFunction.Flag::valueOf);
+    }
+
+    return Optional.empty();
   }
 
   static Optional<RexLiteral> toRex(

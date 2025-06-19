@@ -25,6 +25,10 @@ public class ScalarFunctionConverter
         ScalarFunctionConverter.WrappedScalarCall>
     implements CallConverter {
 
+  /**
+   * Function mappers provide a hook point for any custom mapping to Substrait functions and
+   * arguments.
+   */
   private final List<ScalarFunctionMapper> mappers;
 
   public ScalarFunctionConverter(
@@ -50,12 +54,13 @@ public class ScalarFunctionConverter
   @Override
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    return getConvertMapper(call)
+    // If a mapping applies to this call, use it; otherwise default behavior.
+    return getMappingForCall(call)
         .map(mapping -> mappedConvert(mapping, call, topLevelConverter))
         .orElseGet(() -> defaultConvert(call, topLevelConverter));
   }
 
-  private Optional<SubstraitFunctionMapping> getConvertMapper(final RexCall call) {
+  private Optional<SubstraitFunctionMapping> getMappingForCall(final RexCall call) {
     return mappers.stream()
         .map(mapper -> mapper.toSubstrait(call))
         .filter(Optional::isPresent)
@@ -67,7 +72,7 @@ public class ScalarFunctionConverter
       SubstraitFunctionMapping mapping,
       RexCall call,
       Function<RexNode, Expression> topLevelConverter) {
-    var finder = new FunctionFinder(mapping.name(), call.op, mapping.functions());
+    var finder = new FunctionFinder(mapping.substraitName(), call.op, mapping.functions());
     var wrapped =
         new WrappedScalarCall(call) {
           @Override
@@ -115,14 +120,16 @@ public class ScalarFunctionConverter
         .build();
   }
 
-  public List<FunctionArg> getRexArguments(Expression.ScalarFunctionInvocation expression) {
-    return getMappedRexArguments(expression).orElseGet(expression::arguments);
+  public List<FunctionArg> getExpressionArguments(Expression.ScalarFunctionInvocation expression) {
+    // If a mapping applies to this expression, use it to get the arguments; otherwise default
+    // behavior.
+    return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
   }
 
-  private Optional<List<FunctionArg>> getMappedRexArguments(
+  private Optional<List<FunctionArg>> getMappedExpressionArguments(
       Expression.ScalarFunctionInvocation expression) {
     return mappers.stream()
-        .map(mapper -> mapper.getRexArguments(expression))
+        .map(mapper -> mapper.getExpressionArguments(expression))
         .filter(Optional::isPresent)
         .findFirst()
         .orElse(Optional.empty());
