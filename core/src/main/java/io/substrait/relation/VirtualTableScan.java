@@ -9,7 +9,7 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
-  public abstract List<Expression.StructLiteral> getRows();
+  public abstract List<Expression> getRows();
 
   /**
    *
