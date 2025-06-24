@@ -363,11 +363,11 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
                         callConversionFailureMessage(
                             "scalar", expr.declaration().name(), expr.arguments())));
 
-    var eArgs = expr.arguments();
+    var eArgs = scalarFunctionConverter.getExpressionArguments(expr);
     var args =
-        IntStream.range(0, expr.arguments().size())
+        IntStream.range(0, eArgs.size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
     return rexBuilder.makeCall(returnType, operator, args);
@@ -395,9 +395,9 @@ public class ExpressionRexConverter extends AbstractExpressionVisitor<RexNode, R
 
     List<FunctionArg> eArgs = expr.arguments();
     List<RexNode> args =
-        IntStream.range(0, expr.arguments().size())
+        IntStream.range(0, eArgs.size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
     List<RexNode> partitionKeys =
         expr.partitionBy().stream().map(e -> e.accept(this)).collect(Collectors.toList());

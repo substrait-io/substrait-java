@@ -14,6 +14,7 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
@@ -52,15 +53,38 @@ public class EnumConverter {
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_time", 0),
         TimeUnitRange.class);
+
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "trim:str_str", 0),
+        SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "ltrim:str_str", 0),
+        SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:vchar_vchar", 0),
+        SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0),
+        SqlTrimFunction.Flag.class);
   }
 
   private static Optional<Enum<?>> constructValue(
       Class<? extends Enum<?>> cls, Supplier<Optional<String>> option) {
     if (cls.isAssignableFrom(TimeUnitRange.class)) {
       return option.get().map(TimeUnitRange::valueOf);
-    } else {
-      return Optional.empty();
     }
+
+    if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
+      return option.get().map(SqlTrimFunction.Flag::valueOf);
+    }
+
+    return Optional.empty();
   }
 
   static Optional<RexLiteral> toRex(
@@ -123,9 +147,7 @@ public class EnumConverter {
   }
 
   static boolean isEnumValue(RexNode value) {
-    return value != null
-        && (value instanceof RexLiteral)
-        && value.getType().getSqlTypeName() == SqlTypeName.SYMBOL;
+    return value instanceof RexLiteral && value.getType().getSqlTypeName() == SqlTypeName.SYMBOL;
   }
 
   private static class ArgAnchor {
