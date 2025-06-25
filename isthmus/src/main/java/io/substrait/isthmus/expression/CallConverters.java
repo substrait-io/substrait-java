@@ -3,7 +3,6 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.*;
 import io.substrait.type.Type;
 import java.util.ArrayList;
@@ -106,7 +105,7 @@ public class CallConverters {
         var caseConditions = new ArrayList<Expression.IfClause>();
         for (int i = 0; i < last; i += 2) {
           caseConditions.add(
-              ImmutableExpression.IfClause.builder()
+              Expression.IfClause.builder()
                   .condition(caseArgs.get(i))
                   .then(caseArgs.get(i + 1))
                   .build());

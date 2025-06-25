@@ -5,7 +5,6 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -121,7 +120,7 @@ public class ProtoExpressionConverter {
             scalarFunction.getOptionsList().stream()
                 .map(ProtoExpressionConverter::fromFunctionOption)
                 .collect(Collectors.toList());
-        yield ImmutableExpression.ScalarFunctionInvocation.builder()
+        yield Expression.ScalarFunctionInvocation.builder()
             .addAllArguments(args)
             .declaration(declaration)
             .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
@@ -152,7 +151,7 @@ public class ProtoExpressionConverter {
             orList.getOptionsList().stream()
                 .map(this::from)
                 .collect(java.util.stream.Collectors.toList());
-        yield ImmutableExpression.SingleOrList.builder()
+        yield Expression.SingleOrList.builder()
             .condition(from(orList.getValue()))
             .addAllOptions(values)
             .build();
@@ -163,14 +162,14 @@ public class ProtoExpressionConverter {
             multiOrList.getOptionsList().stream()
                 .map(
                     t ->
-                        ImmutableExpression.MultiOrListRecord.builder()
+                        Expression.MultiOrListRecord.builder()
                             .addAllValues(
                                 t.getFieldsList().stream()
                                     .map(this::from)
                                     .collect(java.util.stream.Collectors.toList()))
                             .build())
                 .collect(java.util.stream.Collectors.toList());
-        yield ImmutableExpression.MultiOrList.builder()
+        yield Expression.MultiOrList.builder()
             .addAllOptionCombinations(values)
             .addAllConditions(
                 multiOrList.getValueList().stream()
@@ -186,7 +185,7 @@ public class ProtoExpressionConverter {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {
             var rel = protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
-            yield ImmutableExpression.SetPredicate.builder()
+            yield Expression.SetPredicate.builder()
                 .tuples(rel)
                 .predicateOp(
                     Expression.PredicateOp.fromProto(
@@ -195,7 +194,7 @@ public class ProtoExpressionConverter {
           }
           case SCALAR -> {
             var rel = protoRelConverter.from(expr.getSubquery().getScalar().getInput());
-            yield ImmutableExpression.ScalarSubquery.builder()
+            yield Expression.ScalarSubquery.builder()
                 .input(rel)
                 .type(
                     rel.getRecordType()
@@ -220,7 +219,7 @@ public class ProtoExpressionConverter {
                 expr.getSubquery().getInPredicate().getNeedlesList().stream()
                     .map(e -> this.from(e))
                     .collect(java.util.stream.Collectors.toList());
-            yield ImmutableExpression.InPredicate.builder().haystack(rel).needles(needles).build();
+            yield Expression.InPredicate.builder().haystack(rel).needles(needles).build();
           }
           case SET_COMPARISON -> {
             throw new UnsupportedOperationException(

@@ -3,7 +3,7 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.ImmutableSimpleExtension;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,8 +46,7 @@ public class TestTypeRoundtrip {
   private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
 
   private ProtoTypeConverter protoTypeConverter =
-      new ProtoTypeConverter(
-          lookup, ImmutableSimpleExtension.ExtensionCollection.builder().build());
+      new ProtoTypeConverter(lookup, SimpleExtension.ExtensionCollection.builder().build());
 
   /*
    * Test a type pojo -> proto -> pojo roundtrip.

@@ -4,8 +4,6 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableExpression;
-import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Project;
 import java.util.ArrayList;
@@ -161,7 +159,7 @@ public class PreCalciteAggregateValidator {
               .map(this::projectOutNonFieldReference)
               .collect(Collectors.toList());
 
-      List<ImmutableExpression.SortField> newSortFields =
+      List<Expression.SortField> newSortFields =
           oldAggregateFunctionInvocation.sort().stream()
               .map(
                   sf ->
@@ -217,7 +215,7 @@ public class PreCalciteAggregateValidator {
      */
     private Expression projectOut(Expression expr) {
       newExpressions.add(expr);
-      return ImmutableFieldReference.builder()
+      return FieldReference.builder()
           // create a field reference to the new expression, then update the expression offset
           .addSegments(FieldReference.StructField.of(expressionOffset++))
           .type(expr.getType())

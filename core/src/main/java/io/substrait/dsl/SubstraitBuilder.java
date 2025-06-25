@@ -3,16 +3,15 @@ package io.substrait.dsl;
 import com.github.bsideup.jabel.Desugar;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.Cast;
 import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.Expression.IfClause;
 import io.substrait.expression.Expression.IfThen;
+import io.substrait.expression.Expression.SingleOrList;
+import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableExpression.Cast;
-import io.substrait.expression.ImmutableExpression.SingleOrList;
-import io.substrait.expression.ImmutableExpression.Switch;
-import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -33,7 +32,6 @@ import io.substrait.relation.Sort;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
-import io.substrait.type.ImmutableType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -396,7 +394,7 @@ public class SubstraitBuilder {
   }
 
   public FieldReference fieldReference(Rel input, int index) {
-    return ImmutableFieldReference.newInputRelReference(index, input);
+    return FieldReference.newInputRelReference(index, input);
   }
 
   public List<FieldReference> fieldReferences(Rel input, int... indexes) {
@@ -406,7 +404,7 @@ public class SubstraitBuilder {
   }
 
   public FieldReference fieldReference(List<Rel> inputs, int index) {
-    return ImmutableFieldReference.newInputRelReference(index, inputs);
+    return FieldReference.newInputRelReference(index, inputs);
   }
 
   public List<FieldReference> fieldReferences(List<Rel> inputs, int... indexes) {
@@ -439,7 +437,7 @@ public class SubstraitBuilder {
         .mapToObj(
             index ->
                 Expression.SortField.builder()
-                    .expr(ImmutableFieldReference.newInputRelReference(index, input))
+                    .expr(FieldReference.newInputRelReference(index, input))
                     .direction(Expression.SortDirection.ASC_NULLS_LAST)
                     .build())
         .collect(java.util.stream.Collectors.toList());
@@ -678,11 +676,7 @@ public class SubstraitBuilder {
   // Types
 
   public Type.UserDefined userDefinedType(String namespace, String typeName) {
-    return ImmutableType.UserDefined.builder()
-        .uri(namespace)
-        .name(typeName)
-        .nullable(false)
-        .build();
+    return Type.UserDefined.builder().uri(namespace).name(typeName).nullable(false).build();
   }
 
   // Misc

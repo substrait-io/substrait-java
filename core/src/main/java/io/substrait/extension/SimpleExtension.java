@@ -570,6 +570,10 @@ public class SimpleExtension {
 
     public abstract List<WindowFunctionVariant> windowFunctions();
 
+    public static ImmutableSimpleExtension.ExtensionCollection.Builder builder() {
+      return ImmutableSimpleExtension.ExtensionCollection.builder();
+    }
+
     private final Supplier<Set<String>> namespaceSupplier =
         Util.memoize(
             () -> {

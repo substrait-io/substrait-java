@@ -56,5 +56,9 @@ public interface FileFormat {
   @Value.Immutable
   abstract static class Extension implements FileFormat {
     public abstract com.google.protobuf.Any getExtension();
+
+    public static ImmutableFileFormat.Extension.Builder builder() {
+      return ImmutableFileFormat.Extension.builder();
+    }
   }
 }

@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.ScalarFunctionInvocation;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.ImmutableEnumArg;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -75,7 +75,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_tstz_str",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("MONTH").build(),
             Expression.TimestampTZLiteral.builder().value(0).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
@@ -96,7 +96,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ptstz_str",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("MONTH").build(),
             Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(6).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
@@ -117,7 +117,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ts",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("MONTH").build(),
             Expression.TimestampLiteral.builder().value(0).build());
 
     RexNode calciteExpr = reqTsFn.accept(expressionRexConverter);
@@ -135,7 +135,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_pts",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("MONTH").build(),
             Expression.PrecisionTimestampLiteral.builder().value(0).precision(6).build());
 
     RexNode calciteExpr = reqPtsFn.accept(expressionRexConverter);
@@ -153,7 +153,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_date",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("MONTH").build(),
             Expression.DateLiteral.builder().value(0).build());
 
     RexNode calciteExpr = reqDateFn.accept(expressionRexConverter);
@@ -171,7 +171,7 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_time",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MINUTE").build(),
+            EnumArg.builder().value("MINUTE").build(),
             Expression.TimeLiteral.builder().value(0).build());
 
     RexNode calciteExpr = reqTimeFn.accept(expressionRexConverter);
@@ -189,8 +189,8 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_tstz_str",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
-            ImmutableEnumArg.builder().value("ONE").build(),
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
             Expression.TimestampTZLiteral.builder().value(0).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
@@ -205,8 +205,8 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ptstz_str",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
-            ImmutableEnumArg.builder().value("ONE").build(),
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
             Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(6).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
@@ -221,8 +221,8 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ts",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
-            ImmutableEnumArg.builder().value("ONE").build(),
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
             Expression.TimestampLiteral.builder().value(0).build());
 
     assertThrows(
@@ -236,8 +236,8 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_pts",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
-            ImmutableEnumArg.builder().value("ONE").build(),
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
             Expression.PrecisionTimestampLiteral.builder().value(0).precision(6).build());
 
     assertThrows(
@@ -251,8 +251,8 @@ public class FunctionConversionTest extends PlanTestBase {
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_date",
             TypeCreator.REQUIRED.I64,
-            ImmutableEnumArg.builder().value("MONTH").build(),
-            ImmutableEnumArg.builder().value("ONE").build(),
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
             Expression.DateLiteral.builder().value(0).build());
 
     assertThrows(

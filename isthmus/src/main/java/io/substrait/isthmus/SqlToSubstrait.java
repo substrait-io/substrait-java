@@ -1,8 +1,6 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.substrait.plan.ImmutablePlan.Builder;
-import io.substrait.plan.ImmutableVersion;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.proto.Plan;
@@ -57,9 +55,8 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    Builder builder = io.substrait.plan.Plan.builder();
-    builder.version(
-        ImmutableVersion.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
+    var builder = io.substrait.plan.Plan.builder();
+    builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
     sqlToRelNode(sql, validator, catalogReader).stream()

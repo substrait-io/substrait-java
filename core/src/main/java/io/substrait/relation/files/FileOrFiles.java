@@ -26,6 +26,10 @@ public interface FileOrFiles {
 
   Optional<FileFormat> getFileFormat();
 
+  static ImmutableFileOrFiles.Builder builder() {
+    return ImmutableFileOrFiles.builder();
+  }
+
   default ReadRel.LocalFiles.FileOrFiles toProto() {
     ReadRel.LocalFiles.FileOrFiles.Builder builder = ReadRel.LocalFiles.FileOrFiles.newBuilder();
 

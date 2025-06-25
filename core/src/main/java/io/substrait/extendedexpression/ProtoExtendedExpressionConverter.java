@@ -5,7 +5,6 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
-import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
@@ -29,7 +28,7 @@ public class ProtoExtendedExpressionConverter {
 
   private final ProtoTypeConverter protoTypeConverter =
       new ProtoTypeConverter(
-          new ExtensionCollector(), ImmutableSimpleExtension.ExtensionCollection.builder().build());
+          new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
 
   public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpression) {
     // fill in simple extension information through a discovery in the current proto-extended

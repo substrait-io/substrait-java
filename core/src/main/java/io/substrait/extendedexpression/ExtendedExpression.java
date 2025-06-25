@@ -20,6 +20,10 @@ public abstract class ExtendedExpression {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
+  public static ImmutableExtendedExpression.Builder builder() {
+    return ImmutableExtendedExpression.builder();
+  }
+
   public interface ExpressionReferenceBase {
     List<String> getOutputNames();
   }
@@ -27,6 +31,10 @@ public abstract class ExtendedExpression {
   @Value.Immutable
   public abstract static class ExpressionReference implements ExpressionReferenceBase {
     public abstract Expression getExpression();
+
+    public static ImmutableExpressionReference.Builder builder() {
+      return ImmutableExpressionReference.builder();
+    }
   }
 
   @Value.Immutable

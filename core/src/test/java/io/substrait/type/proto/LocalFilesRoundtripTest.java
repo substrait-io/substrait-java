@@ -6,13 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.TestBase;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
-import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.proto.ReadRel;
 import io.substrait.relation.LocalFiles;
+import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
-import io.substrait.relation.files.ImmutableFileFormat;
 import io.substrait.relation.files.ImmutableFileOrFiles;
-import io.substrait.type.ImmutableNamedStruct;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Arrays;
@@ -24,7 +23,7 @@ public class LocalFilesRoundtripTest extends TestBase {
     var builder =
         LocalFiles.builder()
             .initialSchema(
-                ImmutableNamedStruct.builder()
+                NamedStruct.builder()
                     .addNames("id")
                     .struct(
                         Type.Struct.builder()
@@ -42,7 +41,7 @@ public class LocalFilesRoundtripTest extends TestBase {
                 ExpressionCreator.scalarFunction(
                     declaration,
                     TypeCreator.REQUIRED.BOOLEAN,
-                    ImmutableFieldReference.builder()
+                    FieldReference.builder()
                         .addSegments(FieldReference.StructField.of(0))
                         .type(TypeCreator.REQUIRED.I32)
                         .build(),
@@ -71,12 +70,12 @@ public class LocalFilesRoundtripTest extends TestBase {
       ImmutableFileOrFiles.Builder builder,
       ReadRel.LocalFiles.FileOrFiles.FileFormatCase fileFormatCase) {
     return switch (fileFormatCase) {
-      case PARQUET -> builder.fileFormat(ImmutableFileFormat.ParquetReadOptions.builder().build());
-      case ARROW -> builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
-      case ORC -> builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
-      case DWRF -> builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
+      case PARQUET -> builder.fileFormat(FileFormat.ParquetReadOptions.builder().build());
+      case ARROW -> builder.fileFormat(FileFormat.ArrowReadOptions.builder().build());
+      case ORC -> builder.fileFormat(FileFormat.OrcReadOptions.builder().build());
+      case DWRF -> builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
       case TEXT -> builder.fileFormat(
-          ImmutableFileFormat.DelimiterSeparatedTextReadOptions.builder()
+          FileFormat.DelimiterSeparatedTextReadOptions.builder()
               .fieldDelimiter("|")
               .maxLineSize(1000)
               .quote("\"")
@@ -84,7 +83,7 @@ public class LocalFilesRoundtripTest extends TestBase {
               .escape("\\")
               .build());
       case EXTENSION -> builder.fileFormat(
-          ImmutableFileFormat.Extension.builder()
+          FileFormat.Extension.builder()
               .extension(com.google.protobuf.Any.newBuilder().build())
               .build());
       case FILEFORMAT_NOT_SET -> builder;
@@ -101,7 +100,7 @@ public class LocalFilesRoundtripTest extends TestBase {
                         pathTypeCase ->
                             assertLocalFilesRoundtrip(
                                 setFileFormat(
-                                        setPath(ImmutableFileOrFiles.builder(), pathTypeCase),
+                                        setPath(FileOrFiles.builder(), pathTypeCase),
                                         fileFormatCase)
                                     .partitionIndex(0)
                                     .start(2)
