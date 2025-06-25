@@ -6,6 +6,7 @@ import io.substrait.expression.Expression.Cast;
 import io.substrait.expression.Expression.FailureBehavior;
 import io.substrait.expression.Expression.IfClause;
 import io.substrait.expression.Expression.IfThen;
+import io.substrait.expression.Expression.PredicateOp;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.Expression.SwitchClause;
@@ -644,6 +645,14 @@ public class SubstraitBuilder {
         DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "equal:any_any", R.BOOLEAN, left, right);
   }
 
+  public Expression.ScalarFunctionInvocation and(Expression... args) {
+    // If any arg is nullable, the output of and is potentially nullable
+    // For example: false and null = null
+    boolean isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
+    Type outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
+    return scalarFn(DefaultExtensionCatalog.FUNCTIONS_BOOLEAN, "and:bool", outputType, args);
+  }
+
   public Expression.ScalarFunctionInvocation or(Expression... args) {
     // If any arg is nullable, the output of or is potentially nullable
     // For example: false or null = null
@@ -705,5 +714,16 @@ public class SubstraitBuilder {
 
   public Rel.Remap remap(Integer... fields) {
     return Rel.Remap.of(Arrays.asList(fields));
+  }
+
+  public Expression scalarSubquery(Rel input, Type type) {
+    return Expression.ScalarSubquery.builder().input(input).type(type).build();
+  }
+
+  public Expression exists(Rel project) {
+    return Expression.SetPredicate.builder()
+        .tuples(project)
+        .predicateOp(PredicateOp.PREDICATE_OP_EXISTS)
+        .build();
   }
 }
