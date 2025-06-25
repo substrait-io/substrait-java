@@ -59,7 +59,8 @@ public class FunctionConversionTest extends PlanTestBase {
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
-    var calciteExpr = expr.accept(expressionRexConverter, null);
+    var calciteExpr =
+        expr.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(
         TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
         calciteExpr.getType());
@@ -79,7 +80,8 @@ public class FunctionConversionTest extends PlanTestBase {
             Expression.TimestampTZLiteral.builder().value(0).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
-    RexNode calciteExpr = reqTstzFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqTstzFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -100,7 +102,8 @@ public class FunctionConversionTest extends PlanTestBase {
             Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(6).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
-    RexNode calciteExpr = reqPtstzFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqPtstzFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -120,7 +123,8 @@ public class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.TimestampLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqTsFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqTsFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -138,7 +142,8 @@ public class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.PrecisionTimestampLiteral.builder().value(0).precision(6).build());
 
-    RexNode calciteExpr = reqPtsFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqPtsFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -156,7 +161,8 @@ public class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.DateLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqDateFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqDateFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -174,7 +180,8 @@ public class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MINUTE").build(),
             Expression.TimeLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqTimeFn.accept(expressionRexConverter, null);
+    RexNode calciteExpr =
+        reqTimeFn.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
@@ -196,7 +203,9 @@ public class FunctionConversionTest extends PlanTestBase {
 
     assertThrows(
         UnsupportedOperationException.class,
-        () -> reqReqTstzFn.accept(expressionRexConverter, null));
+        () ->
+            reqReqTstzFn.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext()));
   }
 
   @Test
@@ -213,7 +222,9 @@ public class FunctionConversionTest extends PlanTestBase {
 
     assertThrows(
         UnsupportedOperationException.class,
-        () -> reqReqPtstzFn.accept(expressionRexConverter, null));
+        () ->
+            reqReqPtstzFn.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext()));
   }
 
   @Test
@@ -228,7 +239,10 @@ public class FunctionConversionTest extends PlanTestBase {
             Expression.TimestampLiteral.builder().value(0).build());
 
     assertThrows(
-        UnsupportedOperationException.class, () -> reqReqTsFn.accept(expressionRexConverter, null));
+        UnsupportedOperationException.class,
+        () ->
+            reqReqTsFn.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext()));
   }
 
   @Test
@@ -244,7 +258,9 @@ public class FunctionConversionTest extends PlanTestBase {
 
     assertThrows(
         UnsupportedOperationException.class,
-        () -> reqReqPtsFn.accept(expressionRexConverter, null));
+        () ->
+            reqReqPtsFn.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext()));
   }
 
   @Test
@@ -260,7 +276,9 @@ public class FunctionConversionTest extends PlanTestBase {
 
     assertThrows(
         UnsupportedOperationException.class,
-        () -> reqReqDateFn.accept(expressionRexConverter, null));
+        () ->
+            reqReqDateFn.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext()));
   }
 
   @Test

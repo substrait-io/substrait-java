@@ -69,7 +69,9 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
 
     // Substrait POJO 2 -> Calcite
     var calcite =
-        pojo2.accept(new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder), null);
+        pojo2.accept(
+            new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder),
+            SubstraitRelNodeConverter.Context.newContext());
 
     // Calcite -> Substrait POJO 3
     var pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
@@ -194,7 +196,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionLeaf extensionLeaf, Void context) {
+    public RelNode visit(ExtensionLeaf extensionLeaf, Context context) {
       if (extensionLeaf.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionLeaf.getDetail();
         RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
@@ -207,7 +209,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionSingle extensionSingle, Void context) throws RuntimeException {
+    public RelNode visit(ExtensionSingle extensionSingle, Context context) throws RuntimeException {
       if (extensionSingle.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionSingle.getDetail();
         RelNode input = extensionSingle.getInput().accept(this, context);
@@ -219,7 +221,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionMulti extensionMulti, Void context) throws RuntimeException {
+    public RelNode visit(ExtensionMulti extensionMulti, Context context) throws RuntimeException {
       if (extensionMulti.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionMulti.getDetail();
         List<RelNode> inputs =

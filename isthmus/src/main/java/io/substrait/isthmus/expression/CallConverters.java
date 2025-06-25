@@ -49,8 +49,8 @@ public class CallConverters {
    * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
    * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
    *
-   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral, java.lang.Void)} for
-   * this conversion.
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral,
+   * SubstraitRelNodeConverter.Context)} for this conversion.
    *
    * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
    * Expression.UserDefinedLiteral} that was stored.

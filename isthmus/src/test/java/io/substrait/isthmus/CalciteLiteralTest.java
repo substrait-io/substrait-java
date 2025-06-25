@@ -184,7 +184,9 @@ public class CalciteLiteralTest extends CalciteObjs {
 
     // expression -> rex
     RexLiteral convertedRex =
-        (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter, null);
+        (RexLiteral)
+            intervalYearMonthExpr.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier (which is used to parse
     // input string).
@@ -232,7 +234,10 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalDayExpr, convertedExpr);
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalDayExpr.accept(expressionRexConverter, null);
+    RexLiteral convertedRex =
+        (RexLiteral)
+            intervalDayExpr.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -256,7 +261,10 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalYearExpr.accept(expressionRexConverter, null);
+    RexLiteral convertedRex =
+        (RexLiteral)
+            intervalYearExpr.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -281,7 +289,10 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalMonthExpr.accept(expressionRexConverter, null);
+    RexLiteral convertedRex =
+        (RexLiteral)
+            intervalMonthExpr.accept(
+                expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -387,7 +398,8 @@ public class CalciteLiteralTest extends CalciteObjs {
   // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
   public void bitest(Expression expression, RexNode rex) {
     assertEquals(expression, rex.accept(rexExpressionConverter));
-    RexNode convertedRex = expression.accept(expressionRexConverter, null);
+    RexNode convertedRex =
+        expression.accept(expressionRexConverter, SubstraitRelNodeConverter.Context.newContext());
     assertEquals(rex, convertedRex);
   }
 }

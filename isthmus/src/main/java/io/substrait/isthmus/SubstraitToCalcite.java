@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -90,7 +91,7 @@ public class SubstraitToCalcite {
     CalciteSchema rootSchema = toSchema(rel);
     RelBuilder relBuilder = createRelBuilder(rootSchema);
     SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
-    return rel.accept(converter, null);
+    return rel.accept(converter, Context.newContext());
   }
 
   /**

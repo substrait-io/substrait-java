@@ -1,6 +1,9 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
+import com.google.common.collect.TreeRangeMap;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -13,10 +16,12 @@ import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
@@ -31,6 +36,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -54,8 +60,8 @@ import org.apache.calcite.util.TimestampString;
  * node will call visitFallback and throw UnsupportedOperationException.
  */
 public class ExpressionRexConverter
-    extends AbstractExpressionVisitor<RexNode, Void, RuntimeException>
-    implements FunctionArg.FuncArgVisitor<RexNode, Void, RuntimeException> {
+    extends AbstractExpressionVisitor<RexNode, Context, RuntimeException>
+    implements FunctionArg.FuncArgVisitor<RexNode, Context, RuntimeException> {
   protected final RelDataTypeFactory typeFactory;
   protected final TypeConverter typeConverter;
   protected final RexBuilder rexBuilder;
@@ -96,77 +102,79 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.NullLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.NullLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(null, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.UserDefinedLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
+      throws RuntimeException {
     var binaryLiteral = rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
     var type = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
   }
 
   @Override
-  public RexNode visit(Expression.BoolLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.BoolLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(expr.value());
   }
 
   @Override
-  public RexNode visit(Expression.I8Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.I8Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.I16Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.I16Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.I32Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.I32Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.I64Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.I64Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.FP32Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.FP32Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.FP64Literal expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.FP64Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.FixedCharLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.FixedCharLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(expr.value());
   }
 
   @Override
-  public RexNode visit(Expression.StrLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.StrLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
-  public RexNode visit(Expression.VarCharLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.VarCharLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
-  public RexNode visit(Expression.FixedBinaryLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.FixedBinaryLiteral expr, Context context)
+      throws RuntimeException {
     return rexBuilder.makeLiteral(
         new ByteString(expr.value().toByteArray()),
         typeConverter.toCalcite(typeFactory, expr.getType()),
@@ -174,7 +182,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.BinaryLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.BinaryLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         new ByteString(expr.value().toByteArray()),
         typeConverter.toCalcite(typeFactory, expr.getType()),
@@ -182,7 +190,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.TimeLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.TimeLiteral expr, Context context) throws RuntimeException {
     // Expression.TimeLiteral is Microseconds
     // Construct a TimeString :
     // 1. Truncate microseconds to seconds
@@ -199,7 +207,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(SingleOrList expr, Void context) throws RuntimeException {
+  public RexNode visit(SingleOrList expr, Context context) throws RuntimeException {
     var lhs = expr.condition().accept(this, context);
     return rexBuilder.makeIn(
         lhs,
@@ -207,32 +215,32 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.DateLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.DateLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.TimestampLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.TimestampLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(TimestampTZLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(TimestampTZLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(PrecisionTimestampLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(PrecisionTimestampLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
         typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(PrecisionTimestampTZLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(PrecisionTimestampTZLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
         typeConverter.toCalcite(typeFactory, expr.getType()));
@@ -276,7 +284,8 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.IntervalYearLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.IntervalYearLiteral expr, Context context)
+      throws RuntimeException {
     return rexBuilder.makeIntervalLiteral(
         new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
   }
@@ -284,7 +293,8 @@ public class ExpressionRexConverter
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
 
   @Override
-  public RexNode visit(Expression.IntervalDayLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.IntervalDayLiteral expr, Context context)
+      throws RuntimeException {
     long milliseconds =
         expr.precision() > 3
             ? (expr.subseconds() / (int) Math.pow(10, expr.precision() - 3))
@@ -296,28 +306,28 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.DecimalLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.DecimalLiteral expr, Context context) throws RuntimeException {
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
     return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
   }
 
   @Override
-  public RexNode visit(Expression.ListLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.ListLiteral expr, Context context) throws RuntimeException {
     List<RexNode> args =
         expr.values().stream().map(l -> l.accept(this, context)).collect(Collectors.toList());
     return rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
   }
 
   @Override
-  public RexNode visit(Expression.EmptyListLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.EmptyListLiteral expr, Context context) throws RuntimeException {
     var calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeCall(
         calciteType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, Collections.emptyList());
   }
 
   @Override
-  public RexNode visit(Expression.MapLiteral expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.MapLiteral expr, Context context) throws RuntimeException {
     var args =
         expr.values().entrySet().stream()
             .flatMap(
@@ -330,7 +340,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.IfThen expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.IfThen expr, Context context) throws RuntimeException {
     // In Calcite, the arguments to the CASE operator are given as:
     //   <cond1> <value1> <cond2> <value2> ... <condN> <valueN> ... <else>
     Stream<RexNode> ifThenArgs =
@@ -346,7 +356,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Switch expr, Void context) throws RuntimeException {
+  public RexNode visit(Switch expr, Context context) throws RuntimeException {
     RexNode match = expr.match().accept(this, context);
     Stream<RexNode> caseThenArgs =
         expr.switchClauses().stream()
@@ -364,7 +374,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.ScalarFunctionInvocation expr, Void context)
+  public RexNode visit(Expression.ScalarFunctionInvocation expr, Context context)
       throws RuntimeException {
     SqlOperator operator =
         scalarFunctionConverter
@@ -393,7 +403,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.WindowFunctionInvocation expr, Void context)
+  public RexNode visit(Expression.WindowFunctionInvocation expr, Context context)
       throws RuntimeException {
     SqlOperator operator =
         windowFunctionConverter
@@ -474,7 +484,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.InPredicate expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.InPredicate expr, Context context) throws RuntimeException {
     List<RexNode> needles =
         expr.needles().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
     RelNode rel = expr.haystack().accept(relNodeConverter, context);
@@ -542,7 +552,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.Cast expr, Void context) throws RuntimeException {
+  public RexNode visit(Expression.Cast expr, Context context) throws RuntimeException {
     var safeCast = expr.failureBehavior() == FailureBehavior.RETURN_NULL;
     return rexBuilder.makeAbstractCast(
         typeConverter.toCalcite(typeFactory, expr.getType()),
@@ -551,14 +561,47 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(FieldReference expr, Void context) throws RuntimeException {
+  public RexNode visit(FieldReference expr, Context context) throws RuntimeException {
     if (expr.isSimpleRootReference()) {
-      var segment = expr.segments().get(0);
+      final ReferenceSegment segment = expr.segments().get(0);
 
-      RexInputRef rexInputRef;
-      if (segment instanceof FieldReference.StructField f) {
+      final RexInputRef rexInputRef;
+      if (segment instanceof FieldReference.StructField field) {
         rexInputRef =
-            new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+            new RexInputRef(field.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+      } else {
+        throw new IllegalArgumentException("Unhandled type: " + segment);
+      }
+
+      return rexInputRef;
+    } else if (expr.isOuterReference()) {
+      final ReferenceSegment segment = expr.segments().get(0);
+
+      final RexNode rexInputRef;
+      if (segment instanceof FieldReference.StructField field) {
+
+        final RelNode[] parents = context.getParentRelation(expr.outerReferenceStepsOut().get());
+        final RangeMap<Integer, RelNode> fieldRangeMap = TreeRangeMap.create();
+
+        int begin = 0;
+        int fieldOffset = field.offset();
+        for (final RelNode parent : parents) {
+          final int end = begin + parent.getRowType().getFieldCount();
+          final Range<Integer> range = Range.closedOpen(begin, end);
+          fieldRangeMap.put(range, parent);
+          if (range.contains(field.offset())) {
+            fieldOffset = fieldOffset - range.lowerEndpoint();
+          }
+          begin = end;
+        }
+
+        CorrelationId correlationId = relNodeConverter.getRelBuilder().getCluster().createCorrel();
+        context.addCorrelationId(expr.outerReferenceStepsOut().get(), correlationId);
+        rexInputRef =
+            rexBuilder.makeFieldAccess(
+                rexBuilder.makeCorrel(
+                    fieldRangeMap.get(field.offset()).getRowType(), correlationId),
+                fieldOffset);
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
@@ -570,7 +613,7 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visitFallback(Expression expr, Void context) {
+  public RexNode visitFallback(Expression expr, Context context) {
     throw new UnsupportedOperationException(
         String.format(
             "Expression %s of type %s not handled by visitor type %s.",
@@ -578,13 +621,14 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e, Void context)
+  public RexNode visitExpr(
+      SimpleExtension.Function fnDef, int argIdx, Expression e, Context context)
       throws RuntimeException {
     return e.accept(this, context);
   }
 
   @Override
-  public RexNode visitType(SimpleExtension.Function fnDef, int argIdx, Type t, Void context)
+  public RexNode visitType(SimpleExtension.Function fnDef, int argIdx, Type t, Context context)
       throws RuntimeException {
     throw new UnsupportedOperationException(
         String.format(
@@ -593,7 +637,8 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e, Void context)
+  public RexNode visitEnumArg(
+      SimpleExtension.Function fnDef, int argIdx, EnumArg e, Context context)
       throws RuntimeException {
 
     return EnumConverter.toRex(rexBuilder, fnDef, argIdx, e)
@@ -606,13 +651,15 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(ScalarSubquery expr, Void context) throws RuntimeException {
+  public RexNode visit(ScalarSubquery expr, Context context) throws RuntimeException {
+    context.incrementSubqueryDepth();
     RelNode inputRelnode = expr.input().accept(relNodeConverter, context);
+    context.decrementSubqueryDepth();
     return RexSubQuery.scalar(inputRelnode);
   }
 
   @Override
-  public RexNode visit(SetPredicate expr, Void context) throws RuntimeException {
+  public RexNode visit(SetPredicate expr, Context context) throws RuntimeException {
     RelNode inputRelnode = expr.tuples().accept(relNodeConverter, context);
     switch (expr.predicateOp()) {
       case PREDICATE_OP_EXISTS:
