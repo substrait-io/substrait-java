@@ -23,6 +23,7 @@ import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
 import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NamedObjectWrite;
+import io.substrait.proto.NamedTable;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
@@ -32,6 +33,7 @@ import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.HashJoin;
@@ -418,6 +420,27 @@ public class RelProtoConverter implements RelVisitor<Rel, RuntimeException> {
     }
 
     return Rel.newBuilder().setDdl(builder).build();
+  }
+
+  public Rel visit(NamedUpdate update) throws RuntimeException {
+    var builder =
+        UpdateRel.newBuilder()
+            .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
+            .setTableSchema(update.getTableSchema().toProto(typeProtoConverter))
+            .addAllTransformations(
+                update.getTransformations().stream()
+                    .map(this::toProto)
+                    .collect(Collectors.toList()))
+            .setCondition(toProto(update.getCondition()));
+    update.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    return Rel.newBuilder().setUpdate(builder).build();
+  }
+
+  UpdateRel.TransformExpression toProto(AbstractUpdate.TransformExpression transformation) {
+    return UpdateRel.TransformExpression.newBuilder()
+        .setTransformation(toProto(transformation.getTransformation()))
+        .setColumnTarget(transformation.getColumnTarget())
+        .build();
   }
 
   private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
