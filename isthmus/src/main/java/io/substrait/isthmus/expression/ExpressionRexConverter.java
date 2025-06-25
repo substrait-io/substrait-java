@@ -1,6 +1,9 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
+import com.google.common.collect.TreeRangeMap;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -33,6 +36,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -513,7 +517,9 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.InPredicate expr, Context context) throws RuntimeException {
     List<RexNode> needles =
         expr.needles().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
+    context.incrementSubqueryDepth();
     RelNode rel = expr.haystack().accept(relNodeConverter, context);
+    context.decrementSubqueryDepth();
     return RexSubQuery.in(rel, ImmutableList.copyOf(needles));
   }
 
@@ -589,13 +595,47 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(FieldReference expr, Context context) throws RuntimeException {
     if (expr.isSimpleRootReference()) {
-      ReferenceSegment segment = expr.segments().get(0);
+      final ReferenceSegment segment = expr.segments().get(0);
 
-      RexInputRef rexInputRef;
+      final RexInputRef rexInputRef;
       if (segment instanceof FieldReference.StructField) {
-        FieldReference.StructField f = (FieldReference.StructField) segment;
+        FieldReference.StructField field = (FieldReference.StructField) segment;
         rexInputRef =
-            new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+            new RexInputRef(field.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+      } else {
+        throw new IllegalArgumentException("Unhandled type: " + segment);
+      }
+
+      return rexInputRef;
+    } else if (expr.isOuterReference()) {
+      final ReferenceSegment segment = expr.segments().get(0);
+
+      final RexNode rexInputRef;
+      if (segment instanceof FieldReference.StructField) {
+        FieldReference.StructField field = (FieldReference.StructField) segment;
+
+        final RelNode[] parents = context.getParentRelation(expr.outerReferenceStepsOut().get());
+        final RangeMap<Integer, RelNode> fieldRangeMap = TreeRangeMap.create();
+
+        int begin = 0;
+        int fieldOffset = field.offset();
+        for (final RelNode parent : parents) {
+          final int end = begin + parent.getRowType().getFieldCount();
+          final Range<Integer> range = Range.closedOpen(begin, end);
+          fieldRangeMap.put(range, parent);
+          if (range.contains(field.offset())) {
+            fieldOffset = fieldOffset - range.lowerEndpoint();
+          }
+          begin = end;
+        }
+
+        CorrelationId correlationId = relNodeConverter.getRelBuilder().getCluster().createCorrel();
+        context.addCorrelationId(expr.outerReferenceStepsOut().get(), correlationId);
+        rexInputRef =
+            rexBuilder.makeFieldAccess(
+                rexBuilder.makeCorrel(
+                    fieldRangeMap.get(field.offset()).getRowType(), correlationId),
+                fieldOffset);
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
@@ -646,13 +686,17 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(ScalarSubquery expr, Context context) throws RuntimeException {
+    context.incrementSubqueryDepth();
     RelNode inputRelnode = expr.input().accept(relNodeConverter, context);
+    context.decrementSubqueryDepth();
     return RexSubQuery.scalar(inputRelnode);
   }
 
   @Override
   public RexNode visit(SetPredicate expr, Context context) throws RuntimeException {
+    context.incrementSubqueryDepth();
     RelNode inputRelnode = expr.tuples().accept(relNodeConverter, context);
+    context.decrementSubqueryDepth();
     switch (expr.predicateOp()) {
       case PREDICATE_OP_EXISTS:
         return RexSubQuery.exists(inputRelnode);
