@@ -25,22 +25,3 @@ scalar_functions:
           - name: days
             value: i32
         return: date
-  - name: shift_right
-    description: >-
-      Bitwise (signed) shift right.
-      Params:
-        base – the base number to shift.
-        shift – number of bits to right shift.
-    impls:
-      - args:
-          - name: base
-            value: i64
-          - name: shift
-            value: i32
-        return: i64
-      - args:
-          - name: base
-            value: i32
-          - name: shift
-            value: i32
-        return: i32

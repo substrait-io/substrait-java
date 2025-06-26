@@ -47,4 +47,10 @@ class NumericSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     assertSqlSubstraitRelRoundTrip(
       "select sum(num), avg(num)from (values (2.5), (-0.5)) as table(num)")
   }
+
+  test("bitwise") {
+    assertSqlSubstraitRelRoundTrip(
+      "select shiftleft(num, 2), shiftright(num, 2), shiftrightunsigned(num, 2) from (values (4), (1)) as table(num)"
+    )
+  }
 }
