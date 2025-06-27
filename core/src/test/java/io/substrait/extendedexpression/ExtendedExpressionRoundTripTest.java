@@ -5,7 +5,7 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.*;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.Aggregate;
-import io.substrait.type.ImmutableNamedStruct;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
@@ -33,7 +33,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
   public void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference) {
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
-    ImmutableNamedStruct namedStruct = getImmutableNamedStruct();
+    NamedStruct namedStruct = getImmutableNamedStruct();
     assertExtendedExpressionOperation(expressionReferences, namedStruct);
   }
 
@@ -120,8 +120,8 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
         .build();
   }
 
-  private static ImmutableNamedStruct getImmutableNamedStruct() {
-    return ImmutableNamedStruct.builder()
+  private static NamedStruct getImmutableNamedStruct() {
+    return NamedStruct.builder()
         .addNames("N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT")
         .struct(
             Type.Struct.builder()
@@ -137,7 +137,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   private static void assertExtendedExpressionOperation(
       List<ExtendedExpression.ExpressionReferenceBase> expressionReferences,
-      ImmutableNamedStruct namedStruct) {
+      NamedStruct namedStruct) {
 
     // initial pojo
     ExtendedExpression extendedExpressionPojoInitial =

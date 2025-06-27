@@ -2,7 +2,6 @@ package io.substrait.relation;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
@@ -31,13 +30,11 @@ import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.extensions.EmptyOptimization;
+import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
-import io.substrait.relation.files.ImmutableFileFormat;
-import io.substrait.relation.files.ImmutableFileOrFiles;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
-import io.substrait.type.ImmutableNamedStruct;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
@@ -325,7 +322,7 @@ public class ProtoRelConverter {
 
   protected NamedStruct newNamedStruct(io.substrait.proto.NamedStruct namedStruct) {
     var struct = namedStruct.getStruct();
-    return ImmutableNamedStruct.builder()
+    return NamedStruct.builder()
         .names(namedStruct.getNamesList())
         .struct(
             Type.Struct.builder()
@@ -485,22 +482,22 @@ public class ProtoRelConverter {
   }
 
   protected FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
-    ImmutableFileOrFiles.Builder builder =
-        ImmutableFileOrFiles.builder()
+    var builder =
+        FileOrFiles.builder()
             .partitionIndex(file.getPartitionIndex())
             .start(file.getStart())
             .length(file.getLength());
     if (file.hasParquet()) {
-      builder.fileFormat(ImmutableFileFormat.ParquetReadOptions.builder().build());
+      builder.fileFormat(FileFormat.ParquetReadOptions.builder().build());
     } else if (file.hasOrc()) {
-      builder.fileFormat(ImmutableFileFormat.OrcReadOptions.builder().build());
+      builder.fileFormat(FileFormat.OrcReadOptions.builder().build());
     } else if (file.hasArrow()) {
-      builder.fileFormat(ImmutableFileFormat.ArrowReadOptions.builder().build());
+      builder.fileFormat(FileFormat.ArrowReadOptions.builder().build());
     } else if (file.hasDwrf()) {
-      builder.fileFormat(ImmutableFileFormat.DwrfReadOptions.builder().build());
+      builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
     } else if (file.hasText()) {
       var ffBuilder =
-          ImmutableFileFormat.DelimiterSeparatedTextReadOptions.builder()
+          FileFormat.DelimiterSeparatedTextReadOptions.builder()
               .fieldDelimiter(file.getText().getFieldDelimiter())
               .maxLineSize(file.getText().getMaxLineSize())
               .quote(file.getText().getQuote())
@@ -511,8 +508,7 @@ public class ProtoRelConverter {
       }
       builder.fileFormat(ffBuilder.build());
     } else if (file.hasExtension()) {
-      builder.fileFormat(
-          ImmutableFileFormat.Extension.builder().extension(file.getExtension()).build());
+      builder.fileFormat(FileFormat.Extension.builder().extension(file.getExtension()).build());
     }
     if (file.hasUriFile()) {
       builder.pathType(FileOrFiles.PathType.URI_FILE).path(file.getUriFile());
@@ -534,7 +530,7 @@ public class ProtoRelConverter {
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
     for (var struct : virtualTable.getValuesList()) {
       structLiterals.add(
-          ImmutableExpression.StructLiteral.builder()
+          Expression.StructLiteral.builder()
               .fields(
                   struct.getFieldsList().stream()
                       .map(converter::from)

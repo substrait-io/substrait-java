@@ -38,10 +38,10 @@ import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
-import io.substrait.plan.{ImmutableRoot, ImmutableVersion, Plan}
+import io.substrait.plan.Plan
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
-import io.substrait.relation.files.{FileFormat, ImmutableFileOrFiles}
+import io.substrait.relation.files.{FileFormat, FileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 import io.substrait.utils.Util
 
@@ -486,7 +486,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         fsRelation.location.inputFiles
           .map(
             file => {
-              ImmutableFileOrFiles
+              FileOrFiles
                 .builder()
                 .fileFormat(format)
                 .partitionIndex(0)
@@ -544,14 +544,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     val rel = visit(p)
     Plan.builder
       .version(
-        ImmutableVersion
+        Plan.Version
           .builder()
           .from(Plan.Version.DEFAULT_VERSION)
           .producer("substrait-spark")
           .build())
       .roots(
         Collections.singletonList(
-          ImmutableRoot
+          Plan.Root
             .builder()
             .input(rel)
             .addAllNames(ToSubstraitType.toNamedStruct(p.schema).names())

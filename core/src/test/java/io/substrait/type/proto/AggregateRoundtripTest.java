@@ -7,10 +7,8 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionOption;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.relation.Aggregate;
-import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.VirtualTableScan;
@@ -26,7 +24,7 @@ public class AggregateRoundtripTest extends TestBase {
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
-        ImmutableExpression.StructLiteral.builder().addFields(expression).build();
+        Expression.StructLiteral.builder().addFields(expression).build();
     var input =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
@@ -62,7 +60,7 @@ public class AggregateRoundtripTest extends TestBase {
                     .build())
             .build();
 
-    var aggRel = ImmutableAggregate.builder().input(input).measures(Arrays.asList(measure)).build();
+    var aggRel = Aggregate.builder().input(input).measures(Arrays.asList(measure)).build();
     var protoAggRel = to.toProto(aggRel);
     assertEquals(
         protoAggRel.getAggregate().getMeasuresList().get(0).getMeasure().getInvocation(),

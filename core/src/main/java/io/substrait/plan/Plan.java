@@ -43,10 +43,14 @@ public abstract class Plan {
 
     public abstract Optional<String> getProducer();
 
+    public static ImmutableVersion.Builder builder() {
+      return ImmutableVersion.builder();
+    }
+
     private static Version loadVersion() {
       final String[] versionComponents = SubstraitVersion.VERSION.split("\\.");
 
-      return ImmutableVersion.builder()
+      return builder()
           .major(Integer.parseInt(versionComponents[0]))
           .minor(Integer.parseInt(versionComponents[1]))
           .patch(Integer.parseInt(versionComponents[2]))

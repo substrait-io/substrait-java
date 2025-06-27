@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Project}
 import org.apache.spark.sql.types.LongType
 import org.apache.spark.substrait.SparkTypeUtil
 
-import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FieldReference, ImmutableEnumArg, ImmutableExpression}
+import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FieldReference}
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.utils.Util
 
@@ -138,7 +138,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
           p =>
             translateUp(trueValue).map(
               t => {
-                ImmutableExpression.IfClause.builder
+                SExpression.IfClause.builder
                   .condition(p)
                   .`then`(t)
                   .build()

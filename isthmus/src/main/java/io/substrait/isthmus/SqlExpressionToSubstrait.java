@@ -1,14 +1,12 @@
 package io.substrait.isthmus;
 
 import com.github.bsideup.jabel.Desugar;
+import io.substrait.extendedexpression.ExtendedExpression;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
-import io.substrait.extendedexpression.ImmutableExpressionReference;
-import io.substrait.extendedexpression.ImmutableExtendedExpression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.proto.ExtendedExpression;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
@@ -60,8 +58,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    * @return a {@link io.substrait.proto.ExtendedExpression }
    * @throws SqlParseException
    */
-  public ExtendedExpression convert(String sqlExpression, List<String> createStatements)
-      throws SqlParseException {
+  public io.substrait.proto.ExtendedExpression convert(
+      String sqlExpression, List<String> createStatements) throws SqlParseException {
     return convert(new String[] {sqlExpression}, createStatements);
   }
 
@@ -73,8 +71,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    * @return a {@link io.substrait.proto.ExtendedExpression }
    * @throws SqlParseException
    */
-  public ExtendedExpression convert(String[] sqlExpressions, List<String> createStatements)
-      throws SqlParseException {
+  public io.substrait.proto.ExtendedExpression convert(
+      String[] sqlExpressions, List<String> createStatements) throws SqlParseException {
     var result = registerCreateTablesForExtendedExpression(createStatements);
     return executeInnerSQLExpressions(
         sqlExpressions,
@@ -84,7 +82,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         result.nameToNodeMap());
   }
 
-  private ExtendedExpression executeInnerSQLExpressions(
+  private io.substrait.proto.ExtendedExpression executeInnerSQLExpressions(
       String[] sqlExpressions,
       SqlValidator validator,
       CalciteCatalogReader catalogReader,
@@ -92,23 +90,22 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     int columnIndex = 1;
-    List<io.substrait.extendedexpression.ExtendedExpression.ExpressionReference>
-        expressionReferences = new ArrayList<>();
+    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
     RexNode rexNode;
     for (String sqlExpression : sqlExpressions) {
       rexNode =
           sqlToRexNode(
               sqlExpression.trim(), validator, catalogReader, nameToTypeMap, nameToNodeMap);
-      ImmutableExpressionReference expressionReference =
-          ImmutableExpressionReference.builder()
+      ExtendedExpression.ExpressionReference expressionReference =
+          ExtendedExpression.ExpressionReference.builder()
               .expression(rexNode.accept(this.rexConverter))
               .addOutputNames("column-" + columnIndex++)
               .build();
       expressionReferences.add(expressionReference);
     }
     NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
-    ImmutableExtendedExpression.Builder extendedExpression =
-        ImmutableExtendedExpression.builder()
+    var extendedExpression =
+        ExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct);
 

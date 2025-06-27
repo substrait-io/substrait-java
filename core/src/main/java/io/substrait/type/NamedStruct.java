@@ -11,6 +11,10 @@ public interface NamedStruct {
 
   List<String> names();
 
+  static ImmutableNamedStruct.Builder builder() {
+    return ImmutableNamedStruct.builder();
+  }
+
   static NamedStruct of(Iterable<String> names, Type.Struct type) {
     return ImmutableNamedStruct.builder().addAllNames(names).struct(type).build();
   }

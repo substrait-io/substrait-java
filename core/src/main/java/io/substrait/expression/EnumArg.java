@@ -23,12 +23,16 @@ public interface EnumArg extends FunctionArg {
 
   static EnumArg of(SimpleExtension.EnumArgument enumArg, String option) {
     assert (enumArg.options().contains(option));
-    return ImmutableEnumArg.builder().value(Optional.of(option)).build();
+    return builder().value(Optional.of(option)).build();
   }
 
   static EnumArg of(String value) {
-    return ImmutableEnumArg.builder().value(Optional.of(value)).build();
+    return builder().value(Optional.of(value)).build();
   }
 
-  EnumArg UNSPECIFIED_ENUM_ARG = ImmutableEnumArg.builder().value(Optional.empty()).build();
+  EnumArg UNSPECIFIED_ENUM_ARG = builder().value(Optional.empty()).build();
+
+  static ImmutableEnumArg.Builder builder() {
+    return ImmutableEnumArg.builder();
+  }
 }
