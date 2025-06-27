@@ -16,19 +16,21 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.{DefaultRelVisitor, SparkExtension, ToSparkType, ToSubstraitType}
+import io.substrait.spark.{DefaultRelVisitor, FileHolder, SparkExtension, ToSparkType, ToSubstraitType}
 import io.substrait.spark.expression._
 
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{caseSensitiveResolution, MultiInstanceRelation, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable, CatalogTableType}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction}
 import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftAnti, LeftOuter, LeftSemi, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.toPrettySQL
 import org.apache.spark.sql.execution.QueryExecution
-import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
+import org.apache.spark.sql.execution.command.{CreateDataSourceTableAsSelectCommand, DataWritingCommand, LeafRunnableCommand}
+import org.apache.spark.sql.execution.datasources.{FileFormat => SparkFileFormat, HadoopFsRelation, InMemoryFileIndex, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1Writes}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
@@ -40,8 +42,9 @@ import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
 import io.substrait.relation
+import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedWrite}
+import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
-import io.substrait.relation.LocalFiles
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
 import io.substrait.util.EmptyVisitationContext
@@ -388,7 +391,28 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     if (formats.length != 1) {
       throw new UnsupportedOperationException(s"All files must have the same format")
     }
-    val (format, options) = formats.head match {
+    val (format, options) = convertFileFormat(formats.head)
+    new LogicalRelation(
+      relation = HadoopFsRelation(
+        location = new InMemoryFileIndex(
+          spark,
+          localFiles.getItems.asScala.map(i => new Path(i.getPath.get())),
+          Map(),
+          Some(schema)),
+        partitionSchema = new StructType(),
+        dataSchema = schema,
+        bucketSpec = None,
+        fileFormat = format,
+        options = options
+      )(spark),
+      output = output,
+      catalogTable = None,
+      isStreaming = false
+    )
+  }
+
+  def convertFileFormat(fileFormat: FileFormat): (SparkFileFormat, Map[String, String]) = {
+    fileFormat match {
       case csv: FileFormat.DelimiterSeparatedTextReadOptions =>
         val opts = scala.collection.mutable.Map[String, String](
           "delimiter" -> csv.getFieldDelimiter,
@@ -409,23 +433,98 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       case format =>
         throw new UnsupportedOperationException(s"File format not currently supported: $format")
     }
-    new LogicalRelation(
-      relation = HadoopFsRelation(
-        location = new InMemoryFileIndex(
-          spark,
-          localFiles.getItems.asScala.map(i => new Path(i.getPath.get())),
-          Map(),
-          Some(schema)),
-        partitionSchema = new StructType(),
-        dataSchema = schema,
-        bucketSpec = None,
-        fileFormat = format,
-        options = options
-      )(spark),
-      output = output,
-      catalogTable = None,
-      isStreaming = false
+  }
+
+  override def visit(write: NamedWrite, context: EmptyVisitationContext): LogicalPlan = {
+    val child = write.getInput.accept(this, context)
+
+    val (table, database, catalog) = write.getNames.asScala match {
+      case Seq(table) => (table, None, None)
+      case Seq(database, table) => (table, Some(database), None)
+      case Seq(catalog, database, table) => (table, Some(database), Some(catalog))
+      case names =>
+        throw new UnsupportedOperationException(
+          s"NamedWrite requires up to three names ([[catalog,] database,] table): $names")
+    }
+    val id = TableIdentifier(table, database, catalog)
+    val catalogTable = CatalogTable(
+      id,
+      CatalogTableType.MANAGED,
+      CatalogStorageFormat.empty,
+      new StructType(),
+      Some("parquet")
     )
+    write.getOperation match {
+      case WriteOp.CTAS =>
+        withChild(child) {
+          CreateDataSourceTableAsSelectCommand(
+            catalogTable,
+            saveMode(write.getCreateMode),
+            child,
+            write.getTableSchema.names().asScala
+          )
+        }
+      case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
+    }
+  }
+
+  override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
+    val child = write.getInput.accept(this, context)
+    val mode = write.getOperation match {
+      case WriteOp.INSERT => SaveMode.Append
+      case WriteOp.UPDATE => SaveMode.Overwrite
+      case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
+    }
+
+    val file = write.getDetail match {
+      case FileHolder(f) => f
+      case d =>
+        throw new UnsupportedOperationException(s"Unsupported extension detail: ${d.getClass}")
+    }
+
+    if (file.getPath.isEmpty)
+      throw new UnsupportedOperationException("The File extension detail must contain a Path field")
+    if (file.getFileFormat.isEmpty)
+      throw new UnsupportedOperationException(
+        "The File extension detail must contain a FileFormat field")
+
+    val (format, options) = convertFileFormat(file.getFileFormat.get)
+
+    val name = file.getPath.get.split('/').reverse.head
+    val id = TableIdentifier(name)
+    val table = CatalogTable(
+      id,
+      CatalogTableType.MANAGED,
+      CatalogStorageFormat.empty,
+      new StructType(),
+      None
+    )
+
+    withChild(child) {
+      V1Writes.apply(
+        InsertIntoHadoopFsRelationCommand(
+          outputPath = new Path(file.getPath.get),
+          staticPartitions = Map(),
+          ifPartitionNotExists = false,
+          partitionColumns = Seq.empty,
+          bucketSpec = None,
+          fileFormat = format,
+          options = options,
+          query = child,
+          mode = mode,
+          catalogTable = Some(table),
+          fileIndex = None,
+          outputColumnNames = write.getTableSchema.names.asScala
+        ))
+    }
+  }
+
+  private def saveMode(mode: CreateMode): SaveMode = mode match {
+    case CreateMode.APPEND_IF_EXISTS => SaveMode.Append
+    case CreateMode.REPLACE_IF_EXISTS => SaveMode.Overwrite
+    case CreateMode.ERROR_IF_EXISTS => SaveMode.ErrorIfExists
+    case CreateMode.IGNORE_IF_EXISTS => SaveMode.Ignore
+    case _ => throw new UnsupportedOperationException(s"Unsupported mode: $mode")
   }
 
   private def withChild(child: LogicalPlan*)(body: => LogicalPlan): LogicalPlan = {
@@ -501,6 +600,9 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
           aggregate.groupingExpressions,
           renameAndCastExprs(aggregate.aggregateExpressions),
           aggregate.child)
+      // if the plan represents a 'write' command, then leave as is
+      case _: DataWritingCommand => logicalPlan
+      case _: LeafRunnableCommand => logicalPlan
       // Otherwise we add a project to enforce correct names in the output
       case _ => Project(renameAndCastExprs(logicalPlan.output), logicalPlan)
     }

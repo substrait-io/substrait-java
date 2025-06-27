@@ -16,16 +16,18 @@
  */
 package io.substrait.spark.logical
 
-import io.substrait.spark.{SparkExtension, ToSubstraitType}
+import io.substrait.spark.{FileHolder, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
+import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
+import org.apache.spark.sql.execution.command.CreateDataSourceTableAsSelectCommand
+import org.apache.spark.sql.execution.datasources.{FileFormat => DSFileFormat, HadoopFsRelation, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1WriteCommand, WriteFiles}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
@@ -39,6 +41,7 @@ import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.Plan
+import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, FileOrFiles}
@@ -49,7 +52,7 @@ import io.substrait.utils.Util
 import java.util
 import java.util.{Collections, Optional}
 
-import scala.collection.JavaConverters.asJavaIterableConverter
+import scala.collection.JavaConverters.{asJavaIterableConverter, seqAsJavaList}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -64,8 +67,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
 
   override def default(p: LogicalPlan): relation.Rel = p match {
+    case c: CommandResult => visit(c.commandLogicalPlan)
+    case w: WriteFiles => visit(w.child)
+    case c: V1WriteCommand => convertDataWritingCommand(c)
+    case CreateDataSourceTableAsSelectCommand(table, mode, query, names) =>
+      convertCTAS(table, mode, query, names)
     case p: LeafNode => convertReadOperator(p)
     case s: SubqueryAlias => visit(s.child)
+    case v: View => visit(v.child)
     case other => t(other)
   }
 
@@ -459,37 +468,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def buildLocalFileScan(fsRelation: HadoopFsRelation): relation.AbstractReadRel = {
-    val namedStruct = ToSubstraitType.toNamedStruct(fsRelation.schema)
-
-    val format = fsRelation.fileFormat match {
-      case _: CSVFileFormat =>
-        // default values for options specified here:
-        // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
-        FileFormat.DelimiterSeparatedTextReadOptions
-          .builder()
-          .fieldDelimiter(fsRelation.options.getOrElse("delimiter", ","))
-          .maxLineSize(0)
-          .quote(fsRelation.options.getOrElse("quote", "\""))
-          .headerLinesToSkip(if (fsRelation.options.getOrElse("header", false) == false) 0 else 1)
-          .escape(fsRelation.options.getOrElse("escape", "\\"))
-          .valueTreatedAsNull(Optional.ofNullable(fsRelation.options.get("nullValue").orNull))
-          .build()
-      case _: ParquetFileFormat => FileFormat.ParquetReadOptions.builder().build()
-      case _: OrcFileFormat => FileFormat.OrcReadOptions.builder().build()
-      case format =>
-        throw new UnsupportedOperationException(s"File format not currently supported: $format")
-    }
-
     relation.LocalFiles
       .builder()
-      .initialSchema(namedStruct)
+      .initialSchema(ToSubstraitType.toNamedStruct(fsRelation.schema))
       .addAllItems(
         fsRelation.location.inputFiles
           .map(
             file => {
               FileOrFiles
                 .builder()
-                .fileFormat(format)
+                .fileFormat(convertFileFormat(fsRelation.fileFormat, fsRelation.options))
                 .partitionIndex(0)
                 .start(0)
                 .length(fsRelation.sizeInBytes)
@@ -501,6 +489,27 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .asJava
       )
       .build()
+  }
+
+  private def convertFileFormat(
+      fileFormat: DSFileFormat,
+      options: Map[String, String]): FileFormat = fileFormat match {
+    case _: CSVFileFormat =>
+      // default values for options specified here:
+      // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
+      FileFormat.DelimiterSeparatedTextReadOptions
+        .builder()
+        .fieldDelimiter(options.getOrElse("delimiter", ","))
+        .maxLineSize(0)
+        .quote(options.getOrElse("quote", "\""))
+        .headerLinesToSkip(if (options.getOrElse("header", "false") == "false") 0 else 1)
+        .escape(options.getOrElse("escape", "\\"))
+        .valueTreatedAsNull(Optional.ofNullable(options.get("nullValue").orNull))
+        .build()
+    case _: ParquetFileFormat => FileFormat.ParquetReadOptions.builder().build()
+    case _: OrcFileFormat => FileFormat.OrcReadOptions.builder().build()
+    case format =>
+      throw new UnsupportedOperationException(s"File format not currently supported: $format")
   }
 
   /** Read Operator: https://substrait.io/relations/logical_relations/#read-operator */
@@ -541,6 +550,75 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           s"******* Unable to convert the plan to a substrait NamedScan: $plan")
     }
   }
+
+  private def convertDataWritingCommand(command: V1WriteCommand): relation.AbstractWriteRel =
+    command match {
+      case InsertIntoHadoopFsRelationCommand(
+            outputPath,
+            _,
+            _,
+            _,
+            _,
+            fileFormat,
+            options,
+            child,
+            mode,
+            _,
+            _,
+            outputColumnNames) =>
+        val file = FileOrFiles
+          .builder()
+          .fileFormat(convertFileFormat(fileFormat, options))
+          .partitionIndex(0)
+          .start(0)
+          .length(0)
+          .path(outputPath.toString)
+          .pathType(PathType.URI_FILE)
+          .build()
+
+        relation.ExtensionWrite
+          .builder()
+          .input(visit(child))
+          .operation(WriteOp.INSERT)
+          .outputMode(OutputMode.UNSPECIFIED)
+          .createMode(createMode(mode))
+          .tableSchema(outputSchema(child.output, outputColumnNames))
+          .detail(FileHolder(file))
+          .build()
+      case _ =>
+        throw new UnsupportedOperationException(s"Unable to convert command: ${command.getClass}")
+    }
+
+  private def convertCTAS(
+      table: CatalogTable,
+      mode: SaveMode,
+      query: LogicalPlan,
+      outputColumnNames: Seq[String]): relation.NamedWrite =
+    relation.NamedWrite
+      .builder()
+      .input(visit(query))
+      .operation(WriteOp.CTAS)
+      .outputMode(OutputMode.UNSPECIFIED)
+      .createMode(createMode(mode))
+      .names(table.identifier.unquotedString.split("\\.").toList.asJava)
+      .tableSchema(outputSchema(query.output, outputColumnNames))
+      .build()
+
+  private def createMode(mode: SaveMode): CreateMode = mode match {
+    case SaveMode.Append => CreateMode.APPEND_IF_EXISTS
+    case SaveMode.Overwrite => CreateMode.REPLACE_IF_EXISTS
+    case SaveMode.ErrorIfExists => CreateMode.ERROR_IF_EXISTS
+    case SaveMode.Ignore => CreateMode.IGNORE_IF_EXISTS
+    case _ => CreateMode.UNSPECIFIED
+  }
+
+  private def outputSchema(output: Seq[Attribute], outputNames: Seq[String]): NamedStruct = {
+    val children = output.map(op => ToSubstraitType.apply(op.dataType, op.nullable))
+    val creator = Type.withNullability(true)
+    val struct = creator.struct(children.asJava)
+    NamedStruct.of(outputNames.asJava, struct)
+  }
+
   def convert(p: LogicalPlan): Plan = {
     val rel = visit(p)
     Plan.builder
