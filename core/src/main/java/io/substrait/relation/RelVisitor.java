@@ -3,57 +3,58 @@ package io.substrait.relation;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.util.VisitationContext;
 
-public interface RelVisitor<OUTPUT, EXCEPTION extends Exception> {
-  OUTPUT visit(Aggregate aggregate) throws EXCEPTION;
+public interface RelVisitor<O, C extends VisitationContext, E extends Exception> {
+  O visit(Aggregate aggregate, C context) throws E;
 
-  OUTPUT visit(EmptyScan emptyScan) throws EXCEPTION;
+  O visit(EmptyScan emptyScan, C context) throws E;
 
-  OUTPUT visit(Fetch fetch) throws EXCEPTION;
+  O visit(Fetch fetch, C context) throws E;
 
-  OUTPUT visit(Filter filter) throws EXCEPTION;
+  O visit(Filter filter, C context) throws E;
 
-  OUTPUT visit(Join join) throws EXCEPTION;
+  O visit(Join join, C context) throws E;
 
-  OUTPUT visit(Set set) throws EXCEPTION;
+  O visit(Set set, C context) throws E;
 
-  OUTPUT visit(NamedScan namedScan) throws EXCEPTION;
+  O visit(NamedScan namedScan, C context) throws E;
 
-  OUTPUT visit(LocalFiles localFiles) throws EXCEPTION;
+  O visit(LocalFiles localFiles, C context) throws E;
 
-  OUTPUT visit(Project project) throws EXCEPTION;
+  O visit(Project project, C context) throws E;
 
-  OUTPUT visit(Expand expand) throws EXCEPTION;
+  O visit(Expand expand, C context) throws E;
 
-  OUTPUT visit(Sort sort) throws EXCEPTION;
+  O visit(Sort sort, C context) throws E;
 
-  OUTPUT visit(Cross cross) throws EXCEPTION;
+  O visit(Cross cross, C context) throws E;
 
-  OUTPUT visit(VirtualTableScan virtualTableScan) throws EXCEPTION;
+  O visit(VirtualTableScan virtualTableScan, C context) throws E;
 
-  OUTPUT visit(ExtensionLeaf extensionLeaf) throws EXCEPTION;
+  O visit(ExtensionLeaf extensionLeaf, C context) throws E;
 
-  OUTPUT visit(ExtensionSingle extensionSingle) throws EXCEPTION;
+  O visit(ExtensionSingle extensionSingle, C context) throws E;
 
-  OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION;
+  O visit(ExtensionMulti extensionMulti, C context) throws E;
 
-  OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION;
+  O visit(ExtensionTable extensionTable, C context) throws E;
 
-  OUTPUT visit(HashJoin hashJoin) throws EXCEPTION;
+  O visit(HashJoin hashJoin, C context) throws E;
 
-  OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION;
+  O visit(MergeJoin mergeJoin, C context) throws E;
 
-  OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION;
+  O visit(NestedLoopJoin nestedLoopJoin, C context) throws E;
 
-  OUTPUT visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION;
+  O visit(ConsistentPartitionWindow consistentPartitionWindow, C context) throws E;
 
-  OUTPUT visit(NamedWrite write) throws EXCEPTION;
+  O visit(NamedWrite write, C context) throws E;
 
-  OUTPUT visit(ExtensionWrite write) throws EXCEPTION;
+  O visit(ExtensionWrite write, C context) throws E;
 
-  OUTPUT visit(NamedDdl ddl) throws EXCEPTION;
+  O visit(NamedDdl ddl, C context) throws E;
 
-  OUTPUT visit(ExtensionDdl ddl) throws EXCEPTION;
+  O visit(ExtensionDdl ddl, C context) throws E;
 
-  OUTPUT visit(NamedUpdate update) throws EXCEPTION;
+  O visit(NamedUpdate update, C context) throws E;
 }

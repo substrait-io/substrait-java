@@ -7,6 +7,7 @@ import io.substrait.relation.HasExtension;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.VisitationContext;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
@@ -69,8 +70,9 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
   }
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableNestedLoopJoin.Builder builder() {

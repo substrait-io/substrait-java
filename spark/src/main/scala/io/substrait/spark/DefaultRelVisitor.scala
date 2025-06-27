@@ -18,10 +18,11 @@ package io.substrait.spark
 
 import io.substrait.relation
 import io.substrait.relation.AbstractRelVisitor
+import io.substrait.util.EmptyVisitationContext
 
-class DefaultRelVisitor[T] extends AbstractRelVisitor[T, RuntimeException] {
+class DefaultRelVisitor[T] extends AbstractRelVisitor[T, EmptyVisitationContext, RuntimeException] {
 
-  override def visitFallback(rel: relation.Rel): T =
+  override def visitFallback(rel: relation.Rel, context: EmptyVisitationContext): T =
     throw new UnsupportedOperationException(
       s"Type ${rel.getClass.getCanonicalName}" +
         s" not handled by visitor type ${getClass.getCanonicalName}.")

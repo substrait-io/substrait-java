@@ -8,6 +8,7 @@ import io.substrait.relation.HasExtension;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.VisitationContext;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -75,8 +76,9 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
   }
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableMergeJoin.Builder builder() {

@@ -19,21 +19,30 @@ package io.substrait.spark
 import io.substrait.`type`.Type
 import io.substrait.expression._
 import io.substrait.extension.SimpleExtension
+import io.substrait.util.EmptyVisitationContext
 
 class DefaultExpressionVisitor[T]
-  extends AbstractExpressionVisitor[T, RuntimeException]
-  with FunctionArg.FuncArgVisitor[T, RuntimeException] {
+  extends AbstractExpressionVisitor[T, EmptyVisitationContext, RuntimeException]
+  with FunctionArg.FuncArgVisitor[T, EmptyVisitationContext, RuntimeException] {
 
-  override def visitFallback(expr: Expression): T =
+  override def visitFallback(expr: Expression, context: EmptyVisitationContext): T =
     throw new UnsupportedOperationException(
       s"Expression type ${expr.getClass.getCanonicalName} " +
         s"not handled by visitor type ${getClass.getCanonicalName}.")
 
-  override def visitType(fnDef: SimpleExtension.Function, argIdx: Int, t: Type): T =
+  override def visitType(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      t: Type,
+      context: EmptyVisitationContext): T =
     throw new UnsupportedOperationException(
       s"FunctionArg $t not handled by visitor type ${getClass.getCanonicalName}.")
 
-  override def visitEnumArg(fnDef: SimpleExtension.Function, argIdx: Int, e: EnumArg): T =
+  override def visitEnumArg(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      e: EnumArg,
+      context: EmptyVisitationContext): T =
     throw new UnsupportedOperationException(
       s"EnumArg(value=${e.value()}) not handled by visitor type ${getClass.getCanonicalName}.")
 
@@ -45,14 +54,20 @@ class DefaultExpressionVisitor[T]
         case _ => throw new IllegalArgumentException(s"Unhandled type: $segment")
       }
     } else {
-      visitFallback(fieldReference)
+      visitFallback(fieldReference, null)
     }
   }
 
-  override def visitExpr(fnDef: SimpleExtension.Function, argIdx: Int, e: Expression): T =
-    e.accept(this)
+  override def visitExpr(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      e: Expression,
+      context: EmptyVisitationContext): T =
+    e.accept(this, context)
 
-  override def visit(userDefinedLiteral: Expression.UserDefinedLiteral): T = {
-    visitFallback(userDefinedLiteral)
+  override def visit(
+      userDefinedLiteral: Expression.UserDefinedLiteral,
+      context: EmptyVisitationContext): T = {
+    visitFallback(userDefinedLiteral, context)
   }
 }

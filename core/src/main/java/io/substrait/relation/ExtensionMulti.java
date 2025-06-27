@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import io.substrait.util.VisitationContext;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -11,8 +12,9 @@ public abstract class ExtensionMulti extends AbstractRel {
   public abstract Extension.MultiRelDetail getDetail();
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableExtensionMulti.Builder from(

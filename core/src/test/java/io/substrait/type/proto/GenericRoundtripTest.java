@@ -12,6 +12,7 @@ import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.relation.ProtoRelConverter;
+import io.substrait.util.EmptyVisitationContext;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -57,7 +58,7 @@ public class GenericRoundtripTest extends TestBase {
             null,
             EMPTY_TYPE,
             new ProtoRelConverter(new ExtensionCollector(), defaultExtensionCollection));
-    assertEquals(val, from.from(val.accept(to)));
+    assertEquals(val, from.from(val.accept(to, EmptyVisitationContext.INSTANCE)));
   }
 
   // Parametrized case generator

@@ -3,6 +3,7 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeVisitor;
+import io.substrait.util.VisitationContext;
 import java.util.List;
 import org.immutables.value.Value;
 
@@ -37,8 +38,9 @@ public abstract class VirtualTableScan extends AbstractReadRel {
   }
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableVirtualTableScan.Builder builder() {

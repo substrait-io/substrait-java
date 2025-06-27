@@ -4,6 +4,7 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.hint.Hint;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.VisitationContext;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -45,5 +46,6 @@ public interface Rel {
     }
   }
 
-  <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E;
+  <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E;
 }

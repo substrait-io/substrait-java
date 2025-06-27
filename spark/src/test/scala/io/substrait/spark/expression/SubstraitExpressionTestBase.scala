@@ -48,7 +48,7 @@ trait SubstraitExpressionTestBase {
     f(substraitExp)
 
     if (bidirectional) {
-      val convertedExpression = substraitExp.accept(toSparkExpression)
+      val convertedExpression = substraitExp.accept(toSparkExpression, null)
       assertResult(expression)(convertedExpression)
     }
   }

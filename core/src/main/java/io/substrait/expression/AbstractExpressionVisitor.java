@@ -1,206 +1,208 @@
 package io.substrait.expression;
 
-public abstract class AbstractExpressionVisitor<OUTPUT, EXCEPTION extends Exception>
-    implements ExpressionVisitor<OUTPUT, EXCEPTION> {
-  public abstract OUTPUT visitFallback(Expression expr);
+import io.substrait.util.VisitationContext;
+
+public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, E extends Exception>
+    implements ExpressionVisitor<O, C, E> {
+  public abstract O visitFallback(Expression expr, C context);
 
   @Override
-  public OUTPUT visit(Expression.NullLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.NullLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.BoolLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.BoolLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.I8Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.I8Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.I16Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.I16Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.I32Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.I32Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.I64Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.I64Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.FP32Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.FP32Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.FP64Literal expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.FP64Literal expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.StrLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.StrLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.BinaryLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.BinaryLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.TimeLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.TimeLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.DateLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.DateLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.TimestampLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.TimestampLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.TimestampTZLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.TimestampTZLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.PrecisionTimestampLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.PrecisionTimestampLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.PrecisionTimestampTZLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.PrecisionTimestampTZLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.IntervalYearLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.IntervalYearLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.IntervalDayLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.IntervalDayLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.IntervalCompoundLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.IntervalCompoundLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.UUIDLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.UUIDLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.FixedCharLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.FixedCharLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.VarCharLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.VarCharLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.FixedBinaryLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.FixedBinaryLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.DecimalLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.DecimalLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.MapLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.MapLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.EmptyMapLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.EmptyMapLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.ListLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.ListLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.EmptyListLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.EmptyListLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.StructLiteral expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.StructLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.Switch expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.Switch expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.IfThen expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.IfThen expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.ScalarFunctionInvocation expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.ScalarFunctionInvocation expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.WindowFunctionInvocation expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.WindowFunctionInvocation expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.Cast expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.Cast expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.SingleOrList expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.SingleOrList expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.MultiOrList expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.MultiOrList expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(FieldReference expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(FieldReference expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.SetPredicate expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.SetPredicate expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.ScalarSubquery expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.ScalarSubquery expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 
   @Override
-  public OUTPUT visit(Expression.InPredicate expr) throws EXCEPTION {
-    return visitFallback(expr);
+  public O visit(Expression.InPredicate expr, C context) throws E {
+    return visitFallback(expr, context);
   }
 }

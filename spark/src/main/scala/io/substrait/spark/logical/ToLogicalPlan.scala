@@ -44,6 +44,7 @@ import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.LocalFiles
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
+import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -64,7 +65,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     val function = measure.getFunction
     var arguments = function.arguments().asScala.zipWithIndex.map {
       case (arg, i) =>
-        arg.accept(function.declaration(), i, expressionConverter)
+        arg.accept(function.declaration(), i, expressionConverter, null)
     }
     if (function.declaration.name == "count" && function.arguments.size == 0) {
       // HACK - count() needs to be rewritten as count(1)
@@ -91,7 +92,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       })
 
     val filter = Option(measure.getPreMeasureFilter.orElse(null))
-      .map(_.accept(expressionConverter))
+      .map(_.accept(expressionConverter, null))
 
     AggregateExpression(
       aggregateFunction,
@@ -106,15 +107,17 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     case other => Alias(other, toPrettySQL(other))()
   }
 
-  override def visit(aggregate: relation.Aggregate): LogicalPlan = {
+  override def visit(
+      aggregate: relation.Aggregate,
+      context: EmptyVisitationContext): LogicalPlan = {
     require(aggregate.getGroupings.size() == 1)
-    val child = aggregate.getInput.accept(this)
+    val child = aggregate.getInput.accept(this, context)
     withChild(child) {
       val groupBy = aggregate.getGroupings
         .get(0)
         .getExpressions
         .asScala
-        .map(expr => expr.accept(expressionConverter))
+        .map(expr => expr.accept(expressionConverter, context))
 
       val outputs = groupBy.map(toNamedExpression)
       val aggregateExpressions =
@@ -123,18 +126,20 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(window: relation.ConsistentPartitionWindow): LogicalPlan = {
-    val child = window.getInput.accept(this)
+  override def visit(
+      window: relation.ConsistentPartitionWindow,
+      context: EmptyVisitationContext): LogicalPlan = {
+    val child = window.getInput.accept(this, context)
     withChild(child) {
       val partitions = window.getPartitionExpressions.asScala
-        .map(expr => expr.accept(expressionConverter))
+        .map(expr => expr.accept(expressionConverter, context))
       val sortOrders = window.getSorts.asScala.map(toSortOrder)
       val windowExpressions = window.getWindowFunctions.asScala
         .map(
           func => {
             val arguments = func.arguments().asScala.zipWithIndex.map {
               case (arg, i) =>
-                arg.accept(func.declaration(), i, expressionConverter)
+                arg.accept(func.declaration(), i, expressionConverter, context)
             }
             val windowFunction = SparkExtension.toWindowFunction
               .getSparkExpressionFromSubstraitFunc(func.declaration.key, arguments)
@@ -172,12 +177,12 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(join: relation.Join): LogicalPlan = {
-    val left = join.getLeft.accept(this)
-    val right = join.getRight.accept(this)
+  override def visit(join: relation.Join, context: EmptyVisitationContext): LogicalPlan = {
+    val left = join.getLeft.accept(this, context)
+    val right = join.getRight.accept(this, context)
     withChild(left, right) {
       val condition = Option(join.getCondition.orElse(null))
-        .map(_.accept(expressionConverter))
+        .map(_.accept(expressionConverter, context))
 
       val joinType = join.getJoinType match {
         case relation.Join.JoinType.INNER => Inner
@@ -197,9 +202,9 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(join: relation.Cross): LogicalPlan = {
-    val left = join.getLeft.accept(this)
-    val right = join.getRight.accept(this)
+  override def visit(join: relation.Cross, context: EmptyVisitationContext): LogicalPlan = {
+    val left = join.getLeft.accept(this, context)
+    val right = join.getRight.accept(this, context)
     withChild(left, right) {
       // TODO: Support different join types here when join types are added to cross rel for BNLJ
       // Currently, this will change both cross and inner join types to inner join
@@ -208,7 +213,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   private def toSortOrder(sortField: SExpression.SortField): SortOrder = {
-    val expression = sortField.expr().accept(expressionConverter)
+    val expression = sortField.expr().accept(expressionConverter, null)
     val (direction, nullOrdering) = sortField.direction() match {
       case SExpression.SortDirection.ASC_NULLS_FIRST => (Ascending, NullsFirst)
       case SExpression.SortDirection.DESC_NULLS_FIRST => (Descending, NullsFirst)
@@ -220,8 +225,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     SortOrder(expression, direction, nullOrdering, Seq.empty)
   }
 
-  override def visit(fetch: relation.Fetch): LogicalPlan = {
-    val child = fetch.getInput.accept(this)
+  override def visit(fetch: relation.Fetch, context: EmptyVisitationContext): LogicalPlan = {
+    val child = fetch.getInput.accept(this, context)
     val limit = fetch.getCount.orElse(-1).intValue() // -1 means unassigned here
     val offset = fetch.getOffset.intValue()
     val toLiteral = (i: Int) => Literal(i, IntegerType)
@@ -239,8 +244,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(sort: relation.Sort): LogicalPlan = {
-    val child = sort.getInput.accept(this)
+  override def visit(sort: relation.Sort, context: EmptyVisitationContext): LogicalPlan = {
+    val child = sort.getInput.accept(this, context)
     withChild(child) {
       val sortOrders = sort.getSortFields.asScala.map(toSortOrder)
       Sort(sortOrders, global = true, child)
@@ -267,8 +272,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(project: relation.Project): LogicalPlan = {
-    val child = project.getInput.accept(this)
+  override def visit(project: relation.Project, context: EmptyVisitationContext): LogicalPlan = {
+    val child = project.getInput.accept(this, context)
     val (output, createProject) = child match {
       case a: Aggregate => (a.aggregateExpressions, false)
       case other => (other.output, true)
@@ -278,7 +283,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     withOutput(output) {
       val projectExprs =
         project.getExpressions.asScala
-          .map(expr => expr.accept(expressionConverter))
+          .map(expr => expr.accept(expressionConverter, context))
       val projectList = if (names.size == projectExprs.size) {
         projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
       } else {
@@ -293,8 +298,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(expand: relation.Expand): LogicalPlan = {
-    val child = expand.getInput.accept(this)
+  override def visit(expand: relation.Expand, context: EmptyVisitationContext): LogicalPlan = {
+    val child = expand.getInput.accept(this, context)
     val names = fieldNames(expand).getOrElse(
       expand.getFields.asScala.zipWithIndex.map { case (_, i) => s"col$i" }
     )
@@ -304,7 +309,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
         .map {
           case sf: SwitchingField =>
             sf.getDuplicates.asScala
-              .map(expr => expr.accept(expressionConverter))
+              .map(expr => expr.accept(expressionConverter, context))
               .map(toNamedExpression)
           case _: ConsistentField =>
             throw new UnsupportedOperationException("ConsistentField not currently supported")
@@ -321,16 +326,16 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(filter: relation.Filter): LogicalPlan = {
-    val child = filter.getInput.accept(this)
+  override def visit(filter: relation.Filter, context: EmptyVisitationContext): LogicalPlan = {
+    val child = filter.getInput.accept(this, context)
     withChild(child) {
-      val condition = filter.getCondition.accept(expressionConverter)
+      val condition = filter.getCondition.accept(expressionConverter, context)
       Filter(condition, child)
     }
   }
 
-  override def visit(set: relation.Set): LogicalPlan = {
-    val children = set.getInputs.asScala.map(_.accept(this))
+  override def visit(set: relation.Set, context: EmptyVisitationContext): LogicalPlan = {
+    val children = set.getInputs.asScala.map(_.accept(this, context))
     withOutput(children.flatMap(_.output)) {
       set.getSetOp match {
         case SetOp.UNION_ALL => Union(children, byName = false, allowMissingCol = false)
@@ -340,18 +345,22 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(emptyScan: relation.EmptyScan): LogicalPlan = {
+  override def visit(
+      emptyScan: relation.EmptyScan,
+      context: EmptyVisitationContext): LogicalPlan = {
     LocalRelation(ToSparkType.toAttributeSeq(emptyScan.getInitialSchema))
   }
 
-  override def visit(virtualTableScan: relation.VirtualTableScan): LogicalPlan = {
+  override def visit(
+      virtualTableScan: relation.VirtualTableScan,
+      context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map(
       row =>
         InternalRow.fromSeq(
           row
             .fields()
             .asScala
-            .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)))
+            .map(field => field.accept(expressionConverter, context).asInstanceOf[Literal].value)))
     virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
         OneRowRelation()
@@ -360,14 +369,16 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
-  override def visit(namedScan: relation.NamedScan): LogicalPlan = {
+  override def visit(
+      namedScan: relation.NamedScan,
+      context: EmptyVisitationContext): LogicalPlan = {
     resolve(UnresolvedRelation(namedScan.getNames.asScala)) match {
       case m: MultiInstanceRelation => m.newInstance()
       case other => other
     }
   }
 
-  override def visit(localFiles: LocalFiles): LogicalPlan = {
+  override def visit(localFiles: LocalFiles, context: EmptyVisitationContext): LogicalPlan = {
     val schema = ToSparkType.toStructType(localFiles.getInitialSchema)
     val output = schema.map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
@@ -438,7 +449,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   def convert(rel: relation.Rel): LogicalPlan = {
-    val logicalPlan = rel.accept(this)
+    val logicalPlan = rel.accept(this, null)
     require(logicalPlan.resolved)
     logicalPlan
   }

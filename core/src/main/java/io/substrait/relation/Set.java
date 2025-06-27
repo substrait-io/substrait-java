@@ -3,6 +3,7 @@ package io.substrait.relation;
 import io.substrait.proto.SetRel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -131,8 +132,9 @@ public abstract class Set extends AbstractRel implements HasExtension {
   }
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C extends VisitationContext, E extends Exception> O accept(
+      RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableSet.Builder builder() {

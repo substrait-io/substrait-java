@@ -1,87 +1,89 @@
 package io.substrait.expression;
 
-public interface ExpressionVisitor<R, E extends Throwable> {
+import io.substrait.util.VisitationContext;
+
+public interface ExpressionVisitor<R, C extends VisitationContext, E extends Throwable> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionVisitor.class);
 
-  R visit(Expression.NullLiteral expr) throws E;
+  R visit(Expression.NullLiteral expr, C context) throws E;
 
-  R visit(Expression.BoolLiteral expr) throws E;
+  R visit(Expression.BoolLiteral expr, C context) throws E;
 
-  R visit(Expression.I8Literal expr) throws E;
+  R visit(Expression.I8Literal expr, C context) throws E;
 
-  R visit(Expression.I16Literal expr) throws E;
+  R visit(Expression.I16Literal expr, C context) throws E;
 
-  R visit(Expression.I32Literal expr) throws E;
+  R visit(Expression.I32Literal expr, C context) throws E;
 
-  R visit(Expression.I64Literal expr) throws E;
+  R visit(Expression.I64Literal expr, C context) throws E;
 
-  R visit(Expression.FP32Literal expr) throws E;
+  R visit(Expression.FP32Literal expr, C context) throws E;
 
-  R visit(Expression.FP64Literal expr) throws E;
+  R visit(Expression.FP64Literal expr, C context) throws E;
 
-  R visit(Expression.StrLiteral expr) throws E;
+  R visit(Expression.StrLiteral expr, C context) throws E;
 
-  R visit(Expression.BinaryLiteral expr) throws E;
+  R visit(Expression.BinaryLiteral expr, C context) throws E;
 
-  R visit(Expression.TimeLiteral expr) throws E;
+  R visit(Expression.TimeLiteral expr, C context) throws E;
 
-  R visit(Expression.DateLiteral expr) throws E;
+  R visit(Expression.DateLiteral expr, C context) throws E;
 
-  R visit(Expression.TimestampLiteral expr) throws E;
+  R visit(Expression.TimestampLiteral expr, C context) throws E;
 
-  R visit(Expression.TimestampTZLiteral expr) throws E;
+  R visit(Expression.TimestampTZLiteral expr, C context) throws E;
 
-  R visit(Expression.PrecisionTimestampLiteral expr) throws E;
+  R visit(Expression.PrecisionTimestampLiteral expr, C context) throws E;
 
-  R visit(Expression.PrecisionTimestampTZLiteral expr) throws E;
+  R visit(Expression.PrecisionTimestampTZLiteral expr, C context) throws E;
 
-  R visit(Expression.IntervalYearLiteral expr) throws E;
+  R visit(Expression.IntervalYearLiteral expr, C context) throws E;
 
-  R visit(Expression.IntervalDayLiteral expr) throws E;
+  R visit(Expression.IntervalDayLiteral expr, C context) throws E;
 
-  R visit(Expression.IntervalCompoundLiteral expr) throws E;
+  R visit(Expression.IntervalCompoundLiteral expr, C context) throws E;
 
-  R visit(Expression.UUIDLiteral expr) throws E;
+  R visit(Expression.UUIDLiteral expr, C context) throws E;
 
-  R visit(Expression.FixedCharLiteral expr) throws E;
+  R visit(Expression.FixedCharLiteral expr, C context) throws E;
 
-  R visit(Expression.VarCharLiteral expr) throws E;
+  R visit(Expression.VarCharLiteral expr, C context) throws E;
 
-  R visit(Expression.FixedBinaryLiteral expr) throws E;
+  R visit(Expression.FixedBinaryLiteral expr, C context) throws E;
 
-  R visit(Expression.DecimalLiteral expr) throws E;
+  R visit(Expression.DecimalLiteral expr, C context) throws E;
 
-  R visit(Expression.MapLiteral expr) throws E;
+  R visit(Expression.MapLiteral expr, C context) throws E;
 
-  R visit(Expression.EmptyMapLiteral expr) throws E;
+  R visit(Expression.EmptyMapLiteral expr, C context) throws E;
 
-  R visit(Expression.ListLiteral expr) throws E;
+  R visit(Expression.ListLiteral expr, C context) throws E;
 
-  R visit(Expression.EmptyListLiteral expr) throws E;
+  R visit(Expression.EmptyListLiteral expr, C context) throws E;
 
-  R visit(Expression.StructLiteral expr) throws E;
+  R visit(Expression.StructLiteral expr, C context) throws E;
 
-  R visit(Expression.UserDefinedLiteral expr) throws E;
+  R visit(Expression.UserDefinedLiteral expr, C context) throws E;
 
-  R visit(Expression.Switch expr) throws E;
+  R visit(Expression.Switch expr, C context) throws E;
 
-  R visit(Expression.IfThen expr) throws E;
+  R visit(Expression.IfThen expr, C context) throws E;
 
-  R visit(Expression.ScalarFunctionInvocation expr) throws E;
+  R visit(Expression.ScalarFunctionInvocation expr, C context) throws E;
 
-  R visit(Expression.WindowFunctionInvocation expr) throws E;
+  R visit(Expression.WindowFunctionInvocation expr, C context) throws E;
 
-  R visit(Expression.Cast expr) throws E;
+  R visit(Expression.Cast expr, C context) throws E;
 
-  R visit(Expression.SingleOrList expr) throws E;
+  R visit(Expression.SingleOrList expr, C context) throws E;
 
-  R visit(Expression.MultiOrList expr) throws E;
+  R visit(Expression.MultiOrList expr, C context) throws E;
 
-  R visit(FieldReference expr) throws E;
+  R visit(FieldReference expr, C context) throws E;
 
-  R visit(Expression.SetPredicate expr) throws E;
+  R visit(Expression.SetPredicate expr, C context) throws E;
 
-  R visit(Expression.ScalarSubquery expr) throws E;
+  R visit(Expression.ScalarSubquery expr, C context) throws E;
 
-  R visit(Expression.InPredicate expr) throws E;
+  R visit(Expression.InPredicate expr, C context) throws E;
 }

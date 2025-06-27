@@ -31,6 +31,7 @@ import io.substrait.{expression => exp}
 import io.substrait.expression.{EnumArg, Expression => SExpression}
 import io.substrait.extension.SimpleExtension
 import io.substrait.util.DecimalUtil
+import io.substrait.util.EmptyVisitationContext
 import io.substrait.utils.Util
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
@@ -41,7 +42,7 @@ class ToSparkExpression(
   extends DefaultExpressionVisitor[Expression]
   with HasOutputStack[Seq[NamedExpression]] {
 
-  override def visit(expr: SExpression.BoolLiteral): Expression = {
+  override def visit(expr: SExpression.BoolLiteral, context: EmptyVisitationContext): Expression = {
     if (expr.value()) {
       Literal.TrueLiteral
     } else {
@@ -49,69 +50,81 @@ class ToSparkExpression(
     }
   }
 
-  override def visit(expr: SExpression.I8Literal): Expression = {
+  override def visit(expr: SExpression.I8Literal, context: EmptyVisitationContext): Expression = {
     Literal(expr.value().asInstanceOf[Byte], ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.I16Literal): Expression = {
+  override def visit(expr: SExpression.I16Literal, context: EmptyVisitationContext): Expression = {
     Literal(expr.value().asInstanceOf[Short], ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.I32Literal): Expression = {
+  override def visit(expr: SExpression.I32Literal, context: EmptyVisitationContext): Expression = {
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.I64Literal): Expression = {
+  override def visit(expr: SExpression.I64Literal, context: EmptyVisitationContext): Expression = {
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.FP32Literal): Literal = {
+  override def visit(expr: SExpression.FP32Literal, context: EmptyVisitationContext): Literal = {
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.FP64Literal): Expression = {
+  override def visit(expr: SExpression.FP64Literal, context: EmptyVisitationContext): Expression = {
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.StrLiteral): Expression = {
+  override def visit(expr: SExpression.StrLiteral, context: EmptyVisitationContext): Expression = {
     Literal(UTF8String.fromString(expr.value()), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.FixedCharLiteral): Expression = {
+  override def visit(
+      expr: SExpression.FixedCharLiteral,
+      context: EmptyVisitationContext): Expression = {
     Literal(UTF8String.fromString(expr.value()), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.VarCharLiteral): Expression = {
+  override def visit(
+      expr: SExpression.VarCharLiteral,
+      context: EmptyVisitationContext): Expression = {
     Literal(UTF8String.fromString(expr.value()), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.BinaryLiteral): Literal = {
+  override def visit(expr: SExpression.BinaryLiteral, context: EmptyVisitationContext): Literal = {
     Literal(expr.value().toByteArray, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.DecimalLiteral): Expression = {
+  override def visit(
+      expr: SExpression.DecimalLiteral,
+      context: EmptyVisitationContext): Expression = {
     val value = expr.value.toByteArray
     val decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale, 16)
     Literal(Decimal(decimal), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.DateLiteral): Expression = {
+  override def visit(expr: SExpression.DateLiteral, context: EmptyVisitationContext): Expression = {
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.PrecisionTimestampLiteral): Literal = {
+  override def visit(
+      expr: SExpression.PrecisionTimestampLiteral,
+      context: EmptyVisitationContext): Literal = {
     // Spark timestamps are stored as a microseconds Long
     Util.assertMicroseconds(expr.precision())
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.PrecisionTimestampTZLiteral): Literal = {
+  override def visit(
+      expr: SExpression.PrecisionTimestampTZLiteral,
+      context: EmptyVisitationContext): Literal = {
     // Spark timestamps are stored as a microseconds Long
     Util.assertMicroseconds(expr.precision())
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.IntervalDayLiteral): Literal = {
+  override def visit(
+      expr: SExpression.IntervalDayLiteral,
+      context: EmptyVisitationContext): Literal = {
     Util.assertMicroseconds(expr.precision())
     // Spark uses a single microseconds Long as the "physical" type for DayTimeInterval
     val micros =
@@ -120,48 +133,56 @@ class ToSparkExpression(
     Literal(micros, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.IntervalYearLiteral): Literal = {
+  override def visit(
+      expr: SExpression.IntervalYearLiteral,
+      context: EmptyVisitationContext): Literal = {
     // Spark uses a single months Int as the "physical" type for YearMonthInterval
     val months = expr.years() * 12 + expr.months()
     Literal(months, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.ListLiteral): Literal = {
-    val array = expr.values().asScala.map(value => value.accept(this).asInstanceOf[Literal].value)
+  override def visit(expr: SExpression.ListLiteral, context: EmptyVisitationContext): Literal = {
+    val array =
+      expr.values().asScala.map(value => value.accept(this, context).asInstanceOf[Literal].value)
     Literal.create(array, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.EmptyListLiteral): Expression = {
+  override def visit(
+      expr: SExpression.EmptyListLiteral,
+      context: EmptyVisitationContext): Expression = {
     Literal.default(ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.MapLiteral): Literal = {
+  override def visit(expr: SExpression.MapLiteral, context: EmptyVisitationContext): Literal = {
     val map = expr.values().asScala.map {
       case (key, value) =>
         (
-          key.accept(this).asInstanceOf[Literal].value,
-          value.accept(this).asInstanceOf[Literal].value
+          key.accept(this, context).asInstanceOf[Literal].value,
+          value.accept(this, context).asInstanceOf[Literal].value
         )
     }
     Literal.create(map, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.EmptyMapLiteral): Literal = {
+  override def visit(
+      expr: SExpression.EmptyMapLiteral,
+      context: EmptyVisitationContext): Literal = {
     Literal.default(ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.StructLiteral): Literal = {
+  override def visit(expr: SExpression.StructLiteral, context: EmptyVisitationContext): Literal = {
     Literal.create(
-      Row.fromSeq(expr.fields.asScala.map(field => field.accept(this).asInstanceOf[Literal].value)),
+      Row.fromSeq(
+        expr.fields.asScala.map(field => field.accept(this, context).asInstanceOf[Literal].value)),
       ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.NullLiteral): Expression = {
+  override def visit(expr: SExpression.NullLiteral, context: EmptyVisitationContext): Expression = {
     Literal(null, ToSparkType.convert(expr.getType))
   }
 
-  override def visit(expr: SExpression.Cast): Expression = {
-    val childExp = expr.input().accept(this)
+  override def visit(expr: SExpression.Cast, context: EmptyVisitationContext): Expression = {
+    val childExp = expr.input().accept(this, context)
     val tt = ToSparkType.convert(expr.getType)
     val tz =
       if (Cast.needsTimeZone(childExp.dataType, tt))
@@ -171,51 +192,55 @@ class ToSparkExpression(
     Cast(childExp, tt, tz)
   }
 
-  override def visit(expr: exp.FieldReference): Expression = {
+  override def visit(expr: exp.FieldReference, context: EmptyVisitationContext): Expression = {
     withFieldReference(expr)(i => currentOutput(i).clone())
   }
 
-  override def visit(expr: SExpression.IfThen): Expression = {
+  override def visit(expr: SExpression.IfThen, context: EmptyVisitationContext): Expression = {
     val branches = expr
       .ifClauses()
       .asScala
       .map(
         ifClause => {
-          val predicate = ifClause.condition().accept(this)
-          val elseValue = ifClause.`then`().accept(this)
+          val predicate = ifClause.condition().accept(this, context)
+          val elseValue = ifClause.`then`().accept(this, context)
           (predicate, elseValue)
         })
-    val default = expr.elseClause().accept(this) match {
+    val default = expr.elseClause().accept(this, context) match {
       case l: Literal if l.nullable => None
       case other => Some(other)
     }
     CaseWhen(branches, default)
   }
 
-  override def visit(expr: SExpression.ScalarSubquery): Expression = {
+  override def visit(
+      expr: SExpression.ScalarSubquery,
+      context: EmptyVisitationContext): Expression = {
     val rel = expr.input()
     val dataType = ToSparkType.convert(expr.getType)
     toLogicalPlan
       .map(
         relConverter => {
-          val plan = rel.accept(relConverter)
+          val plan = rel.accept(relConverter, context)
           require(plan.resolved)
           val result = ScalarSubquery(plan)
           SparkTypeUtil.sameType(result.dataType, dataType)
           result
         })
-      .getOrElse(visitFallback(expr))
+      .getOrElse(visitFallback(expr, context))
   }
 
-  override def visit(expr: SExpression.SingleOrList): Expression = {
-    val value = expr.condition().accept(this)
-    val list = expr.options().asScala.map(e => e.accept(this))
+  override def visit(
+      expr: SExpression.SingleOrList,
+      context: EmptyVisitationContext): Expression = {
+    val value = expr.condition().accept(this, context)
+    val list = expr.options().asScala.map(e => e.accept(this, context))
     In(value, list)
   }
 
-  override def visit(expr: SExpression.InPredicate): Expression = {
-    val needles = expr.needles().asScala.map(e => e.accept(this))
-    val haystack = expr.haystack().accept(toLogicalPlan.get)
+  override def visit(expr: SExpression.InPredicate, context: EmptyVisitationContext): Expression = {
+    val needles = expr.needles().asScala.map(e => e.accept(this, context))
+    val haystack = expr.haystack().accept(toLogicalPlan.get, context)
     new InSubquery(needles, ListQuery(haystack, childOutputs = haystack.output)) {
       override def nullable: Boolean = expr.getType.nullable()
     }
@@ -224,15 +249,18 @@ class ToSparkExpression(
   override def visitEnumArg(
       fnDef: SimpleExtension.Function,
       argIdx: Int,
-      e: EnumArg): Expression = {
+      e: EnumArg,
+      context: EmptyVisitationContext): Expression = {
     Enum(e.value.orElse(""))
   }
 
-  override def visit(expr: SExpression.ScalarFunctionInvocation): Expression = {
+  override def visit(
+      expr: SExpression.ScalarFunctionInvocation,
+      context: EmptyVisitationContext): Expression = {
     val eArgs = expr.arguments().asScala
     val args = eArgs.zipWithIndex.map {
       case (arg, i) =>
-        arg.accept(expr.declaration(), i, this)
+        arg.accept(expr.declaration(), i, this, context)
     }.toList
 
     scalarFunctionConverter

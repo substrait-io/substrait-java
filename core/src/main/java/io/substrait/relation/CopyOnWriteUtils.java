@@ -1,5 +1,6 @@
 package io.substrait.relation;
 
+import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,8 +24,8 @@ public class CopyOnWriteUtils {
   }
 
   @FunctionalInterface
-  public interface TransformFunction<T, E extends Exception> {
-    Optional<T> apply(T t) throws E;
+  public interface TransformFunction<T, C extends VisitationContext, E extends Exception> {
+    Optional<T> apply(T t, C context) throws E;
   }
 
   /**
@@ -41,12 +42,13 @@ public class CopyOnWriteUtils {
    * @return An empty optional if none of the items have changed. An optional containing a new list
    *     otherwise.
    */
-  public static <ITEM, E extends Exception> Optional<List<ITEM>> transformList(
-      List<ITEM> items, TransformFunction<ITEM, E> transform) throws E {
-    List<ITEM> newItems = new ArrayList<>();
+  public static <I, C extends VisitationContext, E extends Exception>
+      Optional<List<I>> transformList(
+          List<I> items, C context, TransformFunction<I, C, E> transform) throws E {
+    List<I> newItems = new ArrayList<>();
     boolean listUpdated = false;
-    for (ITEM item : items) {
-      Optional<ITEM> newItem = transform.apply(item);
+    for (I item : items) {
+      Optional<I> newItem = transform.apply(item, context);
       if (newItem.isPresent()) {
         newItems.add(newItem.get());
         listUpdated = true;
