@@ -61,6 +61,8 @@ public interface ExpressionVisitor<R, E extends Throwable> {
 
   R visit(Expression.StructLiteral expr) throws E;
 
+  R visit(Expression.StructNested expr) throws E;
+
   R visit(Expression.UserDefinedLiteral expr) throws E;
 
   R visit(Expression.Switch expr) throws E;
