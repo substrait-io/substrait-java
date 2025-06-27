@@ -16,9 +16,10 @@ public interface EnumArg extends FunctionArg {
   Optional<String> value();
 
   @Override
-  default <R, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
-    return fnArgVisitor.visitEnumArg(fnDef, argIdx, this);
+  default <R, C, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      throws E {
+    return fnArgVisitor.visitEnumArg(fnDef, argIdx, this, context);
   }
 
   static EnumArg of(SimpleExtension.EnumArgument enumArg, String option) {

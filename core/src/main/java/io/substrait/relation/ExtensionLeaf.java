@@ -8,8 +8,8 @@ public abstract class ExtensionLeaf extends ZeroInputRel {
   public abstract Extension.LeafRelDetail getDetail();
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C, E extends Exception> O accept(RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableExtensionLeaf.Builder from(Extension.LeafRelDetail detail) {

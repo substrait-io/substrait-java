@@ -51,7 +51,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             b.fieldReference(commonTable, 0),
             List.of(b.switchClause(b.i32(0), b.fieldReference(commonTable, 3))),
             b.bool(false));
-    var calciteExpr = expr.accept(converter);
+    var calciteExpr = expr.accept(converter, null);
 
     assertTypeMatch(calciteExpr.getType(), N.BOOLEAN);
   }
@@ -174,7 +174,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             b.i32(7),
             b.i32(42));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    RexNode calciteExpr = expr.accept(expressionRexConverter, null);
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.FP32), calciteExpr.getType());
   }
 
@@ -194,7 +194,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             WindowBound.UNBOUNDED,
             b.i32(42));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    RexNode calciteExpr = expr.accept(expressionRexConverter, null);
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
   }
 

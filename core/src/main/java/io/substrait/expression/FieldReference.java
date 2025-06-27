@@ -28,8 +28,10 @@ public abstract class FieldReference implements Expression {
     return ImmutableFieldReference.builder();
   }
 
-  public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-    return visitor.visit(this);
+  @Override
+  public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+      throws E {
+    return visitor.visit(this, context);
   }
 
   public boolean isSimpleRootReference() {

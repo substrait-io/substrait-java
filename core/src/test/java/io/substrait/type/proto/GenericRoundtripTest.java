@@ -57,7 +57,7 @@ public class GenericRoundtripTest extends TestBase {
             null,
             EMPTY_TYPE,
             new ProtoRelConverter(new ExtensionCollector(), defaultExtensionCollection));
-    assertEquals(val, from.from(val.accept(to)));
+    assertEquals(val, from.from(val.accept(to, null)));
   }
 
   // Parametrized case generator

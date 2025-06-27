@@ -183,7 +183,8 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex =
+        (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter, null);
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier (which is used to parse
     // input string).
@@ -231,7 +232,7 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalDayExpr, convertedExpr);
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalDayExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex = (RexLiteral) intervalDayExpr.accept(expressionRexConverter, null);
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -255,7 +256,7 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalYearExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex = (RexLiteral) intervalYearExpr.accept(expressionRexConverter, null);
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -280,7 +281,7 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalMonthExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex = (RexLiteral) intervalMonthExpr.accept(expressionRexConverter, null);
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -386,7 +387,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
   public void bitest(Expression expression, RexNode rex) {
     assertEquals(expression, rex.accept(rexExpressionConverter));
-    RexNode convertedRex = expression.accept(expressionRexConverter);
+    RexNode convertedRex = expression.accept(expressionRexConverter, null);
     assertEquals(rex, convertedRex);
   }
 }
