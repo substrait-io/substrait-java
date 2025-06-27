@@ -34,7 +34,7 @@ public class AggregateFunctionProtoConverter {
         .setOutputType(measure.getFunction().getType().accept(typeProtoConverter))
         .addAllArguments(
             IntStream.range(0, args.size())
-                .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor))
+                .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor, null))
                 .collect(java.util.stream.Collectors.toList()))
         .setFunctionReference(
             functionCollector.getFunctionReference(measure.getFunction().declaration()))

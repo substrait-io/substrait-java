@@ -21,34 +21,33 @@ import java.util.function.Function;
  * By default, no subtree substitution will be performed. However, if a visit method is overridden
  * to return a non-empty optional value, then that value will replace the relation in the tree.
  */
-public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
-    implements RelVisitor<Optional<Rel>, EXCEPTION> {
+public class RelCopyOnWriteVisitor<E extends Exception>
+    implements RelVisitor<Optional<Rel>, Void, E> {
 
-  private final ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor;
+  private final ExpressionCopyOnWriteVisitor<E> expressionCopyOnWriteVisitor;
 
   public RelCopyOnWriteVisitor() {
     this.expressionCopyOnWriteVisitor = new ExpressionCopyOnWriteVisitor<>(this);
   }
 
-  public RelCopyOnWriteVisitor(
-      ExpressionCopyOnWriteVisitor<EXCEPTION> expressionCopyOnWriteVisitor) {
+  public RelCopyOnWriteVisitor(ExpressionCopyOnWriteVisitor<E> expressionCopyOnWriteVisitor) {
     this.expressionCopyOnWriteVisitor = expressionCopyOnWriteVisitor;
   }
 
   public RelCopyOnWriteVisitor(
-      Function<RelCopyOnWriteVisitor<EXCEPTION>, ExpressionCopyOnWriteVisitor<EXCEPTION>> fn) {
+      Function<RelCopyOnWriteVisitor<E>, ExpressionCopyOnWriteVisitor<E>> fn) {
     this.expressionCopyOnWriteVisitor = fn.apply(this);
   }
 
-  protected ExpressionCopyOnWriteVisitor<EXCEPTION> getExpressionCopyOnWriteVisitor() {
+  protected ExpressionCopyOnWriteVisitor<E> getExpressionCopyOnWriteVisitor() {
     return expressionCopyOnWriteVisitor;
   }
 
   @Override
-  public Optional<Rel> visit(Aggregate aggregate) throws EXCEPTION {
-    var input = aggregate.getInput().accept(this);
-    var groupings = transformList(aggregate.getGroupings(), this::visitGrouping);
-    var measures = transformList(aggregate.getMeasures(), this::visitMeasure);
+  public Optional<Rel> visit(Aggregate aggregate, Void context) throws E {
+    var input = aggregate.getInput().accept(this, context);
+    var groupings = transformList(aggregate.getGroupings(), context, this::visitGrouping);
+    var measures = transformList(aggregate.getMeasures(), context, this::visitMeasure);
 
     if (allEmpty(input, groupings, measures)) {
       return Optional.empty();
@@ -62,15 +61,16 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
             .build());
   }
 
-  protected Optional<Aggregate.Grouping> visitGrouping(Aggregate.Grouping grouping)
-      throws EXCEPTION {
-    return visitExprList(grouping.getExpressions())
+  protected Optional<Aggregate.Grouping> visitGrouping(Aggregate.Grouping grouping, Void context)
+      throws E {
+    return visitExprList(grouping.getExpressions(), context)
         .map(exprs -> Aggregate.Grouping.builder().from(grouping).expressions(exprs).build());
   }
 
-  protected Optional<Aggregate.Measure> visitMeasure(Aggregate.Measure measure) throws EXCEPTION {
-    var preMeasureFilter = visitOptionalExpression(measure.getPreMeasureFilter());
-    var afi = visitAggregateFunction(measure.getFunction());
+  protected Optional<Aggregate.Measure> visitMeasure(Aggregate.Measure measure, Void context)
+      throws E {
+    var preMeasureFilter = visitOptionalExpression(measure.getPreMeasureFilter(), context);
+    var afi = visitAggregateFunction(measure.getFunction(), context);
 
     if (allEmpty(preMeasureFilter, afi)) {
       return Optional.empty();
@@ -84,9 +84,9 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   protected Optional<AggregateFunctionInvocation> visitAggregateFunction(
-      AggregateFunctionInvocation afi) throws EXCEPTION {
-    var arguments = visitFunctionArguments(afi.arguments());
-    var sort = transformList(afi.sort(), this::visitSortField);
+      AggregateFunctionInvocation afi, Void context) throws E {
+    var arguments = visitFunctionArguments(afi.arguments(), context);
+    var sort = transformList(afi.sort(), context, this::visitSortField);
 
     if (allEmpty(arguments, sort)) {
       return Optional.empty();
@@ -100,8 +100,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(EmptyScan emptyScan) throws EXCEPTION {
-    Optional<Expression> filter = visitOptionalExpression(emptyScan.getFilter());
+  public Optional<Rel> visit(EmptyScan emptyScan, Void context) throws E {
+    Optional<Expression> filter = visitOptionalExpression(emptyScan.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -114,17 +114,17 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Fetch fetch) throws EXCEPTION {
+  public Optional<Rel> visit(Fetch fetch, Void context) throws E {
     return fetch
         .getInput()
-        .accept(this)
+        .accept(this, context)
         .map(input -> Fetch.builder().from(fetch).input(input).build());
   }
 
   @Override
-  public Optional<Rel> visit(Filter filter) throws EXCEPTION {
-    var input = filter.getInput().accept(this);
-    var condition = filter.getCondition().accept(getExpressionCopyOnWriteVisitor());
+  public Optional<Rel> visit(Filter filter, Void context) throws E {
+    var input = filter.getInput().accept(this, context);
+    var condition = filter.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
 
     if (allEmpty(input, condition)) {
       return Optional.empty();
@@ -138,11 +138,11 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Join join) throws EXCEPTION {
-    var left = join.getLeft().accept(this);
-    var right = join.getRight().accept(this);
-    var condition = visitOptionalExpression(join.getCondition());
-    var postFilter = visitOptionalExpression(join.getPostJoinFilter());
+  public Optional<Rel> visit(Join join, Void context) throws E {
+    var left = join.getLeft().accept(this, context);
+    var right = join.getRight().accept(this, context);
+    var condition = visitOptionalExpression(join.getCondition(), context);
+    var postFilter = visitOptionalExpression(join.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, condition, postFilter)) {
       return Optional.empty();
@@ -158,14 +158,14 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Set set) throws EXCEPTION {
-    return transformList(set.getInputs(), t -> t.accept(this))
+  public Optional<Rel> visit(Set set, Void context) throws E {
+    return transformList(set.getInputs(), context, (t, c) -> t.accept(this, c))
         .map(s -> Set.builder().from(set).inputs(s).build());
   }
 
   @Override
-  public Optional<Rel> visit(NamedScan namedScan) throws EXCEPTION {
-    var filter = visitOptionalExpression(namedScan.getFilter());
+  public Optional<Rel> visit(NamedScan namedScan, Void context) throws E {
+    var filter = visitOptionalExpression(namedScan.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -175,8 +175,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(LocalFiles localFiles) throws EXCEPTION {
-    var filter = visitOptionalExpression(localFiles.getFilter());
+  public Optional<Rel> visit(LocalFiles localFiles, Void context) throws E {
+    var filter = visitOptionalExpression(localFiles.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -186,9 +186,9 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Project project) throws EXCEPTION {
-    var input = project.getInput().accept(this);
-    var expressions = visitExprList(project.getExpressions());
+  public Optional<Rel> visit(Project project, Void context) throws E {
+    var input = project.getInput().accept(this, context);
+    var expressions = visitExprList(project.getExpressions(), context);
 
     if (allEmpty(input, expressions)) {
       return Optional.empty();
@@ -202,39 +202,39 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Expand expand) throws EXCEPTION {
+  public Optional<Rel> visit(Expand expand, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(NamedWrite write) throws EXCEPTION {
+  public Optional<Rel> visit(NamedWrite write, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionWrite write) throws EXCEPTION {
+  public Optional<Rel> visit(ExtensionWrite write, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(NamedDdl ddl) throws EXCEPTION {
+  public Optional<Rel> visit(NamedDdl ddl, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionDdl ddl) throws EXCEPTION {
+  public Optional<Rel> visit(ExtensionDdl ddl, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(NamedUpdate update) throws EXCEPTION {
+  public Optional<Rel> visit(NamedUpdate update, Void context) throws E {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Rel> visit(Sort sort) throws EXCEPTION {
-    var input = sort.getInput().accept(this);
-    var sortFields = transformList(sort.getSortFields(), this::visitSortField);
+  public Optional<Rel> visit(Sort sort, Void context) throws E {
+    var input = sort.getInput().accept(this, context);
+    var sortFields = transformList(sort.getSortFields(), context, this::visitSortField);
 
     if (allEmpty(input, sortFields)) {
       return Optional.empty();
@@ -248,9 +248,9 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(Cross cross) throws EXCEPTION {
-    var left = cross.getLeft().accept(this);
-    var right = cross.getRight().accept(this);
+  public Optional<Rel> visit(Cross cross, Void context) throws E {
+    var left = cross.getLeft().accept(this, context);
+    var right = cross.getRight().accept(this, context);
 
     if (allEmpty(left, right)) {
       return Optional.empty();
@@ -264,8 +264,8 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(VirtualTableScan virtualTableScan) throws EXCEPTION {
-    var filter = visitOptionalExpression(virtualTableScan.getFilter());
+  public Optional<Rel> visit(VirtualTableScan virtualTableScan, Void context) throws E {
+    var filter = visitOptionalExpression(virtualTableScan.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -278,27 +278,27 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionLeaf extensionLeaf) throws EXCEPTION {
+  public Optional<Rel> visit(ExtensionLeaf extensionLeaf, Void context) throws E {
     return Optional.empty();
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionSingle extensionSingle) throws EXCEPTION {
+  public Optional<Rel> visit(ExtensionSingle extensionSingle, Void context) throws E {
     return extensionSingle
         .getInput()
-        .accept(this)
+        .accept(this, context)
         .map(input -> ExtensionSingle.builder().from(extensionSingle).input(input).build());
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionMulti extensionMulti) throws EXCEPTION {
-    return transformList(extensionMulti.getInputs(), rel -> rel.accept(this))
+  public Optional<Rel> visit(ExtensionMulti extensionMulti, Void context) throws E {
+    return transformList(extensionMulti.getInputs(), context, (rel, c) -> rel.accept(this, c))
         .map(inputs -> ExtensionMulti.builder().from(extensionMulti).inputs(inputs).build());
   }
 
   @Override
-  public Optional<Rel> visit(ExtensionTable extensionTable) throws EXCEPTION {
-    var filter = visitOptionalExpression(extensionTable.getFilter());
+  public Optional<Rel> visit(ExtensionTable extensionTable, Void context) throws E {
+    var filter = visitOptionalExpression(extensionTable.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -311,12 +311,12 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(HashJoin hashJoin) throws EXCEPTION {
-    var left = hashJoin.getLeft().accept(this);
-    var right = hashJoin.getRight().accept(this);
-    var leftKeys = transformList(hashJoin.getLeftKeys(), this::visitFieldReference);
-    var rightKeys = transformList(hashJoin.getRightKeys(), this::visitFieldReference);
-    var postFilter = visitOptionalExpression(hashJoin.getPostJoinFilter());
+  public Optional<Rel> visit(HashJoin hashJoin, Void context) throws E {
+    var left = hashJoin.getLeft().accept(this, context);
+    var right = hashJoin.getRight().accept(this, context);
+    var leftKeys = transformList(hashJoin.getLeftKeys(), context, this::visitFieldReference);
+    var rightKeys = transformList(hashJoin.getRightKeys(), context, this::visitFieldReference);
+    var postFilter = visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
       return Optional.empty();
@@ -333,12 +333,12 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(MergeJoin mergeJoin) throws EXCEPTION {
-    var left = mergeJoin.getLeft().accept(this);
-    var right = mergeJoin.getRight().accept(this);
-    var leftKeys = transformList(mergeJoin.getLeftKeys(), this::visitFieldReference);
-    var rightKeys = transformList(mergeJoin.getRightKeys(), this::visitFieldReference);
-    var postFilter = visitOptionalExpression(mergeJoin.getPostJoinFilter());
+  public Optional<Rel> visit(MergeJoin mergeJoin, Void context) throws E {
+    var left = mergeJoin.getLeft().accept(this, context);
+    var right = mergeJoin.getRight().accept(this, context);
+    var leftKeys = transformList(mergeJoin.getLeftKeys(), context, this::visitFieldReference);
+    var rightKeys = transformList(mergeJoin.getRightKeys(), context, this::visitFieldReference);
+    var postFilter = visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
       return Optional.empty();
@@ -355,10 +355,11 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    var left = nestedLoopJoin.getLeft().accept(this);
-    var right = nestedLoopJoin.getRight().accept(this);
-    var condition = nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor());
+  public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin, Void context) throws E {
+    var left = nestedLoopJoin.getLeft().accept(this, context);
+    var right = nestedLoopJoin.getRight().accept(this, context);
+    var condition =
+        nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
 
     if (allEmpty(left, right, condition)) {
       return Optional.empty();
@@ -373,14 +374,17 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION {
+  public Optional<Rel> visit(ConsistentPartitionWindow consistentPartitionWindow, Void context)
+      throws E {
     var windowFunctions =
-        transformList(consistentPartitionWindow.getWindowFunctions(), this::visitWindowRelFunction);
+        transformList(
+            consistentPartitionWindow.getWindowFunctions(), context, this::visitWindowRelFunction);
     var partitionExpressions =
         transformList(
             consistentPartitionWindow.getPartitionExpressions(),
-            t -> t.accept(getExpressionCopyOnWriteVisitor()));
-    var sorts = transformList(consistentPartitionWindow.getSorts(), this::visitSortField);
+            context,
+            (t, c) -> t.accept(getExpressionCopyOnWriteVisitor(), c));
+    var sorts = transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField);
 
     if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
       return Optional.empty();
@@ -397,9 +401,10 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
   }
 
   protected Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> visitWindowRelFunction(
-      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation)
-      throws EXCEPTION {
-    var functionArgs = visitFunctionArguments(windowRelFunctionInvocation.arguments());
+      ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation,
+      Void context)
+      throws E {
+    var functionArgs = visitFunctionArguments(windowRelFunctionInvocation.arguments(), context);
 
     if (allEmpty(functionArgs)) {
       return Optional.empty();
@@ -414,13 +419,14 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
 
   // utilities
 
-  protected Optional<List<Expression>> visitExprList(List<Expression> exprs) throws EXCEPTION {
-    return transformList(exprs, t -> t.accept(getExpressionCopyOnWriteVisitor()));
+  protected Optional<List<Expression>> visitExprList(List<Expression> exprs, Void context)
+      throws E {
+    return transformList(exprs, context, (t, c) -> t.accept(getExpressionCopyOnWriteVisitor(), c));
   }
 
-  public Optional<FieldReference> visitFieldReference(FieldReference fieldReference)
-      throws EXCEPTION {
-    var inputExpression = visitOptionalExpression(fieldReference.inputExpression());
+  public Optional<FieldReference> visitFieldReference(FieldReference fieldReference, Void context)
+      throws E {
+    var inputExpression = visitOptionalExpression(fieldReference.inputExpression(), context);
     if (allEmpty(inputExpression)) {
       return Optional.empty();
     }
@@ -428,13 +434,14 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
     return Optional.of(FieldReference.builder().inputExpression(inputExpression).build());
   }
 
-  protected Optional<List<FunctionArg>> visitFunctionArguments(List<FunctionArg> funcArgs)
-      throws EXCEPTION {
-    return CopyOnWriteUtils.<FunctionArg, EXCEPTION>transformList(
+  protected Optional<List<FunctionArg>> visitFunctionArguments(
+      List<FunctionArg> funcArgs, Void context) throws E {
+    return CopyOnWriteUtils.<FunctionArg, Void, E>transformList(
         funcArgs,
-        arg -> {
+        context,
+        (arg, c) -> {
           if (arg instanceof Expression expr) {
-            return expr.accept(getExpressionCopyOnWriteVisitor())
+            return expr.accept(getExpressionCopyOnWriteVisitor(), c)
                 .flatMap(Optional::<FunctionArg>of);
           } else {
             return Optional.empty();
@@ -442,19 +449,19 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
         });
   }
 
-  protected Optional<Expression.SortField> visitSortField(Expression.SortField sortField)
-      throws EXCEPTION {
+  protected Optional<Expression.SortField> visitSortField(
+      Expression.SortField sortField, Void context) throws E {
     return sortField
         .expr()
-        .accept(getExpressionCopyOnWriteVisitor())
+        .accept(getExpressionCopyOnWriteVisitor(), context)
         .map(expr -> Expression.SortField.builder().from(sortField).expr(expr).build());
   }
 
-  private Optional<Expression> visitOptionalExpression(Optional<Expression> optExpr)
-      throws EXCEPTION {
+  private Optional<Expression> visitOptionalExpression(Optional<Expression> optExpr, Void context)
+      throws E {
     // not using optExpr.map to allow us to propagate the THROWABLE nicely
     if (optExpr.isPresent()) {
-      return optExpr.get().accept(getExpressionCopyOnWriteVisitor());
+      return optExpr.get().accept(getExpressionCopyOnWriteVisitor(), context);
     }
     return Optional.empty();
   }

@@ -69,8 +69,8 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
   }
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C, E extends Exception> O accept(RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableNestedLoopJoin.Builder builder() {

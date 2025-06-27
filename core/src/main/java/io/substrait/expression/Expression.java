@@ -18,9 +18,10 @@ public interface Expression extends FunctionArg {
   Type getType();
 
   @Override
-  default <R, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
-    return fnArgVisitor.visitExpr(fnDef, argIdx, this);
+  default <R, C, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      throws E {
+    return fnArgVisitor.visitExpr(fnDef, argIdx, this, context);
   }
 
   interface Literal extends Expression {
@@ -30,7 +31,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
-  <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E;
+  <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context) throws E;
 
   @Value.Immutable
   abstract static class NullLiteral implements Literal {
@@ -44,8 +45,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.NullLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -61,8 +64,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.BoolLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -78,8 +83,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.I8Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -95,8 +102,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.I16Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -112,8 +121,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.I32Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -129,8 +140,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.I64Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -146,8 +159,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.FP32Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -163,8 +178,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.FP64Literal.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -180,8 +197,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.StrLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -197,8 +216,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.BinaryLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -214,8 +235,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.TimestampLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -231,8 +254,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.TimeLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -248,8 +273,9 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.DateLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -265,8 +291,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.TimestampTZLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -284,8 +312,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.PrecisionTimestampLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -303,8 +333,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.PrecisionTimestampTZLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -322,8 +354,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.IntervalYearLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -345,8 +379,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.IntervalDayLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -374,8 +410,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.IntervalCompoundLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -391,8 +429,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.UUIDLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
 
     public ByteString toBytes() {
@@ -416,8 +456,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.FixedCharLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -435,8 +477,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.VarCharLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -452,8 +496,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.FixedBinaryLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -473,8 +519,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.DecimalLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -493,8 +541,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.MapLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -512,8 +562,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.EmptyMapLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -529,8 +581,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.ListLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -548,8 +602,9 @@ public interface Expression extends FunctionArg {
     }
 
     @Override
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -569,8 +624,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.StructLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -590,8 +647,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.UserDefinedLiteral.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -611,8 +670,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.Switch.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -647,8 +708,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.IfThen.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -679,8 +742,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.Cast.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -702,8 +767,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.ScalarFunctionInvocation.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -740,8 +807,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.WindowFunctionInvocation.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -786,8 +855,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.SingleOrList.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -805,8 +876,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.MultiOrList.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -846,8 +919,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.SetPredicate.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -859,8 +934,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.ScalarSubquery.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -878,8 +955,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.InPredicate.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C, E extends Throwable> R accept(ExpressionVisitor<R, C, E> visitor, C context)
+        throws E {
+      return visitor.visit(this, context);
     }
   }
 

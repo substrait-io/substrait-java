@@ -27,7 +27,7 @@ public class ExtendedExpressionProtoConverter {
       if (expressionReference
           instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et) {
         io.substrait.proto.Expression expressionProto =
-            et.getExpression().accept(expressionProtoConverter);
+            et.getExpression().accept(expressionProtoConverter, null);
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setExpression(expressionProto)

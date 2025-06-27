@@ -12,8 +12,8 @@ public abstract class LocalFiles extends AbstractReadRel {
   public abstract List<FileOrFiles> getItems();
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C, E extends Exception> O accept(RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableLocalFiles.Builder builder() {

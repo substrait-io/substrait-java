@@ -90,7 +90,7 @@ public class SubstraitToCalcite {
     CalciteSchema rootSchema = toSchema(rel);
     RelBuilder relBuilder = createRelBuilder(rootSchema);
     SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
-    return rel.accept(converter);
+    return rel.accept(converter, null);
   }
 
   /**
@@ -176,13 +176,13 @@ public class SubstraitToCalcite {
 
     public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
       var visitor = new NamedStructGatherer();
-      rel.accept(visitor);
+      rel.accept(visitor, null);
       return visitor.tableMap;
     }
 
     @Override
-    public Optional<Rel> visit(NamedScan namedScan) {
-      Optional<Rel> result = super.visit(namedScan);
+    public Optional<Rel> visit(NamedScan namedScan, Void context) {
+      Optional<Rel> result = super.visit(namedScan, context);
 
       List<String> tableName = namedScan.getNames();
       tableMap.put(tableName, namedScan.getInitialSchema());

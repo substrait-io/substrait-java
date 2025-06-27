@@ -21,19 +21,23 @@ import io.substrait.expression._
 import io.substrait.extension.SimpleExtension
 
 class DefaultExpressionVisitor[T]
-  extends AbstractExpressionVisitor[T, RuntimeException]
-  with FunctionArg.FuncArgVisitor[T, RuntimeException] {
+  extends AbstractExpressionVisitor[T, Void, RuntimeException]
+  with FunctionArg.FuncArgVisitor[T, Void, RuntimeException] {
 
-  override def visitFallback(expr: Expression): T =
+  override def visitFallback(expr: Expression, context: Void): T =
     throw new UnsupportedOperationException(
       s"Expression type ${expr.getClass.getCanonicalName} " +
         s"not handled by visitor type ${getClass.getCanonicalName}.")
 
-  override def visitType(fnDef: SimpleExtension.Function, argIdx: Int, t: Type): T =
+  override def visitType(fnDef: SimpleExtension.Function, argIdx: Int, t: Type, context: Void): T =
     throw new UnsupportedOperationException(
       s"FunctionArg $t not handled by visitor type ${getClass.getCanonicalName}.")
 
-  override def visitEnumArg(fnDef: SimpleExtension.Function, argIdx: Int, e: EnumArg): T =
+  override def visitEnumArg(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      e: EnumArg,
+      context: Void): T =
     throw new UnsupportedOperationException(
       s"EnumArg(value=${e.value()}) not handled by visitor type ${getClass.getCanonicalName}.")
 
@@ -45,14 +49,18 @@ class DefaultExpressionVisitor[T]
         case _ => throw new IllegalArgumentException(s"Unhandled type: $segment")
       }
     } else {
-      visitFallback(fieldReference)
+      visitFallback(fieldReference, null)
     }
   }
 
-  override def visitExpr(fnDef: SimpleExtension.Function, argIdx: Int, e: Expression): T =
-    e.accept(this)
+  override def visitExpr(
+      fnDef: SimpleExtension.Function,
+      argIdx: Int,
+      e: Expression,
+      context: Void): T =
+    e.accept(this, context)
 
-  override def visit(userDefinedLiteral: Expression.UserDefinedLiteral): T = {
-    visitFallback(userDefinedLiteral)
+  override def visit(userDefinedLiteral: Expression.UserDefinedLiteral, context: Void): T = {
+    visitFallback(userDefinedLiteral, context)
   }
 }

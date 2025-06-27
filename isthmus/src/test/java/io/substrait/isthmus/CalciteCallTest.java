@@ -106,7 +106,7 @@ public class CalciteCallTest extends CalciteObjs {
     consumer.accept(func);
 
     if (bidirectional) {
-      RexNode convertedCall = expression.accept(expressionRexConverter);
+      RexNode convertedCall = expression.accept(expressionRexConverter, null);
       assertEquals(call, convertedCall);
     }
   }

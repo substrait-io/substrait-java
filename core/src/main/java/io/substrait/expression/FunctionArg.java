@@ -15,39 +15,43 @@ import io.substrait.type.proto.ProtoTypeConverter;
  */
 public interface FunctionArg {
 
-  <R, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E;
+  <R, C, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      throws E;
 
-  interface FuncArgVisitor<R, E extends Throwable> {
-    R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e) throws E;
+  interface FuncArgVisitor<R, C, E extends Throwable> {
+    R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e, C context) throws E;
 
-    R visitType(SimpleExtension.Function fnDef, int argIdx, Type t) throws E;
+    R visitType(SimpleExtension.Function fnDef, int argIdx, Type t, C context) throws E;
 
-    R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e) throws E;
+    R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e, C context) throws E;
   }
 
-  static FuncArgVisitor<FunctionArgument, RuntimeException> toProto(
+  static FuncArgVisitor<FunctionArgument, Void, RuntimeException> toProto(
       TypeExpressionVisitor<io.substrait.proto.Type, RuntimeException> typeVisitor,
-      ExpressionVisitor<io.substrait.proto.Expression, RuntimeException> expressionVisitor) {
+      ExpressionVisitor<io.substrait.proto.Expression, Void, RuntimeException> expressionVisitor) {
 
     return new FuncArgVisitor<>() {
 
       @Override
-      public FunctionArgument visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e)
+      public FunctionArgument visitExpr(
+          SimpleExtension.Function fnDef, int argIdx, Expression e, Void context)
           throws RuntimeException {
-        var pE = e.accept(expressionVisitor);
+        var pE = e.accept(expressionVisitor, context);
         return FunctionArgument.newBuilder().setValue(pE).build();
       }
 
       @Override
-      public FunctionArgument visitType(SimpleExtension.Function fnDef, int argIdx, Type t)
+      public FunctionArgument visitType(
+          SimpleExtension.Function fnDef, int argIdx, Type t, Void context)
           throws RuntimeException {
         var pTyp = t.accept(typeVisitor);
         return FunctionArgument.newBuilder().setType(pTyp).build();
       }
 
       @Override
-      public FunctionArgument visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg ea)
+      public FunctionArgument visitEnumArg(
+          SimpleExtension.Function fnDef, int argIdx, EnumArg ea, Void context)
           throws RuntimeException {
         var enumBldr = FunctionArgument.newBuilder();
 

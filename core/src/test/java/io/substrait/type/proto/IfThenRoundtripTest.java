@@ -26,7 +26,7 @@ public class IfThenRoundtripTest extends TestBase {
 
     var to = new ExpressionProtoConverter(null, null);
     var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
-    assertEquals(ifRel, from.from(ifRel.accept(to)));
+    assertEquals(ifRel, from.from(ifRel.accept(to, null)));
   }
 
   @Test
@@ -40,6 +40,6 @@ public class IfThenRoundtripTest extends TestBase {
 
     var to = new ExpressionProtoConverter(null, null);
     var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
-    assertEquals(ifRel, from.from(ifRel.accept(to)));
+    assertEquals(ifRel, from.from(ifRel.accept(to, null)));
   }
 }
