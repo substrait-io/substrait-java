@@ -1,6 +1,19 @@
 Release Notes
 ---
 
+## [0.61.0](https://github.com/substrait-io/substrait-java/compare/v0.60.0...v0.61.0) (2025-06-29)
+
+### Features
+
+* add additional builder methods  ([#425](https://github.com/substrait-io/substrait-java/issues/425)) ([bb4c3bd](https://github.com/substrait-io/substrait-java/commit/bb4c3bd2e260537488e7212cc370ae968dbabf5a))
+* **core:** add UpdateRel ([#421](https://github.com/substrait-io/substrait-java/issues/421)) ([5e6741d](https://github.com/substrait-io/substrait-java/commit/5e6741d8059f632432eb5722026c562f881ff873))
+* **isthmus:** support for SQL TRIM function ([#401](https://github.com/substrait-io/substrait-java/issues/401)) ([1f0e4de](https://github.com/substrait-io/substrait-java/commit/1f0e4ded677ced7cb50ec346b996c6abf2ac3280))
+* **spark:** use core spec bitwise shift functions ([#424](https://github.com/substrait-io/substrait-java/issues/424)) ([8f14f62](https://github.com/substrait-io/substrait-java/commit/8f14f625a15178bb0440080d5ae136e5ca242a4f))
+
+### Bug Fixes
+
+* **core:** convert hints in ProtoRelConverter ([#420](https://github.com/substrait-io/substrait-java/issues/420)) ([e0a0fda](https://github.com/substrait-io/substrait-java/commit/e0a0fdaf49e9583bbd85af30889a43ea0051e0d5))
+
 ## [0.60.0](https://github.com/substrait-io/substrait-java/compare/v0.59.0...v0.60.0) (2025-06-18)
 
 ### Features
