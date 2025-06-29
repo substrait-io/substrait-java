@@ -18,9 +18,10 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
   @Override
-  default <R, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E {
-    return fnArgVisitor.visitType(fnDef, argIdx, this);
+  default <R, C, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      throws E {
+    return fnArgVisitor.visitType(fnDef, argIdx, this, context);
   }
 
   @Value.Immutable

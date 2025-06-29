@@ -78,13 +78,13 @@ public class SchemaCollector {
      */
     public static Map<List<String>, NamedStruct> gatherTables(Rel rootRel) {
       var visitor = new TableGatherer();
-      rootRel.accept(visitor);
+      rootRel.accept(visitor, null);
       return visitor.tableMap;
     }
 
     @Override
-    public Optional<Rel> visit(NamedScan namedScan) {
-      super.visit(namedScan);
+    public Optional<Rel> visit(NamedScan namedScan, Void context) {
+      super.visit(namedScan, context);
 
       List<String> tableName = namedScan.getNames();
       if (tableMap.containsKey(tableName)) {

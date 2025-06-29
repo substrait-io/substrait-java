@@ -29,67 +29,67 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 
 class ExpressionToString extends DefaultExpressionVisitor[String] {
 
-  override def visit(expr: DecimalLiteral): String = {
+  override def visit(expr: DecimalLiteral, context: Void): String = {
     val value = expr.value.toByteArray
     val decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale, 16)
     decimal.toString
   }
 
-  override def visit(expr: StrLiteral): String = {
+  override def visit(expr: StrLiteral, context: Void): String = {
     expr.value()
   }
 
-  override def visit(expr: I32Literal): String = {
+  override def visit(expr: I32Literal, context: Void): String = {
     expr.value().toString
   }
 
-  override def visit(expr: I64Literal): String = {
+  override def visit(expr: I64Literal, context: Void): String = {
     expr.value().toString
   }
 
-  override def visit(expr: DateLiteral): String = {
+  override def visit(expr: DateLiteral, context: Void): String = {
     DateTimeUtils.toJavaDate(expr.value()).toString
   }
 
-  override def visit(expr: FieldReference): String = {
+  override def visit(expr: FieldReference, context: Void): String = {
     withFieldReference(expr)(i => "$" + i.toString)
   }
 
-  override def visit(expr: Expression.SingleOrList): String = {
+  override def visit(expr: Expression.SingleOrList, context: Void): String = {
     expr.toString
   }
 
-  override def visit(expr: Expression.ScalarFunctionInvocation): String = {
+  override def visit(expr: Expression.ScalarFunctionInvocation, context: Void): String = {
     val args = expr
       .arguments()
       .asScala
       .zipWithIndex
       .map {
         case (arg, i) =>
-          arg.accept(expr.declaration(), i, this)
+          arg.accept(expr.declaration(), i, this, context)
       }
       .mkString(",")
 
     s"${expr.declaration().key()}[${expr.outputType().accept(ToTypeString.INSTANCE)}]($args)"
   }
 
-  override def visit(expr: Expression.UserDefinedLiteral): String = {
+  override def visit(expr: Expression.UserDefinedLiteral, context: Void): String = {
     expr.toString
   }
 
-  override def visit(expr: Expression.EmptyMapLiteral): String = {
+  override def visit(expr: Expression.EmptyMapLiteral, context: Void): String = {
     expr.toString
   }
 
-  override def visit(expr: Expression.Cast): String = {
+  override def visit(expr: Expression.Cast, context: Void): String = {
     expr.getType.toString
   }
 
-  override def visit(expr: Expression.InPredicate): String = {
+  override def visit(expr: Expression.InPredicate, context: Void): String = {
     expr.toString
   }
 
-  override def visit(expr: Expression.ScalarSubquery): String = {
+  override def visit(expr: Expression.ScalarSubquery, context: Void): String = {
     expr.toString
   }
 }

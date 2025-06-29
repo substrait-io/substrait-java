@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
 import com.google.common.collect.ImmutableList;
@@ -25,8 +26,10 @@ import io.substrait.relation.Sort;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -38,6 +41,7 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
@@ -56,7 +60,8 @@ import org.apache.calcite.tools.RelBuilder;
  * RelVisitor to convert Substrait Rel plan to Calcite RelNode plan. Unsupported Rel node will call
  * visitFallback and throw UnsupportedOperationException.
  */
-public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, RuntimeException> {
+public class SubstraitRelNodeConverter
+    extends AbstractRelVisitor<RelNode, SubstraitRelNodeConverter.Context, RuntimeException> {
 
   protected final RelDataTypeFactory typeFactory;
 
@@ -133,30 +138,34 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder));
+            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder),
+        Context.newContext());
   }
 
   @Override
-  public RelNode visit(Filter filter) throws RuntimeException {
-    RelNode input = filter.getInput().accept(this);
-    RexNode filterCondition = filter.getCondition().accept(expressionRexConverter);
-    RelNode node = relBuilder.push(input).filter(filterCondition).build();
+  public RelNode visit(Filter filter, Context context) throws RuntimeException {
+    RelNode input = filter.getInput().accept(this, context);
+    context.pushParentRelNodes(input);
+    RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
+    RelNode node =
+        relBuilder.push(input).filter(context.popCorrelationIds(), filterCondition).build();
+    context.popParentRelNodes();
     return applyRemap(node, filter.getRemap());
   }
 
   @Override
-  public RelNode visit(NamedScan namedScan) throws RuntimeException {
+  public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
     return applyRemap(node, namedScan.getRemap());
   }
 
   @Override
-  public RelNode visit(LocalFiles localFiles) throws RuntimeException {
-    return visitFallback(localFiles);
+  public RelNode visit(LocalFiles localFiles, Context context) throws RuntimeException {
+    return visitFallback(localFiles, context);
   }
 
   @Override
-  public RelNode visit(EmptyScan emptyScan) throws RuntimeException {
+  public RelNode visit(EmptyScan emptyScan, Context context) throws RuntimeException {
     RelDataType rowType =
         typeConverter.toCalcite(relBuilder.getTypeFactory(), emptyScan.getInitialSchema().struct());
     RelNode node = LogicalValues.create(relBuilder.getCluster(), rowType, ImmutableList.of());
@@ -164,27 +173,33 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visit(Project project) throws RuntimeException {
-    RelNode child = project.getInput().accept(this);
+  public RelNode visit(Project project, Context context) throws RuntimeException {
+    RelNode child = project.getInput().accept(this, context);
+    context.pushParentRelNodes(child);
 
     Stream<RexNode> directOutputs =
         IntStream.range(0, child.getRowType().getFieldCount())
             .mapToObj(fieldIndex -> rexBuilder.makeInputRef(child, fieldIndex));
 
     Stream<RexNode> exprs =
-        project.getExpressions().stream().map(expr -> expr.accept(expressionRexConverter));
+        project.getExpressions().stream().map(expr -> expr.accept(expressionRexConverter, context));
 
     List<RexNode> rexExprs =
         Stream.concat(directOutputs, exprs).collect(java.util.stream.Collectors.toList());
 
-    RelNode node = relBuilder.push(child).project(rexExprs).build();
+    RelNode node =
+        relBuilder
+            .push(child)
+            .project(rexExprs, List.of(), false, context.popCorrelationIds())
+            .build();
+    context.popParentRelNodes();
     return applyRemap(node, project.getRemap());
   }
 
   @Override
-  public RelNode visit(Cross cross) throws RuntimeException {
-    RelNode left = cross.getLeft().accept(this);
-    RelNode right = cross.getRight().accept(this);
+  public RelNode visit(Cross cross, Context context) throws RuntimeException {
+    RelNode left = cross.getLeft().accept(this, context);
+    RelNode right = cross.getRight().accept(this, context);
     // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
     RelNode node =
         relBuilder.push(left).push(right).join(JoinRelType.INNER, relBuilder.literal(true)).build();
@@ -192,14 +207,15 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visit(Join join) throws RuntimeException {
-    var left = join.getLeft().accept(this);
-    var right = join.getRight().accept(this);
-    var condition =
+  public RelNode visit(Join join, Context context) throws RuntimeException {
+    RelNode left = join.getLeft().accept(this, context);
+    RelNode right = join.getRight().accept(this, context);
+    context.pushParentRelNodes(left, right);
+    RexNode condition =
         join.getCondition()
-            .map(c -> c.accept(expressionRexConverter))
+            .map(c -> c.accept(expressionRexConverter, context))
             .orElse(relBuilder.literal(true));
-    var joinType =
+    JoinRelType joinType =
         switch (join.getJoinType()) {
           case INNER -> JoinRelType.INNER;
           case LEFT -> JoinRelType.LEFT;
@@ -214,17 +230,23 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
           default -> throw new UnsupportedOperationException(
               "Unsupported join type: " + join.getJoinType().name());
         };
-    RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
+    RelNode node =
+        relBuilder
+            .push(left)
+            .push(right)
+            .join(joinType, condition, context.popCorrelationIds())
+            .build();
+    context.popParentRelNodes();
     return applyRemap(node, join.getRemap());
   }
 
   @Override
-  public RelNode visit(Set set) throws RuntimeException {
+  public RelNode visit(Set set, Context context) throws RuntimeException {
     int numInputs = set.getInputs().size();
     set.getInputs()
         .forEach(
             input -> {
-              relBuilder.push(input.accept(this));
+              relBuilder.push(input.accept(this, context));
             });
     // TODO: MINUS_MULTISET and INTERSECTION_PRIMARY mappings are set to be removed as they do not
     //   correspond to the Calcite relations they are associated with. They are retained for now
@@ -247,20 +269,20 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visit(Aggregate aggregate) throws RuntimeException {
+  public RelNode visit(Aggregate aggregate, Context context) throws RuntimeException {
     if (!PreCalciteAggregateValidator.isValidCalciteAggregate(aggregate)) {
       aggregate =
           PreCalciteAggregateValidator.PreCalciteAggregateTransformer
               .transformToValidCalciteAggregate(aggregate);
     }
 
-    RelNode child = aggregate.getInput().accept(this);
+    RelNode child = aggregate.getInput().accept(this, context);
     var groupExprLists =
         aggregate.getGroupings().stream()
             .map(
                 gr ->
                     gr.getExpressions().stream()
-                        .map(expr -> expr.accept(expressionRexConverter))
+                        .map(expr -> expr.accept(expressionRexConverter, context))
                         .collect(java.util.stream.Collectors.toList()))
             .collect(java.util.stream.Collectors.toList());
     List<RexNode> groupExprs =
@@ -269,13 +291,13 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
     List<AggregateCall> aggregateCalls =
         aggregate.getMeasures().stream()
-            .map(this::fromMeasure)
+            .map(measure -> fromMeasure(measure, context))
             .collect(java.util.stream.Collectors.toList());
     RelNode node = relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
     return applyRemap(node, aggregate.getRemap());
   }
 
-  private AggregateCall fromMeasure(Aggregate.Measure measure) {
+  private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
     var eArgs = measure.getFunction().arguments();
     var arguments =
         IntStream.range(0, measure.getFunction().arguments().size())
@@ -283,7 +305,11 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
                 i ->
                     eArgs
                         .get(i)
-                        .accept(measure.getFunction().declaration(), i, expressionRexConverter))
+                        .accept(
+                            measure.getFunction().declaration(),
+                            i,
+                            expressionRexConverter,
+                            context))
             .collect(java.util.stream.Collectors.toList());
     var operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
@@ -318,7 +344,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
 
     int filterArg = -1;
     if (measure.getPreMeasureFilter().isPresent()) {
-      RexNode filter = measure.getPreMeasureFilter().get().accept(expressionRexConverter);
+      RexNode filter = measure.getPreMeasureFilter().get().accept(expressionRexConverter, context);
       filterArg = ((RexInputRef) filter).getIndex();
     }
 
@@ -327,7 +353,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
       relCollation =
           RelCollations.of(
               measure.getFunction().sort().stream()
-                  .map(sortField -> toRelFieldCollation(sortField))
+                  .map(sortField -> toRelFieldCollation(sortField, context))
                   .collect(Collectors.toList()));
     }
 
@@ -346,19 +372,19 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visit(Sort sort) throws RuntimeException {
-    RelNode child = sort.getInput().accept(this);
+  public RelNode visit(Sort sort, Context context) throws RuntimeException {
+    RelNode child = sort.getInput().accept(this, context);
     List<RexNode> sortExpressions =
         sort.getSortFields().stream()
-            .map(this::directedRexNode)
-            .collect(java.util.stream.Collectors.toList());
+            .map(sortField -> directedRexNode(sortField, context))
+            .collect(Collectors.toList());
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
     return applyRemap(node, sort.getRemap());
   }
 
-  private RexNode directedRexNode(Expression.SortField sortField) {
+  private RexNode directedRexNode(Expression.SortField sortField, Context context) {
     var expression = sortField.expr();
-    var rexNode = expression.accept(expressionRexConverter);
+    var rexNode = expression.accept(expressionRexConverter, context);
     var sortDirection = sortField.direction();
     return switch (sortDirection) {
       case ASC_NULLS_FIRST -> relBuilder.nullsFirst(rexNode);
@@ -371,8 +397,8 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visit(Fetch fetch) throws RuntimeException {
-    RelNode child = fetch.getInput().accept(this);
+  public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
+    RelNode child = fetch.getInput().accept(this, context);
     var optCount = fetch.getCount();
     long count = optCount.orElse(-1L);
     var offset = fetch.getOffset();
@@ -386,9 +412,9 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     return applyRemap(node, fetch.getRemap());
   }
 
-  private RelFieldCollation toRelFieldCollation(Expression.SortField sortField) {
+  private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
     var expression = sortField.expr();
-    var rex = expression.accept(expressionRexConverter);
+    var rex = expression.accept(expressionRexConverter, context);
     var sortDirection = sortField.direction();
     RexSlot rexSlot = (RexSlot) rex;
     int fieldIndex = rexSlot.getIndex();
@@ -414,7 +440,7 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
   }
 
   @Override
-  public RelNode visitFallback(Rel rel) throws RuntimeException {
+  public RelNode visitFallback(Rel rel, Context context) throws RuntimeException {
     throw new UnsupportedOperationException(
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
@@ -442,12 +468,49 @@ public class SubstraitRelNodeConverter extends AbstractRelVisitor<RelNode, Runti
     return relBuilder.push(relNode).project(rexList).build();
   }
 
-  private void checkRexInputRefOnly(RexNode rexNode, String context, String aggName) {
-    if (!(rexNode instanceof RexInputRef)) {
-      throw new UnsupportedOperationException(
-          String.format(
-              "Compound expression %s in %s of agg function %s is not implemented yet.",
-              rexNode, context, aggName));
+  public static class Context {
+    protected final Stack<RelNode[]> parentRelations = new Stack<>();
+
+    protected final Stack<java.util.Set<CorrelationId>> correlationIds = new Stack<>();
+
+    private int subqueryDepth;
+
+    public static Context newContext() {
+      return new Context();
     }
+
+    public void pushParentRelNodes(final RelNode... inputs) {
+      parentRelations.push(inputs);
+      this.correlationIds.push(new HashSet<>());
+    }
+
+    public void popParentRelNodes() {
+      parentRelations.pop();
+    }
+
+    public RelNode[] getParentRelation(final Integer stepsOut) {
+      return this.parentRelations.get(stepsOut - subqueryDepth);
+    }
+
+    public java.util.Set<CorrelationId> popCorrelationIds() {
+      return correlationIds.pop();
+    }
+
+    public void addCorrelationId(final int stepsOut, final CorrelationId correlationId) {
+      final int index = stepsOut - subqueryDepth;
+      this.correlationIds.get(index).add(correlationId);
+    }
+
+    public void incrementSubqueryDepth() {
+      this.subqueryDepth++;
+    }
+
+    public void decrementSubqueryDepth() {
+      this.subqueryDepth--;
+    }
+  }
+
+  public RelBuilder getRelBuilder() {
+    return relBuilder;
   }
 }

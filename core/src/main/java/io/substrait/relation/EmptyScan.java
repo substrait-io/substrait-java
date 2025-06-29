@@ -6,8 +6,8 @@ import org.immutables.value.Value;
 public abstract class EmptyScan extends AbstractReadRel {
 
   @Override
-  public <O, E extends Exception> O accept(RelVisitor<O, E> visitor) throws E {
-    return visitor.visit(this);
+  public <O, C, E extends Exception> O accept(RelVisitor<O, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public static ImmutableEmptyScan.Builder builder() {

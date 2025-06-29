@@ -164,7 +164,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   private static class HasTableReference {
     public boolean hasTableReference(Plan plan, String name) {
       HasTableReferenceVisitor visitor = new HasTableReferenceVisitor(Arrays.asList(name));
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor));
+      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
       return (visitor.hasTableReference());
     }
 
@@ -181,9 +181,9 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(NamedScan namedScan) {
+      public Optional<Rel> visit(NamedScan namedScan, Void context) {
         this.hasTableReference |= namedScan.getNames().equals(tableName);
-        return super.visit(namedScan);
+        return super.visit(namedScan, context);
       }
     }
   }
@@ -198,7 +198,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
     public int getCountDistincts(Plan plan) {
       CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor));
+      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
       return visitor.getCountDistincts();
     }
 
@@ -210,7 +210,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate) {
+      public Optional<Rel> visit(Aggregate aggregate, Void context) {
         countDistincts +=
             aggregate.getMeasures().stream()
                 .filter(
@@ -220,7 +220,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
                                 .invocation()
                                 .equals(Expression.AggregationInvocation.DISTINCT))
                 .count();
-        return super.visit(aggregate);
+        return super.visit(aggregate, context);
       }
     }
   }
@@ -229,7 +229,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
     public int getApproxCountDistincts(Plan plan) {
       CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor));
+      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
       return visitor.getApproxCountDistincts();
     }
 
@@ -241,13 +241,13 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate) {
+      public Optional<Rel> visit(Aggregate aggregate, Void context) {
         aproxCountDistincts +=
             aggregate.getMeasures().stream()
                 .filter(
                     m -> m.getFunction().declaration().getAnchor().equals(APPROX_COUNT_DISTINCT))
                 .count();
-        return super.visit(aggregate);
+        return super.visit(aggregate, context);
       }
     }
   }
@@ -260,11 +260,12 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     }
 
     public Optional<Plan> modify(Plan plan) {
-      return CopyOnWriteUtils.<Plan.Root, RuntimeException>transformList(
+      return CopyOnWriteUtils.<Plan.Root, Void, RuntimeException>transformList(
               plan.getRoots(),
-              t ->
+              null,
+              (t, c) ->
                   t.getInput()
-                      .accept(visitor)
+                      .accept(visitor, c)
                       .map(u -> Plan.Root.builder().from(t).input(u).build()))
           .map(t -> Plan.builder().from(plan).roots(t).build());
     }
@@ -281,10 +282,11 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate) {
-        return CopyOnWriteUtils.<Aggregate.Measure, RuntimeException>transformList(
+      public Optional<Rel> visit(Aggregate aggregate, Void context) {
+        return CopyOnWriteUtils.<Aggregate.Measure, Void, RuntimeException>transformList(
                 aggregate.getMeasures(),
-                m -> {
+                context,
+                (m, c) -> {
                   if (m.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT)
                       && m.getFunction().declaration().getAnchor().equals(COUNT)) {
                     return Optional.of(
