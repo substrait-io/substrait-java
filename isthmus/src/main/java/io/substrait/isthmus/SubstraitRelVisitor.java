@@ -11,6 +11,7 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -18,6 +19,7 @@ import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
@@ -352,7 +354,44 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.TableModify modify) {
-    return super.visit(modify);
+    final Rel input = apply(modify.getInput());
+    return switch (modify.getOperation()) {
+      case INSERT -> {
+        assert modify.getTable() != null;
+        yield NamedWrite.builder()
+            .input(input)
+            .tableSchema(typeConverter.toNamedStruct(modify.getRowType()))
+            .operation(AbstractWriteRel.WriteOp.INSERT)
+            .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
+            .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+            .names(modify.getTable().getQualifiedName())
+            .build();
+      }
+      case UPDATE -> {
+        assert modify.getTable() != null;
+        yield NamedWrite.builder()
+            .input(input)
+            .tableSchema(typeConverter.toNamedStruct(modify.getRowType()))
+            .operation(AbstractWriteRel.WriteOp.UPDATE)
+            .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
+            .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+            .names(modify.getTable().getQualifiedName())
+            .build();
+      }
+
+      case DELETE -> {
+        assert modify.getTable() != null;
+        yield NamedWrite.builder()
+            .input(input)
+            .tableSchema(typeConverter.toNamedStruct(modify.getRowType()))
+            .operation(AbstractWriteRel.WriteOp.DELETE)
+            .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
+            .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+            .names(modify.getTable().getQualifiedName())
+            .build();
+      }
+      default -> super.visit(modify);
+    };
   }
 
   @Override
