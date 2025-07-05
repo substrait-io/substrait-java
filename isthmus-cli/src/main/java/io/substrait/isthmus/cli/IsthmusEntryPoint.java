@@ -42,7 +42,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"-c", "--create"},
       description =
           "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
-  private List<String> createStatements;
+  private List<String> createStatements = List.of();
 
   @Option(
       names = {"--outputformat"},
