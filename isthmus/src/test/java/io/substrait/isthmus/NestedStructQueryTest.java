@@ -10,6 +10,7 @@ import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Schema;
@@ -57,8 +58,9 @@ public class NestedStructQueryTest extends PlanTestBase {
   private void test(Table table, String query, String expectedExpressionText)
       throws SqlParseException, IOException {
     final Schema schema = new SubstraitSchema(Map.of("my_table", table));
+    final CalciteCatalogReader catalog = schemaToCatalog("nested", schema);
     final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
-    Plan plan = sqlToSubstrait.execute(query, "nested", schema);
+    Plan plan = sqlToSubstrait.execute(query, catalog);
     Expression obtainedExpression =
         plan.getRelations(0).getRoot().getInput().getProject().getExpressions(0);
     Expression expectedExpression = TextFormat.parse(expectedExpressionText, Expression.class);

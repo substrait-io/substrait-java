@@ -24,12 +24,18 @@ import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.calcite.adapter.tpcds.TpcdsSchema;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.config.CalciteConnectionProperty;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 
@@ -58,6 +64,10 @@ public class PlanTestBase {
       throw new RuntimeException(e);
     }
   }
+
+  private static final TpcdsSchema TPCDS_SCHEMA = new TpcdsSchema(1.0);
+  protected static CalciteCatalogReader TPCDS_CATALOG =
+      PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
 
   protected Plan assertProtoPlanRoundrip(String query) throws SqlParseException {
     return assertProtoPlanRoundrip(query, new SqlToSubstrait());
@@ -290,5 +300,17 @@ public class PlanTestBase {
     RelRoot relRoot = new SubstraitToCalcite(extensions, typeFactory).convert(root);
     RelNode project = relRoot.project(true);
     return SubstraitSqlDialect.toSql(project).getSql();
+  }
+
+  protected static CalciteCatalogReader schemaToCatalog(String schemaName, Schema schema) {
+    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    rootSchema.add(schemaName, schema);
+    List<String> defaultSchema = List.of(schemaName);
+    return new CalciteCatalogReader(
+        rootSchema,
+        defaultSchema,
+        new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM),
+        CalciteConnectionConfig.DEFAULT.set(
+            CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString()));
   }
 }
