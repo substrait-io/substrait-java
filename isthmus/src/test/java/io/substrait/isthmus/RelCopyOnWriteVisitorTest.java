@@ -70,12 +70,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    io.substrait.proto.Plan protoPlan1 = s.execute(query, creates);
+    io.substrait.proto.Plan protoPlan1 = s.execute(query, TPCH_CATALOG);
     return new ProtoPlanConverter().from(protoPlan1);
   }
 
@@ -134,12 +129,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
     // convert newPlan back to sql
     var pojoRel = newPlan.getRoots().get(0).getInput();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, creates);
+    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, TPCH_CATALOG);
     String newSql = SubstraitSqlDialect.toSql(relnodeRoot).getSql();
     assertTrue(newSql.toUpperCase().contains("APPROX_COUNT_DISTINCT"));
   }

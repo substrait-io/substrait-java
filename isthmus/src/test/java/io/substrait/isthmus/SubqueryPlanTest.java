@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.PlanTestBase.asString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.util.JsonFormat;
@@ -8,26 +7,20 @@ import io.substrait.proto.Expression;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.Plan;
 import java.io.IOException;
-import java.util.Arrays;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class SubqueryPlanTest {
+public class SubqueryPlanTest extends PlanTestBase {
   // TODO: Add a roundtrip test once the ProtoRelConverter is committed and updated to support
   // subqueries
   @Test
-  public void existsCorrelatedSubquery() throws IOException, SqlParseException {
+  public void existsCorrelatedSubquery() throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
     Plan plan =
         s.execute(
             "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)",
-            creates);
+            TPCH_CATALOG);
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -65,15 +58,10 @@ public class SubqueryPlanTest {
   @Test
   public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
     Plan plan =
         s.execute(
             "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)",
-            creates);
+            TPCH_CATALOG);
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -114,14 +102,9 @@ public class SubqueryPlanTest {
   @Test
   public void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
     String sql =
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)";
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    Plan plan = s.execute(sql, creates);
+    Plan plan = s.execute(sql, TPCH_CATALOG);
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -157,14 +140,9 @@ public class SubqueryPlanTest {
   @Test
   public void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
     String sql =
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)";
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    Plan plan = s.execute(sql, creates);
+    Plan plan = s.execute(sql, TPCH_CATALOG);
     Expression.Subquery subquery =
         plan.getRelations(0)
             .getRoot()
@@ -202,7 +180,6 @@ public class SubqueryPlanTest {
   @Test
   public void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
     String sql =
         "SELECT p_partkey\n"
             + "FROM part p\n"
@@ -215,11 +192,7 @@ public class SubqueryPlanTest {
             + "          FROM partsupp ps\n"
             + "          WHERE ps.ps_partkey = p.p_partkey\n"
             + "          AND   PS.ps_suppkey = l.l_suppkey))";
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    Plan plan = s.execute(sql, creates);
+    Plan plan = s.execute(sql, TPCH_CATALOG);
 
     Expression.Subquery outer_subquery =
         plan.getRelations(0)
@@ -292,13 +265,8 @@ public class SubqueryPlanTest {
   @Test
   public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
     String sql = asString("subquery/nested_scalar_subquery_in_filter.sql");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    Plan plan = s.execute(sql, creates);
+    Plan plan = s.execute(sql, TPCH_CATALOG);
     String planText = JsonFormat.printer().includingDefaultValueFields().print(plan);
 
     System.out.println(planText);
@@ -372,16 +340,11 @@ public class SubqueryPlanTest {
   @Test
   public void correlatedScalarSubQInSelect() throws IOException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
     String sql = asString("subquery/nested_scalar_subquery_in_select.sql");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
     Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> {
-          s.execute(sql, creates);
+          s.execute(sql, TPCH_CATALOG);
         });
   }
 }
