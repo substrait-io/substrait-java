@@ -1,22 +1,17 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import java.util.Map;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class ApplyJoinPlanTest extends PlanTestBase {
 
-  private static RelRoot getCalcitePlan(SqlToSubstrait s, String sql) throws SqlParseException {
-    SubstraitSqlValidator validator = new SubstraitSqlValidator(TPCDS_CATALOG);
-    SqlToRelConverter converter = s.createSqlToRelConverter(validator, TPCDS_CATALOG);
-    SqlParser parser = SqlParser.create(sql, s.parserConfig);
-    return SqlToSubstrait.getBestExpRelRoot(converter, parser.parseQuery());
+  private static RelRoot getCalcitePlan(String sql) throws SqlParseException {
+    SqlToSubstrait s = new SqlToSubstrait();
+    return s.sqlToRelNode(sql, TPCDS_CATALOG).get(0);
   }
 
   private static void validateOuterRef(
@@ -57,7 +52,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     */
 
     // validate outer reference map
-    RelRoot root = getCalcitePlan(new SqlToSubstrait(), sql);
+    RelRoot root = getCalcitePlan(sql);
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
     validateOuterRef(fieldAccessDepthMap, "$cor0", "SS_ITEM_SK", 1);
@@ -75,13 +70,12 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     String sql;
     sql =
         """
-            SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-            FROM store_sales OUTER APPLY
-              (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
+       SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
+        FROM store_sales OUTER APPLY
+          (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)
+       """;
 
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
-    SqlToSubstrait s = new SqlToSubstrait(featureBoard);
-    RelRoot root = getCalcitePlan(s, sql);
+    RelRoot root = getCalcitePlan(sql);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
@@ -90,7 +84,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -122,7 +116,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
      */
     FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);
-    RelRoot root = getCalcitePlan(s, sql);
+    RelRoot root = getCalcitePlan(sql);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(3, fieldAccessDepthMap.size());
@@ -133,7 +127,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -152,7 +146,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 }
