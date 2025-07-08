@@ -11,6 +11,7 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractRelVisitor;
+import io.substrait.relation.AbstractUpdate;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -20,10 +21,14 @@ import io.substrait.relation.Join;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.VirtualTableScan;
+import io.substrait.type.NamedStruct;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
@@ -42,12 +48,15 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -471,6 +480,118 @@ public class SubstraitRelNodeConverter
     }
 
     return new RelFieldCollation(fieldIndex, fieldDirection, nullDirection);
+  }
+
+  @Override
+  public RelNode visit(NamedUpdate update, Context context) {
+    relBuilder.scan(update.getNames());
+    RexNode condition = update.getCondition().accept(expressionRexConverter, context);
+    relBuilder.filter(condition);
+    RelNode inputForModify = relBuilder.build();
+
+    NamedStruct tableSchema = update.getTableSchema();
+    List<String> fieldNames = tableSchema.names();
+
+    List<String> updateColumnList = new ArrayList<>();
+    List<RexNode> sourceExpressionList = new ArrayList<>();
+
+    for (AbstractUpdate.TransformExpression transform : update.getTransformations()) {
+
+      updateColumnList.add(fieldNames.get(transform.getColumnTarget()));
+      sourceExpressionList.add(
+          transform.getTransformation().accept(expressionRexConverter, context));
+    }
+
+    assert relBuilder.getRelOptSchema() != null;
+    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(update.getNames());
+
+    if (table == null) {
+      throw new IllegalStateException("Table not found in Calcite catalog: " + update.getNames());
+    }
+    final Prepare.CatalogReader catalogReader = (Prepare.CatalogReader) table.getRelOptSchema();
+
+    assert catalogReader != null;
+    return LogicalTableModify.create(
+        table,
+        catalogReader,
+        inputForModify,
+        TableModify.Operation.UPDATE,
+        updateColumnList,
+        sourceExpressionList,
+        false);
+  }
+
+  @Override
+  public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+
+    final RelDataType typeInfoOnly =
+        typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
+
+    final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
+
+    final List<RelDataType> fieldTypes =
+        typeInfoOnly.getFieldList().stream()
+            .map(RelDataTypeField::getType)
+            .collect(Collectors.toList());
+
+    final RelDataType rowTypeWithNames =
+        typeFactory.createStructType(fieldTypes, correctFieldNames);
+
+    final List<ImmutableList<RexLiteral>> tuples = new ArrayList<>();
+    for (final Expression.StructLiteral row : virtualTableScan.getRows()) {
+      final List<RexLiteral> rexRow = new ArrayList<>();
+      for (final Expression.Literal literal : row.fields()) {
+        final RexNode rexNode = literal.accept(expressionRexConverter, context);
+        if (rexNode instanceof RexLiteral) {
+          final RexLiteral rexLiteral = (RexLiteral) rexNode;
+          rexRow.add(rexLiteral);
+        } else {
+          throw new UnsupportedOperationException(
+              "VirtualTableScan only supports literal values, found: "
+                  + rexNode.getClass().getName());
+        }
+      }
+      tuples.add(ImmutableList.copyOf(rexRow));
+    }
+
+    return LogicalValues.create(
+        relBuilder.getCluster(), rowTypeWithNames, ImmutableList.copyOf(tuples));
+  }
+
+  @Override
+  public RelNode visit(NamedWrite write, Context context) {
+    RelNode input = write.getInput().accept(this, context);
+    assert relBuilder.getRelOptSchema() != null;
+    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(write.getNames());
+
+    if (table == null) {
+      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
+    }
+
+    TableModify.Operation operation;
+    switch (write.getOperation()) {
+      case INSERT:
+        operation = TableModify.Operation.INSERT;
+        break;
+      case DELETE:
+        operation = TableModify.Operation.DELETE;
+        break;
+      default:
+        throw new UnsupportedOperationException(
+            "Write operation '"
+                + write.getOperation()
+                + "' is not supported by the NamedWrite visitor. "
+                + "Check if a more specific relation type (e.g., NamedUpdate) should be used.");
+    }
+
+    return LogicalTableModify.create(
+        table,
+        (Prepare.CatalogReader) relBuilder.getRelOptSchema(),
+        input,
+        operation,
+        null,
+        null,
+        false);
   }
 
   @Override
