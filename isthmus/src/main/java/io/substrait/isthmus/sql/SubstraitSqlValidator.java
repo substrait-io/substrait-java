@@ -2,6 +2,7 @@ package io.substrait.isthmus.sql;
 
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
@@ -11,5 +12,9 @@ public class SubstraitSqlValidator extends SqlValidatorImpl {
 
   public SubstraitSqlValidator(Prepare.CatalogReader catalogReader) {
     super(SubstraitOperatorTable.INSTANCE, catalogReader, catalogReader.getTypeFactory(), CONFIG);
+  }
+
+  public SubstraitSqlValidator(Prepare.CatalogReader catalogReader, SqlOperatorTable opTable) {
+    super(opTable, catalogReader, catalogReader.getTypeFactory(), CONFIG);
   }
 }

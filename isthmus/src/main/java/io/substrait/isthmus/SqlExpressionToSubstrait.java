@@ -34,12 +34,12 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   protected final RexExpressionConverter rexConverter;
 
   public SqlExpressionToSubstrait() {
-    this(FEATURES_DEFAULT, EXTENSION_COLLECTION);
+    this(FEATURES_DEFAULT, SimpleExtension.loadDefaults());
   }
 
   public SqlExpressionToSubstrait(
       FeatureBoard features, SimpleExtension.ExtensionCollection extensions) {
-    super(features);
+    super(features, extensions);
     ScalarFunctionConverter scalarFunctionConverter =
         new ScalarFunctionConverter(extensions.scalarFunctions(), factory);
     this.rexConverter = new RexExpressionConverter(scalarFunctionConverter);

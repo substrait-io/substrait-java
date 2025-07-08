@@ -8,6 +8,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -53,6 +54,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
 
@@ -78,10 +80,25 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
+
+    SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+        ExtensionUtils.getDynamicExtensions(extensions);
+    List<SqlOperator> dynamicOperators =
+        SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+    List<FunctionMappings.Sig> additionalSignatures =
+        dynamicOperators.stream()
+            .map(op -> FunctionMappings.s(op, op.getName()))
+            .collect(Collectors.toList());
     this.typeConverter = TypeConverter.DEFAULT;
-    ArrayList<CallConverter> converters = new ArrayList<CallConverter>();
+    ArrayList<CallConverter> converters = new ArrayList<>();
     converters.addAll(CallConverters.defaults(typeConverter));
-    converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+    converters.add(
+        new ScalarFunctionConverter(
+            extensions.scalarFunctions(),
+            additionalSignatures,
+            typeFactory,
+            TypeConverter.DEFAULT));
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);

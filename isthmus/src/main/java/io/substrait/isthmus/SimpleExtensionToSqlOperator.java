@@ -1,0 +1,319 @@
+package io.substrait.isthmus;
+
+import io.substrait.extension.SimpleExtension;
+import io.substrait.function.ParameterizedType;
+import io.substrait.function.ParameterizedTypeVisitor;
+import io.substrait.function.TypeExpression;
+import io.substrait.type.Type;
+import io.substrait.type.TypeExpressionEvaluator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
+
+public final class SimpleExtensionToSqlOperator {
+
+  private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
+      new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
+
+  private SimpleExtensionToSqlOperator() {}
+
+  public static List<SqlOperator> from(SimpleExtension.ExtensionCollection collection) {
+    return from(collection, DEFAULT_TYPE_FACTORY);
+  }
+
+  public static List<SqlOperator> from(
+      SimpleExtension.ExtensionCollection collection, RelDataTypeFactory typeFactory) {
+    TypeConverter typeConverter = TypeConverter.DEFAULT;
+    return Stream.concat(
+            collection.scalarFunctions().stream(), collection.aggregateFunctions().stream())
+        .map(function -> toSqlFunction(function, typeFactory, typeConverter))
+        .collect(Collectors.toList());
+  }
+
+  private static SqlFunction toSqlFunction(
+      SimpleExtension.Function function,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    List<SimpleExtension.Argument> requiredArgs =
+        function.args().stream()
+            .filter(SimpleExtension.Argument::required)
+            .filter(t -> t instanceof SimpleExtension.ValueArgument || t instanceof SimpleExtension.EnumArgument)
+            .map(t -> (SimpleExtension.Argument) t)
+            .collect(Collectors.toList());
+
+    List<SqlTypeFamily> argFamilies =
+        requiredArgs.stream()
+            .map(arg -> arg.value().accept(new CalciteTypeVisitor()).getFamily())
+            .collect(Collectors.toList());
+
+    SqlReturnTypeInference returnTypeInference =
+        new SubstraitReturnTypeInference(function, typeFactory, typeConverter);
+
+    return new SqlFunction(
+        function.name(),
+        SqlKind.OTHER_FUNCTION,
+        returnTypeInference,
+        null,
+        OperandTypes.family(argFamilies),
+        SqlFunctionCategory.USER_DEFINED_FUNCTION);
+  }
+
+  private static class SubstraitReturnTypeInference implements SqlReturnTypeInference {
+
+    private final SimpleExtension.Function function;
+    private final RelDataTypeFactory typeFactory;
+    private final TypeConverter typeConverter;
+
+    private SubstraitReturnTypeInference(
+        SimpleExtension.Function function,
+        RelDataTypeFactory typeFactory,
+        TypeConverter typeConverter) {
+      this.function = function;
+      this.typeFactory = typeFactory;
+      this.typeConverter = typeConverter;
+    }
+
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
+      List<Type> substraitArgTypes =
+          opBinding.collectOperandTypes().stream()
+              .map(typeConverter::toSubstrait)
+              .collect(Collectors.toList());
+
+      TypeExpression returnExpression = function.returnType();
+      Type resolvedSubstraitType =
+          TypeExpressionEvaluator.evaluateExpression(
+              returnExpression, function.args(), substraitArgTypes);
+
+      return typeConverter.toCalcite(typeFactory, resolvedSubstraitType);
+    }
+  }
+
+  private static class CalciteTypeVisitor
+      extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<
+          SqlTypeName, RuntimeException> {
+
+    private CalciteTypeVisitor() {
+      super("Type not supported for Calcite conversion.");
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Bool expr) {
+      return SqlTypeName.BOOLEAN;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.I8 expr) {
+      return SqlTypeName.TINYINT;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.I16 expr) {
+      return SqlTypeName.SMALLINT;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.I32 expr) {
+      return SqlTypeName.INTEGER;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.I64 expr) {
+      return SqlTypeName.BIGINT;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.FP32 expr) {
+      return SqlTypeName.FLOAT;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.FP64 expr) {
+      return SqlTypeName.DOUBLE;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Str expr) {
+      return SqlTypeName.VARCHAR;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Binary expr) {
+      return SqlTypeName.VARBINARY;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Date expr) {
+      return SqlTypeName.DATE;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Time expr) {
+      return SqlTypeName.TIME;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.TimestampTZ expr) {
+      return SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Timestamp expr) {
+      return SqlTypeName.TIMESTAMP;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.IntervalYear year) {
+      return SqlTypeName.INTERVAL_YEAR_MONTH;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.IntervalDay day) {
+      return SqlTypeName.INTERVAL_DAY;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.UUID expr) {
+      return SqlTypeName.VARCHAR;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Struct struct) {
+      return SqlTypeName.ROW;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.ListType listType) {
+      return SqlTypeName.ARRAY;
+    }
+
+    @Override
+    public SqlTypeName visit(Type.Map map) {
+      return SqlTypeName.MAP;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.FixedChar expr) {
+      return SqlTypeName.CHAR;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.VarChar expr) {
+      return SqlTypeName.VARCHAR;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.FixedBinary expr) {
+      return SqlTypeName.BINARY;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.Decimal expr) {
+      return SqlTypeName.DECIMAL;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.Struct expr) {
+      return SqlTypeName.ROW;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.ListType expr) {
+      return SqlTypeName.ARRAY;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.Map expr) {
+      return SqlTypeName.MAP;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.PrecisionTimestamp expr) {
+      return SqlTypeName.TIMESTAMP;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.PrecisionTimestampTZ expr) {
+      return SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.PrecisionTime expr) {
+      return SqlTypeName.TIME;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.IntervalDay expr) {
+      return SqlTypeName.INTERVAL_DAY;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.IntervalCompound expr) {
+      // TODO: double check
+      return SqlTypeName.INTERVAL_DAY_HOUR;
+    }
+
+    @Override
+    public SqlTypeName visit(ParameterizedType.StringLiteral expr) {
+      String type = expr.value().toUpperCase();
+
+      if (type.startsWith("ANY")) {
+        return SqlTypeName.ANY;
+      }
+
+      switch (type) {
+        case "BOOLEAN":
+          return SqlTypeName.BOOLEAN;
+        case "I8":
+          return SqlTypeName.TINYINT;
+        case "I16":
+          return SqlTypeName.SMALLINT;
+        case "I32":
+          return SqlTypeName.INTEGER;
+        case "I64":
+          return SqlTypeName.BIGINT;
+        case "FP32":
+          return SqlTypeName.FLOAT;
+        case "FP64":
+          return SqlTypeName.DOUBLE;
+        case "STRING":
+          return SqlTypeName.VARCHAR;
+        case "BINARY":
+          return SqlTypeName.VARBINARY;
+        case "TIMESTAMP":
+          return SqlTypeName.TIMESTAMP;
+        case "TIMESTAMP_TZ":
+          return SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE;
+        case "DATE":
+          return SqlTypeName.DATE;
+        case "TIME":
+          return SqlTypeName.TIME;
+        case "UUID":
+          return SqlTypeName.VARCHAR;
+        default:
+          if (type.startsWith("DECIMAL")) {
+            return SqlTypeName.DECIMAL;
+          }
+          if (type.startsWith("STRUCT")) {
+            return SqlTypeName.ROW;
+          }
+          if (type.startsWith("LIST")) {
+            return SqlTypeName.ARRAY;
+          }
+          return super.visit(expr);
+      }
+    }
+  }
+}

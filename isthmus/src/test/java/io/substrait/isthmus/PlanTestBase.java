@@ -41,12 +41,12 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 
 public class PlanTestBase {
-  protected final SimpleExtension.ExtensionCollection extensions =
-      SqlConverterBase.EXTENSION_COLLECTION;
+  protected final SimpleExtension.ExtensionCollection extensions;
+
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
-  protected final SubstraitBuilder substraitBuilder = new SubstraitBuilder(extensions);
+  protected final SubstraitBuilder substraitBuilder;
   protected static final TypeCreator R = TypeCreator.of(false);
   protected static final TypeCreator N = TypeCreator.of(true);
 
@@ -65,6 +65,15 @@ public class PlanTestBase {
   private static final TpcdsSchema TPCDS_SCHEMA = new TpcdsSchema(1.0);
   protected static CalciteCatalogReader TPCDS_CATALOG =
       PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
+
+  protected PlanTestBase() {
+    this(SimpleExtension.loadDefaults());
+  }
+
+  protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
+    this.extensions = extensions;
+    this.substraitBuilder = new SubstraitBuilder(extensions);
+  }
 
   public static String asString(String resource) throws IOException {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
@@ -144,6 +153,41 @@ public class PlanTestBase {
     Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions);
 
     assertEquals(pojo1, pojo2);
+    return relRoot2;
+  }
+
+  protected RelRoot assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
+      String query, Prepare.CatalogReader catalogReader) throws Exception {
+    // sql <--> substrait round trip test.
+    // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
+    // Return list of sql -> Substrait rel -> Calcite rel.
+
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+
+    SqlToSubstrait s = new SqlToSubstrait(extensions, null);
+
+    // 1. SQL -> Calcite RelRoot
+    List<RelRoot> relRoots = s.sqlToRelNode(query, catalogReader);
+    assertEquals(1, relRoots.size());
+    RelRoot relRoot1 = relRoots.get(0);
+
+    // 2. Calcite RelRoot  -> Substrait Rel
+    Plan.Root pojo1 = SubstraitRelVisitor.convert(relRoot1, extensions);
+
+    // 3. Substrait Rel -> Calcite RelNode
+    RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
+
+    // 4. Calcite RelNode -> Substrait Rel
+    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions);
+
+    // Here pojo1 and pojo2 can be different because of different default optimization
+    // rules between SqlNode->RelRoot conversion (Sql->Substrait) and
+    // RelBuilder/RexBuilder (Substrait->Sql).
+    // Therefore, substrait plans passed through conversion to calcite should be compared
+    RelRoot relRoot3 = substraitToCalcite.convert(pojo2);
+    Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, extensions);
+
+    assertEquals(pojo2, pojo3);
     return relRoot2;
   }
 
