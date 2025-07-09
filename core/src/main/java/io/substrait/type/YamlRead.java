@@ -54,7 +54,8 @@ public class YamlRead {
           new ObjectMapper(new YAMLFactory())
               .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
               .registerModule(Deserializers.MODULE);
-      var doc = mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
+      SimpleExtension.ExtensionSignatures doc =
+          mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
 
       logger.atDebug().log(
           "Parsed {} functions in file {}.",

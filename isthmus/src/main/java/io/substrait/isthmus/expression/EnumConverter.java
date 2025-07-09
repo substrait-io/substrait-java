@@ -117,8 +117,8 @@ public class EnumConverter {
         return Optional.empty();
       }
       Argument arg = args.get(enumAnchor.argIdx);
-      if (arg instanceof SimpleExtension.EnumArgument ea) {
-        return Optional.of(ea);
+      if (arg instanceof SimpleExtension.EnumArgument) {
+        return Optional.of((SimpleExtension.EnumArgument) arg);
       } else {
         return Optional.empty();
       }
@@ -127,19 +127,21 @@ public class EnumConverter {
 
   static Optional<EnumArg> fromRex(
       SimpleExtension.Function function, RexLiteral literal, int argIdx) {
-    return switch (literal.getType().getSqlTypeName()) {
-      case SYMBOL -> {
-        Object v = literal.getValue();
-        if (!literal.isNull() && (v instanceof Enum)) {
-          Enum<?> value = (Enum<?>) v;
-          ArgAnchor enumAnchor = argAnchor(function, argIdx);
-          yield findEnumArg(function, enumAnchor).map(ea -> EnumArg.of(ea, value.name()));
-        } else {
-          yield Optional.empty();
+    switch (literal.getType().getSqlTypeName()) {
+      case SYMBOL:
+        {
+          Object v = literal.getValue();
+          if (!literal.isNull() && (v instanceof Enum)) {
+            Enum<?> value = (Enum<?>) v;
+            ArgAnchor enumAnchor = argAnchor(function, argIdx);
+            return findEnumArg(function, enumAnchor).map(ea -> EnumArg.of(ea, value.name()));
+          }
+
+          return Optional.empty();
         }
-      }
-      default -> Optional.empty();
-    };
+      default:
+        return Optional.empty();
+    }
   }
 
   static boolean canConvert(Enum<?> value) {

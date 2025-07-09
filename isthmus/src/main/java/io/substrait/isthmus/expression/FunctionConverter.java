@@ -203,7 +203,7 @@ public abstract class FunctionConverter<
      * @param args expected arguments as defined in a {@link SimpleExtension.Function}
      * @return true if the {@code inputTypes} satisfy the {@code args}, false otherwise
      */
-    private static boolean inputTypesMatchDefinedArguments(
+    private boolean inputTypesMatchDefinedArguments(
         List<Type> inputTypes, List<SimpleExtension.Argument> args) {
 
       Map<String, Set<Type>> wildcardToType = new HashMap<>();
@@ -242,9 +242,8 @@ public abstract class FunctionConverter<
      * <p>If this exists, the function finder will attempt to find a least-restrictive match using
      * these.
      */
-    private static <F extends SimpleExtension.Function>
-        Optional<SingularArgumentMatcher<F>> getSingularInputType(List<F> functions) {
-      List<SingularArgumentMatcher> matchers = new ArrayList<>();
+    private Optional<SingularArgumentMatcher<F>> getSingularInputType(List<F> functions) {
+      List<SingularArgumentMatcher<F>> matchers = new ArrayList<>();
       for (var f : functions) {
 
         ParameterizedType firstType = null;
@@ -274,15 +273,17 @@ public abstract class FunctionConverter<
         }
       }
 
-      return switch (matchers.size()) {
-        case 0 -> Optional.empty();
-        case 1 -> Optional.of(matchers.get(0));
-        default -> Optional.of(chained(matchers));
-      };
+      switch (matchers.size()) {
+        case 0:
+          return Optional.empty();
+        case 1:
+          return Optional.of(matchers.get(0));
+        default:
+          return Optional.of(chained(matchers));
+      }
     }
 
-    public static <F extends SimpleExtension.Function> SingularArgumentMatcher<F> singular(
-        F function, ParameterizedType type) {
+    private SingularArgumentMatcher<F> singular(F function, ParameterizedType type) {
       return (inputType, outputType) -> {
         var check = isMatch(inputType, type);
         if (check) {
@@ -292,7 +293,7 @@ public abstract class FunctionConverter<
       };
     }
 
-    public static SingularArgumentMatcher chained(List<SingularArgumentMatcher> matchers) {
+    private SingularArgumentMatcher<F> chained(List<SingularArgumentMatcher<F>> matchers) {
       return (inputType, outputType) -> {
         for (var s : matchers) {
           var outcome = s.tryMatch(inputType, outputType);

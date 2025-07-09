@@ -37,10 +37,9 @@ public class ApplyJoinPlanTest extends PlanTestBase {
   public void lateralJoinQuery() throws SqlParseException {
     String sql;
     sql =
-        """
-            SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-            FROM store_sales CROSS JOIN LATERAL
-              (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
+        "SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk\n"
+            + "FROM store_sales CROSS JOIN LATERAL\n"
+            + "  (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)";
 
     /* the calcite plan for the above query is:
       LogicalProject(SS_SOLD_DATE_SK=[$0], SS_ITEM_SK=[$2], SS_CUSTOMER_SK=[$3])
@@ -69,11 +68,9 @@ public class ApplyJoinPlanTest extends PlanTestBase {
   public void outerApplyQuery() throws SqlParseException {
     String sql;
     sql =
-        """
-       SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-        FROM store_sales OUTER APPLY
-          (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)
-       """;
+        "SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk\n"
+            + "FROM store_sales OUTER APPLY\n"
+            + "  (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)";
 
     RelRoot root = getCalcitePlan(sql);
 
@@ -92,15 +89,14 @@ public class ApplyJoinPlanTest extends PlanTestBase {
   public void nestedApplyJoinQuery() throws SqlParseException {
     String sql;
     sql =
-        """
-            SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-            FROM store_sales CROSS APPLY
-              ( SELECT i_item_sk
-                FROM item CROSS APPLY
-                  ( SELECT p_promo_sk
-                    FROM promotion
-                    WHERE p_item_sk = i_item_sk AND p_item_sk = ss_item_sk )
-                WHERE item.i_item_sk = store_sales.ss_item_sk )""";
+        "SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk\n"
+            + "FROM store_sales CROSS APPLY\n"
+            + "  ( SELECT i_item_sk\n"
+            + "    FROM item CROSS APPLY\n"
+            + "      ( SELECT p_promo_sk\n"
+            + "        FROM promotion\n"
+            + "        WHERE p_item_sk = i_item_sk AND p_item_sk = ss_item_sk )\n"
+            + "    WHERE item.i_item_sk = store_sales.ss_item_sk )";
 
     /* the calcite plan for the above query is:
     LogicalProject(SS_SOLD_DATE_SK=[$0], SS_ITEM_SK=[$2], SS_CUSTOMER_SK=[$3])
@@ -135,10 +131,9 @@ public class ApplyJoinPlanTest extends PlanTestBase {
   public void crossApplyQuery() throws SqlParseException {
     String sql;
     sql =
-        """
-            SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-            FROM store_sales CROSS APPLY
-              (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
+        "SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk\n"
+            + "FROM store_sales CROSS APPLY\n"
+            + "  (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)";
 
     FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);

@@ -16,18 +16,25 @@ public class WindowBoundConverter {
     if (rexWindowBound.isUnbounded()) {
       return WindowBound.UNBOUNDED;
     } else {
-      if (rexWindowBound.getOffset() instanceof RexLiteral literal
-          && SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
-        BigDecimal offset = (BigDecimal) literal.getValue4();
-        if (rexWindowBound.isPreceding()) {
-          return WindowBound.Preceding.of(offset.longValue());
+      var node = rexWindowBound.getOffset();
+
+      if (node instanceof RexLiteral) {
+        var literal = (RexLiteral) node;
+        if (SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
+          BigDecimal offset = (BigDecimal) literal.getValue4();
+
+          if (rexWindowBound.isPreceding()) {
+            return WindowBound.Preceding.of(offset.longValue());
+          }
+          if (rexWindowBound.isFollowing()) {
+            return WindowBound.Following.of(offset.longValue());
+          }
+
+          throw new IllegalStateException(
+              "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
         }
-        if (rexWindowBound.isFollowing()) {
-          return WindowBound.Following.of(offset.longValue());
-        }
-        throw new IllegalStateException(
-            "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
       }
+
       throw new IllegalArgumentException(
           String.format(
               "substrait only supports integer window offsets. Received: %s",

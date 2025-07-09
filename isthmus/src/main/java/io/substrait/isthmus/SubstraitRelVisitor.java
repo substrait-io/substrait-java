@@ -32,9 +32,11 @@ import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelFieldCollation;
+import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -170,23 +172,33 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var left = apply(join.getLeft());
     var right = apply(join.getRight());
     var condition = toExpression(join.getCondition());
-    var joinType =
-        switch (join.getJoinType()) {
-          case INNER -> Join.JoinType.INNER;
-          case LEFT -> Join.JoinType.LEFT;
-          case RIGHT -> Join.JoinType.RIGHT;
-          case FULL -> Join.JoinType.OUTER;
-          case SEMI -> Join.JoinType.LEFT_SEMI;
-          case ANTI -> Join.JoinType.LEFT_ANTI;
-          default -> throw new UnsupportedOperationException(
-              "Unsupported join type: " + join.getJoinType());
-        };
+    var joinType = asJoinType(join);
 
     // An INNER JOIN with a join condition of TRUE can be encoded as a Substrait Cross relation
     if (joinType == Join.JoinType.INNER && TRUE.equals(condition)) {
       return Cross.builder().left(left).right(right).build();
     }
     return Join.builder().condition(condition).joinType(joinType).left(left).right(right).build();
+  }
+
+  private Join.JoinType asJoinType(org.apache.calcite.rel.core.Join join) {
+    JoinRelType type = join.getJoinType();
+
+    if (type == JoinRelType.INNER) {
+      return Join.JoinType.INNER;
+    } else if (type == JoinRelType.LEFT) {
+      return Join.JoinType.LEFT;
+    } else if (type == JoinRelType.RIGHT) {
+      return Join.JoinType.RIGHT;
+    } else if (type == JoinRelType.FULL) {
+      return Join.JoinType.OUTER;
+    } else if (type == JoinRelType.SEMI) {
+      return Join.JoinType.LEFT_SEMI;
+    } else if (type == JoinRelType.ANTI) {
+      return Join.JoinType.LEFT_ANTI;
+    }
+
+    throw new UnsupportedOperationException("Unsupported join type: " + join.getJoinType());
   }
 
   @Override
@@ -197,14 +209,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // right input of correlated-join is similar to a correlated sub-query
     apply(correlate.getRight());
 
-    var joinType =
-        switch (correlate.getJoinType()) {
-          case INNER -> Join.JoinType.INNER; // corresponds to CROSS APPLY join
-          case LEFT -> Join.JoinType.LEFT; // corresponds to OUTER APPLY join
-          default -> throw new IllegalArgumentException(
-              "Invalid correlated join type: " + correlate.getJoinType());
-        };
+    var joinType = asJoinType(correlate);
     return super.visit(correlate);
+  }
+
+  private Join.JoinType asJoinType(org.apache.calcite.rel.core.Correlate correlate) {
+    JoinRelType type = correlate.getJoinType();
+
+    if (type == JoinRelType.INNER) {
+      return Join.JoinType.INNER;
+    } else if (type == JoinRelType.LEFT) {
+      return Join.JoinType.LEFT;
+    }
+
+    throw new IllegalArgumentException("Invalid correlated join type: " + correlate.getJoinType());
   }
 
   @Override
@@ -316,33 +334,40 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private long asLong(RexNode rex) {
     var expr = toExpression(rex);
-    if (expr instanceof Expression.I64Literal i) {
-      return i.value();
-    } else if (expr instanceof Expression.I32Literal i) {
-      return i.value();
+    if (expr instanceof Expression.I64Literal) {
+      return ((Expression.I64Literal) expr).value();
+    } else if (expr instanceof Expression.I32Literal) {
+      return ((Expression.I32Literal) expr).value();
     }
     throw new UnsupportedOperationException("Unknown type: " + rex);
   }
 
   public static Expression.SortField toSortField(
       RelFieldCollation collation, Type.Struct inputType) {
-    Expression.SortDirection direction =
-        switch (collation.direction) {
-          case STRICTLY_ASCENDING, ASCENDING -> collation.nullDirection
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.ASC_NULLS_LAST
-              : Expression.SortDirection.ASC_NULLS_FIRST;
-          case STRICTLY_DESCENDING, DESCENDING -> collation.nullDirection
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.DESC_NULLS_LAST
-              : Expression.SortDirection.DESC_NULLS_FIRST;
-          case CLUSTERED -> Expression.SortDirection.CLUSTERED;
-        };
+    Expression.SortDirection direction = asSortDirection(collation);
 
     return Expression.SortField.builder()
         .expr(FieldReference.newRootStructReference(collation.getFieldIndex(), inputType))
         .direction(direction)
         .build();
+  }
+
+  private static Expression.SortDirection asSortDirection(RelFieldCollation collation) {
+    RelFieldCollation.Direction direction = collation.direction;
+
+    if (direction == Direction.STRICTLY_ASCENDING || direction == Direction.ASCENDING) {
+      return collation.nullDirection == RelFieldCollation.NullDirection.LAST
+          ? Expression.SortDirection.ASC_NULLS_LAST
+          : Expression.SortDirection.ASC_NULLS_FIRST;
+    } else if (direction == Direction.STRICTLY_DESCENDING || direction == Direction.DESCENDING) {
+      return collation.nullDirection == RelFieldCollation.NullDirection.LAST
+          ? Expression.SortDirection.DESC_NULLS_LAST
+          : Expression.SortDirection.DESC_NULLS_FIRST;
+    } else if (direction == Direction.CLUSTERED) {
+      return Expression.SortDirection.CLUSTERED;
+    }
+
+    throw new IllegalArgumentException("Unsupported collation direction: " + direction);
   }
 
   @Override

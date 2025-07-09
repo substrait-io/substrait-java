@@ -36,29 +36,33 @@ public interface FileOrFiles {
     getFileFormat()
         .ifPresent(
             fileFormat -> {
-              if (fileFormat instanceof FileFormat.ParquetReadOptions options) {
+              if (fileFormat instanceof FileFormat.ParquetReadOptions) {
                 builder.setParquet(
                     ReadRel.LocalFiles.FileOrFiles.ParquetReadOptions.newBuilder().build());
-              } else if (fileFormat instanceof FileFormat.ArrowReadOptions options) {
+              } else if (fileFormat instanceof FileFormat.ArrowReadOptions) {
                 builder.setArrow(
                     ReadRel.LocalFiles.FileOrFiles.ArrowReadOptions.newBuilder().build());
-              } else if (fileFormat instanceof FileFormat.OrcReadOptions options) {
+              } else if (fileFormat instanceof FileFormat.OrcReadOptions) {
                 builder.setOrc(ReadRel.LocalFiles.FileOrFiles.OrcReadOptions.newBuilder().build());
-              } else if (fileFormat instanceof FileFormat.DwrfReadOptions options) {
+              } else if (fileFormat instanceof FileFormat.DwrfReadOptions) {
                 builder.setDwrf(
                     ReadRel.LocalFiles.FileOrFiles.DwrfReadOptions.newBuilder().build());
-              } else if (fileFormat
-                  instanceof FileFormat.DelimiterSeparatedTextReadOptions options) {
-                var optionsBuilder =
-                    ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions.newBuilder()
-                        .setFieldDelimiter(options.getFieldDelimiter())
-                        .setMaxLineSize(options.getMaxLineSize())
-                        .setQuote(options.getQuote())
-                        .setHeaderLinesToSkip(options.getHeaderLinesToSkip())
-                        .setEscape(options.getEscape());
+              } else if (fileFormat instanceof FileFormat.DelimiterSeparatedTextReadOptions) {
+                FileFormat.DelimiterSeparatedTextReadOptions options =
+                    (FileFormat.DelimiterSeparatedTextReadOptions) fileFormat;
+                ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions.Builder
+                    optionsBuilder =
+                        ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions
+                            .newBuilder()
+                            .setFieldDelimiter(options.getFieldDelimiter())
+                            .setMaxLineSize(options.getMaxLineSize())
+                            .setQuote(options.getQuote())
+                            .setHeaderLinesToSkip(options.getHeaderLinesToSkip())
+                            .setEscape(options.getEscape());
                 options.getValueTreatedAsNull().ifPresent(optionsBuilder::setValueTreatedAsNull);
                 builder.setText(optionsBuilder.build());
-              } else if (fileFormat instanceof FileFormat.Extension options) {
+              } else if (fileFormat instanceof FileFormat.Extension) {
+                FileFormat.Extension options = (FileFormat.Extension) fileFormat;
                 builder.setExtension(options.getExtension());
               } else {
                 throw new UnsupportedOperationException(
@@ -72,11 +76,14 @@ public interface FileOrFiles {
                 getPath()
                     .ifPresent(
                         path -> {
-                          switch (pathType) {
-                            case URI_PATH -> builder.setUriPath(path);
-                            case URI_PATH_GLOB -> builder.setUriPathGlob(path);
-                            case URI_FILE -> builder.setUriFile(path);
-                            case URI_FOLDER -> builder.setUriFolder(path);
+                          if (pathType == PathType.URI_PATH) {
+                            builder.setUriPath(path);
+                          } else if (pathType == PathType.URI_PATH_GLOB) {
+                            builder.setUriPathGlob(path);
+                          } else if (pathType == PathType.URI_FILE) {
+                            builder.setUriFile(path);
+                          } else if (pathType == PathType.URI_FOLDER) {
+                            builder.setUriFolder(path);
                           }
                         }));
 

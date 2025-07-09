@@ -306,7 +306,7 @@ public class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void scalarSubquery() {
-      var rel =
+      Project rel =
           b.project(
               input ->
                   Stream.of(
@@ -322,7 +322,7 @@ public class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void inPredicate() {
-      var rel =
+      Project rel =
           b.project(
               input ->
                   Stream.of(
@@ -337,7 +337,7 @@ public class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void setPredicate() {
-      var rel =
+      Project rel =
           b.project(
               input ->
                   Stream.of(

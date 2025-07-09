@@ -833,7 +833,7 @@ public interface Expression extends FunctionArg {
 
     public static WindowBoundsType fromProto(
         io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
-      for (var v : values()) {
+      for (WindowBoundsType v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -984,7 +984,7 @@ public interface Expression extends FunctionArg {
 
     public static PredicateOp fromProto(
         io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
-      for (var v : values()) {
+      for (PredicateOp v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1010,7 +1010,7 @@ public interface Expression extends FunctionArg {
     }
 
     public static AggregationInvocation fromProto(AggregateFunction.AggregationInvocation proto) {
-      for (var v : values()) {
+      for (AggregationInvocation v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1041,7 +1041,7 @@ public interface Expression extends FunctionArg {
     }
 
     public static AggregationPhase fromProto(io.substrait.proto.AggregationPhase proto) {
-      for (var v : values()) {
+      for (AggregationPhase v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1069,7 +1069,7 @@ public interface Expression extends FunctionArg {
     }
 
     public static SortDirection fromProto(io.substrait.proto.SortField.SortDirection proto) {
-      for (var v : values()) {
+      for (SortDirection v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1097,7 +1097,7 @@ public interface Expression extends FunctionArg {
 
     public static FailureBehavior fromProto(
         io.substrait.proto.Expression.Cast.FailureBehavior proto) {
-      for (var v : values()) {
+      for (FailureBehavior v : values()) {
         if (v.proto == proto) {
           return v;
         }

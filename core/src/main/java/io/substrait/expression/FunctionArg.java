@@ -34,13 +34,13 @@ public interface FunctionArg {
       ExpressionVisitor<io.substrait.proto.Expression, EmptyVisitationContext, RuntimeException>
           expressionVisitor) {
 
-    return new FuncArgVisitor<>() {
+    return new FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>() {
 
       @Override
       public FunctionArgument visitExpr(
           SimpleExtension.Function fnDef, int argIdx, Expression e, EmptyVisitationContext context)
           throws RuntimeException {
-        var pE = e.accept(expressionVisitor, context);
+        io.substrait.proto.Expression pE = e.accept(expressionVisitor, context);
         return FunctionArgument.newBuilder().setValue(pE).build();
       }
 
@@ -48,7 +48,7 @@ public interface FunctionArg {
       public FunctionArgument visitType(
           SimpleExtension.Function fnDef, int argIdx, Type t, EmptyVisitationContext context)
           throws RuntimeException {
-        var pTyp = t.accept(typeVisitor);
+        io.substrait.proto.Type pTyp = t.accept(typeVisitor);
         return FunctionArgument.newBuilder().setType(pTyp).build();
       }
 
@@ -56,7 +56,7 @@ public interface FunctionArg {
       public FunctionArgument visitEnumArg(
           SimpleExtension.Function fnDef, int argIdx, EnumArg ea, EmptyVisitationContext context)
           throws RuntimeException {
-        var enumBldr = FunctionArgument.newBuilder();
+        FunctionArgument.Builder enumBldr = FunctionArgument.newBuilder();
 
         if (ea.value().isPresent()) {
           enumBldr = enumBldr.setEnum(ea.value().get());
@@ -82,18 +82,22 @@ public interface FunctionArg {
 
     public FunctionArg convert(
         SimpleExtension.Function funcDef, int argIdx, FunctionArgument fArg) {
-      return switch (fArg.getArgTypeCase()) {
-        case TYPE -> protoTypeConverter.from(fArg.getType());
-        case VALUE -> protoExprConverter.from(fArg.getValue());
-        case ENUM -> {
-          SimpleExtension.EnumArgument enumArgDef =
-              (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
-          var optionValue = fArg.getEnum();
-          yield EnumArg.of(enumArgDef, optionValue);
-        }
-        default -> throw new UnsupportedOperationException(
-            String.format("Unable to convert FunctionArgument %s.", fArg));
-      };
+      switch (fArg.getArgTypeCase()) {
+        case TYPE:
+          return protoTypeConverter.from(fArg.getType());
+        case VALUE:
+          return protoExprConverter.from(fArg.getValue());
+        case ENUM:
+          {
+            SimpleExtension.EnumArgument enumArgDef =
+                (SimpleExtension.EnumArgument) funcDef.args().get(argIdx);
+            String optionValue = fArg.getEnum();
+            return EnumArg.of(enumArgDef, optionValue);
+          }
+        default:
+          throw new UnsupportedOperationException(
+              String.format("Unable to convert FunctionArgument %s.", fArg));
+      }
     }
   }
 }

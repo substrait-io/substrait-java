@@ -6,7 +6,7 @@ plugins {
 }
 
 java {
-  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  toolchain { languageVersion = JavaLanguageVersion.of(11) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -42,8 +42,6 @@ dependencies {
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
 }
 
