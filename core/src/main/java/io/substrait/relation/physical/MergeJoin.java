@@ -43,7 +43,7 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
     }
 
     public static JoinType fromProto(MergeJoinRel.JoinType proto) {
-      for (var v : values()) {
+      for (JoinType v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -58,21 +58,35 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    Stream<Type> leftTypes =
-        switch (getJoinType()) {
-          case RIGHT, OUTER -> getLeft().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          case RIGHT_ANTI, RIGHT_SEMI -> Stream.empty();
-          default -> getLeft().getRecordType().fields().stream();
-        };
-    Stream<Type> rightTypes =
-        switch (getJoinType()) {
-          case LEFT, OUTER -> getRight().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          case LEFT_ANTI, LEFT_SEMI -> Stream.empty();
-          default -> getRight().getRecordType().fields().stream();
-        };
+    Stream<Type> leftTypes = getLeftTypes();
+    Stream<Type> rightTypes = getRightTypes();
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
+  }
+
+  private Stream<Type> getLeftTypes() {
+    switch (getJoinType()) {
+      case LEFT:
+      case OUTER:
+        return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
+      case LEFT_ANTI:
+      case LEFT_SEMI:
+        return Stream.empty();
+      default:
+        return getRight().getRecordType().fields().stream();
+    }
+  }
+
+  private Stream<Type> getRightTypes() {
+    switch (getJoinType()) {
+      case LEFT:
+      case OUTER:
+        return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
+      case LEFT_ANTI:
+      case LEFT_SEMI:
+        return Stream.empty();
+      default:
+        return getRight().getRecordType().fields().stream();
+    }
   }
 
   @Override

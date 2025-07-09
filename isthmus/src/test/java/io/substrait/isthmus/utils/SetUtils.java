@@ -18,17 +18,7 @@ public class SetUtils {
    * @return a sql query
    */
   public static String getSetQuery(Set.SetOp op, boolean multi) {
-    String opString =
-        switch (op) {
-          case MINUS_PRIMARY -> "EXCEPT";
-          case MINUS_PRIMARY_ALL -> "EXCEPT ALL";
-          case INTERSECTION_MULTISET -> "INTERSECT";
-          case INTERSECTION_MULTISET_ALL -> "INTERSECT ALL";
-          case UNION_DISTINCT -> "UNION";
-          case UNION_ALL -> "UNION ALL";
-          default -> throw new UnsupportedOperationException(
-              "Unknown set operation is not supported");
-        };
+    String opString = asString(op);
 
     StringBuilder query = new StringBuilder();
     query.append(
@@ -46,6 +36,25 @@ public class SetUtils {
       query.append(
           "select ps_partkey as partkey, ps_comment as str, (ps_partkey + ps_partkey) as expr from partsupp");
       return query.toString();
+    }
+  }
+
+  private static String asString(Set.SetOp op) {
+    switch (op) {
+      case MINUS_PRIMARY:
+        return "EXCEPT";
+      case MINUS_PRIMARY_ALL:
+        return "EXCEPT ALL";
+      case INTERSECTION_MULTISET:
+        return "INTERSECT";
+      case INTERSECTION_MULTISET_ALL:
+        return "INTERSECT ALL";
+      case UNION_DISTINCT:
+        return "UNION";
+      case UNION_ALL:
+        return "UNION ALL";
+      default:
+        throw new UnsupportedOperationException("Unknown set operation is not supported");
     }
   }
 

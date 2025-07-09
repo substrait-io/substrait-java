@@ -25,8 +25,8 @@ public class ProtoRelConverterTest extends TestBase {
   @Nested
   class DefaultAdvancedExtensionTests {
 
-    static final StringHolder ENHANCED = new StringHolder("ENHANCED");
-    static final StringHolder OPTIMIZED = new StringHolder("OPTIMIZED");
+    final StringHolder ENHANCED = new StringHolder("ENHANCED");
+    final StringHolder OPTIMIZED = new StringHolder("OPTIMIZED");
 
     Rel relWithExtension(AdvancedExtension advancedExtension) {
       return NamedScan.builder()

@@ -66,8 +66,11 @@ public class CallConverters {
 
             // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
             // user-defined literals
-            if (operand instanceof Expression.FixedBinaryLiteral literal
-                && type instanceof Type.UserDefined t) {
+            if (operand instanceof Expression.FixedBinaryLiteral
+                && type instanceof Type.UserDefined) {
+              Expression.FixedBinaryLiteral literal = (Expression.FixedBinaryLiteral) operand;
+              Type.UserDefined t = (Type.UserDefined) type;
+
               return Expression.UserDefinedLiteral.builder()
                   .uri(t.uri())
                   .name(t.name())

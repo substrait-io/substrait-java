@@ -70,7 +70,7 @@ public class ExpressionProtoConverter
   }
 
   private Expression lit(Consumer<Expression.Literal.Builder> consumer) {
-    var builder = Expression.Literal.newBuilder();
+    Expression.Literal.Builder builder = Expression.Literal.newBuilder();
     consumer.accept(builder);
     return Expression.newBuilder().setLiteral(builder).build();
   }
@@ -278,12 +278,12 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.MapLiteral expr, EmptyVisitationContext context) {
     return lit(
         bldr -> {
-          var keyValues =
+          List<Expression.Literal.Map.KeyValue> keyValues =
               expr.values().entrySet().stream()
                   .map(
                       e -> {
-                        var key = toLiteral(e.getKey());
-                        var value = toLiteral(e.getValue());
+                        Expression.Literal key = toLiteral(e.getKey());
+                        Expression.Literal value = toLiteral(e.getValue());
                         return Expression.Literal.Map.KeyValue.newBuilder()
                             .setKey(key)
                             .setValue(value)
@@ -300,7 +300,7 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.EmptyMapLiteral expr, EmptyVisitationContext context) {
     return lit(
         bldr -> {
-          var protoMapType = toProto(expr.getType());
+          Type protoMapType = toProto(expr.getType());
           bldr.setEmptyMap(protoMapType.getMap())
               // For empty maps, the Literal message's own nullable field should be ignored
               // in favor of the nullability of the Type.Map in the literal's
@@ -316,7 +316,7 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.ListLiteral expr, EmptyVisitationContext context) {
     return lit(
         bldr -> {
-          var values =
+          List<Expression.Literal> values =
               expr.values().stream()
                   .map(this::toLiteral)
                   .collect(java.util.stream.Collectors.toList());
@@ -331,7 +331,7 @@ public class ExpressionProtoConverter
       throws RuntimeException {
     return lit(
         builder -> {
-          var protoListType = toProto(expr.getType());
+          Type protoListType = toProto(expr.getType());
           builder
               .setEmptyList(protoListType.getList())
               // For empty lists, the Literal message's own nullable field should be ignored
@@ -348,7 +348,7 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.StructLiteral expr, EmptyVisitationContext context) {
     return lit(
         bldr -> {
-          var values =
+          List<Expression.Literal> values =
               expr.fields().stream()
                   .map(this::toLiteral)
                   .collect(java.util.stream.Collectors.toList());
@@ -360,7 +360,7 @@ public class ExpressionProtoConverter
   @Override
   public Expression visit(
       io.substrait.expression.Expression.UserDefinedLiteral expr, EmptyVisitationContext context) {
-    var typeReference =
+    int typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
     return lit(
         bldr -> {
@@ -378,7 +378,7 @@ public class ExpressionProtoConverter
   }
 
   private Expression.Literal toLiteral(io.substrait.expression.Expression expression) {
-    var e = toProto(expression);
+    Expression e = toProto(expression);
     assert e.getRexTypeCase() == Expression.RexTypeCase.LITERAL;
     return e.getLiteral();
   }
@@ -386,7 +386,7 @@ public class ExpressionProtoConverter
   @Override
   public Expression visit(
       io.substrait.expression.Expression.Switch expr, EmptyVisitationContext context) {
-    var clauses =
+    List<Expression.SwitchExpression.IfValue> clauses =
         expr.switchClauses().stream()
             .map(
                 s ->
@@ -407,7 +407,7 @@ public class ExpressionProtoConverter
   @Override
   public Expression visit(
       io.substrait.expression.Expression.IfThen expr, EmptyVisitationContext context) {
-    var clauses =
+    List<Expression.IfThen.IfClause> clauses =
         expr.ifClauses().stream()
             .map(
                 s ->
@@ -427,7 +427,8 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.ScalarFunctionInvocation expr,
       EmptyVisitationContext context) {
 
-    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
+    FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
+        argVisitor = FunctionArg.toProto(typeProtoConverter, this);
 
     return Expression.newBuilder()
         .setScalarFunction(
@@ -499,22 +500,28 @@ public class ExpressionProtoConverter
   public Expression visit(FieldReference expr, EmptyVisitationContext context) {
 
     Expression.ReferenceSegment seg = null;
-    for (var segment : expr.segments()) {
+    for (FieldReference.ReferenceSegment segment : expr.segments()) {
       Expression.ReferenceSegment.Builder protoSegment;
-      if (segment instanceof FieldReference.StructField f) {
-        var bldr = Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
+      if (segment instanceof FieldReference.StructField) {
+        FieldReference.StructField f = (FieldReference.StructField) segment;
+        Expression.ReferenceSegment.StructField.Builder bldr =
+            Expression.ReferenceSegment.StructField.newBuilder().setField(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setStructField(bldr);
-      } else if (segment instanceof FieldReference.ListElement f) {
-        var bldr = Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
+      } else if (segment instanceof FieldReference.ListElement) {
+        FieldReference.ListElement f = (FieldReference.ListElement) segment;
+        Expression.ReferenceSegment.ListElement.Builder bldr =
+            Expression.ReferenceSegment.ListElement.newBuilder().setOffset(f.offset());
         if (seg != null) {
           bldr.setChild(seg);
         }
         protoSegment = Expression.ReferenceSegment.newBuilder().setListElement(bldr);
-      } else if (segment instanceof FieldReference.MapKey f) {
-        var bldr = Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
+      } else if (segment instanceof FieldReference.MapKey) {
+        FieldReference.MapKey f = (FieldReference.MapKey) segment;
+        Expression.ReferenceSegment.MapKey.Builder bldr =
+            Expression.ReferenceSegment.MapKey.newBuilder().setMapKey(toLiteral(f.key()));
         if (seg != null) {
           bldr.setChild(seg);
         }
@@ -522,11 +529,11 @@ public class ExpressionProtoConverter
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
-      var builtSegment = protoSegment.build();
-      seg = builtSegment;
+      seg = protoSegment.build();
     }
 
-    var out = Expression.FieldReference.newBuilder().setDirectReference(seg);
+    Expression.FieldReference.Builder out =
+        Expression.FieldReference.newBuilder().setDirectReference(seg);
 
     if (expr.inputExpression().isPresent()) {
       out.setExpression(toProto(expr.inputExpression().get()));
@@ -591,7 +598,8 @@ public class ExpressionProtoConverter
       io.substrait.expression.Expression.WindowFunctionInvocation expr,
       EmptyVisitationContext context)
       throws RuntimeException {
-    var argVisitor = FunctionArg.toProto(typeProtoConverter, this);
+    FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
+        argVisitor = FunctionArg.toProto(typeProtoConverter, this);
     List<FunctionArgument> args =
         expr.arguments().stream()
             .map(a -> a.accept(expr.declaration(), 0, argVisitor, context))

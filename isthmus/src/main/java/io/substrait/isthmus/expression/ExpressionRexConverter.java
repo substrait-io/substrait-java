@@ -424,15 +424,7 @@ public class ExpressionRexConverter
         expr.sort().stream()
             .map(
                 sf -> {
-                  Set<SqlKind> direction =
-                      switch (sf.direction()) {
-                        case ASC_NULLS_FIRST -> Set.of(SqlKind.NULLS_FIRST);
-                        case ASC_NULLS_LAST -> Set.of(SqlKind.NULLS_LAST);
-                        case DESC_NULLS_FIRST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
-                        case DESC_NULLS_LAST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_LAST);
-                        case CLUSTERED -> throw new IllegalArgumentException(
-                            "SORT_DIRECTION_CLUSTERED is not supported");
-                      };
+                  Set<SqlKind> direction = asSqlKind(sf.direction());
                   return new RexFieldCollation(sf.expr().accept(this, context), direction);
                 })
             .collect(ImmutableList.toImmutableList());
@@ -440,19 +432,8 @@ public class ExpressionRexConverter
     RexWindowBound lowerBound = ToRexWindowBound.lowerBound(rexBuilder, expr.lowerBound());
     RexWindowBound upperBound = ToRexWindowBound.upperBound(rexBuilder, expr.upperBound());
 
-    boolean rowMode =
-        switch (expr.boundsType()) {
-          case ROWS -> true;
-          case RANGE -> false;
-          case UNSPECIFIED -> throw new IllegalArgumentException(
-              "bounds type on window function must be specified");
-        };
-
-    boolean distinct =
-        switch (expr.invocation()) {
-          case UNSPECIFIED, ALL -> false;
-          case DISTINCT -> true;
-        };
+    boolean rowMode = isRowMode(expr);
+    boolean distinct = isDistinct(expr);
 
     // For queries like: SELECT last_value() IGNORE NULLS OVER ...
     // Substrait has no mechanism to set this, so by default it is false
@@ -476,6 +457,53 @@ public class ExpressionRexConverter
         nullWhenCountZero,
         distinct,
         ignoreNulls);
+  }
+
+  private Set<SqlKind> asSqlKind(Expression.SortDirection direction) {
+    switch (direction) {
+      case ASC_NULLS_FIRST:
+        return Set.of(SqlKind.NULLS_FIRST);
+      case ASC_NULLS_LAST:
+        return Set.of(SqlKind.NULLS_LAST);
+      case DESC_NULLS_FIRST:
+        return Set.of(SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
+      case DESC_NULLS_LAST:
+        return Set.of(SqlKind.DESCENDING, SqlKind.NULLS_LAST);
+      case CLUSTERED:
+        throw new IllegalArgumentException("SORT_DIRECTION_CLUSTERED is not supported");
+      default:
+        throw new IllegalArgumentException("Unsupported sort direction: " + direction);
+    }
+  }
+
+  private boolean isRowMode(Expression.WindowFunctionInvocation expr) {
+    Expression.WindowBoundsType boundsType = expr.boundsType();
+
+    switch (boundsType) {
+      case ROWS:
+        return true;
+      case RANGE:
+        return false;
+      case UNSPECIFIED:
+        throw new IllegalArgumentException("bounds type on window function must be specified");
+      default:
+        throw new IllegalArgumentException(
+            "Unsupported window function bounds type: " + boundsType);
+    }
+  }
+
+  private boolean isDistinct(Expression.WindowFunctionInvocation expr) {
+    Expression.AggregationInvocation invocation = expr.invocation();
+
+    switch (invocation) {
+      case UNSPECIFIED:
+      case ALL:
+        return false;
+      case DISTINCT:
+        return true;
+      default:
+        throw new IllegalArgumentException("Unsupported window function invocation: " + invocation);
+    }
   }
 
   @Override
@@ -534,12 +562,12 @@ public class ExpressionRexConverter
 
   private String convert(FunctionArg a) {
     String v;
-    if (a instanceof EnumArg ea) {
-      v = ea.value().toString();
-    } else if (a instanceof Expression e) {
-      v = e.getType().accept(new StringTypeVisitor());
-    } else if (a instanceof Type t) {
-      v = t.accept(new StringTypeVisitor());
+    if (a instanceof EnumArg) {
+      v = ((EnumArg) a).value().toString();
+    } else if (a instanceof Expression) {
+      v = ((Expression) a).getType().accept(new StringTypeVisitor());
+    } else if (a instanceof Type) {
+      v = ((Type) a).accept(new StringTypeVisitor());
     } else {
       throw new IllegalStateException("Unexpected value: " + a);
     }
@@ -561,7 +589,8 @@ public class ExpressionRexConverter
       var segment = expr.segments().get(0);
 
       RexInputRef rexInputRef;
-      if (segment instanceof FieldReference.StructField f) {
+      if (segment instanceof FieldReference.StructField) {
+        FieldReference.StructField f = (FieldReference.StructField) segment;
         rexInputRef =
             new RexInputRef(f.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
       } else {

@@ -12,7 +12,8 @@ public abstract class Hint {
   public abstract List<String> getOutputNames();
 
   public RelCommon.Hint toProto() {
-    var builder = RelCommon.Hint.newBuilder().addAllOutputNames(getOutputNames());
+    RelCommon.Hint.Builder builder =
+        RelCommon.Hint.newBuilder().addAllOutputNames(getOutputNames());
     getAlias().ifPresent(builder::setAlias);
     return builder.build();
   }

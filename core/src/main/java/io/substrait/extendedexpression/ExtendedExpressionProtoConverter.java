@@ -26,7 +26,10 @@ public class ExtendedExpressionProtoConverter {
     for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReferenceBase
         expressionReference : extendedExpression.getReferredExpressions()) {
       if (expressionReference
-          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et) {
+          instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference) {
+        io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et =
+            (io.substrait.extendedexpression.ExtendedExpression.ExpressionReference)
+                expressionReference;
         io.substrait.proto.Expression expressionProto =
             et.getExpression().accept(expressionProtoConverter, EmptyVisitationContext.INSTANCE);
         ExpressionReference.Builder expressionReferenceBuilder =
@@ -36,8 +39,10 @@ public class ExtendedExpressionProtoConverter {
         builder.addReferredExpr(expressionReferenceBuilder);
       } else if (expressionReference
           instanceof
-          io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference
-          aft) {
+          io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference) {
+        io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference aft =
+            (io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference)
+                expressionReference;
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setMeasure(

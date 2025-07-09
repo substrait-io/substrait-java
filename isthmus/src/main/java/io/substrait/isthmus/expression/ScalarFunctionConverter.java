@@ -135,7 +135,7 @@ public class ScalarFunctionConverter
         .orElse(Optional.empty());
   }
 
-  protected static class WrappedScalarCall implements GenericCall {
+  protected static class WrappedScalarCall implements FunctionConverter.GenericCall {
 
     private final RexCall delegate;
 

@@ -33,7 +33,7 @@ public abstract class AbstractDdlRel extends ZeroInputRel {
     }
 
     public static DdlObject fromProto(DdlRel.DdlObject proto) {
-      for (var v : values()) {
+      for (DdlObject v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -61,7 +61,7 @@ public abstract class AbstractDdlRel extends ZeroInputRel {
     }
 
     public static DdlOp fromProto(DdlRel.DdlOp proto) {
-      for (var v : values()) {
+      for (DdlOp v : values()) {
         if (v.proto == proto) {
           return v;
         }

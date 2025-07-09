@@ -24,11 +24,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    */
   @Value.Check
   protected void check() {
-    var names = getInitialSchema().names();
+    List<String> names = getInitialSchema().names();
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    var rows = getRows();
+    List<Expression.StructLiteral> rows = getRows();
 
     assert rows.size() > 0
         && names.stream().noneMatch(s -> s == null)

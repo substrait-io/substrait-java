@@ -6,6 +6,7 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
@@ -111,7 +112,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    AggregateRel.Builder builder =
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
@@ -125,11 +126,13 @@ public class RelProtoConverter
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-    var args = measure.getFunction().arguments();
-    var aggFuncDef = measure.getFunction().declaration();
+    FunctionArg.FuncArgVisitor<
+            io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
+        argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
+    List<FunctionArg> args = measure.getFunction().arguments();
+    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
 
-    var func =
+    AggregateFunction.Builder func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation().toProto())
@@ -149,7 +152,7 @@ public class RelProtoConverter
                     .map(ExpressionProtoConverter::from)
                     .collect(Collectors.toList()));
 
-    var builder = AggregateRel.Measure.newBuilder().setMeasure(func);
+    AggregateRel.Measure.Builder builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 
     measure.getPreMeasureFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     return builder.build();
@@ -175,7 +178,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    FetchRel.Builder builder =
         FetchRel.newBuilder()
             .setCommon(common(fetch))
             .setInput(toProto(fetch.getInput()))
@@ -189,7 +192,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Filter filter, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    FilterRel.Builder builder =
         FilterRel.newBuilder()
             .setCommon(common(filter))
             .setInput(toProto(filter.getInput()))
@@ -201,7 +204,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Join join, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    JoinRel.Builder builder =
         JoinRel.newBuilder()
             .setCommon(common(join))
             .setLeft(toProto(join.getLeft()))
@@ -218,7 +221,8 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Set set, EmptyVisitationContext context) throws RuntimeException {
-    var builder = SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
+    SetRel.Builder builder =
+        SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
     set.getInputs()
         .forEach(
             inputRel -> {
@@ -231,7 +235,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedScan namedScan, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(namedScan))
             .setNamedTable(ReadRel.NamedTable.newBuilder().addAllNames(namedScan.getNames()))
@@ -246,7 +250,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(LocalFiles localFiles, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(localFiles))
             .setLocalFiles(
@@ -269,7 +273,7 @@ public class RelProtoConverter
       throws RuntimeException {
     ReadRel.ExtensionTable.Builder extensionTableBuilder =
         ReadRel.ExtensionTable.newBuilder().setDetail(extensionTable.getDetail().toProto(this));
-    var builder =
+    ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(extensionTable))
             .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
@@ -281,7 +285,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    HashJoinRel.Builder builder =
         HashJoinRel.newBuilder()
             .setCommon(common(hashJoin))
             .setLeft(toProto(hashJoin.getLeft()))
@@ -306,7 +310,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    MergeJoinRel.Builder builder =
         MergeJoinRel.newBuilder()
             .setCommon(common(mergeJoin))
             .setLeft(toProto(mergeJoin.getLeft()))
@@ -332,7 +336,7 @@ public class RelProtoConverter
   @Override
   public Rel visit(NestedLoopJoin nestedLoopJoin, EmptyVisitationContext context)
       throws RuntimeException {
-    var builder =
+    NestedLoopJoinRel.Builder builder =
         NestedLoopJoinRel.newBuilder()
             .setCommon(common(nestedLoopJoin))
             .setLeft(toProto(nestedLoopJoin.getLeft()))
@@ -348,7 +352,7 @@ public class RelProtoConverter
   public Rel visit(
       ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
       throws RuntimeException {
-    var builder =
+    ConsistentPartitionWindowRel.Builder builder =
         ConsistentPartitionWindowRel.newBuilder()
             .setCommon(common(consistentPartitionWindow))
             .setInput(toProto(consistentPartitionWindow.getInput()))
@@ -367,7 +371,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedWrite write, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    WriteRel.Builder builder =
         WriteRel.newBuilder()
             .setCommon(common(write))
             .setInput(toProto(write.getInput()))
@@ -382,7 +386,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(ExtensionWrite write, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    WriteRel.Builder builder =
         WriteRel.newBuilder()
             .setCommon(common(write))
             .setInput(toProto(write.getInput()))
@@ -398,7 +402,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    DdlRel.Builder builder =
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
@@ -415,7 +419,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(ExtensionDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    DdlRel.Builder builder =
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
@@ -433,7 +437,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    UpdateRel.Builder builder =
         UpdateRel.newBuilder()
             .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
             .setTableSchema(update.getTableSchema().toProto(typeProtoConverter))
@@ -460,11 +464,13 @@ public class RelProtoConverter
     return windowRelFunctionInvocations.stream()
         .map(
             f -> {
-              var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-              var args = f.arguments();
-              var aggFuncDef = f.declaration();
+              FunctionArg.FuncArgVisitor<
+                      io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
+                  argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
+              List<FunctionArg> args = f.arguments();
+              SimpleExtension.WindowFunctionVariant aggFuncDef = f.declaration();
 
-              var arguments =
+              List<io.substrait.proto.FunctionArgument> arguments =
                   IntStream.range(0, args.size())
                       .mapToObj(
                           i ->
@@ -472,7 +478,7 @@ public class RelProtoConverter
                                   .accept(
                                       aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                       .collect(Collectors.toList());
-              var options =
+              List<io.substrait.proto.FunctionOption> options =
                   f.options().stream()
                       .map(ExpressionProtoConverter::from)
                       .collect(Collectors.toList());
@@ -494,7 +500,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Project project, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    ProjectRel.Builder builder =
         ProjectRel.newBuilder()
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
@@ -506,20 +512,22 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Expand expand, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    ExpandRel.Builder builder =
         ExpandRel.newBuilder().setCommon(common(expand)).setInput(toProto(expand.getInput()));
 
     expand
         .getFields()
         .forEach(
             expandField -> {
-              if (expandField instanceof Expand.ConsistentField cf) {
+              if (expandField instanceof Expand.ConsistentField) {
+                Expand.ConsistentField cf = (Expand.ConsistentField) expandField;
                 builder.addFields(
                     ExpandRel.ExpandField.newBuilder()
                         .setConsistentField(toProto(cf.getExpression()))
                         .build());
 
-              } else if (expandField instanceof Expand.SwitchingField sf) {
+              } else if (expandField instanceof Expand.SwitchingField) {
+                Expand.SwitchingField sf = (Expand.SwitchingField) expandField;
                 builder.addFields(
                     ExpandRel.ExpandField.newBuilder()
                         .setSwitchingField(
@@ -536,7 +544,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Sort sort, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    SortRel.Builder builder =
         SortRel.newBuilder()
             .setCommon(common(sort))
             .setInput(toProto(sort.getInput()))
@@ -548,7 +556,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Cross cross, EmptyVisitationContext context) throws RuntimeException {
-    var builder =
+    CrossRel.Builder builder =
         CrossRel.newBuilder()
             .setCommon(common(cross))
             .setLeft(toProto(cross.getLeft()))
@@ -561,7 +569,7 @@ public class RelProtoConverter
   @Override
   public Rel visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws RuntimeException {
-    var builder =
+    ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(virtualTableScan))
             .setVirtualTable(
@@ -584,7 +592,7 @@ public class RelProtoConverter
   @Override
   public Rel visit(ExtensionLeaf extensionLeaf, EmptyVisitationContext context)
       throws RuntimeException {
-    var builder =
+    ExtensionLeafRel.Builder builder =
         ExtensionLeafRel.newBuilder()
             .setCommon(common(extensionLeaf))
             .setDetail(extensionLeaf.getDetail().toProto(this));
@@ -594,7 +602,7 @@ public class RelProtoConverter
   @Override
   public Rel visit(ExtensionSingle extensionSingle, EmptyVisitationContext context)
       throws RuntimeException {
-    var builder =
+    ExtensionSingleRel.Builder builder =
         ExtensionSingleRel.newBuilder()
             .setCommon(common(extensionSingle))
             .setInput(toProto(extensionSingle.getInput()))
@@ -607,7 +615,7 @@ public class RelProtoConverter
       throws RuntimeException {
     List<Rel> inputs =
         extensionMulti.getInputs().stream().map(this::toProto).collect(Collectors.toList());
-    var builder =
+    ExtensionMultiRel.Builder builder =
         ExtensionMultiRel.newBuilder()
             .setCommon(common(extensionMulti))
             .addAllInputs(inputs)
@@ -616,11 +624,11 @@ public class RelProtoConverter
   }
 
   private RelCommon common(io.substrait.relation.Rel rel) {
-    var builder = RelCommon.newBuilder();
+    RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getCommonExtension()
         .ifPresent(extension -> builder.setAdvancedExtension(extension.toProto(this)));
 
-    var remap = rel.getRemap().orElse(null);
+    io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
     if (remap != null) {
       builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(remap.indices()));
     } else {

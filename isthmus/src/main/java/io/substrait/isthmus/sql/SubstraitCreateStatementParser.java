@@ -67,9 +67,11 @@ public class SubstraitCreateStatementParser {
 
     SqlNodeList sqlNode = parser.parseStmtList();
     for (SqlNode parsed : sqlNode) {
-      if (!(parsed instanceof SqlCreateTable create)) {
+      if (!(parsed instanceof SqlCreateTable)) {
         throw fail("Not a valid CREATE TABLE statement.");
       }
+
+      SqlCreateTable create = (SqlCreateTable) parsed;
 
       if (create.name.names.size() > 1) {
         throw fail("Only simple table names are allowed.", create.name.getParserPosition());
@@ -83,7 +85,7 @@ public class SubstraitCreateStatementParser {
       List<RelDataType> columnTypes = new ArrayList<>();
 
       for (SqlNode node : create.columnList) {
-        if (!(node instanceof SqlColumnDeclaration col)) {
+        if (!(node instanceof SqlColumnDeclaration)) {
           if (node instanceof SqlKeyConstraint) {
             // key constraints declarations, like primary key declaration, are valid and should not
             // result in parse exceptions. Ignore the constraint declaration.
@@ -92,6 +94,8 @@ public class SubstraitCreateStatementParser {
 
           throw fail("Unexpected column list construction.", node.getParserPosition());
         }
+
+        SqlColumnDeclaration col = (SqlColumnDeclaration) node;
 
         if (col.name.names.size() != 1) {
           throw fail("Expected simple column names.", col.name.getParserPosition());

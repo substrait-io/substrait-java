@@ -91,9 +91,12 @@ public class PreCalciteAggregateValidator {
   }
 
   private static boolean isSimpleFieldReference(FunctionArg e) {
-    return e instanceof FieldReference fr
-        && fr.segments().size() == 1
-        && fr.segments().get(0) instanceof FieldReference.StructField;
+    if (!(e instanceof FieldReference)) {
+      return false;
+    }
+
+    List<FieldReference.ReferenceSegment> segments = ((FieldReference) e).segments();
+    return segments.size() == 1 && segments.get(0) instanceof FieldReference.StructField;
   }
 
   private static int getFieldRefOffset(FieldReference fr) {
@@ -194,8 +197,8 @@ public class PreCalciteAggregateValidator {
     }
 
     private Expression projectOutNonFieldReference(FunctionArg farg) {
-      if ((farg instanceof Expression e)) {
-        return projectOutNonFieldReference(e);
+      if ((farg instanceof Expression)) {
+        return projectOutNonFieldReference((Expression) farg);
       } else {
         throw new IllegalArgumentException("cannot handle non-expression argument for aggregate");
       }

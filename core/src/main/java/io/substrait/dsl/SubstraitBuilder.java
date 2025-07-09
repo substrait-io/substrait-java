@@ -1,6 +1,5 @@
 package io.substrait.dsl;
 
-import com.github.bsideup.jabel.Desugar;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.Cast;
@@ -87,8 +86,8 @@ public class SubstraitBuilder {
       Function<Rel, List<Aggregate.Measure>> measuresFn,
       Optional<Rel.Remap> remap,
       Rel input) {
-    var groupings = groupingsFn.apply(input);
-    var measures = measuresFn.apply(input);
+    List<Aggregate.Grouping> groupings = groupingsFn.apply(input);
+    List<Aggregate.Measure> measures = measuresFn.apply(input);
     return Aggregate.builder()
         .groupings(groupings)
         .measures(measures)
@@ -147,12 +146,27 @@ public class SubstraitBuilder {
 
   private Filter filter(
       Function<Rel, Expression> conditionFn, Optional<Rel.Remap> remap, Rel input) {
-    var condition = conditionFn.apply(input);
+    Expression condition = conditionFn.apply(input);
     return Filter.builder().input(input).condition(condition).remap(remap).build();
   }
 
-  @Desugar
-  public record JoinInput(Rel left, Rel right) {}
+  public static final class JoinInput {
+    private final Rel left;
+    private final Rel right;
+
+    JoinInput(Rel left, Rel right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    public Rel left() {
+      return left;
+    }
+
+    public Rel right() {
+      return right;
+    }
+  }
 
   public Join innerJoin(Function<JoinInput, Expression> conditionFn, Rel left, Rel right) {
     return join(conditionFn, Join.JoinType.INNER, left, right);
@@ -183,7 +197,7 @@ public class SubstraitBuilder {
       Optional<Rel.Remap> remap,
       Rel left,
       Rel right) {
-    var condition = conditionFn.apply(new JoinInput(left, right));
+    Expression condition = conditionFn.apply(new JoinInput(left, right));
     return Join.builder()
         .left(left)
         .right(right)
@@ -263,7 +277,7 @@ public class SubstraitBuilder {
       Optional<Rel.Remap> remap,
       Rel left,
       Rel right) {
-    var condition = conditionFn.apply(new JoinInput(left, right));
+    Expression condition = conditionFn.apply(new JoinInput(left, right));
     return NestedLoopJoin.builder()
         .left(left)
         .right(right)
@@ -291,8 +305,8 @@ public class SubstraitBuilder {
       Iterable<String> columnNames,
       Iterable<Type> types,
       Optional<Rel.Remap> remap) {
-    var struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
-    var namedStruct = NamedStruct.of(columnNames, struct);
+    Type.Struct struct = Type.Struct.builder().addAllFields(types).nullable(false).build();
+    NamedStruct namedStruct = NamedStruct.of(columnNames, struct);
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
@@ -315,7 +329,7 @@ public class SubstraitBuilder {
       Function<Rel, Iterable<? extends Expression>> expressionsFn,
       Optional<Rel.Remap> remap,
       Rel input) {
-    var expressions = expressionsFn.apply(input);
+    Iterable<? extends Expression> expressions = expressionsFn.apply(input);
     return Project.builder().input(input).expressions(expressions).remap(remap).build();
   }
 
@@ -332,7 +346,7 @@ public class SubstraitBuilder {
       Function<Rel, Iterable<? extends Expand.ExpandField>> fieldsFn,
       Optional<Rel.Remap> remap,
       Rel input) {
-    var fields = fieldsFn.apply(input);
+    Iterable<? extends Expand.ExpandField> fields = fieldsFn.apply(input);
     return Expand.builder().input(input).fields(fields).remap(remap).build();
   }
 
@@ -363,7 +377,7 @@ public class SubstraitBuilder {
       Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
       Optional<Rel.Remap> remap,
       Rel input) {
-    var condition = sortFieldFn.apply(input);
+    Iterable<? extends Expression.SortField> condition = sortFieldFn.apply(input);
     return Sort.builder().input(input).sortFields(condition).remap(remap).build();
   }
 
@@ -465,7 +479,7 @@ public class SubstraitBuilder {
 
   public AggregateFunctionInvocation aggregateFn(
       String namespace, String key, Type outputType, Expression... args) {
-    var declaration =
+    SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
     return AggregateFunctionInvocation.builder()
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
@@ -477,7 +491,7 @@ public class SubstraitBuilder {
   }
 
   public Aggregate.Grouping grouping(Rel input, int... indexes) {
-    var columns = fieldReferences(input, indexes);
+    List<FieldReference> columns = fieldReferences(input, indexes);
     return Aggregate.Grouping.builder().addAllExpressions(columns).build();
   }
 
@@ -486,7 +500,7 @@ public class SubstraitBuilder {
   }
 
   public Aggregate.Measure count(Rel input, int field) {
-    var declaration =
+    SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any"));
@@ -563,7 +577,7 @@ public class SubstraitBuilder {
   private Aggregate.Measure singleArgumentArithmeticAggregate(
       Expression expr, String functionName, Type outputType) {
     String typeString = ToTypeString.apply(expr.getType());
-    var declaration =
+    SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
@@ -585,7 +599,7 @@ public class SubstraitBuilder {
 
   public Expression.ScalarFunctionInvocation negate(Expression expr) {
     // output type of negate is the same as the input type
-    var outputType = expr.getType();
+    Type outputType = expr.getType();
     return scalarFn(
         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
         String.format("negate:%s", ToTypeString.apply(outputType)),
@@ -611,12 +625,12 @@ public class SubstraitBuilder {
 
   private Expression.ScalarFunctionInvocation arithmeticFunction(
       String fname, Expression left, Expression right) {
-    var leftTypeStr = ToTypeString.apply(left.getType());
-    var rightTypeStr = ToTypeString.apply(right.getType());
-    var key = String.format("%s:%s_%s", fname, leftTypeStr, rightTypeStr);
+    String leftTypeStr = ToTypeString.apply(left.getType());
+    String rightTypeStr = ToTypeString.apply(right.getType());
+    String key = String.format("%s:%s_%s", fname, leftTypeStr, rightTypeStr);
 
-    var isOutputNullable = left.getType().nullable() || right.getType().nullable();
-    var outputType = left.getType();
+    boolean isOutputNullable = left.getType().nullable() || right.getType().nullable();
+    Type outputType = left.getType();
     outputType =
         isOutputNullable
             ? TypeCreator.asNullable(outputType)
@@ -633,14 +647,14 @@ public class SubstraitBuilder {
   public Expression.ScalarFunctionInvocation or(Expression... args) {
     // If any arg is nullable, the output of or is potentially nullable
     // For example: false or null = null
-    var isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
-    var outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
+    boolean isOutputNullable = Arrays.stream(args).anyMatch(a -> a.getType().nullable());
+    Type outputType = isOutputNullable ? N.BOOLEAN : R.BOOLEAN;
     return scalarFn(DefaultExtensionCatalog.FUNCTIONS_BOOLEAN, "or:bool", outputType, args);
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
       String namespace, String key, Type outputType, FunctionArg... args) {
-    var declaration =
+    SimpleExtension.ScalarFunctionVariant declaration =
         extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
@@ -659,7 +673,7 @@ public class SubstraitBuilder {
       WindowBound lowerBound,
       WindowBound upperBound,
       Expression... args) {
-    var declaration =
+    SimpleExtension.WindowFunctionVariant declaration =
         extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
     return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)

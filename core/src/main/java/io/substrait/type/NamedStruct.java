@@ -20,7 +20,7 @@ public interface NamedStruct {
   }
 
   default io.substrait.proto.NamedStruct toProto(TypeProtoConverter typeProtoConverter) {
-    var type = struct().accept(typeProtoConverter);
+    io.substrait.proto.Type type = struct().accept(typeProtoConverter);
     return io.substrait.proto.NamedStruct.newBuilder()
         .setStruct(type.getStruct())
         .addAllNames(names())
@@ -29,7 +29,7 @@ public interface NamedStruct {
 
   static io.substrait.type.NamedStruct fromProto(
       io.substrait.proto.NamedStruct namedStruct, ProtoTypeConverter protoTypeConverter) {
-    var struct = namedStruct.getStruct();
+    io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
         .names(namedStruct.getNamesList())
         .struct(

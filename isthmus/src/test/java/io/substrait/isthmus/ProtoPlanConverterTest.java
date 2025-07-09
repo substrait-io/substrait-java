@@ -76,34 +76,28 @@ public class ProtoPlanConverterTest extends PlanTestBase {
         };
     var featureBoard = ImmutableFeatureBoard.builder().build();
 
-    Plan plan1 =
-        assertProtoPlanRoundrip(
-            """
-            select
-              c.c_custKey,
-              o.o_custkey
-            from
-              "customer" c cross join
-              "orders" o
-            """,
-            new SqlToSubstrait(featureBoard));
+    String query1 =
+        "select\n"
+            + "  c.c_custKey,\n"
+            + "  o.o_custkey\n"
+            + "from\n"
+            + "  \"customer\" c cross join\n"
+            + "  \"orders\" o";
+    Plan plan1 = assertProtoPlanRoundrip(query1, new SqlToSubstrait(featureBoard));
     plan1
         .getRoots()
         .forEach(
             t -> t.getInput().accept(crossJoinCountingVisitor, EmptyVisitationContext.INSTANCE));
     assertEquals(1, counter[0]);
 
-    Plan plan2 =
-        assertProtoPlanRoundrip(
-            """
-            select
-              c.c_custKey,
-              o.o_custkey
-            from
-              "customer" c,
-              "orders" o
-            """,
-            new SqlToSubstrait(featureBoard));
+    String query2 =
+        "select\n"
+            + "  c.c_custKey,\n"
+            + "  o.o_custkey\n"
+            + "from\n"
+            + "  \"customer\" c,\n"
+            + "  \"orders\" o";
+    Plan plan2 = assertProtoPlanRoundrip(query2, new SqlToSubstrait(featureBoard));
     plan2
         .getRoots()
         .forEach(
