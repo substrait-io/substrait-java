@@ -2,6 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
   `maven-publish`
+  signing
   id("java-library")
   id("idea")
   id("com.diffplug.spotless") version "6.19.0"
@@ -57,32 +58,38 @@ publishing {
   }
 }
 
+signing {
+  setRequired({
+    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToStagingRepository")
+  })
+  val signingKeyId =
+    System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY_ID"].toString()
+  val signingPassword =
+    System.getenv("SIGNING_PASSWORD").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_PASSWORD"].toString()
+  val signingKey =
+    System.getenv("SIGNING_KEY").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY"].toString()
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign(publishing.publications["maven-publish"])
+}
+
 jreleaser {
   gitRootSearch = true
-  signing {
-    active = org.jreleaser.model.Active.ALWAYS
-    armored = true
-    verify = false
-  }
   deploy {
     maven {
       mavenCentral {
         register("sonatype") {
           active = org.jreleaser.model.Active.ALWAYS
           url = "https://central.sonatype.com/api/v1/publisher"
+          sign = false
           stagingRepository(file(stagingRepositoryUrl).toString())
-          retryDelay = 60
         }
       }
     }
   }
-  release {
-    github {
-      skipRelease = true
-      skipTag = true
-      token = "EMPTY"
-    }
-  }
+  release { github { enabled = false } }
 }
 
 java {
