@@ -12,7 +12,6 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.relation.Set;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Optional;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -21,15 +20,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class ProtoPlanConverterTest extends PlanTestBase {
 
-  private io.substrait.proto.Plan getProtoPlan(String query1)
-      throws IOException, SqlParseException {
+  private io.substrait.proto.Plan getProtoPlan(String query1) throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    String[] values = asString("tpch/schema.sql").split(";");
-    var creates =
-        Arrays.stream(values)
-            .filter(t -> !t.trim().isBlank())
-            .collect(java.util.stream.Collectors.toList());
-    return s.execute(query1, creates);
+    return s.execute(query1, TPCH_CATALOG);
   }
 
   @Test

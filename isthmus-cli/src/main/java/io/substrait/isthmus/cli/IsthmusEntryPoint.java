@@ -13,12 +13,14 @@ import io.substrait.isthmus.FeatureBoard;
 import io.substrait.isthmus.ImmutableFeatureBoard;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.isthmus.SqlToSubstrait;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.prepare.Prepare;
 import picocli.CommandLine;
 
 @Command(
@@ -40,7 +42,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"-c", "--create"},
       description =
           "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
-  private List<String> createStatements;
+  private List<String> createStatements = List.of();
 
   @Option(
       names = {"--outputformat"},
@@ -90,7 +92,10 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-      Plan plan = converter.execute(sql, createStatements);
+      Prepare.CatalogReader catalog =
+          SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+              createStatements.toArray(String[]::new));
+      Plan plan = converter.execute(sql, catalog);
       printMessage(plan);
     }
     return 0;

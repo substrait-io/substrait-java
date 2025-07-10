@@ -3,16 +3,20 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import java.util.List;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.junit.jupiter.api.Test;
 
 public class NameRoundtripTest extends PlanTestBase {
 
   @Test
   void preserveNamesFromSql() throws Exception {
-    List<String> creates = List.of("CREATE TABLE foo(a BIGINT, b BIGINT)");
+    String createStatement = "CREATE TABLE foo(a BIGINT, b BIGINT)";
+    CalciteCatalogReader catalogReader =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatement);
 
     SqlToSubstrait s = new SqlToSubstrait();
     var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
@@ -22,7 +26,7 @@ public class NameRoundtripTest extends PlanTestBase {
       """;
     List<String> expectedNames = List.of("a", "B");
 
-    List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, creates);
+    List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, catalogReader);
     assertEquals(1, calciteRelRoots.size());
 
     org.apache.calcite.rel.RelRoot calciteRelRoot1 = calciteRelRoots.get(0);

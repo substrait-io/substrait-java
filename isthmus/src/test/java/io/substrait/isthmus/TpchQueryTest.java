@@ -4,10 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import io.substrait.proto.Plan;
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
-import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -37,8 +35,6 @@ public class TpchQueryTest extends PlanTestBase {
   }
 
   private Plan toSubstraitPlan(String sql) throws SqlParseException {
-    List<String> createStatements = tpchSchemaCreateStatements();
-    CalciteCatalogReader catalog = new SqlToSubstrait().registerCreateTables(createStatements);
-    return toSubstraitPlan(sql, catalog);
+    return toSubstraitPlan(sql, TPCH_CATALOG);
   }
 }

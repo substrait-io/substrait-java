@@ -25,7 +25,7 @@ public class OptimizerIntegrationTest extends PlanTestBase {
     assertFullRoundTrip(query);
 
     SqlToSubstrait sqlConverter = new SqlToSubstrait();
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(query, tpchSchemaCreateStatements());
+    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(query, TPCH_CATALOG);
     assertEquals(1, relRoots.size());
     RelRoot planRoot = relRoots.get(0);
     RelNode originalPlan = planRoot.rel;

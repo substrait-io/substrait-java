@@ -1,28 +1,17 @@
 package io.substrait.isthmus;
 
 import java.util.Map;
-import org.apache.calcite.adapter.tpcds.TpcdsSchema;
-import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ApplyJoinPlanTest {
+public class ApplyJoinPlanTest extends PlanTestBase {
 
-  private static RelRoot getCalcitePlan(SqlToSubstrait s, TpcdsSchema schema, String sql)
-      throws SqlParseException {
-    CalciteCatalogReader catalogReader = s.registerSchema("tpcds", schema);
-    SqlConverterBase.Validator validator =
-        SqlConverterBase.Validator.create(
-            catalogReader.getTypeFactory(), catalogReader, SqlValidator.Config.DEFAULT);
-    SqlToRelConverter converter = s.createSqlToRelConverter(validator, catalogReader);
-    SqlParser parser = SqlParser.create(sql, s.parserConfig);
-    return s.getBestExpRelRoot(converter, parser.parseQuery());
+  private static RelRoot getCalcitePlan(String sql) throws SqlParseException {
+    SqlToSubstrait s = new SqlToSubstrait();
+    return s.sqlToRelNode(sql, TPCDS_CATALOG).get(0);
   }
 
   private static void validateOuterRef(
@@ -46,7 +35,6 @@ public class ApplyJoinPlanTest {
 
   @Test
   public void lateralJoinQuery() throws SqlParseException {
-    TpcdsSchema schema = new TpcdsSchema(1.0);
     String sql;
     sql =
         """
@@ -64,7 +52,7 @@ public class ApplyJoinPlanTest {
     */
 
     // validate outer reference map
-    RelRoot root = getCalcitePlan(new SqlToSubstrait(), schema, sql);
+    RelRoot root = getCalcitePlan(sql);
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
     validateOuterRef(fieldAccessDepthMap, "$cor0", "SS_ITEM_SK", 1);
@@ -73,23 +61,21 @@ public class ApplyJoinPlanTest {
     var sE2E = new SqlToSubstrait();
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> sE2E.execute(sql, "tpcds", schema),
+        () -> sE2E.execute(sql, TPCDS_CATALOG),
         "Lateral join is not supported");
   }
 
   @Test
   public void outerApplyQuery() throws SqlParseException {
-    TpcdsSchema schema = new TpcdsSchema(1.0);
     String sql;
     sql =
         """
-            SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
-            FROM store_sales OUTER APPLY
-              (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)""";
+       SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk
+        FROM store_sales OUTER APPLY
+          (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)
+       """;
 
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
-    SqlToSubstrait s = new SqlToSubstrait(featureBoard);
-    RelRoot root = getCalcitePlan(s, schema, sql);
+    RelRoot root = getCalcitePlan(sql);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
@@ -98,13 +84,12 @@ public class ApplyJoinPlanTest {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, "tpcds", schema),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
   @Test
   public void nestedApplyJoinQuery() throws SqlParseException {
-    TpcdsSchema schema = new TpcdsSchema(1.0);
     String sql;
     sql =
         """
@@ -131,7 +116,7 @@ public class ApplyJoinPlanTest {
      */
     FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
     SqlToSubstrait s = new SqlToSubstrait(featureBoard);
-    RelRoot root = getCalcitePlan(s, schema, sql);
+    RelRoot root = getCalcitePlan(sql);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(3, fieldAccessDepthMap.size());
@@ -142,13 +127,12 @@ public class ApplyJoinPlanTest {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, "tpcds", schema),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
   @Test
   public void crossApplyQuery() throws SqlParseException {
-    TpcdsSchema schema = new TpcdsSchema(1.0);
     String sql;
     sql =
         """
@@ -162,7 +146,7 @@ public class ApplyJoinPlanTest {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> s.execute(sql, "tpcds", schema),
+        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 }
