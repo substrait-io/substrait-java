@@ -53,7 +53,7 @@ public class PlanTestBase {
     return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
   }
 
-  protected static CalciteCatalogReader TPCH_CATALOG;
+  protected static final CalciteCatalogReader TPCH_CATALOG;
 
   static {
     try {

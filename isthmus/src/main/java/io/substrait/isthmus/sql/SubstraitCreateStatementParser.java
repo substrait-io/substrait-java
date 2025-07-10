@@ -25,7 +25,7 @@ import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 
-/** Utility class for parsing CREATE statements into a {@link CalciteSchema} */
+/** Utility class for parsing CREATE statements into a {@link CalciteCatalogReader} */
 public class SubstraitCreateStatementParser {
 
   private static final RelDataTypeFactory TYPE_FACTORY =
@@ -54,6 +54,8 @@ public class SubstraitCreateStatementParser {
           EMPTY_CATALOG);
 
   /**
+   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s
+   *
    * @param createStatements a SQL string containing only CREATE statements
    * @return a list of {@link SubstraitTable}s generated from the CREATE statements
    * @throws SqlParseException
@@ -108,6 +110,8 @@ public class SubstraitCreateStatementParser {
   }
 
   /**
+   * Parses a SQL string containing only CREATE statements into a {@link CalciteCatalogReader}
+   *
    * @param createStatements a SQL string containing only CREATE statements
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
    * @throws SqlParseException
