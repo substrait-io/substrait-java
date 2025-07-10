@@ -14,9 +14,9 @@ public class NameRoundtripTest extends PlanTestBase {
 
   @Test
   void preserveNamesFromSql() throws Exception {
-    List<String> createStatements = List.of("CREATE TABLE foo(a BIGINT, b BIGINT)");
+    String createStatement = "CREATE TABLE foo(a BIGINT, b BIGINT)";
     CalciteCatalogReader catalogReader =
-        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatement);
 
     SqlToSubstrait s = new SqlToSubstrait();
     var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);

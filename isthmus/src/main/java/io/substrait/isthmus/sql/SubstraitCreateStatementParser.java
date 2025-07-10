@@ -110,13 +110,14 @@ public class SubstraitCreateStatementParser {
   }
 
   /**
-   * Parses a SQL string containing only CREATE statements into a {@link CalciteCatalogReader}
+   * Parses one or more SQL strings containing only CREATE statements into a {@link
+   * CalciteCatalogReader}
    *
    * @param createStatements a SQL string containing only CREATE statements
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
    * @throws SqlParseException
    */
-  public static CalciteCatalogReader processCreateStatementsToCatalog(List<String> createStatements)
+  public static CalciteCatalogReader processCreateStatementsToCatalog(String... createStatements)
       throws SqlParseException {
     List<SubstraitTable> tables = new ArrayList<>();
     for (String statement : createStatements) {

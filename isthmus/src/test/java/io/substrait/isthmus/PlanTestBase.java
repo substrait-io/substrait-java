@@ -57,7 +57,7 @@ public class PlanTestBase {
 
   static {
     try {
-      List<String> tpchCreateStatements = List.of(asString("tpch/schema.sql").split(";"));
+      String tpchCreateStatements = asString("tpch/schema.sql");
       TPCH_CATALOG =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(tpchCreateStatements);
     } catch (IOException | SqlParseException e) {
@@ -77,8 +77,8 @@ public class PlanTestBase {
     return assertProtoPlanRoundrip(query, s, TPCH_CATALOG);
   }
 
-  protected Plan assertProtoPlanRoundrip(
-      String query, SqlToSubstrait s, List<String> createStatements) throws SqlParseException {
+  protected Plan assertProtoPlanRoundrip(String query, SqlToSubstrait s, String createStatements)
+      throws SqlParseException {
     Prepare.CatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
     return assertProtoPlanRoundrip(query, s, catalog);
@@ -112,7 +112,7 @@ public class PlanTestBase {
     return assertSqlSubstraitRelRoundTrip(query, TPCH_CATALOG);
   }
 
-  protected RelRoot assertSqlSubstraitRelRoundTrip(String query, List<String> createStatements)
+  protected RelRoot assertSqlSubstraitRelRoundTrip(String query, String createStatements)
       throws Exception {
     CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
@@ -153,7 +153,7 @@ public class PlanTestBase {
   }
 
   @Beta
-  protected void assertFullRoundTrip(String query, List<String> createStatements)
+  protected void assertFullRoundTrip(String query, String createStatements)
       throws SqlParseException {
     CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);

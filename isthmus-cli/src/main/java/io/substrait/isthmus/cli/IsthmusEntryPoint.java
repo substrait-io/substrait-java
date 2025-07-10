@@ -93,7 +93,8 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     } else { // by default Isthmus image are parsing SQL Query
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
       Prepare.CatalogReader catalog =
-          SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
+          SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+              createStatements.toArray(String[]::new));
       Plan plan = converter.execute(sql, catalog);
       printMessage(plan);
     }
