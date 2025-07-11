@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import io.substrait.proto.Plan;
 import java.io.IOException;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,8 +11,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-H test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpchQueryTest extends PlanTestBase {
-  private static final Set<Integer> fromSubstraitExclusions = Set.of(17);
-
   static IntStream testCases() {
     return IntStream.rangeClosed(1, 22);
   }
@@ -29,9 +26,7 @@ public class TpchQueryTest extends PlanTestBase {
 
     Plan plan = assertDoesNotThrow(() -> toSubstraitPlan(inputSql), "SQL to Substrait");
 
-    if (!fromSubstraitExclusions.contains(query)) {
-      assertDoesNotThrow(() -> toSql(plan), "Substrait to SQL");
-    }
+    assertDoesNotThrow(() -> toSql(plan), "Substrait to SQL");
   }
 
   private Plan toSubstraitPlan(String sql) throws SqlParseException {
