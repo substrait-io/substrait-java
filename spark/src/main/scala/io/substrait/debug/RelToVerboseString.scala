@@ -42,7 +42,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
   }
 
   def apply(rel: Rel, maxFields: Int): String = {
-    rel.accept(this, null)
+    rel.accept(this, EmptyVisitationContext.INSTANCE)
   }
 
   override def visit(fetch: Fetch, context: EmptyVisitationContext): String = {

@@ -156,7 +156,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   private static class HasTableReference {
     public boolean hasTableReference(Plan plan, String name) {
       HasTableReferenceVisitor visitor = new HasTableReferenceVisitor(Arrays.asList(name));
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
+      plan.getRoots().stream()
+          .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return (visitor.hasTableReference());
     }
 
@@ -190,7 +191,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
     public int getCountDistincts(Plan plan) {
       CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
+      plan.getRoots().stream()
+          .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return visitor.getCountDistincts();
     }
 
@@ -221,7 +223,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
     public int getApproxCountDistincts(Plan plan) {
       CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
-      plan.getRoots().stream().forEach(r -> r.getInput().accept(visitor, null));
+      plan.getRoots().stream()
+          .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return visitor.getApproxCountDistincts();
     }
 

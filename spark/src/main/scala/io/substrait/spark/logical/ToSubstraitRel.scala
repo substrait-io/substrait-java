@@ -43,6 +43,7 @@ import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, FileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
+import io.substrait.util.EmptyVisitationContext
 import io.substrait.utils.Util
 
 import java.util
@@ -575,7 +576,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         proto.PlanRel
           .newBuilder()
           .setRel(substraitRel
-            .accept(relProtoConverter, null))
+            .accept(relProtoConverter, EmptyVisitationContext.INSTANCE))
       )
     extensionCollector.addExtensionsToPlan(builder)
     builder.build().toByteArray

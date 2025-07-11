@@ -77,7 +77,7 @@ public class RelProtoConverter
   }
 
   public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
-    return rel.accept(this, null);
+    return rel.accept(this, EmptyVisitationContext.INSTANCE);
   }
 
   protected io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
@@ -136,7 +136,10 @@ public class RelProtoConverter
             .setOutputType(toProto(measure.getFunction().getType()))
             .addAllArguments(
                 IntStream.range(0, args.size())
-                    .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor, null))
+                    .mapToObj(
+                        i ->
+                            args.get(i)
+                                .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                     .collect(Collectors.toList()))
             .addAllSorts(toProtoS(measure.getFunction().sort()))
             .setFunctionReference(
@@ -463,7 +466,11 @@ public class RelProtoConverter
 
               var arguments =
                   IntStream.range(0, args.size())
-                      .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor, null))
+                      .mapToObj(
+                          i ->
+                              args.get(i)
+                                  .accept(
+                                      aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                       .collect(Collectors.toList());
               var options =
                   f.options().stream()

@@ -47,7 +47,7 @@ public class ExpressionProtoConverter
   }
 
   public io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
-    return expression.accept(this, null);
+    return expression.accept(this, EmptyVisitationContext.INSTANCE);
   }
 
   public List<io.substrait.proto.Expression> toProto(

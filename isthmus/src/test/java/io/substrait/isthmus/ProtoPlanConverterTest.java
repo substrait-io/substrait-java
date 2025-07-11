@@ -87,7 +87,10 @@ public class ProtoPlanConverterTest extends PlanTestBase {
               "orders" o
             """,
             new SqlToSubstrait(featureBoard));
-    plan1.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor, null));
+    plan1
+        .getRoots()
+        .forEach(
+            t -> t.getInput().accept(crossJoinCountingVisitor, EmptyVisitationContext.INSTANCE));
     assertEquals(1, counter[0]);
 
     Plan plan2 =
@@ -101,7 +104,10 @@ public class ProtoPlanConverterTest extends PlanTestBase {
               "orders" o
             """,
             new SqlToSubstrait(featureBoard));
-    plan2.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor, null));
+    plan2
+        .getRoots()
+        .forEach(
+            t -> t.getInput().accept(crossJoinCountingVisitor, EmptyVisitationContext.INSTANCE));
     assertEquals(2, counter[0]);
   }
 

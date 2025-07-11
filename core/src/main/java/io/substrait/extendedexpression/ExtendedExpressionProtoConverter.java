@@ -6,6 +6,7 @@ import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.relation.AggregateFunctionProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
+import io.substrait.util.EmptyVisitationContext;
 
 /**
  * Converts from {@link io.substrait.extendedexpression.ExtendedExpression} to {@link
@@ -27,7 +28,7 @@ public class ExtendedExpressionProtoConverter {
       if (expressionReference
           instanceof io.substrait.extendedexpression.ExtendedExpression.ExpressionReference et) {
         io.substrait.proto.Expression expressionProto =
-            et.getExpression().accept(expressionProtoConverter, null);
+            et.getExpression().accept(expressionProtoConverter, EmptyVisitationContext.INSTANCE);
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setExpression(expressionProto)

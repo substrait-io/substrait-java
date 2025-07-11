@@ -10,6 +10,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.util.EmptyVisitationContext;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +27,7 @@ public class IfThenRoundtripTest extends TestBase {
 
     var to = new ExpressionProtoConverter(null, null);
     var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
-    assertEquals(ifRel, from.from(ifRel.accept(to, null)));
+    assertEquals(ifRel, from.from(ifRel.accept(to, EmptyVisitationContext.INSTANCE)));
   }
 
   @Test
@@ -40,6 +41,6 @@ public class IfThenRoundtripTest extends TestBase {
 
     var to = new ExpressionProtoConverter(null, null);
     var from = new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
-    assertEquals(ifRel, from.from(ifRel.accept(to, null)));
+    assertEquals(ifRel, from.from(ifRel.accept(to, EmptyVisitationContext.INSTANCE)));
   }
 }
