@@ -3,6 +3,7 @@ package io.substrait.expression;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeVisitor;
+import io.substrait.util.VisitationContext;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +29,10 @@ public abstract class FieldReference implements Expression {
     return ImmutableFieldReference.builder();
   }
 
-  public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-    return visitor.visit(this);
+  @Override
+  public <R, C extends VisitationContext, E extends Throwable> R accept(
+      ExpressionVisitor<R, C, E> visitor, C context) throws E {
+    return visitor.visit(this, context);
   }
 
   public boolean isSimpleRootReference() {

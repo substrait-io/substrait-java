@@ -6,6 +6,7 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.type.NamedStruct;
+import io.substrait.util.EmptyVisitationContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,13 +79,13 @@ public class SchemaCollector {
      */
     public static Map<List<String>, NamedStruct> gatherTables(Rel rootRel) {
       var visitor = new TableGatherer();
-      rootRel.accept(visitor);
+      rootRel.accept(visitor, null);
       return visitor.tableMap;
     }
 
     @Override
-    public Optional<Rel> visit(NamedScan namedScan) {
-      super.visit(namedScan);
+    public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
+      super.visit(namedScan, context);
 
       List<String> tableName = namedScan.getNames();
       if (tableMap.containsKey(tableName)) {

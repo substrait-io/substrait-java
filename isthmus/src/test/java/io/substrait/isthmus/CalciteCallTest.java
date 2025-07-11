@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -106,7 +107,7 @@ public class CalciteCallTest extends CalciteObjs {
     consumer.accept(func);
 
     if (bidirectional) {
-      RexNode convertedCall = expression.accept(expressionRexConverter);
+      RexNode convertedCall = expression.accept(expressionRexConverter, Context.newContext());
       assertEquals(call, convertedCall);
     }
   }

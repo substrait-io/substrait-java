@@ -3,138 +3,139 @@ package io.substrait.relation;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.util.VisitationContext;
 
-public abstract class AbstractRelVisitor<OUTPUT, EXCEPTION extends Exception>
-    implements RelVisitor<OUTPUT, EXCEPTION> {
-  public abstract OUTPUT visitFallback(Rel rel);
+public abstract class AbstractRelVisitor<O, C extends VisitationContext, E extends Exception>
+    implements RelVisitor<O, C, E> {
+  public abstract O visitFallback(Rel rel, C context);
 
   @Override
-  public OUTPUT visit(Aggregate aggregate) throws EXCEPTION {
-    return visitFallback(aggregate);
+  public O visit(Aggregate aggregate, C context) throws E {
+    return visitFallback(aggregate, context);
   }
 
   @Override
-  public OUTPUT visit(EmptyScan emptyScan) throws EXCEPTION {
-    return visitFallback(emptyScan);
+  public O visit(EmptyScan emptyScan, C context) throws E {
+    return visitFallback(emptyScan, context);
   }
 
   @Override
-  public OUTPUT visit(Fetch fetch) throws EXCEPTION {
-    return visitFallback(fetch);
+  public O visit(Fetch fetch, C context) throws E {
+    return visitFallback(fetch, context);
   }
 
   @Override
-  public OUTPUT visit(Filter filter) throws EXCEPTION {
-    return visitFallback(filter);
+  public O visit(Filter filter, C context) throws E {
+    return visitFallback(filter, context);
   }
 
   @Override
-  public OUTPUT visit(Join join) throws EXCEPTION {
-    return visitFallback(join);
+  public O visit(Join join, C context) throws E {
+    return visitFallback(join, context);
   }
 
   @Override
-  public OUTPUT visit(Set set) throws EXCEPTION {
-    return visitFallback(set);
+  public O visit(Set set, C context) throws E {
+    return visitFallback(set, context);
   }
 
   @Override
-  public OUTPUT visit(NamedScan namedScan) throws EXCEPTION {
-    return visitFallback(namedScan);
+  public O visit(NamedScan namedScan, C context) throws E {
+    return visitFallback(namedScan, context);
   }
 
   @Override
-  public OUTPUT visit(LocalFiles localFiles) throws EXCEPTION {
-    return visitFallback(localFiles);
+  public O visit(LocalFiles localFiles, C context) throws E {
+    return visitFallback(localFiles, context);
   }
 
   @Override
-  public OUTPUT visit(Project project) throws EXCEPTION {
-    return visitFallback(project);
+  public O visit(Project project, C context) throws E {
+    return visitFallback(project, context);
   }
 
   @Override
-  public OUTPUT visit(Expand expand) throws EXCEPTION {
-    return visitFallback(expand);
+  public O visit(Expand expand, C context) throws E {
+    return visitFallback(expand, context);
   }
 
   @Override
-  public OUTPUT visit(Sort sort) throws EXCEPTION {
-    return visitFallback(sort);
+  public O visit(Sort sort, C context) throws E {
+    return visitFallback(sort, context);
   }
 
   @Override
-  public OUTPUT visit(VirtualTableScan virtualTableScan) throws EXCEPTION {
-    return visitFallback(virtualTableScan);
+  public O visit(Cross cross, C context) throws E {
+    return visitFallback(cross, context);
   }
 
   @Override
-  public OUTPUT visit(Cross cross) throws EXCEPTION {
-    return visitFallback(cross);
+  public O visit(VirtualTableScan virtualTableScan, C context) throws E {
+    return visitFallback(virtualTableScan, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionLeaf extensionLeaf) throws EXCEPTION {
-    return visitFallback(extensionLeaf);
+  public O visit(ExtensionLeaf extensionLeaf, C context) throws E {
+    return visitFallback(extensionLeaf, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionSingle extensionSingle) throws EXCEPTION {
-    return visitFallback(extensionSingle);
+  public O visit(ExtensionSingle extensionSingle, C context) throws E {
+    return visitFallback(extensionSingle, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionMulti extensionMulti) throws EXCEPTION {
-    return visitFallback(extensionMulti);
+  public O visit(ExtensionMulti extensionMulti, C context) throws E {
+    return visitFallback(extensionMulti, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionTable extensionTable) throws EXCEPTION {
-    return visitFallback(extensionTable);
+  public O visit(ExtensionTable extensionTable, C context) throws E {
+    return visitFallback(extensionTable, context);
   }
 
   @Override
-  public OUTPUT visit(HashJoin hashJoin) throws EXCEPTION {
-    return visitFallback(hashJoin);
+  public O visit(HashJoin hashJoin, C context) throws E {
+    return visitFallback(hashJoin, context);
   }
 
   @Override
-  public OUTPUT visit(MergeJoin mergeJoin) throws EXCEPTION {
-    return visitFallback(mergeJoin);
+  public O visit(MergeJoin mergeJoin, C context) throws E {
+    return visitFallback(mergeJoin, context);
   }
 
   @Override
-  public OUTPUT visit(NestedLoopJoin nestedLoopJoin) throws EXCEPTION {
-    return visitFallback(nestedLoopJoin);
+  public O visit(NestedLoopJoin nestedLoopJoin, C context) throws E {
+    return visitFallback(nestedLoopJoin, context);
   }
 
   @Override
-  public OUTPUT visit(ConsistentPartitionWindow consistentPartitionWindow) throws EXCEPTION {
-    return visitFallback(consistentPartitionWindow);
+  public O visit(ConsistentPartitionWindow consistentPartitionWindow, C context) throws E {
+    return visitFallback(consistentPartitionWindow, context);
   }
 
   @Override
-  public OUTPUT visit(NamedWrite write) throws EXCEPTION {
-    return visitFallback(write);
+  public O visit(NamedWrite write, C context) throws E {
+    return visitFallback(write, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionWrite write) throws EXCEPTION {
-    return visitFallback(write);
+  public O visit(ExtensionWrite write, C context) throws E {
+    return visitFallback(write, context);
   }
 
   @Override
-  public OUTPUT visit(NamedDdl ddl) throws EXCEPTION {
-    return visitFallback(ddl);
+  public O visit(NamedDdl ddl, C context) throws E {
+    return visitFallback(ddl, context);
   }
 
   @Override
-  public OUTPUT visit(ExtensionDdl ddl) throws EXCEPTION {
-    return visitFallback(ddl);
+  public O visit(ExtensionDdl ddl, C context) throws E {
+    return visitFallback(ddl, context);
   }
 
   @Override
-  public OUTPUT visit(NamedUpdate update) throws EXCEPTION {
-    return visitFallback(update);
+  public O visit(NamedUpdate update, C context) throws E {
+    return visitFallback(update, context);
   }
 }

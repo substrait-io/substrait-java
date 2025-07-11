@@ -11,6 +11,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.relation.Set;
+import io.substrait.util.EmptyVisitationContext;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -67,9 +68,10 @@ public class ProtoPlanConverterTest extends PlanTestBase {
     int[] counter = new int[1];
     var crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
-          public Optional<Rel> visit(Cross cross) throws RuntimeException {
+          public Optional<Rel> visit(Cross cross, EmptyVisitationContext context)
+              throws RuntimeException {
             counter[0]++;
-            return super.visit(cross);
+            return super.visit(cross, context);
           }
         };
     var featureBoard = ImmutableFeatureBoard.builder().build();
@@ -85,7 +87,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
               "orders" o
             """,
             new SqlToSubstrait(featureBoard));
-    plan1.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor));
+    plan1.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor, null));
     assertEquals(1, counter[0]);
 
     Plan plan2 =
@@ -99,7 +101,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
               "orders" o
             """,
             new SqlToSubstrait(featureBoard));
-    plan2.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor));
+    plan2.getRoots().forEach(t -> t.getInput().accept(crossJoinCountingVisitor, null));
     assertEquals(2, counter[0]);
   }
 

@@ -72,7 +72,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
     // convert substrait back to spark plan
     val toLogicalPlan = new ToLogicalPlan(spark);
-    val sparkPlan2 = substraitRel2.accept(toLogicalPlan)
+    val sparkPlan2 = substraitRel2.accept(toLogicalPlan, null)
     require(sparkPlan2.resolved)
 
     // and back to substrait again

@@ -11,6 +11,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -18,6 +19,7 @@ import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.EmptyVisitationContext;
 import java.io.IOException;
 import java.util.List;
 import org.apache.calcite.rex.RexBuilder;
@@ -71,7 +73,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   @Test
   public void singleOrList() {
     Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
-    RexNode rexNode = singleOrList.accept(converter);
+    RexNode rexNode = singleOrList.accept(converter, Context.newContext());
     Expression substraitExpression =
         rexNode.accept(
             new RexExpressionConverter(
@@ -93,7 +95,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
             b.fieldReference(commonTable, 0),
             List.of(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
             b.i32(3));
-    RexNode rexNode = switchExpression.accept(converter);
+    RexNode rexNode = switchExpression.accept(converter, Context.newContext());
     Expression expression =
         rexNode.accept(
             new RexExpressionConverter(
@@ -131,7 +133,8 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
     // go the extra mile and convert both inputs to protobuf
     // helps verify that the protobuf conversion is not broken
     assertEquals(
-        expected.accept(expressionProtoConverter), actual.accept(expressionProtoConverter));
+        expected.accept(expressionProtoConverter, EmptyVisitationContext.INSTANCE),
+        actual.accept(expressionProtoConverter, EmptyVisitationContext.INSTANCE));
   }
 
   @Test
@@ -147,7 +150,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
             .value(0)
             .precision(precision)
             .build()
-            .accept(converter);
+            .accept(converter, Context.newContext());
     assertInstanceOf(RexLiteral.class, calciteExpr);
   }
 
@@ -164,7 +167,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
             .value(0)
             .precision(precision)
             .build()
-            .accept(converter);
+            .accept(converter, Context.newContext());
     assertInstanceOf(RexLiteral.class, calciteExpr);
   }
 
@@ -231,6 +234,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   void assertThrowsExpressionLiteral(Expression.Literal expr) {
-    assertThrows(UnsupportedOperationException.class, () -> expr.accept(converter));
+    assertThrows(
+        UnsupportedOperationException.class, () -> expr.accept(converter, Context.newContext()));
   }
 }

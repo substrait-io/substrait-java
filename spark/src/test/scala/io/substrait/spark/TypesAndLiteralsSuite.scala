@@ -101,7 +101,7 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     l => {
       test(s"test literal: $l (${l.dataType})") {
         val substraitLiteral = ToSubstraitLiteral.convert(l).get
-        val sparkLiteral = substraitLiteral.accept(toSparkExpression).asInstanceOf[Literal]
+        val sparkLiteral = substraitLiteral.accept(toSparkExpression, null).asInstanceOf[Literal]
 
         println("Before: " + l + " " + l.dataType)
         println("After: " + sparkLiteral + " " + sparkLiteral.dataType)
@@ -118,7 +118,7 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
       MapType(IntegerType, StringType, valueContainsNull = false))
 
     val substraitLiteral = ToSubstraitLiteral.convert(l).get
-    val sparkLiteral = substraitLiteral.accept(toSparkExpression).asInstanceOf[Literal]
+    val sparkLiteral = substraitLiteral.accept(toSparkExpression, null).asInstanceOf[Literal]
 
     println("Before: " + l + " " + l.dataType)
     println("After: " + sparkLiteral + " " + sparkLiteral.dataType)

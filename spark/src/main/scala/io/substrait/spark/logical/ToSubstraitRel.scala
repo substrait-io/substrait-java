@@ -575,7 +575,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         proto.PlanRel
           .newBuilder()
           .setRel(substraitRel
-            .accept(relProtoConverter))
+            .accept(relProtoConverter, null))
       )
     extensionCollector.addExtensionsToPlan(builder)
     builder.build().toByteArray

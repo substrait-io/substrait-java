@@ -1,12 +1,14 @@
 package io.substrait.isthmus;
 
 import static io.substrait.expression.ExpressionCreator.*;
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -183,7 +185,8 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex =
+        (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier (which is used to parse
     // input string).
@@ -231,7 +234,8 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalDayExpr, convertedExpr);
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalDayExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex =
+        (RexLiteral) intervalDayExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -255,7 +259,8 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalYearExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex =
+        (RexLiteral) intervalYearExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -280,7 +285,8 @@ public class CalciteLiteralTest extends CalciteObjs {
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex = (RexLiteral) intervalMonthExpr.accept(expressionRexConverter);
+    RexLiteral convertedRex =
+        (RexLiteral) intervalMonthExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
     assertEquals(
@@ -386,7 +392,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
   public void bitest(Expression expression, RexNode rex) {
     assertEquals(expression, rex.accept(rexExpressionConverter));
-    RexNode convertedRex = expression.accept(expressionRexConverter);
+    RexNode convertedRex = expression.accept(expressionRexConverter, Context.newContext());
     assertEquals(rex, convertedRex);
   }
 }

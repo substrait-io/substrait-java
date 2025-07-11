@@ -6,6 +6,8 @@ import io.substrait.function.TypeExpressionVisitor;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
+import io.substrait.util.EmptyVisitationContext;
+import io.substrait.util.VisitationContext;
 
 /**
  * FunctionArg is a marker interface that represents an argument of a {@link
@@ -15,39 +17,44 @@ import io.substrait.type.proto.ProtoTypeConverter;
  */
 public interface FunctionArg {
 
-  <R, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, E> fnArgVisitor) throws E;
+  <R, C extends VisitationContext, E extends Throwable> R accept(
+      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      throws E;
 
-  interface FuncArgVisitor<R, E extends Throwable> {
-    R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e) throws E;
+  interface FuncArgVisitor<R, C extends VisitationContext, E extends Throwable> {
+    R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e, C context) throws E;
 
-    R visitType(SimpleExtension.Function fnDef, int argIdx, Type t) throws E;
+    R visitType(SimpleExtension.Function fnDef, int argIdx, Type t, C context) throws E;
 
-    R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e) throws E;
+    R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e, C context) throws E;
   }
 
-  static FuncArgVisitor<FunctionArgument, RuntimeException> toProto(
+  static FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException> toProto(
       TypeExpressionVisitor<io.substrait.proto.Type, RuntimeException> typeVisitor,
-      ExpressionVisitor<io.substrait.proto.Expression, RuntimeException> expressionVisitor) {
+      ExpressionVisitor<io.substrait.proto.Expression, EmptyVisitationContext, RuntimeException>
+          expressionVisitor) {
 
     return new FuncArgVisitor<>() {
 
       @Override
-      public FunctionArgument visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e)
+      public FunctionArgument visitExpr(
+          SimpleExtension.Function fnDef, int argIdx, Expression e, EmptyVisitationContext context)
           throws RuntimeException {
-        var pE = e.accept(expressionVisitor);
+        var pE = e.accept(expressionVisitor, context);
         return FunctionArgument.newBuilder().setValue(pE).build();
       }
 
       @Override
-      public FunctionArgument visitType(SimpleExtension.Function fnDef, int argIdx, Type t)
+      public FunctionArgument visitType(
+          SimpleExtension.Function fnDef, int argIdx, Type t, EmptyVisitationContext context)
           throws RuntimeException {
         var pTyp = t.accept(typeVisitor);
         return FunctionArgument.newBuilder().setType(pTyp).build();
       }
 
       @Override
-      public FunctionArgument visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg ea)
+      public FunctionArgument visitEnumArg(
+          SimpleExtension.Function fnDef, int argIdx, EnumArg ea, EmptyVisitationContext context)
           throws RuntimeException {
         var enumBldr = FunctionArgument.newBuilder();
 

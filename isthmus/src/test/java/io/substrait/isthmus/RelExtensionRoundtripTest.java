@@ -9,6 +9,7 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.relation.Extension;
 import io.substrait.relation.ExtensionLeaf;
 import io.substrait.relation.ExtensionMulti;
@@ -60,7 +61,8 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
 
   void roundtrip(Rel pojo1) {
     // Substrait POJO 1 -> Substrait Proto
-    io.substrait.proto.Rel proto = pojo1.accept(new RelProtoConverter(new ExtensionCollector()));
+    io.substrait.proto.Rel proto =
+        pojo1.accept(new RelProtoConverter(new ExtensionCollector()), null);
 
     // Substrait Proto -> Substrait POJO 2
     var pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
@@ -68,7 +70,9 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
 
     // Substrait POJO 2 -> Calcite
     var calcite =
-        pojo2.accept(new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder));
+        pojo2.accept(
+            new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder),
+            Context.newContext());
 
     // Calcite -> Substrait POJO 3
     var pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
@@ -192,10 +196,11 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
       super(extensions, typeFactory, relBuilder);
     }
 
-    public RelNode visit(ExtensionLeaf extensionLeaf) {
+    @Override
+    public RelNode visit(ExtensionLeaf extensionLeaf, Context context) {
       if (extensionLeaf.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionLeaf.getDetail();
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter);
+        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         RelOptCluster cluster = relBuilder.getCluster();
         RelTraitSet traits = cluster.traitSet();
         return new ColumnAppenderRel(
@@ -205,11 +210,11 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionSingle extensionSingle) throws RuntimeException {
+    public RelNode visit(ExtensionSingle extensionSingle, Context context) throws RuntimeException {
       if (extensionSingle.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionSingle.getDetail();
-        RelNode input = extensionSingle.getInput().accept(this);
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter);
+        RelNode input = extensionSingle.getInput().accept(this, context);
+        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         return new ColumnAppenderRel(
             input.getCluster(), input.getTraitSet(), literal, List.of(input));
       }
@@ -217,14 +222,14 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionMulti extensionMulti) throws RuntimeException {
+    public RelNode visit(ExtensionMulti extensionMulti, Context context) throws RuntimeException {
       if (extensionMulti.getDetail() instanceof ColumnAppendDetail) {
         ColumnAppendDetail cad = (ColumnAppendDetail) extensionMulti.getDetail();
         List<RelNode> inputs =
             extensionMulti.getInputs().stream()
-                .map(input -> input.accept(this))
+                .map(input -> input.accept(this, context))
                 .collect(Collectors.toList());
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter);
+        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         return new ColumnAppenderRel(
             inputs.get(0).getCluster(), inputs.get(0).getTraitSet(), literal, inputs);
       }

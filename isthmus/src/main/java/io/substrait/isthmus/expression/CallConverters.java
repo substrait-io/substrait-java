@@ -3,7 +3,8 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.isthmus.*;
+import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,6 @@ import javax.annotation.Nullable;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 
@@ -49,7 +49,8 @@ public class CallConverters {
    * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
    * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
    *
-   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral)} for this conversion.
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral,
+   * SubstraitRelNodeConverter.Context)} for this conversion.
    *
    * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
    * Expression.UserDefinedLiteral} that was stored.

@@ -8,6 +8,7 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
@@ -51,7 +52,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             b.fieldReference(commonTable, 0),
             List.of(b.switchClause(b.i32(0), b.fieldReference(commonTable, 3))),
             b.bool(false));
-    var calciteExpr = expr.accept(converter);
+    var calciteExpr = expr.accept(converter, Context.newContext());
 
     assertTypeMatch(calciteExpr.getType(), N.BOOLEAN);
   }
@@ -174,7 +175,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             b.i32(7),
             b.i32(42));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.FP32), calciteExpr.getType());
   }
 
@@ -194,7 +195,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             WindowBound.UNBOUNDED,
             b.i32(42));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter);
+    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
   }
 

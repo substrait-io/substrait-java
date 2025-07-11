@@ -19,6 +19,7 @@ package io.substrait.debug
 import io.substrait.spark.DefaultRelVisitor
 
 import io.substrait.relation._
+import io.substrait.util.EmptyVisitationContext
 
 import scala.collection.mutable
 
@@ -41,10 +42,10 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
   }
 
   def apply(rel: Rel, maxFields: Int): String = {
-    rel.accept(this)
+    rel.accept(this, null)
   }
 
-  override def visit(fetch: Fetch): String = {
+  override def visit(fetch: Fetch, context: EmptyVisitationContext): String = {
     withBuilder(fetch, 7)(
       builder => {
         builder.append("offset=").append(fetch.getOffset)
@@ -55,14 +56,14 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
           })
       })
   }
-  override def visit(sort: Sort): String = {
+  override def visit(sort: Sort, context: EmptyVisitationContext): String = {
     withBuilder(sort, 5)(
       builder => {
         builder.append("sortFields=").append(sort.getSortFields)
       })
   }
 
-  override def visit(join: Join): String = {
+  override def visit(join: Join, context: EmptyVisitationContext): String = {
     withBuilder(join, 5)(
       builder => {
         join.getCondition.ifPresent(
@@ -80,10 +81,10 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(filter: Filter): String = {
+  override def visit(filter: Filter, context: EmptyVisitationContext): String = {
     withBuilder(filter, 7)(
       builder => {
-        builder.append(filter.getCondition.accept(expressionStringConverter))
+        builder.append(filter.getCondition.accept(expressionStringConverter, context))
       })
   }
 
@@ -101,7 +102,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(namedScan: NamedScan): String = {
+  override def visit(namedScan: NamedScan, context: EmptyVisitationContext): String = {
     withBuilder(namedScan, 10)(
       builder => {
         fillReadRel(namedScan, builder)
@@ -116,7 +117,9 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(virtualTableScan: VirtualTableScan): String = {
+  override def visit(
+      virtualTableScan: VirtualTableScan,
+      context: EmptyVisitationContext): String = {
     withBuilder(virtualTableScan, 10)(
       builder => {
         fillReadRel(virtualTableScan, builder)
@@ -131,14 +134,14 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(emptyScan: EmptyScan): String = {
+  override def visit(emptyScan: EmptyScan, context: EmptyVisitationContext): String = {
     withBuilder(emptyScan, 10)(
       builder => {
         fillReadRel(emptyScan, builder)
       })
   }
 
-  override def visit(project: Project): String = {
+  override def visit(project: Project, context: EmptyVisitationContext): String = {
     withBuilder(project, 8)(
       builder => {
         builder
@@ -147,7 +150,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(expand: Expand): String = {
+  override def visit(expand: Expand, context: EmptyVisitationContext): String = {
     withBuilder(expand, 8)(
       builder => {
         builder
@@ -156,7 +159,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(aggregate: Aggregate): String = {
+  override def visit(aggregate: Aggregate, context: EmptyVisitationContext): String = {
     withBuilder(aggregate, 10)(
       builder => {
         builder
@@ -168,7 +171,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(window: ConsistentPartitionWindow): String = {
+  override def visit(window: ConsistentPartitionWindow, context: EmptyVisitationContext): String = {
     withBuilder(window, 10)(
       builder => {
         builder
@@ -181,7 +184,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(set: Set): String = {
+  override def visit(set: Set, context: EmptyVisitationContext): String = {
     withBuilder(set, 8)(
       builder => {
         builder
@@ -190,7 +193,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(cross: Cross): String = {
+  override def visit(cross: Cross, context: EmptyVisitationContext): String = {
     withBuilder(cross, 10)(
       builder => {
         builder
@@ -201,7 +204,7 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(localFiles: LocalFiles): String = {
+  override def visit(localFiles: LocalFiles, context: EmptyVisitationContext): String = {
     withBuilder(localFiles, 10)(
       builder => {
         builder
