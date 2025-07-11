@@ -10,6 +10,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -46,11 +47,16 @@ public class SqlToSubstrait extends SqlConverterBase {
     return executeInner(sql, validator, catalogReader);
   }
 
+  List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
+      throws SqlParseException {
+    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
+    return sqlToRelNode(sql, validator, catalogReader);
+  }
+
   // Package protected for testing
   List<RelRoot> sqlToRelNode(String sql, List<String> tables) throws SqlParseException {
     Prepare.CatalogReader catalogReader = registerCreateTables(tables);
-    SqlValidator validator = Validator.create(factory, catalogReader, SqlValidator.Config.DEFAULT);
-    return sqlToRelNode(sql, validator, catalogReader);
+    return sqlToRelNode(sql, catalogReader);
   }
 
   private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
@@ -99,7 +105,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
-      var program = HepProgram.builder().build();
+      var program = HepProgram.builder().addRuleInstance(CoreRules.PROJECT_REMOVE).build();
       HepPlanner hepPlanner = new HepPlanner(program);
       hepPlanner.setRoot(root.rel);
       root = root.withRel(hepPlanner.findBestExp());

@@ -157,7 +157,8 @@ public class PlanTestBase {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // SQL -> Calcite 1
-    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, createStatements);
+    final CalciteCatalogReader catalogReader = sqlConverter.registerCreateTables(createStatements);
+    List<RelRoot> relRoots = sqlConverter.sqlToRelNode(sqlQuery, catalogReader);
     assertEquals(1, relRoots.size());
     RelRoot calcite1 = relRoots.get(0);
 
@@ -174,7 +175,10 @@ public class PlanTestBase {
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite 2
-    RelRoot calcite2 = new SubstraitToCalcite(extensions, typeFactory).convert(pojo2);
+    final SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(extensions, typeFactory, catalogReader);
+
+    RelRoot calcite2 = substraitToCalcite.convert(pojo2);
     // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
     // do so
     assertNotNull(calcite2);

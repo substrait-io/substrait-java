@@ -208,7 +208,15 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
 
   @Override
   public Optional<Rel> visit(NamedWrite write) throws EXCEPTION {
-    throw new UnsupportedOperationException();
+
+    var input = write.getInput().accept(this);
+
+    if (allEmpty(input)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        NamedWrite.builder().from(write).input(input.orElse(write.getInput())).build());
   }
 
   @Override
@@ -226,9 +234,38 @@ public class RelCopyOnWriteVisitor<EXCEPTION extends Exception>
     throw new UnsupportedOperationException();
   }
 
+
+  protected Optional<NamedUpdate.TransformExpression> visitTransformExpression(
+      NamedUpdate.TransformExpression transform) throws EXCEPTION {
+    return transform
+        .getTransformation()
+        .accept(getExpressionCopyOnWriteVisitor())
+        .map(
+            expr ->
+                NamedUpdate.TransformExpression.builder()
+                    .from(transform)
+                    .transformation(expr)
+                    .build());
+  }
+
   @Override
   public Optional<Rel> visit(NamedUpdate update) throws EXCEPTION {
-    throw new UnsupportedOperationException();
+    var condition = update.getCondition().accept(getExpressionCopyOnWriteVisitor());
+
+    var transformations =
+        transformList(update.getTransformations(), this::visitTransformExpression);
+
+
+    if (allEmpty(condition, transformations)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        NamedUpdate.builder()
+            .from(update)
+            .condition(condition.orElse(update.getCondition()))
+            .transformations(transformations.orElse(update.getTransformations()))
+            .build());
   }
 
   @Override

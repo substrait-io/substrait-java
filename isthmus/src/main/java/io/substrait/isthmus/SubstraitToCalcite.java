@@ -12,8 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -33,19 +35,36 @@ public class SubstraitToCalcite {
   protected final SimpleExtension.ExtensionCollection extensions;
   protected final RelDataTypeFactory typeFactory;
   protected final TypeConverter typeConverter;
+  protected final Prepare.CatalogReader catalogReader;
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-    this(extensions, typeFactory, TypeConverter.DEFAULT);
+    this(extensions, typeFactory, TypeConverter.DEFAULT, null);
+  }
+
+  public SubstraitToCalcite(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      Prepare.CatalogReader catalogReader) {
+    this(extensions, typeFactory, TypeConverter.DEFAULT, catalogReader);
   }
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
+    this(extensions, typeFactory, typeConverter, null);
+  }
+
+  public SubstraitToCalcite(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter,
+      Prepare.CatalogReader catalogReader) {
     this.extensions = extensions;
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
+    this.catalogReader = catalogReader;
   }
 
   /**
@@ -87,9 +106,12 @@ public class SubstraitToCalcite {
    * @return {@link RelNode}
    */
   public RelNode convert(Rel rel) {
-    CalciteSchema rootSchema = toSchema(rel);
-    RelBuilder relBuilder = createRelBuilder(rootSchema);
+      // TODO: a questionable change below: can we use catalogReader instead of Rel?
+      // CalciteSchema rootSchema = toSchema(rel);
+    //    RelBuilder relBuilder = createRelBuilder(rootSchema);
+    RelBuilder relBuilder = createRelBuilder(catalogReader.getRootSchema());
     SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
+
     return rel.accept(converter);
   }
 
@@ -108,13 +130,24 @@ public class SubstraitToCalcite {
    * @return {@link RelRoot}
    */
   public RelRoot convert(Plan.Root root) {
-    RelNode input = convert(root.getInput());
-    RelDataType inputRowType = input.getRowType();
+    RelNode convertedNode = convert(root.getInput());
+    if (convertedNode instanceof TableModify tableModify) {
+      RelDataType tableRowType = tableModify.getTable().getRowType();
+      final SqlKind kind;
+      switch (tableModify.getOperation()) {
+        case INSERT -> kind = SqlKind.INSERT;
 
+        case UPDATE -> kind = SqlKind.UPDATE;
+        case DELETE -> kind = SqlKind.DELETE;
+        default -> throw new RuntimeException(
+            "Unsupported table modify operation: " + tableModify.getOperation());
+      }
+      return RelRoot.of(tableModify, tableRowType, kind);
+    }
+
+    RelDataType inputRowType = convertedNode.getRowType();
     RelDataType newRowType = renameFields(inputRowType, root.getNames(), 0).right;
-    RelRoot calciteRoot = RelRoot.of(input, newRowType, SqlKind.SELECT);
-
-    return calciteRoot;
+    return RelRoot.of(convertedNode, newRowType, SqlKind.SELECT);
   }
 
   /**
