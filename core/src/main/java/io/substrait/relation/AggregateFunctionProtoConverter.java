@@ -5,6 +5,7 @@ import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.type.proto.TypeProtoConverter;
+import io.substrait.util.EmptyVisitationContext;
 import java.util.stream.IntStream;
 
 /**
@@ -34,7 +35,10 @@ public class AggregateFunctionProtoConverter {
         .setOutputType(measure.getFunction().getType().accept(typeProtoConverter))
         .addAllArguments(
             IntStream.range(0, args.size())
-                .mapToObj(i -> args.get(i).accept(aggFuncDef, i, argVisitor, null))
+                .mapToObj(
+                    i ->
+                        args.get(i)
+                            .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                 .collect(java.util.stream.Collectors.toList()))
         .setFunctionReference(
             functionCollector.getFunctionReference(measure.getFunction().declaration()))

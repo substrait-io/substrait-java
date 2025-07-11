@@ -65,7 +65,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     val function = measure.getFunction
     var arguments = function.arguments().asScala.zipWithIndex.map {
       case (arg, i) =>
-        arg.accept(function.declaration(), i, expressionConverter, null)
+        arg.accept(function.declaration(), i, expressionConverter, EmptyVisitationContext.INSTANCE)
     }
     if (function.declaration.name == "count" && function.arguments.size == 0) {
       // HACK - count() needs to be rewritten as count(1)
@@ -92,7 +92,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       })
 
     val filter = Option(measure.getPreMeasureFilter.orElse(null))
-      .map(_.accept(expressionConverter, null))
+      .map(_.accept(expressionConverter, EmptyVisitationContext.INSTANCE))
 
     AggregateExpression(
       aggregateFunction,
@@ -213,7 +213,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   private def toSortOrder(sortField: SExpression.SortField): SortOrder = {
-    val expression = sortField.expr().accept(expressionConverter, null)
+    val expression = sortField.expr().accept(expressionConverter, EmptyVisitationContext.INSTANCE)
     val (direction, nullOrdering) = sortField.direction() match {
       case SExpression.SortDirection.ASC_NULLS_FIRST => (Ascending, NullsFirst)
       case SExpression.SortDirection.DESC_NULLS_FIRST => (Descending, NullsFirst)
@@ -449,7 +449,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   def convert(rel: relation.Rel): LogicalPlan = {
-    val logicalPlan = rel.accept(this, null)
+    val logicalPlan = rel.accept(this, EmptyVisitationContext.INSTANCE)
     require(logicalPlan.resolved)
     logicalPlan
   }

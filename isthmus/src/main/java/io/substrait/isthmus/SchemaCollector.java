@@ -79,7 +79,7 @@ public class SchemaCollector {
      */
     public static Map<List<String>, NamedStruct> gatherTables(Rel rootRel) {
       var visitor = new TableGatherer();
-      rootRel.accept(visitor, null);
+      rootRel.accept(visitor, EmptyVisitationContext.INSTANCE);
       return visitor.tableMap;
     }
 

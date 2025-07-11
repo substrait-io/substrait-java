@@ -29,6 +29,7 @@ import io.substrait.extension.ExtensionCollector
 import io.substrait.plan.{Plan, PlanProtoConverter, ProtoPlanConverter}
 import io.substrait.proto
 import io.substrait.relation.{ProtoRelConverter, RelProtoConverter}
+import io.substrait.util.EmptyVisitationContext
 import org.scalactic.Equality
 import org.scalactic.source.Position
 import org.scalatest.Succeeded
@@ -72,7 +73,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
     // convert substrait back to spark plan
     val toLogicalPlan = new ToLogicalPlan(spark);
-    val sparkPlan2 = substraitRel2.accept(toLogicalPlan, null)
+    val sparkPlan2 = substraitRel2.accept(toLogicalPlan, EmptyVisitationContext.INSTANCE)
     require(sparkPlan2.resolved)
 
     // and back to substrait again

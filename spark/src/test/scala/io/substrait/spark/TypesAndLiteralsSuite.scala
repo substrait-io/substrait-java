@@ -10,6 +10,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
+import io.substrait.util.EmptyVisitationContext
+
 import java.time.{Duration, Instant, LocalDate, LocalDateTime, Period}
 
 class TypesAndLiteralsSuite extends SparkFunSuite {
@@ -101,7 +103,9 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     l => {
       test(s"test literal: $l (${l.dataType})") {
         val substraitLiteral = ToSubstraitLiteral.convert(l).get
-        val sparkLiteral = substraitLiteral.accept(toSparkExpression, null).asInstanceOf[Literal]
+        val sparkLiteral = substraitLiteral
+          .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+          .asInstanceOf[Literal]
 
         println("Before: " + l + " " + l.dataType)
         println("After: " + sparkLiteral + " " + sparkLiteral.dataType)
@@ -118,7 +122,9 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
       MapType(IntegerType, StringType, valueContainsNull = false))
 
     val substraitLiteral = ToSubstraitLiteral.convert(l).get
-    val sparkLiteral = substraitLiteral.accept(toSparkExpression, null).asInstanceOf[Literal]
+    val sparkLiteral = substraitLiteral
+      .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+      .asInstanceOf[Literal]
 
     println("Before: " + l + " " + l.dataType)
     println("After: " + sparkLiteral + " " + sparkLiteral.dataType)

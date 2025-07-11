@@ -21,6 +21,7 @@ import io.substrait.spark.SparkExtension
 import org.apache.spark.sql.catalyst.expressions.Expression
 
 import io.substrait.expression.{Expression => SExpression}
+import io.substrait.util.EmptyVisitationContext
 import org.scalatest.Assertions.assertResult
 
 trait SubstraitExpressionTestBase {
@@ -48,7 +49,8 @@ trait SubstraitExpressionTestBase {
     f(substraitExp)
 
     if (bidirectional) {
-      val convertedExpression = substraitExp.accept(toSparkExpression, null)
+      val convertedExpression =
+        substraitExp.accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
       assertResult(expression)(convertedExpression)
     }
   }

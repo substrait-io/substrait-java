@@ -178,7 +178,7 @@ public class SubstraitToCalcite {
 
     public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
       var visitor = new NamedStructGatherer();
-      rel.accept(visitor, null);
+      rel.accept(visitor, EmptyVisitationContext.INSTANCE);
       return visitor.tableMap;
     }
 

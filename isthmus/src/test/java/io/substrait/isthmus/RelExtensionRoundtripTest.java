@@ -18,6 +18,7 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
+import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -62,7 +63,8 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
   void roundtrip(Rel pojo1) {
     // Substrait POJO 1 -> Substrait Proto
     io.substrait.proto.Rel proto =
-        pojo1.accept(new RelProtoConverter(new ExtensionCollector()), null);
+        pojo1.accept(
+            new RelProtoConverter(new ExtensionCollector()), EmptyVisitationContext.INSTANCE);
 
     // Substrait Proto -> Substrait POJO 2
     var pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
