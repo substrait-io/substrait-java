@@ -54,7 +54,7 @@ public class TestTypeRoundtrip {
    * @param type
    */
   private void t(Type type) {
-    var converted = type.accept(typeProtoConverter);
+    io.substrait.proto.Type converted = type.accept(typeProtoConverter);
     assertEquals(type, protoTypeConverter.from(converted));
   }
 

@@ -225,7 +225,7 @@ public abstract class FieldReference implements Expression {
     Collections.reverse(segments);
     for (int i = 0; i < segments.size(); i++) {
       if (i == 0) {
-        var last = segments.get(0);
+        ReferenceSegment last = segments.get(0);
         reference =
             struct == null ? last.constructOnExpression(expression) : last.constructOnRoot(struct);
       } else {

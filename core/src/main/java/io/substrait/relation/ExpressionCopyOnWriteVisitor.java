@@ -212,9 +212,10 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(Expression.Switch expr, EmptyVisitationContext context)
       throws E {
-    var match = expr.match().accept(this, context);
-    var switchClauses = transformList(expr.switchClauses(), context, this::visitSwitchClause);
-    var defaultClause = expr.defaultClause().accept(this, context);
+    Optional<Expression> match = expr.match().accept(this, context);
+    Optional<List<Expression.SwitchClause>> switchClauses =
+        transformList(expr.switchClauses(), context, this::visitSwitchClause);
+    Optional<Expression> defaultClause = expr.defaultClause().accept(this, context);
 
     if (allEmpty(match, switchClauses, defaultClause)) {
       return Optional.empty();
@@ -242,8 +243,9 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(Expression.IfThen ifThen, EmptyVisitationContext context)
       throws E {
-    var ifClauses = transformList(ifThen.ifClauses(), context, this::visitIfClause);
-    var elseClause = ifThen.elseClause().accept(this, context);
+    Optional<List<Expression.IfClause>> ifClauses =
+        transformList(ifThen.ifClauses(), context, this::visitIfClause);
+    Optional<Expression> elseClause = ifThen.elseClause().accept(this, context);
 
     if (allEmpty(ifClauses, elseClause)) {
       return Optional.empty();
@@ -258,8 +260,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   protected Optional<Expression.IfClause> visitIfClause(
       Expression.IfClause ifClause, EmptyVisitationContext context) throws E {
-    var condition = ifClause.condition().accept(this, context);
-    var then = ifClause.then().accept(this, context);
+    Optional<Expression> condition = ifClause.condition().accept(this, context);
+    Optional<Expression> then = ifClause.then().accept(this, context);
 
     if (allEmpty(condition, then)) {
       return Optional.empty();
@@ -287,9 +289,10 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.WindowFunctionInvocation wfi, EmptyVisitationContext context) throws E {
-    var arguments = visitFunctionArguments(wfi.arguments(), context);
-    var partitionBy = visitExprList(wfi.partitionBy(), context);
-    var sort = transformList(wfi.sort(), context, this::visitSortField);
+    Optional<List<FunctionArg>> arguments = visitFunctionArguments(wfi.arguments(), context);
+    Optional<List<Expression>> partitionBy = visitExprList(wfi.partitionBy(), context);
+    Optional<List<Expression.SortField>> sort =
+        transformList(wfi.sort(), context, this::visitSortField);
 
     if (allEmpty(arguments, partitionBy, sort)) {
       return Optional.empty();
@@ -313,8 +316,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.SingleOrList singleOrList, EmptyVisitationContext context) throws E {
-    var condition = singleOrList.condition().accept(this, context);
-    var options = visitExprList(singleOrList.options(), context);
+    Optional<Expression> condition = singleOrList.condition().accept(this, context);
+    Optional<List<Expression>> options = visitExprList(singleOrList.options(), context);
 
     if (allEmpty(condition, options)) {
       return Optional.empty();
@@ -330,8 +333,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.MultiOrList multiOrList, EmptyVisitationContext context) throws E {
-    var conditions = visitExprList(multiOrList.conditions(), context);
-    var optionCombinations =
+    Optional<List<Expression>> conditions = visitExprList(multiOrList.conditions(), context);
+    Optional<List<Expression.MultiOrListRecord>> optionCombinations =
         transformList(multiOrList.optionCombinations(), context, this::visitMultiOrListRecord);
 
     if (allEmpty(conditions, optionCombinations)) {
@@ -359,7 +362,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(FieldReference fieldReference, EmptyVisitationContext context)
       throws E {
-    var inputExpression = visitOptionalExpression(fieldReference.inputExpression(), context);
+    Optional<Expression> inputExpression =
+        visitOptionalExpression(fieldReference.inputExpression(), context);
 
     if (allEmpty(inputExpression)) {
       return Optional.empty();
@@ -389,8 +393,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.InPredicate inPredicate, EmptyVisitationContext context) throws E {
-    var haystack = inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context);
-    var needles = visitExprList(inPredicate.needles(), context);
+    Optional<Rel> haystack = inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context);
+    Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
 
     if (allEmpty(haystack, needles)) {
       return Optional.empty();
@@ -425,8 +429,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
         funcArgs,
         context,
         (arg, c) -> {
-          if (arg instanceof Expression expr) {
-            return expr.accept(this, c).flatMap(Optional::<FunctionArg>of);
+          if (arg instanceof Expression) {
+            return ((Expression) arg).accept(this, c).flatMap(Optional::<FunctionArg>of);
           } else {
             return Optional.empty();
           }

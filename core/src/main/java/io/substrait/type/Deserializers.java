@@ -42,7 +42,7 @@ public class Deserializers {
     @Override
     public T deserialize(final JsonParser p, final DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
-      var typeString = p.getValueAsString();
+      String typeString = p.getValueAsString();
       try {
         String namespace =
             (String) ctxt.findInjectableValue(SimpleExtension.URI_LOCATOR_KEY, null, null);

@@ -15,11 +15,11 @@ public class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void namedScan() {
-    var tableName = Stream.of("a_table").collect(Collectors.toList());
-    var columnNames = Stream.of("column1", "column2").collect(Collectors.toList());
+    List<String> tableName = Stream.of("a_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("column1", "column2").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I64, R.I64).collect(Collectors.toList());
 
-    var namedScan = b.namedScan(tableName, columnNames, columnTypes);
+    NamedScan namedScan = b.namedScan(tableName, columnNames, columnTypes);
     namedScan =
         NamedScan.builder()
             .from(namedScan)
@@ -33,13 +33,13 @@ public class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void emptyScan() {
-    var emptyScan = b.emptyScan();
+    io.substrait.relation.EmptyScan emptyScan = b.emptyScan();
     verifyRoundTrip(emptyScan);
   }
 
   @Test
   void virtualTable() {
-    var virtTable =
+    io.substrait.relation.ImmutableVirtualTableScan virtTable =
         VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.of(

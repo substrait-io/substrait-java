@@ -93,7 +93,7 @@ jreleaser {
 }
 
 java {
-  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  toolchain { languageVersion = JavaLanguageVersion.of(11) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -137,8 +137,6 @@ dependencies {
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
 }
 

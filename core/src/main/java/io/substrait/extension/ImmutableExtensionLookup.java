@@ -46,12 +46,12 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         List<SimpleExtensionURI> simpleExtensionURIs,
         List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
       Map<Integer, String> namespaceMap = new HashMap<>();
-      for (var extension : simpleExtensionURIs) {
+      for (SimpleExtensionURI extension : simpleExtensionURIs) {
         namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());
       }
 
       // Add all functions used in plan to the functionMap
-      for (var extension : simpleExtensionDeclarations) {
+      for (SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionFunction()) {
           continue;
         }
@@ -68,7 +68,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       }
 
       // Add all types used in plan to the typeMap
-      for (var extension : simpleExtensionDeclarations) {
+      for (SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionType()) {
           continue;
         }

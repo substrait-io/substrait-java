@@ -271,9 +271,7 @@ public class SimpleExtension {
     private final Supplier<List<Argument>> requiredArgsSupplier =
         Util.memoize(
             () -> {
-              return args().stream()
-                  .filter(Argument::required)
-                  .collect(java.util.stream.Collectors.toList());
+              return args().stream().filter(Argument::required).collect(Collectors.toList());
             });
 
     public static String constructKeyFromTypes(
@@ -656,7 +654,7 @@ public class SimpleExtension {
     }
 
     public AggregateFunctionVariant getAggregateFunction(FunctionAnchor anchor) {
-      var variant = aggregateFunctionsLookup.get().get(anchor);
+      AggregateFunctionVariant variant = aggregateFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -670,7 +668,7 @@ public class SimpleExtension {
     }
 
     public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
-      var variant = windowFunctionsLookup.get().get(anchor);
+      WindowFunctionVariant variant = windowFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -697,7 +695,7 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() {
-    var defaultFiles =
+    List<String> defaultFiles =
         Arrays.asList(
                 "boolean",
                 "aggregate_generic",
@@ -712,7 +710,7 @@ public class SimpleExtension {
                 "string")
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
     return load(defaultFiles);
   }
@@ -722,17 +720,17 @@ public class SimpleExtension {
       throw new IllegalArgumentException("Require at least one resource path.");
     }
 
-    var extensions =
+    List<ExtensionCollection> extensions =
         resourcePaths.stream()
             .map(
                 path -> {
-                  try (var stream = ExtensionCollection.class.getResourceAsStream(path)) {
+                  try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
                     return load(path, stream);
                   } catch (IOException e) {
                     throw new RuntimeException(e);
                   }
                 })
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
     ExtensionCollection complete = extensions.get(0);
     for (int i = 1; i < extensions.size(); i++) {
       complete = complete.merge(extensions.get(i));
@@ -742,7 +740,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, String str) {
     try {
-      var doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
+      ExtensionSignatures doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -751,7 +749,8 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String namespace, InputStream stream) {
     try {
-      var doc = objectMapper(namespace).readValue(stream, ExtensionSignatures.class);
+      ExtensionSignatures doc =
+          objectMapper(namespace).readValue(stream, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (RuntimeException ex) {
       throw ex;
@@ -765,12 +764,12 @@ public class SimpleExtension {
     List<ScalarFunctionVariant> scalarFunctionVariants =
         extensionSignatures.scalars().stream()
             .flatMap(t -> t.resolve(namespace))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
     List<AggregateFunctionVariant> aggregateFunctionVariants =
         extensionSignatures.aggregates().stream()
             .flatMap(t -> t.resolve(namespace))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
     Stream<WindowFunctionVariant> windowFunctionVariants =
         extensionSignatures.windows().stream().flatMap(t -> t.resolve(namespace));
@@ -794,7 +793,7 @@ public class SimpleExtension {
         Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
             .collect(Collectors.toList());
 
-    var collection =
+    ImmutableSimpleExtension.ExtensionCollection collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .scalarFunctions(scalarFunctionVariants)
             .aggregateFunctions(aggregateFunctionVariants)

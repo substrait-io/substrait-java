@@ -53,8 +53,8 @@ public abstract class Expand extends SingleInputRel {
     public abstract List<Expression> getDuplicates();
 
     public Type getType() {
-      var nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
-      var type = getDuplicates().get(0).getType();
+      boolean nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
+      Type type = getDuplicates().get(0).getType();
       return nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
     }
 

@@ -96,7 +96,7 @@ configurations.all {
 }
 
 java {
-  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -150,5 +150,6 @@ tasks {
   test {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
+    jvmArgs("--add-exports=java.base/sun.nio.ch=ALL-UNNAMED")
   }
 }

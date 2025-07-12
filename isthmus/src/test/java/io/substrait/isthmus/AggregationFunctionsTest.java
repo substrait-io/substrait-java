@@ -41,15 +41,20 @@ public class AggregationFunctionsTest extends PlanTestBase {
 
   // Create the given function call on the given field of the input
   private Aggregate.Measure functionPicker(Rel input, int field, String fname) {
-    return switch (fname) {
-      case "min" -> b.min(input, field);
-      case "max" -> b.max(input, field);
-      case "sum" -> b.sum(input, field);
-      case "sum0" -> b.sum0(input, field);
-      case "avg" -> b.avg(input, field);
-      default -> throw new RuntimeException(
-          String.format("no function is associated with %s", fname));
-    };
+    switch (fname) {
+      case "min":
+        return b.min(input, field);
+      case "max":
+        return b.max(input, field);
+      case "sum":
+        return b.sum(input, field);
+      case "sum0":
+        return b.sum0(input, field);
+      case "avg":
+        return b.avg(input, field);
+      default:
+        throw new RuntimeException(String.format("no function is associated with %s", fname));
+    }
   }
 
   // Create one function call per numeric type column

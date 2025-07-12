@@ -26,8 +26,6 @@ dependencies {
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
 val submodulesUpdate by
@@ -41,20 +39,10 @@ allprojects {
   repositories { mavenCentral() }
 
   tasks.configureEach<Test> {
-    val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()
-    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
     testLogging { exceptionFormat = TestExceptionFormat.FULL }
   }
-  tasks.withType<JavaCompile> {
-    sourceCompatibility = "17"
-    if (project.name != "core") {
-      options.release.set(11)
-    } else {
-      options.release.set(8)
-    }
-    dependsOn(submodulesUpdate)
-  }
+  tasks.withType<JavaCompile> { dependsOn(submodulesUpdate) }
 
   group = "io.substrait"
   version = "${version}"

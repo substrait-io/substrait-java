@@ -129,25 +129,30 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   public Expression visitFieldAccess(RexFieldAccess fieldAccess) {
     SqlKind kind = fieldAccess.getReferenceExpr().getKind();
     switch (kind) {
-      case CORREL_VARIABLE -> {
-        int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
+      case CORREL_VARIABLE:
+        {
+          int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
 
-        return FieldReference.newRootStructOuterReference(
-            fieldAccess.getField().getIndex(),
-            typeConverter.toSubstrait(fieldAccess.getType()),
-            stepsOut);
-      }
-      case ITEM, INPUT_REF, FIELD_ACCESS -> {
-        Expression expression = fieldAccess.getReferenceExpr().accept(this);
-        if (expression instanceof FieldReference) {
-          FieldReference nestedReference = (FieldReference) expression;
-          return nestedReference.dereferenceStruct(fieldAccess.getField().getIndex());
-        } else {
-          return FieldReference.newStructReference(fieldAccess.getField().getIndex(), expression);
+          return FieldReference.newRootStructOuterReference(
+              fieldAccess.getField().getIndex(),
+              typeConverter.toSubstrait(fieldAccess.getType()),
+              stepsOut);
         }
-      }
-      default -> throw new UnsupportedOperationException(
-          String.format("RexFieldAccess for SqlKind %s not supported", kind));
+      case ITEM:
+      case INPUT_REF:
+      case FIELD_ACCESS:
+        {
+          Expression expression = fieldAccess.getReferenceExpr().accept(this);
+          if (expression instanceof FieldReference) {
+            FieldReference nestedReference = (FieldReference) expression;
+            return nestedReference.dereferenceStruct(fieldAccess.getField().getIndex());
+          } else {
+            return FieldReference.newStructReference(fieldAccess.getField().getIndex(), expression);
+          }
+        }
+      default:
+        throw new UnsupportedOperationException(
+            String.format("RexFieldAccess for SqlKind %s not supported", kind));
     }
   }
 

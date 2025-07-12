@@ -264,59 +264,62 @@ public class ParameterizedProtoConverter
 
     @Override
     protected ParameterizedType wrap(final Object o) {
-      var bldr = ParameterizedType.newBuilder();
-      if (o instanceof Type.Boolean t) {
-        return bldr.setBool(t).build();
-      } else if (o instanceof Type.I8 t) {
-        return bldr.setI8(t).build();
-      } else if (o instanceof Type.I16 t) {
-        return bldr.setI16(t).build();
-      } else if (o instanceof Type.I32 t) {
-        return bldr.setI32(t).build();
-      } else if (o instanceof Type.I64 t) {
-        return bldr.setI64(t).build();
-      } else if (o instanceof Type.FP32 t) {
-        return bldr.setFp32(t).build();
-      } else if (o instanceof Type.FP64 t) {
-        return bldr.setFp64(t).build();
-      } else if (o instanceof Type.String t) {
-        return bldr.setString(t).build();
-      } else if (o instanceof Type.Binary t) {
-        return bldr.setBinary(t).build();
-      } else if (o instanceof Type.Timestamp t) {
-        return bldr.setTimestamp(t).build();
-      } else if (o instanceof Type.Date t) {
-        return bldr.setDate(t).build();
-      } else if (o instanceof Type.Time t) {
-        return bldr.setTime(t).build();
-      } else if (o instanceof Type.TimestampTZ t) {
-        return bldr.setTimestampTz(t).build();
-      } else if (o instanceof Type.IntervalYear t) {
-        return bldr.setIntervalYear(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedIntervalDay t) {
-        return bldr.setIntervalDay(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedIntervalCompound t) {
-        return bldr.setIntervalCompound(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedFixedChar t) {
-        return bldr.setFixedChar(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedVarChar t) {
-        return bldr.setVarchar(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedFixedBinary t) {
-        return bldr.setFixedBinary(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedDecimal t) {
-        return bldr.setDecimal(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestamp t) {
-        return bldr.setPrecisionTimestamp(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestampTZ t) {
-        return bldr.setPrecisionTimestampTz(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedStruct t) {
-        return bldr.setStruct(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedList t) {
-        return bldr.setList(t).build();
-      } else if (o instanceof ParameterizedType.ParameterizedMap t) {
-        return bldr.setMap(t).build();
-      } else if (o instanceof Type.UUID t) {
-        return bldr.setUuid(t).build();
+      ParameterizedType.Builder bldr = ParameterizedType.newBuilder();
+      if (o instanceof Type.Boolean) {
+        return bldr.setBool((Type.Boolean) o).build();
+      } else if (o instanceof Type.I8) {
+        return bldr.setI8((Type.I8) o).build();
+      } else if (o instanceof Type.I16) {
+        return bldr.setI16((Type.I16) o).build();
+      } else if (o instanceof Type.I32) {
+        return bldr.setI32((Type.I32) o).build();
+      } else if (o instanceof Type.I64) {
+        return bldr.setI64((Type.I64) o).build();
+      } else if (o instanceof Type.FP32) {
+        return bldr.setFp32((Type.FP32) o).build();
+      } else if (o instanceof Type.FP64) {
+        return bldr.setFp64((Type.FP64) o).build();
+      } else if (o instanceof Type.String) {
+        return bldr.setString((Type.String) o).build();
+      } else if (o instanceof Type.Binary) {
+        return bldr.setBinary((Type.Binary) o).build();
+      } else if (o instanceof Type.Timestamp) {
+        return bldr.setTimestamp((Type.Timestamp) o).build();
+      } else if (o instanceof Type.Date) {
+        return bldr.setDate((Type.Date) o).build();
+      } else if (o instanceof Type.Time) {
+        return bldr.setTime((Type.Time) o).build();
+      } else if (o instanceof Type.TimestampTZ) {
+        return bldr.setTimestampTz((Type.TimestampTZ) o).build();
+      } else if (o instanceof Type.IntervalYear) {
+        return bldr.setIntervalYear((Type.IntervalYear) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedIntervalDay) {
+        return bldr.setIntervalDay((ParameterizedType.ParameterizedIntervalDay) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedIntervalCompound) {
+        return bldr.setIntervalCompound((ParameterizedType.ParameterizedIntervalCompound) o)
+            .build();
+      } else if (o instanceof ParameterizedType.ParameterizedFixedChar) {
+        return bldr.setFixedChar((ParameterizedType.ParameterizedFixedChar) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedVarChar) {
+        return bldr.setVarchar((ParameterizedType.ParameterizedVarChar) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedFixedBinary) {
+        return bldr.setFixedBinary((ParameterizedType.ParameterizedFixedBinary) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedDecimal) {
+        return bldr.setDecimal((ParameterizedType.ParameterizedDecimal) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestamp) {
+        return bldr.setPrecisionTimestamp((ParameterizedType.ParameterizedPrecisionTimestamp) o)
+            .build();
+      } else if (o instanceof ParameterizedType.ParameterizedPrecisionTimestampTZ) {
+        return bldr.setPrecisionTimestampTz((ParameterizedType.ParameterizedPrecisionTimestampTZ) o)
+            .build();
+      } else if (o instanceof ParameterizedType.ParameterizedStruct) {
+        return bldr.setStruct((ParameterizedType.ParameterizedStruct) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedList) {
+        return bldr.setList((ParameterizedType.ParameterizedList) o).build();
+      } else if (o instanceof ParameterizedType.ParameterizedMap) {
+        return bldr.setMap((ParameterizedType.ParameterizedMap) o).build();
+      } else if (o instanceof Type.UUID) {
+        return bldr.setUuid((Type.UUID) o).build();
       }
       throw new UnsupportedOperationException("Unable to wrap type of " + o.getClass());
     }
