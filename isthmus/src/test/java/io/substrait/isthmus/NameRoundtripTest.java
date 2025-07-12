@@ -4,6 +4,7 @@ import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import java.util.List;
@@ -25,10 +26,8 @@ public class NameRoundtripTest extends PlanTestBase {
     String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");
 
-    List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, catalogReader);
-    assertEquals(1, calciteRelRoots.size());
-
-    org.apache.calcite.rel.RelRoot calciteRelRoot1 = calciteRelRoots.get(0);
+    org.apache.calcite.rel.RelRoot calciteRelRoot1 =
+        SubstraitSqlToCalcite.convertSelect(query, catalogReader);
     assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
 
     io.substrait.plan.Plan.Root substraitRelRoot =
