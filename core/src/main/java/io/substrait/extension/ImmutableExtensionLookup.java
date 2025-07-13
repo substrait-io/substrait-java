@@ -17,8 +17,6 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ImmutableExtensionLookup.class);
 
-  private int counter = -1;
-
   private ImmutableExtensionLookup(
       Map<Integer, SimpleExtension.FunctionAnchor> functionMap,
       Map<Integer, SimpleExtension.TypeAnchor> typeMap) {

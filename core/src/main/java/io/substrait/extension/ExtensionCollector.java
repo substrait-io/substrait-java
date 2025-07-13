@@ -21,7 +21,6 @@ public class ExtensionCollector extends AbstractExtensionLookup {
 
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
-  private final BidiMap<Integer, String> uriMap;
 
   // start at 0 to make sure functionAnchors start with 1 according to spec
   private int counter = 0;
@@ -30,7 +29,6 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     super(new HashMap<>(), new HashMap<>());
     funcMap = new BidiMap<>(functionAnchorMap);
     typeMap = new BidiMap<>(typeAnchorMap);
-    uriMap = new BidiMap<>(new HashMap<>());
   }
 
   public int getFunctionReference(SimpleExtension.Function declaration) {
