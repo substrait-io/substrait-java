@@ -736,7 +736,7 @@ public class SimpleExtension {
                   try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
                     return load(path, stream);
                   } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new IllegalStateException(e);
                   }
                 })
             .collect(Collectors.toList());
@@ -752,7 +752,7 @@ public class SimpleExtension {
       ExtensionSignatures doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 
@@ -764,7 +764,7 @@ public class SimpleExtension {
     } catch (RuntimeException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new RuntimeException("Failure while parsing " + namespace, ex);
+      throw new IllegalStateException("Failure while parsing " + namespace, ex);
     }
   }
 

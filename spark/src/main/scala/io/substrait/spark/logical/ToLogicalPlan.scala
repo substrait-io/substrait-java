@@ -220,7 +220,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       case SExpression.SortDirection.ASC_NULLS_LAST => (Ascending, NullsLast)
       case SExpression.SortDirection.DESC_NULLS_LAST => (Descending, NullsLast)
       case other =>
-        throw new RuntimeException(s"Unexpected Expression.SortDirection enum: $other !")
+        throw new UnsupportedOperationException(
+          s"Unexpected Expression.SortDirection enum: $other !")
     }
     SortOrder(expression, direction, nullOrdering, Seq.empty)
   }

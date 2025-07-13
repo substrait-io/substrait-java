@@ -61,7 +61,7 @@ public class RelCreator {
       RelRoot root = converter.convertQuery(parsed, true, true);
       return root;
     } catch (SqlParseException e) {
-      throw new RuntimeException(e);
+      throw new IllegalArgumentException(e);
     }
   }
 

@@ -118,7 +118,7 @@ public class RegisterAtRuntime implements Feature {
                 if (c.method != null) RuntimeReflection.register(c.method);
               });
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 

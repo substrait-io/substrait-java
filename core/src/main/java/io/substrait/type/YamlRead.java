@@ -72,7 +72,7 @@ public class YamlRead {
     } catch (RuntimeException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new RuntimeException("Failure while parsing file " + name, ex);
+      throw new IllegalStateException("Failure while parsing file " + name, ex);
     }
   }
 }

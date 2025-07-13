@@ -296,7 +296,7 @@ public class RelProtoConverter
     List<FieldReference> rightKeys = hashJoin.getRightKeys();
 
     if (leftKeys.size() != rightKeys.size()) {
-      throw new RuntimeException("Number of left and right keys must be equal.");
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
     }
 
     builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
@@ -321,7 +321,7 @@ public class RelProtoConverter
     List<FieldReference> rightKeys = mergeJoin.getRightKeys();
 
     if (leftKeys.size() != rightKeys.size()) {
-      throw new RuntimeException("Number of left and right keys must be equal.");
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
     }
 
     builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
@@ -535,7 +535,7 @@ public class RelProtoConverter
                                 .addAllDuplicates(toProto(sf.getDuplicates())))
                         .build());
               } else {
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                     "Consistent or Switching fields must be set for the Expand relation.");
               }
             });

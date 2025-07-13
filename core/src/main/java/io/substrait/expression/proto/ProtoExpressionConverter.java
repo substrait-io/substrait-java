@@ -426,7 +426,7 @@ public class ProtoExpressionConverter {
       case INTERVAL_COMPOUND:
         {
           if (!literal.getIntervalCompound().getIntervalDayToSecond().hasPrecision()) {
-            throw new RuntimeException(
+            throw new UnsupportedOperationException(
                 "Interval compound with deprecated version of interval day (ie. no precision) is not supported");
           }
           return ExpressionCreator.intervalCompound(

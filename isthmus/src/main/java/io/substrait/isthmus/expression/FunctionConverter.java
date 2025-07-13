@@ -132,7 +132,7 @@ public abstract class FunctionConverter<
     if (resolvedOperators.size() == 1) {
       return Optional.of(resolvedOperators.get(0));
     } else if (resolvedOperators.size() > 1) {
-      throw new RuntimeException(
+      throw new IllegalStateException(
           String.format(
               "Found %d SqlOperators: %s for ScalarFunction %s: ",
               resolvedOperators.size(), resolvedOperators, key));

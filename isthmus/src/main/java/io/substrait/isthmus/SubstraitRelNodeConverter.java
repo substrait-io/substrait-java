@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 
 import com.google.common.collect.ImmutableList;
@@ -415,7 +416,8 @@ public class SubstraitRelNodeConverter
       return relBuilder.nullsLast(relBuilder.desc(rexNode));
     }
     if (sortDirection == Expression.SortDirection.CLUSTERED) {
-      throw new RuntimeException(String.format("Unexpected Expression.SortDirection: Clustered!"));
+      throw new UnsupportedOperationException(
+          String.format("Unexpected Expression.SortDirection: Clustered!"));
     }
 
     throw new IllegalArgumentException("Unsupported sort direction: " + sortDirection);
@@ -428,10 +430,12 @@ public class SubstraitRelNodeConverter
     long count = optCount.orElse(-1L);
     var offset = fetch.getOffset();
     if (offset > Integer.MAX_VALUE) {
-      throw new RuntimeException(String.format("offset is overflowed as an integer: %d", offset));
+      throw new IllegalArgumentException(
+          String.format("offset is overflowed as an integer: %d", offset));
     }
     if (count > Integer.MAX_VALUE) {
-      throw new RuntimeException(String.format("count is overflowed as an integer: %d", count));
+      throw new IllegalArgumentException(
+          String.format("count is overflowed as an integer: %d", count));
     }
     RelNode node = relBuilder.push(child).limit((int) offset, (int) count).build();
     return applyRemap(node, fetch.getRemap());
@@ -463,7 +467,7 @@ public class SubstraitRelNodeConverter
       fieldDirection = RelFieldCollation.Direction.CLUSTERED;
       nullDirection = RelFieldCollation.NullDirection.UNSPECIFIED;
     } else {
-      throw new RuntimeException(
+      throw new UnsupportedOperationException(
           String.format("Unexpected Expression.SortDirection enum: %s !", sortDirection));
     }
 
