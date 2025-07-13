@@ -28,14 +28,6 @@ public class ProtoRelConverterTest extends TestBase {
     static final StringHolder ENHANCED = new StringHolder("ENHANCED");
     static final StringHolder OPTIMIZED = new StringHolder("OPTIMIZED");
 
-    Rel relWithExtension(AdvancedExtension advancedExtension) {
-      return NamedScan.builder()
-          .from(commonTable)
-          .commonExtension(advancedExtension)
-          .extension(advancedExtension)
-          .build();
-    }
-
     Rel emptyAdvancedExtension = relWithExtension(AdvancedExtension.builder().build());
     Rel advancedExtensionWithOptimization =
         relWithExtension(AdvancedExtension.builder().addOptimizations(OPTIMIZED).build());
@@ -44,6 +36,14 @@ public class ProtoRelConverterTest extends TestBase {
     Rel advancedExtensionWithEnhancementAndOptimization =
         relWithExtension(
             AdvancedExtension.builder().enhancement(ENHANCED).addOptimizations(OPTIMIZED).build());
+
+    Rel relWithExtension(AdvancedExtension advancedExtension) {
+      return NamedScan.builder()
+          .from(commonTable)
+          .commonExtension(advancedExtension)
+          .extension(advancedExtension)
+          .build();
+    }
 
     @Test
     void emptyAdvancedExtension() {

@@ -19,6 +19,12 @@ public class ComplexAggregateTest extends PlanTestBase {
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);
 
+  private List<Type> columnTypes = List.of(R.I32, R.I32, R.I32, R.I32);
+  private List<String> columnNames = List.of("a", "b", "c", "d");
+  private NamedScan table = b.namedScan(List.of("example"), columnNames, columnTypes);
+
+  private Aggregate.Grouping emptyGrouping = Aggregate.Grouping.builder().build();
+
   Aggregate.Measure withPreMeasureFilter(Aggregate.Measure measure, Expression preMeasureFilter) {
     return Aggregate.Measure.builder().from(measure).preMeasureFilter(preMeasureFilter).build();
   }
@@ -50,12 +56,6 @@ public class ComplexAggregateTest extends PlanTestBase {
     // Substrait POJO -> Calcite
     new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo);
   }
-
-  private List<Type> columnTypes = List.of(R.I32, R.I32, R.I32, R.I32);
-  private List<String> columnNames = List.of("a", "b", "c", "d");
-  private NamedScan table = b.namedScan(List.of("example"), columnNames, columnTypes);
-
-  private Aggregate.Grouping emptyGrouping = Aggregate.Grouping.builder().build();
 
   @Test
   void handleComplexMeasureArgument() {

@@ -26,12 +26,6 @@ public class LiteralConverter {
   // TODO: Handle conversion of user-defined type literals
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LiteralConverter.class);
 
-  private final TypeConverter typeConverter;
-
-  public LiteralConverter(TypeConverter typeConverter) {
-    this.typeConverter = typeConverter;
-  }
-
   static final DateTimeFormatter CALCITE_LOCAL_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
   static final DateTimeFormatter CALCITE_LOCAL_TIME_FORMATTER =
       new DateTimeFormatterBuilder()
@@ -63,6 +57,12 @@ public class LiteralConverter {
 
   private static final ZoneOffset SYSTEM_TIMEZONE =
       OffsetDateTime.now(ZoneId.systemDefault()).getOffset();
+
+  private final TypeConverter typeConverter;
+
+  public LiteralConverter(TypeConverter typeConverter) {
+    this.typeConverter = typeConverter;
+  }
 
   private Expression nullOf(RexLiteral literal) {
     return null;

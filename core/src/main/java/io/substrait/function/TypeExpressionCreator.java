@@ -77,6 +77,8 @@ public class TypeExpressionCreator extends TypeCreator
   }
 
   public static class Assign {
+    String name;
+    TypeExpression expr;
 
     public Assign() {}
 
@@ -84,9 +86,6 @@ public class TypeExpressionCreator extends TypeCreator
       this.name = name;
       this.expr = expr;
     }
-
-    String name;
-    TypeExpression expr;
 
     public String name() {
       return name;
