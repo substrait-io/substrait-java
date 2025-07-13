@@ -47,7 +47,7 @@ public class CustomFunctionTest extends PlanTestBase {
     try {
       FUNCTIONS_CUSTOM = asString("extensions/functions_custom.yaml");
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 

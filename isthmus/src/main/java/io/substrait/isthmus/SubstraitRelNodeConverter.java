@@ -371,7 +371,7 @@ public class SubstraitRelNodeConverter
       case ASC_NULLS_LAST -> relBuilder.nullsLast(rexNode);
       case DESC_NULLS_FIRST -> relBuilder.nullsFirst(relBuilder.desc(rexNode));
       case DESC_NULLS_LAST -> relBuilder.nullsLast(relBuilder.desc(rexNode));
-      case CLUSTERED -> throw new RuntimeException(
+      case CLUSTERED -> throw new UnsupportedOperationException(
           String.format("Unexpected Expression.SortDirection: Clustered!"));
     };
   }
@@ -383,10 +383,12 @@ public class SubstraitRelNodeConverter
     long count = optCount.orElse(-1L);
     var offset = fetch.getOffset();
     if (offset > Integer.MAX_VALUE) {
-      throw new RuntimeException(String.format("offset is overflowed as an integer: %d", offset));
+      throw new IllegalArgumentException(
+          String.format("offset is overflowed as an integer: %d", offset));
     }
     if (count > Integer.MAX_VALUE) {
-      throw new RuntimeException(String.format("count is overflowed as an integer: %d", count));
+      throw new IllegalArgumentException(
+          String.format("count is overflowed as an integer: %d", count));
     }
     RelNode node = relBuilder.push(child).limit((int) offset, (int) count).build();
     return applyRemap(node, fetch.getRemap());
@@ -413,7 +415,7 @@ public class SubstraitRelNodeConverter
       }
       case CLUSTERED -> fieldDirection = RelFieldCollation.Direction.CLUSTERED;
 
-      default -> throw new RuntimeException(
+      default -> throw new UnsupportedOperationException(
           String.format("Unexpected Expression.SortDirection enum: %s !", sortDirection));
     }
     return new RelFieldCollation(fieldIndex, fieldDirection, nullDirection);

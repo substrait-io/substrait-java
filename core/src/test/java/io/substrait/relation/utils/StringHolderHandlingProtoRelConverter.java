@@ -24,7 +24,7 @@ public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
     try {
       return new StringHolder(any.unpack(StringValue.class).getValue());
     } catch (InvalidProtocolBufferException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 

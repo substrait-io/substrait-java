@@ -940,7 +940,7 @@ public class ProtoRelConverter {
    * io.substrait.proto.AdvancedExtension#getEnhancement()} data
    */
   protected Extension.Enhancement enhancementFromAdvancedExtension(com.google.protobuf.Any any) {
-    throw new RuntimeException("enhancements cannot be ignored by consumers");
+    throw new IllegalStateException("enhancements cannot be ignored by consumers");
   }
 
   /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */

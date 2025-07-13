@@ -61,7 +61,7 @@ public class PlanTestBase {
       TPCH_CATALOG =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(tpchCreateStatements);
     } catch (IOException | SqlParseException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 

@@ -165,7 +165,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
                 .from(proto.getLiteral()));
         return new ColumnAppendDetail(literal);
       } catch (InvalidProtocolBufferException e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
 
@@ -208,7 +208,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
         return new ColumnAppenderRel(
             relBuilder.getCluster(), traits, literal, Collections.emptyList());
       }
-      throw new RuntimeException("detail was not ColumnAppendDetail");
+      throw new UnsupportedOperationException("detail was not ColumnAppendDetail");
     }
 
     @Override
@@ -220,7 +220,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
         return new ColumnAppenderRel(
             input.getCluster(), input.getTraitSet(), literal, List.of(input));
       }
-      throw new RuntimeException("detail was not ColumnAppendDetail");
+      throw new UnsupportedOperationException("detail was not ColumnAppendDetail");
     }
 
     @Override
@@ -235,7 +235,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
         return new ColumnAppenderRel(
             inputs.get(0).getCluster(), inputs.get(0).getTraitSet(), literal, inputs);
       }
-      throw new RuntimeException("detail was not ColumnAppendDetail");
+      throw new UnsupportedOperationException("detail was not ColumnAppendDetail");
     }
   }
 
