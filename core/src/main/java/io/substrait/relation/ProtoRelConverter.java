@@ -46,7 +46,6 @@ import java.util.stream.IntStream;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProtoRelConverter.class);
 
   protected final ExtensionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;

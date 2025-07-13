@@ -13,7 +13,6 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 
 public class TypeStringParser {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeStringParser.class);
 
   private TypeStringParser() {}
 

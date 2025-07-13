@@ -16,7 +16,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class CalciteTypeTest extends CalciteObjs {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteTypeTest.class);
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})

@@ -9,7 +9,6 @@ import io.substrait.type.TypeCreator;
 import org.junit.jupiter.api.Test;
 
 public class TestTypeParser {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTypeParser.class);
 
   private final TypeCreator n = TypeCreator.NULLABLE;
   private final TypeCreator r = TypeCreator.REQUIRED;

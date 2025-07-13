@@ -8,8 +8,6 @@ import io.substrait.proto.Type;
 
 public class TypeExpressionProtoVisitor
     extends BaseProtoConverter<DerivationExpression, DerivationExpression> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(TypeExpressionProtoVisitor.class);
 
   public TypeExpressionProtoVisitor(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Unexpected expression type. This shouldn't happen.");

@@ -17,7 +17,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class ExpressionCreator {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionCreator.class);
 
   private ExpressionCreator() {}
 

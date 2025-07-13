@@ -12,8 +12,6 @@ import java.util.Optional;
 
 /** Converts from {@link io.substrait.proto.Plan} to {@link io.substrait.plan.Plan} */
 public class ProtoPlanConverter {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(io.substrait.plan.ProtoPlanConverter.class);
 
   protected final SimpleExtension.ExtensionCollection extensionCollection;
 

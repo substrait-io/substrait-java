@@ -8,7 +8,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 /** Set of classes/methods that make it easier to work with Calcite. */
 public abstract class CalciteObjs {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteObjs.class);
 
   final RelDataTypeFactory type = SubstraitTypeSystem.createTypeFactory();
   final RexBuilder rex = new RexBuilder(type);
