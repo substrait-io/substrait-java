@@ -1,6 +1,23 @@
 Release Notes
 ---
 
+## [0.62.0](https://github.com/substrait-io/substrait-java/compare/v0.61.0...v0.62.0) (2025-07-13)
+
+### ⚠ BREAKING CHANGES
+
+* ExpressionVisitor methods have new Context parameter
+* RelVisitor methods have new Context parameter
+* FunArgVisitor methods have new Context parameter
+* **isthmus:** removed SqlToSubstrait#execute(String sql, List tables)
+* **isthmus:** removed SqlToSubstrait#execute(String sql, String name, Schema schema)
+* **isthmus:** removed SubstraitToSql#substraitRelToCalciteRel(Rel relRoot, List tables)
+* **isthmus:** removed SubstraitToSql#toSql(RelNode root)
+
+### Features
+
+* add visit context to Rel, Expression and FuncArg Visitors ([#427](https://github.com/substrait-io/substrait-java/issues/427)) ([0e9c492](https://github.com/substrait-io/substrait-java/commit/0e9c4926a6e8341df07d541fd2a451d3c2117f81))
+* **isthmus:** additional parsing and unparsing utils for SQL ([#430](https://github.com/substrait-io/substrait-java/issues/430)) ([f87929d](https://github.com/substrait-io/substrait-java/commit/f87929d00775e767b69de782e52859b9c2499b68))
+
 ## [0.61.0](https://github.com/substrait-io/substrait-java/compare/v0.60.0...v0.61.0) (2025-06-29)
 
 ### Features
