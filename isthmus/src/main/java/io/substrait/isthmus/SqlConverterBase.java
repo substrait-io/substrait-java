@@ -19,6 +19,9 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 class SqlConverterBase {
+  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      SimpleExtension.loadDefaults();
+
   final RelDataTypeFactory factory;
   final RelOptCluster relOptCluster;
   final CalciteConnectionConfig config;
@@ -49,7 +52,4 @@ class SqlConverterBase {
             .withParserFactory(SqlDdlParserImpl.FACTORY)
             .withConformance(SqlConformanceEnum.LENIENT);
   }
-
-  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
 }

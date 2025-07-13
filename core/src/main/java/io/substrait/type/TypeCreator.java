@@ -25,6 +25,11 @@ public class TypeCreator {
   public final Type INTERVAL_YEAR;
   public final Type UUID;
 
+  private static NullableSettingTypeVisitor NULLABLE_TRUE_VISITOR =
+      new NullableSettingTypeVisitor(true);
+  private static NullableSettingTypeVisitor NULLABLE_FALSE_VISITOR =
+      new NullableSettingTypeVisitor(false);
+
   protected TypeCreator(boolean nullable) {
     this.nullable = nullable;
     BOOLEAN = Type.Bool.builder().nullable(nullable).build();
@@ -118,11 +123,6 @@ public class TypeCreator {
   public static Type asNotNullable(Type type) {
     return type.nullable() ? type.accept(NULLABLE_FALSE_VISITOR) : type;
   }
-
-  private static NullableSettingTypeVisitor NULLABLE_TRUE_VISITOR =
-      new NullableSettingTypeVisitor(true);
-  private static NullableSettingTypeVisitor NULLABLE_FALSE_VISITOR =
-      new NullableSettingTypeVisitor(false);
 
   private static final class NullableSettingTypeVisitor
       implements TypeVisitor<Type, RuntimeException> {

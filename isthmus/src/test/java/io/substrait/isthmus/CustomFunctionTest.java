@@ -250,6 +250,19 @@ public class CustomFunctionTest extends PlanTestBase {
   WindowFunctionConverter windowFunctionConverter =
       new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
 
+  final SubstraitToCalcite substraitToCalcite =
+      new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
+
+  // Create a SubstraitRelVisitor that uses the custom Function Converters
+  final SubstraitRelVisitor calciteToSubstrait =
+      new SubstraitRelVisitor(
+          typeFactory,
+          scalarFunctionConverter,
+          aggregateFunctionConverter,
+          windowFunctionConverter,
+          typeConverter,
+          ImmutableFeatureBoard.builder().build());
+
   // Create a SubstraitToCalcite converter that has access to the custom Function Converters
   class CustomSubstraitToCalcite extends SubstraitToCalcite {
 
@@ -271,19 +284,6 @@ public class CustomFunctionTest extends PlanTestBase {
           typeConverter);
     }
   }
-
-  final SubstraitToCalcite substraitToCalcite =
-      new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
-
-  // Create a SubstraitRelVisitor that uses the custom Function Converters
-  final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
-          typeFactory,
-          scalarFunctionConverter,
-          aggregateFunctionConverter,
-          windowFunctionConverter,
-          typeConverter,
-          ImmutableFeatureBoard.builder().build());
 
   @Test
   void customScalarFunctionRoundtrip() {

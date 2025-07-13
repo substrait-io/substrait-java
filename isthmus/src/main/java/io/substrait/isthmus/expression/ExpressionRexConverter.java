@@ -57,13 +57,6 @@ import org.apache.calcite.util.TimestampString;
 public class ExpressionRexConverter
     extends AbstractExpressionVisitor<RexNode, Context, RuntimeException>
     implements FunctionArg.FuncArgVisitor<RexNode, Context, RuntimeException> {
-  protected final RelDataTypeFactory typeFactory;
-  protected final TypeConverter typeConverter;
-  protected final RexBuilder rexBuilder;
-  protected final ScalarFunctionConverter scalarFunctionConverter;
-  protected final WindowFunctionConverter windowFunctionConverter;
-  protected SubstraitRelNodeConverter relNodeConverter;
-
   private static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(
           org.apache.calcite.avatica.util.TimeUnit.YEAR,
@@ -79,6 +72,15 @@ public class ExpressionRexConverter
           org.apache.calcite.avatica.util.TimeUnit.SECOND,
           3, // Calcite only supports millisecond at the moment
           SqlParserPos.QUOTED_ZERO);
+
+  private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
+
+  protected final RelDataTypeFactory typeFactory;
+  protected final TypeConverter typeConverter;
+  protected final RexBuilder rexBuilder;
+  protected final ScalarFunctionConverter scalarFunctionConverter;
+  protected final WindowFunctionConverter windowFunctionConverter;
+  protected SubstraitRelNodeConverter relNodeConverter;
 
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory,
@@ -284,8 +286,6 @@ public class ExpressionRexConverter
     return rexBuilder.makeIntervalLiteral(
         new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
   }
-
-  private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
 
   @Override
   public RexNode visit(Expression.IntervalDayLiteral expr, Context context)
@@ -517,6 +517,9 @@ public class ExpressionRexConverter
   static class ToRexWindowBound
       implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
 
+    private final RexBuilder rexBuilder;
+    private final RexWindowBound unboundedVariant;
+
     static RexWindowBound lowerBound(RexBuilder rexBuilder, WindowBound bound) {
       // per the spec, unbounded on the lower bound means the start of the partition
       // thus UNBOUNDED_PRECEDING should be used when bound is unbounded
@@ -528,9 +531,6 @@ public class ExpressionRexConverter
       // thus UNBOUNDED_FOLLOWING should be used when bound is unbounded
       return bound.accept(new ToRexWindowBound(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
     }
-
-    private final RexBuilder rexBuilder;
-    private final RexWindowBound unboundedVariant;
 
     private ToRexWindowBound(RexBuilder rexBuilder, RexWindowBound unboundedVariant) {
       this.rexBuilder = rexBuilder;

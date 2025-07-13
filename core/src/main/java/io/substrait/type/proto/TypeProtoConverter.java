@@ -5,6 +5,10 @@ import io.substrait.proto.Type;
 
 /** Convert from {@link io.substrait.type.Type} to {@link io.substrait.proto.Type} */
 public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
+  private static final BaseProtoTypes<Type, Integer> NULLABLE =
+      new Types(Type.Nullability.NULLABILITY_NULLABLE);
+  private static final BaseProtoTypes<Type, Integer> REQUIRED =
+      new Types(Type.Nullability.NULLABILITY_REQUIRED);
 
   public TypeProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Type literals cannot contain parameters or expressions.");
@@ -13,11 +17,6 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
   public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return type.accept(this);
   }
-
-  private static final BaseProtoTypes<Type, Integer> NULLABLE =
-      new Types(Type.Nullability.NULLABILITY_NULLABLE);
-  private static final BaseProtoTypes<Type, Integer> REQUIRED =
-      new Types(Type.Nullability.NULLABILITY_REQUIRED);
 
   @Override
   public BaseProtoTypes<Type, Integer> typeContainer(final boolean nullable) {

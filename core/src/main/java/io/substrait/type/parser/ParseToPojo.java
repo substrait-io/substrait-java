@@ -37,6 +37,8 @@ public class ParseToPojo {
   }
 
   public static class Visitor implements SubstraitTypeVisitor<TypeExpression> {
+    private final VisitorType expressionType;
+    private final String namespace;
 
     public static Visitor simple(String namespace) {
       return new Visitor(VisitorType.SIMPLE, namespace);
@@ -49,9 +51,6 @@ public class ParseToPojo {
     public static Visitor expression(String namespace) {
       return new Visitor(VisitorType.EXPRESSION, namespace);
     }
-
-    private final VisitorType expressionType;
-    private final String namespace;
 
     private Visitor(VisitorType exprType, String namespace) {
       this.expressionType = exprType;

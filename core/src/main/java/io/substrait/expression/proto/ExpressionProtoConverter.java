@@ -643,12 +643,11 @@ public class ExpressionProtoConverter
 
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
+    private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
 
     public static Expression.WindowFunction.Bound convert(WindowBound bound) {
       return bound.accept(TO_BOUND_VISITOR);
     }
-
-    private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
 
     private BoundConverter() {}
 

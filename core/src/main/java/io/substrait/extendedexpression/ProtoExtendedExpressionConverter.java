@@ -18,6 +18,10 @@ import java.util.Optional;
 public class ProtoExtendedExpressionConverter {
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
+  private final ProtoTypeConverter protoTypeConverter =
+      new ProtoTypeConverter(
+          new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
+
   public ProtoExtendedExpressionConverter() {
     this(SimpleExtension.loadDefaults());
   }
@@ -25,10 +29,6 @@ public class ProtoExtendedExpressionConverter {
   public ProtoExtendedExpressionConverter(SimpleExtension.ExtensionCollection extensionCollection) {
     this.extensionCollection = extensionCollection;
   }
-
-  private final ProtoTypeConverter protoTypeConverter =
-      new ProtoTypeConverter(
-          new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
 
   public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpression) {
     // fill in simple extension information through a discovery in the current proto-extended

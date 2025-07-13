@@ -27,6 +27,12 @@ import org.junit.jupiter.api.Test;
 
 public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
+  public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
+      SimpleExtension.FunctionAnchor.of(
+          "/functions_aggregate_approx.yaml", "approx_count_distinct:any");
+  public static SimpleExtension.FunctionAnchor COUNT =
+      SimpleExtension.FunctionAnchor.of("/functions_aggregate_generic.yaml", "count:any");
+
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
           + "  count(distinct l.l_orderkey),\n"
@@ -180,12 +186,6 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
     }
   }
-
-  public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
-      SimpleExtension.FunctionAnchor.of(
-          "/functions_aggregate_approx.yaml", "approx_count_distinct:any");
-  public static SimpleExtension.FunctionAnchor COUNT =
-      SimpleExtension.FunctionAnchor.of("/functions_aggregate_generic.yaml", "count:any");
 
   private static class CountCountDistinct {
 
