@@ -113,6 +113,7 @@ public class SimpleExtension {
       return value().accept(ToTypeString.INSTANCE);
     }
 
+    @Override
     public boolean required() {
       return true;
     }
@@ -130,10 +131,12 @@ public class SimpleExtension {
     @JsonProperty(required = true)
     public abstract ParameterizedType type();
 
+    @Override
     public String toTypeString() {
       return "type";
     }
 
+    @Override
     public boolean required() {
       return true;
     }
@@ -165,6 +168,7 @@ public class SimpleExtension {
       return true;
     }
 
+    @Override
     public String toTypeString() {
       return "req";
     }
