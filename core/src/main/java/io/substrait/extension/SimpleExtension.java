@@ -311,8 +311,6 @@ public class SimpleExtension {
 
     public Util.IntRange getRange() {
       // end range is exclusive so add one to size.
-
-      long optionalCount = args().stream().filter(t -> !t.required()).count();
       int max =
           variadic()
               .map(

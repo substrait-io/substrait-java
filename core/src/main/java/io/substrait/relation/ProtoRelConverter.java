@@ -1,7 +1,6 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
-import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
@@ -42,7 +41,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
@@ -633,15 +631,7 @@ public class ProtoRelConverter {
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
-    FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(protoExprConverter, protoTypeConverter);
     for (AggregateRel.Measure measure : rel.getMeasuresList()) {
-      io.substrait.proto.AggregateFunction func = measure.getMeasure();
-      SimpleExtension.AggregateFunctionVariant funcDecl =
-          lookup.getAggregateFunction(func.getFunctionReference(), extensions);
-      List<FunctionArg> args =
-          IntStream.range(0, measure.getMeasure().getArgumentsCount())
-              .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
-              .collect(java.util.stream.Collectors.toList());
       measures.add(
           Aggregate.Measure.builder()
               .function(protoAggrFuncConverter.from(measure.getMeasure()))

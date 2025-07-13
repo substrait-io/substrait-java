@@ -154,12 +154,6 @@ public class ParameterizedProtoConverter
       return ParameterizedType.IntegerOption.newBuilder().setLiteral(len).build();
     }
 
-    private static ParameterizedType.IntegerOption i(String param) {
-      return ParameterizedType.IntegerOption.newBuilder()
-          .setParameter(ParameterizedType.IntegerParameter.newBuilder().setName(param))
-          .build();
-    }
-
     @Override
     public ParameterizedType varChar(ParameterizedType.IntegerOption len) {
       return wrap(

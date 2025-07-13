@@ -15,8 +15,6 @@ import java.util.Map;
  */
 public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
-  private int counter = -1;
-
   private ImmutableExtensionLookup(
       Map<Integer, SimpleExtension.FunctionAnchor> functionMap,
       Map<Integer, SimpleExtension.TypeAnchor> typeMap) {

@@ -14,7 +14,6 @@ public class TestTypeParser {
   private final TypeCreator r = TypeCreator.REQUIRED;
 
   private final TypeExpressionCreator eo = TypeExpressionCreator.REQUIRED;
-  private final TypeExpressionCreator en = TypeExpressionCreator.NULLABLE;
   private final ParameterizedTypeCreator pr = ParameterizedTypeCreator.REQUIRED;
   private final ParameterizedTypeCreator pn = ParameterizedTypeCreator.NULLABLE;
 

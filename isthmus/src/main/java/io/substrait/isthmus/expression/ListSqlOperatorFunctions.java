@@ -26,12 +26,7 @@ public class ListSqlOperatorFunctions {
                     return false;
                   }
 
-                  try {
-                    SqlOperator op = (SqlOperator) f.get(null);
-                    return true;
-                  } catch (IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                  }
+                  return true;
                 })
             .filter(f -> Modifier.isStatic(f.getModifiers()) && Modifier.isPublic(f.getModifiers()))
             .collect(Collectors.toMap(Field::getName, ListSqlOperatorFunctions::toOp));
