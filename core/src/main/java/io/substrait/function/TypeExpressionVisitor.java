@@ -34,7 +34,7 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
 
   R visit(TypeExpression.ReturnProgram expr) throws E;
 
-  public abstract static class TypeExpressionThrowsVisitor<R, E extends Throwable>
+  abstract class TypeExpressionThrowsVisitor<R, E extends Throwable>
       extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<R, E>
       implements TypeExpressionVisitor<R, E> {
 

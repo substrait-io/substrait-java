@@ -29,7 +29,7 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
 
   R visit(ParameterizedType.StringLiteral stringLiteral) throws E;
 
-  public abstract static class ParameterizedTypeThrowsVisitor<R, E extends Throwable>
+  abstract class ParameterizedTypeThrowsVisitor<R, E extends Throwable>
       extends TypeVisitor.TypeThrowsVisitor<R, E> implements ParameterizedTypeVisitor<R, E> {
 
     protected ParameterizedTypeThrowsVisitor(String unsupportedMessage) {

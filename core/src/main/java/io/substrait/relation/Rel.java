@@ -26,7 +26,7 @@ public interface Rel {
   Optional<Hint> getHint();
 
   @Value.Immutable
-  public abstract static class Remap {
+  abstract class Remap {
     public abstract List<Integer> indices();
 
     public Type.Struct remap(Type.Struct initial) {
