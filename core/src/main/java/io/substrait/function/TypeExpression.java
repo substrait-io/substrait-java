@@ -15,6 +15,7 @@ public interface TypeExpression {
   }
 
   abstract class BaseTypeExpression implements TypeExpression {
+    @Override
     public final <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
       if (typeVisitor instanceof TypeExpressionVisitor) {
         return acceptE((TypeExpressionVisitor<R, E>) typeVisitor);

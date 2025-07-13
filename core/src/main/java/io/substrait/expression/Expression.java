@@ -39,6 +39,7 @@ public interface Expression extends FunctionArg {
   abstract class NullLiteral implements Literal {
     public abstract Type type();
 
+    @Override
     public Type getType() {
       return type();
     }
@@ -58,6 +59,7 @@ public interface Expression extends FunctionArg {
   abstract class BoolLiteral implements Literal {
     public abstract Boolean value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).BOOLEAN;
     }
@@ -77,6 +79,7 @@ public interface Expression extends FunctionArg {
   abstract class I8Literal implements Literal {
     public abstract int value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).I8;
     }
@@ -96,6 +99,7 @@ public interface Expression extends FunctionArg {
   abstract class I16Literal implements Literal {
     public abstract int value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).I16;
     }
@@ -115,6 +119,7 @@ public interface Expression extends FunctionArg {
   abstract class I32Literal implements Literal {
     public abstract int value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).I32;
     }
@@ -134,6 +139,7 @@ public interface Expression extends FunctionArg {
   abstract class I64Literal implements Literal {
     public abstract long value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).I64;
     }
@@ -153,6 +159,7 @@ public interface Expression extends FunctionArg {
   abstract class FP32Literal implements Literal {
     public abstract float value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).FP32;
     }
@@ -172,6 +179,7 @@ public interface Expression extends FunctionArg {
   abstract class FP64Literal implements Literal {
     public abstract double value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).FP64;
     }
@@ -191,6 +199,7 @@ public interface Expression extends FunctionArg {
   abstract class StrLiteral implements Literal {
     public abstract String value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).STRING;
     }
@@ -210,6 +219,7 @@ public interface Expression extends FunctionArg {
   abstract class BinaryLiteral implements Literal {
     public abstract ByteString value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).BINARY;
     }
@@ -229,6 +239,7 @@ public interface Expression extends FunctionArg {
   abstract class TimestampLiteral implements Literal {
     public abstract long value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).TIMESTAMP;
     }
@@ -248,6 +259,7 @@ public interface Expression extends FunctionArg {
   abstract class TimeLiteral implements Literal {
     public abstract long value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).TIME;
     }
@@ -267,6 +279,7 @@ public interface Expression extends FunctionArg {
   abstract class DateLiteral implements Literal {
     public abstract int value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).DATE;
     }
@@ -275,6 +288,7 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.DateLiteral.builder();
     }
 
+    @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
         ExpressionVisitor<R, C, E> visitor, C context) throws E {
       return visitor.visit(this, context);
@@ -285,6 +299,7 @@ public interface Expression extends FunctionArg {
   abstract class TimestampTZLiteral implements Literal {
     public abstract long value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).TIMESTAMP_TZ;
     }
@@ -306,6 +321,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int precision();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).precisionTimestamp(precision());
     }
@@ -327,6 +343,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int precision();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).precisionTimestampTZ(precision());
     }
@@ -348,6 +365,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int months();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).INTERVAL_YEAR;
     }
@@ -373,6 +391,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int precision();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).intervalDay(precision());
     }
@@ -404,6 +423,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int precision();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).intervalCompound(precision());
     }
@@ -423,6 +443,7 @@ public interface Expression extends FunctionArg {
   abstract class UUIDLiteral implements Literal {
     public abstract UUID value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).UUID;
     }
@@ -450,6 +471,7 @@ public interface Expression extends FunctionArg {
   abstract class FixedCharLiteral implements Literal {
     public abstract String value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).fixedChar(value().length());
     }
@@ -471,6 +493,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int length();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).varChar(length());
     }
@@ -490,6 +513,7 @@ public interface Expression extends FunctionArg {
   abstract class FixedBinaryLiteral implements Literal {
     public abstract ByteString value();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).fixedBinary(value().size());
     }
@@ -513,6 +537,7 @@ public interface Expression extends FunctionArg {
 
     public abstract int scale();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).decimal(precision(), scale());
     }
@@ -532,6 +557,7 @@ public interface Expression extends FunctionArg {
   abstract class MapLiteral implements Literal {
     public abstract Map<Literal, Literal> values();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable())
           .map(
@@ -556,6 +582,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Type valueType();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).map(keyType(), valueType());
     }
@@ -575,6 +602,7 @@ public interface Expression extends FunctionArg {
   abstract class ListLiteral implements Literal {
     public abstract List<Literal> values();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).list(values().get(0).getType());
     }
@@ -614,6 +642,7 @@ public interface Expression extends FunctionArg {
   abstract class StructLiteral implements Literal {
     public abstract List<Literal> fields();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable())
           .struct(
@@ -641,6 +670,7 @@ public interface Expression extends FunctionArg {
 
     public abstract String name();
 
+    @Override
     public Type getType() {
       return Type.withNullability(nullable()).userDefined(uri(), name());
     }
@@ -664,6 +694,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Expression defaultClause();
 
+    @Override
     public Type getType() {
       return defaultClause().getType();
     }
@@ -696,6 +727,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Expression elseClause();
 
+    @Override
     public Type getType() {
       Type elseType = elseClause().getType();
 
@@ -736,6 +768,7 @@ public interface Expression extends FunctionArg {
 
     public abstract FailureBehavior failureBehavior();
 
+    @Override
     public Type getType() {
       return type();
     }
@@ -761,6 +794,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Type outputType();
 
+    @Override
     public Type getType() {
       return outputType();
     }
@@ -799,6 +833,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Type outputType();
 
+    @Override
     public Type getType() {
       return outputType();
     }
@@ -849,6 +884,7 @@ public interface Expression extends FunctionArg {
 
     public abstract List<Expression> options();
 
+    @Override
     public Type getType() {
       return TypeCreator.NULLABLE.BOOLEAN;
     }
@@ -870,6 +906,7 @@ public interface Expression extends FunctionArg {
 
     public abstract List<MultiOrListRecord> optionCombinations();
 
+    @Override
     public Type getType() {
       return TypeCreator.NULLABLE.BOOLEAN;
     }
@@ -913,6 +950,7 @@ public interface Expression extends FunctionArg {
 
     public abstract Rel tuples();
 
+    @Override
     public Type getType() {
       return TypeCreator.REQUIRED.BOOLEAN;
     }
@@ -949,6 +987,7 @@ public interface Expression extends FunctionArg {
 
     public abstract List<Expression> needles();
 
+    @Override
     public Type getType() {
       return TypeCreator.REQUIRED.BOOLEAN;
     }
