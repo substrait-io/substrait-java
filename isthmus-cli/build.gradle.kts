@@ -24,8 +24,6 @@ val SLF4J_VERSION = properties.get("slf4j.version")
 dependencies {
   implementation(project(":core"))
   implementation(project(":isthmus"))
-  implementation("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
-  implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
   testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
   testImplementation("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -41,7 +39,12 @@ dependencies {
   }
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
+  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}") {
+    exclude(group = "commons-lang", module = "commons-lang")
+      .because(
+        "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
+      )
+  }
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
