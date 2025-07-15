@@ -19,12 +19,15 @@ package io.substrait.spark
 
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
-import org.apache.spark.sql.{Dataset, DatasetUtil, Row}
+import org.apache.spark.sql.{Dataset, DatasetUtil, Encoders, Row}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
+import io.substrait.extension.ExtensionLookup
 import io.substrait.plan.{PlanProtoConverter, ProtoPlanConverter}
+import io.substrait.relation.ProtoRelConverter
 
 import java.nio.file.Paths
 
@@ -36,9 +39,10 @@ class LocalFiles extends SharedSparkSession {
     conf.setConf(SQLConf.DYNAMIC_PARTITION_PRUNING_ENABLED, false)
     // introduced in spark 3.4
     spark.conf.set("spark.sql.readSideCharPadding", "false")
+    spark.conf.set("spark.sql.legacy.createHiveTableByDefault", "false")
   }
 
-  def assertRoundTrip(data: Dataset[Row], comparePlans: Boolean = false): Dataset[Row] = {
+  def assertRoundTripData(data: Dataset[Row]): Dataset[Row] = {
     val toSubstrait = new ToSubstraitRel
     val sparkPlan = data.queryExecution.optimizedPlan
     val substraitPlan = toSubstrait.convert(sparkPlan)
@@ -62,11 +66,9 @@ class LocalFiles extends SharedSparkSession {
       case (before, after) => assertResult(before)(after)
     }
 
-    if (comparePlans) {
-      // extra check to assert the query plans round-trip as well
-      val roundTrippedPlan = toSubstrait.convert(sparkPlan2)
-      assertResult(substraitPlan)(roundTrippedPlan)
-    }
+    // extra check to assert the query plans round-trip as well
+    val roundTrippedPlan = toSubstrait.convert(sparkPlan2)
+    assertResult(substraitPlan)(roundTrippedPlan)
 
     result
   }
@@ -77,7 +79,7 @@ class LocalFiles extends SharedSparkSession {
       .option("inferSchema", true)
       .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
 
-    assertRoundTrip(table)
+    assertRoundTripData(table)
   }
 
   test("CSV null value") {
@@ -87,7 +89,7 @@ class LocalFiles extends SharedSparkSession {
       .option("nullValue", "seven")
       .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
 
-    val result = assertRoundTrip(table)
+    val result = assertRoundTripData(table)
     val id = result.filter("isnull(VALUE)").head().get(0)
 
     assertResult(id)(7)
@@ -104,7 +106,7 @@ class LocalFiles extends SharedSparkSession {
       .option("quote", "'")
       .csv(Paths.get("src/test/resources/dataset-a.txt").toAbsolutePath.toString)
 
-    assertRoundTrip(table)
+    assertRoundTripData(table)
   }
 
   test("Read csv folder") {
@@ -113,21 +115,21 @@ class LocalFiles extends SharedSparkSession {
       .option("inferSchema", true)
       .csv(Paths.get("src/test/resources/csv/").toAbsolutePath.toString)
 
-    assertRoundTrip(table, true)
+    assertRoundTripData(table)
   }
 
   test("Read parquet file") {
     val table = spark.read
       .parquet(Paths.get("src/test/resources/dataset-a.parquet").toAbsolutePath.toString)
 
-    assertRoundTrip(table, true)
+    assertRoundTripData(table)
   }
 
   test("Read orc file") {
     val table = spark.read
       .orc(Paths.get("src/test/resources/dataset-a.orc").toAbsolutePath.toString)
 
-    assertRoundTrip(table, true)
+    assertRoundTripData(table)
   }
 
   test("Join tables from different formats") {
@@ -145,7 +147,7 @@ class LocalFiles extends SharedSparkSession {
       .join(orc, csv.col("ID").equalTo(orc.col("ID_B")))
       .select("ID", "VALUE", "VALUE_B")
 
-    assertRoundTrip(both)
+    assertRoundTripData(both)
   }
 
   test("Struct from sub-queries") {
@@ -162,7 +164,105 @@ class LocalFiles extends SharedSparkSession {
                            |
                            |""".stripMargin)
 
-    val result = assertRoundTrip(data)
+    val result = assertRoundTripData(data)
     assertResult(Row(55, 10))(result.head())
   }
+
+  def assertRoundTripExtension(plan: LogicalPlan): LogicalPlan = {
+    val toSubstrait = new ToSubstraitRel
+    val substraitPlan = toSubstrait.convert(plan)
+
+    // Serialize to proto buffer
+    val bytes = new PlanProtoConverter()
+      .toProto(substraitPlan)
+      .toByteArray
+
+    // Read it back
+    val protoPlan = io.substrait.proto.Plan
+      .parseFrom(bytes)
+    val converter = new ProtoPlanConverter {
+      override protected def getProtoRelConverter(
+          functionLookup: ExtensionLookup): ProtoRelConverter = {
+        new FileHolderHandlingProtoRelConverter(functionLookup)
+      }
+    }
+    val substraitPlan2 = converter.from(protoPlan)
+    val sparkPlan2 = new ToLogicalPlan(spark).convert(substraitPlan2)
+    val roundTrippedPlan = toSubstrait.convert(sparkPlan2)
+    assertResult(substraitPlan)(roundTrippedPlan)
+
+    sparkPlan2
+  }
+
+  test("Insert") {
+    // create an in-memory table with 2 rows
+    spark.sql("drop table if exists test")
+    spark.sql("create table test(ID int, VALUE string)")
+    spark.sql("insert into test values(1001, 'hello')")
+    spark.sql("insert into test values(1002, 'world')")
+    assertResult(2)(spark.sql("select * from test").count())
+
+    // insert a new row - and capture the query plan
+    val insert = spark.sql("insert into test values(1003, 'again')")
+    // there are now 3 rows
+    assertResult(3)(spark.sql("select * from test").count())
+
+    // convert the plan to Substrait and back
+    val plan = assertRoundTripExtension(insert.queryExecution.optimizedPlan)
+    // this should not have affected the table (still 3 rows)
+    assertResult(3)(spark.sql("select * from test").count())
+
+    // now execute the round-tripped plan and assert an extra row is appended
+    spark.sessionState.executePlan(plan).executedPlan.execute()
+    assertResult(4)(spark.sql("select * from test").count())
+    // and again...
+    spark.sessionState.executePlan(plan).executedPlan.execute()
+    assertResult(5)(spark.sql("select * from test").count())
+  }
+
+  test("Append to CSV file") {
+    val tempFile = "build/tmp/test/write-a.csv"
+
+    // create a CSV file with 2 rows
+    val encoder = Encoders.tuple(Encoders.scalaInt, Encoders.STRING)
+    val ds = spark.createDataset(Seq((1, "a"), (2, "b")))(encoder)
+    ds.write.mode("overwrite").format("csv").save(tempFile)
+
+    csvRead(tempFile).createOrReplaceTempView("csv")
+    val insert = spark.sql("insert into csv values (3, 'c')")
+
+    // there are 3 rows in the file
+    assertResult(3)(csvRead(tempFile).count())
+
+    // convert the plan to Substrait and back
+    val plan = assertRoundTripExtension(insert.queryExecution.optimizedPlan)
+
+    // this should not have affected the csv file (still 3 rows)
+    assertResult(3)(csvRead(tempFile).count())
+
+    // now execute the round-tripped plan and assert an extra row is appended
+    spark.sessionState.executePlan(plan).executedPlan.execute()
+    assertResult(4)(csvRead(tempFile).count())
+    // and again...
+    spark.sessionState.executePlan(plan).executedPlan.execute()
+    assertResult(5)(csvRead(tempFile).count())
+  }
+
+  test("Create table as select") {
+    spark.sql("drop table if exists ctas")
+    val df = spark.sql(
+      "create table ctas as select * from (values (1, 'a'), (2, 'b') as table(col1, col2))")
+    assertResult(2)(spark.sql("select * from ctas").count())
+
+    spark.sql("drop table ctas")
+
+    val plan = assertRoundTripExtension(df.queryExecution.optimizedPlan)
+    spark.sessionState.executePlan(plan).executedPlan.execute()
+    assertResult(2)(spark.sql("select * from ctas").count())
+  }
+
+  private def csvRead(path: String): Dataset[Row] =
+    spark.read
+      .option("inferSchema", true)
+      .csv(Paths.get(path).toAbsolutePath.toString)
 }
