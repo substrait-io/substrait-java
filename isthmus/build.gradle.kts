@@ -110,15 +110,28 @@ val PROTOBUF_VERSION = properties.get("protobuf.version")
 
 dependencies {
   api(project(":core"))
-  api("org.apache.calcite:calcite-core:${CALCITE_VERSION}")
+  api("org.apache.calcite:calcite-core:${CALCITE_VERSION}") {
+    exclude(group = "commons-lang", module = "commons-lang")
+      .because(
+        "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
+      )
+  }
   constraints {
     // calcite-core:1.39.0 has dependencies that contain vulnerabilities:
     // - CVE-2025-27820 (org.apache.httpcomponents.client5:httpclient5 < 5.4.3)
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
     implementation("org.apache.httpcomponents.client5:httpclient5:5.4.4")
     implementation("net.minidev:json-smart:2.5.2")
+    // calcite-core:1.40.0 has dependencies that contain vulnerabilities:
+    // - CVE-2025-48924 (org.apache.commons:commons-lang3 < 3.18.0)
+    implementation("org.apache.commons:commons-lang3:[3.18.0,)")
   }
-  implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}")
+  implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}") {
+    exclude(group = "commons-lang", module = "commons-lang")
+      .because(
+        "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
+      )
+  }
   testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
   testImplementation("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -136,7 +149,12 @@ dependencies {
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}")
+  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}") {
+    exclude(group = "commons-lang", module = "commons-lang")
+      .because(
+        "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
+      )
+  }
   annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
