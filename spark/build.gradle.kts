@@ -103,7 +103,7 @@ java {
 
 tasks.withType<ScalaCompile>() {
   targetCompatibility = ""
-  scalaCompileOptions.additionalParameters = listOf("-release:17")
+  scalaCompileOptions.additionalParameters = listOf("-release:11")
 }
 
 var SLF4J_VERSION = properties.get("slf4j.version")
