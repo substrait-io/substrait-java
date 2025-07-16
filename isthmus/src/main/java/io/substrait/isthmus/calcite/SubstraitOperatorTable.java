@@ -1,6 +1,7 @@
 package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -29,7 +30,7 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
 
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(
-          List.of(
+          Arrays.asList(
               AggregateFunctions.MAX,
               AggregateFunctions.MIN,
               AggregateFunctions.AVG,
@@ -51,7 +52,7 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               // filter out the kinds that have been overriden from the standard operator table
               STANDARD_OPERATOR_TABLE.getOperatorList().stream()
                   .filter(op -> !OVERRIDE_KINDS.contains(op.kind)))
-          .collect(Collectors.toUnmodifiableList());
+          .collect(Collectors.toList());
 
   @Override
   public void lookupOperatorOverloads(

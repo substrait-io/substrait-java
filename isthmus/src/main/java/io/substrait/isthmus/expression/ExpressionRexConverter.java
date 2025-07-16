@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -426,10 +427,12 @@ public class ExpressionRexConverter
                 sf -> {
                   Set<SqlKind> direction =
                       switch (sf.direction()) {
-                        case ASC_NULLS_FIRST -> Set.of(SqlKind.NULLS_FIRST);
-                        case ASC_NULLS_LAST -> Set.of(SqlKind.NULLS_LAST);
-                        case DESC_NULLS_FIRST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
-                        case DESC_NULLS_LAST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_LAST);
+                        case ASC_NULLS_FIRST -> ImmutableSet.of(SqlKind.NULLS_FIRST);
+                        case ASC_NULLS_LAST -> ImmutableSet.of(SqlKind.NULLS_LAST);
+                        case DESC_NULLS_FIRST -> ImmutableSet.of(
+                            SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
+                        case DESC_NULLS_LAST -> ImmutableSet.of(
+                            SqlKind.DESCENDING, SqlKind.NULLS_LAST);
                         case CLUSTERED -> throw new IllegalArgumentException(
                             "SORT_DIRECTION_CLUSTERED is not supported");
                       };

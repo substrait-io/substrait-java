@@ -17,6 +17,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -34,9 +35,9 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
 
   final ExpressionRexConverter converter;
 
-  final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
+  final List<Type> commonTableType = Arrays.asList(R.I32, R.FP32, N.STRING, N.BOOLEAN);
   final Rel commonTable =
-      b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
+      b.namedScan(Arrays.asList("example"), Arrays.asList("a", "b", "c", "d"), commonTableType);
 
   final SubstraitRelNodeConverter relNodeConverter =
       new SubstraitRelNodeConverter(extensions, typeFactory, builder);
@@ -50,7 +51,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
     var expr =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
-            List.of(b.switchClause(b.i32(0), b.fieldReference(commonTable, 3))),
+            Arrays.asList(b.switchClause(b.i32(0), b.fieldReference(commonTable, 3))),
             b.bool(false));
     var calciteExpr = expr.accept(converter, Context.newContext());
 
@@ -64,7 +65,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
     Expression.ScalarSubquery expr =
         Expression.ScalarSubquery.builder().type(R.I64).input(subQueryRel).build();
 
-    Project query = b.project(input -> List.of(expr), b.emptyScan());
+    Project query = b.project(input -> Arrays.asList(expr), b.emptyScan());
 
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
@@ -85,7 +86,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = b.project(input -> List.of(expr), b.emptyScan());
+    Project query = b.project(input -> Arrays.asList(expr), b.emptyScan());
 
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
@@ -106,7 +107,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = b.project(input -> List.of(expr), b.emptyScan());
+    Project query = b.project(input -> Arrays.asList(expr), b.emptyScan());
 
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
@@ -127,7 +128,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = b.project(input -> List.of(expr), b.emptyScan());
+    Project query = b.project(input -> Arrays.asList(expr), b.emptyScan());
 
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     Exception exception =
@@ -151,8 +152,8 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
    */
   Rel createSubQueryRel() {
     return b.project(
-        input -> List.of(b.fieldReference(input, 0)),
-        Remap.of(List.of(3)),
+        input -> Arrays.asList(b.fieldReference(input, 0)),
+        Remap.of(Arrays.asList(3)),
         b.filter(input -> b.equal(b.fieldReference(input, 2), b.str("EUROPE")), commonTable));
   }
 

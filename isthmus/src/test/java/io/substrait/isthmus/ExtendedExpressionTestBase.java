@@ -18,7 +18,7 @@ public class ExtendedExpressionTestBase {
   public static List<String> tpchSchemaCreateStatements(String schemaToLoad) throws IOException {
     String[] values = asString(schemaToLoad).split(";");
     return Arrays.stream(values)
-        .filter(t -> !t.trim().isBlank())
+        .filter(t -> !t.trim().matches("^\\s*$"))
         .collect(java.util.stream.Collectors.toList());
   }
 

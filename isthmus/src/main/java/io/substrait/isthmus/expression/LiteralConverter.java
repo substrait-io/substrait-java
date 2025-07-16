@@ -174,8 +174,8 @@ public class LiteralConverter {
         var interval = Duration.ofMillis(totalMillis);
 
         var days = interval.toDays();
-        var seconds = interval.minusDays(days).toSeconds();
-        var micros = interval.toMillisPart() * 1000;
+        var seconds = interval.minusDays(days).getSeconds();
+        var micros = interval.getNano() / 1000;
 
         yield intervalDay(n, (int) days, (int) seconds, micros, 6);
       }

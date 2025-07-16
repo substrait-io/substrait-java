@@ -77,9 +77,7 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
 
   private List<ScalarFunctionVariant> findFunction(
       String name, Collection<ScalarFunctionVariant> functions) {
-    return functions.stream()
-        .filter(f -> name.equals(f.name()))
-        .collect(Collectors.toUnmodifiableList());
+    return functions.stream().filter(f -> name.equals(f.name())).collect(Collectors.toList());
   }
 
   @Override
@@ -92,14 +90,13 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
 
     return trimType.map(
         trim -> {
-          var functions = trimFunctions.getOrDefault(trim, List.of());
+          var functions = trimFunctions.getOrDefault(trim, Collections.emptyList());
           if (functions.isEmpty()) {
             return null;
           }
 
           var name = trim.substraitName();
-          var operands =
-              call.getOperands().stream().skip(1).collect(Collectors.toUnmodifiableList());
+          var operands = call.getOperands().stream().skip(1).collect(Collectors.toList());
           return new SubstraitFunctionMapping(name, operands, functions);
         });
   }

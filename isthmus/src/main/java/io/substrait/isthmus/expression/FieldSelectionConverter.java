@@ -49,7 +49,7 @@ public class FieldSelectionConverter implements CallConverter {
       case ROW:
         {
           var index = toInt(literal);
-          if (index.isEmpty()) {
+          if (!index.isPresent()) {
             return Optional.empty();
           }
           if (input instanceof FieldReference) {
@@ -61,7 +61,7 @@ public class FieldSelectionConverter implements CallConverter {
       case ARRAY:
         {
           var index = toInt(literal);
-          if (index.isEmpty()) {
+          if (!index.isPresent()) {
             return Optional.empty();
           }
 
@@ -75,7 +75,7 @@ public class FieldSelectionConverter implements CallConverter {
       case MAP:
         {
           var mapKey = toString(literal);
-          if (mapKey.isEmpty()) {
+          if (!mapKey.isPresent()) {
             return Optional.empty();
           }
 

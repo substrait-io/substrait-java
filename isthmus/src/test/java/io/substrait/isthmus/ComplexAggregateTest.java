@@ -11,6 +11,8 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -51,9 +53,9 @@ public class ComplexAggregateTest extends PlanTestBase {
     new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo);
   }
 
-  private List<Type> columnTypes = List.of(R.I32, R.I32, R.I32, R.I32);
-  private List<String> columnNames = List.of("a", "b", "c", "d");
-  private NamedScan table = b.namedScan(List.of("example"), columnNames, columnTypes);
+  private List<Type> columnTypes = Arrays.asList(R.I32, R.I32, R.I32, R.I32);
+  private List<String> columnNames = Arrays.asList("a", "b", "c", "d");
+  private NamedScan table = b.namedScan(Arrays.asList("example"), columnNames, columnTypes);
 
   private Aggregate.Grouping emptyGrouping = Aggregate.Grouping.builder().build();
 
@@ -63,17 +65,17 @@ public class ComplexAggregateTest extends PlanTestBase {
     var rel =
         b.aggregate(
             input -> emptyGrouping,
-            input -> List.of(b.sum(b.add(b.fieldReference(input, 2), b.i32(7)))),
+            input -> Arrays.asList(b.sum(b.add(b.fieldReference(input, 2), b.i32(7)))),
             table);
 
     var expectedFinal =
         b.aggregate(
             input -> emptyGrouping,
             // sum call references input field
-            input -> List.of(b.sum(input, 4)),
+            input -> Arrays.asList(b.sum(input, 4)),
             b.project(
                 // add call is moved to child project
-                input -> List.of(b.add(b.fieldReference(input, 2), b.i32(7))),
+                input -> Arrays.asList(b.add(b.fieldReference(input, 2), b.i32(7))),
                 table));
 
     validateAggregateTransformation(rel, expectedFinal);
@@ -86,7 +88,7 @@ public class ComplexAggregateTest extends PlanTestBase {
         b.aggregate(
             input -> emptyGrouping,
             input ->
-                List.of(
+                Arrays.asList(
                     withPreMeasureFilter(
                         b.sum(input, 0), b.equal(b.fieldReference(input, 1), b.i32(42)))),
             table);
@@ -94,8 +96,10 @@ public class ComplexAggregateTest extends PlanTestBase {
     var expectedFinal =
         b.aggregate(
             input -> emptyGrouping,
-            input -> List.of(withPreMeasureFilter(b.sum(input, 0), b.fieldReference(input, 4))),
-            b.project(input -> List.of(b.equal(b.fieldReference(input, 1), b.i32(42))), table));
+            input ->
+                Arrays.asList(withPreMeasureFilter(b.sum(input, 0), b.fieldReference(input, 4))),
+            b.project(
+                input -> Arrays.asList(b.equal(b.fieldReference(input, 1), b.i32(42))), table));
 
     validateAggregateTransformation(rel, expectedFinal);
   }
@@ -107,10 +111,10 @@ public class ComplexAggregateTest extends PlanTestBase {
         b.aggregate(
             input -> emptyGrouping,
             input ->
-                List.of(
+                Arrays.asList(
                     withSort(
                         b.sum(input, 3),
-                        List.of(
+                        Arrays.asList(
                             b.sortField(
                                 b.negate(b.fieldReference(input, 1)),
                                 Expression.SortDirection.ASC_NULLS_FIRST)))),
@@ -120,16 +124,16 @@ public class ComplexAggregateTest extends PlanTestBase {
         b.aggregate(
             input -> emptyGrouping,
             input ->
-                List.of(
+                Arrays.asList(
                     withSort(
                         b.sum(input, 3),
-                        List.of(
+                        Arrays.asList(
                             b.sortField(
                                 b.fieldReference(input, 4),
                                 Expression.SortDirection.ASC_NULLS_FIRST)))),
             b.project(
                 // negate call is moved to child project
-                input -> List.of(b.negate(b.fieldReference(input, 1))),
+                input -> Arrays.asList(b.negate(b.fieldReference(input, 1))),
                 table));
 
     validateAggregateTransformation(rel, expectedFinal);
@@ -142,17 +146,17 @@ public class ComplexAggregateTest extends PlanTestBase {
             input ->
                 b.grouping(
                     b.fieldReference(input, 2), b.add(b.fieldReference(input, 1), b.i32(42))),
-            input -> List.of(),
+            input -> Collections.emptyList(),
             table);
 
     var expectedFinal =
         b.aggregate(
             // grouping exprs are now field references to input
             input -> b.grouping(input, 4, 5),
-            input -> List.of(),
+            input -> Collections.emptyList(),
             b.project(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.fieldReference(input, 2), b.add(b.fieldReference(input, 1), b.i32(42))),
                 table));
 
@@ -161,17 +165,18 @@ public class ComplexAggregateTest extends PlanTestBase {
 
   @Test
   void handleOutOfOrderGroupingArguments() {
-    var rel = b.aggregate(input -> b.grouping(input, 1, 0, 2), input -> List.of(), table);
+    var rel =
+        b.aggregate(input -> b.grouping(input, 1, 0, 2), input -> Collections.emptyList(), table);
 
     var expectedFinal =
         b.aggregate(
             // grouping exprs are now field references to input
             input -> b.grouping(input, 4, 5, 6),
-            input -> List.of(),
+            input -> Collections.emptyList(),
             b.project(
                 // ALL grouping exprs are added to the child projects (including field references)
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.fieldReference(input, 1),
                         b.fieldReference(input, 0),
                         b.fieldReference(input, 2)),
@@ -185,8 +190,11 @@ public class ComplexAggregateTest extends PlanTestBase {
     Rel rel =
         b.aggregate(
             input -> b.grouping(input, 2, 0),
-            input -> List.of(),
-            b.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+            input -> Collections.emptyList(),
+            b.namedScan(
+                Arrays.asList("foo"),
+                Arrays.asList("a", "b", "c"),
+                Arrays.asList(R.I64, R.I64, R.STRING)));
     var relNode = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(rel);
     assertRowMatch(relNode.getRowType(), R.STRING, R.I64);
   }

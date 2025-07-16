@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import com.google.common.collect.ImmutableSet;
 import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.Set;
@@ -12,7 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-H test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpchQueryTest extends PlanTestBase {
-  private static final Set<Integer> fromSubstraitExclusions = Set.of(17);
+  private static final Set<Integer> fromSubstraitExclusions = ImmutableSet.of(17);
 
   static IntStream testCases() {
     return IntStream.rangeClosed(1, 22);

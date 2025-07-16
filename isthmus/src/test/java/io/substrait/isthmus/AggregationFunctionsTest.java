@@ -7,6 +7,7 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -22,8 +23,8 @@ public class AggregationFunctionsTest extends PlanTestBase {
   static final TypeCreator N = TypeCreator.of(true);
 
   // Create a table with that has a column of every numeric type, both NOT NULL and NULL
-  private List<Type> numericTypesR = List.of(R.I8, R.I16, R.I32, R.I64, R.FP32, R.FP64);
-  private List<Type> numericTypesN = List.of(N.I8, N.I16, N.I32, N.I64, N.FP32, N.FP64);
+  private List<Type> numericTypesR = Arrays.asList(R.I8, R.I16, R.I32, R.I64, R.FP32, R.FP64);
+  private List<Type> numericTypesN = Arrays.asList(N.I8, N.I16, N.I32, N.I64, N.FP32, N.FP64);
   private List<Type> numericTypes =
       Stream.concat(numericTypesR.stream(), numericTypesN.stream()).collect(Collectors.toList());
 
@@ -37,7 +38,8 @@ public class AggregationFunctionsTest extends PlanTestBase {
   private List<String> columnNames =
       Streams.mapWithIndex(tableTypes.stream(), (t, index) -> String.valueOf(index))
           .collect(Collectors.toList());
-  private NamedScan numericTypesTable = b.namedScan(List.of("example"), columnNames, tableTypes);
+  private NamedScan numericTypesTable =
+      b.namedScan(Arrays.asList("example"), columnNames, tableTypes);
 
   // Create the given function call on the given field of the input
   private Aggregate.Measure functionPicker(Rel input, int field, String fname) {

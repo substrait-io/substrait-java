@@ -8,6 +8,7 @@ import io.substrait.relation.Set.SetOp;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,12 +24,12 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
   // Define a shared table (i.e. a NamedScan) for use in tests.
-  final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
+  final List<Type> commonTableType = Arrays.asList(R.I32, R.FP32, N.STRING, N.BOOLEAN);
   final List<Type> commonTableTypeTwice =
       Stream.concat(commonTableType.stream(), commonTableType.stream())
           .collect(Collectors.toList());
   final Rel commonTable =
-      b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
+      b.namedScan(Arrays.asList("example"), Arrays.asList("a", "b", "c", "d"), commonTableType);
 
   final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
 
@@ -40,7 +41,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
           b.root(
               b.aggregate(
                   input -> b.grouping(input, 0, 2),
-                  input -> List.of(b.count(input, 0)),
+                  input -> Arrays.asList(b.count(input, 0)),
                   commonTable));
 
       var relNode = converter.convert(root.getInput());
@@ -53,7 +54,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
           b.root(
               b.aggregate(
                   input -> b.grouping(input, 0, 2),
-                  input -> List.of(b.count(input, 0)),
+                  input -> Arrays.asList(b.count(input, 0)),
                   b.remap(1, 2),
                   commonTable));
 
@@ -140,8 +141,9 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
     @Test
     public void leftJoin() {
-      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
-      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+      final List<Type> joinTableType = Arrays.asList(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable =
+          b.namedScan(Arrays.asList("join"), Arrays.asList("a", "b", "c"), joinTableType);
 
       Plan.Root root =
           b.root(
@@ -156,8 +158,9 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
     @Test
     public void rightJoin() {
-      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
-      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+      final List<Type> joinTableType = Arrays.asList(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable =
+          b.namedScan(Arrays.asList("join"), Arrays.asList("a", "b", "c"), joinTableType);
 
       Plan.Root root =
           b.root(
@@ -172,8 +175,9 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
     @Test
     public void outerJoin() {
-      final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
-      final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
+      final List<Type> joinTableType = Arrays.asList(R.STRING, R.FP64, R.BINARY);
+      final Rel joinTable =
+          b.namedScan(Arrays.asList("join"), Arrays.asList("a", "b", "c"), joinTableType);
 
       Plan.Root root =
           b.root(
@@ -192,7 +196,9 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     @Test
     public void direct() {
       Plan.Root root =
-          b.root(b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I32, R.FP32)));
+          b.root(
+              b.namedScan(
+                  Arrays.asList("example"), Arrays.asList("a", "b"), Arrays.asList(R.I32, R.FP32)));
 
       var relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, R.FP32);
@@ -203,7 +209,10 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       Plan.Root root =
           b.root(
               b.namedScan(
-                  List.of("example"), List.of("a", "b"), List.of(R.I32, R.FP32), b.remap(1)));
+                  Arrays.asList("example"),
+                  Arrays.asList("a", "b"),
+                  Arrays.asList(R.I32, R.FP32),
+                  b.remap(1)));
 
       var relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.FP32);
@@ -284,7 +293,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       Plan.Root root = b.root(emptyScan);
       var relNode = converter.convert(root.getInput());
-      assertRowMatch(relNode.getRowType(), List.of(R.I32, N.STRING));
+      assertRowMatch(relNode.getRowType(), Arrays.asList(R.I32, N.STRING));
     }
 
     @Test
@@ -292,7 +301,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       Rel emptyScanWithRemap =
           io.substrait.relation.EmptyScan.builder()
               .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct(R.I32, N.STRING)))
-              .remap(Rel.Remap.of(List.of(0)))
+              .remap(Rel.Remap.of(Arrays.asList(0)))
               .build();
 
       Plan.Root root = b.root(emptyScanWithRemap);

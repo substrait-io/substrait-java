@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.relation.Rel;
-import java.util.List;
+import java.util.Arrays;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +26,13 @@ public class SchemaCollectorTest extends PlanTestBase {
     Rel rel =
         b.cross(
             b.namedScan(
-                List.of("table1"),
-                List.of("col1", "col2", "col3"),
-                List.of(N.I64, R.FP64, N.STRING)),
-            b.namedScan(List.of("table2"), List.of("col4", "col5"), List.of(N.BOOLEAN, N.I32)));
+                Arrays.asList("table1"),
+                Arrays.asList("col1", "col2", "col3"),
+                Arrays.asList(N.I64, R.FP64, N.STRING)),
+            b.namedScan(
+                Arrays.asList("table2"),
+                Arrays.asList("col4", "col5"),
+                Arrays.asList(N.BOOLEAN, N.I32)));
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
 
     hasTable(
@@ -45,14 +48,15 @@ public class SchemaCollectorTest extends PlanTestBase {
         b.cross(
             b.cross(
                 b.namedScan(
-                    List.of("schema1", "table1"),
-                    List.of("col1", "col2", "col3"),
-                    List.of(N.I64, N.FP64, N.STRING)),
+                    Arrays.asList("schema1", "table1"),
+                    Arrays.asList("col1", "col2", "col3"),
+                    Arrays.asList(N.I64, N.FP64, N.STRING)),
                 b.namedScan(
-                    List.of("schema1", "table2"),
-                    List.of("col4", "col5"),
-                    List.of(N.BOOLEAN, N.I32))),
-            b.namedScan(List.of("schema2", "table3"), List.of("col6"), List.of(N.I64)));
+                    Arrays.asList("schema1", "table2"),
+                    Arrays.asList("col4", "col5"),
+                    Arrays.asList(N.BOOLEAN, N.I32))),
+            b.namedScan(
+                Arrays.asList("schema2", "table3"), Arrays.asList("col6"), Arrays.asList(N.I64)));
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
 
     CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
@@ -68,8 +72,13 @@ public class SchemaCollectorTest extends PlanTestBase {
     Rel rel =
         b.cross(
             b.namedScan(
-                List.of("level1", "level2a", "level3", "t1"), List.of("col1"), List.of(N.I64)),
-            b.namedScan(List.of("level1", "level2b", "t2"), List.of("col2"), List.of(N.I32)));
+                Arrays.asList("level1", "level2a", "level3", "t1"),
+                Arrays.asList("col1"),
+                Arrays.asList(N.I64)),
+            b.namedScan(
+                Arrays.asList("level1", "level2b", "t2"),
+                Arrays.asList("col2"),
+                Arrays.asList(N.I32)));
 
     var rootSchema = schemaCollector.toSchema(rel);
     CalciteSchema level1 = rootSchema.getSubSchema("level1", false);
@@ -84,7 +93,8 @@ public class SchemaCollectorTest extends PlanTestBase {
 
   @Test
   void canHandleDuplicateNamedScans() {
-    Rel table = b.namedScan(List.of("table"), List.of("col1"), List.of(N.BOOLEAN));
+    Rel table =
+        b.namedScan(Arrays.asList("table"), Arrays.asList("col1"), Arrays.asList(N.BOOLEAN));
     Rel rel = b.cross(table, table);
 
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
@@ -95,8 +105,8 @@ public class SchemaCollectorTest extends PlanTestBase {
   void validatesSchemasForDuplicateNamedScans() {
     Rel rel =
         b.cross(
-            b.namedScan(List.of("t"), List.of("col1"), List.of(N.BOOLEAN)),
-            b.namedScan(List.of("t"), List.of("col1"), List.of(R.BOOLEAN)));
+            b.namedScan(Arrays.asList("t"), Arrays.asList("col1"), Arrays.asList(N.BOOLEAN)),
+            b.namedScan(Arrays.asList("t"), Arrays.asList("col1"), Arrays.asList(R.BOOLEAN)));
 
     IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> schemaCollector.toSchema(rel));
@@ -109,8 +119,8 @@ public class SchemaCollectorTest extends PlanTestBase {
   void validatesSchemasForNestedDuplicateNamedScans() {
     Rel rel =
         b.cross(
-            b.namedScan(List.of("s", "t"), List.of("col1"), List.of(N.BOOLEAN)),
-            b.namedScan(List.of("s", "t"), List.of("col1"), List.of(R.BOOLEAN)));
+            b.namedScan(Arrays.asList("s", "t"), Arrays.asList("col1"), Arrays.asList(N.BOOLEAN)),
+            b.namedScan(Arrays.asList("s", "t"), Arrays.asList("col1"), Arrays.asList(R.BOOLEAN)));
 
     IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> schemaCollector.toSchema(rel));

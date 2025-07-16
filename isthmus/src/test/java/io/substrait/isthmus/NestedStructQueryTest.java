@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.TextFormat;
 import io.substrait.isthmus.calcite.SubstraitSchema;
 import io.substrait.plan.ProtoPlanConverter;
@@ -9,7 +10,6 @@ import io.substrait.proto.Expression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Map;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -57,7 +57,7 @@ public class NestedStructQueryTest extends PlanTestBase {
 
   private void test(Table table, String query, String expectedExpressionText)
       throws SqlParseException, IOException {
-    final Schema schema = new SubstraitSchema(Map.of("my_table", table));
+    final Schema schema = new SubstraitSchema(ImmutableMap.of("my_table", table));
     final CalciteCatalogReader catalog = schemaToCatalog("nested", schema);
     final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
     Plan plan = sqlToSubstrait.execute(query, catalog);

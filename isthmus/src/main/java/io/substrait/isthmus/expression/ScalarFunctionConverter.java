@@ -7,6 +7,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -43,7 +44,7 @@ public class ScalarFunctionConverter
       TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
 
-    mappers = List.of(new TrimFunctionMapper(functions));
+    mappers = Arrays.asList(new TrimFunctionMapper(functions));
   }
 
   @Override

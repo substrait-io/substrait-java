@@ -12,6 +12,7 @@ import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,7 +142,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     Map<String, RexNode> nameToNodeMap = new HashMap<>();
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     CalciteCatalogReader catalogReader =
-        new CalciteCatalogReader(rootSchema, List.of(), factory, config);
+        new CalciteCatalogReader(rootSchema, Collections.emptyList(), factory, config);
     if (tables != null) {
       for (String tableDef : tables) {
         List<SubstraitTable> tList =

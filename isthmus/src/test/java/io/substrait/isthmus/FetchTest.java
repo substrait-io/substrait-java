@@ -3,7 +3,7 @@ package io.substrait.isthmus;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
-import java.util.List;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 public class FetchTest extends PlanTestBase {
@@ -12,7 +12,8 @@ public class FetchTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
-  final Rel TABLE = b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING));
+  final Rel TABLE =
+      b.namedScan(Arrays.asList("test"), Arrays.asList("col1"), Arrays.asList(R.STRING));
 
   @Test
   void limitOnly() {

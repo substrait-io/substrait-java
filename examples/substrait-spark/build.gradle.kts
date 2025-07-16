@@ -38,3 +38,9 @@ tasks.named<Test>("test") {
 }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+
+// dependency io.substrait:spark:0.36.0 above has been compiled for Java 11, setting release to 11
+tasks.withType<JavaCompile> {
+  sourceCompatibility = "17"
+  options.release = 11
+}

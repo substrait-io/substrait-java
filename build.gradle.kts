@@ -43,16 +43,17 @@ allprojects {
   tasks.configureEach<Test> {
     val javaToolchains = project.extensions.getByType<JavaToolchainService>()
     useJUnitPlatform()
-    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(11)) })
+    // run tests on Java 8
+    // toolchain resolver plugin will download Java 8 if not installed
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(8)) })
     testLogging { exceptionFormat = TestExceptionFormat.FULL }
   }
   tasks.withType<JavaCompile> {
     sourceCompatibility = "17"
-    if (project.name != "core") {
-      options.release.set(11)
-    } else {
-      options.release.set(8)
-    }
+    // compile for Java 8 release level
+    options.release = 8
+    // use a Java 17 to compile code, will download Java 17 if not installed
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(17) }
     dependsOn(submodulesUpdate)
   }
 

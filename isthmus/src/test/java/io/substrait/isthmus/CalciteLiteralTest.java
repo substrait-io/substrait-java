@@ -307,7 +307,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tDecimalLiteral() {
     List<BigDecimal> decimalList =
-        List.of(
+        Arrays.asList(
             new BigDecimal("-123.457890"),
             new BigDecimal("123.457890"),
             new BigDecimal("123.450000"),
@@ -320,7 +320,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tDecimalLiteral2() {
     List<BigDecimal> decimalList =
-        List.of(
+        Arrays.asList(
             new BigDecimal("-99.123456789123456789123456789123456789"), // scale = 36, precision =38
             new BigDecimal("99.123456789123456789123456789123456789") // scale = 36, precision = 38
             );

@@ -17,6 +17,7 @@ import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
@@ -42,7 +43,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       names = {"-c", "--create"},
       description =
           "One or multiple create table statements e.g. CREATE TABLE T1(foo int, bar bigint)")
-  private List<String> createStatements = List.of();
+  private List<String> createStatements = Collections.emptyList();
 
   @Option(
       names = {"--outputformat"},
@@ -94,7 +95,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-              createStatements.toArray(String[]::new));
+              createStatements.toArray(new String[0]));
       Plan plan = converter.execute(sql, catalog);
       printMessage(plan);
     }

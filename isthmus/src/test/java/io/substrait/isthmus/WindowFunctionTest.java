@@ -7,7 +7,7 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.Rel;
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -192,7 +192,7 @@ public class WindowFunctionTest extends PlanTestBase {
     Rel rel =
         substraitBuilder.project(
             input ->
-                List.of(
+                Arrays.asList(
                     substraitBuilder.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any", function),
@@ -204,7 +204,8 @@ public class WindowFunctionTest extends PlanTestBase {
                         WindowBound.Following.CURRENT_ROW,
                         substraitBuilder.fieldReference(input, 0))),
             substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+            substraitBuilder.namedScan(
+                Arrays.asList("window_test"), Arrays.asList("a"), Arrays.asList(R.FP64)));
 
     assertFullRoundTrip(rel);
   }
@@ -215,7 +216,7 @@ public class WindowFunctionTest extends PlanTestBase {
     Rel rel =
         substraitBuilder.project(
             input ->
-                List.of(
+                Arrays.asList(
                     substraitBuilder.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32", function),
@@ -228,7 +229,8 @@ public class WindowFunctionTest extends PlanTestBase {
                         substraitBuilder.fieldReference(input, 0),
                         substraitBuilder.i32(1))),
             substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+            substraitBuilder.namedScan(
+                Arrays.asList("window_test"), Arrays.asList("a"), Arrays.asList(R.FP64)));
 
     assertFullRoundTrip(rel);
   }
@@ -239,7 +241,7 @@ public class WindowFunctionTest extends PlanTestBase {
     Rel rel =
         substraitBuilder.project(
             input ->
-                List.of(
+                Arrays.asList(
                     substraitBuilder.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32_any", function),
@@ -253,7 +255,8 @@ public class WindowFunctionTest extends PlanTestBase {
                         substraitBuilder.i32(1),
                         substraitBuilder.fp64(100.0))),
             substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+            substraitBuilder.namedScan(
+                Arrays.asList("window_test"), Arrays.asList("a"), Arrays.asList(R.FP64)));
 
     assertFullRoundTrip(rel);
   }

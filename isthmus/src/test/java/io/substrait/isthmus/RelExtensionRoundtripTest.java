@@ -20,6 +20,7 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -218,7 +219,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
         RelNode input = extensionSingle.getInput().accept(this, context);
         RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         return new ColumnAppenderRel(
-            input.getCluster(), input.getTraitSet(), literal, List.of(input));
+            input.getCluster(), input.getTraitSet(), literal, Arrays.asList(input));
       }
       throw new RuntimeException("detail was not ColumnAppendDetail");
     }
