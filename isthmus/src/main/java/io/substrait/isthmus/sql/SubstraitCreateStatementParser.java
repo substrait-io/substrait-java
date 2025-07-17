@@ -45,7 +45,10 @@ public class SubstraitCreateStatementParser {
 
   private static final CalciteCatalogReader EMPTY_CATALOG =
       new CalciteCatalogReader(
-          CalciteSchema.createRootSchema(false), List.of(), TYPE_FACTORY, CONNECTION_CONFIG);
+          CalciteSchema.createRootSchema(false),
+          Collections.emptyList(),
+          TYPE_FACTORY,
+          CONNECTION_CONFIG);
 
   // A validator is needed to convert the types in column declarations to Calcite types
   private static final SqlValidator VALIDATOR =

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ public class NameRoundtripTest extends PlanTestBase {
     String query = """
       SELECT "a", "B" FROM foo GROUP BY a, b
       """;
-    List<String> expectedNames = List.of("a", "B");
+    List<String> expectedNames = Arrays.asList("a", "B");
 
     List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, catalogReader);
     assertEquals(1, calciteRelRoots.size());
@@ -44,12 +45,12 @@ public class NameRoundtripTest extends PlanTestBase {
   void preserveNamesFromSubstrait() {
     NamedScan rel =
         substraitBuilder.namedScan(
-            List.of("foo"),
-            List.of("i64", "struct", "struct0", "struct1"),
-            List.of(R.I64, R.struct(R.FP64, R.STRING)));
+            Arrays.asList("foo"),
+            Arrays.asList("i64", "struct", "struct0", "struct1"),
+            Arrays.asList(R.I64, R.struct(R.FP64, R.STRING)));
 
     Plan.Root planRoot =
-        Plan.Root.builder().input(rel).names(List.of("i", "s", "s0", "s1")).build();
+        Plan.Root.builder().input(rel).names(Arrays.asList("i", "s", "s0", "s1")).build();
     assertFullRoundTrip(planRoot);
   }
 }

@@ -9,6 +9,7 @@ import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
@@ -59,10 +60,11 @@ public class ComplexSortTest extends PlanTestBase {
             b.remap(1),
             b.sort(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.sortField(
                             b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                b.namedScan(
+                    Arrays.asList("example"), Arrays.asList("a"), Arrays.asList(R.STRING))));
 
     String expected =
         """
@@ -88,11 +90,12 @@ public class ComplexSortTest extends PlanTestBase {
             b.remap(1),
             b.sort(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.sortField(
                             b.cast(b.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                b.namedScan(
+                    Arrays.asList("example"), Arrays.asList("a"), Arrays.asList(R.STRING))));
 
     String expected =
         """
@@ -116,15 +119,16 @@ public class ComplexSortTest extends PlanTestBase {
 
     Rel rel =
         b.project(
-            input -> List.of(b.cast(b.fieldReference(input, 0), R.I32)),
+            input -> Arrays.asList(b.cast(b.fieldReference(input, 0), R.I32)),
             b.remap(1),
             b.sort(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.sortField(
                             b.cast(b.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.DESC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                b.namedScan(
+                    Arrays.asList("example"), Arrays.asList("a"), Arrays.asList(R.STRING))));
 
     String expected =
         """
@@ -148,15 +152,16 @@ public class ComplexSortTest extends PlanTestBase {
 
     Rel rel =
         b.project(
-            input -> List.of(b.fieldReference(input, 0)),
+            input -> Arrays.asList(b.fieldReference(input, 0)),
             b.remap(1),
             b.sort(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.sortField(
                             b.cast(b.fieldReference(input, 0), R.STRING),
                             Expression.SortDirection.DESC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                b.namedScan(
+                    Arrays.asList("example"), Arrays.asList("a"), Arrays.asList(R.STRING))));
 
     String expected =
         """
@@ -180,18 +185,21 @@ public class ComplexSortTest extends PlanTestBase {
 
     Rel rel =
         b.project(
-            input -> List.of(b.fieldReference(input, 0), b.fieldReference(input, 1)),
+            input -> Arrays.asList(b.fieldReference(input, 0), b.fieldReference(input, 1)),
             b.remap(2, 3),
             b.sort(
                 input ->
-                    List.of(
+                    Arrays.asList(
                         b.sortField(
                             b.cast(b.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.DESC_NULLS_FIRST),
                         b.sortField(
                             b.add(b.negate(b.fieldReference(input, 1)), b.i32(42)),
                             Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.STRING, R.I32))));
+                b.namedScan(
+                    Arrays.asList("example"),
+                    Arrays.asList("a", "b"),
+                    Arrays.asList(R.STRING, R.I32))));
 
     String expected =
         """

@@ -18,6 +18,7 @@ import io.substrait.isthmus.Utils;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -325,7 +327,7 @@ public abstract class FunctionConverter<
                       if (rexArg instanceof RexLiteral) {
                         isOption = ((RexLiteral) rexArg).getValue() instanceof Enum;
                       }
-                      return isOption ? List.of("req", "opt") : List.of(opType);
+                      return isOption ? Arrays.asList("req", "opt") : Arrays.asList(opType);
                     })
                 .collect(Collectors.toList());
 
@@ -376,7 +378,7 @@ public abstract class FunctionConverter<
                       }
                     })
                 .collect(Collectors.toList());
-        boolean allArgsMapped = funcArgs.stream().filter(Objects::isNull).findFirst().isEmpty();
+        boolean allArgsMapped = !funcArgs.stream().filter(Objects::isNull).findFirst().isPresent();
         if (allArgsMapped) {
           return Optional.of(generateBinding(call, variant, funcArgs, outputType));
         } else {
@@ -406,7 +408,10 @@ public abstract class FunctionConverter<
         return Optional.empty();
       }
       Type type = typeConverter.toSubstrait(leastRestrictive);
-      var out = singularInputType.orElseThrow().tryMatch(type, outputType);
+      if (!singularInputType.isPresent()) {
+        throw new NoSuchElementException("No value present");
+      }
+      var out = singularInputType.get().tryMatch(type, outputType);
 
       return out.map(
           declaration -> {
@@ -426,7 +431,7 @@ public abstract class FunctionConverter<
 
       // See if all the input types can be made to match the function
       Optional<F> matchFunction = signatureMatch(operandTypes, outputType);
-      if (matchFunction.isEmpty()) {
+      if (!matchFunction.isPresent()) {
         return Optional.empty();
       }
 

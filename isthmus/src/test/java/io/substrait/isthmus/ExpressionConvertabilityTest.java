@@ -21,6 +21,7 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -49,9 +50,9 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   final RexBuilder rexBuilder = new RexBuilder(typeFactory);
 
   // Define a shared table (i.e. a NamedScan) for use in tests.
-  final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
+  final List<Type> commonTableType = Arrays.asList(R.I32, R.FP32, N.STRING, N.BOOLEAN);
   final Rel commonTable =
-      b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
+      b.namedScan(Arrays.asList("example"), Arrays.asList("a", "b", "c", "d"), commonTableType);
 
   @Test
   public void listLiteral() throws IOException, SqlParseException {
@@ -93,7 +94,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
     Expression switchExpression =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
-            List.of(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
+            Arrays.asList(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
             b.i32(3));
     RexNode rexNode = switchExpression.accept(converter, Context.newContext());
     Expression expression =
@@ -104,7 +105,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
     // cannot roundtrip test switchExpression because Calcite simplifies the representation
     assertExpressionEquality(
         b.ifThen(
-            List.of(
+            Arrays.asList(
                 b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(5)), b.i32(1)),
                 b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(10)), b.i32(2))),
             b.i32(3)),
@@ -116,7 +117,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
     Rel rel =
         b.project(
             input ->
-                List.of(
+                Arrays.asList(
                     ExpressionCreator.cast(
                         R.I64,
                         b.fieldReference(input, 0),
@@ -124,7 +125,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
                     ExpressionCreator.cast(
                         R.I32, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
             b.remap(1, 2),
-            b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
+            b.namedScan(Arrays.asList("test"), Arrays.asList("col1"), Arrays.asList(R.STRING)));
 
     assertFullRoundTrip(rel);
   }

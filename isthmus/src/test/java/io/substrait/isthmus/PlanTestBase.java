@@ -305,7 +305,7 @@ public class PlanTestBase {
   protected static CalciteCatalogReader schemaToCatalog(String schemaName, Schema schema) {
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
     rootSchema.add(schemaName, schema);
-    List<String> defaultSchema = List.of(schemaName);
+    List<String> defaultSchema = Arrays.asList(schemaName);
     return new CalciteCatalogReader(
         rootSchema,
         defaultSchema,

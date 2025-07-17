@@ -1,6 +1,8 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.substrait.isthmus.AggregateFunctions;
 import java.util.Locale;
 import java.util.Map;
@@ -98,17 +100,21 @@ public class FunctionMappings {
 
   // contains return-type based resolver for both scalar and aggregator operator
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER =
-      Map.of(
+      ImmutableMap.of(
           SqlStdOperatorTable.PLUS,
           resolver(
-              SqlStdOperatorTable.PLUS, Set.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
+              SqlStdOperatorTable.PLUS,
+              ImmutableSet.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
           SqlStdOperatorTable.DATETIME_PLUS,
-          resolver(SqlStdOperatorTable.PLUS, Set.of("date", "time", "timestamp")),
+          resolver(SqlStdOperatorTable.PLUS, ImmutableSet.of("date", "time", "timestamp")),
           SqlStdOperatorTable.MINUS,
           resolver(
-              SqlStdOperatorTable.MINUS, Set.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
+              SqlStdOperatorTable.MINUS,
+              ImmutableSet.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
           SqlStdOperatorTable.MINUS_DATE,
-          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
+          resolver(
+              SqlStdOperatorTable.MINUS_DATE,
+              ImmutableSet.of("date", "timestamp_tz", "timestamp")));
 
   public static void main(String[] args) {
     SCALAR_SIGS.forEach(System.out::println);

@@ -131,10 +131,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                   var fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
-                          .collect(Collectors.toUnmodifiableList());
+                          .collect(Collectors.toList());
                   return ExpressionCreator.struct(false, fields);
                 })
-            .collect(Collectors.toUnmodifiableList());
+            .collect(Collectors.toList());
     return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
   }
 
@@ -266,7 +266,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     var invocation =
         aggregateFunctionConverter.convert(
             input, inputType, call, t -> t.accept(rexExpressionConverter));
-    if (invocation.isEmpty()) {
+    if (!invocation.isPresent()) {
       throw new UnsupportedOperationException("Unable to find binding for call " + call);
     }
     var builder = Aggregate.Measure.builder().function(invocation.get());
