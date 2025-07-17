@@ -178,8 +178,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           case FULL -> Join.JoinType.OUTER;
           case SEMI -> Join.JoinType.LEFT_SEMI;
           case ANTI -> Join.JoinType.LEFT_ANTI;
-          default -> throw new UnsupportedOperationException(
-              "Unsupported join type: " + join.getJoinType());
+          default ->
+              throw new UnsupportedOperationException(
+                  "Unsupported join type: " + join.getJoinType());
         };
 
     // An INNER JOIN with a join condition of TRUE can be encoded as a Substrait Cross relation
@@ -201,8 +202,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         switch (correlate.getJoinType()) {
           case INNER -> Join.JoinType.INNER; // corresponds to CROSS APPLY join
           case LEFT -> Join.JoinType.LEFT; // corresponds to OUTER APPLY join
-          default -> throw new IllegalArgumentException(
-              "Invalid correlated join type: " + correlate.getJoinType());
+          default ->
+              throw new IllegalArgumentException(
+                  "Invalid correlated join type: " + correlate.getJoinType());
         };
     return super.visit(correlate);
   }
@@ -328,14 +330,14 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       RelFieldCollation collation, Type.Struct inputType) {
     Expression.SortDirection direction =
         switch (collation.direction) {
-          case STRICTLY_ASCENDING, ASCENDING -> collation.nullDirection
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.ASC_NULLS_LAST
-              : Expression.SortDirection.ASC_NULLS_FIRST;
-          case STRICTLY_DESCENDING, DESCENDING -> collation.nullDirection
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.DESC_NULLS_LAST
-              : Expression.SortDirection.DESC_NULLS_FIRST;
+          case STRICTLY_ASCENDING, ASCENDING ->
+              collation.nullDirection == RelFieldCollation.NullDirection.LAST
+                  ? Expression.SortDirection.ASC_NULLS_LAST
+                  : Expression.SortDirection.ASC_NULLS_FIRST;
+          case STRICTLY_DESCENDING, DESCENDING ->
+              collation.nullDirection == RelFieldCollation.NullDirection.LAST
+                  ? Expression.SortDirection.DESC_NULLS_LAST
+                  : Expression.SortDirection.DESC_NULLS_FIRST;
           case CLUSTERED -> Expression.SortDirection.CLUSTERED;
         };
 

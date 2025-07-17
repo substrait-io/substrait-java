@@ -26,8 +26,8 @@ public class SetUtils {
           case INTERSECTION_MULTISET_ALL -> "INTERSECT ALL";
           case UNION_DISTINCT -> "UNION";
           case UNION_ALL -> "UNION ALL";
-          default -> throw new UnsupportedOperationException(
-              "Unknown set operation is not supported");
+          default ->
+              throw new UnsupportedOperationException("Unknown set operation is not supported");
         };
 
     StringBuilder query = new StringBuilder();

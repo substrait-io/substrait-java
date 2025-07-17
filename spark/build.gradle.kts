@@ -4,7 +4,7 @@ plugins {
   id("java")
   id("scala")
   id("idea")
-  id("com.diffplug.spotless") version "6.19.0"
+  id("com.diffplug.spotless") version "7.1.0"
   id("org.jreleaser")
 }
 

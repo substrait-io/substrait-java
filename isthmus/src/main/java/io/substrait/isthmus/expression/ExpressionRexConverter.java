@@ -430,8 +430,9 @@ public class ExpressionRexConverter
                         case ASC_NULLS_LAST -> Set.of(SqlKind.NULLS_LAST);
                         case DESC_NULLS_FIRST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_FIRST);
                         case DESC_NULLS_LAST -> Set.of(SqlKind.DESCENDING, SqlKind.NULLS_LAST);
-                        case CLUSTERED -> throw new IllegalArgumentException(
-                            "SORT_DIRECTION_CLUSTERED is not supported");
+                        case CLUSTERED ->
+                            throw new IllegalArgumentException(
+                                "SORT_DIRECTION_CLUSTERED is not supported");
                       };
                   return new RexFieldCollation(sf.expr().accept(this, context), direction);
                 })
@@ -444,8 +445,9 @@ public class ExpressionRexConverter
         switch (expr.boundsType()) {
           case ROWS -> true;
           case RANGE -> false;
-          case UNSPECIFIED -> throw new IllegalArgumentException(
-              "bounds type on window function must be specified");
+          case UNSPECIFIED ->
+              throw new IllegalArgumentException(
+                  "bounds type on window function must be specified");
         };
 
     boolean distinct =

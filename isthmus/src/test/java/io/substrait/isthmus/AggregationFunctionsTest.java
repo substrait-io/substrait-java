@@ -47,8 +47,8 @@ public class AggregationFunctionsTest extends PlanTestBase {
       case "sum" -> b.sum(input, field);
       case "sum0" -> b.sum0(input, field);
       case "avg" -> b.avg(input, field);
-      default -> throw new RuntimeException(
-          String.format("no function is associated with %s", fname));
+      default ->
+          throw new RuntimeException(String.format("no function is associated with %s", fname));
     };
   }
 

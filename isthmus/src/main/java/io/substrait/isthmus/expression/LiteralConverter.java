@@ -124,14 +124,15 @@ public class LiteralConverter {
 
         yield ExpressionCreator.varChar(n, s(literal), literal.getType().getPrecision());
       }
-      case BINARY -> ExpressionCreator.fixedBinary(
-          n,
-          ByteString.copyFrom(
-              padRightIfNeeded(
-                  literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
-                  literal.getType().getPrecision())));
-      case VARBINARY -> ExpressionCreator.binary(
-          n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
+      case BINARY ->
+          ExpressionCreator.fixedBinary(
+              n,
+              ByteString.copyFrom(
+                  padRightIfNeeded(
+                      literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
+                      literal.getType().getPrecision())));
+      case VARBINARY ->
+          ExpressionCreator.binary(n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
       case SYMBOL -> {
         Object value = literal.getValue();
         // case TimeUnitRange tur -> string(n, tur.name());
@@ -203,10 +204,11 @@ public class LiteralConverter {
             n, literals.stream().map(this::convert).collect(Collectors.toList()));
       }
 
-      default -> throw new UnsupportedOperationException(
-          String.format(
-              "Unable to convert the value of %s of type %s to a literal.",
-              literal, literal.getType().getSqlTypeName()));
+      default ->
+          throw new UnsupportedOperationException(
+              String.format(
+                  "Unable to convert the value of %s of type %s to a literal.",
+                  literal, literal.getType().getSqlTypeName()));
     };
   }
 

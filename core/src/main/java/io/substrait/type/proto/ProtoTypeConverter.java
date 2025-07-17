@@ -32,32 +32,39 @@ public class ProtoTypeConverter {
       case DATE -> n(type.getDate().getNullability()).DATE;
       case TIME -> n(type.getTime().getNullability()).TIME;
       case INTERVAL_YEAR -> n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
-      case INTERVAL_DAY -> n(type.getIntervalDay().getNullability())
-          // precision defaults to 6 (micros) for backwards compatibility, see protobuf
-          .intervalDay(
-              type.getIntervalDay().hasPrecision() ? type.getIntervalDay().getPrecision() : 6);
-      case INTERVAL_COMPOUND -> n(type.getIntervalCompound().getNullability())
-          .intervalCompound(type.getIntervalCompound().getPrecision());
+      case INTERVAL_DAY ->
+          n(type.getIntervalDay().getNullability())
+              // precision defaults to 6 (micros) for backwards compatibility, see protobuf
+              .intervalDay(
+                  type.getIntervalDay().hasPrecision() ? type.getIntervalDay().getPrecision() : 6);
+      case INTERVAL_COMPOUND ->
+          n(type.getIntervalCompound().getNullability())
+              .intervalCompound(type.getIntervalCompound().getPrecision());
       case TIMESTAMP_TZ -> n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;
       case UUID -> n(type.getUuid().getNullability()).UUID;
-      case FIXED_CHAR -> n(type.getFixedChar().getNullability())
-          .fixedChar(type.getFixedChar().getLength());
+      case FIXED_CHAR ->
+          n(type.getFixedChar().getNullability()).fixedChar(type.getFixedChar().getLength());
       case VARCHAR -> n(type.getVarchar().getNullability()).varChar(type.getVarchar().getLength());
-      case FIXED_BINARY -> n(type.getFixedBinary().getNullability())
-          .fixedBinary(type.getFixedBinary().getLength());
-      case DECIMAL -> n(type.getDecimal().getNullability())
-          .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
-      case PRECISION_TIME -> n(type.getPrecisionTime().getNullability())
-          .precisionTime(type.getPrecisionTime().getPrecision());
-      case PRECISION_TIMESTAMP -> n(type.getPrecisionTimestamp().getNullability())
-          .precisionTimestamp(type.getPrecisionTimestamp().getPrecision());
-      case PRECISION_TIMESTAMP_TZ -> n(type.getPrecisionTimestampTz().getNullability())
-          .precisionTimestampTZ(type.getPrecisionTimestampTz().getPrecision());
-      case STRUCT -> n(type.getStruct().getNullability())
-          .struct(
-              type.getStruct().getTypesList().stream()
-                  .map(this::from)
-                  .collect(java.util.stream.Collectors.toList()));
+      case FIXED_BINARY ->
+          n(type.getFixedBinary().getNullability()).fixedBinary(type.getFixedBinary().getLength());
+      case DECIMAL ->
+          n(type.getDecimal().getNullability())
+              .decimal(type.getDecimal().getPrecision(), type.getDecimal().getScale());
+      case PRECISION_TIME ->
+          n(type.getPrecisionTime().getNullability())
+              .precisionTime(type.getPrecisionTime().getPrecision());
+      case PRECISION_TIMESTAMP ->
+          n(type.getPrecisionTimestamp().getNullability())
+              .precisionTimestamp(type.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ ->
+          n(type.getPrecisionTimestampTz().getNullability())
+              .precisionTimestampTZ(type.getPrecisionTimestampTz().getPrecision());
+      case STRUCT ->
+          n(type.getStruct().getNullability())
+              .struct(
+                  type.getStruct().getTypesList().stream()
+                      .map(this::from)
+                      .collect(java.util.stream.Collectors.toList()));
       case LIST -> fromList(type.getList());
       case MAP -> fromMap(type.getMap());
       case USER_DEFINED -> {
@@ -65,8 +72,8 @@ public class ProtoTypeConverter {
         var t = lookup.getType(userDefined.getTypeReference(), extensions);
         yield n(userDefined.getNullability()).userDefined(t.uri(), t.name());
       }
-      case USER_DEFINED_TYPE_REFERENCE -> throw new UnsupportedOperationException(
-          "Unsupported user defined reference: " + type);
+      case USER_DEFINED_TYPE_REFERENCE ->
+          throw new UnsupportedOperationException("Unsupported user defined reference: " + type);
       case KIND_NOT_SET -> throw new UnsupportedOperationException("Type is not set: " + type);
     };
   }

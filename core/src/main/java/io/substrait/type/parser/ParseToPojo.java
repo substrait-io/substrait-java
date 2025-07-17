@@ -538,8 +538,9 @@ public class ParseToPojo {
           switch (name) {
             case "MIN" -> TypeExpression.BinaryOperation.OpType.MIN;
             case "MAX" -> TypeExpression.BinaryOperation.OpType.MAX;
-            default -> throw new IllegalStateException(
-                "The following operation was unrecognized: " + name);
+            default ->
+                throw new IllegalStateException(
+                    "The following operation was unrecognized: " + name);
           };
       return TypeExpression.BinaryOperation.builder()
           .opType(type)

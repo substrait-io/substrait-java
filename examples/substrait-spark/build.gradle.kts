@@ -1,7 +1,7 @@
 plugins {
   // Apply the application plugin to add support for building a CLI application in Java.
   id("java")
-  id("com.diffplug.spotless") version "6.19.0"
+  id("com.diffplug.spotless") version "7.1.0"
 }
 
 repositories {

@@ -94,15 +94,16 @@ public class TypeConverter {
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE -> creator.precisionTimestampTZ(type.getPrecision());
       case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> creator.INTERVAL_YEAR;
       case INTERVAL_DAY,
-          INTERVAL_DAY_HOUR,
-          INTERVAL_DAY_MINUTE,
-          INTERVAL_DAY_SECOND,
-          INTERVAL_HOUR,
-          INTERVAL_HOUR_MINUTE,
-          INTERVAL_HOUR_SECOND,
-          INTERVAL_MINUTE,
-          INTERVAL_MINUTE_SECOND,
-          INTERVAL_SECOND -> creator.intervalDay(type.getScale());
+              INTERVAL_DAY_HOUR,
+              INTERVAL_DAY_MINUTE,
+              INTERVAL_DAY_SECOND,
+              INTERVAL_HOUR,
+              INTERVAL_HOUR_MINUTE,
+              INTERVAL_HOUR_SECOND,
+              INTERVAL_MINUTE,
+              INTERVAL_MINUTE_SECOND,
+              INTERVAL_SECOND ->
+          creator.intervalDay(type.getScale());
       case VARBINARY -> creator.BINARY;
       case BINARY -> creator.fixedBinary(type.getPrecision());
       case MAP -> {
@@ -119,8 +120,9 @@ public class TypeConverter {
         yield creator.struct(children);
       }
       case ARRAY -> creator.list(toSubstrait(type.getComponentType(), names));
-      default -> throw new UnsupportedOperationException(
-          String.format("Unable to convert the type " + type.toString()));
+      default ->
+          throw new UnsupportedOperationException(
+              String.format("Unable to convert the type " + type.toString()));
     };
   }
 
@@ -348,8 +350,9 @@ public class TypeConverter {
             case 0 -> typeFactory.createSqlType(typeName);
             case 1 -> typeFactory.createSqlType(typeName, props[0]);
             case 2 -> typeFactory.createSqlType(typeName, props[0], props[1]);
-            default -> throw new IllegalArgumentException(
-                "Unexpected properties length: " + Arrays.toString(props));
+            default ->
+                throw new IllegalArgumentException(
+                    "Unexpected properties length: " + Arrays.toString(props));
           };
 
       return typeFactory.createTypeWithNullability(baseType, nullable);

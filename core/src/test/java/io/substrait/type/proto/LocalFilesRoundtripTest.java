@@ -74,18 +74,20 @@ public class LocalFilesRoundtripTest extends TestBase {
       case ARROW -> builder.fileFormat(FileFormat.ArrowReadOptions.builder().build());
       case ORC -> builder.fileFormat(FileFormat.OrcReadOptions.builder().build());
       case DWRF -> builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
-      case TEXT -> builder.fileFormat(
-          FileFormat.DelimiterSeparatedTextReadOptions.builder()
-              .fieldDelimiter("|")
-              .maxLineSize(1000)
-              .quote("\"")
-              .headerLinesToSkip(1)
-              .escape("\\")
-              .build());
-      case EXTENSION -> builder.fileFormat(
-          FileFormat.Extension.builder()
-              .extension(com.google.protobuf.Any.newBuilder().build())
-              .build());
+      case TEXT ->
+          builder.fileFormat(
+              FileFormat.DelimiterSeparatedTextReadOptions.builder()
+                  .fieldDelimiter("|")
+                  .maxLineSize(1000)
+                  .quote("\"")
+                  .headerLinesToSkip(1)
+                  .escape("\\")
+                  .build());
+      case EXTENSION ->
+          builder.fileFormat(
+              FileFormat.Extension.builder()
+                  .extension(com.google.protobuf.Any.newBuilder().build())
+                  .build());
       case FILEFORMAT_NOT_SET -> builder;
     };
   }

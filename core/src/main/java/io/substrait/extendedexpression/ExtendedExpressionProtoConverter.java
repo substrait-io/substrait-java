@@ -36,8 +36,7 @@ public class ExtendedExpressionProtoConverter {
         builder.addReferredExpr(expressionReferenceBuilder);
       } else if (expressionReference
           instanceof
-          io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference
-          aft) {
+          io.substrait.extendedexpression.ExtendedExpression.AggregateFunctionReference aft) {
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
                 .setMeasure(
