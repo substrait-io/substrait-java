@@ -51,23 +51,6 @@ public class LiteralConverter {
           .append(CALCITE_LOCAL_TIME_FORMATTER)
           .toFormatter();
 
-  private static final DateTimeFormatter CALCITE_TIMESTAMP_WITH_ZONE_FORMATTER =
-      new DateTimeFormatterBuilder()
-          .parseCaseInsensitive()
-          .append(CALCITE_LOCAL_DATE_FORMATTER)
-          .appendLiteral(' ')
-          .append(CALCITE_LOCAL_TIME_FORMATTER)
-          .appendLiteral(' ')
-          .appendZoneId()
-          .toFormatter();
-
-  private static final ZoneOffset SYSTEM_TIMEZONE =
-      OffsetDateTime.now(ZoneId.systemDefault()).getOffset();
-
-  private Expression nullOf(RexLiteral literal) {
-    return null;
-  }
-
   private static BigDecimal i(RexLiteral literal) {
     return bd(literal).setScale(0, RoundingMode.HALF_UP);
   }

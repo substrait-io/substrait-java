@@ -488,20 +488,4 @@ public class ExpressionCreator {
         .failureBehavior(failureBehavior)
         .build();
   }
-
-  private static ByteString padLeftIfNeeded(byte[] value, int length) {
-
-    if (length < value.length) {
-      throw new IllegalArgumentException(
-          "Byte values should either be at or below the expected length.");
-    }
-
-    if (length == value.length) {
-      return ByteString.copyFrom(value);
-    }
-
-    byte[] newArray = new byte[length];
-    System.arraycopy(value, 0, newArray, length - value.length, value.length);
-    return ByteString.copyFrom(newArray);
-  }
 }

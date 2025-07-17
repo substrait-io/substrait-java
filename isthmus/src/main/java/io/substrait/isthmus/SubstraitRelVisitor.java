@@ -197,13 +197,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // right input of correlated-join is similar to a correlated sub-query
     apply(correlate.getRight());
 
-    var joinType =
-        switch (correlate.getJoinType()) {
-          case INNER -> Join.JoinType.INNER; // corresponds to CROSS APPLY join
-          case LEFT -> Join.JoinType.LEFT; // corresponds to OUTER APPLY join
-          default -> throw new IllegalArgumentException(
-              "Invalid correlated join type: " + correlate.getJoinType());
-        };
     return super.visit(correlate);
   }
 
