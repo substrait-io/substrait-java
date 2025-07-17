@@ -26,7 +26,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,12 +79,10 @@ public class SimpleExtension {
     String toTypeString();
 
     @JsonProperty()
-    @Nullable
-    String name();
+    @Nullable String name();
 
     @JsonProperty()
-    @Nullable
-    String description();
+    @Nullable String description();
 
     boolean required();
   }

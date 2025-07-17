@@ -9,6 +9,7 @@ plugins {
   id("com.gradleup.shadow") version "8.3.6"
   id("com.google.protobuf") version "0.9.4"
   id("org.jreleaser")
+  id("org.checkerframework") version "0.6.56"
 }
 
 val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))
@@ -139,7 +140,6 @@ dependencies {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
-  implementation("com.google.code.findbugs:jsr305:3.0.2")
   implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
