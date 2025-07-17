@@ -32,9 +32,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 public class RexExpressionConverter implements RexVisitor<Expression> {
 
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(RexExpressionConverter.class);
-
   private final List<CallConverter> callConverters;
   private final SubstraitRelVisitor relVisitor;
   private final TypeConverter typeConverter;

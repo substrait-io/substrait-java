@@ -19,7 +19,7 @@ import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 public class TypeConverter {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeConverter.class);
+
   private final UserTypeMapper userTypeMapper;
 
   // DEFAULT TypeConverter which does not handle user-defined types

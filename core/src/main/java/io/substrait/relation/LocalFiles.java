@@ -8,8 +8,6 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class LocalFiles extends AbstractReadRel {
 
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LocalFiles.class);
-
   public abstract List<FileOrFiles> getItems();
 
   @Override

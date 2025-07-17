@@ -9,9 +9,11 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class YamlRead {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(YamlRead.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(YamlRead.class);
 
   private static final List<String> FUNCTIONS =
       Collections.unmodifiableList(
@@ -56,7 +58,7 @@ public class YamlRead {
               .registerModule(Deserializers.MODULE);
       var doc = mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
 
-      logger.atDebug().log(
+      LOGGER.atDebug().log(
           "Parsed {} functions in file {}.",
           Optional.ofNullable(doc.scalars()).map(List::size).orElse(0)
               + Optional.ofNullable(doc.aggregates()).map(List::size).orElse(0),

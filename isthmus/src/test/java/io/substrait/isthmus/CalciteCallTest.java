@@ -21,7 +21,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
 public class CalciteCallTest extends CalciteObjs {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteCallTest.class);
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       SimpleExtension.loadDefaults();

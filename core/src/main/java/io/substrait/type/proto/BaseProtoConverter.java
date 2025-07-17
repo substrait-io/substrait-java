@@ -8,8 +8,6 @@ import io.substrait.type.Type;
 
 abstract class BaseProtoConverter<T, I>
     extends TypeExpressionVisitor.TypeExpressionThrowsVisitor<T, RuntimeException> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(BaseProtoConverter.class);
 
   protected final ExtensionCollector extensionCollector;
 

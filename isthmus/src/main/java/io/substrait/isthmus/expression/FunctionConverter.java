@@ -38,11 +38,13 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class FunctionConverter<
     F extends SimpleExtension.Function, T, C extends FunctionConverter.GenericCall> {
 
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionConverter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(FunctionConverter.class);
 
   protected final Map<SqlOperator, FunctionFinder> signatures;
   protected final RelDataTypeFactory typeFactory;
@@ -83,7 +85,7 @@ public abstract class FunctionConverter<
     for (String key : alm.keySet()) {
       var sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
-        logger.atInfo().log("No binding for function: {}", key);
+        LOGGER.atInfo().log("No binding for function: {}", key);
       }
 
       for (var sig : sigs) {

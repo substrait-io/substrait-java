@@ -11,8 +11,6 @@ import org.apache.calcite.sql.fun.SqlMultisetSetOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 public class ListSqlOperatorFunctions {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ListSqlOperatorFunctions.class);
 
   public static void main(String[] args) {
     Map<String, SqlOperator> operators =

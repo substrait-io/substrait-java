@@ -4,7 +4,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 public class FunctionMatch {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionMatch.class);
 
   public static void load() {
 

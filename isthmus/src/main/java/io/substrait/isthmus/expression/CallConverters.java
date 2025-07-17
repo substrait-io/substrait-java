@@ -18,7 +18,6 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 
 public class CallConverters {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CallConverters.class);
 
   public static Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->

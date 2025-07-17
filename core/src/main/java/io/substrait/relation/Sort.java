@@ -8,7 +8,6 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class Sort extends SingleInputRel implements HasExtension {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Sort.class);
 
   public abstract List<Expression.SortField> getSortFields();
 

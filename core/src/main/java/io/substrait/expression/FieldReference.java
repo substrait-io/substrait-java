@@ -11,7 +11,6 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class FieldReference implements Expression {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FieldReference.class);
 
   public abstract List<ReferenceSegment> segments();
 

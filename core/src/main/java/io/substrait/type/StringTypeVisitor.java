@@ -3,7 +3,6 @@ package io.substrait.type;
 import java.util.stream.Collectors;
 
 public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StringTypeVisitor.class);
 
   private String n(Type type) {
     return type.nullable() ? "?" : "";

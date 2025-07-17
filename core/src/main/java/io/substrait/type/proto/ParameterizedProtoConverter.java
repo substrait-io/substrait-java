@@ -8,8 +8,6 @@ import io.substrait.proto.Type;
 
 public class ParameterizedProtoConverter
     extends BaseProtoConverter<ParameterizedType, ParameterizedType.IntegerOption> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ParameterizedProtoConverter.class);
 
   public ParameterizedProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Parameterized types cannot include return type expressions.");

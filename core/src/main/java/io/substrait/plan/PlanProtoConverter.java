@@ -11,8 +11,6 @@ import java.util.List;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(PlanProtoConverter.class);
 
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();

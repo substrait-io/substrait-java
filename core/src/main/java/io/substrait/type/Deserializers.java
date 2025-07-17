@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.function.BiFunction;
 
 public class Deserializers {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Deserializers.class);
 
   public static final StdDeserializer<ParameterizedType> PARAMETERIZED_TYPE =
       new ParseDeserializer<>(ParameterizedType.class, ParseToPojo::parameterizedType);

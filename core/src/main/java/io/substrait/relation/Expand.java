@@ -10,7 +10,6 @@ import org.immutables.value.Value;
 @Value.Enclosing
 @Value.Immutable
 public abstract class Expand extends SingleInputRel {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Expand.class);
 
   public abstract List<ExpandField> getFields();
 

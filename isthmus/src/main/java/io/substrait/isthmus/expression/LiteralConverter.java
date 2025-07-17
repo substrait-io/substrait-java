@@ -24,7 +24,6 @@ import org.apache.calcite.util.*;
 
 public class LiteralConverter {
   // TODO: Handle conversion of user-defined type literals
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LiteralConverter.class);
 
   private final TypeConverter typeConverter;
 
