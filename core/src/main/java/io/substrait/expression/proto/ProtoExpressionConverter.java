@@ -76,30 +76,34 @@ public class ProtoExpressionConverter {
                   segment = listElement.getChild();
                   yield FieldReference.ListElement.of(listElement.getOffset());
                 }
-                case REFERENCETYPE_NOT_SET -> throw new IllegalArgumentException(
-                    "Unhandled type: " + segment.getReferenceTypeCase());
+                case REFERENCETYPE_NOT_SET ->
+                    throw new IllegalArgumentException(
+                        "Unhandled type: " + segment.getReferenceTypeCase());
               });
         }
         Collections.reverse(segments);
         var fieldReference =
             switch (reference.getRootTypeCase()) {
-              case EXPRESSION -> FieldReference.ofExpression(
-                  from(reference.getExpression()), segments);
+              case EXPRESSION ->
+                  FieldReference.ofExpression(from(reference.getExpression()), segments);
               case ROOT_REFERENCE -> FieldReference.ofRoot(rootType, segments);
-              case OUTER_REFERENCE -> FieldReference.newRootStructOuterReference(
-                  reference.getDirectReference().getStructField().getField(),
-                  rootType,
-                  reference.getOuterReference().getStepsOut());
-              case ROOTTYPE_NOT_SET -> throw new IllegalArgumentException(
-                  "Unhandled type: " + reference.getRootTypeCase());
+              case OUTER_REFERENCE ->
+                  FieldReference.newRootStructOuterReference(
+                      reference.getDirectReference().getStructField().getField(),
+                      rootType,
+                      reference.getOuterReference().getStepsOut());
+              case ROOTTYPE_NOT_SET ->
+                  throw new IllegalArgumentException(
+                      "Unhandled type: " + reference.getRootTypeCase());
             };
 
         return fieldReference;
       }
-      case MASKED_REFERENCE -> throw new IllegalArgumentException(
-          "Unsupported type: " + reference.getReferenceTypeCase());
-      default -> throw new IllegalArgumentException(
-          "Unhandled type: " + reference.getReferenceTypeCase());
+      case MASKED_REFERENCE ->
+          throw new IllegalArgumentException(
+              "Unsupported type: " + reference.getReferenceTypeCase());
+      default ->
+          throw new IllegalArgumentException("Unhandled type: " + reference.getReferenceTypeCase());
     }
   }
 
@@ -177,10 +181,11 @@ public class ProtoExpressionConverter {
                     .collect(java.util.stream.Collectors.toList()))
             .build();
       }
-      case CAST -> ExpressionCreator.cast(
-          protoTypeConverter.from(expr.getCast().getType()),
-          from(expr.getCast().getInput()),
-          Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
+      case CAST ->
+          ExpressionCreator.cast(
+              protoTypeConverter.from(expr.getCast().getType()),
+              from(expr.getCast().getInput()),
+              Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
       case SUBQUERY -> {
         switch (expr.getSubquery().getSubqueryTypeCase()) {
           case SET_PREDICATE -> {
@@ -232,9 +237,9 @@ public class ProtoExpressionConverter {
         }
       }
 
-        // TODO enum.
-      case ENUM -> throw new UnsupportedOperationException(
-          "Unsupported type: " + expr.getRexTypeCase());
+      // TODO enum.
+      case ENUM ->
+          throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
       default -> throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     };
   }
@@ -320,9 +325,9 @@ public class ProtoExpressionConverter {
       case CURRENT_ROW -> WindowBound.CURRENT_ROW;
       case UNBOUNDED -> WindowBound.UNBOUNDED;
       case KIND_NOT_SET ->
-      // per the spec, the lower and upper bounds default to the start or end of the partition
-      // respectively if not set
-      WindowBound.UNBOUNDED;
+          // per the spec, the lower and upper bounds default to the start or end of the partition
+          // respectively if not set
+          WindowBound.UNBOUNDED;
     };
   }
 
@@ -338,22 +343,25 @@ public class ProtoExpressionConverter {
       case STRING -> ExpressionCreator.string(literal.getNullable(), literal.getString());
       case BINARY -> ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
       case TIMESTAMP -> ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
-      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
-          literal.getNullable(), literal.getTimestampTz());
-      case PRECISION_TIMESTAMP -> ExpressionCreator.precisionTimestamp(
-          literal.getNullable(),
-          literal.getPrecisionTimestamp().getValue(),
-          literal.getPrecisionTimestamp().getPrecision());
-      case PRECISION_TIMESTAMP_TZ -> ExpressionCreator.precisionTimestampTZ(
-          literal.getNullable(),
-          literal.getPrecisionTimestampTz().getValue(),
-          literal.getPrecisionTimestampTz().getPrecision());
+      case TIMESTAMP_TZ ->
+          ExpressionCreator.timestampTZ(literal.getNullable(), literal.getTimestampTz());
+      case PRECISION_TIMESTAMP ->
+          ExpressionCreator.precisionTimestamp(
+              literal.getNullable(),
+              literal.getPrecisionTimestamp().getValue(),
+              literal.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ ->
+          ExpressionCreator.precisionTimestampTZ(
+              literal.getNullable(),
+              literal.getPrecisionTimestampTz().getValue(),
+              literal.getPrecisionTimestampTz().getPrecision());
       case DATE -> ExpressionCreator.date(literal.getNullable(), literal.getDate());
       case TIME -> ExpressionCreator.time(literal.getNullable(), literal.getTime());
-      case INTERVAL_YEAR_TO_MONTH -> ExpressionCreator.intervalYear(
-          literal.getNullable(),
-          literal.getIntervalYearToMonth().getYears(),
-          literal.getIntervalYearToMonth().getMonths());
+      case INTERVAL_YEAR_TO_MONTH ->
+          ExpressionCreator.intervalYear(
+              literal.getNullable(),
+              literal.getIntervalYearToMonth().getYears(),
+              literal.getIntervalYearToMonth().getMonths());
       case INTERVAL_DAY_TO_SECOND -> {
         // Handle deprecated version that doesn't provide precision and that uses microseconds
         // instead of subseconds, for backwards compatibility
@@ -387,24 +395,30 @@ public class ProtoExpressionConverter {
             literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
       }
       case FIXED_CHAR -> ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
-      case VAR_CHAR -> ExpressionCreator.varChar(
-          literal.getNullable(), literal.getVarChar().getValue(), literal.getVarChar().getLength());
-      case FIXED_BINARY -> ExpressionCreator.fixedBinary(
-          literal.getNullable(), literal.getFixedBinary());
-      case DECIMAL -> ExpressionCreator.decimal(
-          literal.getNullable(),
-          literal.getDecimal().getValue(),
-          literal.getDecimal().getPrecision(),
-          literal.getDecimal().getScale());
-      case STRUCT -> ExpressionCreator.struct(
-          literal.getNullable(),
-          literal.getStruct().getFieldsList().stream()
-              .map(this::from)
-              .collect(java.util.stream.Collectors.toList()));
-      case MAP -> ExpressionCreator.map(
-          literal.getNullable(),
-          literal.getMap().getKeyValuesList().stream()
-              .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
+      case VAR_CHAR ->
+          ExpressionCreator.varChar(
+              literal.getNullable(),
+              literal.getVarChar().getValue(),
+              literal.getVarChar().getLength());
+      case FIXED_BINARY ->
+          ExpressionCreator.fixedBinary(literal.getNullable(), literal.getFixedBinary());
+      case DECIMAL ->
+          ExpressionCreator.decimal(
+              literal.getNullable(),
+              literal.getDecimal().getValue(),
+              literal.getDecimal().getPrecision(),
+              literal.getDecimal().getScale());
+      case STRUCT ->
+          ExpressionCreator.struct(
+              literal.getNullable(),
+              literal.getStruct().getFieldsList().stream()
+                  .map(this::from)
+                  .collect(java.util.stream.Collectors.toList()));
+      case MAP ->
+          ExpressionCreator.map(
+              literal.getNullable(),
+              literal.getMap().getKeyValuesList().stream()
+                  .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
       case EMPTY_MAP -> {
         // literal.getNullable() is intentionally ignored in favor of the nullability
         // specified in the literal.getEmptyMap() type.
@@ -413,11 +427,12 @@ public class ProtoExpressionConverter {
       }
       case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
       case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
-      case LIST -> ExpressionCreator.list(
-          literal.getNullable(),
-          literal.getList().getValuesList().stream()
-              .map(this::from)
-              .collect(java.util.stream.Collectors.toList()));
+      case LIST ->
+          ExpressionCreator.list(
+              literal.getNullable(),
+              literal.getList().getValuesList().stream()
+                  .map(this::from)
+                  .collect(java.util.stream.Collectors.toList()));
       case EMPTY_LIST -> {
         // literal.getNullable() is intentionally ignored in favor of the nullability
         // specified in the literal.getEmptyList() type.
@@ -430,8 +445,8 @@ public class ProtoExpressionConverter {
         yield ExpressionCreator.userDefinedLiteral(
             literal.getNullable(), type.uri(), type.name(), userDefinedLiteral.getValue());
       }
-      default -> throw new IllegalStateException(
-          "Unexpected value: " + literal.getLiteralTypeCase());
+      default ->
+          throw new IllegalStateException("Unexpected value: " + literal.getLiteralTypeCase());
     };
   }
 

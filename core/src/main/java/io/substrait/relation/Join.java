@@ -65,26 +65,26 @@ public abstract class Join extends BiRel implements HasExtension {
   protected Type.Struct deriveRecordType() {
     Stream<Type> leftTypes =
         switch (getJoinType()) {
-          case RIGHT, OUTER, RIGHT_SINGLE -> getLeft().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          case RIGHT_SEMI, RIGHT_ANTI -> Stream
-              .of(); // these are right joins which ignore left side columns
-          case RIGHT_MARK -> Stream.of(
-              TypeCreator.REQUIRED
-                  .BOOLEAN); // right mark join keeps all fields from right and adds a boolean mark
-            // field
+          case RIGHT, OUTER, RIGHT_SINGLE ->
+              getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
+          case RIGHT_SEMI, RIGHT_ANTI ->
+              // these are right joins which ignore left side columns
+              Stream.of();
+          case RIGHT_MARK ->
+              // right mark join keeps all fields from right and adds a boolean mark field
+              Stream.of(TypeCreator.REQUIRED.BOOLEAN);
           default -> getLeft().getRecordType().fields().stream();
         };
     Stream<Type> rightTypes =
         switch (getJoinType()) {
-          case LEFT, OUTER, LEFT_SINGLE -> getRight().getRecordType().fields().stream()
-              .map(TypeCreator::asNullable);
-          case SEMI, ANTI, LEFT_SEMI, LEFT_ANTI -> Stream
-              .of(); // these are left joins which ignore right side columns
-          case LEFT_MARK -> Stream.of(
-              TypeCreator.REQUIRED
-                  .BOOLEAN); // left mark join keeps all fields from left and adds a boolean mark
-            // field
+          case LEFT, OUTER, LEFT_SINGLE ->
+              getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
+          case SEMI, ANTI, LEFT_SEMI, LEFT_ANTI ->
+              // these are left joins which ignore right side columns
+              Stream.of();
+          case LEFT_MARK ->
+              // left mark join keeps all fields from left and adds a boolean mark field
+              Stream.of(TypeCreator.REQUIRED.BOOLEAN);
           default -> getRight().getRecordType().fields().stream();
         };
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));

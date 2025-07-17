@@ -13,18 +13,19 @@ public class SortFieldConverter {
     var rexDirection = rexFieldCollation.getDirection();
     Expression.SortDirection direction =
         switch (rexDirection) {
-          case ASCENDING -> rexFieldCollation.getNullDirection()
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.ASC_NULLS_LAST
-              : Expression.SortDirection.ASC_NULLS_FIRST;
-          case DESCENDING -> rexFieldCollation.getNullDirection()
-                  == RelFieldCollation.NullDirection.LAST
-              ? Expression.SortDirection.DESC_NULLS_LAST
-              : Expression.SortDirection.DESC_NULLS_FIRST;
-          default -> throw new IllegalArgumentException(
-              String.format(
-                  "Unexpected RelFieldCollation.Direction:%s enum at the RexFieldCollation!",
-                  rexDirection));
+          case ASCENDING ->
+              rexFieldCollation.getNullDirection() == RelFieldCollation.NullDirection.LAST
+                  ? Expression.SortDirection.ASC_NULLS_LAST
+                  : Expression.SortDirection.ASC_NULLS_FIRST;
+          case DESCENDING ->
+              rexFieldCollation.getNullDirection() == RelFieldCollation.NullDirection.LAST
+                  ? Expression.SortDirection.DESC_NULLS_LAST
+                  : Expression.SortDirection.DESC_NULLS_FIRST;
+          default ->
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Unexpected RelFieldCollation.Direction:%s enum at the RexFieldCollation!",
+                      rexDirection));
         };
 
     return Expression.SortField.builder().expr(expr).direction(direction).build();

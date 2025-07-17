@@ -103,8 +103,8 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   private void printMessage(Message message) throws IOException {
     switch (outputFormat) {
-      case PROTOJSON -> System.out.println(
-          JsonFormat.printer().includingDefaultValueFields().print(message));
+      case PROTOJSON ->
+          System.out.println(JsonFormat.printer().includingDefaultValueFields().print(message));
       case PROTOTEXT -> TextFormat.printer().print(message, System.out);
       case BINARY -> message.writeTo(System.out);
     }

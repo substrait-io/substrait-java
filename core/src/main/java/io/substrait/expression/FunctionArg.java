@@ -91,8 +91,9 @@ public interface FunctionArg {
           var optionValue = fArg.getEnum();
           yield EnumArg.of(enumArgDef, optionValue);
         }
-        default -> throw new UnsupportedOperationException(
-            String.format("Unable to convert FunctionArgument %s.", fArg));
+        default ->
+            throw new UnsupportedOperationException(
+                String.format("Unable to convert FunctionArgument %s.", fArg));
       };
     }
   }

@@ -211,10 +211,11 @@ public class SubstraitRelNodeConverter
           case ANTI -> JoinRelType.ANTI;
           case LEFT_SEMI -> JoinRelType.SEMI;
           case LEFT_ANTI -> JoinRelType.ANTI;
-          case UNKNOWN -> throw new UnsupportedOperationException(
-              "Unknown join type is not supported");
-          default -> throw new UnsupportedOperationException(
-              "Unsupported join type: " + join.getJoinType().name());
+          case UNKNOWN ->
+              throw new UnsupportedOperationException("Unknown join type is not supported");
+          default ->
+              throw new UnsupportedOperationException(
+                  "Unsupported join type: " + join.getJoinType().name());
         };
     RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
     return applyRemap(node, join.getRemap());
@@ -236,13 +237,13 @@ public class SubstraitRelNodeConverter
         switch (set.getSetOp()) {
           case MINUS_PRIMARY -> relBuilder.minus(false, numInputs);
           case MINUS_PRIMARY_ALL, MINUS_MULTISET -> relBuilder.minus(true, numInputs);
-          case INTERSECTION_PRIMARY, INTERSECTION_MULTISET -> relBuilder.intersect(
-              false, numInputs);
+          case INTERSECTION_PRIMARY, INTERSECTION_MULTISET ->
+              relBuilder.intersect(false, numInputs);
           case INTERSECTION_MULTISET_ALL -> relBuilder.intersect(true, numInputs);
           case UNION_DISTINCT -> relBuilder.union(false, numInputs);
           case UNION_ALL -> relBuilder.union(true, numInputs);
-          case UNKNOWN -> throw new UnsupportedOperationException(
-              "Unknown set operation is not supported");
+          case UNKNOWN ->
+              throw new UnsupportedOperationException("Unknown set operation is not supported");
         };
     RelNode node = builder.build();
     return applyRemap(node, set.getRemap());
@@ -371,8 +372,9 @@ public class SubstraitRelNodeConverter
       case ASC_NULLS_LAST -> relBuilder.nullsLast(rexNode);
       case DESC_NULLS_FIRST -> relBuilder.nullsFirst(relBuilder.desc(rexNode));
       case DESC_NULLS_LAST -> relBuilder.nullsLast(relBuilder.desc(rexNode));
-      case CLUSTERED -> throw new RuntimeException(
-          String.format("Unexpected Expression.SortDirection: Clustered!"));
+      case CLUSTERED ->
+          throw new RuntimeException(
+              String.format("Unexpected Expression.SortDirection: Clustered!"));
     };
   }
 
@@ -413,8 +415,9 @@ public class SubstraitRelNodeConverter
       }
       case CLUSTERED -> fieldDirection = RelFieldCollation.Direction.CLUSTERED;
 
-      default -> throw new RuntimeException(
-          String.format("Unexpected Expression.SortDirection enum: %s !", sortDirection));
+      default ->
+          throw new RuntimeException(
+              String.format("Unexpected Expression.SortDirection enum: %s !", sortDirection));
     }
     return new RelFieldCollation(fieldIndex, fieldDirection, nullDirection);
   }

@@ -146,8 +146,9 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
           return FieldReference.newStructReference(fieldAccess.getField().getIndex(), expression);
         }
       }
-      default -> throw new UnsupportedOperationException(
-          String.format("RexFieldAccess for SqlKind %s not supported", kind));
+      default ->
+          throw new UnsupportedOperationException(
+              String.format("RexFieldAccess for SqlKind %s not supported", kind));
     }
   }
 

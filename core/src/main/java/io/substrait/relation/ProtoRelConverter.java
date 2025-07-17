@@ -269,8 +269,8 @@ public class ProtoRelConverter {
       case NAMED_TABLE -> {
         return newNamedUpdate(rel);
       }
-      default -> throw new UnsupportedOperationException(
-          "Unsupported UpdateTypeCase of " + relType);
+      default ->
+          throw new UnsupportedOperationException("Unsupported UpdateTypeCase of " + relType);
     }
   }
 
@@ -608,17 +608,22 @@ public class ProtoRelConverter {
                     .map(
                         expandField ->
                             switch (expandField.getFieldTypeCase()) {
-                              case CONSISTENT_FIELD -> Expand.ConsistentField.builder()
-                                  .expression(converter.from(expandField.getConsistentField()))
-                                  .build();
-                              case SWITCHING_FIELD -> Expand.SwitchingField.builder()
-                                  .duplicates(
-                                      expandField.getSwitchingField().getDuplicatesList().stream()
-                                          .map(converter::from)
-                                          .collect(java.util.stream.Collectors.toList()))
-                                  .build();
-                              case FIELDTYPE_NOT_SET -> throw new UnsupportedOperationException(
-                                  "Expand fields not set");
+                              case CONSISTENT_FIELD ->
+                                  Expand.ConsistentField.builder()
+                                      .expression(converter.from(expandField.getConsistentField()))
+                                      .build();
+                              case SWITCHING_FIELD ->
+                                  Expand.SwitchingField.builder()
+                                      .duplicates(
+                                          expandField
+                                              .getSwitchingField()
+                                              .getDuplicatesList()
+                                              .stream()
+                                              .map(converter::from)
+                                              .collect(java.util.stream.Collectors.toList()))
+                                      .build();
+                              case FIELDTYPE_NOT_SET ->
+                                  throw new UnsupportedOperationException("Expand fields not set");
                             })
                     .collect(java.util.stream.Collectors.toList()));
 

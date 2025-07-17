@@ -70,8 +70,8 @@ public abstract class Set extends AbstractRel implements HasExtension {
       case UNKNOWN -> first; // alternative would be to throw an exception
       case MINUS_PRIMARY, MINUS_PRIMARY_ALL, MINUS_MULTISET -> first;
       case INTERSECTION_PRIMARY -> coalesceNullabilityIntersectionPrimary(first, rest);
-      case INTERSECTION_MULTISET, INTERSECTION_MULTISET_ALL -> coalesceNullabilityIntersection(
-          first, rest);
+      case INTERSECTION_MULTISET, INTERSECTION_MULTISET_ALL ->
+          coalesceNullabilityIntersection(first, rest);
       case UNION_DISTINCT, UNION_ALL -> coalesceNullabilityUnion(first, rest);
     };
   }
