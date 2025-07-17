@@ -16,7 +16,6 @@ configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking
 val CALCITE_VERSION = properties.get("calcite.version")
 val GUAVA_VERSION = properties.get("guava.version")
 val IMMUTABLES_VERSION = properties.get("immutables.version")
-val JACKSON_VERSION = properties.get("jackson.version")
 val JUNIT_VERSION = properties.get("junit.version")
 val PROTOBUF_VERSION = properties.get("protobuf.version")
 val SLF4J_VERSION = properties.get("slf4j.version")
@@ -32,7 +31,6 @@ dependencies {
   implementation("org.graalvm.sdk:graal-sdk:22.1.0")
   implementation("info.picocli:picocli:4.7.5")
   annotationProcessor("info.picocli:picocli-codegen:4.7.5")
-  implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.google.protobuf:protobuf-java-util:${PROTOBUF_VERSION}") {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
