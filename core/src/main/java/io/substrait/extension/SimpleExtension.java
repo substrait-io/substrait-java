@@ -21,6 +21,7 @@ import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -729,7 +730,7 @@ public class SimpleExtension {
                   try (var stream = ExtensionCollection.class.getResourceAsStream(path)) {
                     return load(path, stream);
                   } catch (IOException e) {
-                    throw new IllegalStateException(e);
+                    throw new UncheckedIOException(e);
                   }
                 })
             .collect(java.util.stream.Collectors.toList());
