@@ -10,12 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class CallConverters {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CallConverters.class);
@@ -144,8 +144,7 @@ public class CallConverters {
 
   public interface SimpleCallConverter extends CallConverter {
 
-    @Nullable
-    Expression apply(RexCall call, Function<RexNode, Expression> topLevelConverter);
+    @Nullable Expression apply(RexCall call, Function<RexNode, Expression> topLevelConverter);
 
     @Override
     default Optional<Expression> convert(
