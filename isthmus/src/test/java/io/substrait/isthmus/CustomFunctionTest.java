@@ -20,6 +20,7 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
@@ -47,7 +48,7 @@ public class CustomFunctionTest extends PlanTestBase {
     try {
       FUNCTIONS_CUSTOM = asString("extensions/functions_custom.yaml");
     } catch (IOException e) {
-      throw new IllegalStateException(e);
+      throw new UncheckedIOException(e);
     }
   }
 
