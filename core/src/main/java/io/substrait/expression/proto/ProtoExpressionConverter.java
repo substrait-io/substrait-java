@@ -258,7 +258,7 @@ public class ProtoExpressionConverter {
           }
         }
 
-        // TODO enum.
+      // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
       default:

@@ -12,7 +12,7 @@ plugins {
   id("idea")
   id("antlr")
   id("com.google.protobuf") version "0.9.4"
-  id("com.diffplug.spotless") version "6.19.0"
+  id("com.diffplug.spotless") version "7.1.0"
   id("com.gradleup.shadow") version "8.3.6"
   id("org.jreleaser")
 }
@@ -261,7 +261,7 @@ project.configure<IdeaModel> {
     generatedSourceDirs.addAll(
       listOf(
         file("build/generated/sources/antlr/main"),
-        file("build/generated/source/proto/main/java")
+        file("build/generated/source/proto/main/java"),
       )
     )
   }
