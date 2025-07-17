@@ -76,12 +76,11 @@ public abstract class Join extends BiRel implements HasExtension {
         return getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
       case RIGHT_SEMI:
       case RIGHT_ANTI:
-        return Stream.of(); // these are right joins which ignore left side columns
+        // these are right joins which ignore left side columns
+        return Stream.of();
       case RIGHT_MARK:
-        return Stream.of(
-            TypeCreator.REQUIRED
-                .BOOLEAN); // right mark join keeps all fields from right and adds a boolean mark
-        // field
+        // right mark join keeps all fields from right and adds a boolean mark field
+        return Stream.of(TypeCreator.REQUIRED.BOOLEAN);
       default:
         return getLeft().getRecordType().fields().stream();
     }
@@ -97,12 +96,11 @@ public abstract class Join extends BiRel implements HasExtension {
       case ANTI:
       case LEFT_SEMI:
       case LEFT_ANTI:
-        return Stream.of(); // these are left joins which ignore right side columns
+        // these are left joins which ignore right side columns
+        return Stream.of();
       case LEFT_MARK:
-        return Stream.of(
-            TypeCreator.REQUIRED
-                .BOOLEAN); // left mark join keeps all fields from left and adds a boolean mark
-        // field
+        // left mark join keeps all fields from left and adds a boolean mark field
+        return Stream.of(TypeCreator.REQUIRED.BOOLEAN);
       default:
         return getRight().getRecordType().fields().stream();
     }

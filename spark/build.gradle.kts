@@ -101,10 +101,7 @@ java {
   withSourcesJar()
 }
 
-tasks.withType<ScalaCompile>() {
-  targetCompatibility = ""
-  scalaCompileOptions.additionalParameters = listOf("-release:17")
-}
+tasks.withType<ScalaCompile>() { scalaCompileOptions.additionalParameters = listOf("-release:17") }
 
 var SLF4J_VERSION = properties.get("slf4j.version")
 var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
