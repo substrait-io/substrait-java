@@ -30,11 +30,11 @@ public class TypeStringParser {
   }
 
   private static SubstraitTypeParser.StartContext parse(String str) {
-    var lexer = new SubstraitTypeLexer(CharStreams.fromString(str));
+    SubstraitTypeLexer lexer = new SubstraitTypeLexer(CharStreams.fromString(str));
     lexer.removeErrorListeners();
     lexer.addErrorListener(TypeErrorListener.INSTANCE);
-    var tokenStream = new CommonTokenStream(lexer);
-    var parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
+    CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+    SubstraitTypeParser parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
     parser.removeErrorListeners();
     parser.addErrorListener(TypeErrorListener.INSTANCE);
     return parser.start();

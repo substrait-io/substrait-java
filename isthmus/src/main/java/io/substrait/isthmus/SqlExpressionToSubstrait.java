@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import com.github.bsideup.jabel.Desugar;
 import io.substrait.extendedexpression.ExtendedExpression;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extension.SimpleExtension;
@@ -45,12 +44,23 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     this.rexConverter = new RexExpressionConverter(scalarFunctionConverter);
   }
 
-  @Desugar
-  private record Result(
-      SqlValidator validator,
-      CalciteCatalogReader catalogReader,
-      Map<String, RelDataType> nameToTypeMap,
-      Map<String, RexNode> nameToNodeMap) {}
+  private static final class Result {
+    final SqlValidator validator;
+    final CalciteCatalogReader catalogReader;
+    final Map<String, RelDataType> nameToTypeMap;
+    final Map<String, RexNode> nameToNodeMap;
+
+    Result(
+        SqlValidator validator,
+        CalciteCatalogReader catalogReader,
+        Map<String, RelDataType> nameToTypeMap,
+        Map<String, RexNode> nameToNodeMap) {
+      this.validator = validator;
+      this.catalogReader = catalogReader;
+      this.nameToTypeMap = nameToTypeMap;
+      this.nameToNodeMap = nameToNodeMap;
+    }
+  }
 
   /**
    * Converts the given SQL expression to an {@link io.substrait.proto.ExtendedExpression }
@@ -78,10 +88,10 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     var result = registerCreateTablesForExtendedExpression(createStatements);
     return executeInnerSQLExpressions(
         sqlExpressions,
-        result.validator(),
-        result.catalogReader(),
-        result.nameToTypeMap(),
-        result.nameToNodeMap());
+        result.validator,
+        result.catalogReader,
+        result.nameToTypeMap,
+        result.nameToNodeMap);
   }
 
   private io.substrait.proto.ExtendedExpression executeInnerSQLExpressions(

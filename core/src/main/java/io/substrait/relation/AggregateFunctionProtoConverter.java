@@ -3,9 +3,13 @@ package io.substrait.relation;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
+import io.substrait.proto.FunctionArgument;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -25,9 +29,10 @@ public class AggregateFunctionProtoConverter {
   }
 
   public AggregateFunction toProto(Aggregate.Measure measure) {
-    var argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-    var args = measure.getFunction().arguments();
-    var aggFuncDef = measure.getFunction().declaration();
+    FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
+        argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
+    List<FunctionArg> args = measure.getFunction().arguments();
+    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
 
     return AggregateFunction.newBuilder()
         .setPhase(measure.getFunction().aggregationPhase().toProto())
@@ -39,7 +44,7 @@ public class AggregateFunctionProtoConverter {
                     i ->
                         args.get(i)
                             .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
-                .collect(java.util.stream.Collectors.toList()))
+                .collect(Collectors.toList()))
         .setFunctionReference(
             functionCollector.getFunctionReference(measure.getFunction().declaration()))
         .build();

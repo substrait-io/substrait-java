@@ -128,8 +128,6 @@ dependencies {
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
   annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
   compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
 }
 
 configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
@@ -233,12 +231,12 @@ tasks {
   jar { manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") } }
 }
 
+// Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run
+tasks.withType<JavaCompile>().configureEach { options.release = 8 }
+
 java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(17))
-    withJavadocJar()
-    withSourcesJar()
-  }
+  withJavadocJar()
+  withSourcesJar()
 }
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }

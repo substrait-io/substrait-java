@@ -14,7 +14,8 @@ public abstract class AdvancedExtension {
   public abstract Optional<Extension.Enhancement> getEnhancement();
 
   public io.substrait.proto.AdvancedExtension toProto(RelProtoConverter relProtoConverter) {
-    var builder = io.substrait.proto.AdvancedExtension.newBuilder();
+    io.substrait.proto.AdvancedExtension.Builder builder =
+        io.substrait.proto.AdvancedExtension.newBuilder();
     getEnhancement().ifPresent(e -> builder.setEnhancement(e.toProto(relProtoConverter)));
     getOptimizations().forEach(e -> builder.addOptimization(e.toProto(relProtoConverter)));
     return builder.build();

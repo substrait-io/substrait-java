@@ -35,7 +35,7 @@ public abstract class Set extends AbstractRel implements HasExtension {
     }
 
     public static SetOp fromProto(SetRel.SetOp proto) {
-      for (var v : values()) {
+      for (SetOp v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -66,14 +66,24 @@ public abstract class Set extends AbstractRel implements HasExtension {
     }
 
     // As defined in https://substrait.io/relations/logical_relations/#set-operation-types
-    return switch (getSetOp()) {
-      case UNKNOWN -> first; // alternative would be to throw an exception
-      case MINUS_PRIMARY, MINUS_PRIMARY_ALL, MINUS_MULTISET -> first;
-      case INTERSECTION_PRIMARY -> coalesceNullabilityIntersectionPrimary(first, rest);
-      case INTERSECTION_MULTISET, INTERSECTION_MULTISET_ALL -> coalesceNullabilityIntersection(
-          first, rest);
-      case UNION_DISTINCT, UNION_ALL -> coalesceNullabilityUnion(first, rest);
-    };
+    switch (getSetOp()) {
+      case UNKNOWN:
+        return first; // alternative would be to throw an exception
+      case MINUS_PRIMARY:
+      case MINUS_PRIMARY_ALL:
+      case MINUS_MULTISET:
+        return first;
+      case INTERSECTION_PRIMARY:
+        return coalesceNullabilityIntersectionPrimary(first, rest);
+      case INTERSECTION_MULTISET:
+      case INTERSECTION_MULTISET_ALL:
+        return coalesceNullabilityIntersection(first, rest);
+      case UNION_DISTINCT:
+      case UNION_ALL:
+        return coalesceNullabilityUnion(first, rest);
+      default:
+        throw new UnsupportedOperationException("Unexpected set operation: " + getSetOp());
+    }
   }
 
   /** If field is nullable in any of the inputs, it's nullable in the output */

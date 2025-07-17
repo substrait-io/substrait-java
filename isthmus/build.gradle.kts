@@ -93,7 +93,7 @@ jreleaser {
 }
 
 java {
-  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  toolchain { languageVersion = JavaLanguageVersion.of(11) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -149,8 +149,6 @@ dependencies {
         "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
       )
   }
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
 }
 

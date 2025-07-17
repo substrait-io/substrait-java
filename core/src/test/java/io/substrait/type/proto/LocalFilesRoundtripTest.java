@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 public class LocalFilesRoundtripTest extends TestBase {
 
   private void assertLocalFilesRoundtrip(FileOrFiles file) {
-    var builder =
+    io.substrait.relation.ImmutableLocalFiles.Builder builder =
         LocalFiles.builder()
             .initialSchema(
                 NamedStruct.builder()
@@ -48,8 +48,8 @@ public class LocalFilesRoundtripTest extends TestBase {
                     ExpressionCreator.i32(false, 1)))
         .ifPresent(builder::filter);
 
-    var localFiles = builder.build();
-    var protoFileRel = relProtoConverter.toProto(localFiles);
+    io.substrait.relation.ImmutableLocalFiles localFiles = builder.build();
+    io.substrait.proto.Rel protoFileRel = relProtoConverter.toProto(localFiles);
     assertTrue(protoFileRel.getRead().hasFilter());
     assertEquals(protoFileRel, relProtoConverter.toProto(protoRelConverter.from(protoFileRel)));
   }
@@ -57,37 +57,53 @@ public class LocalFilesRoundtripTest extends TestBase {
   private ImmutableFileOrFiles.Builder setPath(
       ImmutableFileOrFiles.Builder builder,
       ReadRel.LocalFiles.FileOrFiles.PathTypeCase pathTypeCase) {
-    return switch (pathTypeCase) {
-      case URI_PATH -> builder.pathType(FileOrFiles.PathType.URI_PATH).path("path");
-      case URI_PATH_GLOB -> builder.pathType(FileOrFiles.PathType.URI_PATH_GLOB).path("path");
-      case URI_FILE -> builder.pathType(FileOrFiles.PathType.URI_FILE).path("path");
-      case URI_FOLDER -> builder.pathType(FileOrFiles.PathType.URI_FOLDER).path("path");
-      case PATHTYPE_NOT_SET -> builder;
-    };
+    switch (pathTypeCase) {
+      case URI_PATH:
+        return builder.pathType(FileOrFiles.PathType.URI_PATH).path("path");
+      case URI_PATH_GLOB:
+        return builder.pathType(FileOrFiles.PathType.URI_PATH_GLOB).path("path");
+      case URI_FILE:
+        return builder.pathType(FileOrFiles.PathType.URI_FILE).path("path");
+      case URI_FOLDER:
+        return builder.pathType(FileOrFiles.PathType.URI_FOLDER).path("path");
+      case PATHTYPE_NOT_SET:
+        return builder;
+      default:
+        throw new IllegalArgumentException("Unknown path type case: " + pathTypeCase);
+    }
   }
 
   private ImmutableFileOrFiles.Builder setFileFormat(
       ImmutableFileOrFiles.Builder builder,
       ReadRel.LocalFiles.FileOrFiles.FileFormatCase fileFormatCase) {
-    return switch (fileFormatCase) {
-      case PARQUET -> builder.fileFormat(FileFormat.ParquetReadOptions.builder().build());
-      case ARROW -> builder.fileFormat(FileFormat.ArrowReadOptions.builder().build());
-      case ORC -> builder.fileFormat(FileFormat.OrcReadOptions.builder().build());
-      case DWRF -> builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
-      case TEXT -> builder.fileFormat(
-          FileFormat.DelimiterSeparatedTextReadOptions.builder()
-              .fieldDelimiter("|")
-              .maxLineSize(1000)
-              .quote("\"")
-              .headerLinesToSkip(1)
-              .escape("\\")
-              .build());
-      case EXTENSION -> builder.fileFormat(
-          FileFormat.Extension.builder()
-              .extension(com.google.protobuf.Any.newBuilder().build())
-              .build());
-      case FILEFORMAT_NOT_SET -> builder;
-    };
+    switch (fileFormatCase) {
+      case PARQUET:
+        return builder.fileFormat(FileFormat.ParquetReadOptions.builder().build());
+      case ARROW:
+        return builder.fileFormat(FileFormat.ArrowReadOptions.builder().build());
+      case ORC:
+        return builder.fileFormat(FileFormat.OrcReadOptions.builder().build());
+      case DWRF:
+        return builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
+      case TEXT:
+        return builder.fileFormat(
+            FileFormat.DelimiterSeparatedTextReadOptions.builder()
+                .fieldDelimiter("|")
+                .maxLineSize(1000)
+                .quote("\"")
+                .headerLinesToSkip(1)
+                .escape("\\")
+                .build());
+      case EXTENSION:
+        return builder.fileFormat(
+            FileFormat.Extension.builder()
+                .extension(com.google.protobuf.Any.newBuilder().build())
+                .build());
+      case FILEFORMAT_NOT_SET:
+        return builder;
+      default:
+        throw new IllegalArgumentException("Unknown file format case: " + fileFormatCase);
+    }
   }
 
   @Test
