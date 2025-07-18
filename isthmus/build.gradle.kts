@@ -9,6 +9,7 @@ plugins {
   id("com.gradleup.shadow") version "8.3.6"
   id("com.google.protobuf") version "0.9.4"
   id("org.jreleaser")
+  id("substrait.java-conventions")
 }
 
 val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))
