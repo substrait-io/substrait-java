@@ -697,6 +697,7 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() {
+    var emptyExtension = ImmutableSimpleExtension.ExtensionCollection.builder().build();
     return Stream.of(
             "boolean",
             "aggregate_generic",
@@ -718,8 +719,7 @@ public class SimpleExtension {
                       category);
               return loadFromResource(resourcePath, uri);
             })
-        .reduce((extension1, extension2) -> extension1.merge(extension2))
-        .get();
+        .reduce(emptyExtension, ExtensionCollection::merge);
   }
 
   public static ExtensionCollection loadFromResource(String resourcePath, String uri) {
