@@ -717,19 +717,25 @@ public class SimpleExtension {
                   String.format(
                       "https://github.com/substrait-io/substrait/blob/main/extensions/functions_%s.yaml",
                       category);
-              return loadFromResource(resourcePath, uri);
+              return loadFromPath(uri, resourcePath);
             })
         .reduce(emptyExtension, ExtensionCollection::merge);
   }
 
-  public static ExtensionCollection loadFromResource(String resourcePath, String uri) {
-    try (InputStream stream = ExtensionCollection.class.getResourceAsStream(resourcePath)) {
+  /*
+   Loads the resource from a resource path with a custom namespace.
+   @param namespace the namespace to use for the extension (i.e URI)
+   @param path the path to the resource
+   @return the extension collection
+  */
+  public static ExtensionCollection loadFromPath(String namespace, String path) {
+    try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
       if (stream == null) {
-        throw new IllegalArgumentException("Resource not found: " + resourcePath);
+        throw new IllegalArgumentException("Resource not found: " + path);
       }
-      return load(uri, stream);
+      return load(namespace, stream);
     } catch (IOException e) {
-      throw new RuntimeException("Failed to load extension from " + resourcePath, e);
+      throw new RuntimeException("Failed to load extension from " + path, e);
     }
   }
 
