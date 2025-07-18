@@ -20,6 +20,7 @@ public class ParameterizedTypeCreator extends TypeCreator
     return parameter(literal, nullable);
   }
 
+  @Override
   public ParameterizedType fixedCharE(String len) {
     return ParameterizedType.FixedChar.builder()
         .nullable(nullable)
@@ -27,6 +28,7 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  @Override
   public ParameterizedType varCharE(String len) {
     return ParameterizedType.VarChar.builder()
         .nullable(nullable)
@@ -34,6 +36,7 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  @Override
   public ParameterizedType fixedBinaryE(String len) {
     return ParameterizedType.FixedBinary.builder()
         .nullable(nullable)
@@ -41,6 +44,7 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  @Override
   public ParameterizedType decimalE(String precision, String scale) {
     return ParameterizedType.Decimal.builder()
         .nullable(nullable)
@@ -77,18 +81,22 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  @Override
   public ParameterizedType structE(ParameterizedType... types) {
     return ParameterizedType.Struct.builder().nullable(nullable).addFields(types).build();
   }
 
+  @Override
   public ParameterizedType structE(Iterable<? extends ParameterizedType> types) {
     return ParameterizedType.Struct.builder().nullable(nullable).addAllFields(types).build();
   }
 
+  @Override
   public ParameterizedType listE(ParameterizedType type) {
     return ParameterizedType.ListType.builder().nullable(nullable).name(type).build();
   }
 
+  @Override
   public ParameterizedType mapE(ParameterizedType key, ParameterizedType value) {
     return ParameterizedType.Map.builder().nullable(nullable).key(key).value(value).build();
   }

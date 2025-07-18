@@ -68,6 +68,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
     int[] counter = new int[1];
     var crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
+          @Override
           public Optional<Rel> visit(Cross cross, EmptyVisitationContext context)
               throws RuntimeException {
             counter[0]++;
