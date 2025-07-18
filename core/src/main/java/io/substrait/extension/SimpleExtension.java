@@ -697,44 +697,41 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() {
-    var functionCategories =
-        Arrays.asList(
-                "boolean",
-                "aggregate_generic",
-                "aggregate_approx",
-                "arithmetic_decimal",
-                "arithmetic",
-                "comparison",
-                "datetime",
-                "logarithmic",
-                "rounding",
-                "rounding_decimal",
-                "string");
+    return Stream.of(
+            "boolean",
+            "aggregate_generic",
+            "aggregate_approx",
+            "arithmetic_decimal",
+            "arithmetic",
+            "comparison",
+            "datetime",
+            "logarithmic",
+            "rounding",
+            "rounding_decimal",
+            "string")
+        .map(
+            category -> {
+              String resourcePath = String.format("/functions_%s.yaml", category);
+              String uri =
+                  String.format(
+                      "https://github.com/substrait-io/substrait/blob/main/extensions/functions_%s.yaml",
+                      category);
+              return loadFromResource(resourcePath, uri);
+            })
+        .reduce((extension1, extension2) -> extension1.merge(extension2))
+        .get();
+  }
 
-         List<ExtensionCollection> extensions = new ArrayList<>();
-     for (String category : functionCategories) {
-       String resourcePath = String.format("/functions_%s.yaml", category);
-       String uri = String.format("https://github.com/substrait-io/substrait/blob/main/extensions/functions_%s.yaml", category);
-       extensions.add(loadFromResource(resourcePath, uri));
-     }
-
-     ExtensionCollection complete = extensions.get(0);
-     for (int i = 1; i < extensions.size(); i++) {
-       complete = complete.merge(extensions.get(i));
-     }
-     return complete;
-   }
-
-   public static ExtensionCollection loadFromResource(String resourcePath, String uri) {
-     try (InputStream stream = ExtensionCollection.class.getResourceAsStream(resourcePath)) {
-       if (stream == null) {
-         throw new IllegalArgumentException("Resource not found: " + resourcePath);
-       }
-       return load(uri, stream);
-     } catch (IOException e) {
-       throw new RuntimeException("Failed to load extension from " + resourcePath, e);
-     }
-   }
+  public static ExtensionCollection loadFromResource(String resourcePath, String uri) {
+    try (InputStream stream = ExtensionCollection.class.getResourceAsStream(resourcePath)) {
+      if (stream == null) {
+        throw new IllegalArgumentException("Resource not found: " + resourcePath);
+      }
+      return load(uri, stream);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load extension from " + resourcePath, e);
+    }
+  }
 
   public static ExtensionCollection load(List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {

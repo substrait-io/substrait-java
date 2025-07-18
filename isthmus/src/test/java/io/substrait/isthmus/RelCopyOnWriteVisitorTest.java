@@ -186,7 +186,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
       SimpleExtension.FunctionAnchor.of(
           DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_APPROX, "approx_count_distinct:any");
   public static SimpleExtension.FunctionAnchor COUNT =
-      SimpleExtension.FunctionAnchor.of(DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any");
+      SimpleExtension.FunctionAnchor.of(
+          DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any");
 
   private static class CountCountDistinct {
 
