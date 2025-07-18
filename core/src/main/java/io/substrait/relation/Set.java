@@ -13,7 +13,7 @@ import org.immutables.value.Value;
 public abstract class Set extends AbstractRel implements HasExtension {
   public abstract SetOp getSetOp();
 
-  public static enum SetOp {
+  public enum SetOp {
     UNKNOWN(SetRel.SetOp.SET_OP_UNSPECIFIED),
     MINUS_PRIMARY(SetRel.SetOp.SET_OP_MINUS_PRIMARY),
     MINUS_PRIMARY_ALL(SetRel.SetOp.SET_OP_MINUS_PRIMARY_ALL),

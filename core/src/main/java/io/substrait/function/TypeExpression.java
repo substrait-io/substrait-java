@@ -6,15 +6,15 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface TypeExpression {
 
-  static class RequiredTypeExpressionVisitorException extends RuntimeException {}
+  class RequiredTypeExpressionVisitorException extends RuntimeException {}
 
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
-  public static TypeExpressionCreator withNullability(boolean nullable) {
+  static TypeExpressionCreator withNullability(boolean nullable) {
     return nullable ? TypeExpressionCreator.NULLABLE : TypeExpressionCreator.REQUIRED;
   }
 
-  abstract static class BaseTypeExpression implements TypeExpression {
+  abstract class BaseTypeExpression implements TypeExpression {
     public final <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
       if (typeVisitor instanceof TypeExpressionVisitor) {
         return acceptE((TypeExpressionVisitor<R, E>) typeVisitor);
@@ -27,7 +27,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class FixedChar extends BaseTypeExpression implements NullableType {
+  abstract class FixedChar extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression length();
 
     public static ImmutableTypeExpression.FixedChar.Builder builder() {
@@ -41,7 +41,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class VarChar extends BaseTypeExpression implements NullableType {
+  abstract class VarChar extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression length();
 
     public static ImmutableTypeExpression.VarChar.Builder builder() {
@@ -55,7 +55,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class FixedBinary extends BaseTypeExpression implements NullableType {
+  abstract class FixedBinary extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression length();
 
     public static ImmutableTypeExpression.FixedBinary.Builder builder() {
@@ -69,7 +69,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class Decimal extends BaseTypeExpression implements NullableType {
+  abstract class Decimal extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression scale();
 
     public abstract TypeExpression precision();
@@ -85,7 +85,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class IntervalDay extends BaseTypeExpression implements NullableType {
+  abstract class IntervalDay extends BaseTypeExpression implements NullableType {
 
     public abstract TypeExpression precision();
 
@@ -100,7 +100,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class IntervalCompound extends BaseTypeExpression implements NullableType {
+  abstract class IntervalCompound extends BaseTypeExpression implements NullableType {
 
     public abstract TypeExpression precision();
 
@@ -115,7 +115,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class PrecisionTimestamp extends BaseTypeExpression implements NullableType {
+  abstract class PrecisionTimestamp extends BaseTypeExpression implements NullableType {
 
     public abstract TypeExpression precision();
 
@@ -130,7 +130,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class PrecisionTimestampTZ extends BaseTypeExpression implements NullableType {
+  abstract class PrecisionTimestampTZ extends BaseTypeExpression implements NullableType {
 
     public abstract TypeExpression precision();
 
@@ -145,7 +145,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class Struct extends BaseTypeExpression implements NullableType {
+  abstract class Struct extends BaseTypeExpression implements NullableType {
     public abstract java.util.List<TypeExpression> fields();
 
     public static ImmutableTypeExpression.Struct.Builder builder() {
@@ -159,7 +159,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class ListType extends BaseTypeExpression implements NullableType {
+  abstract class ListType extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression elementType();
 
     public static ImmutableTypeExpression.ListType.Builder builder() {
@@ -173,7 +173,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class Map extends BaseTypeExpression implements NullableType {
+  abstract class Map extends BaseTypeExpression implements NullableType {
     public abstract TypeExpression key();
 
     public abstract TypeExpression value();
@@ -189,7 +189,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class BinaryOperation extends BaseTypeExpression {
+  abstract class BinaryOperation extends BaseTypeExpression {
     public enum OpType {
       ADD,
       SUBTRACT,
@@ -225,7 +225,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class NotOperation extends BaseTypeExpression {
+  abstract class NotOperation extends BaseTypeExpression {
     public abstract TypeExpression inner();
 
     public static ImmutableTypeExpression.NotOperation.Builder builder() {
@@ -239,7 +239,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class IfOperation extends BaseTypeExpression {
+  abstract class IfOperation extends BaseTypeExpression {
     public abstract TypeExpression ifCondition();
 
     public abstract TypeExpression thenExpr();
@@ -257,7 +257,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class IntegerLiteral extends BaseTypeExpression {
+  abstract class IntegerLiteral extends BaseTypeExpression {
     public abstract int value();
 
     public static ImmutableTypeExpression.IntegerLiteral.Builder builder() {
@@ -271,7 +271,7 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
-  abstract static class ReturnProgram extends BaseTypeExpression {
+  abstract class ReturnProgram extends BaseTypeExpression {
     public abstract java.util.List<Assignment> assignments();
 
     public abstract TypeExpression finalExpression();

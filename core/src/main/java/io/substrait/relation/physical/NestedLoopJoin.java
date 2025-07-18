@@ -18,7 +18,7 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
 
   public abstract JoinType getJoinType();
 
-  public static enum JoinType {
+  public enum JoinType {
     UNKNOWN(NestedLoopJoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
     INNER(NestedLoopJoinRel.JoinType.JOIN_TYPE_INNER),
     OUTER(NestedLoopJoinRel.JoinType.JOIN_TYPE_OUTER),

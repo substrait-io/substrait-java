@@ -25,7 +25,7 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
   public abstract Optional<Expression> getPostJoinFilter();
 
-  public static enum JoinType {
+  public enum JoinType {
     UNKNOWN(MergeJoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
     INNER(MergeJoinRel.JoinType.JOIN_TYPE_INNER),
     OUTER(MergeJoinRel.JoinType.JOIN_TYPE_OUTER),

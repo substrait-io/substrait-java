@@ -59,8 +59,7 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.UserDefined type) throws E;
 
-  public abstract static class TypeThrowsVisitor<R, E extends Throwable>
-      implements TypeVisitor<R, E> {
+  abstract class TypeThrowsVisitor<R, E extends Throwable> implements TypeVisitor<R, E> {
 
     private final String unsupportedMessage;
 
