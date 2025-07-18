@@ -6,11 +6,11 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface TypeExpression {
 
-  static class RequiredTypeExpressionVisitorException extends RuntimeException {}
+  class RequiredTypeExpressionVisitorException extends RuntimeException {}
 
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
-  public static TypeExpressionCreator withNullability(boolean nullable) {
+  static TypeExpressionCreator withNullability(boolean nullable) {
     return nullable ? TypeExpressionCreator.NULLABLE : TypeExpressionCreator.REQUIRED;
   }
 

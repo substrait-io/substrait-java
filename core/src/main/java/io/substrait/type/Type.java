@@ -10,9 +10,9 @@ import org.immutables.value.Value;
 
 @Value.Enclosing
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Type.class);
+  org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Type.class);
 
-  public static TypeCreator withNullability(boolean nullable) {
+  static TypeCreator withNullability(boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
 
