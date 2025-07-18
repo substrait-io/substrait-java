@@ -13,6 +13,7 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     this.typeAnchorMap = typeAnchorMap;
   }
 
+  @Override
   public SimpleExtension.ScalarFunctionVariant getScalarFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     SimpleExtension.FunctionAnchor anchor = functionAnchorMap.get(reference);
@@ -24,6 +25,7 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     return extensions.getScalarFunction(anchor);
   }
 
+  @Override
   public SimpleExtension.WindowFunctionVariant getWindowFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     SimpleExtension.FunctionAnchor anchor = functionAnchorMap.get(reference);
@@ -35,6 +37,7 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     return extensions.getWindowFunction(anchor);
   }
 
+  @Override
   public SimpleExtension.AggregateFunctionVariant getAggregateFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     SimpleExtension.FunctionAnchor anchor = functionAnchorMap.get(reference);
@@ -46,6 +49,7 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     return extensions.getAggregateFunction(anchor);
   }
 
+  @Override
   public SimpleExtension.Type getType(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     SimpleExtension.TypeAnchor anchor = typeAnchorMap.get(reference);

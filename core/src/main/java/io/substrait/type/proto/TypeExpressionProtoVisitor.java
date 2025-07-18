@@ -224,6 +224,7 @@ public class TypeExpressionProtoVisitor
       super(nullability);
     }
 
+    @Override
     public DerivationExpression fixedChar(DerivationExpression len) {
       return wrap(
           DerivationExpression.ExpressionFixedChar.newBuilder()
@@ -242,6 +243,7 @@ public class TypeExpressionProtoVisitor
       return DerivationExpression.newBuilder().setIntegerParameterName(name).build();
     }
 
+    @Override
     public DerivationExpression varChar(DerivationExpression len) {
       return wrap(
           DerivationExpression.ExpressionVarChar.newBuilder()
@@ -250,6 +252,7 @@ public class TypeExpressionProtoVisitor
               .build());
     }
 
+    @Override
     public DerivationExpression fixedBinary(DerivationExpression len) {
       return wrap(
           DerivationExpression.ExpressionFixedBinary.newBuilder()
@@ -258,6 +261,7 @@ public class TypeExpressionProtoVisitor
               .build());
     }
 
+    @Override
     public DerivationExpression decimal(
         DerivationExpression scale, DerivationExpression precision) {
       return wrap(
@@ -313,6 +317,7 @@ public class TypeExpressionProtoVisitor
               .build());
     }
 
+    @Override
     public DerivationExpression struct(Iterable<DerivationExpression> types) {
       return wrap(
           DerivationExpression.ExpressionStruct.newBuilder()
@@ -325,6 +330,7 @@ public class TypeExpressionProtoVisitor
       return DerivationExpression.newBuilder().setTypeParameterName(name).build();
     }
 
+    @Override
     public DerivationExpression list(DerivationExpression type) {
       return wrap(
           DerivationExpression.ExpressionList.newBuilder()
@@ -333,6 +339,7 @@ public class TypeExpressionProtoVisitor
               .build());
     }
 
+    @Override
     public DerivationExpression map(DerivationExpression key, DerivationExpression value) {
       return wrap(
           DerivationExpression.ExpressionMap.newBuilder()

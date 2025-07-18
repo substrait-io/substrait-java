@@ -20,6 +20,7 @@ public abstract class FieldReference implements Expression {
 
   public abstract Optional<Integer> outerReferenceStepsOut();
 
+  @Override
   public Type getType() {
     return type();
   }
