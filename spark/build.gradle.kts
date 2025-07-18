@@ -6,6 +6,7 @@ plugins {
   id("idea")
   id("com.diffplug.spotless") version "7.1.0"
   id("org.jreleaser")
+  id("substrait.java-conventions")
 }
 
 val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))

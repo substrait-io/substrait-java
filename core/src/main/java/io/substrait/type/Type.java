@@ -11,7 +11,7 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
 
-  public static TypeCreator withNullability(boolean nullable) {
+  static TypeCreator withNullability(boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
 

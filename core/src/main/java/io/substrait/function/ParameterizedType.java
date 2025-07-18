@@ -10,7 +10,7 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface ParameterizedType extends TypeExpression {
 
-  static class RequiredParameterizedVisitorException extends RuntimeException {
+  class RequiredParameterizedVisitorException extends RuntimeException {
     @Override
     public synchronized Throwable fillInStackTrace() {
       return this;
@@ -19,7 +19,7 @@ public interface ParameterizedType extends TypeExpression {
 
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
-  public static ParameterizedTypeCreator withNullability(boolean nullable) {
+  static ParameterizedTypeCreator withNullability(boolean nullable) {
     return nullable ? ParameterizedTypeCreator.NULLABLE : ParameterizedTypeCreator.REQUIRED;
   }
 
