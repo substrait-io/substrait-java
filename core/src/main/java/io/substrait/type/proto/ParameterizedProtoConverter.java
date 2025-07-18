@@ -11,6 +11,11 @@ public class ParameterizedProtoConverter
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(ParameterizedProtoConverter.class);
 
+  private static final BaseProtoTypes<ParameterizedType, ParameterizedType.IntegerOption>
+      PARAMETERIZED_NULLABLE = new ParameterizedTypes(Type.Nullability.NULLABILITY_NULLABLE);
+  private static final BaseProtoTypes<ParameterizedType, ParameterizedType.IntegerOption>
+      PARAMETERIZED_REQUIRED = new ParameterizedTypes(Type.Nullability.NULLABILITY_REQUIRED);
+
   public ParameterizedProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Parameterized types cannot include return type expressions.");
   }
@@ -20,11 +25,6 @@ public class ParameterizedProtoConverter
       final boolean nullable) {
     return nullable ? PARAMETERIZED_NULLABLE : PARAMETERIZED_REQUIRED;
   }
-
-  private static final BaseProtoTypes<ParameterizedType, ParameterizedType.IntegerOption>
-      PARAMETERIZED_NULLABLE = new ParameterizedTypes(Type.Nullability.NULLABILITY_NULLABLE);
-  private static final BaseProtoTypes<ParameterizedType, ParameterizedType.IntegerOption>
-      PARAMETERIZED_REQUIRED = new ParameterizedTypes(Type.Nullability.NULLABILITY_REQUIRED);
 
   public ParameterizedType.IntegerOption i(final TypeExpression num) {
     return num.accept(new IntegerVisitor());

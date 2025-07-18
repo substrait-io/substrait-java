@@ -49,10 +49,6 @@ public class PlanTestBase {
   protected static final TypeCreator R = TypeCreator.of(false);
   protected static final TypeCreator N = TypeCreator.of(true);
 
-  public static String asString(String resource) throws IOException {
-    return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
-  }
-
   protected static final CalciteCatalogReader TPCH_CATALOG;
 
   static {
@@ -68,6 +64,10 @@ public class PlanTestBase {
   private static final TpcdsSchema TPCDS_SCHEMA = new TpcdsSchema(1.0);
   protected static CalciteCatalogReader TPCDS_CATALOG =
       PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
+
+  public static String asString(String resource) throws IOException {
+    return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
+  }
 
   protected Plan assertProtoPlanRoundrip(String query) throws SqlParseException {
     return assertProtoPlanRoundrip(query, new SqlToSubstrait());

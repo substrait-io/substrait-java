@@ -11,6 +11,11 @@ public class TypeExpressionProtoVisitor
   static final org.slf4j.Logger logger =
       org.slf4j.LoggerFactory.getLogger(TypeExpressionProtoVisitor.class);
 
+  private static final DerivationTypes DERIVATION_NULLABLE =
+      new DerivationTypes(Type.Nullability.NULLABILITY_NULLABLE);
+  private static final DerivationTypes DERIVATION_REQUIRED =
+      new DerivationTypes(Type.Nullability.NULLABILITY_REQUIRED);
+
   public TypeExpressionProtoVisitor(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Unexpected expression type. This shouldn't happen.");
   }
@@ -20,11 +25,6 @@ public class TypeExpressionProtoVisitor
       final boolean nullable) {
     return nullable ? DERIVATION_NULLABLE : DERIVATION_REQUIRED;
   }
-
-  private static final DerivationTypes DERIVATION_NULLABLE =
-      new DerivationTypes(Type.Nullability.NULLABILITY_NULLABLE);
-  private static final DerivationTypes DERIVATION_REQUIRED =
-      new DerivationTypes(Type.Nullability.NULLABILITY_REQUIRED);
 
   @Override
   public DerivationExpression visit(final TypeExpression.BinaryOperation expr) {

@@ -14,6 +14,8 @@ import org.immutables.value.Value;
  */
 @Value.Immutable
 public interface EnumArg extends FunctionArg {
+  EnumArg UNSPECIFIED_ENUM_ARG = builder().value(Optional.empty()).build();
+
   Optional<String> value();
 
   @Override
@@ -31,8 +33,6 @@ public interface EnumArg extends FunctionArg {
   static EnumArg of(String value) {
     return builder().value(Optional.of(value)).build();
   }
-
-  EnumArg UNSPECIFIED_ENUM_ARG = builder().value(Optional.empty()).build();
 
   static ImmutableEnumArg.Builder builder() {
     return ImmutableEnumArg.builder();

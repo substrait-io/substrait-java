@@ -18,6 +18,33 @@ import org.junit.jupiter.params.provider.ValueSource;
 class CalciteTypeTest extends CalciteObjs {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CalciteTypeTest.class);
 
+  // Setup for user-defined type test
+  static final String uTypeURI = "/functions_custom";
+  static final String uTypeName = "u_type";
+  UserTypeFactory uTypeFactory = new UserTypeFactory(uTypeURI, uTypeName);
+
+  public TypeConverter typeConverter =
+      new TypeConverter(
+          new UserTypeMapper() {
+            @Nullable
+            @Override
+            public Type toSubstrait(RelDataType relDataType) {
+              if (uTypeFactory.isTypeFromFactory(relDataType)) {
+                return uTypeFactory.createSubstrait(relDataType.isNullable());
+              }
+              return null;
+            }
+
+            @Nullable
+            @Override
+            public RelDataType toCalcite(Type.UserDefined type) {
+              if (type.uri().equals(uTypeURI) && type.name().equals(uTypeName)) {
+                return uTypeFactory.createCalcite(type.nullable());
+              }
+              return null;
+            }
+          });
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void bool(boolean nullable) {
@@ -213,33 +240,6 @@ class CalciteTypeTest extends CalciteObjs {
         Arrays.asList(
             "topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
   }
-
-  // Setup for user-defined type test
-  static final String uTypeURI = "/functions_custom";
-  static final String uTypeName = "u_type";
-  UserTypeFactory uTypeFactory = new UserTypeFactory(uTypeURI, uTypeName);
-
-  public TypeConverter typeConverter =
-      new TypeConverter(
-          new UserTypeMapper() {
-            @Nullable
-            @Override
-            public Type toSubstrait(RelDataType relDataType) {
-              if (uTypeFactory.isTypeFromFactory(relDataType)) {
-                return uTypeFactory.createSubstrait(relDataType.isNullable());
-              }
-              return null;
-            }
-
-            @Nullable
-            @Override
-            public RelDataType toCalcite(Type.UserDefined type) {
-              if (type.uri().equals(uTypeURI) && type.name().equals(uTypeName)) {
-                return uTypeFactory.createCalcite(type.nullable());
-              }
-              return null;
-            }
-          });
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})

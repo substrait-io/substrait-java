@@ -41,6 +41,13 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   final SubstraitRelNodeConverter relNodeConverter =
       new SubstraitRelNodeConverter(extensions, typeFactory, builder);
 
+  final ExpressionRexConverter expressionRexConverter =
+      new ExpressionRexConverter(
+          typeFactory,
+          new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+          TypeConverter.DEFAULT);
+
   public SubstraitExpressionConverterTest() {
     converter = relNodeConverter.expressionRexConverter;
   }
@@ -155,13 +162,6 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
         Remap.of(List.of(3)),
         b.filter(input -> b.equal(b.fieldReference(input, 2), b.str("EUROPE")), commonTable));
   }
-
-  final ExpressionRexConverter expressionRexConverter =
-      new ExpressionRexConverter(
-          typeFactory,
-          new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
-          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
-          TypeConverter.DEFAULT);
 
   @Test
   public void useSubstraitReturnTypeDuringScalarFunctionConversion() {

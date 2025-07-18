@@ -25,8 +25,6 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
 
   public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
-  private SubstraitOperatorTable() {}
-
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(
           List.of(
@@ -52,6 +50,8 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               STANDARD_OPERATOR_TABLE.getOperatorList().stream()
                   .filter(op -> !OVERRIDE_KINDS.contains(op.kind)))
           .collect(Collectors.toUnmodifiableList());
+
+  private SubstraitOperatorTable() {}
 
   @Override
   public void lookupOperatorOverloads(
