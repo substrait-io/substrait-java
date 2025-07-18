@@ -697,7 +697,7 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() {
-    var defaultFiles =
+    var functionCategories =
         Arrays.asList(
                 "boolean",
                 "aggregate_generic",
@@ -709,13 +709,32 @@ public class SimpleExtension {
                 "logarithmic",
                 "rounding",
                 "rounding_decimal",
-                "string")
-            .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
-            .collect(java.util.stream.Collectors.toList());
+                "string");
 
-    return load(defaultFiles);
-  }
+         List<ExtensionCollection> extensions = new ArrayList<>();
+     for (String category : functionCategories) {
+       String resourcePath = String.format("/functions_%s.yaml", category);
+       String uri = String.format("https://github.com/substrait-io/substrait/blob/main/extensions/functions_%s.yaml", category);
+       extensions.add(loadFromResource(resourcePath, uri));
+     }
+
+     ExtensionCollection complete = extensions.get(0);
+     for (int i = 1; i < extensions.size(); i++) {
+       complete = complete.merge(extensions.get(i));
+     }
+     return complete;
+   }
+
+   public static ExtensionCollection loadFromResource(String resourcePath, String uri) {
+     try (InputStream stream = ExtensionCollection.class.getResourceAsStream(resourcePath)) {
+       if (stream == null) {
+         throw new IllegalArgumentException("Resource not found: " + resourcePath);
+       }
+       return load(uri, stream);
+     } catch (IOException e) {
+       throw new RuntimeException("Failed to load extension from " + resourcePath, e);
+     }
+   }
 
   public static ExtensionCollection load(List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {

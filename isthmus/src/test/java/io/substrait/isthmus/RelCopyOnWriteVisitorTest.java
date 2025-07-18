@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
@@ -183,9 +184,9 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
       SimpleExtension.FunctionAnchor.of(
-          "/functions_aggregate_approx.yaml", "approx_count_distinct:any");
+          DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_APPROX, "approx_count_distinct:any");
   public static SimpleExtension.FunctionAnchor COUNT =
-      SimpleExtension.FunctionAnchor.of("/functions_aggregate_generic.yaml", "count:any");
+      SimpleExtension.FunctionAnchor.of(DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:any");
 
   private static class CountCountDistinct {
 
