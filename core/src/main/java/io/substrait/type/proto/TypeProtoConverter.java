@@ -30,6 +30,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
       super(nullability);
     }
 
+    @Override
     public Type fixedChar(Integer len) {
       return wrap(Type.FixedChar.newBuilder().setLength(len).setNullability(nullability).build());
     }
@@ -46,14 +47,17 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
           "It is not possible to use parameters in basic types.");
     }
 
+    @Override
     public Type varChar(Integer len) {
       return wrap(Type.VarChar.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
+    @Override
     public Type fixedBinary(Integer len) {
       return wrap(Type.FixedBinary.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
+    @Override
     public Type decimal(Integer scale, Integer precision) {
       return wrap(
           Type.Decimal.newBuilder()
@@ -63,6 +67,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type intervalDay(Integer precision) {
       return wrap(
           Type.IntervalDay.newBuilder()
@@ -71,6 +76,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type intervalCompound(Integer precision) {
       return wrap(
           Type.IntervalCompound.newBuilder()
@@ -79,6 +85,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type precisionTime(Integer precision) {
       return wrap(
           Type.PrecisionTime.newBuilder()
@@ -87,6 +94,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type precisionTimestamp(Integer precision) {
       return wrap(
           Type.PrecisionTimestamp.newBuilder()
@@ -95,6 +103,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type precisionTimestampTZ(Integer precision) {
       return wrap(
           Type.PrecisionTimestampTZ.newBuilder()
@@ -103,14 +112,17 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
               .build());
     }
 
+    @Override
     public Type struct(Iterable<Type> types) {
       return wrap(Type.Struct.newBuilder().addAllTypes(types).setNullability(nullability).build());
     }
 
+    @Override
     public Type list(Type type) {
       return wrap(Type.List.newBuilder().setType(type).setNullability(nullability).build());
     }
 
+    @Override
     public Type map(Type key, Type value) {
       return wrap(
           Type.Map.newBuilder().setKey(key).setValue(value).setNullability(nullability).build());

@@ -128,6 +128,7 @@ public class ParameterizedProtoConverter
       super(nullability);
     }
 
+    @Override
     public ParameterizedType fixedChar(ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedFixedChar.newBuilder()
@@ -150,6 +151,7 @@ public class ParameterizedProtoConverter
           .build();
     }
 
+    @Override
     protected ParameterizedType.IntegerOption i(int len) {
       return ParameterizedType.IntegerOption.newBuilder().setLiteral(len).build();
     }
@@ -160,6 +162,7 @@ public class ParameterizedProtoConverter
           .build();
     }
 
+    @Override
     public ParameterizedType varChar(ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedVarChar.newBuilder()
@@ -168,6 +171,7 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
     public ParameterizedType fixedBinary(ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedFixedBinary.newBuilder()
@@ -176,6 +180,7 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
     public ParameterizedType decimal(
         ParameterizedType.IntegerOption scale, ParameterizedType.IntegerOption precision) {
       return wrap(
@@ -231,6 +236,7 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
     public ParameterizedType struct(Iterable<ParameterizedType> types) {
       return wrap(
           ParameterizedType.ParameterizedStruct.newBuilder()
@@ -239,6 +245,7 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
     public ParameterizedType list(ParameterizedType type) {
       return wrap(
           ParameterizedType.ParameterizedList.newBuilder()
@@ -247,6 +254,7 @@ public class ParameterizedProtoConverter
               .build());
     }
 
+    @Override
     public ParameterizedType map(ParameterizedType key, ParameterizedType value) {
       return wrap(
           ParameterizedType.ParameterizedMap.newBuilder()

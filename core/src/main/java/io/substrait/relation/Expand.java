@@ -39,6 +39,7 @@ public abstract class Expand extends SingleInputRel {
   public abstract static class ConsistentField implements ExpandField {
     public abstract Expression getExpression();
 
+    @Override
     public Type getType() {
       return getExpression().getType();
     }
@@ -52,6 +53,7 @@ public abstract class Expand extends SingleInputRel {
   public abstract static class SwitchingField implements ExpandField {
     public abstract List<Expression> getDuplicates();
 
+    @Override
     public Type getType() {
       var nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
       var type = getDuplicates().get(0).getType();
