@@ -697,24 +697,46 @@ public class SimpleExtension {
   }
 
   public static ExtensionCollection loadDefaults() {
-    var defaultFiles =
-        Arrays.asList(
-                "boolean",
-                "aggregate_generic",
-                "aggregate_approx",
-                "arithmetic_decimal",
-                "arithmetic",
-                "comparison",
-                "datetime",
-                "logarithmic",
-                "rounding",
-                "rounding_decimal",
-                "string")
-            .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
-            .collect(java.util.stream.Collectors.toList());
+    var emptyExtension = ImmutableSimpleExtension.ExtensionCollection.builder().build();
+    return Stream.of(
+            "boolean",
+            "aggregate_generic",
+            "aggregate_approx",
+            "arithmetic_decimal",
+            "arithmetic",
+            "comparison",
+            "datetime",
+            "logarithmic",
+            "rounding",
+            "rounding_decimal",
+            "string")
+        .map(
+            category -> {
+              String resourcePath = String.format("/functions_%s.yaml", category);
+              String uri =
+                  String.format(
+                      "https://github.com/substrait-io/substrait/blob/main/extensions/functions_%s.yaml",
+                      category);
+              return loadFromPath(uri, resourcePath);
+            })
+        .reduce(emptyExtension, ExtensionCollection::merge);
+  }
 
-    return load(defaultFiles);
+  /*
+   Loads the resource from a resource path with a custom namespace.
+   @param namespace the namespace to use for the extension (i.e URI)
+   @param path the path to the resource
+   @return the extension collection
+  */
+  public static ExtensionCollection loadFromPath(String namespace, String path) {
+    try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
+      if (stream == null) {
+        throw new IllegalArgumentException("Resource not found: " + path);
+      }
+      return load(namespace, stream);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load extension from " + path, e);
+    }
   }
 
   public static ExtensionCollection load(List<String> resourcePaths) {
