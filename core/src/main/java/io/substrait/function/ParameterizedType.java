@@ -9,7 +9,6 @@ import org.immutables.value.Value;
  */
 @Value.Enclosing
 public interface ParameterizedType extends TypeExpression {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParameterizedType.class);
 
   static class RequiredParameterizedVisitorException extends RuntimeException {
     @Override

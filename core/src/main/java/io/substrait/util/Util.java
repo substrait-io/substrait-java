@@ -3,7 +3,6 @@ package io.substrait.util;
 import java.util.function.Supplier;
 
 public class Util {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Util.class);
 
   public static <T> Supplier<T> memoize(Supplier<T> supplier) {
     return new Memoizer<T>(supplier);

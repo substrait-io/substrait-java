@@ -15,9 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan}
  */
 public class ExtensionCollector extends AbstractExtensionLookup {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ExtensionCollector.class);
-
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
   private final BidiMap<Integer, String> uriMap;

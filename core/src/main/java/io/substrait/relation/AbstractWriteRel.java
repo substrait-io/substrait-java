@@ -5,7 +5,6 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 
 public abstract class AbstractWriteRel extends SingleInputRel {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractWriteRel.class);
 
   public abstract NamedStruct getTableSchema();
 

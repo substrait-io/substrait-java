@@ -30,10 +30,6 @@ import java.util.stream.IntStream;
  * Converts from {@link io.substrait.proto.Expression} to {@link io.substrait.expression.Expression}
  */
 public class ProtoExpressionConverter {
-
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ProtoExpressionConverter.class);
-
   public static final Type.Struct EMPTY_TYPE = Type.Struct.builder().nullable(false).build();
 
   private final ExtensionLookup lookup;

@@ -5,8 +5,6 @@ import java.util.Arrays;
 
 public class TypeExpressionCreator extends TypeCreator
     implements ExtendedTypeCreator<TypeExpression, TypeExpression> {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(TypeExpressionCreator.class);
 
   public static final TypeExpressionCreator REQUIRED = new TypeExpressionCreator(false);
   public static final TypeExpressionCreator NULLABLE = new TypeExpressionCreator(true);

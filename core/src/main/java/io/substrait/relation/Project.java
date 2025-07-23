@@ -10,7 +10,6 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class Project extends SingleInputRel implements HasExtension {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Project.class);
 
   public abstract List<Expression> getExpressions();
 

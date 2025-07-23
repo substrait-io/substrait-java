@@ -14,8 +14,6 @@ import java.util.Map;
  * new anchors.
  */
 public class ImmutableExtensionLookup extends AbstractExtensionLookup {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(ImmutableExtensionLookup.class);
 
   private int counter = -1;
 

@@ -28,11 +28,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.immutables.value.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Classes used to deserialize YAML extension files. Handles functions and types. */
 @Value.Enclosing
 public class SimpleExtension {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SimpleExtension.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtension.class);
 
   // Key for looking up URI in InjectableValues
   public static final String URI_LOCATOR_KEY = "uri";
@@ -800,7 +802,7 @@ public class SimpleExtension {
             .windowFunctions(allWindowFunctionVariants)
             .addAllTypes(extensionSignatures.types())
             .build();
-    logger.atDebug().log(
+    LOGGER.atDebug().log(
         "Loaded {} aggregate functions and {} scalar functions from {}.",
         collection.aggregateFunctions().size(),
         collection.scalarFunctions().size(),

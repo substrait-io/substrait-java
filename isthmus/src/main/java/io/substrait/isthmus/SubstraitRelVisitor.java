@@ -48,8 +48,6 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(SubstraitRelVisitor.class);
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 

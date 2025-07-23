@@ -16,8 +16,6 @@ import org.apache.calcite.sql.fun.SqlArrayValueConstructor;
 import org.apache.calcite.sql.fun.SqlMapValueConstructor;
 
 public class LiteralConstructorConverter implements CallConverter {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(LiteralConstructorConverter.class);
 
   private final TypeConverter typeConverter;
 

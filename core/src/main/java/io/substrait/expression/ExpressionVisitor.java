@@ -3,7 +3,6 @@ package io.substrait.expression;
 import io.substrait.util.VisitationContext;
 
 public interface ExpressionVisitor<R, C extends VisitationContext, E extends Throwable> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionVisitor.class);
 
   R visit(Expression.NullLiteral expr, C context) throws E;
 

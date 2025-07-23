@@ -9,11 +9,13 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlKind;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Converts field selections from Calcite representation. */
 public class FieldSelectionConverter implements CallConverter {
-  static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(FieldSelectionConverter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(FieldSelectionConverter.class);
+
   private final TypeConverter typeConverter;
 
   public FieldSelectionConverter(TypeConverter typeConverter) {
@@ -32,7 +34,7 @@ public class FieldSelectionConverter implements CallConverter {
     var reference = call.getOperands().get(1);
 
     if (reference.getKind() != SqlKind.LITERAL || !(reference instanceof RexLiteral)) {
-      logger
+      LOGGER
           .atWarn()
           .log(
               "Found item operator without literal kind/type. This isn't handled well. Reference was {} with toString {}.",
@@ -101,13 +103,13 @@ public class FieldSelectionConverter implements CallConverter {
     } else if (l instanceof Expression.I64Literal) {
       return Optional.of((int) ((Expression.I64Literal) l).value());
     }
-    logger.atWarn().log("Literal expected to be int type but was not. {}.", l);
+    LOGGER.atWarn().log("Literal expected to be int type but was not. {}.", l);
     return Optional.empty();
   }
 
   public Optional<String> toString(Expression.Literal l) {
     if (!(l instanceof Expression.FixedCharLiteral)) {
-      logger.atWarn().log("Literal expected to be char type but was not. {}", l);
+      LOGGER.atWarn().log("Literal expected to be char type but was not. {}", l);
       return Optional.empty();
     }
 
