@@ -2,7 +2,11 @@ package io.substrait.extendedexpression;
 
 import io.substrait.TestBase;
 import io.substrait.dsl.SubstraitBuilder;
-import io.substrait.expression.*;
+import io.substrait.expression.AggregateFunctionInvocation;
+import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.NamedStruct;

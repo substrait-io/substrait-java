@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.PlanTestBase;

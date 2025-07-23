@@ -4,7 +4,9 @@ import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**

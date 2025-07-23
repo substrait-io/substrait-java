@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +47,8 @@ public class CalciteCallTest extends CalciteObjs {
   public void coerceNumericOp() {
     test(
         "add:i64_i64",
-        rex.makeCall(PLUS, c(20, SqlTypeName.INTEGER), c(4, SqlTypeName.BIGINT)),
+        rex.makeCall(
+            SqlStdOperatorTable.PLUS, c(20, SqlTypeName.INTEGER), c(4, SqlTypeName.BIGINT)),
         func -> {
           // check that there is a cast for the incorrect argument type.
           assertEquals(
@@ -65,7 +65,7 @@ public class CalciteCallTest extends CalciteObjs {
   public void directMatchPlus() {
     test(
         "add:i64_i64",
-        rex.makeCall(PLUS, c(4, SqlTypeName.BIGINT), c(4, SqlTypeName.BIGINT)),
+        rex.makeCall(SqlStdOperatorTable.PLUS, c(4, SqlTypeName.BIGINT), c(4, SqlTypeName.BIGINT)),
         func -> {
 
           // ensure both literals are included directly.
@@ -77,17 +77,23 @@ public class CalciteCallTest extends CalciteObjs {
 
   @Test
   public void directMatchAnd() {
-    test("and:bool", rex.makeCall(AND, c(true, SqlTypeName.BOOLEAN), c(true, SqlTypeName.BOOLEAN)));
+    test(
+        "and:bool",
+        rex.makeCall(
+            SqlStdOperatorTable.AND, c(true, SqlTypeName.BOOLEAN), c(true, SqlTypeName.BOOLEAN)));
   }
 
   @Test
   public void directMatchOr() {
-    test("or:bool", rex.makeCall(OR, c(false, SqlTypeName.BOOLEAN), c(true, SqlTypeName.BOOLEAN)));
+    test(
+        "or:bool",
+        rex.makeCall(
+            SqlStdOperatorTable.OR, c(false, SqlTypeName.BOOLEAN), c(true, SqlTypeName.BOOLEAN)));
   }
 
   @Test
   public void not() {
-    test("not:bool", rex.makeCall(NOT, c(false, SqlTypeName.BOOLEAN)));
+    test("not:bool", rex.makeCall(SqlStdOperatorTable.NOT, c(false, SqlTypeName.BOOLEAN)));
   }
 
   private void test(String expectedName, RexNode call) {

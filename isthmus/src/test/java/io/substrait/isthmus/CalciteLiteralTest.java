@@ -1,13 +1,12 @@
 package io.substrait.isthmus;
 
-import static io.substrait.expression.ExpressionCreator.*;
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -44,62 +43,62 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void nullLiteral() {
     bitest(
-        typedNull(TypeCreator.NULLABLE.varChar(10)),
+        ExpressionCreator.typedNull(TypeCreator.NULLABLE.varChar(10)),
         rex.makeNullLiteral(tN(SqlTypeName.VARCHAR, 10)));
   }
 
   @Test
   void tI8() {
-    bitest(i8(false, 4), c(4, SqlTypeName.TINYINT));
+    bitest(ExpressionCreator.i8(false, 4), c(4, SqlTypeName.TINYINT));
   }
 
   @Test
   void tI16() {
-    bitest(i16(false, 4), c(4, SqlTypeName.SMALLINT));
+    bitest(ExpressionCreator.i16(false, 4), c(4, SqlTypeName.SMALLINT));
   }
 
   @Test
   void tI32() {
-    bitest(i32(false, 4), c(4, SqlTypeName.INTEGER));
+    bitest(ExpressionCreator.i32(false, 4), c(4, SqlTypeName.INTEGER));
   }
 
   @Test
   void tI64() {
-    bitest(i64(false, 1234L), c(1234L, SqlTypeName.BIGINT));
+    bitest(ExpressionCreator.i64(false, 1234L), c(1234L, SqlTypeName.BIGINT));
   }
 
   @Test
   void tFP32() {
-    bitest(fp32(false, 4.44F), c(4.44F, SqlTypeName.REAL));
+    bitest(ExpressionCreator.fp32(false, 4.44F), c(4.44F, SqlTypeName.REAL));
   }
 
   @Test
   void tFP64() {
-    bitest(fp64(false, 4.45F), c(4.45F, SqlTypeName.DOUBLE));
+    bitest(ExpressionCreator.fp64(false, 4.45F), c(4.45F, SqlTypeName.DOUBLE));
   }
 
   @Test
   void tFloatFP64() {
-    test(fp64(false, 4.45F), c(4.45F, SqlTypeName.FLOAT));
+    test(ExpressionCreator.fp64(false, 4.45F), c(4.45F, SqlTypeName.FLOAT));
   }
 
   @Test
   void tStr() {
-    bitest(string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
+    bitest(ExpressionCreator.string(false, "my test"), c("my test", SqlTypeName.VARCHAR));
   }
 
   @Test
   void tBinary() {
     var val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
-        binary(false, val),
+        ExpressionCreator.binary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.VARBINARY));
   }
 
   @Test
   void tTime() {
     bitest(
-        time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000),
+        ExpressionCreator.time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000),
         rex.makeTimeLiteral(new TimeString(14, 22, 47), 6));
   }
 
@@ -115,7 +114,7 @@ public class CalciteLiteralTest extends CalciteObjs {
         new TimeString("14:22:47.123456"));
 
     bitest(
-        time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456),
+        ExpressionCreator.time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456),
         rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
   }
 
@@ -129,13 +128,13 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tDate() {
     bitest(
-        date(false, (int) LocalDate.of(2002, 2, 14).toEpochDay()),
+        ExpressionCreator.date(false, (int) LocalDate.of(2002, 2, 14).toEpochDay()),
         rex.makeDateLiteral(new DateString(2002, 2, 14)));
   }
 
   @Test
   void tTimestamp() {
-    var ts = timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
+    var ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
     var nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
     var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
@@ -143,7 +142,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimestampWithMilliMacroSeconds() {
-    var ts = timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
+    var ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
     var nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
     var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
@@ -161,7 +160,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   void tIntervalYearMonth() {
     BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
     RexLiteral intervalYearMonth = rex.makeIntervalLiteral(bd, YEAR_MONTH_INTERVAL);
-    var intervalYearMonthExpr = intervalYear(false, 3, 5);
+    var intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 3, 5);
     bitest(intervalYearMonthExpr, intervalYearMonth);
   }
 
@@ -177,7 +176,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.MONTH,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalYearMonthExpr = intervalYear(false, 123, 5);
+    var intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 123, 5);
 
     // rex --> expression
     assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
@@ -212,7 +211,8 @@ public class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.SECOND,
                 3,
                 SqlParserPos.ZERO));
-    var intervalDaySecondExpr = intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
+    var intervalDaySecondExpr =
+        ExpressionCreator.intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
     bitest(intervalDaySecondExpr, intervalDaySecond);
   }
 
@@ -225,7 +225,7 @@ public class CalciteLiteralTest extends CalciteObjs {
             bd,
             new SqlIntervalQualifier(
                 org.apache.calcite.avatica.util.TimeUnit.DAY, -1, null, -1, SqlParserPos.ZERO));
-    var intervalDayExpr = intervalDay(false, 5, 0, 0, 6);
+    var intervalDayExpr = ExpressionCreator.intervalDay(false, 5, 0, 0, 6);
 
     // rex --> expression
     var convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
@@ -252,7 +252,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalYearExpr = intervalYear(false, 123, 0);
+    var intervalYearExpr = ExpressionCreator.intervalYear(false, 123, 0);
     // rex --> expression
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
@@ -278,7 +278,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalMonthExpr = intervalYear(false, 123 / 12, 123 % 12);
+    var intervalMonthExpr = ExpressionCreator.intervalYear(false, 123 / 12, 123 % 12);
     // rex --> expression
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
@@ -294,12 +294,12 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tFixedChar() {
-    bitest(fixedChar(false, "hello "), c("hello ", SqlTypeName.CHAR));
+    bitest(ExpressionCreator.fixedChar(false, "hello "), c("hello ", SqlTypeName.CHAR));
   }
 
   @Test
   void tVarChar() {
-    bitest(varChar(false, "hello ", 10), c("hello ", SqlTypeName.VARCHAR, 10));
+    bitest(ExpressionCreator.varChar(false, "hello ", 10), c("hello ", SqlTypeName.VARCHAR, 10));
   }
 
   @Test
@@ -311,7 +311,7 @@ public class CalciteLiteralTest extends CalciteObjs {
             new BigDecimal("123.450000"),
             new BigDecimal("-123.450000"));
     for (BigDecimal bd : decimalList) {
-      bitest(decimal(false, bd, 32, 6), c(bd, SqlTypeName.DECIMAL, 32, 6));
+      bitest(ExpressionCreator.decimal(false, bd, 32, 6), c(bd, SqlTypeName.DECIMAL, 32, 6));
     }
   }
 
@@ -323,7 +323,7 @@ public class CalciteLiteralTest extends CalciteObjs {
             new BigDecimal("99.123456789123456789123456789123456789") // scale = 36, precision = 38
             );
     for (BigDecimal bd : decimalList) {
-      bitest(decimal(false, bd, 38, 36), c(bd, SqlTypeName.DECIMAL, 38, 36));
+      bitest(ExpressionCreator.decimal(false, bd, 38, 36), c(bd, SqlTypeName.DECIMAL, 38, 36));
     }
   }
 
@@ -344,20 +344,24 @@ public class CalciteLiteralTest extends CalciteObjs {
   void tMap() {
     var ss =
         ImmutableMap.<Expression.Literal, Expression.Literal>of(
-            string(false, "foo"), i32(false, 4), string(false, "bar"), i32(false, -1));
+            ExpressionCreator.string(false, "foo"),
+            ExpressionCreator.i32(false, 4),
+            ExpressionCreator.string(false, "bar"),
+            ExpressionCreator.i32(false, -1));
     var calcite =
         rex.makeLiteral(
             ImmutableMap.of("foo", 4, "bar", -1),
             type.createMapType(t(SqlTypeName.VARCHAR), t(SqlTypeName.INTEGER)),
             true,
             false);
-    bitest(map(false, ss), calcite);
+    bitest(ExpressionCreator.map(false, ss), calcite);
   }
 
   @Test
   void tList() {
     bitest(
-        list(false, i32(false, 4), i32(false, -1)),
+        ExpressionCreator.list(
+            false, ExpressionCreator.i32(false, 4), ExpressionCreator.i32(false, -1)),
         rex.makeLiteral(
             Arrays.asList(4, -1), type.createArrayType(t(SqlTypeName.INTEGER), -1), false, false));
   }
@@ -365,7 +369,8 @@ public class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tStruct() {
     test(
-        struct(false, i32(false, 4), i32(false, -1)),
+        ExpressionCreator.struct(
+            false, ExpressionCreator.i32(false, 4), ExpressionCreator.i32(false, -1)),
         rex.makeLiteral(
             Arrays.asList(4, -1),
             type.createStructType(
@@ -379,7 +384,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   void tFixedBinary() {
     var val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
-        fixedBinary(false, val),
+        ExpressionCreator.fixedBinary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.BINARY));
   }
 
