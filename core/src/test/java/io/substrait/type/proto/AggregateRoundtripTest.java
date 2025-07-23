@@ -22,20 +22,21 @@ import org.junit.jupiter.api.Test;
 public class AggregateRoundtripTest extends TestBase {
 
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
-    var expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
+    Expression.DecimalLiteral expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
     Expression.StructLiteral literal =
         Expression.StructLiteral.builder().addFields(expression).build();
-    var input =
+    io.substrait.relation.ImmutableVirtualTableScan input =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
             .addRows(literal)
             .build();
     ExtensionCollector functionCollector = new ExtensionCollector();
-    var to = new RelProtoConverter(functionCollector);
-    var extensions = defaultExtensionCollection;
-    var from = new ProtoRelConverter(functionCollector, extensions);
+    RelProtoConverter to = new RelProtoConverter(functionCollector);
+    io.substrait.extension.SimpleExtension.ExtensionCollection extensions =
+        defaultExtensionCollection;
+    ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 
-    var measure =
+    io.substrait.relation.ImmutableMeasure measure =
         Aggregate.Measure.builder()
             .function(
                 AggregateFunctionInvocation.builder()
@@ -60,8 +61,9 @@ public class AggregateRoundtripTest extends TestBase {
                     .build())
             .build();
 
-    var aggRel = Aggregate.builder().input(input).measures(Arrays.asList(measure)).build();
-    var protoAggRel = to.toProto(aggRel);
+    io.substrait.relation.ImmutableAggregate aggRel =
+        Aggregate.builder().input(input).measures(Arrays.asList(measure)).build();
+    io.substrait.proto.Rel protoAggRel = to.toProto(aggRel);
     assertEquals(
         protoAggRel.getAggregate().getMeasuresList().get(0).getMeasure().getInvocation(),
         invocation.toProto());
@@ -70,7 +72,7 @@ public class AggregateRoundtripTest extends TestBase {
 
   @Test
   void aggregateInvocationRoundtrip() {
-    for (var invocation : Expression.AggregationInvocation.values()) {
+    for (Expression.AggregationInvocation invocation : Expression.AggregationInvocation.values()) {
       assertAggregateRoundtrip(invocation);
     }
   }

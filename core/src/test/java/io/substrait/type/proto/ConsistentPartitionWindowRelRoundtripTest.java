@@ -17,7 +17,7 @@ public class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
 
   @Test
   void consistentPartitionWindowRoundtripSingle() {
-    var windowFunctionDeclaration =
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
@@ -70,11 +70,11 @@ public class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
 
   @Test
   void consistentPartitionWindowRoundtripMulti() {
-    var windowFunctionLeadDeclaration =
+    SimpleExtension.WindowFunctionVariant windowFunctionLeadDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    var windowFunctionLagDeclaration =
+    SimpleExtension.WindowFunctionVariant windowFunctionLagDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));

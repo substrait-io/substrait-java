@@ -94,38 +94,38 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
    * RelVisitor.reverseAccept(RelNode) due to the lack of ability to extend base classes.
    */
   public final OUTPUT reverseAccept(RelNode node) throws EXCEPTION {
-    if (node instanceof TableScan scan) {
-      return this.visit(scan);
-    } else if (node instanceof TableFunctionScan scan) {
-      return this.visit(scan);
-    } else if (node instanceof Values values) {
-      return this.visit(values);
-    } else if (node instanceof Filter filter) {
-      return this.visit(filter);
-    } else if (node instanceof Calc calc) {
-      return this.visit(calc);
-    } else if (node instanceof Project project) {
-      return this.visit(project);
-    } else if (node instanceof Join join) {
-      return this.visit(join);
-    } else if (node instanceof Correlate correlate) {
-      return this.visit(correlate);
-    } else if (node instanceof Union union) {
-      return this.visit(union);
-    } else if (node instanceof Intersect intersect) {
-      return this.visit(intersect);
-    } else if (node instanceof Minus minus) {
-      return this.visit(minus);
-    } else if (node instanceof Match match) {
-      return this.visit(match);
-    } else if (node instanceof Sort sort) {
-      return this.visit(sort);
-    } else if (node instanceof Exchange exchange) {
-      return this.visit(exchange);
-    } else if (node instanceof Aggregate aggregate) {
-      return this.visit(aggregate);
-    } else if (node instanceof TableModify modify) {
-      return this.visit(modify);
+    if (node instanceof TableScan) {
+      return this.visit((TableScan) node);
+    } else if (node instanceof TableFunctionScan) {
+      return this.visit((TableFunctionScan) node);
+    } else if (node instanceof Values) {
+      return this.visit((Values) node);
+    } else if (node instanceof Filter) {
+      return this.visit((Filter) node);
+    } else if (node instanceof Calc) {
+      return this.visit((Calc) node);
+    } else if (node instanceof Project) {
+      return this.visit((Project) node);
+    } else if (node instanceof Join) {
+      return this.visit((Join) node);
+    } else if (node instanceof Correlate) {
+      return this.visit((Correlate) node);
+    } else if (node instanceof Union) {
+      return this.visit((Union) node);
+    } else if (node instanceof Intersect) {
+      return this.visit((Intersect) node);
+    } else if (node instanceof Minus) {
+      return this.visit((Minus) node);
+    } else if (node instanceof Match) {
+      return this.visit((Match) node);
+    } else if (node instanceof Sort) {
+      return this.visit((Sort) node);
+    } else if (node instanceof Exchange) {
+      return this.visit((Exchange) node);
+    } else if (node instanceof Aggregate) {
+      return this.visit((Aggregate) node);
+    } else if (node instanceof TableModify) {
+      return this.visit((TableModify) node);
     } else {
       return this.visitOther(node);
     }

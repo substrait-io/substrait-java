@@ -46,9 +46,11 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Aggregate aggregate, EmptyVisitationContext context) throws E {
-    var input = aggregate.getInput().accept(this, context);
-    var groupings = transformList(aggregate.getGroupings(), context, this::visitGrouping);
-    var measures = transformList(aggregate.getMeasures(), context, this::visitMeasure);
+    Optional<Rel> input = aggregate.getInput().accept(this, context);
+    Optional<List<Aggregate.Grouping>> groupings =
+        transformList(aggregate.getGroupings(), context, this::visitGrouping);
+    Optional<List<Aggregate.Measure>> measures =
+        transformList(aggregate.getMeasures(), context, this::visitMeasure);
 
     if (allEmpty(input, groupings, measures)) {
       return Optional.empty();
@@ -70,8 +72,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   protected Optional<Aggregate.Measure> visitMeasure(
       Aggregate.Measure measure, EmptyVisitationContext context) throws E {
-    var preMeasureFilter = visitOptionalExpression(measure.getPreMeasureFilter(), context);
-    var afi = visitAggregateFunction(measure.getFunction(), context);
+    Optional<Expression> preMeasureFilter =
+        visitOptionalExpression(measure.getPreMeasureFilter(), context);
+    Optional<AggregateFunctionInvocation> afi =
+        visitAggregateFunction(measure.getFunction(), context);
 
     if (allEmpty(preMeasureFilter, afi)) {
       return Optional.empty();
@@ -86,8 +90,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   protected Optional<AggregateFunctionInvocation> visitAggregateFunction(
       AggregateFunctionInvocation afi, EmptyVisitationContext context) throws E {
-    var arguments = visitFunctionArguments(afi.arguments(), context);
-    var sort = transformList(afi.sort(), context, this::visitSortField);
+    Optional<List<FunctionArg>> arguments = visitFunctionArguments(afi.arguments(), context);
+    Optional<List<Expression.SortField>> sort =
+        transformList(afi.sort(), context, this::visitSortField);
 
     if (allEmpty(arguments, sort)) {
       return Optional.empty();
@@ -124,8 +129,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Filter filter, EmptyVisitationContext context) throws E {
-    var input = filter.getInput().accept(this, context);
-    var condition = filter.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
+    Optional<Rel> input = filter.getInput().accept(this, context);
+    Optional<Expression> condition =
+        filter.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
 
     if (allEmpty(input, condition)) {
       return Optional.empty();
@@ -140,10 +146,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Join join, EmptyVisitationContext context) throws E {
-    var left = join.getLeft().accept(this, context);
-    var right = join.getRight().accept(this, context);
-    var condition = visitOptionalExpression(join.getCondition(), context);
-    var postFilter = visitOptionalExpression(join.getPostJoinFilter(), context);
+    Optional<Rel> left = join.getLeft().accept(this, context);
+    Optional<Rel> right = join.getRight().accept(this, context);
+    Optional<Expression> condition = visitOptionalExpression(join.getCondition(), context);
+    Optional<Expression> postFilter = visitOptionalExpression(join.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, condition, postFilter)) {
       return Optional.empty();
@@ -166,7 +172,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) throws E {
-    var filter = visitOptionalExpression(namedScan.getFilter(), context);
+    Optional<Expression> filter = visitOptionalExpression(namedScan.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -177,7 +183,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(LocalFiles localFiles, EmptyVisitationContext context) throws E {
-    var filter = visitOptionalExpression(localFiles.getFilter(), context);
+    Optional<Expression> filter = visitOptionalExpression(localFiles.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -188,8 +194,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Project project, EmptyVisitationContext context) throws E {
-    var input = project.getInput().accept(this, context);
-    var expressions = visitExprList(project.getExpressions(), context);
+    Optional<Rel> input = project.getInput().accept(this, context);
+    Optional<List<Expression>> expressions = visitExprList(project.getExpressions(), context);
 
     if (allEmpty(input, expressions)) {
       return Optional.empty();
@@ -234,8 +240,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Sort sort, EmptyVisitationContext context) throws E {
-    var input = sort.getInput().accept(this, context);
-    var sortFields = transformList(sort.getSortFields(), context, this::visitSortField);
+    Optional<Rel> input = sort.getInput().accept(this, context);
+    Optional<List<Expression.SortField>> sortFields =
+        transformList(sort.getSortFields(), context, this::visitSortField);
 
     if (allEmpty(input, sortFields)) {
       return Optional.empty();
@@ -250,8 +257,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Cross cross, EmptyVisitationContext context) throws E {
-    var left = cross.getLeft().accept(this, context);
-    var right = cross.getRight().accept(this, context);
+    Optional<Rel> left = cross.getLeft().accept(this, context);
+    Optional<Rel> right = cross.getRight().accept(this, context);
 
     if (allEmpty(left, right)) {
       return Optional.empty();
@@ -267,7 +274,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws E {
-    var filter = visitOptionalExpression(virtualTableScan.getFilter(), context);
+    Optional<Expression> filter = visitOptionalExpression(virtualTableScan.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -303,7 +310,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(ExtensionTable extensionTable, EmptyVisitationContext context)
       throws E {
-    var filter = visitOptionalExpression(extensionTable.getFilter(), context);
+    Optional<Expression> filter = visitOptionalExpression(extensionTable.getFilter(), context);
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -317,11 +324,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(HashJoin hashJoin, EmptyVisitationContext context) throws E {
-    var left = hashJoin.getLeft().accept(this, context);
-    var right = hashJoin.getRight().accept(this, context);
-    var leftKeys = transformList(hashJoin.getLeftKeys(), context, this::visitFieldReference);
-    var rightKeys = transformList(hashJoin.getRightKeys(), context, this::visitFieldReference);
-    var postFilter = visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
+    Optional<Rel> left = hashJoin.getLeft().accept(this, context);
+    Optional<Rel> right = hashJoin.getRight().accept(this, context);
+    Optional<List<FieldReference>> leftKeys =
+        transformList(hashJoin.getLeftKeys(), context, this::visitFieldReference);
+    Optional<List<FieldReference>> rightKeys =
+        transformList(hashJoin.getRightKeys(), context, this::visitFieldReference);
+    Optional<Expression> postFilter =
+        visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
       return Optional.empty();
@@ -339,11 +349,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws E {
-    var left = mergeJoin.getLeft().accept(this, context);
-    var right = mergeJoin.getRight().accept(this, context);
-    var leftKeys = transformList(mergeJoin.getLeftKeys(), context, this::visitFieldReference);
-    var rightKeys = transformList(mergeJoin.getRightKeys(), context, this::visitFieldReference);
-    var postFilter = visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
+    Optional<Rel> left = mergeJoin.getLeft().accept(this, context);
+    Optional<Rel> right = mergeJoin.getRight().accept(this, context);
+    Optional<List<FieldReference>> leftKeys =
+        transformList(mergeJoin.getLeftKeys(), context, this::visitFieldReference);
+    Optional<List<FieldReference>> rightKeys =
+        transformList(mergeJoin.getRightKeys(), context, this::visitFieldReference);
+    Optional<Expression> postFilter =
+        visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
 
     if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
       return Optional.empty();
@@ -362,9 +375,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(NestedLoopJoin nestedLoopJoin, EmptyVisitationContext context)
       throws E {
-    var left = nestedLoopJoin.getLeft().accept(this, context);
-    var right = nestedLoopJoin.getRight().accept(this, context);
-    var condition =
+    Optional<Rel> left = nestedLoopJoin.getLeft().accept(this, context);
+    Optional<Rel> right = nestedLoopJoin.getRight().accept(this, context);
+    Optional<Expression> condition =
         nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
 
     if (allEmpty(left, right, condition)) {
@@ -383,15 +396,16 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(
       ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
       throws E {
-    var windowFunctions =
+    Optional<List<ConsistentPartitionWindow.WindowRelFunctionInvocation>> windowFunctions =
         transformList(
             consistentPartitionWindow.getWindowFunctions(), context, this::visitWindowRelFunction);
-    var partitionExpressions =
+    Optional<List<Expression>> partitionExpressions =
         transformList(
             consistentPartitionWindow.getPartitionExpressions(),
             context,
             (t, c) -> t.accept(getExpressionCopyOnWriteVisitor(), c));
-    var sorts = transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField);
+    Optional<List<Expression.SortField>> sorts =
+        transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField);
 
     if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
       return Optional.empty();
@@ -411,7 +425,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
       ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunctionInvocation,
       EmptyVisitationContext context)
       throws E {
-    var functionArgs = visitFunctionArguments(windowRelFunctionInvocation.arguments(), context);
+    Optional<List<FunctionArg>> functionArgs =
+        visitFunctionArguments(windowRelFunctionInvocation.arguments(), context);
 
     if (allEmpty(functionArgs)) {
       return Optional.empty();
@@ -433,7 +448,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   public Optional<FieldReference> visitFieldReference(
       FieldReference fieldReference, EmptyVisitationContext context) throws E {
-    var inputExpression = visitOptionalExpression(fieldReference.inputExpression(), context);
+    Optional<Expression> inputExpression =
+        visitOptionalExpression(fieldReference.inputExpression(), context);
     if (allEmpty(inputExpression)) {
       return Optional.empty();
     }
@@ -447,12 +463,13 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         funcArgs,
         context,
         (arg, c) -> {
-          if (arg instanceof Expression expr) {
-            return expr.accept(getExpressionCopyOnWriteVisitor(), c)
+          if (arg instanceof Expression) {
+            return ((Expression) arg)
+                .accept(getExpressionCopyOnWriteVisitor(), c)
                 .flatMap(Optional::<FunctionArg>of);
-          } else {
-            return Optional.empty();
           }
+
+          return Optional.empty();
         });
   }
 

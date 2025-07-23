@@ -7,35 +7,35 @@ import org.immutables.value.Value;
 public interface FileFormat {
 
   @Value.Immutable
-  abstract static class ParquetReadOptions implements FileFormat {
+  abstract class ParquetReadOptions implements FileFormat {
     public static ImmutableFileFormat.ParquetReadOptions.Builder builder() {
       return ImmutableFileFormat.ParquetReadOptions.builder();
     }
   }
 
   @Value.Immutable
-  abstract static class ArrowReadOptions implements FileFormat {
+  abstract class ArrowReadOptions implements FileFormat {
     public static ImmutableFileFormat.ArrowReadOptions.Builder builder() {
       return ImmutableFileFormat.ArrowReadOptions.builder();
     }
   }
 
   @Value.Immutable
-  abstract static class OrcReadOptions implements FileFormat {
+  abstract class OrcReadOptions implements FileFormat {
     public static ImmutableFileFormat.OrcReadOptions.Builder builder() {
       return ImmutableFileFormat.OrcReadOptions.builder();
     }
   }
 
   @Value.Immutable
-  abstract static class DwrfReadOptions implements FileFormat {
+  abstract class DwrfReadOptions implements FileFormat {
     public static ImmutableFileFormat.DwrfReadOptions.Builder builder() {
       return ImmutableFileFormat.DwrfReadOptions.builder();
     }
   }
 
   @Value.Immutable
-  abstract static class DelimiterSeparatedTextReadOptions implements FileFormat {
+  abstract class DelimiterSeparatedTextReadOptions implements FileFormat {
     public abstract String getFieldDelimiter();
 
     public abstract long getMaxLineSize();
@@ -54,7 +54,7 @@ public interface FileFormat {
   }
 
   @Value.Immutable
-  abstract static class Extension implements FileFormat {
+  abstract class Extension implements FileFormat {
     public abstract com.google.protobuf.Any getExtension();
 
     public static ImmutableFileFormat.Extension.Builder builder() {

@@ -38,7 +38,8 @@ public class AggregateFunctions {
    *     conversion was needed, empty otherwise.
    */
   public static Optional<SqlAggFunction> toSubstraitAggVariant(SqlAggFunction aggFunction) {
-    if (aggFunction instanceof SqlMinMaxAggFunction fun) {
+    if (aggFunction instanceof SqlMinMaxAggFunction) {
+      SqlMinMaxAggFunction fun = (SqlMinMaxAggFunction) aggFunction;
       return Optional.of(
           fun.getKind() == SqlKind.MIN ? AggregateFunctions.MIN : AggregateFunctions.MAX);
     } else if (aggFunction instanceof SqlAvgAggFunction) {

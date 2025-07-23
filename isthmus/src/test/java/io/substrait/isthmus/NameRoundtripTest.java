@@ -21,9 +21,7 @@ public class NameRoundtripTest extends PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
     var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
-    String query = """
-      SELECT "a", "B" FROM foo GROUP BY a, b
-      """;
+    String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");
 
     List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, catalogReader);

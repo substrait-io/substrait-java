@@ -96,15 +96,12 @@ configurations.all {
 }
 
 java {
-  toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }
 
-tasks.withType<ScalaCompile>() {
-  targetCompatibility = ""
-  scalaCompileOptions.additionalParameters = listOf("-release:17")
-}
+tasks.withType<ScalaCompile>() { scalaCompileOptions.additionalParameters = listOf("-release:17") }
 
 var SLF4J_VERSION = properties.get("slf4j.version")
 var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
@@ -150,5 +147,6 @@ tasks {
   test {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
+    jvmArgs("--add-exports=java.base/sun.nio.ch=ALL-UNNAMED")
   }
 }

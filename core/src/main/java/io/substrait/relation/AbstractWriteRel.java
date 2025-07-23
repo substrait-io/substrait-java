@@ -33,7 +33,7 @@ public abstract class AbstractWriteRel extends SingleInputRel {
     }
 
     public static WriteOp fromProto(WriteRel.WriteOp proto) {
-      for (var v : values()) {
+      for (WriteOp v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -60,7 +60,7 @@ public abstract class AbstractWriteRel extends SingleInputRel {
     }
 
     public static CreateMode fromProto(WriteRel.CreateMode proto) {
-      for (var v : values()) {
+      for (CreateMode v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -85,7 +85,7 @@ public abstract class AbstractWriteRel extends SingleInputRel {
     }
 
     public static OutputMode fromProto(WriteRel.OutputMode proto) {
-      for (var v : values()) {
+      for (OutputMode v : values()) {
         if (v.proto == proto) {
           return v;
         }

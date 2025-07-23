@@ -73,8 +73,8 @@ public class TypeExtensionTest {
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
 
-    var protoPlan = planProtoConverter.toProto(plan);
-    var planReturned = protoPlanConverter.from(protoPlan);
+    io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
+    Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
 
@@ -99,8 +99,8 @@ public class TypeExtensionTest {
                                     b.fieldReference(input, 0)))
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
-    var protoPlan = planProtoConverter.toProto(plan);
-    var planReturned = protoPlanConverter.from(protoPlan);
+    io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
+    Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
 }

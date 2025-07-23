@@ -3,12 +3,14 @@ package io.substrait.expression.proto;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.ConsistentPartitionWindowRel;
+import io.substrait.proto.Expression.FieldReference.ReferenceTypeCase;
 import io.substrait.proto.FunctionArgument;
 import io.substrait.proto.SortField;
 import io.substrait.relation.ConsistentPartitionWindow;
@@ -53,211 +55,241 @@ public class ProtoExpressionConverter {
   }
 
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
-    switch (reference.getReferenceTypeCase()) {
-      case DIRECT_REFERENCE -> {
-        io.substrait.proto.Expression.ReferenceSegment segment = reference.getDirectReference();
+    io.substrait.proto.Expression.FieldReference.ReferenceTypeCase refTypeCase =
+        reference.getReferenceTypeCase();
 
-        var segments = new ArrayList<FieldReference.ReferenceSegment>();
-        while (segment != io.substrait.proto.Expression.ReferenceSegment.getDefaultInstance()) {
-          segments.add(
-              switch (segment.getReferenceTypeCase()) {
-                case MAP_KEY -> {
-                  var mapKey = segment.getMapKey();
-                  segment = mapKey.getChild();
-                  yield FieldReference.MapKey.of(from(mapKey.getMapKey()));
-                }
-                case STRUCT_FIELD -> {
-                  var structField = segment.getStructField();
-                  segment = structField.getChild();
-                  yield FieldReference.StructField.of(structField.getField());
-                }
-                case LIST_ELEMENT -> {
-                  var listElement = segment.getListElement();
-                  segment = listElement.getChild();
-                  yield FieldReference.ListElement.of(listElement.getOffset());
-                }
-                case REFERENCETYPE_NOT_SET -> throw new IllegalArgumentException(
-                    "Unhandled type: " + segment.getReferenceTypeCase());
-              });
-        }
-        Collections.reverse(segments);
-        var fieldReference =
-            switch (reference.getRootTypeCase()) {
-              case EXPRESSION -> FieldReference.ofExpression(
-                  from(reference.getExpression()), segments);
-              case ROOT_REFERENCE -> FieldReference.ofRoot(rootType, segments);
-              case OUTER_REFERENCE -> FieldReference.newRootStructOuterReference(
-                  reference.getDirectReference().getStructField().getField(),
-                  rootType,
-                  reference.getOuterReference().getStepsOut());
-              case ROOTTYPE_NOT_SET -> throw new IllegalArgumentException(
-                  "Unhandled type: " + reference.getRootTypeCase());
-            };
+    if (refTypeCase == ReferenceTypeCase.MASKED_REFERENCE) {
+      throw new IllegalArgumentException("Unsupported type: " + refTypeCase);
+    }
 
-        return fieldReference;
-      }
-      case MASKED_REFERENCE -> throw new IllegalArgumentException(
-          "Unsupported type: " + reference.getReferenceTypeCase());
-      default -> throw new IllegalArgumentException(
-          "Unhandled type: " + reference.getReferenceTypeCase());
+    if (refTypeCase != ReferenceTypeCase.DIRECT_REFERENCE) {
+      throw new IllegalArgumentException("Unhandled type: " + refTypeCase);
+    }
+
+    switch (reference.getRootTypeCase()) {
+      case EXPRESSION:
+        return FieldReference.ofExpression(
+            from(reference.getExpression()),
+            getDirectReferenceSegments(reference.getDirectReference()));
+      case ROOT_REFERENCE:
+        return FieldReference.ofRoot(
+            rootType, getDirectReferenceSegments(reference.getDirectReference()));
+      case OUTER_REFERENCE:
+        return FieldReference.newRootStructOuterReference(
+            reference.getDirectReference().getStructField().getField(),
+            rootType,
+            reference.getOuterReference().getStepsOut());
+      case ROOTTYPE_NOT_SET:
+      default:
+        throw new IllegalArgumentException("Unhandled type: " + reference.getRootTypeCase());
     }
   }
 
-  public Expression from(io.substrait.proto.Expression expr) {
-    return switch (expr.getRexTypeCase()) {
-      case LITERAL -> from(expr.getLiteral());
-      case SELECTION -> from(expr.getSelection());
-      case SCALAR_FUNCTION -> {
-        var scalarFunction = expr.getScalarFunction();
-        var functionReference = scalarFunction.getFunctionReference();
-        var declaration = lookup.getScalarFunction(functionReference, extensions);
-        var pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
-        var args =
-            IntStream.range(0, scalarFunction.getArgumentsCount())
-                .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
-                .collect(java.util.stream.Collectors.toList());
-        var options =
-            scalarFunction.getOptionsList().stream()
-                .map(ProtoExpressionConverter::fromFunctionOption)
-                .collect(Collectors.toList());
-        yield Expression.ScalarFunctionInvocation.builder()
-            .addAllArguments(args)
-            .declaration(declaration)
-            .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
-            .options(options)
-            .build();
-      }
-      case WINDOW_FUNCTION -> fromWindowFunction(expr.getWindowFunction());
-      case IF_THEN -> {
-        var ifThen = expr.getIfThen();
-        var clauses =
-            ifThen.getIfsList().stream()
-                .map(t -> ExpressionCreator.ifThenClause(from(t.getIf()), from(t.getThen())))
-                .collect(java.util.stream.Collectors.toList());
-        yield ExpressionCreator.ifThenStatement(from(ifThen.getElse()), clauses);
-      }
-      case SWITCH_EXPRESSION -> {
-        var switchExpr = expr.getSwitchExpression();
-        var clauses =
-            switchExpr.getIfsList().stream()
-                .map(t -> ExpressionCreator.switchClause(from(t.getIf()), from(t.getThen())))
-                .collect(java.util.stream.Collectors.toList());
-        yield ExpressionCreator.switchStatement(
-            from(switchExpr.getMatch()), from(switchExpr.getElse()), clauses);
-      }
-      case SINGULAR_OR_LIST -> {
-        var orList = expr.getSingularOrList();
-        var values =
-            orList.getOptionsList().stream()
-                .map(this::from)
-                .collect(java.util.stream.Collectors.toList());
-        yield Expression.SingleOrList.builder()
-            .condition(from(orList.getValue()))
-            .addAllOptions(values)
-            .build();
-      }
-      case MULTI_OR_LIST -> {
-        var multiOrList = expr.getMultiOrList();
-        var values =
-            multiOrList.getOptionsList().stream()
-                .map(
-                    t ->
-                        Expression.MultiOrListRecord.builder()
-                            .addAllValues(
-                                t.getFieldsList().stream()
-                                    .map(this::from)
-                                    .collect(java.util.stream.Collectors.toList()))
-                            .build())
-                .collect(java.util.stream.Collectors.toList());
-        yield Expression.MultiOrList.builder()
-            .addAllOptionCombinations(values)
-            .addAllConditions(
-                multiOrList.getValueList().stream()
-                    .map(this::from)
-                    .collect(java.util.stream.Collectors.toList()))
-            .build();
-      }
-      case CAST -> ExpressionCreator.cast(
-          protoTypeConverter.from(expr.getCast().getType()),
-          from(expr.getCast().getInput()),
-          Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
-      case SUBQUERY -> {
-        switch (expr.getSubquery().getSubqueryTypeCase()) {
-          case SET_PREDICATE -> {
-            var rel = protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
-            yield Expression.SetPredicate.builder()
-                .tuples(rel)
-                .predicateOp(
-                    Expression.PredicateOp.fromProto(
-                        expr.getSubquery().getSetPredicate().getPredicateOp()))
-                .build();
-          }
-          case SCALAR -> {
-            var rel = protoRelConverter.from(expr.getSubquery().getScalar().getInput());
-            yield Expression.ScalarSubquery.builder()
-                .input(rel)
-                .type(
-                    rel.getRecordType()
-                        .accept(
-                            new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>(
-                                "Expected struct field") {
-                              @Override
-                              public Type visit(Type.Struct type) throws RuntimeException {
-                                if (type.fields().size() != 1) {
-                                  throw new UnsupportedOperationException(
-                                      "Scalar subquery must have exactly one field");
-                                }
-                                // Result can be null if the query returns no rows
-                                return type.fields().get(0);
-                              }
-                            }))
-                .build();
-          }
-          case IN_PREDICATE -> {
-            var rel = protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
-            var needles =
-                expr.getSubquery().getInPredicate().getNeedlesList().stream()
-                    .map(e -> this.from(e))
-                    .collect(java.util.stream.Collectors.toList());
-            yield Expression.InPredicate.builder().haystack(rel).needles(needles).build();
-          }
-          case SET_COMPARISON -> {
-            throw new UnsupportedOperationException(
-                "Unsupported subquery type: " + expr.getSubquery().getSubqueryTypeCase());
-          }
-          default -> {
-            throw new IllegalArgumentException(
-                "Unknown subquery type: " + expr.getSubquery().getSubqueryTypeCase());
-          }
-        }
+  private List<ReferenceSegment> getDirectReferenceSegments(
+      io.substrait.proto.Expression.ReferenceSegment segment) {
+    List<ReferenceSegment> results = new ArrayList<>();
+
+    while (segment != io.substrait.proto.Expression.ReferenceSegment.getDefaultInstance()) {
+      final ReferenceSegment mappedSegment;
+      switch (segment.getReferenceTypeCase()) {
+        case MAP_KEY:
+          io.substrait.proto.Expression.ReferenceSegment.MapKey mapKey = segment.getMapKey();
+          segment = mapKey.getChild();
+          mappedSegment = FieldReference.MapKey.of(from(mapKey.getMapKey()));
+          break;
+        case STRUCT_FIELD:
+          io.substrait.proto.Expression.ReferenceSegment.StructField structField =
+              segment.getStructField();
+          segment = structField.getChild();
+          mappedSegment = FieldReference.StructField.of(structField.getField());
+          break;
+        case LIST_ELEMENT:
+          io.substrait.proto.Expression.ReferenceSegment.ListElement listElement =
+              segment.getListElement();
+          segment = listElement.getChild();
+          mappedSegment = FieldReference.ListElement.of(listElement.getOffset());
+          break;
+        case REFERENCETYPE_NOT_SET:
+        default:
+          throw new IllegalArgumentException("Unhandled type: " + segment.getReferenceTypeCase());
       }
 
+      results.add(mappedSegment);
+    }
+
+    Collections.reverse(results);
+
+    return results;
+  }
+
+  public Expression from(io.substrait.proto.Expression expr) {
+    switch (expr.getRexTypeCase()) {
+      case LITERAL:
+        return from(expr.getLiteral());
+      case SELECTION:
+        return from(expr.getSelection());
+      case SCALAR_FUNCTION:
+        {
+          io.substrait.proto.Expression.ScalarFunction scalarFunction = expr.getScalarFunction();
+          int functionReference = scalarFunction.getFunctionReference();
+          SimpleExtension.ScalarFunctionVariant declaration =
+              lookup.getScalarFunction(functionReference, extensions);
+          FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+          List<FunctionArg> args =
+              IntStream.range(0, scalarFunction.getArgumentsCount())
+                  .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
+                  .collect(Collectors.toList());
+          List<FunctionOption> options =
+              scalarFunction.getOptionsList().stream()
+                  .map(ProtoExpressionConverter::fromFunctionOption)
+                  .collect(Collectors.toList());
+          return Expression.ScalarFunctionInvocation.builder()
+              .addAllArguments(args)
+              .declaration(declaration)
+              .outputType(protoTypeConverter.from(scalarFunction.getOutputType()))
+              .options(options)
+              .build();
+        }
+      case WINDOW_FUNCTION:
+        return fromWindowFunction(expr.getWindowFunction());
+      case IF_THEN:
+        {
+          io.substrait.proto.Expression.IfThen ifThen = expr.getIfThen();
+          List<Expression.IfClause> clauses =
+              ifThen.getIfsList().stream()
+                  .map(t -> ExpressionCreator.ifThenClause(from(t.getIf()), from(t.getThen())))
+                  .collect(Collectors.toList());
+          return ExpressionCreator.ifThenStatement(from(ifThen.getElse()), clauses);
+        }
+      case SWITCH_EXPRESSION:
+        {
+          io.substrait.proto.Expression.SwitchExpression switchExpr = expr.getSwitchExpression();
+          List<Expression.SwitchClause> clauses =
+              switchExpr.getIfsList().stream()
+                  .map(t -> ExpressionCreator.switchClause(from(t.getIf()), from(t.getThen())))
+                  .collect(Collectors.toList());
+          return ExpressionCreator.switchStatement(
+              from(switchExpr.getMatch()), from(switchExpr.getElse()), clauses);
+        }
+      case SINGULAR_OR_LIST:
+        {
+          io.substrait.proto.Expression.SingularOrList orList = expr.getSingularOrList();
+          List<Expression> values =
+              orList.getOptionsList().stream().map(this::from).collect(Collectors.toList());
+          return Expression.SingleOrList.builder()
+              .condition(from(orList.getValue()))
+              .addAllOptions(values)
+              .build();
+        }
+      case MULTI_OR_LIST:
+        {
+          io.substrait.proto.Expression.MultiOrList multiOrList = expr.getMultiOrList();
+          List<Expression.MultiOrListRecord> values =
+              multiOrList.getOptionsList().stream()
+                  .map(
+                      t ->
+                          Expression.MultiOrListRecord.builder()
+                              .addAllValues(
+                                  t.getFieldsList().stream()
+                                      .map(this::from)
+                                      .collect(Collectors.toList()))
+                              .build())
+                  .collect(Collectors.toList());
+          return Expression.MultiOrList.builder()
+              .addAllOptionCombinations(values)
+              .addAllConditions(
+                  multiOrList.getValueList().stream().map(this::from).collect(Collectors.toList()))
+              .build();
+        }
+      case CAST:
+        return ExpressionCreator.cast(
+            protoTypeConverter.from(expr.getCast().getType()),
+            from(expr.getCast().getInput()),
+            Expression.FailureBehavior.fromProto(expr.getCast().getFailureBehavior()));
+      case SUBQUERY:
+        {
+          switch (expr.getSubquery().getSubqueryTypeCase()) {
+            case SET_PREDICATE:
+              {
+                io.substrait.relation.Rel rel =
+                    protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
+                return Expression.SetPredicate.builder()
+                    .tuples(rel)
+                    .predicateOp(
+                        Expression.PredicateOp.fromProto(
+                            expr.getSubquery().getSetPredicate().getPredicateOp()))
+                    .build();
+              }
+            case SCALAR:
+              {
+                io.substrait.relation.Rel rel =
+                    protoRelConverter.from(expr.getSubquery().getScalar().getInput());
+                return Expression.ScalarSubquery.builder()
+                    .input(rel)
+                    .type(
+                        rel.getRecordType()
+                            .accept(
+                                new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>(
+                                    "Expected struct field") {
+                                  @Override
+                                  public Type visit(Type.Struct type) throws RuntimeException {
+                                    if (type.fields().size() != 1) {
+                                      throw new UnsupportedOperationException(
+                                          "Scalar subquery must have exactly one field");
+                                    }
+                                    // Result can be null if the query returns no rows
+                                    return type.fields().get(0);
+                                  }
+                                }))
+                    .build();
+              }
+            case IN_PREDICATE:
+              {
+                io.substrait.relation.Rel rel =
+                    protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
+                List<Expression> needles =
+                    expr.getSubquery().getInPredicate().getNeedlesList().stream()
+                        .map(e -> this.from(e))
+                        .collect(Collectors.toList());
+                return Expression.InPredicate.builder().haystack(rel).needles(needles).build();
+              }
+            case SET_COMPARISON:
+              throw new UnsupportedOperationException(
+                  "Unsupported subquery type: " + expr.getSubquery().getSubqueryTypeCase());
+            default:
+              throw new IllegalArgumentException(
+                  "Unknown subquery type: " + expr.getSubquery().getSubqueryTypeCase());
+          }
+        }
+
         // TODO enum.
-      case ENUM -> throw new UnsupportedOperationException(
-          "Unsupported type: " + expr.getRexTypeCase());
-      default -> throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
-    };
+      case ENUM:
+        throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
+      default:
+        throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
+    }
   }
 
   public Expression.WindowFunctionInvocation fromWindowFunction(
       io.substrait.proto.Expression.WindowFunction windowFunction) {
-    var functionReference = windowFunction.getFunctionReference();
-    var declaration = lookup.getWindowFunction(functionReference, extensions);
-    var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+    int functionReference = windowFunction.getFunctionReference();
+    SimpleExtension.WindowFunctionVariant declaration =
+        lookup.getWindowFunction(functionReference, extensions);
+    FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
 
-    var args =
+    List<FunctionArg> args =
         fromFunctionArgumentList(
             windowFunction.getArgumentsCount(),
             argVisitor,
             declaration,
             windowFunction::getArguments);
-    var partitionExprs =
+    List<Expression> partitionExprs =
         windowFunction.getPartitionsList().stream().map(this::from).collect(Collectors.toList());
-    var sortFields =
+    List<Expression.SortField> sortFields =
         windowFunction.getSortsList().stream()
             .map(this::fromSortField)
             .collect(Collectors.toList());
-    var options =
+    List<FunctionOption> options =
         windowFunction.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
@@ -282,17 +314,18 @@ public class ProtoExpressionConverter {
 
   public ConsistentPartitionWindow.WindowRelFunctionInvocation fromWindowRelFunction(
       ConsistentPartitionWindowRel.WindowRelFunction windowRelFunction) {
-    var functionReference = windowRelFunction.getFunctionReference();
-    var declaration = lookup.getWindowFunction(functionReference, extensions);
-    var argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+    int functionReference = windowRelFunction.getFunctionReference();
+    SimpleExtension.WindowFunctionVariant declaration =
+        lookup.getWindowFunction(functionReference, extensions);
+    FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
 
-    var args =
+    List<FunctionArg> args =
         fromFunctionArgumentList(
             windowRelFunction.getArgumentsCount(),
             argVisitor,
             declaration,
             windowRelFunction::getArguments);
-    var options =
+    List<FunctionOption> options =
         windowRelFunction.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
@@ -314,125 +347,163 @@ public class ProtoExpressionConverter {
   }
 
   private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
-    return switch (bound.getKindCase()) {
-      case PRECEDING -> WindowBound.Preceding.of(bound.getPreceding().getOffset());
-      case FOLLOWING -> WindowBound.Following.of(bound.getFollowing().getOffset());
-      case CURRENT_ROW -> WindowBound.CURRENT_ROW;
-      case UNBOUNDED -> WindowBound.UNBOUNDED;
-      case KIND_NOT_SET ->
-      // per the spec, the lower and upper bounds default to the start or end of the partition
-      // respectively if not set
-      WindowBound.UNBOUNDED;
-    };
+    switch (bound.getKindCase()) {
+      case PRECEDING:
+        return WindowBound.Preceding.of(bound.getPreceding().getOffset());
+      case FOLLOWING:
+        return WindowBound.Following.of(bound.getFollowing().getOffset());
+      case CURRENT_ROW:
+        return WindowBound.CURRENT_ROW;
+      case UNBOUNDED:
+        return WindowBound.UNBOUNDED;
+      case KIND_NOT_SET:
+        // per the spec, the lower and upper bounds default to the start or end of the partition
+        // respectively if not set
+        return WindowBound.UNBOUNDED;
+      default:
+        throw new IllegalArgumentException("Unsupported bound kind: " + bound.getKindCase());
+    }
   }
 
   public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
-    return switch (literal.getLiteralTypeCase()) {
-      case BOOLEAN -> ExpressionCreator.bool(literal.getNullable(), literal.getBoolean());
-      case I8 -> ExpressionCreator.i8(literal.getNullable(), literal.getI8());
-      case I16 -> ExpressionCreator.i16(literal.getNullable(), literal.getI16());
-      case I32 -> ExpressionCreator.i32(literal.getNullable(), literal.getI32());
-      case I64 -> ExpressionCreator.i64(literal.getNullable(), literal.getI64());
-      case FP32 -> ExpressionCreator.fp32(literal.getNullable(), literal.getFp32());
-      case FP64 -> ExpressionCreator.fp64(literal.getNullable(), literal.getFp64());
-      case STRING -> ExpressionCreator.string(literal.getNullable(), literal.getString());
-      case BINARY -> ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
-      case TIMESTAMP -> ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
-      case TIMESTAMP_TZ -> ExpressionCreator.timestampTZ(
-          literal.getNullable(), literal.getTimestampTz());
-      case PRECISION_TIMESTAMP -> ExpressionCreator.precisionTimestamp(
-          literal.getNullable(),
-          literal.getPrecisionTimestamp().getValue(),
-          literal.getPrecisionTimestamp().getPrecision());
-      case PRECISION_TIMESTAMP_TZ -> ExpressionCreator.precisionTimestampTZ(
-          literal.getNullable(),
-          literal.getPrecisionTimestampTz().getValue(),
-          literal.getPrecisionTimestampTz().getPrecision());
-      case DATE -> ExpressionCreator.date(literal.getNullable(), literal.getDate());
-      case TIME -> ExpressionCreator.time(literal.getNullable(), literal.getTime());
-      case INTERVAL_YEAR_TO_MONTH -> ExpressionCreator.intervalYear(
-          literal.getNullable(),
-          literal.getIntervalYearToMonth().getYears(),
-          literal.getIntervalYearToMonth().getMonths());
-      case INTERVAL_DAY_TO_SECOND -> {
-        // Handle deprecated version that doesn't provide precision and that uses microseconds
-        // instead of subseconds, for backwards compatibility
-        int precision =
-            literal.getIntervalDayToSecond().hasPrecision()
-                ? literal.getIntervalDayToSecond().getPrecision()
-                : 6; // microseconds
-        long subseconds =
-            literal.getIntervalDayToSecond().hasPrecision()
-                ? literal.getIntervalDayToSecond().getSubseconds()
-                : literal.getIntervalDayToSecond().getMicroseconds();
-        yield ExpressionCreator.intervalDay(
+    switch (literal.getLiteralTypeCase()) {
+      case BOOLEAN:
+        return ExpressionCreator.bool(literal.getNullable(), literal.getBoolean());
+      case I8:
+        return ExpressionCreator.i8(literal.getNullable(), literal.getI8());
+      case I16:
+        return ExpressionCreator.i16(literal.getNullable(), literal.getI16());
+      case I32:
+        return ExpressionCreator.i32(literal.getNullable(), literal.getI32());
+      case I64:
+        return ExpressionCreator.i64(literal.getNullable(), literal.getI64());
+      case FP32:
+        return ExpressionCreator.fp32(literal.getNullable(), literal.getFp32());
+      case FP64:
+        return ExpressionCreator.fp64(literal.getNullable(), literal.getFp64());
+      case STRING:
+        return ExpressionCreator.string(literal.getNullable(), literal.getString());
+      case BINARY:
+        return ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
+      case TIMESTAMP:
+        return ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
+      case TIMESTAMP_TZ:
+        return ExpressionCreator.timestampTZ(literal.getNullable(), literal.getTimestampTz());
+      case PRECISION_TIMESTAMP:
+        return ExpressionCreator.precisionTimestamp(
             literal.getNullable(),
-            literal.getIntervalDayToSecond().getDays(),
-            literal.getIntervalDayToSecond().getSeconds(),
-            subseconds,
-            precision);
-      }
-      case INTERVAL_COMPOUND -> {
-        if (!literal.getIntervalCompound().getIntervalDayToSecond().hasPrecision()) {
-          throw new RuntimeException(
-              "Interval compound with deprecated version of interval day (ie. no precision) is not supported");
+            literal.getPrecisionTimestamp().getValue(),
+            literal.getPrecisionTimestamp().getPrecision());
+      case PRECISION_TIMESTAMP_TZ:
+        return ExpressionCreator.precisionTimestampTZ(
+            literal.getNullable(),
+            literal.getPrecisionTimestampTz().getValue(),
+            literal.getPrecisionTimestampTz().getPrecision());
+      case DATE:
+        return ExpressionCreator.date(literal.getNullable(), literal.getDate());
+      case TIME:
+        return ExpressionCreator.time(literal.getNullable(), literal.getTime());
+      case INTERVAL_YEAR_TO_MONTH:
+        return ExpressionCreator.intervalYear(
+            literal.getNullable(),
+            literal.getIntervalYearToMonth().getYears(),
+            literal.getIntervalYearToMonth().getMonths());
+      case INTERVAL_DAY_TO_SECOND:
+        {
+          // Handle deprecated version that doesn't provide precision and that uses microseconds
+          // instead of subseconds, for backwards compatibility
+          int precision =
+              literal.getIntervalDayToSecond().hasPrecision()
+                  ? literal.getIntervalDayToSecond().getPrecision()
+                  : 6; // microseconds
+          long subseconds =
+              literal.getIntervalDayToSecond().hasPrecision()
+                  ? literal.getIntervalDayToSecond().getSubseconds()
+                  : literal.getIntervalDayToSecond().getMicroseconds();
+          return ExpressionCreator.intervalDay(
+              literal.getNullable(),
+              literal.getIntervalDayToSecond().getDays(),
+              literal.getIntervalDayToSecond().getSeconds(),
+              subseconds,
+              precision);
         }
-        yield ExpressionCreator.intervalCompound(
+      case INTERVAL_COMPOUND:
+        {
+          if (!literal.getIntervalCompound().getIntervalDayToSecond().hasPrecision()) {
+            throw new RuntimeException(
+                "Interval compound with deprecated version of interval day (ie. no precision) is not supported");
+          }
+          return ExpressionCreator.intervalCompound(
+              literal.getNullable(),
+              literal.getIntervalCompound().getIntervalYearToMonth().getYears(),
+              literal.getIntervalCompound().getIntervalYearToMonth().getMonths(),
+              literal.getIntervalCompound().getIntervalDayToSecond().getDays(),
+              literal.getIntervalCompound().getIntervalDayToSecond().getSeconds(),
+              literal.getIntervalCompound().getIntervalDayToSecond().getSubseconds(),
+              literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
+        }
+      case FIXED_CHAR:
+        return ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
+      case VAR_CHAR:
+        return ExpressionCreator.varChar(
             literal.getNullable(),
-            literal.getIntervalCompound().getIntervalYearToMonth().getYears(),
-            literal.getIntervalCompound().getIntervalYearToMonth().getMonths(),
-            literal.getIntervalCompound().getIntervalDayToSecond().getDays(),
-            literal.getIntervalCompound().getIntervalDayToSecond().getSeconds(),
-            literal.getIntervalCompound().getIntervalDayToSecond().getSubseconds(),
-            literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
-      }
-      case FIXED_CHAR -> ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
-      case VAR_CHAR -> ExpressionCreator.varChar(
-          literal.getNullable(), literal.getVarChar().getValue(), literal.getVarChar().getLength());
-      case FIXED_BINARY -> ExpressionCreator.fixedBinary(
-          literal.getNullable(), literal.getFixedBinary());
-      case DECIMAL -> ExpressionCreator.decimal(
-          literal.getNullable(),
-          literal.getDecimal().getValue(),
-          literal.getDecimal().getPrecision(),
-          literal.getDecimal().getScale());
-      case STRUCT -> ExpressionCreator.struct(
-          literal.getNullable(),
-          literal.getStruct().getFieldsList().stream()
-              .map(this::from)
-              .collect(java.util.stream.Collectors.toList()));
-      case MAP -> ExpressionCreator.map(
-          literal.getNullable(),
-          literal.getMap().getKeyValuesList().stream()
-              .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
-      case EMPTY_MAP -> {
-        // literal.getNullable() is intentionally ignored in favor of the nullability
-        // specified in the literal.getEmptyMap() type.
-        var mapType = protoTypeConverter.fromMap(literal.getEmptyMap());
-        yield ExpressionCreator.emptyMap(mapType.nullable(), mapType.key(), mapType.value());
-      }
-      case UUID -> ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
-      case NULL -> ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
-      case LIST -> ExpressionCreator.list(
-          literal.getNullable(),
-          literal.getList().getValuesList().stream()
-              .map(this::from)
-              .collect(java.util.stream.Collectors.toList()));
-      case EMPTY_LIST -> {
-        // literal.getNullable() is intentionally ignored in favor of the nullability
-        // specified in the literal.getEmptyList() type.
-        var listType = protoTypeConverter.fromList(literal.getEmptyList());
-        yield ExpressionCreator.emptyList(listType.nullable(), listType.elementType());
-      }
-      case USER_DEFINED -> {
-        var userDefinedLiteral = literal.getUserDefined();
-        var type = lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
-        yield ExpressionCreator.userDefinedLiteral(
-            literal.getNullable(), type.uri(), type.name(), userDefinedLiteral.getValue());
-      }
-      default -> throw new IllegalStateException(
-          "Unexpected value: " + literal.getLiteralTypeCase());
-    };
+            literal.getVarChar().getValue(),
+            literal.getVarChar().getLength());
+      case FIXED_BINARY:
+        return ExpressionCreator.fixedBinary(literal.getNullable(), literal.getFixedBinary());
+      case DECIMAL:
+        return ExpressionCreator.decimal(
+            literal.getNullable(),
+            literal.getDecimal().getValue(),
+            literal.getDecimal().getPrecision(),
+            literal.getDecimal().getScale());
+      case STRUCT:
+        return ExpressionCreator.struct(
+            literal.getNullable(),
+            literal.getStruct().getFieldsList().stream()
+                .map(this::from)
+                .collect(Collectors.toList()));
+      case MAP:
+        return ExpressionCreator.map(
+            literal.getNullable(),
+            literal.getMap().getKeyValuesList().stream()
+                .collect(Collectors.toMap(kv -> from(kv.getKey()), kv -> from(kv.getValue()))));
+      case EMPTY_MAP:
+        {
+          // literal.getNullable() is intentionally ignored in favor of the nullability
+          // specified in the literal.getEmptyMap() type.
+          Type.Map mapType = protoTypeConverter.fromMap(literal.getEmptyMap());
+          return ExpressionCreator.emptyMap(mapType.nullable(), mapType.key(), mapType.value());
+        }
+      case UUID:
+        return ExpressionCreator.uuid(literal.getNullable(), literal.getUuid());
+      case NULL:
+        return ExpressionCreator.typedNull(protoTypeConverter.from(literal.getNull()));
+      case LIST:
+        return ExpressionCreator.list(
+            literal.getNullable(),
+            literal.getList().getValuesList().stream()
+                .map(this::from)
+                .collect(Collectors.toList()));
+      case EMPTY_LIST:
+        {
+          // literal.getNullable() is intentionally ignored in favor of the nullability
+          // specified in the literal.getEmptyList() type.
+          Type.ListType listType = protoTypeConverter.fromList(literal.getEmptyList());
+          return ExpressionCreator.emptyList(listType.nullable(), listType.elementType());
+        }
+      case USER_DEFINED:
+        {
+          io.substrait.proto.Expression.Literal.UserDefined userDefinedLiteral =
+              literal.getUserDefined();
+          SimpleExtension.Type type =
+              lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
+          return ExpressionCreator.userDefinedLiteral(
+              literal.getNullable(), type.uri(), type.name(), userDefinedLiteral.getValue());
+        }
+      default:
+        throw new IllegalStateException("Unexpected value: " + literal.getLiteralTypeCase());
+    }
   }
 
   private static List<FunctionArg> fromFunctionArgumentList(

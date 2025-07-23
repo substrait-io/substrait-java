@@ -85,24 +85,17 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table"."a"
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n" + "  \"nested\".\"my_table\".\"a\"\n" + "FROM\n" + "  \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-          selection {
-            direct_reference {
-              struct_field {
-                field: 1 # a
-              }
-            }
-            root_reference: {}
-          }
-        """;
+        "selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 1 # a\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference: {}\n"
+            + "}";
 
     test(table, query, expectedExpressionText);
   }
@@ -121,29 +114,25 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table"."a"."b"
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n"
+            + "   \"nested\".\"my_table\".\"a\".\"b\"\n"
+            + "FROM\n"
+            + "  \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-          selection {
-            direct_reference {
-              struct_field {
-                field: 1 # a
-                child {
-                  struct_field {
-                    field: 0 # b
-                  }
-                }
-              }
-            }
-            root_reference: {}
-          }
-        """;
+        "selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 1 # a\n"
+            + "      child {\n"
+            + "        struct_field {\n"
+            + "          field: 0 # b\n"
+            + "        }\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference: {}\n"
+            + "}";
 
     test(table, query, expectedExpressionText);
   }
@@ -162,34 +151,30 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table"."a"."b"."c"
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n"
+            + "  \"nested\".\"my_table\".\"a\".\"b\".\"c\"\n"
+            + "FROM\n"
+            + "   \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-          selection {
-            direct_reference {
-              struct_field {
-                field: 1 # a
-                child {
-                  struct_field {
-                    field: 0 # b
-                    child: {
-                      struct_field {
-                        field: 0 # c
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            root_reference: {}
-          }
-        """;
+        "selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 1 # a\n"
+            + "      child {\n"
+            + "        struct_field {\n"
+            + "          field: 0 # b\n"
+            + "          child: {\n"
+            + "            struct_field {\n"
+            + "              field: 0 # c\n"
+            + "            }\n"
+            + "          }\n"
+            + "        }\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference: {}\n"
+            + "}";
 
     test(table, query, expectedExpressionText);
   }
@@ -207,29 +192,25 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table"."a"[1]
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n"
+            + "  \"nested\".\"my_table\".\"a\"[1]\n"
+            + "FROM\n"
+            + "  \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-            selection {
-              direct_reference {
-                struct_field {
-                  field: 1 # a
-                  child {
-                    list_element {
-                      offset: 1
-                    }
-                  }
-                }
-              }
-              root_reference: {}
-            }
-        """;
+        "selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 1 # a\n"
+            + "      child {\n"
+            + "        list_element {\n"
+            + "          offset: 1\n"
+            + "        }\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference: {}\n"
+            + "}";
 
     test(table, query, expectedExpressionText);
   }
@@ -251,39 +232,35 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table"."a"[1][2][3]
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n"
+            + "  \"nested\".\"my_table\".\"a\"[1][2][3]\n"
+            + "FROM\n"
+            + "  \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-        selection {
-          direct_reference {
-            struct_field {
-              field: 1 # a
-              child {
-                list_element {
-                  offset: 1
-                  child {
-                    list_element {
-                      offset: 2
-                      child {
-                        list_element {
-                          offset: 3
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          root_reference: {}
-        }
-        """;
+        "selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 1 # a\n"
+            + "      child {\n"
+            + "        list_element {\n"
+            + "          offset: 1\n"
+            + "          child {\n"
+            + "            list_element {\n"
+            + "              offset: 2\n"
+            + "              child {\n"
+            + "                list_element {\n"
+            + "                  offset: 3\n"
+            + "                }\n"
+            + "              }\n"
+            + "            }\n"
+            + "          }\n"
+            + "        }\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference: {}\n"
+            + "}";
 
     test(table, query, expectedExpressionText);
   }
@@ -308,51 +285,47 @@ public class NestedStructQueryTest extends PlanTestBase {
         };
 
     String query =
-        """
-           SELECT
-             "nested"."my_table".a.b[2].c['my_map_key'].x
-           FROM
-             "nested"."my_table";
-           """;
+        "SELECT\n"
+            + "  \"nested\".\"my_table\".a.b[2].c['my_map_key'].x\n"
+            + "FROM\n"
+            + "  \"nested\".\"my_table\";";
 
     String expectedExpressionText =
-        """
-          selection {
-            direct_reference {
-              struct_field {
-                field: 0 # .a
-                child {
-                  struct_field {
-                    field: 0 # .b
-                    child {
-                      list_element {
-                        offset: 2
-                        child {
-                          struct_field {
-                            field: 0 # .c
-                            child {
-                              map_key {
-                                map_key {
-                                  string: "my_map_key" # ['my_map_key']
-                                }
-                                child {
-                                  struct_field {
-                                    field: 0 # .x
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            root_reference {}
-          }
-        """;
+        "  selection {\n"
+            + "  direct_reference {\n"
+            + "    struct_field {\n"
+            + "      field: 0 # .a\n"
+            + "      child {\n"
+            + "        struct_field {\n"
+            + "          field: 0 # .b\n"
+            + "          child {\n"
+            + "            list_element {\n"
+            + "              offset: 2\n"
+            + "              child {\n"
+            + "                struct_field {\n"
+            + "                  field: 0 # .c\n"
+            + "                  child {\n"
+            + "                    map_key {\n"
+            + "                      map_key {\n"
+            + "                        string: \"my_map_key\" # ['my_map_key']\n"
+            + "                      }\n"
+            + "                      child {\n"
+            + "                        struct_field {\n"
+            + "                          field: 0 # .x\n"
+            + "                        }\n"
+            + "                      }\n"
+            + "                    }\n"
+            + "                  }\n"
+            + "                }\n"
+            + "              }\n"
+            + "            }\n"
+            + "          }\n"
+            + "        }\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "  root_reference {}\n"
+            + "}\n";
     test(table, query, expectedExpressionText);
   }
 }

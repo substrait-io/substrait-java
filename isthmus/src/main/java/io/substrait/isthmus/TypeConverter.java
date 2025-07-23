@@ -65,63 +65,90 @@ public class TypeConverter {
     }
 
     TypeCreator creator = Type.withNullability(type.isNullable());
-    return switch (type.getSqlTypeName()) {
-      case BOOLEAN -> creator.BOOLEAN;
-      case TINYINT -> creator.I8;
-      case SMALLINT -> creator.I16;
-      case INTEGER -> creator.I32;
-      case BIGINT -> creator.I64;
-      case REAL -> creator.FP32;
-      case FLOAT, DOUBLE -> creator.FP64;
-      case DECIMAL -> {
-        if (type.getPrecision() > 38) {
-          throw new UnsupportedOperationException(
-              "unsupported decimal precision " + type.getPrecision());
+
+    switch (type.getSqlTypeName()) {
+      case BOOLEAN:
+        return creator.BOOLEAN;
+      case TINYINT:
+        return creator.I8;
+      case SMALLINT:
+        return creator.I16;
+      case INTEGER:
+        return creator.I32;
+      case BIGINT:
+        return creator.I64;
+      case REAL:
+        return creator.FP32;
+      case FLOAT:
+      case DOUBLE:
+        return creator.FP64;
+      case DECIMAL:
+        {
+          if (type.getPrecision() > 38) {
+            throw new UnsupportedOperationException(
+                "unsupported decimal precision " + type.getPrecision());
+          }
+          return creator.decimal(type.getPrecision(), type.getScale());
         }
-        yield creator.decimal(type.getPrecision(), type.getScale());
-      }
-      case CHAR -> creator.fixedChar(type.getPrecision());
-      case VARCHAR -> {
-        if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
-          yield creator.STRING;
+      case CHAR:
+        return creator.fixedChar(type.getPrecision());
+      case VARCHAR:
+        {
+          if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+            return creator.STRING;
+          }
+          return creator.varChar(type.getPrecision());
         }
-        yield creator.varChar(type.getPrecision());
-      }
-      case SYMBOL -> creator.STRING;
-      case DATE -> creator.DATE;
-      case TIME -> creator.TIME;
-      case TIMESTAMP -> creator.precisionTimestamp(type.getPrecision());
-      case TIMESTAMP_WITH_LOCAL_TIME_ZONE -> creator.precisionTimestampTZ(type.getPrecision());
-      case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> creator.INTERVAL_YEAR;
-      case INTERVAL_DAY,
-          INTERVAL_DAY_HOUR,
-          INTERVAL_DAY_MINUTE,
-          INTERVAL_DAY_SECOND,
-          INTERVAL_HOUR,
-          INTERVAL_HOUR_MINUTE,
-          INTERVAL_HOUR_SECOND,
-          INTERVAL_MINUTE,
-          INTERVAL_MINUTE_SECOND,
-          INTERVAL_SECOND -> creator.intervalDay(type.getScale());
-      case VARBINARY -> creator.BINARY;
-      case BINARY -> creator.fixedBinary(type.getPrecision());
-      case MAP -> {
-        MapSqlType map = (MapSqlType) type;
-        yield creator.map(
-            toSubstrait(map.getKeyType(), names), toSubstrait(map.getValueType(), names));
-      }
-      case ROW -> {
-        var children = new ArrayList<Type>();
-        for (var field : type.getFieldList()) {
-          names.add(field.getName());
-          children.add(toSubstrait(field.getType(), names));
+      case SYMBOL:
+        return creator.STRING;
+      case DATE:
+        return creator.DATE;
+      case TIME:
+        return creator.TIME;
+      case TIMESTAMP:
+        return creator.precisionTimestamp(type.getPrecision());
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+        return creator.precisionTimestampTZ(type.getPrecision());
+      case INTERVAL_YEAR:
+      case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
+        return creator.INTERVAL_YEAR;
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
+        return creator.intervalDay(type.getScale());
+      case VARBINARY:
+        return creator.BINARY;
+      case BINARY:
+        return creator.fixedBinary(type.getPrecision());
+      case MAP:
+        {
+          MapSqlType map = (MapSqlType) type;
+          return creator.map(
+              toSubstrait(map.getKeyType(), names), toSubstrait(map.getValueType(), names));
         }
-        yield creator.struct(children);
-      }
-      case ARRAY -> creator.list(toSubstrait(type.getComponentType(), names));
-      default -> throw new UnsupportedOperationException(
-          String.format("Unable to convert the type " + type.toString()));
-    };
+      case ROW:
+        {
+          var children = new ArrayList<Type>();
+          for (var field : type.getFieldList()) {
+            names.add(field.getName());
+            children.add(toSubstrait(field.getType(), names));
+          }
+          return creator.struct(children);
+        }
+      case ARRAY:
+        return creator.list(toSubstrait(type.getComponentType(), names));
+      default:
+        throw new UnsupportedOperationException(
+            String.format("Unable to convert the type " + type.toString()));
+    }
   }
 
   public RelDataType toCalcite(
@@ -343,14 +370,17 @@ public class TypeConverter {
     }
 
     private RelDataType t(boolean nullable, SqlTypeName typeName, Integer... props) {
-      final RelDataType baseType =
-          switch (props.length) {
-            case 0 -> typeFactory.createSqlType(typeName);
-            case 1 -> typeFactory.createSqlType(typeName, props[0]);
-            case 2 -> typeFactory.createSqlType(typeName, props[0], props[1]);
-            default -> throw new IllegalArgumentException(
-                "Unexpected properties length: " + Arrays.toString(props));
-          };
+      final RelDataType baseType;
+      if (props.length == 0) {
+        baseType = typeFactory.createSqlType(typeName);
+      } else if (props.length == 1) {
+        baseType = typeFactory.createSqlType(typeName, props[0]);
+      } else if (props.length == 2) {
+        baseType = typeFactory.createSqlType(typeName, props[0], props[1]);
+      } else {
+        throw new IllegalArgumentException(
+            "Unexpected properties length: " + Arrays.toString(props));
+      }
 
       return typeFactory.createTypeWithNullability(baseType, nullable);
     }

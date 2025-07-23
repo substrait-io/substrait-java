@@ -89,112 +89,139 @@ public class LiteralConverter {
       return typedNull(type);
     }
 
-    return switch (literal.getType().getSqlTypeName()) {
-      case TINYINT -> i8(n, i(literal).intValue());
-      case SMALLINT -> i16(n, i(literal).intValue());
-      case INTEGER -> i32(n, i(literal).intValue());
-      case BIGINT -> i64(n, i(literal).longValue());
-      case BOOLEAN -> bool(n, literal.getValueAs(Boolean.class));
-      case CHAR -> {
-        var val = literal.getValue();
-        if (val instanceof NlsString nls) {
-          yield fixedChar(n, nls.getValue());
+    switch (literal.getType().getSqlTypeName()) {
+      case TINYINT:
+        return i8(n, i(literal).intValue());
+      case SMALLINT:
+        return i16(n, i(literal).intValue());
+      case INTEGER:
+        return i32(n, i(literal).intValue());
+      case BIGINT:
+        return i64(n, i(literal).longValue());
+      case BOOLEAN:
+        return bool(n, literal.getValueAs(Boolean.class));
+      case CHAR:
+        {
+          var val = literal.getValue();
+          if (val instanceof NlsString) {
+            var nls = (NlsString) val;
+            return fixedChar(n, nls.getValue());
+          }
+          throw new UnsupportedOperationException("Unable to handle char type: " + val);
         }
-        throw new UnsupportedOperationException("Unable to handle char type: " + val);
-      }
-      case FLOAT, DOUBLE -> fp64(n, literal.getValueAs(Double.class));
-      case REAL -> fp32(n, literal.getValueAs(Float.class));
+      case FLOAT:
+      case DOUBLE:
+        return fp64(n, literal.getValueAs(Double.class));
+      case REAL:
+        return fp32(n, literal.getValueAs(Float.class));
 
-      case DECIMAL -> {
-        BigDecimal bd = bd(literal);
-        yield decimal(n, bd, literal.getType().getPrecision(), literal.getType().getScale());
-      }
-      case VARCHAR -> {
-        if (literal.getType().getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
-          yield string(n, s(literal));
+      case DECIMAL:
+        {
+          BigDecimal bd = bd(literal);
+          return decimal(n, bd, literal.getType().getPrecision(), literal.getType().getScale());
+        }
+      case VARCHAR:
+        {
+          if (literal.getType().getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+            return string(n, s(literal));
+          }
+
+          return varChar(n, s(literal), literal.getType().getPrecision());
+        }
+      case BINARY:
+        return fixedBinary(
+            n,
+            ByteString.copyFrom(
+                padRightIfNeeded(
+                    literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
+                    literal.getType().getPrecision())));
+      case VARBINARY:
+        return binary(n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
+      case SYMBOL:
+        {
+          Object value = literal.getValue();
+          // case TimeUnitRange tur -> string(n, tur.name());
+          if (value instanceof NlsString) {
+            return string(n, ((NlsString) value).getValue());
+          } else if (value instanceof Enum) {
+            Enum<?> v = (Enum<?>) value;
+            Optional<Expression.Literal> r =
+                EnumConverter.canConvert(v) ? Optional.of(string(n, v.name())) : Optional.empty();
+            return r.orElseThrow(
+                () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
+          } else {
+            throw new UnsupportedOperationException("Unable to handle symbol: " + value);
+          }
+        }
+      case DATE:
+        {
+          DateString date = literal.getValueAs(DateString.class);
+          LocalDate localDate = LocalDate.parse(date.toString(), CALCITE_LOCAL_DATE_FORMATTER);
+          return ExpressionCreator.date(n, (int) localDate.toEpochDay());
+        }
+      case TIME:
+        {
+          TimeString time = literal.getValueAs(TimeString.class);
+          LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
+          return time(n, NANOSECONDS.toMicros(localTime.toNanoOfDay()));
+        }
+      case TIMESTAMP:
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+        {
+          TimestampString timestamp = literal.getValueAs(TimestampString.class);
+          LocalDateTime ldt =
+              LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
+          return timestamp(n, ldt);
+        }
+      case INTERVAL_YEAR:
+      case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
+        {
+          long intervalLength = Objects.requireNonNull(literal.getValueAs(Long.class));
+          var years = intervalLength / 12;
+          var months = intervalLength - years * 12;
+          return intervalYear(n, (int) years, (int) months);
+        }
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
+        {
+          // Calcite represents day/time intervals in milliseconds, despite a default scale of 6.
+          var totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
+          var interval = Duration.ofMillis(totalMillis);
+
+          var days = interval.toDays();
+          var seconds = interval.minusDays(days).toSeconds();
+          var micros = interval.toMillisPart() * 1000;
+
+          return intervalDay(n, (int) days, (int) seconds, micros, 6);
         }
 
-        yield varChar(n, s(literal), literal.getType().getPrecision());
-      }
-      case BINARY -> fixedBinary(
-          n,
-          ByteString.copyFrom(
-              padRightIfNeeded(
-                  literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
-                  literal.getType().getPrecision())));
-      case VARBINARY -> binary(n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
-      case SYMBOL -> {
-        Object value = literal.getValue();
-        // case TimeUnitRange tur -> string(n, tur.name());
-        if (value instanceof NlsString s) {
-          yield string(n, s.getValue());
-        } else if (value instanceof Enum v) {
-          Optional<Expression.Literal> r =
-              EnumConverter.canConvert(v) ? Optional.of(string(n, v.name())) : Optional.empty();
-          yield r.orElseThrow(
-              () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
-        } else {
-          throw new UnsupportedOperationException("Unable to handle symbol: " + value);
+      case ROW:
+        {
+          List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
+          return struct(n, literals.stream().map(this::convert).collect(Collectors.toList()));
         }
-      }
-      case DATE -> {
-        DateString date = literal.getValueAs(DateString.class);
-        LocalDate localDate = LocalDate.parse(date.toString(), CALCITE_LOCAL_DATE_FORMATTER);
-        yield ExpressionCreator.date(n, (int) localDate.toEpochDay());
-      }
-      case TIME -> {
-        TimeString time = literal.getValueAs(TimeString.class);
-        LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-        yield time(n, NANOSECONDS.toMicros(localTime.toNanoOfDay()));
-      }
-      case TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE -> {
-        TimestampString timestamp = literal.getValueAs(TimestampString.class);
-        LocalDateTime ldt =
-            LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-        yield timestamp(n, ldt);
-      }
-      case INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH -> {
-        long intervalLength = Objects.requireNonNull(literal.getValueAs(Long.class));
-        var years = intervalLength / 12;
-        var months = intervalLength - years * 12;
-        yield intervalYear(n, (int) years, (int) months);
-      }
-      case INTERVAL_DAY,
-          INTERVAL_DAY_HOUR,
-          INTERVAL_DAY_MINUTE,
-          INTERVAL_DAY_SECOND,
-          INTERVAL_HOUR,
-          INTERVAL_HOUR_MINUTE,
-          INTERVAL_HOUR_SECOND,
-          INTERVAL_MINUTE,
-          INTERVAL_MINUTE_SECOND,
-          INTERVAL_SECOND -> {
-        // Calcite represents day/time intervals in milliseconds, despite a default scale of 6.
-        var totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
-        var interval = Duration.ofMillis(totalMillis);
 
-        var days = interval.toDays();
-        var seconds = interval.minusDays(days).toSeconds();
-        var micros = interval.toMillisPart() * 1000;
+      case ARRAY:
+        {
+          List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
+          return list(n, literals.stream().map(this::convert).collect(Collectors.toList()));
+        }
 
-        yield intervalDay(n, (int) days, (int) seconds, micros, 6);
-      }
-
-      case ROW -> {
-        List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield struct(n, literals.stream().map(this::convert).collect(Collectors.toList()));
-      }
-
-      case ARRAY -> {
-        List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-        yield list(n, literals.stream().map(this::convert).collect(Collectors.toList()));
-      }
-
-      default -> throw new UnsupportedOperationException(
-          String.format(
-              "Unable to convert the value of %s of type %s to a literal.",
-              literal, literal.getType().getSqlTypeName()));
-    };
+      default:
+        throw new UnsupportedOperationException(
+            String.format(
+                "Unable to convert the value of %s of type %s to a literal.",
+                literal, literal.getType().getSqlTypeName()));
+    }
   }
 
   public static byte[] padRightIfNeeded(

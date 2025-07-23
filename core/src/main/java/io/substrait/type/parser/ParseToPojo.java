@@ -1,5 +1,6 @@
 package io.substrait.type.parser;
 
+import io.substrait.function.ImmutableTypeExpression;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
@@ -8,9 +9,11 @@ import io.substrait.type.SubstraitTypeParser;
 import io.substrait.type.SubstraitTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.IntFunction;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
@@ -19,7 +22,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 public class ParseToPojo {
 
   public static Type type(String namespace, SubstraitTypeParser.StartContext ctx) {
-    var visitor = Visitor.simple(namespace);
+    Visitor visitor = Visitor.simple(namespace);
     return (Type) ctx.accept(visitor);
   }
 
@@ -160,12 +163,12 @@ public class ParseToPojo {
     public TypeExpression visitIntervalDay(final SubstraitTypeParser.IntervalDayContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
-      if (precision instanceof Integer p) {
-        return withNull(nullable).intervalDay(p);
+      if (precision instanceof Integer) {
+        return withNull(nullable).intervalDay((Integer) precision);
       }
-      if (precision instanceof String s) {
+      if (precision instanceof String) {
         checkParameterizedOrExpression();
-        return withNullP(nullable).intervalDayE(s);
+        return withNullP(nullable).intervalDayE((String) precision);
       }
 
       checkExpression();
@@ -177,12 +180,12 @@ public class ParseToPojo {
         final SubstraitTypeParser.IntervalCompoundContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
-      if (precision instanceof Integer p) {
-        return withNull(nullable).intervalCompound(p);
+      if (precision instanceof Integer) {
+        return withNull(nullable).intervalCompound((Integer) precision);
       }
-      if (precision instanceof String s) {
+      if (precision instanceof String) {
         checkParameterizedOrExpression();
-        return withNullP(nullable).intervalCompoundE(s);
+        return withNullP(nullable).intervalCompoundE((String) precision);
       }
 
       checkExpression();
@@ -196,7 +199,7 @@ public class ParseToPojo {
 
     @Override
     public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
-      var name = ctx.Identifier().getSymbol().getText();
+      String name = ctx.Identifier().getSymbol().getText();
       return withNull(ctx).userDefined(namespace, name);
     }
 
@@ -280,12 +283,12 @@ public class ParseToPojo {
         final SubstraitTypeParser.PrecisionTimestampContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
-      if (precision instanceof Integer p) {
-        return withNull(nullable).precisionTimestamp(p);
+      if (precision instanceof Integer) {
+        return withNull(nullable).precisionTimestamp((Integer) precision);
       }
-      if (precision instanceof String s) {
+      if (precision instanceof String) {
         checkParameterizedOrExpression();
-        return withNullP(nullable).precisionTimestampE(s);
+        return withNullP(nullable).precisionTimestampE((String) precision);
       }
 
       checkExpression();
@@ -297,12 +300,12 @@ public class ParseToPojo {
         final SubstraitTypeParser.PrecisionTimestampTZContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
-      if (precision instanceof Integer p) {
-        return withNull(nullable).precisionTimestampTZ(p);
+      if (precision instanceof Integer) {
+        return withNull(nullable).precisionTimestampTZ((Integer) precision);
       }
-      if (precision instanceof String s) {
+      if (precision instanceof String) {
         checkParameterizedOrExpression();
-        return withNullP(nullable).precisionTimestampTZE(s);
+        return withNullP(nullable).precisionTimestampTZE((String) precision);
       }
 
       checkExpression();
@@ -325,7 +328,7 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitStruct(final SubstraitTypeParser.StructContext ctx) {
       boolean nullable = ctx.isnull != null;
-      var types =
+      List<TypeExpression> types =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
@@ -456,17 +459,17 @@ public class ParseToPojo {
     public TypeExpression visitMultilineDefinition(
         final SubstraitTypeParser.MultilineDefinitionContext ctx) {
       checkExpression();
-      var exprs =
+      List<TypeExpression> exprs =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
-      var identifiers =
+      List<String> identifiers =
           ctx.Identifier().stream()
               .map(t -> t.getText())
               .collect(java.util.stream.Collectors.toList());
-      var finalExpr = ctx.finalType.accept(this);
+      TypeExpression finalExpr = ctx.finalType.accept(this);
 
-      var bldr = TypeExpression.ReturnProgram.builder();
+      ImmutableTypeExpression.ReturnProgram.Builder bldr = TypeExpression.ReturnProgram.builder();
       for (int i = 0; i < exprs.size(); i++) {
         bldr.addAssignments(
             TypeExpression.ReturnProgram.Assignment.builder()
@@ -482,25 +485,39 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitBinaryExpr(final SubstraitTypeParser.BinaryExprContext ctx) {
       checkExpression();
-      TypeExpression.BinaryOperation.OpType type =
-          switch (ctx.op.getText().toUpperCase(Locale.ROOT)) {
-            case "+" -> TypeExpression.BinaryOperation.OpType.ADD;
-            case "-" -> TypeExpression.BinaryOperation.OpType.SUBTRACT;
-            case "*" -> TypeExpression.BinaryOperation.OpType.MULTIPLY;
-            case "/" -> TypeExpression.BinaryOperation.OpType.DIVIDE;
-            case ">" -> TypeExpression.BinaryOperation.OpType.GT;
-            case "<" -> TypeExpression.BinaryOperation.OpType.LT;
-            case "AND" -> TypeExpression.BinaryOperation.OpType.AND;
-            case "OR" -> TypeExpression.BinaryOperation.OpType.OR;
-            case "=" -> TypeExpression.BinaryOperation.OpType.EQ;
-            case ":=" -> TypeExpression.BinaryOperation.OpType.COVERS;
-            default -> throw new IllegalStateException("Unexpected value: " + ctx.op.getText());
-          };
+      TypeExpression.BinaryOperation.OpType type = getBinaryExpressionType(ctx.op);
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.left.accept(this))
           .right(ctx.right.accept(this))
           .build();
+    }
+
+    private TypeExpression.BinaryOperation.OpType getBinaryExpressionType(Token token) {
+      switch (token.getText().toUpperCase(Locale.ROOT)) {
+        case "+":
+          return TypeExpression.BinaryOperation.OpType.ADD;
+        case "-":
+          return TypeExpression.BinaryOperation.OpType.SUBTRACT;
+        case "*":
+          return TypeExpression.BinaryOperation.OpType.MULTIPLY;
+        case "/":
+          return TypeExpression.BinaryOperation.OpType.DIVIDE;
+        case ">":
+          return TypeExpression.BinaryOperation.OpType.GT;
+        case "<":
+          return TypeExpression.BinaryOperation.OpType.LT;
+        case "AND":
+          return TypeExpression.BinaryOperation.OpType.AND;
+        case "OR":
+          return TypeExpression.BinaryOperation.OpType.OR;
+        case "=":
+          return TypeExpression.BinaryOperation.OpType.EQ;
+        case ":=":
+          return TypeExpression.BinaryOperation.OpType.COVERS;
+        default:
+          throw new IllegalStateException("Unexpected value: " + token.getText());
+      }
     }
 
     @Override
@@ -533,19 +550,24 @@ public class ParseToPojo {
       if (ctx.expr().size() != 2) {
         throw new IllegalStateException("Only two argument functions exist for type expressions.");
       }
-      var name = ctx.Identifier().getSymbol().getText().toUpperCase(Locale.ROOT);
-      TypeExpression.BinaryOperation.OpType type =
-          switch (name) {
-            case "MIN" -> TypeExpression.BinaryOperation.OpType.MIN;
-            case "MAX" -> TypeExpression.BinaryOperation.OpType.MAX;
-            default -> throw new IllegalStateException(
-                "The following operation was unrecognized: " + name);
-          };
+      TypeExpression.BinaryOperation.OpType type = getFunctionType(ctx.Identifier().getSymbol());
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.expr(0).accept(this))
           .right(ctx.expr(1).accept(this))
           .build();
+    }
+
+    private TypeExpression.BinaryOperation.OpType getFunctionType(Token token) {
+      switch (token.getText().toUpperCase(Locale.ROOT)) {
+        case "MIN":
+          return TypeExpression.BinaryOperation.OpType.MIN;
+        case "MAX":
+          return TypeExpression.BinaryOperation.OpType.MAX;
+        default:
+          throw new IllegalStateException(
+              "The following operation was unrecognized: " + token.getText());
+      }
     }
 
     @Override

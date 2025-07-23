@@ -67,77 +67,56 @@ public class ProtoRelConverter {
   }
 
   public Rel from(io.substrait.proto.Rel rel) {
-    var relType = rel.getRelTypeCase();
+    io.substrait.proto.Rel.RelTypeCase relType = rel.getRelTypeCase();
     switch (relType) {
-      case READ -> {
+      case READ:
         return newRead(rel.getRead());
-      }
-      case FILTER -> {
+      case FILTER:
         return newFilter(rel.getFilter());
-      }
-      case FETCH -> {
+      case FETCH:
         return newFetch(rel.getFetch());
-      }
-      case AGGREGATE -> {
+      case AGGREGATE:
         return newAggregate(rel.getAggregate());
-      }
-      case SORT -> {
+      case SORT:
         return newSort(rel.getSort());
-      }
-      case JOIN -> {
+      case JOIN:
         return newJoin(rel.getJoin());
-      }
-      case SET -> {
+      case SET:
         return newSet(rel.getSet());
-      }
-      case PROJECT -> {
+      case PROJECT:
         return newProject(rel.getProject());
-      }
-      case EXPAND -> {
+      case EXPAND:
         return newExpand(rel.getExpand());
-      }
-      case CROSS -> {
+      case CROSS:
         return newCross(rel.getCross());
-      }
-      case EXTENSION_LEAF -> {
+      case EXTENSION_LEAF:
         return newExtensionLeaf(rel.getExtensionLeaf());
-      }
-      case EXTENSION_SINGLE -> {
+      case EXTENSION_SINGLE:
         return newExtensionSingle(rel.getExtensionSingle());
-      }
-      case EXTENSION_MULTI -> {
+      case EXTENSION_MULTI:
         return newExtensionMulti(rel.getExtensionMulti());
-      }
-      case HASH_JOIN -> {
+      case HASH_JOIN:
         return newHashJoin(rel.getHashJoin());
-      }
-      case MERGE_JOIN -> {
+      case MERGE_JOIN:
         return newMergeJoin(rel.getMergeJoin());
-      }
-      case NESTED_LOOP_JOIN -> {
+      case NESTED_LOOP_JOIN:
         return newNestedLoopJoin(rel.getNestedLoopJoin());
-      }
-      case WINDOW -> {
+      case WINDOW:
         return newConsistentPartitionWindow(rel.getWindow());
-      }
-      case WRITE -> {
+      case WRITE:
         return newWrite(rel.getWrite());
-      }
-      case DDL -> {
+      case DDL:
         return newDdl(rel.getDdl());
-      }
-      case UPDATE -> {
+      case UPDATE:
         return newUpdate(rel.getUpdate());
-      }
-      default -> {
+      default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
-      }
     }
   }
 
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
-      var virtualTable = rel.getVirtualTable();
+      ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
       if (virtualTable.getValuesCount() == 0) {
         return newEmptyScan(rel);
       } else {
@@ -155,21 +134,20 @@ public class ProtoRelConverter {
   }
 
   protected Rel newWrite(WriteRel rel) {
-    var relType = rel.getWriteTypeCase();
+    WriteRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
-      case NAMED_TABLE -> {
+      case NAMED_TABLE:
         return newNamedWrite(rel);
-      }
-      case EXTENSION_TABLE -> {
+      case EXTENSION_TABLE:
         return newExtensionWrite(rel);
-      }
-      default -> throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
+      default:
+        throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
     }
   }
 
   protected NamedWrite newNamedWrite(WriteRel rel) {
-    var input = from(rel.getInput());
-    var builder =
+    Rel input = from(rel.getInput());
+    ImmutableNamedWrite.Builder builder =
         NamedWrite.builder()
             .input(input)
             .names(rel.getNamedTable().getNamesList())
@@ -186,9 +164,10 @@ public class ProtoRelConverter {
   }
 
   protected Rel newExtensionWrite(WriteRel rel) {
-    var input = from(rel.getInput());
-    var detail = detailFromWriteExtensionObject(rel.getExtensionTable().getDetail());
-    var builder =
+    Rel input = from(rel.getInput());
+    Extension.WriteExtensionObject detail =
+        detailFromWriteExtensionObject(rel.getExtensionTable().getDetail());
+    ImmutableExtensionWrite.Builder builder =
         ExtensionWrite.builder()
             .input(input)
             .detail(detail)
@@ -205,20 +184,19 @@ public class ProtoRelConverter {
   }
 
   protected Rel newDdl(DdlRel rel) {
-    var relType = rel.getWriteTypeCase();
+    DdlRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
-      case NAMED_OBJECT -> {
+      case NAMED_OBJECT:
         return newNamedDdl(rel);
-      }
-      case EXTENSION_OBJECT -> {
+      case EXTENSION_OBJECT:
         return newExtensionDdl(rel);
-      }
-      default -> throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
+      default:
+        throw new UnsupportedOperationException("Unsupported WriteTypeCase of " + relType);
     }
   }
 
   protected NamedDdl newNamedDdl(DdlRel rel) {
-    var tableSchema = newNamedStruct(rel.getTableSchema());
+    NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     return NamedDdl.builder()
         .names(rel.getNamedObject().getNamesList())
         .tableSchema(tableSchema)
@@ -233,8 +211,9 @@ public class ProtoRelConverter {
   }
 
   protected ExtensionDdl newExtensionDdl(DdlRel rel) {
-    var detail = detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
-    var tableSchema = newNamedStruct(rel.getTableSchema());
+    Extension.DdlExtensionObject detail =
+        detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
+    NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     return ExtensionDdl.builder()
         .detail(detail)
         .tableSchema(newNamedStruct(rel.getTableSchema()))
@@ -254,7 +233,8 @@ public class ProtoRelConverter {
 
   protected Expression.StructLiteral tableDefaults(
       io.substrait.proto.Expression.Literal.Struct struct, NamedStruct tableSchema) {
-    var converter = new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
     return Expression.StructLiteral.builder()
         .fields(
             struct.getFieldsList().stream()
@@ -264,29 +244,29 @@ public class ProtoRelConverter {
   }
 
   protected Rel newUpdate(UpdateRel rel) {
-    var relType = rel.getUpdateTypeCase();
+    UpdateRel.UpdateTypeCase relType = rel.getUpdateTypeCase();
     switch (relType) {
-      case NAMED_TABLE -> {
+      case NAMED_TABLE:
         return newNamedUpdate(rel);
-      }
-      default -> throw new UnsupportedOperationException(
-          "Unsupported UpdateTypeCase of " + relType);
+      default:
+        throw new UnsupportedOperationException("Unsupported UpdateTypeCase of " + relType);
     }
   }
 
   protected Rel newNamedUpdate(UpdateRel rel) {
-    var tableSchema = newNamedStruct(rel.getTableSchema());
-    var converter = new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
     List<NamedUpdate.TransformExpression> transformations =
         new ArrayList<>(rel.getTransformationsCount());
-    for (var transformation : rel.getTransformationsList()) {
+    for (UpdateRel.TransformExpression transformation : rel.getTransformationsList()) {
       transformations.add(
           NamedUpdate.TransformExpression.builder()
               .transformation(converter.from(transformation.getTransformation()))
               .columnTarget(transformation.getColumnTarget())
               .build());
     }
-    var builder =
+    ImmutableNamedUpdate.Builder builder =
         NamedUpdate.builder()
             .names(rel.getNamedTable().getNamesList())
             .tableSchema(tableSchema)
@@ -299,8 +279,8 @@ public class ProtoRelConverter {
   }
 
   protected Filter newFilter(FilterRel rel) {
-    var input = from(rel.getInput());
-    var builder =
+    Rel input = from(rel.getInput());
+    ImmutableFilter.Builder builder =
         Filter.builder()
             .input(input)
             .condition(
@@ -321,7 +301,7 @@ public class ProtoRelConverter {
   }
 
   protected NamedStruct newNamedStruct(io.substrait.proto.NamedStruct namedStruct) {
-    var struct = namedStruct.getStruct();
+    io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
     return NamedStruct.builder()
         .names(namedStruct.getNamesList())
         .struct(
@@ -336,8 +316,8 @@ public class ProtoRelConverter {
   }
 
   protected EmptyScan newEmptyScan(ReadRel rel) {
-    var namedStruct = newNamedStruct(rel);
-    var builder =
+    NamedStruct namedStruct = newNamedStruct(rel);
+    ImmutableEmptyScan.Builder builder =
         EmptyScan.builder()
             .initialSchema(namedStruct)
             .bestEffortFilter(
@@ -367,7 +347,7 @@ public class ProtoRelConverter {
 
   protected ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
     Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
-    var builder =
+    ImmutableExtensionLeaf.Builder builder =
         ExtensionLeaf.from(detail)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()))
@@ -378,7 +358,7 @@ public class ProtoRelConverter {
   protected ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
     Extension.SingleRelDetail detail = detailFromExtensionSingleRel(rel.getDetail());
     Rel input = from(rel.getInput());
-    var builder =
+    ImmutableExtensionSingle.Builder builder =
         ExtensionSingle.from(detail, input)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()))
@@ -389,7 +369,7 @@ public class ProtoRelConverter {
   protected ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
     Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
-    var builder =
+    ImmutableExtensionMulti.Builder builder =
         ExtensionMulti.from(detail, inputs)
             .commonExtension(optionalAdvancedExtension(rel.getCommon()))
             .remap(optionalRelmap(rel.getCommon()))
@@ -401,8 +381,8 @@ public class ProtoRelConverter {
   }
 
   protected NamedScan newNamedScan(ReadRel rel) {
-    var namedStruct = newNamedStruct(rel);
-    var builder =
+    NamedStruct namedStruct = newNamedStruct(rel);
+    ImmutableNamedScan.Builder builder =
         NamedScan.builder()
             .initialSchema(namedStruct)
             .names(rel.getNamedTable().getNamesList())
@@ -434,7 +414,7 @@ public class ProtoRelConverter {
   protected ExtensionTable newExtensionTable(ReadRel rel) {
     Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
-    var builder = ExtensionTable.from(detail);
+    ImmutableExtensionTable.Builder builder = ExtensionTable.from(detail);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -447,9 +427,9 @@ public class ProtoRelConverter {
   }
 
   protected LocalFiles newLocalFiles(ReadRel rel) {
-    var namedStruct = newNamedStruct(rel);
+    NamedStruct namedStruct = newNamedStruct(rel);
 
-    var builder =
+    ImmutableLocalFiles.Builder builder =
         LocalFiles.builder()
             .initialSchema(namedStruct)
             .addAllItems(
@@ -482,7 +462,7 @@ public class ProtoRelConverter {
   }
 
   protected FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
-    var builder =
+    io.substrait.relation.files.ImmutableFileOrFiles.Builder builder =
         FileOrFiles.builder()
             .partitionIndex(file.getPartitionIndex())
             .start(file.getStart())
@@ -496,13 +476,14 @@ public class ProtoRelConverter {
     } else if (file.hasDwrf()) {
       builder.fileFormat(FileFormat.DwrfReadOptions.builder().build());
     } else if (file.hasText()) {
-      var ffBuilder =
-          FileFormat.DelimiterSeparatedTextReadOptions.builder()
-              .fieldDelimiter(file.getText().getFieldDelimiter())
-              .maxLineSize(file.getText().getMaxLineSize())
-              .quote(file.getText().getQuote())
-              .headerLinesToSkip(file.getText().getHeaderLinesToSkip())
-              .escape(file.getText().getEscape());
+      io.substrait.relation.files.ImmutableFileFormat.DelimiterSeparatedTextReadOptions.Builder
+          ffBuilder =
+              FileFormat.DelimiterSeparatedTextReadOptions.builder()
+                  .fieldDelimiter(file.getText().getFieldDelimiter())
+                  .maxLineSize(file.getText().getMaxLineSize())
+                  .quote(file.getText().getQuote())
+                  .headerLinesToSkip(file.getText().getHeaderLinesToSkip())
+                  .escape(file.getText().getEscape());
       if (file.getText().hasValueTreatedAsNull()) {
         ffBuilder.valueTreatedAsNull(file.getText().getValueTreatedAsNull());
       }
@@ -523,12 +504,12 @@ public class ProtoRelConverter {
   }
 
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
-    var virtualTable = rel.getVirtualTable();
-    var virtualTableSchema = newNamedStruct(rel);
-    var converter =
+    ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
+    NamedStruct virtualTableSchema = newNamedStruct(rel);
+    ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
     List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
-    for (var struct : virtualTable.getValuesList()) {
+    for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
       structLiterals.add(
           Expression.StructLiteral.builder()
               .fields(
@@ -538,7 +519,7 @@ public class ProtoRelConverter {
               .build());
     }
 
-    var builder =
+    ImmutableVirtualTableScan.Builder builder =
         VirtualTableScan.builder()
             .bestEffortFilter(
                 Optional.ofNullable(
@@ -558,8 +539,8 @@ public class ProtoRelConverter {
   }
 
   protected Fetch newFetch(FetchRel rel) {
-    var input = from(rel.getInput());
-    var builder = Fetch.builder().input(input).offset(rel.getOffset());
+    Rel input = from(rel.getInput());
+    ImmutableFetch.Builder builder = Fetch.builder().input(input).offset(rel.getOffset());
     if (rel.getCount() != -1) {
       // -1 is used as a sentinel value to signal LIMIT ALL
       // count only needs to be set when it is not -1
@@ -577,9 +558,10 @@ public class ProtoRelConverter {
   }
 
   protected Project newProject(ProjectRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
-    var builder =
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableProject.Builder builder =
         Project.builder()
             .input(input)
             .expressions(
@@ -598,28 +580,33 @@ public class ProtoRelConverter {
   }
 
   protected Expand newExpand(ExpandRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
-    var builder =
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableExpand.Builder builder =
         Expand.builder()
             .input(input)
             .fields(
                 rel.getFieldsList().stream()
                     .map(
-                        expandField ->
-                            switch (expandField.getFieldTypeCase()) {
-                              case CONSISTENT_FIELD -> Expand.ConsistentField.builder()
+                        expandField -> {
+                          switch (expandField.getFieldTypeCase()) {
+                            case CONSISTENT_FIELD:
+                              return Expand.ConsistentField.builder()
                                   .expression(converter.from(expandField.getConsistentField()))
                                   .build();
-                              case SWITCHING_FIELD -> Expand.SwitchingField.builder()
+                            case SWITCHING_FIELD:
+                              return Expand.SwitchingField.builder()
                                   .duplicates(
                                       expandField.getSwitchingField().getDuplicatesList().stream()
                                           .map(converter::from)
                                           .collect(java.util.stream.Collectors.toList()))
                                   .build();
-                              case FIELDTYPE_NOT_SET -> throw new UnsupportedOperationException(
-                                  "Expand fields not set");
-                            })
+                            case FIELDTYPE_NOT_SET:
+                            default:
+                              throw new UnsupportedOperationException("Expand fields not set");
+                          }
+                        })
                     .collect(java.util.stream.Collectors.toList()));
 
     builder
@@ -630,14 +617,14 @@ public class ProtoRelConverter {
   }
 
   protected Aggregate newAggregate(AggregateRel rel) {
-    var input = from(rel.getInput());
-    var protoExprConverter =
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
-    var protoAggrFuncConverter =
+    ProtoAggregateFunctionConverter protoAggrFuncConverter =
         new ProtoAggregateFunctionConverter(lookup, extensions, protoExprConverter);
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
-    for (var grouping : rel.getGroupingsList()) {
+    for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
       groupings.add(
           Aggregate.Grouping.builder()
               .expressions(
@@ -647,11 +634,12 @@ public class ProtoRelConverter {
               .build());
     }
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
-    var pF = new FunctionArg.ProtoFrom(protoExprConverter, protoTypeConverter);
-    for (var measure : rel.getMeasuresList()) {
-      var func = measure.getMeasure();
-      var funcDecl = lookup.getAggregateFunction(func.getFunctionReference(), extensions);
-      var args =
+    FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(protoExprConverter, protoTypeConverter);
+    for (AggregateRel.Measure measure : rel.getMeasuresList()) {
+      io.substrait.proto.AggregateFunction func = measure.getMeasure();
+      SimpleExtension.AggregateFunctionVariant funcDecl =
+          lookup.getAggregateFunction(func.getFunctionReference(), extensions);
+      List<FunctionArg> args =
           IntStream.range(0, measure.getMeasure().getArgumentsCount())
               .mapToObj(i -> pF.convert(funcDecl, i, measure.getMeasure().getArguments(i)))
               .collect(java.util.stream.Collectors.toList());
@@ -663,7 +651,8 @@ public class ProtoRelConverter {
                       measure.hasFilter() ? protoExprConverter.from(measure.getFilter()) : null))
               .build());
     }
-    var builder = Aggregate.builder().input(input).groupings(groupings).measures(measures);
+    ImmutableAggregate.Builder builder =
+        Aggregate.builder().input(input).groupings(groupings).measures(measures);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -676,9 +665,10 @@ public class ProtoRelConverter {
   }
 
   protected Sort newSort(SortRel rel) {
-    var input = from(rel.getInput());
-    var converter = new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
-    var builder =
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableSort.Builder builder =
         Sort.builder()
             .input(input)
             .sortFields(
@@ -707,8 +697,9 @@ public class ProtoRelConverter {
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
-    var builder =
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    ImmutableJoin.Builder builder =
         Join.builder()
             .left(left)
             .right(right)
@@ -731,7 +722,7 @@ public class ProtoRelConverter {
   protected Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    var builder = Cross.builder().left(left).right(right);
+    ImmutableCross.Builder builder = Cross.builder().left(left).right(right);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -747,7 +738,8 @@ public class ProtoRelConverter {
         rel.getInputsList().stream()
             .map(inputRel -> from(inputRel))
             .collect(java.util.stream.Collectors.toList());
-    var builder = Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
+    ImmutableSet.Builder builder =
+        Set.builder().inputs(inputs).setOp(Set.SetOp.fromProto(rel.getOp()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -762,16 +754,19 @@ public class ProtoRelConverter {
   protected Rel newHashJoin(HashJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    var leftKeys = rel.getLeftKeysList();
-    var rightKeys = rel.getRightKeysList();
+    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
+    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var leftConverter = new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
-    var rightConverter = new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
-    var unionConverter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
-    var builder =
+    ProtoExpressionConverter leftConverter =
+        new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
+    ProtoExpressionConverter rightConverter =
+        new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
+    ProtoExpressionConverter unionConverter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    io.substrait.relation.physical.ImmutableHashJoin.Builder builder =
         HashJoin.builder()
             .left(left)
             .right(right)
@@ -794,16 +789,19 @@ public class ProtoRelConverter {
   protected Rel newMergeJoin(MergeJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    var leftKeys = rel.getLeftKeysList();
-    var rightKeys = rel.getRightKeysList();
+    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
+    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var leftConverter = new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
-    var rightConverter = new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
-    var unionConverter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
-    var builder =
+    ProtoExpressionConverter leftConverter =
+        new ProtoExpressionConverter(lookup, extensions, leftStruct, this);
+    ProtoExpressionConverter rightConverter =
+        new ProtoExpressionConverter(lookup, extensions, rightStruct, this);
+    ProtoExpressionConverter unionConverter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    io.substrait.relation.physical.ImmutableMergeJoin.Builder builder =
         MergeJoin.builder()
             .left(left)
             .right(right)
@@ -830,8 +828,9 @@ public class ProtoRelConverter {
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
-    var converter = new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
-    var builder =
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    io.substrait.relation.physical.ImmutableNestedLoopJoin.Builder builder =
         NestedLoopJoin.builder()
             .left(left)
             .right(right)
@@ -855,24 +854,24 @@ public class ProtoRelConverter {
   protected ConsistentPartitionWindow newConsistentPartitionWindow(
       ConsistentPartitionWindowRel rel) {
 
-    var input = from(rel.getInput());
-    var protoExpressionConverter =
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
 
-    var partitionExprs =
+    List<Expression> partitionExprs =
         rel.getPartitionExpressionsList().stream()
             .map(protoExpressionConverter::from)
             .collect(Collectors.toList());
-    var sortFields =
+    List<Expression.SortField> sortFields =
         rel.getSortsList().stream()
             .map(protoExpressionConverter::fromSortField)
             .collect(Collectors.toList());
-    var windowRelFunctions =
+    List<ConsistentPartitionWindow.WindowRelFunctionInvocation> windowRelFunctions =
         rel.getWindowFunctionsList().stream()
             .map(protoExpressionConverter::fromWindowRelFunction)
             .collect(Collectors.toList());
 
-    var builder =
+    ImmutableConsistentPartitionWindow.Builder builder =
         ConsistentPartitionWindow.builder()
             .input(input)
             .partitionExpressions(partitionExprs)
@@ -896,8 +895,9 @@ public class ProtoRelConverter {
 
   protected static Optional<Hint> optionalHint(io.substrait.proto.RelCommon relCommon) {
     if (!relCommon.hasHint()) return Optional.empty();
-    var hint = relCommon.getHint();
-    var builder = Hint.builder().addAllOutputNames(hint.getOutputNamesList());
+    io.substrait.proto.RelCommon.Hint hint = relCommon.getHint();
+    io.substrait.hint.ImmutableHint.Builder builder =
+        Hint.builder().addAllOutputNames(hint.getOutputNamesList());
     if (!hint.getAlias().isEmpty()) {
       builder.alias(hint.getAlias());
     }
@@ -914,7 +914,7 @@ public class ProtoRelConverter {
 
   protected AdvancedExtension advancedExtension(
       io.substrait.proto.AdvancedExtension advancedExtension) {
-    var builder = AdvancedExtension.builder();
+    io.substrait.extension.ImmutableAdvancedExtension.Builder builder = AdvancedExtension.builder();
     if (advancedExtension.hasEnhancement()) {
       builder.enhancement(enhancementFromAdvancedExtension(advancedExtension.getEnhancement()));
     }
