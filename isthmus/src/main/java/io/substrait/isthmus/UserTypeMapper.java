@@ -2,7 +2,7 @@ package io.substrait.isthmus;
 
 import io.substrait.type.Type;
 import org.apache.calcite.rel.type.RelDataType;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Defines conversion of user-defined types between Substrait and Calcite */
 public interface UserTypeMapper {

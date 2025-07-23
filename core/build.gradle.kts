@@ -15,7 +15,6 @@ plugins {
   id("com.diffplug.spotless") version "6.19.0"
   id("com.gradleup.shadow") version "8.3.6"
   id("org.jreleaser")
-  id("org.checkerframework") version "0.6.56"
 }
 
 val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))
@@ -122,6 +121,7 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
+  api("org.jspecify:jspecify:1.0.0")
 
   antlr("org.antlr:antlr4:${ANTLR_VERSION}")
   shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")

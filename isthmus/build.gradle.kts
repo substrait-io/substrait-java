@@ -9,7 +9,6 @@ plugins {
   id("com.gradleup.shadow") version "8.3.6"
   id("com.google.protobuf") version "0.9.4"
   id("org.jreleaser")
-  id("org.checkerframework") version "0.6.56"
 }
 
 val stagingRepositoryUrl = uri(layout.buildDirectory.dir("staging-deploy"))
@@ -150,6 +149,7 @@ dependencies {
       )
   }
   testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
+  api("org.jspecify:jspecify:1.0.0")
 }
 
 tasks {
