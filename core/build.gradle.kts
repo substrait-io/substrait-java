@@ -121,7 +121,7 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
-  implementation("com.google.code.findbugs:jsr305:3.0.2")
+  api("org.jspecify:jspecify:1.0.0")
 
   antlr("org.antlr:antlr4:${ANTLR_VERSION}")
   shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")

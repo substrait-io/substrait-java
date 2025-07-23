@@ -12,11 +12,11 @@ import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import javax.annotation.Nullable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.jspecify.annotations.Nullable;
 
 public class TypeConverter {
 
