@@ -46,6 +46,7 @@ import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.SubTypesScanner;
 
 public class RegisterAtRuntime implements Feature {
+  @Override
   public void beforeAnalysis(BeforeAnalysisAccess access) {
     try {
       Reflections substrait = new Reflections("io.substrait");

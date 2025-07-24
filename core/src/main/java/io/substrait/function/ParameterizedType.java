@@ -17,6 +17,7 @@ public interface ParameterizedType extends TypeExpression {
     }
   }
 
+  @Override
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
   static ParameterizedTypeCreator withNullability(boolean nullable) {
@@ -32,6 +33,7 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   abstract class BaseParameterizedType implements ParameterizedType {
+    @Override
     public final <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
       if (typeVisitor instanceof ParameterizedTypeVisitor) {
         return accept((ParameterizedTypeVisitor<R, E>) typeVisitor);

@@ -15,6 +15,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
 
+  @Override
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
   @Override

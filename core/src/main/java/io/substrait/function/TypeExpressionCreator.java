@@ -13,18 +13,22 @@ public class TypeExpressionCreator extends TypeCreator
     super(nullable);
   }
 
+  @Override
   public TypeExpression fixedCharE(TypeExpression len) {
     return TypeExpression.FixedChar.builder().nullable(nullable).length(len).build();
   }
 
+  @Override
   public TypeExpression varCharE(TypeExpression len) {
     return TypeExpression.VarChar.builder().nullable(nullable).length(len).build();
   }
 
+  @Override
   public TypeExpression fixedBinaryE(TypeExpression len) {
     return TypeExpression.FixedBinary.builder().nullable(nullable).length(len).build();
   }
 
+  @Override
   public TypeExpression decimalE(TypeExpression precision, TypeExpression scale) {
     return TypeExpression.Decimal.builder()
         .nullable(nullable)
@@ -58,18 +62,22 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
+  @Override
   public TypeExpression structE(TypeExpression... types) {
     return TypeExpression.Struct.builder().nullable(nullable).addFields(types).build();
   }
 
+  @Override
   public TypeExpression structE(Iterable<? extends TypeExpression> types) {
     return TypeExpression.Struct.builder().nullable(nullable).addAllFields(types).build();
   }
 
+  @Override
   public TypeExpression listE(TypeExpression type) {
     return TypeExpression.ListType.builder().nullable(nullable).elementType(type).build();
   }
 
+  @Override
   public TypeExpression mapE(TypeExpression key, TypeExpression value) {
     return TypeExpression.Map.builder().nullable(nullable).key(key).value(value).build();
   }
