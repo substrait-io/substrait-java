@@ -11,7 +11,7 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
 
-  public static TypeCreator withNullability(boolean nullable) {
+  static TypeCreator withNullability(boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
 
@@ -25,7 +25,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Bool implements Type {
+  abstract class Bool implements Type {
     public static ImmutableType.Bool.Builder builder() {
       return ImmutableType.Bool.builder();
     }
@@ -37,7 +37,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class I8 implements Type {
+  abstract class I8 implements Type {
     public static ImmutableType.I8.Builder builder() {
       return ImmutableType.I8.builder();
     }
@@ -49,7 +49,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class I16 implements Type {
+  abstract class I16 implements Type {
     public static ImmutableType.I16.Builder builder() {
       return ImmutableType.I16.builder();
     }
@@ -61,7 +61,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class I32 implements Type {
+  abstract class I32 implements Type {
     public static ImmutableType.I32.Builder builder() {
       return ImmutableType.I32.builder();
     }
@@ -73,7 +73,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class I64 implements Type {
+  abstract class I64 implements Type {
     public static ImmutableType.I64.Builder builder() {
       return ImmutableType.I64.builder();
     }
@@ -85,7 +85,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class FP32 implements Type {
+  abstract class FP32 implements Type {
     public static ImmutableType.FP32.Builder builder() {
       return ImmutableType.FP32.builder();
     }
@@ -97,7 +97,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class FP64 implements Type {
+  abstract class FP64 implements Type {
     public static ImmutableType.FP64.Builder builder() {
       return ImmutableType.FP64.builder();
     }
@@ -109,7 +109,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Str implements Type {
+  abstract class Str implements Type {
     public static ImmutableType.Str.Builder builder() {
       return ImmutableType.Str.builder();
     }
@@ -121,7 +121,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Binary implements Type {
+  abstract class Binary implements Type {
     public static ImmutableType.Binary.Builder builder() {
       return ImmutableType.Binary.builder();
     }
@@ -133,7 +133,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Date implements Type {
+  abstract class Date implements Type {
     public static ImmutableType.Date.Builder builder() {
       return ImmutableType.Date.builder();
     }
@@ -145,7 +145,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Time implements Type {
+  abstract class Time implements Type {
     public static ImmutableType.Time.Builder builder() {
       return ImmutableType.Time.builder();
     }
@@ -159,7 +159,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   /** Deprecated, use {@link PrecisionTimestampTZ} instead */
   @Value.Immutable
   @Deprecated
-  abstract static class TimestampTZ implements Type {
+  abstract class TimestampTZ implements Type {
 
     /** Deprecated, use {@link PrecisionTimestampTZ#builder()} instead */
     public static ImmutableType.TimestampTZ.Builder builder() {
@@ -175,7 +175,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   /** Deprecated, use {@link PrecisionTimestamp} instead */
   @Value.Immutable
   @Deprecated
-  abstract static class Timestamp implements Type {
+  abstract class Timestamp implements Type {
 
     /** Deprecated, use {@link PrecisionTimestamp#builder()} instead */
     @Deprecated
@@ -190,7 +190,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class IntervalYear implements Type {
+  abstract class IntervalYear implements Type {
     public static ImmutableType.IntervalYear.Builder builder() {
       return ImmutableType.IntervalYear.builder();
     }
@@ -202,7 +202,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class IntervalDay implements Type {
+  abstract class IntervalDay implements Type {
     public abstract int precision();
 
     public static ImmutableType.IntervalDay.Builder builder() {
@@ -216,7 +216,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class IntervalCompound implements Type {
+  abstract class IntervalCompound implements Type {
     public abstract int precision();
 
     public static ImmutableType.IntervalCompound.Builder builder() {
@@ -230,7 +230,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class UUID implements Type {
+  abstract class UUID implements Type {
     public static ImmutableType.UUID.Builder builder() {
       return ImmutableType.UUID.builder();
     }
@@ -242,7 +242,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class FixedChar implements Type {
+  abstract class FixedChar implements Type {
     public abstract int length();
 
     public static ImmutableType.FixedChar.Builder builder() {
@@ -256,7 +256,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class VarChar implements Type {
+  abstract class VarChar implements Type {
     public abstract int length();
 
     public static ImmutableType.VarChar.Builder builder() {
@@ -270,7 +270,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class FixedBinary implements Type {
+  abstract class FixedBinary implements Type {
     public abstract int length();
 
     public static ImmutableType.FixedBinary.Builder builder() {
@@ -284,7 +284,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Decimal implements Type {
+  abstract class Decimal implements Type {
     public abstract int scale();
 
     public abstract int precision();
@@ -300,7 +300,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class PrecisionTime implements Type {
+  abstract class PrecisionTime implements Type {
     public abstract int precision();
 
     public static ImmutableType.PrecisionTime.Builder builder() {
@@ -314,7 +314,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class PrecisionTimestamp implements Type {
+  abstract class PrecisionTimestamp implements Type {
     public abstract int precision();
 
     public static ImmutableType.PrecisionTimestamp.Builder builder() {
@@ -328,7 +328,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class PrecisionTimestampTZ implements Type {
+  abstract class PrecisionTimestampTZ implements Type {
     public abstract int precision();
 
     public static ImmutableType.PrecisionTimestampTZ.Builder builder() {
@@ -342,7 +342,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Struct implements Type {
+  abstract class Struct implements Type {
     public abstract java.util.List<Type> fields();
 
     public static ImmutableType.Struct.Builder builder() {
@@ -356,7 +356,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class ListType implements Type {
+  abstract class ListType implements Type {
     public abstract Type elementType();
 
     public static ImmutableType.ListType.Builder builder() {
@@ -370,7 +370,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class Map implements Type {
+  abstract class Map implements Type {
     public abstract Type key();
 
     public abstract Type value();
@@ -386,7 +386,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract static class UserDefined implements Type {
+  abstract class UserDefined implements Type {
 
     public abstract String uri();
 

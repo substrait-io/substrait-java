@@ -25,7 +25,7 @@ public abstract class HashJoin extends BiRel implements HasExtension {
 
   public abstract Optional<Expression> getPostJoinFilter();
 
-  public static enum JoinType {
+  public enum JoinType {
     UNKNOWN(HashJoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
     INNER(HashJoinRel.JoinType.JOIN_TYPE_INNER),
     OUTER(HashJoinRel.JoinType.JOIN_TYPE_OUTER),
