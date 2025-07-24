@@ -10,10 +10,7 @@ repositories {
 }
 
 dependencies {
-  implementation("org.apache.spark:spark-core_2.12:3.5.1")
-  implementation("io.substrait:spark:0.36.0")
-  implementation("io.substrait:core:0.36.0")
-  implementation("org.apache.spark:spark-sql_2.12:3.5.1")
+  implementation(project(":spark"))
 
   // For a real Spark application, these would not be required since they would be in the Spark
   // server classpath
@@ -22,6 +19,8 @@ dependencies {
 }
 
 tasks.jar {
+  dependsOn(":spark:jar", ":core:jar", ":core:shadowJar")
+
   isZip64 = true
   exclude("META-INF/*.RSA")
   exclude("META-INF/*.SF")
