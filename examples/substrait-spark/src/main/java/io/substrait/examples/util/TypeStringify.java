@@ -13,10 +13,12 @@ import io.substrait.type.Type.I16;
 import io.substrait.type.Type.I32;
 import io.substrait.type.Type.I64;
 import io.substrait.type.Type.I8;
+import io.substrait.type.Type.IntervalCompound;
 import io.substrait.type.Type.IntervalDay;
 import io.substrait.type.Type.IntervalYear;
 import io.substrait.type.Type.ListType;
 import io.substrait.type.Type.Map;
+import io.substrait.type.Type.PrecisionTime;
 import io.substrait.type.Type.Str;
 import io.substrait.type.Type.Struct;
 import io.substrait.type.Type.Time;
@@ -170,6 +172,16 @@ public class TypeStringify extends ParentStringify
 
   @Override
   public String visit(UserDefined type) throws RuntimeException {
+    return type.getClass().getSimpleName();
+  }
+
+  @Override
+  public String visit(PrecisionTime type) throws RuntimeException {
+    return type.getClass().getSimpleName();
+  }
+
+  @Override
+  public String visit(IntervalCompound type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 }

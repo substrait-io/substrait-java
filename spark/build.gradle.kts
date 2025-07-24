@@ -1,7 +1,7 @@
 plugins {
   `maven-publish`
   signing
-  id("java")
+  id("java-library")
   id("scala")
   id("idea")
   id("com.diffplug.spotless") version "7.1.0"
@@ -114,10 +114,10 @@ sourceSets {
 }
 
 dependencies {
-  implementation(project(":core"))
+  api(project(":core"))
   implementation("org.scala-lang:scala-library:2.12.16")
-  implementation("org.apache.spark:spark-core_2.12:${SPARK_VERSION}")
-  implementation("org.apache.spark:spark-sql_2.12:${SPARK_VERSION}")
+  api("org.apache.spark:spark-core_2.12:${SPARK_VERSION}")
+  api("org.apache.spark:spark-sql_2.12:${SPARK_VERSION}")
   implementation("org.apache.spark:spark-catalyst_2.12:${SPARK_VERSION}")
   implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
 
