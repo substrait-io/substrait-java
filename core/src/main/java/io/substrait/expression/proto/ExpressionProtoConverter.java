@@ -372,7 +372,7 @@ public class ExpressionProtoConverter
                         .setValue(Any.parseFrom(expr.value())))
                 .build();
           } catch (InvalidProtocolBufferException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
           }
         });
   }

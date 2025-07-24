@@ -2,6 +2,7 @@ plugins {
   // Apply the application plugin to add support for building a CLI application in Java.
   id("java")
   id("com.diffplug.spotless") version "7.1.0"
+  id("substrait.java-conventions")
 }
 
 repositories {
@@ -37,3 +38,5 @@ tasks.named<Test>("test") {
 }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+
+tasks.pmdMain { dependsOn(":core:shadowJar") }

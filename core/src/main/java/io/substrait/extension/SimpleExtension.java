@@ -21,6 +21,7 @@ import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -736,7 +737,7 @@ public class SimpleExtension {
                   try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
                     return load(path, stream);
                   } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new UncheckedIOException(e);
                   }
                 })
             .collect(Collectors.toList());
@@ -752,7 +753,7 @@ public class SimpleExtension {
       ExtensionSignatures doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
       return buildExtensionCollection(namespace, doc);
     } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 
@@ -764,7 +765,7 @@ public class SimpleExtension {
     } catch (RuntimeException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new RuntimeException("Failure while parsing " + namespace, ex);
+      throw new IllegalStateException("Failure while parsing " + namespace, ex);
     }
   }
 

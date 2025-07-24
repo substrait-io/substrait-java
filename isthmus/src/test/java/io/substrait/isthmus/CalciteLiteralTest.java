@@ -1,6 +1,6 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlToSubstrait.EXTENSION_COLLECTION;
+import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
