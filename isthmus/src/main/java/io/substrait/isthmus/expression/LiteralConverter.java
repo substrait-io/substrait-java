@@ -11,9 +11,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
@@ -56,23 +53,6 @@ public class LiteralConverter {
           .appendLiteral(' ')
           .append(CALCITE_LOCAL_TIME_FORMATTER)
           .toFormatter();
-
-  private static final DateTimeFormatter CALCITE_TIMESTAMP_WITH_ZONE_FORMATTER =
-      new DateTimeFormatterBuilder()
-          .parseCaseInsensitive()
-          .append(CALCITE_LOCAL_DATE_FORMATTER)
-          .appendLiteral(' ')
-          .append(CALCITE_LOCAL_TIME_FORMATTER)
-          .appendLiteral(' ')
-          .appendZoneId()
-          .toFormatter();
-
-  private static final ZoneOffset SYSTEM_TIMEZONE =
-      OffsetDateTime.now(ZoneId.systemDefault()).getOffset();
-
-  private Expression nullOf(RexLiteral literal) {
-    return null;
-  }
 
   private static BigDecimal i(RexLiteral literal) {
     return bd(literal).setScale(0, RoundingMode.HALF_UP);

@@ -502,15 +502,6 @@ public class SubstraitRelNodeConverter
     return relBuilder.push(relNode).project(rexList).build();
   }
 
-  private void checkRexInputRefOnly(RexNode rexNode, String context, String aggName) {
-    if (!(rexNode instanceof RexInputRef)) {
-      throw new UnsupportedOperationException(
-          String.format(
-              "Compound expression %s in %s of agg function %s is not implemented yet.",
-              rexNode, context, aggName));
-    }
-  }
-
   public static class Context implements VisitationContext {
     public static Context newContext() {
       return new Context();
