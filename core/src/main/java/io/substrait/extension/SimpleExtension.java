@@ -226,6 +226,15 @@ public class SimpleExtension {
   }
 
   public abstract static class Function {
+    private final Supplier<FunctionAnchor> anchorSupplier =
+        Util.memoize(() -> FunctionAnchor.of(uri(), key()));
+    private final Supplier<String> keySupplier = Util.memoize(() -> constructKey(name(), args()));
+    private final Supplier<List<Argument>> requiredArgsSupplier =
+        Util.memoize(
+            () -> {
+              return args().stream().filter(Argument::required).collect(Collectors.toList());
+            });
+
     @Value.Default
     public String name() {
       // we can't use null detection here since we initially construct this with a parent name.
@@ -274,15 +283,6 @@ public class SimpleExtension {
 
     @JsonProperty(value = "return")
     public abstract TypeExpression returnType();
-
-    private final Supplier<FunctionAnchor> anchorSupplier =
-        Util.memoize(() -> FunctionAnchor.of(uri(), key()));
-    private final Supplier<String> keySupplier = Util.memoize(() -> constructKey(name(), args()));
-    private final Supplier<List<Argument>> requiredArgsSupplier =
-        Util.memoize(
-            () -> {
-              return args().stream().filter(Argument::required).collect(Collectors.toList());
-            });
 
     public static String constructKeyFromTypes(
         String name, List<io.substrait.type.Type> arguments) {
@@ -515,6 +515,9 @@ public class SimpleExtension {
   @JsonSerialize(as = ImmutableSimpleExtension.Type.class)
   @Value.Immutable
   public abstract static class Type {
+    private final Supplier<TypeAnchor> anchorSupplier =
+        Util.memoize(() -> TypeAnchor.of(uri(), name()));
+
     public abstract String name();
 
     @JacksonInject(SimpleExtension.URI_LOCATOR_KEY)
@@ -526,9 +529,6 @@ public class SimpleExtension {
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
     }
-
-    private final Supplier<TypeAnchor> anchorSupplier =
-        Util.memoize(() -> TypeAnchor.of(uri(), name()));
   }
 
   @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
@@ -567,19 +567,6 @@ public class SimpleExtension {
 
   @Value.Immutable
   public abstract static class ExtensionCollection {
-
-    public abstract List<Type> types();
-
-    public abstract List<ScalarFunctionVariant> scalarFunctions();
-
-    public abstract List<AggregateFunctionVariant> aggregateFunctions();
-
-    public abstract List<WindowFunctionVariant> windowFunctions();
-
-    public static ImmutableSimpleExtension.ExtensionCollection.Builder builder() {
-      return ImmutableSimpleExtension.ExtensionCollection.builder();
-    }
-
     private final Supplier<Set<String>> namespaceSupplier =
         Util.memoize(
             () -> {
@@ -623,6 +610,18 @@ public class SimpleExtension {
                       Collectors.toMap(
                           Function::getAnchor, java.util.function.Function.identity()));
             });
+
+    public abstract List<Type> types();
+
+    public abstract List<ScalarFunctionVariant> scalarFunctions();
+
+    public abstract List<AggregateFunctionVariant> aggregateFunctions();
+
+    public abstract List<WindowFunctionVariant> windowFunctions();
+
+    public static ImmutableSimpleExtension.ExtensionCollection.Builder builder() {
+      return ImmutableSimpleExtension.ExtensionCollection.builder();
+    }
 
     public Type getType(TypeAnchor anchor) {
       Type type = typeLookup.get().get(anchor);

@@ -29,12 +29,6 @@ import org.apache.calcite.util.TimestampString;
 public class LiteralConverter {
   // TODO: Handle conversion of user-defined type literals
 
-  private final TypeConverter typeConverter;
-
-  public LiteralConverter(TypeConverter typeConverter) {
-    this.typeConverter = typeConverter;
-  }
-
   static final DateTimeFormatter CALCITE_LOCAL_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
   static final DateTimeFormatter CALCITE_LOCAL_TIME_FORMATTER =
       new DateTimeFormatterBuilder()
@@ -53,6 +47,12 @@ public class LiteralConverter {
           .appendLiteral(' ')
           .append(CALCITE_LOCAL_TIME_FORMATTER)
           .toFormatter();
+
+  private final TypeConverter typeConverter;
+
+  public LiteralConverter(TypeConverter typeConverter) {
+    this.typeConverter = typeConverter;
+  }
 
   private static BigDecimal i(RexLiteral literal) {
     return bd(literal).setScale(0, RoundingMode.HALF_UP);

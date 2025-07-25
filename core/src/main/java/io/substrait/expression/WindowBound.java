@@ -5,6 +5,9 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface WindowBound {
 
+  CurrentRow CURRENT_ROW = ImmutableWindowBound.CurrentRow.builder().build();
+  Unbounded UNBOUNDED = ImmutableWindowBound.Unbounded.builder().build();
+
   interface WindowBoundVisitor<R, E extends Throwable> {
     R visit(Preceding preceding);
 
@@ -16,9 +19,6 @@ public interface WindowBound {
   }
 
   <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor);
-
-  CurrentRow CURRENT_ROW = ImmutableWindowBound.CurrentRow.builder().build();
-  Unbounded UNBOUNDED = ImmutableWindowBound.Unbounded.builder().build();
 
   @Value.Immutable
   abstract class Preceding implements WindowBound {

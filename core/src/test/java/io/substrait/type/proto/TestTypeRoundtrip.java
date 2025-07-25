@@ -11,6 +11,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 public class TestTypeRoundtrip {
 
+  private ExtensionCollector lookup = new ExtensionCollector();
+  private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
+
+  private ProtoTypeConverter protoTypeConverter =
+      new ProtoTypeConverter(lookup, SimpleExtension.ExtensionCollection.builder().build());
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   public void roundtrip(boolean n) {
@@ -41,12 +47,6 @@ public class TestTypeRoundtrip {
     t(creator(n).list(creator(n).TIME));
     t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));
   }
-
-  private ExtensionCollector lookup = new ExtensionCollector();
-  private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
-
-  private ProtoTypeConverter protoTypeConverter =
-      new ProtoTypeConverter(lookup, SimpleExtension.ExtensionCollection.builder().build());
 
   /*
    * Test a type pojo -> proto -> pojo roundtrip.

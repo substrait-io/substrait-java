@@ -11,6 +11,27 @@ public class DecimalUtil {
   private static final byte zero = 0;
   private static final byte minus_one = -1;
 
+  private static final long[] POWER_OF_10 = {
+    1l,
+    10l,
+    100l,
+    1000l,
+    10_000l,
+    100_000l,
+    1_000_000l,
+    10_000_000l,
+    100_000_000l,
+    1_000_000_000l,
+    10_000_000_000l,
+    100_000_000_000l,
+    1_000_000_000_000l,
+    10_000_000_000_000l,
+    100_000_000_000_000l,
+    1_000_000_000_000_000l,
+    10_000_000_000_000_000l,
+    100_000_000_000_000_000l // long max = 9,223,372,036,854,775,807
+  };
+
   /**
    * Given an input of little-endian twos-complement with byeWidth bytes of a scaled big integer,
    * convert it back to BigDecimal. This method is the opposite of encodeDecimalIntoBytes()
@@ -63,27 +84,6 @@ public class DecimalUtil {
     }
     return encodedBytes;
   }
-
-  private static final long[] POWER_OF_10 = {
-    1l,
-    10l,
-    100l,
-    1000l,
-    10_000l,
-    100_000l,
-    1_000_000l,
-    10_000_000l,
-    100_000_000l,
-    1_000_000_000l,
-    10_000_000_000l,
-    100_000_000_000l,
-    1_000_000_000_000l,
-    10_000_000_000_000l,
-    100_000_000_000_000l,
-    1_000_000_000_000_000l,
-    10_000_000_000_000_000l,
-    100_000_000_000_000_000l // long max = 9,223,372,036,854,775,807
-  };
 
   private static BigDecimal powerOfTen(int scale) {
     if (scale < POWER_OF_10.length) {

@@ -57,6 +57,8 @@ import java.util.stream.Collectors;
 public class SubstraitStringify extends ParentStringify
     implements RelVisitor<String, EmptyVisitationContext, RuntimeException> {
 
+  private boolean showRemap = false;
+
   public SubstraitStringify() {
     super(0);
   }
@@ -97,8 +99,6 @@ public class SubstraitStringify extends ParentStringify
     explanation.addAll(Arrays.asList(rel.accept(s, EmptyVisitationContext.INSTANCE).split("\n")));
     return explanation;
   }
-
-  private boolean showRemap = false;
 
   private List<String> fieldList(List<io.substrait.type.Type> fields) {
     return fields.stream().map(t -> t.accept(new TypeStringify(0))).collect(Collectors.toList());
