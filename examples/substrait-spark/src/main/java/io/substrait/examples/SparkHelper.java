@@ -5,8 +5,6 @@ import org.apache.spark.sql.SparkSession;
 /** Collection of helper fns */
 public final class SparkHelper {
 
-  private SparkHelper() {}
-
   /** Vehicles table */
   public static final String VEHICLE_TABLE = "vehicles";
 
@@ -21,6 +19,8 @@ public final class SparkHelper {
 
   /** In-container data location */
   public static final String ROOT_DIR = "/opt/spark-data";
+
+  private SparkHelper() {}
 
   /**
    * Connects to the local spark cluister
