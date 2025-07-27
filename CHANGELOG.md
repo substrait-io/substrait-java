@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.62.1](https://github.com/substrait-io/substrait-java/compare/v0.62.0...v0.62.1) (2025-07-27)
+
+### Bug Fixes
+
+* **isthmus-cli:** fix tpch_smoke.sh test script ([#450](https://github.com/substrait-io/substrait-java/issues/450)) ([7906dae](https://github.com/substrait-io/substrait-java/commit/7906dae271faccccd11cd0d957c8ae9e7c4d0488))
+
 ## [0.62.0](https://github.com/substrait-io/substrait-java/compare/v0.61.0...v0.62.0) (2025-07-13)
 
 ### ⚠ BREAKING CHANGES
