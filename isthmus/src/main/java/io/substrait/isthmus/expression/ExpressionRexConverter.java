@@ -3,7 +3,6 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
-import com.google.common.collect.TreeRangeMap;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -599,7 +598,7 @@ public class ExpressionRexConverter
 
       final RexInputRef rexInputRef;
       if (segment instanceof FieldReference.StructField) {
-        FieldReference.StructField field = (FieldReference.StructField) segment;
+        final FieldReference.StructField field = (FieldReference.StructField) segment;
         rexInputRef =
             new RexInputRef(field.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
       } else {
@@ -612,29 +611,19 @@ public class ExpressionRexConverter
 
       final RexNode rexInputRef;
       if (segment instanceof FieldReference.StructField) {
-        FieldReference.StructField field = (FieldReference.StructField) segment;
+        final FieldReference.StructField field = (FieldReference.StructField) segment;
 
-        final RelNode[] parents = context.getParentRelation(expr.outerReferenceStepsOut().get());
-        final RangeMap<Integer, RelNode> fieldRangeMap = TreeRangeMap.create();
+        final RangeMap<Integer, RelDataType> fieldRangeMap =
+            context.getOuterRowTypeRangeMap(expr.outerReferenceStepsOut().get());
+        final Range<Integer> range = fieldRangeMap.getEntry(field.offset()).getKey();
+        final int fieldOffset = field.offset() - range.lowerEndpoint();
 
-        int begin = 0;
-        int fieldOffset = field.offset();
-        for (final RelNode parent : parents) {
-          final int end = begin + parent.getRowType().getFieldCount();
-          final Range<Integer> range = Range.closedOpen(begin, end);
-          fieldRangeMap.put(range, parent);
-          if (range.contains(field.offset())) {
-            fieldOffset = fieldOffset - range.lowerEndpoint();
-          }
-          begin = end;
-        }
-
-        CorrelationId correlationId = relNodeConverter.getRelBuilder().getCluster().createCorrel();
+        final CorrelationId correlationId =
+            relNodeConverter.getRelBuilder().getCluster().createCorrel();
         context.addCorrelationId(expr.outerReferenceStepsOut().get(), correlationId);
         rexInputRef =
             rexBuilder.makeFieldAccess(
-                rexBuilder.makeCorrel(
-                    fieldRangeMap.get(field.offset()).getRowType(), correlationId),
+                rexBuilder.makeCorrel(fieldRangeMap.get(field.offset()), correlationId),
                 fieldOffset);
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);

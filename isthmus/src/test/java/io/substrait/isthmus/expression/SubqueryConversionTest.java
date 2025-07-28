@@ -6,6 +6,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.PlanTestBase;
 import io.substrait.isthmus.SubstraitToCalcite;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
+import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.TypeCreator;
@@ -15,6 +16,24 @@ import org.junit.jupiter.api.Test;
 
 class SubqueryConversionTest extends PlanTestBase {
   protected final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
+
+  private final Rel customerTableScan =
+      substraitBuilder.namedScan(
+          List.of("customer"),
+          List.of("c_custkey", "c_nationkey"),
+          List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64));
+
+  private final NamedScan orderTableScan =
+      substraitBuilder.namedScan(
+          List.of("orders"),
+          List.of("o_orderkey", "o_custkey"),
+          List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64));
+
+  private final NamedScan nationTableScan =
+      substraitBuilder.namedScan(
+          List.of("nation"),
+          List.of("n_nationkey", "n_name"),
+          List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING));
 
   @Test
   void testOuterFieldReferenceOneStep() {
@@ -44,16 +63,10 @@ class SubqueryConversionTest extends PlanTestBase {
                                         // orders.o_custkey
                                         FieldReference.newRootStructOuterReference(
                                             1, TypeCreator.REQUIRED.I64, 1)),
-                                substraitBuilder.namedScan(
-                                    List.of("customer"),
-                                    List.of("c_custkey", "c_nationkey"),
-                                    List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64)))),
+                                customerTableScan)),
                         TypeCreator.NULLABLE.I64)),
             Remap.of(List.of(2, 3)),
-            substraitBuilder.namedScan(
-                List.of("orders"),
-                List.of("o_orderkey", "o_custkey"),
-                List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64)));
+            orderTableScan);
 
     final RelNode calciteRel = converter.convert(root);
 
@@ -127,24 +140,12 @@ class SubqueryConversionTest extends PlanTestBase {
                                                                     1,
                                                                     TypeCreator.REQUIRED.I64,
                                                                     2)),
-                                                    substraitBuilder.namedScan(
-                                                        List.of("customer"),
-                                                        List.of("c_custkey", "c_nationkey"),
-                                                        List.of(
-                                                            TypeCreator.REQUIRED.I64,
-                                                            TypeCreator.REQUIRED.I64)))),
+                                                    customerTableScan)),
                                             TypeCreator.NULLABLE.I64)),
-                                substraitBuilder.namedScan(
-                                    List.of("nation"),
-                                    List.of("n_nationkey", "n_name"),
-                                    List.of(
-                                        TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING)))),
+                                nationTableScan)),
                         TypeCreator.NULLABLE.STRING)),
             Remap.of(List.of(2, 3)),
-            substraitBuilder.namedScan(
-                List.of("orders"),
-                List.of("o_orderkey", "o_custkey"),
-                List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64)));
+            orderTableScan);
 
     final RelNode calciteRel = converter.convert(root);
 
@@ -217,24 +218,12 @@ class SubqueryConversionTest extends PlanTestBase {
                                                         // orders.o_custkey
                                                         FieldReference.newRootStructOuterReference(
                                                             1, TypeCreator.REQUIRED.I64, 2)),
-                                                substraitBuilder.namedScan(
-                                                    List.of("customer"),
-                                                    List.of("c_custkey", "c_nationkey"),
-                                                    List.of(
-                                                        TypeCreator.REQUIRED.I64,
-                                                        TypeCreator.REQUIRED.I64)))),
+                                                customerTableScan)),
                                         substraitBuilder.fieldReference(input2, 0)),
-                                substraitBuilder.namedScan(
-                                    List.of("nation"),
-                                    List.of("n_nationkey", "n_name"),
-                                    List.of(
-                                        TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING)))),
+                                nationTableScan)),
                         TypeCreator.NULLABLE.STRING)),
             Remap.of(List.of(2, 3)),
-            substraitBuilder.namedScan(
-                List.of("orders"),
-                List.of("o_orderkey", "o_custkey"),
-                List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64)));
+            orderTableScan);
 
     final RelNode calciteRel = converter.convert(root);
 
@@ -323,23 +312,11 @@ class SubqueryConversionTest extends PlanTestBase {
                                                                     0,
                                                                     TypeCreator.REQUIRED.I64,
                                                                     1))),
-                                                substraitBuilder.namedScan(
-                                                    List.of("customer"),
-                                                    List.of("c_custkey", "c_nationkey"),
-                                                    List.of(
-                                                        TypeCreator.REQUIRED.I64,
-                                                        TypeCreator.REQUIRED.I64))))),
-                                substraitBuilder.namedScan(
-                                    List.of("nation"),
-                                    List.of("n_nationkey", "n_name"),
-                                    List.of(
-                                        TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING)))),
+                                                customerTableScan))),
+                                nationTableScan)),
                         TypeCreator.NULLABLE.STRING)),
             Remap.of(List.of(2, 3)),
-            substraitBuilder.namedScan(
-                List.of("orders"),
-                List.of("o_orderkey", "o_custkey"),
-                List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64)));
+            orderTableScan);
 
     final RelNode calciteRel = converter.convert(root);
 

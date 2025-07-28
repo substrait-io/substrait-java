@@ -720,9 +720,9 @@ public class SubstraitBuilder {
     return Expression.ScalarSubquery.builder().input(input).type(type).build();
   }
 
-  public Expression exists(Rel project) {
+  public Expression exists(Rel rel) {
     return Expression.SetPredicate.builder()
-        .tuples(project)
+        .tuples(rel)
         .predicateOp(PredicateOp.PREDICATE_OP_EXISTS)
         .build();
   }
