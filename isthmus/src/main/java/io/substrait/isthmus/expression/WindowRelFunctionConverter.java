@@ -83,7 +83,7 @@ public class WindowRelFunctionConverter
       RexWindowBound upperBound,
       boolean isRows,
       Function<RexNode, Expression> topLevelConverter) {
-    var aggFunction = (SqlAggFunction) winAggCall.getOperator();
+    SqlAggFunction aggFunction = (SqlAggFunction) winAggCall.getOperator();
 
     SqlAggFunction lookupFunction =
         AggregateFunctions.toSubstraitAggVariant(aggFunction).orElse(aggFunction);
@@ -95,7 +95,8 @@ public class WindowRelFunctionConverter
       return Optional.empty();
     }
 
-    var wrapped = new WrappedWindowRelCall(winAggCall, lowerBound, upperBound, isRows);
+    WrappedWindowRelCall wrapped =
+        new WrappedWindowRelCall(winAggCall, lowerBound, upperBound, isRows);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 

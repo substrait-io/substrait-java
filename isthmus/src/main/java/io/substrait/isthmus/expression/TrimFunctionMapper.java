@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -65,9 +66,9 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
   private final Map<Trim, List<ScalarFunctionVariant>> trimFunctions;
 
   public TrimFunctionMapper(List<ScalarFunctionVariant> functions) {
-    var trims = new HashMap<Trim, List<ScalarFunctionVariant>>();
-    for (var t : Trim.values()) {
-      var funcs = findFunction(t.substraitName(), functions);
+    Map<Trim, List<ScalarFunctionVariant>> trims = new HashMap<>();
+    for (Trim t : Trim.values()) {
+      List<ScalarFunctionVariant> funcs = findFunction(t.substraitName(), functions);
       if (!funcs.isEmpty()) {
         trims.put(t, funcs);
       }
@@ -88,29 +89,29 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
       return Optional.empty();
     }
 
-    var trimType = getTrimCallType(call);
+    Optional<Trim> trimType = getTrimCallType(call);
 
     return trimType.map(
         trim -> {
-          var functions = trimFunctions.getOrDefault(trim, List.of());
+          List<ScalarFunctionVariant> functions = trimFunctions.getOrDefault(trim, List.of());
           if (functions.isEmpty()) {
             return null;
           }
 
-          var name = trim.substraitName();
-          var operands =
+          String name = trim.substraitName();
+          List<RexNode> operands =
               call.getOperands().stream().skip(1).collect(Collectors.toUnmodifiableList());
           return new SubstraitFunctionMapping(name, operands, functions);
         });
   }
 
   private Optional<Trim> getTrimCallType(RexCall call) {
-    var trimType = call.operands.get(0);
+    RexNode trimType = call.operands.get(0);
     if (trimType.getType().getSqlTypeName() != SqlTypeName.SYMBOL) {
       return Optional.empty();
     }
 
-    var value = ((RexLiteral) trimType).getValue();
+    Comparable value = ((RexLiteral) trimType).getValue();
     if (!(value instanceof SqlTrimFunction.Flag)) {
       return Optional.empty();
     }
@@ -121,14 +122,14 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
   @Override
   public Optional<List<FunctionArg>> getExpressionArguments(
       final Expression.ScalarFunctionInvocation expression) {
-    var name = expression.declaration().name();
+    String name = expression.declaration().name();
     return Trim.fromSubstraitName(name)
         .map(Trim::flag)
         .map(SqlTrimFunction.Flag::name)
         .map(EnumArg::of)
         .map(
             trimTypeArg -> {
-              var args = new LinkedList<>(expression.arguments());
+              LinkedList args = new LinkedList<>(expression.arguments());
               args.addFirst(trimTypeArg);
               return args;
             });

@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
+import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
@@ -13,11 +15,16 @@ import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.Aggregate.Grouping;
+import io.substrait.relation.Aggregate.Measure;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableFetch;
+import io.substrait.relation.ImmutableMeasure.Builder;
 import io.substrait.relation.Join;
+import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
@@ -26,6 +33,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,13 +79,13 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
     this.typeConverter = TypeConverter.DEFAULT;
-    var converters = new ArrayList<CallConverter>();
+    ArrayList<CallConverter> converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.defaults(typeConverter));
     converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-    var windowFunctionConverter =
+    WindowFunctionConverter windowFunctionConverter =
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
     this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
@@ -91,7 +99,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter,
       FeatureBoard features) {
-    var converters = new ArrayList<CallConverter>();
+    ArrayList<CallConverter> converters = new ArrayList<CallConverter>();
     converters.addAll(CallConverters.defaults(typeConverter));
     converters.add(scalarFunctionConverter);
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
@@ -108,7 +116,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.TableScan scan) {
-    var type = typeConverter.toNamedStruct(scan.getRowType());
+    NamedStruct type = typeConverter.toNamedStruct(scan.getRowType());
     return NamedScan.builder()
         .initialSchema(type)
         .addAllNames(scan.getTable().getQualifiedName())
@@ -122,7 +130,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Values values) {
-    var type = typeConverter.toNamedStruct(values.getRowType());
+    NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
     }
@@ -132,7 +140,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         values.getTuples().stream()
             .map(
                 list -> {
-                  var fields =
+                  List<Literal> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
@@ -144,7 +152,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Filter filter) {
-    var condition = toExpression(filter.getCondition());
+    Expression condition = toExpression(filter.getCondition());
     return Filter.builder().condition(condition).input(apply(filter.getInput())).build();
   }
 
@@ -155,7 +163,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
-    var expressions =
+    List<Expression> expressions =
         project.getProjects().stream()
             .map(this::toExpression)
             .collect(java.util.stream.Collectors.toList());
@@ -171,10 +179,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Join join) {
-    var left = apply(join.getLeft());
-    var right = apply(join.getRight());
-    var condition = toExpression(join.getCondition());
-    var joinType = asJoinType(join);
+    Rel left = apply(join.getLeft());
+    Rel right = apply(join.getRight());
+    Expression condition = toExpression(join.getCondition());
+    JoinType joinType = asJoinType(join);
 
     // An INNER JOIN with a join condition of TRUE can be encoded as a Substrait Cross relation
     if (joinType == Join.JoinType.INNER && TRUE.equals(condition)) {
@@ -211,7 +219,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // right input of correlated-join is similar to a correlated sub-query
     apply(correlate.getRight());
 
-    var joinType = asJoinType(correlate);
+    JoinType joinType = asJoinType(correlate);
     return super.visit(correlate);
   }
 
@@ -229,29 +237,29 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Union union) {
-    var inputs = apply(union.getInputs());
-    var setOp = union.all ? Set.SetOp.UNION_ALL : Set.SetOp.UNION_DISTINCT;
+    List<Rel> inputs = apply(union.getInputs());
+    Set.SetOp setOp = union.all ? Set.SetOp.UNION_ALL : Set.SetOp.UNION_DISTINCT;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Intersect intersect) {
-    var inputs = apply(intersect.getInputs());
-    var setOp =
+    List<Rel> inputs = apply(intersect.getInputs());
+    Set.SetOp setOp =
         intersect.all ? Set.SetOp.INTERSECTION_MULTISET_ALL : Set.SetOp.INTERSECTION_MULTISET;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Minus minus) {
-    var inputs = apply(minus.getInputs());
-    var setOp = minus.all ? Set.SetOp.MINUS_PRIMARY_ALL : Set.SetOp.MINUS_PRIMARY;
+    List<Rel> inputs = apply(minus.getInputs());
+    Set.SetOp setOp = minus.all ? Set.SetOp.MINUS_PRIMARY_ALL : Set.SetOp.MINUS_PRIMARY;
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Aggregate aggregate) {
-    var input = apply(aggregate.getInput());
+    Rel input = apply(aggregate.getInput());
     Stream<ImmutableBitSet> sets;
     if (aggregate.groupSets != null) {
       sets = aggregate.groupSets.stream();
@@ -259,10 +267,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       sets = Stream.of(aggregate.getGroupSet());
     }
 
-    var groupings =
+    List<Grouping> groupings =
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
-    var aggCalls =
+    List<Measure> aggCalls =
         aggregate.getAggCallList().stream()
             .map(c -> fromAggCall(aggregate.getInput(), input.getRecordType(), c))
             .collect(Collectors.toList());
@@ -283,13 +291,13 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {
-    var invocation =
+    Optional<AggregateFunctionInvocation> invocation =
         aggregateFunctionConverter.convert(
             input, inputType, call, t -> t.accept(rexExpressionConverter));
     if (invocation.isEmpty()) {
       throw new UnsupportedOperationException("Unable to find binding for call " + call);
     }
-    var builder = Aggregate.Measure.builder().function(invocation.get());
+    Builder builder = Aggregate.Measure.builder().function(invocation.get());
     if (call.filterArg != -1) {
       builder.preMeasureFilter(FieldReference.newRootStructReference(call.filterArg, inputType));
     }
@@ -327,7 +335,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
               .map(r -> OptionalLong.of(asLong(r)))
               .orElse(OptionalLong.empty());
 
-      var builder = Fetch.builder().input(output).offset(offset).count(count);
+      ImmutableFetch.Builder builder = Fetch.builder().input(output).offset(offset).count(count);
       output = builder.build();
     }
 
@@ -335,7 +343,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   private long asLong(RexNode rex) {
-    var expr = toExpression(rex);
+    Expression expr = toExpression(rex);
     if (expr instanceof Expression.I64Literal) {
       return ((Expression.I64Literal) expr).value();
     } else if (expr instanceof Expression.I32Literal) {

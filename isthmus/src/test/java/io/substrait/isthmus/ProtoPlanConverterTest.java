@@ -66,7 +66,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   @Test
   public void crossJoin() throws IOException, SqlParseException {
     int[] counter = new int[1];
-    var crossJoinCountingVisitor =
+    RelCopyOnWriteVisitor<RuntimeException> crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
           @Override
           public Optional<Rel> visit(Cross cross, EmptyVisitationContext context)
@@ -75,7 +75,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
             return super.visit(cross, context);
           }
         };
-    var featureBoard = ImmutableFeatureBoard.builder().build();
+    ImmutableFeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
 
     String query1 =
         "select\n"

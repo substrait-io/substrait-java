@@ -42,7 +42,10 @@ import io.substrait.expression.Expression.VarCharLiteral;
 import io.substrait.expression.Expression.WindowFunctionInvocation;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionArg;
+import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.List;
 
 /** ExpressionStringify gives a simple debug text output for Expressions */
 public class ExpressionStringify extends ParentStringify
@@ -203,16 +206,16 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(ScalarFunctionInvocation expr, EmptyVisitationContext context)
       throws RuntimeException {
-    var sb = new StringBuilder("<ScalarFn>");
+    StringBuilder sb = new StringBuilder("<ScalarFn>");
 
     sb.append(expr.declaration());
     // sb.append(" (");
-    var args = expr.arguments();
-    for (var i = 0; i < args.size(); i++) {
-      var arg = args.get(i);
+    List<FunctionArg> args = expr.arguments();
+    for (int i = 0; i < args.size(); i++) {
+      FunctionArg arg = args.get(i);
       sb.append(getContinuationIndentString());
       sb.append("arg" + i + " = ");
-      var funcArgVisitor = new FunctionArgStringify(indent);
+      FunctionArgStringify funcArgVisitor = new FunctionArgStringify(indent);
 
       sb.append(arg.accept(expr.declaration(), i, funcArgVisitor, context));
       sb.append(" ");
@@ -223,14 +226,14 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(WindowFunctionInvocation expr, EmptyVisitationContext context)
       throws RuntimeException {
-    var sb = new StringBuilder("WindowFunctionInvocation#");
+    StringBuilder sb = new StringBuilder("WindowFunctionInvocation#");
 
     return sb.toString();
   }
 
   @Override
   public String visit(Cast expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("<Cast#");
+    StringBuilder sb = new StringBuilder("<Cast#");
 
     sb.append(expr.getType().accept(new TypeStringify(this.indent))).append(" ");
     sb.append(expr.input().accept(this, context)).append(" ");
@@ -241,14 +244,14 @@ public class ExpressionStringify extends ParentStringify
 
   @Override
   public String visit(SingleOrList expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("SingleOrList#");
+    StringBuilder sb = new StringBuilder("SingleOrList#");
 
     return sb.toString();
   }
 
   @Override
   public String visit(MultiOrList expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("Cast#");
+    StringBuilder sb = new StringBuilder("Cast#");
 
     return sb.toString();
   }
@@ -256,7 +259,7 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(FieldReference expr, EmptyVisitationContext context) throws RuntimeException {
     StringBuilder sb = new StringBuilder("FieldRef#");
-    var type = expr.getType();
+    Type type = expr.getType();
     // sb.append(expr.inputExpression());
     sb.append("/").append(type.accept(new TypeStringify(indent))).append("/");
     expr.segments()
@@ -270,21 +273,21 @@ public class ExpressionStringify extends ParentStringify
 
   @Override
   public String visit(SetPredicate expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("SetPredicate#");
+    StringBuilder sb = new StringBuilder("SetPredicate#");
 
     return sb.toString();
   }
 
   @Override
   public String visit(ScalarSubquery expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("ScalarSubquery#");
+    StringBuilder sb = new StringBuilder("ScalarSubquery#");
 
     return sb.toString();
   }
 
   @Override
   public String visit(InPredicate expr, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("InPredicate#");
+    StringBuilder sb = new StringBuilder("InPredicate#");
 
     return sb.toString();
   }

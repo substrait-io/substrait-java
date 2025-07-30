@@ -12,6 +12,8 @@ import io.substrait.spark.logical.ToSubstraitRel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 
@@ -53,7 +55,7 @@ public class SparkSQL implements App.Action {
               + " GROUP BY vehicles.colour"
               + " ORDER BY count(*)";
 
-      var result = spark.sql(sqlQuery);
+      Dataset<Row> result = spark.sql(sqlQuery);
       result.show();
 
       LogicalPlan logical = result.logicalPlan();

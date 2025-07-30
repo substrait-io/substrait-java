@@ -10,7 +10,7 @@ public class SortFieldConverter {
   /** Converts a {@link RexFieldCollation} to a {@link Expression.SortField}. */
   public static Expression.SortField toSortField(
       RexFieldCollation rexFieldCollation, RexExpressionConverter rexExpressionConverter) {
-    var expr = rexFieldCollation.left.accept(rexExpressionConverter);
+    Expression expr = rexFieldCollation.left.accept(rexExpressionConverter);
     Expression.SortDirection direction = asSortDirection(rexFieldCollation);
 
     return Expression.SortField.builder().expr(expr).direction(direction).build();

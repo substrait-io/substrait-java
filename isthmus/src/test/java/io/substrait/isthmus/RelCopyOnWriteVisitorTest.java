@@ -135,7 +135,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     assertPlanRoundtrip(newPlan);
 
     // convert newPlan back to sql
-    var pojoRel = newPlan.getRoots().get(0).getInput();
+    Rel pojoRel = newPlan.getRoots().get(0).getInput();
     RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, TPCH_CATALOG);
     String newSql = SubstraitSqlDialect.toSql(relnodeRoot).getSql();
     assertTrue(newSql.toUpperCase().contains("APPROX_COUNT_DISTINCT"));

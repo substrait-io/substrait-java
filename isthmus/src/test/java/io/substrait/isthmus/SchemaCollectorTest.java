@@ -71,7 +71,7 @@ public class SchemaCollectorTest extends PlanTestBase {
                 List.of("level1", "level2a", "level3", "t1"), List.of("col1"), List.of(N.I64)),
             b.namedScan(List.of("level1", "level2b", "t2"), List.of("col2"), List.of(N.I32)));
 
-    var rootSchema = schemaCollector.toSchema(rel);
+    CalciteSchema rootSchema = schemaCollector.toSchema(rel);
     CalciteSchema level1 = rootSchema.getSubSchema("level1", false);
 
     CalciteSchema level2a = level1.getSubSchema("level2a", false);

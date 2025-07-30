@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -16,7 +18,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
 
   private static void validateOuterRef(
       Map<RexFieldAccess, Integer> fieldAccessDepthMap, String refName, String colName, int depth) {
-    var entry =
+    Optional<Entry<RexFieldAccess, Integer>> entry =
         fieldAccessDepthMap.entrySet().stream()
             .filter(f -> f.getKey().getReferenceExpr().toString().equals(refName))
             .filter(f -> f.getKey().getField().getName().equals(colName))
@@ -27,7 +29,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
 
   private static Map<RexFieldAccess, Integer> buildOuterFieldRefMap(RelRoot root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
-    var fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
+    Map<RexFieldAccess, Integer> fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
     Assertions.assertEquals(0, fieldAccessDepthMap.size());
     resolver.apply(root.rel);
     return fieldAccessDepthMap;
@@ -57,7 +59,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     validateOuterRef(fieldAccessDepthMap, "$cor0", "SS_ITEM_SK", 1);
 
     // TODO validate end to end conversion
-    var sE2E = new SqlToSubstrait();
+    SqlToSubstrait sE2E = new SqlToSubstrait();
     Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> sE2E.execute(sql, TPCDS_CATALOG),

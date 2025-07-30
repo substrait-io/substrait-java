@@ -10,6 +10,7 @@ import io.substrait.type.StringTypeVisitor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -72,8 +73,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitCall(RexCall call) {
-    for (var c : callConverters) {
-      var out = c.convert(call, rexNode -> rexNode.accept(this));
+    for (CallConverter c : callConverters) {
+      Optional<Expression> out = c.convert(call, rexNode -> rexNode.accept(this));
       if (out.isPresent()) {
         return out.get();
       }

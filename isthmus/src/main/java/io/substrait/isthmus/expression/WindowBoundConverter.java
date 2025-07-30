@@ -3,6 +3,7 @@ package io.substrait.isthmus.expression;
 import io.substrait.expression.WindowBound;
 import java.math.BigDecimal;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -16,10 +17,10 @@ public class WindowBoundConverter {
     if (rexWindowBound.isUnbounded()) {
       return WindowBound.UNBOUNDED;
     } else {
-      var node = rexWindowBound.getOffset();
+      RexNode node = rexWindowBound.getOffset();
 
       if (node instanceof RexLiteral) {
-        var literal = (RexLiteral) node;
+        RexLiteral literal = (RexLiteral) node;
         if (SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
           BigDecimal offset = (BigDecimal) literal.getValue4();
 

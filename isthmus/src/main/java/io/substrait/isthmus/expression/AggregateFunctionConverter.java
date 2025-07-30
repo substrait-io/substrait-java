@@ -81,7 +81,7 @@ public class AggregateFunctionConverter
       AggregateCall call,
       Function<RexNode, Expression> topLevelConverter) {
 
-    var m = getFunctionFinder(call);
+    FunctionFinder m = getFunctionFinder(call);
     if (m == null) {
       return Optional.empty();
     }
@@ -89,7 +89,7 @@ public class AggregateFunctionConverter
       return Optional.empty();
     }
 
-    var wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
+    WrappedAggregateCall wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 

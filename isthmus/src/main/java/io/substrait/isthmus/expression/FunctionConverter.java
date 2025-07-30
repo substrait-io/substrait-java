@@ -3,7 +3,6 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
@@ -11,13 +10,17 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ToTypeString;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
+import io.substrait.isthmus.expression.FunctionMappings.Sig;
+import io.substrait.isthmus.expression.FunctionMappings.TypeBasedResolver;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +28,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -64,41 +68,42 @@ public abstract class FunctionConverter<
       TypeConverter typeConverter) {
     this.rexBuilder = new RexBuilder(typeFactory);
     this.typeConverter = typeConverter;
-    var signatures =
-        new ArrayList<FunctionMappings.Sig>(getSigs().size() + additionalSignatures.size());
+    List<FunctionMappings.Sig> signatures =
+        new ArrayList<>(getSigs().size() + additionalSignatures.size());
     signatures.addAll(additionalSignatures);
     signatures.addAll(getSigs());
     this.typeFactory = typeFactory;
     this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.create();
 
-    var alm = ArrayListMultimap.<String, F>create();
-    for (var f : functions) {
+    ArrayListMultimap<String, F> alm = ArrayListMultimap.<String, F>create();
+    for (F f : functions) {
       alm.put(f.name().toLowerCase(Locale.ROOT), f);
     }
 
-    ListMultimap<String, FunctionMappings.Sig> calciteOperators =
+    Multimap<String, FunctionMappings.Sig> calciteOperators =
         signatures.stream()
             .collect(
                 Multimaps.toMultimap(
                     FunctionMappings.Sig::name, Function.identity(), ArrayListMultimap::create));
-    var matcherMap = new IdentityHashMap<SqlOperator, FunctionFinder>();
+    IdentityHashMap<SqlOperator, FunctionFinder> matcherMap =
+        new IdentityHashMap<SqlOperator, FunctionFinder>();
     for (String key : alm.keySet()) {
-      var sigs = calciteOperators.get(key);
+      Collection<Sig> sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
         LOGGER.atInfo().log("No binding for function: {}", key);
       }
 
-      for (var sig : sigs) {
-        var implList = alm.get(key);
+      for (Sig sig : sigs) {
+        List<F> implList = alm.get(key);
         if (!implList.isEmpty()) {
           matcherMap.put(sig.operator(), new FunctionFinder(key, sig.operator(), implList));
         }
       }
     }
 
-    for (var entry : alm.entries()) {
+    for (Entry<String, F> entry : alm.entries()) {
       String key = entry.getKey();
-      var func = entry.getValue();
+      F func = entry.getValue();
       for (FunctionMappings.Sig sig : calciteOperators.get(key)) {
         substraitFuncKeyToSqlOperatorMap.put(func.key(), sig.operator());
       }
@@ -108,8 +113,8 @@ public abstract class FunctionConverter<
   }
 
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
-    var resolver = getTypeBasedResolver();
-    var operators = substraitFuncKeyToSqlOperatorMap.get(key);
+    Map<SqlOperator, TypeBasedResolver> resolver = getTypeBasedResolver();
+    Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
     if (operators.isEmpty()) {
       return Optional.empty();
     }
@@ -121,7 +126,7 @@ public abstract class FunctionConverter<
 
     // at least 2 operators. Use output type to resolve SqlOperator.
     String outputTypeStr = outputType.accept(ToTypeString.INSTANCE);
-    var resolvedOperators =
+    List<SqlOperator> resolvedOperators =
         operators.stream()
             .filter(
                 operator ->
@@ -163,8 +168,8 @@ public abstract class FunctionConverter<
               functions.stream().mapToInt(t -> t.getRange().getStartInclusive()).min().getAsInt(),
               functions.stream().mapToInt(t -> t.getRange().getEndExclusive()).max().getAsInt());
       this.singularInputType = getSingularInputType(functions);
-      var directMap = ImmutableMap.<String, F>builder();
-      for (var func : functions) {
+      ImmutableMap.Builder<String, F> directMap = ImmutableMap.builder();
+      for (F func : functions) {
         String key = func.key();
         directMap.put(key, func);
         if (func.requiredArguments().size() != func.args().size()) {
@@ -246,18 +251,18 @@ public abstract class FunctionConverter<
      */
     private Optional<SingularArgumentMatcher<F>> getSingularInputType(List<F> functions) {
       List<SingularArgumentMatcher<F>> matchers = new ArrayList<>();
-      for (var f : functions) {
+      for (F f : functions) {
 
         ParameterizedType firstType = null;
 
         // determine if all the required arguments are the of the same type. If so,
-        for (var a : f.requiredArguments()) {
+        for (Argument a : f.requiredArguments()) {
           if (!(a instanceof SimpleExtension.ValueArgument)) {
             firstType = null;
             break;
           }
 
-          var pt = ((SimpleExtension.ValueArgument) a).value();
+          ParameterizedType pt = ((SimpleExtension.ValueArgument) a).value();
 
           if (firstType == null) {
             firstType = pt;
@@ -287,7 +292,7 @@ public abstract class FunctionConverter<
 
     private SingularArgumentMatcher<F> singular(F function, ParameterizedType type) {
       return (inputType, outputType) -> {
-        var check = isMatch(inputType, type);
+        boolean check = isMatch(inputType, type);
         if (check) {
           return Optional.of(function);
         }
@@ -297,8 +302,8 @@ public abstract class FunctionConverter<
 
     private SingularArgumentMatcher<F> chained(List<SingularArgumentMatcher<F>> matchers) {
       return (inputType, outputType) -> {
-        for (var s : matchers) {
-          var outcome = s.tryMatch(inputType, outputType);
+        for (SingularArgumentMatcher<F> s : matchers) {
+          Optional<F> outcome = s.tryMatch(inputType, outputType);
           if (outcome.isPresent()) {
             return outcome;
           }
@@ -409,11 +414,11 @@ public abstract class FunctionConverter<
         return Optional.empty();
       }
       Type type = typeConverter.toSubstrait(leastRestrictive);
-      var out = singularInputType.orElseThrow().tryMatch(type, outputType);
+      Optional<F> out = singularInputType.orElseThrow().tryMatch(type, outputType);
 
       return out.map(
           declaration -> {
-            var coercedArgs = coerceArguments(operands, type);
+            List<Expression> coercedArgs = coerceArguments(operands, type);
             declaration.validateOutputType(coercedArgs, outputType);
             return generateBinding(call, out.get(), coercedArgs, outputType);
           });
@@ -433,7 +438,7 @@ public abstract class FunctionConverter<
         return Optional.empty();
       }
 
-      var coercedArgs =
+      List<Expression> coercedArgs =
           Streams.zip(
                   expressions.stream(), operandTypes.stream(), FunctionConverter::coerceArgument)
               .collect(Collectors.toList());

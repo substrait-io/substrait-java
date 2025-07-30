@@ -21,10 +21,12 @@ import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.RelVisitor;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -33,6 +35,7 @@ import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -70,13 +73,13 @@ public class SubstraitStringify extends ParentStringify
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.plan.Plan plan) {
-    var explanations = new ArrayList<String>();
+    ArrayList<String> explanations = new ArrayList<String>();
     explanations.add("<Substrait Plan>");
 
     plan.getRoots()
         .forEach(
             root -> {
-              var rel = root.getInput();
+              Rel rel = root.getInput();
 
               explanations.add("Root::  " + rel.getClass().getSimpleName() + " " + root.getNames());
               explanations.addAll(explain(rel));
@@ -92,7 +95,7 @@ public class SubstraitStringify extends ParentStringify
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.relation.Rel rel) {
-    var s = new SubstraitStringify();
+    SubstraitStringify s = new SubstraitStringify();
 
     List<String> explanation = new ArrayList<String>();
     explanation.add("<Substrait Relation>");
@@ -108,9 +111,9 @@ public class SubstraitStringify extends ParentStringify
     if (!showRemap) {
       return "";
     }
-    var fieldCount = rel.getRecordType().fields().size();
-    var remap = rel.getRemap();
-    var recordType = fieldList(rel.getRecordType().fields());
+    int fieldCount = rel.getRecordType().fields().size();
+    Optional<Remap> remap = rel.getRemap();
+    List<String> recordType = fieldList(rel.getRecordType().fields());
 
     if (remap.isPresent()) {
       return "/Remapping fields ("
@@ -151,21 +154,21 @@ public class SubstraitStringify extends ParentStringify
 
   @Override
   public String visit(EmptyScan emptyScan, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("EmptyScan:: ").append(getRemap(emptyScan));
+    StringBuilder sb = new StringBuilder("EmptyScan:: ").append(getRemap(emptyScan));
     // sb.append(emptyScan.accept(this));
     return getOutdent(sb);
   }
 
   @Override
   public String visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
-    var sb = new StringBuilder("Fetch:: ");
+    StringBuilder sb = new StringBuilder("Fetch:: ");
     // sb.append(fetch.accept(this));
     return getOutdent(sb);
   }
 
   @Override
   public String visit(Filter filter, EmptyVisitationContext context) throws RuntimeException {
-    var sb = getIndent().append("Filter:: ").append(getRemap(filter));
+    StringBuilder sb = getIndent().append("Filter:: ").append(getRemap(filter));
     // .append("{ ");
     sb.append(
         filter.getCondition().accept(new ExpressionStringify(indent), context)) /* .append(")") */;
@@ -182,7 +185,7 @@ public class SubstraitStringify extends ParentStringify
   @Override
   public String visit(Join join, EmptyVisitationContext context) throws RuntimeException {
 
-    var sb =
+    StringBuilder sb =
         getIndent().append("Join:: ").append(join.getJoinType()).append(" ").append(getRemap(join));
 
     if (join.getCondition().isPresent()) {
@@ -219,12 +222,12 @@ public class SubstraitStringify extends ParentStringify
   }
 
   private String namedStruct(NamedStruct struct) {
-    var sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
 
-    var names = struct.names();
-    var types = fieldList(struct.struct().fields());
+    List<String> names = struct.names();
+    List<String> types = fieldList(struct.struct().fields());
 
-    for (var x = 0; x < names.size(); x++) {
+    for (int x = 0; x < names.size(); x++) {
       if (x != 0) {
         sb.append(",");
       }
@@ -239,9 +242,9 @@ public class SubstraitStringify extends ParentStringify
       throws RuntimeException {
     StringBuilder sb = getIndent().append("LocalFiles:: ");
 
-    for (var i : localFiles.getItems()) {
+    for (FileOrFiles i : localFiles.getItems()) {
       sb.append(getContinuationIndentString());
-      var fileFormat = "";
+      String fileFormat = "";
       if (i.getFileFormat().isPresent()) {
         fileFormat = i.getFileFormat().get().toString();
       }
@@ -261,7 +264,7 @@ public class SubstraitStringify extends ParentStringify
 
     sb.append(fieldList(project.deriveRecordType().fields()));
 
-    var inputs = project.getInputs();
+    List<Rel> inputs = project.getInputs();
     inputs.forEach(
         i -> {
           sb.append(i.accept(this, context));
@@ -275,10 +278,10 @@ public class SubstraitStringify extends ParentStringify
     sort.getSortFields()
         .forEach(
             sf -> {
-              var expr = new ExpressionStringify(indent);
+              ExpressionStringify expr = new ExpressionStringify(indent);
               sb.append(sf.expr().accept(expr, context)).append(" ").append(sf.direction());
             });
-    var inputs = sort.getInputs();
+    List<Rel> inputs = sort.getInputs();
     inputs.forEach(
         i -> {
           sb.append(i.accept(this, context));

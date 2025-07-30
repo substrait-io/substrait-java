@@ -57,7 +57,7 @@ public class WindowFunctionConverter
     RexOver over = call.over;
     RexWindow window = over.getWindow();
 
-    var partitionExprs =
+    List<Expression> partitionExprs =
         window.partitionKeys.stream()
             .map(r -> r.accept(call.rexExpressionConverter))
             .collect(java.util.stream.Collectors.toList());
@@ -96,7 +96,7 @@ public class WindowFunctionConverter
       RexOver over,
       Function<RexNode, Expression> topLevelConverter,
       RexExpressionConverter rexExpressionConverter) {
-    var aggFunction = over.getAggOperator();
+    SqlAggFunction aggFunction = over.getAggOperator();
 
     SqlAggFunction lookupFunction =
         AggregateFunctions.toSubstraitAggVariant(aggFunction).orElse(aggFunction);
@@ -108,7 +108,7 @@ public class WindowFunctionConverter
       return Optional.empty();
     }
 
-    var wrapped = new WrappedWindowCall(over, rexExpressionConverter);
+    WrappedWindowCall wrapped = new WrappedWindowCall(over, rexExpressionConverter);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 

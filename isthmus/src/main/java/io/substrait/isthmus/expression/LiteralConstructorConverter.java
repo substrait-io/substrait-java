@@ -4,11 +4,13 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.type.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
@@ -62,8 +64,8 @@ public class LiteralConstructorConverter implements CallConverter {
   }
 
   private Optional<Expression> toEmptyListLiteral(RexCall call) {
-    var calciteElementType = call.getType().getComponentType();
-    var substraitElementType = typeConverter.toSubstrait(calciteElementType);
+    RelDataType calciteElementType = call.getType().getComponentType();
+    Type substraitElementType = typeConverter.toSubstrait(calciteElementType);
     return Optional.of(
         ExpressionCreator.emptyList(call.getType().isNullable(), substraitElementType));
   }

@@ -19,7 +19,8 @@ public class NameRoundtripTest extends PlanTestBase {
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatement);
 
     SqlToSubstrait s = new SqlToSubstrait();
-    var substraitToCalcite = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
+    SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
     String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");

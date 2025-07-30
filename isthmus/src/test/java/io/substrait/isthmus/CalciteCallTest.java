@@ -105,7 +105,7 @@ public class CalciteCallTest extends CalciteObjs {
       RexNode call,
       Consumer<Expression.ScalarFunctionInvocation> consumer,
       boolean bidirectional) {
-    var expression = call.accept(rexExpressionConverter);
+    Expression expression = call.accept(rexExpressionConverter);
     assertTrue(expression instanceof Expression.ScalarFunctionInvocation);
     Expression.ScalarFunctionInvocation func = (Expression.ScalarFunctionInvocation) expression;
     assertEquals(expectedName, func.declaration().key());

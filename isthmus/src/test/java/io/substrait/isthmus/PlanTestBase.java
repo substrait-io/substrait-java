@@ -91,7 +91,7 @@ public class PlanTestBase {
     Plan plan = new ProtoPlanConverter(extensions).from(protoPlan1);
     io.substrait.proto.Plan protoPlan2 = new PlanProtoConverter().toProto(plan);
     assertEquals(protoPlan1, protoPlan2);
-    var rootRels = s.sqlToRelNode(query, catalogReader);
+    List<RelRoot> rootRels = s.sqlToRelNode(query, catalogReader);
     assertEquals(rootRels.size(), plan.getRoots().size());
     for (int i = 0; i < rootRels.size(); i++) {
       Plan.Root rootRel = SubstraitRelVisitor.convert(rootRels.get(i), extensions);
@@ -125,7 +125,7 @@ public class PlanTestBase {
     // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
     // Return list of sql -> Substrait rel -> Calcite rel.
 
-    var substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
     SqlToSubstrait s = new SqlToSubstrait();
 
@@ -221,7 +221,7 @@ public class PlanTestBase {
    */
   protected void assertFullRoundTrip(Rel pojo1) {
     // TODO: reuse the Plan.Root based assertFullRoundTrip by generating names
-    var extensionCollector = new ExtensionCollector();
+    ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // Substrait POJO 1 -> Substrait Proto
     io.substrait.proto.Rel proto = new RelProtoConverter(extensionCollector).toProto(pojo1);
@@ -252,7 +252,7 @@ public class PlanTestBase {
    * </ul>
    */
   protected void assertFullRoundTrip(Plan.Root pojo1) {
-    var extensionCollector = new ExtensionCollector();
+    ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // Substrait POJO 1 -> Substrait Proto
     io.substrait.proto.RelRoot proto = new RelProtoConverter(extensionCollector).toProto(pojo1);

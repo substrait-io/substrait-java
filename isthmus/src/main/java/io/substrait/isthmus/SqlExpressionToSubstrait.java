@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import io.substrait.extendedexpression.ExtendedExpression;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
+import io.substrait.extendedexpression.ImmutableExtendedExpression.Builder;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -85,7 +86,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    */
   public io.substrait.proto.ExtendedExpression convert(
       String[] sqlExpressions, List<String> createStatements) throws SqlParseException {
-    var result = registerCreateTablesForExtendedExpression(createStatements);
+    Result result = registerCreateTablesForExtendedExpression(createStatements);
     return executeInnerSQLExpressions(
         sqlExpressions,
         result.validator,
@@ -116,7 +117,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       expressionReferences.add(expressionReference);
     }
     NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
-    var extendedExpression =
+    Builder extendedExpression =
         ExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct);
@@ -182,8 +183,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   private NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
-    var names = new ArrayList<String>();
-    var types = new ArrayList<Type>();
+    ArrayList<String> names = new ArrayList<String>();
+    ArrayList<Type> types = new ArrayList<Type>();
     for (Map.Entry<String, RelDataType> entry : nameToTypeMap.entrySet()) {
       String k = entry.getKey();
       RelDataType v = entry.getValue();

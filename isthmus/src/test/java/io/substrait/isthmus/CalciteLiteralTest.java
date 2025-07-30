@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.IntervalDayLiteral;
+import io.substrait.expression.Expression.IntervalYearLiteral;
+import io.substrait.expression.Expression.Literal;
+import io.substrait.expression.Expression.TimestampLiteral;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -89,7 +93,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tBinary() {
-    var val = "my test".getBytes(StandardCharsets.UTF_8);
+    byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
         ExpressionCreator.binary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.VARBINARY));
@@ -134,17 +138,17 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimestamp() {
-    var ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
-    var nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
-    var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
+    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
+    int nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
+    TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
   @Test
   void tTimestampWithMilliMacroSeconds() {
-    var ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
-    var nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
-    var tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
+    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
+    int nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
+    TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
@@ -160,7 +164,7 @@ public class CalciteLiteralTest extends CalciteObjs {
   void tIntervalYearMonth() {
     BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
     RexLiteral intervalYearMonth = rex.makeIntervalLiteral(bd, YEAR_MONTH_INTERVAL);
-    var intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 3, 5);
+    IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 3, 5);
     bitest(intervalYearMonthExpr, intervalYearMonth);
   }
 
@@ -176,7 +180,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.MONTH,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 123, 5);
+    IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 123, 5);
 
     // rex --> expression
     assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
@@ -211,7 +215,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.SECOND,
                 3,
                 SqlParserPos.ZERO));
-    var intervalDaySecondExpr =
+    IntervalDayLiteral intervalDaySecondExpr =
         ExpressionCreator.intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
     bitest(intervalDaySecondExpr, intervalDaySecond);
   }
@@ -225,10 +229,10 @@ public class CalciteLiteralTest extends CalciteObjs {
             bd,
             new SqlIntervalQualifier(
                 org.apache.calcite.avatica.util.TimeUnit.DAY, -1, null, -1, SqlParserPos.ZERO));
-    var intervalDayExpr = ExpressionCreator.intervalDay(false, 5, 0, 0, 6);
+    IntervalDayLiteral intervalDayExpr = ExpressionCreator.intervalDay(false, 5, 0, 0, 6);
 
     // rex --> expression
-    var convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
+    Expression convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
     assertEquals(intervalDayExpr, convertedExpr);
 
     // expression -> rex
@@ -252,7 +256,7 @@ public class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalYearExpr = ExpressionCreator.intervalYear(false, 123, 0);
+    IntervalYearLiteral intervalYearExpr = ExpressionCreator.intervalYear(false, 123, 0);
     // rex --> expression
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
@@ -278,7 +282,8 @@ public class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    var intervalMonthExpr = ExpressionCreator.intervalYear(false, 123 / 12, 123 % 12);
+    IntervalYearLiteral intervalMonthExpr =
+        ExpressionCreator.intervalYear(false, 123 / 12, 123 % 12);
     // rex --> expression
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
@@ -342,13 +347,13 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tMap() {
-    var ss =
-        ImmutableMap.<Expression.Literal, Expression.Literal>of(
+    ImmutableMap<Literal, Literal> ss =
+        ImmutableMap.of(
             ExpressionCreator.string(false, "foo"),
             ExpressionCreator.i32(false, 4),
             ExpressionCreator.string(false, "bar"),
             ExpressionCreator.i32(false, -1));
-    var calcite =
+    RexNode calcite =
         rex.makeLiteral(
             ImmutableMap.of("foo", 4, "bar", -1),
             type.createMapType(t(SqlTypeName.VARCHAR), t(SqlTypeName.INTEGER)),
@@ -382,7 +387,7 @@ public class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tFixedBinary() {
-    var val = "my test".getBytes(StandardCharsets.UTF_8);
+    byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
         ExpressionCreator.fixedBinary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.BINARY));

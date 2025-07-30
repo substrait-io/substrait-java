@@ -5,6 +5,7 @@ import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
+import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -35,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -60,6 +62,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
@@ -135,7 +138,7 @@ public class SubstraitRelNodeConverter
       RelOptCluster relOptCluster,
       Prepare.CatalogReader catalogReader,
       SqlParser.Config parserConfig) {
-    var relBuilder =
+    RelBuilder relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
                 .parserConfig(parserConfig)
@@ -212,7 +215,7 @@ public class SubstraitRelNodeConverter
         join.getCondition()
             .map(c -> c.accept(expressionRexConverter, context))
             .orElse(relBuilder.literal(true));
-    var joinType = asJoinRelType(join);
+    JoinRelType joinType = asJoinRelType(join);
     RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
     return applyRemap(node, join.getRemap());
   }
@@ -262,7 +265,7 @@ public class SubstraitRelNodeConverter
     //   correspond to the Calcite relations they are associated with. They are retained for now
     //   to enable users to migrate off of them.
     //   See:  https://github.com/substrait-io/substrait-java/issues/303
-    var builder = getRelBuilder(set);
+    RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
     return applyRemap(node, set.getRemap());
   }
@@ -301,7 +304,7 @@ public class SubstraitRelNodeConverter
     }
 
     RelNode child = aggregate.getInput().accept(this, context);
-    var groupExprLists =
+    List<List<RexNode>> groupExprLists =
         aggregate.getGroupings().stream()
             .map(
                 gr ->
@@ -322,8 +325,8 @@ public class SubstraitRelNodeConverter
   }
 
   private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
-    var eArgs = measure.getFunction().arguments();
-    var arguments =
+    List<FunctionArg> eArgs = measure.getFunction().arguments();
+    List<RexNode> arguments =
         IntStream.range(0, measure.getFunction().arguments().size())
             .mapToObj(
                 i ->
@@ -335,7 +338,7 @@ public class SubstraitRelNodeConverter
                             expressionRexConverter,
                             context))
             .collect(java.util.stream.Collectors.toList());
-    var operator =
+    Optional<SqlOperator> operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
             measure.getFunction().declaration().key(), measure.getFunction().outputType());
     if (!operator.isPresent()) {
@@ -407,9 +410,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
-    var expression = sortField.expr();
-    var rexNode = expression.accept(expressionRexConverter, context);
-    var sortDirection = sortField.direction();
+    Expression expression = sortField.expr();
+    RexNode rexNode = expression.accept(expressionRexConverter, context);
+    SortDirection sortDirection = sortField.direction();
 
     if (sortDirection == Expression.SortDirection.ASC_NULLS_FIRST) {
       return relBuilder.nullsFirst(rexNode);
@@ -434,9 +437,9 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
     RelNode child = fetch.getInput().accept(this, context);
-    var optCount = fetch.getCount();
+    OptionalLong optCount = fetch.getCount();
     long count = optCount.orElse(-1L);
-    var offset = fetch.getOffset();
+    long offset = fetch.getOffset();
     if (offset > Integer.MAX_VALUE) {
       throw new IllegalArgumentException(
           String.format("offset is overflowed as an integer: %d", offset));
@@ -450,9 +453,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
-    var expression = sortField.expr();
-    var rex = expression.accept(expressionRexConverter, context);
-    var sortDirection = sortField.direction();
+    Expression expression = sortField.expr();
+    RexNode rex = expression.accept(expressionRexConverter, context);
+    SortDirection sortDirection = sortField.direction();
     RexSlot rexSlot = (RexSlot) rex;
     int fieldIndex = rexSlot.getIndex();
 
@@ -610,8 +613,8 @@ public class SubstraitRelNodeConverter
   }
 
   private RelNode applyRemap(RelNode relNode, Rel.Remap remap) {
-    var rowType = relNode.getRowType();
-    var fieldNames = rowType.getFieldNames();
+    RelDataType rowType = relNode.getRowType();
+    List<String> fieldNames = rowType.getFieldNames();
     List<RexNode> rexList =
         remap.indices().stream()
             .map(

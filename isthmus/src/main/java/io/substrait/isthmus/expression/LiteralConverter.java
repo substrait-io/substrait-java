@@ -88,9 +88,9 @@ public class LiteralConverter {
         return ExpressionCreator.bool(n, literal.getValueAs(Boolean.class));
       case CHAR:
         {
-          var val = literal.getValue();
+          Comparable val = literal.getValue();
           if (val instanceof NlsString) {
-            var nls = (NlsString) val;
+            NlsString nls = (NlsString) val;
             return ExpressionCreator.fixedChar(n, nls.getValue());
           }
           throw new UnsupportedOperationException("Unable to handle char type: " + val);
@@ -167,8 +167,8 @@ public class LiteralConverter {
       case INTERVAL_MONTH:
         {
           long intervalLength = Objects.requireNonNull(literal.getValueAs(Long.class));
-          var years = intervalLength / 12;
-          var months = intervalLength - years * 12;
+          long years = intervalLength / 12;
+          long months = intervalLength - years * 12;
           return ExpressionCreator.intervalYear(n, (int) years, (int) months);
         }
       case INTERVAL_DAY:
@@ -183,12 +183,12 @@ public class LiteralConverter {
       case INTERVAL_SECOND:
         {
           // Calcite represents day/time intervals in milliseconds, despite a default scale of 6.
-          var totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
-          var interval = Duration.ofMillis(totalMillis);
+          Long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
+          Duration interval = Duration.ofMillis(totalMillis);
 
-          var days = interval.toDays();
-          var seconds = interval.minusDays(days).toSeconds();
-          var micros = interval.toMillisPart() * 1000;
+          long days = interval.toDays();
+          long seconds = interval.minusDays(days).toSeconds();
+          int micros = interval.toMillisPart() * 1000;
 
           return ExpressionCreator.intervalDay(n, (int) days, (int) seconds, micros, 6);
         }

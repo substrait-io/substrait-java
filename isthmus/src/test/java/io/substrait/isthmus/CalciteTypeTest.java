@@ -243,7 +243,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void userDefinedType(boolean nullable) {
-    var type = uTypeFactory.createSubstrait(nullable);
+    Type type = uTypeFactory.createSubstrait(nullable);
     testType(typeConverter, type, uTypeFactory.createCalcite(nullable), null);
   }
 
