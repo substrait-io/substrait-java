@@ -7,7 +7,7 @@ package io.substrait.examples.util;
 public class ParentStringify {
 
   protected String indentChar = " ";
-  protected int indent = 0;
+  protected int indent;
   protected int indentSize = 3;
 
   /**
