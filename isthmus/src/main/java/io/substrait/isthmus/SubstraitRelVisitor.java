@@ -219,7 +219,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // right input of correlated-join is similar to a correlated sub-query
     apply(correlate.getRight());
 
-    JoinType joinType = asJoinType(correlate);
     return super.visit(correlate);
   }
 
