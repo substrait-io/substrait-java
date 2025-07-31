@@ -6,7 +6,7 @@ plugins {
   id("java-library")
   id("idea")
   id("com.diffplug.spotless") version "7.1.0"
-  id("com.gradleup.shadow") version "8.3.6"
+  id("com.gradleup.shadow") version "8.3.8"
   id("com.google.protobuf") version "0.9.4"
   id("org.jreleaser")
   id("substrait.java-conventions")
