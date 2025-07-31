@@ -11,6 +11,7 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -18,6 +19,8 @@ import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
@@ -37,6 +40,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -374,8 +378,76 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   @Override
-  public Rel visit(org.apache.calcite.rel.core.TableModify modify) {
-    return super.visit(modify);
+  public Rel visit(TableModify modify) {
+    switch (modify.getOperation()) {
+      case INSERT:
+      case DELETE:
+        {
+          final Rel input = apply(modify.getInput());
+          final AbstractWriteRel.WriteOp op =
+              modify.getOperation() == TableModify.Operation.INSERT
+                  ? AbstractWriteRel.WriteOp.INSERT
+                  : AbstractWriteRel.WriteOp.DELETE;
+
+          assert modify.getTable() != null;
+          return NamedWrite.builder()
+              .input(input)
+              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
+              .operation(op)
+              .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
+              .outputMode(AbstractWriteRel.OutputMode.MODIFIED_RECORDS)
+              .names(modify.getTable().getQualifiedName())
+              .build();
+        }
+
+      case UPDATE:
+        {
+          assert modify.getTable() != null;
+
+          Expression condition;
+          if (modify.getInput() instanceof org.apache.calcite.rel.core.Filter) {
+            org.apache.calcite.rel.core.Filter filter =
+                (org.apache.calcite.rel.core.Filter) modify.getInput();
+            condition = toExpression(filter.getCondition());
+          } else {
+            condition = Expression.BoolLiteral.builder().nullable(false).value(true).build();
+          }
+
+          List<String> updateColumnNames = modify.getUpdateColumnList();
+          List<RexNode> sourceExpressions = modify.getSourceExpressionList();
+          List<String> allTableColumnNames = modify.getTable().getRowType().getFieldNames();
+          List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
+
+          for (int i = 0; i < updateColumnNames.size(); i++) {
+            String colName = updateColumnNames.get(i);
+            RexNode rexExpr = sourceExpressions.get(i);
+
+            int columnIndex = allTableColumnNames.indexOf(colName);
+            if (columnIndex == -1) {
+              throw new IllegalStateException(
+                  "Updated column '" + colName + "' not found in table schema.");
+            }
+
+            Expression substraitExpr = toExpression(rexExpr);
+
+            transformations.add(
+                NamedUpdate.TransformExpression.builder()
+                    .columnTarget(columnIndex)
+                    .transformation(substraitExpr)
+                    .build());
+          }
+
+          return NamedUpdate.builder()
+              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
+              .names(modify.getTable().getQualifiedName())
+              .condition(condition)
+              .transformations(transformations)
+              .build();
+        }
+
+      default:
+        return super.visit(modify);
+    }
   }
 
   @Override

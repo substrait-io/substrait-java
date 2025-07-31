@@ -215,7 +215,15 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(NamedWrite write, EmptyVisitationContext context) throws E {
-    throw new UnsupportedOperationException();
+
+    Optional<Rel> input = write.getInput().accept(this, context);
+
+    if (allEmpty(input)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        NamedWrite.builder().from(write).input(input.orElse(write.getInput())).build());
   }
 
   @Override
@@ -233,9 +241,37 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     throw new UnsupportedOperationException();
   }
 
+  protected Optional<NamedUpdate.TransformExpression> visitTransformExpression(
+      NamedUpdate.TransformExpression transform, EmptyVisitationContext context) throws E {
+    return transform
+        .getTransformation()
+        .accept(getExpressionCopyOnWriteVisitor(), context)
+        .map(
+            expr ->
+                NamedUpdate.TransformExpression.builder()
+                    .from(transform)
+                    .transformation(expr)
+                    .build());
+  }
+
   @Override
   public Optional<Rel> visit(NamedUpdate update, EmptyVisitationContext context) throws E {
-    throw new UnsupportedOperationException();
+    Optional<Expression> condition =
+        update.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
+
+    Optional<List<AbstractUpdate.TransformExpression>> transformations =
+        transformList(update.getTransformations(), context, this::visitTransformExpression);
+
+    if (allEmpty(condition, transformations)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        NamedUpdate.builder()
+            .from(update)
+            .condition(condition.orElse(update.getCondition()))
+            .transformations(transformations.orElse(update.getTransformations()))
+            .build());
   }
 
   @Override

@@ -10,6 +10,7 @@ import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -33,7 +34,6 @@ public class SqlToSubstrait extends SqlConverterBase {
     return executeInner(sql, validator, catalogReader);
   }
 
-  // Package protected for testing
   List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader);
@@ -86,7 +86,9 @@ public class SqlToSubstrait extends SqlConverterBase {
   static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
-      var program = HepProgram.builder().build();
+      // RelBuilder seems to implicitly use the rule below,
+      // need to add to avoid discrepancies in assertFullRoundTrip
+      var program = HepProgram.builder().addRuleInstance(CoreRules.PROJECT_REMOVE).build();
       HepPlanner hepPlanner = new HepPlanner(program);
       hepPlanner.setRoot(root.rel);
       root = root.withRel(hepPlanner.findBestExp());
