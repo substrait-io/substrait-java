@@ -21,11 +21,13 @@ import io.substrait.spark.expression._
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.execution.LogicalRDD
 import org.apache.spark.sql.execution.command.CreateDataSourceTableAsSelectCommand
 import org.apache.spark.sql.execution.datasources.{FileFormat => DSFileFormat, HadoopFsRelation, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1WriteCommand, WriteFiles}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
@@ -52,7 +54,7 @@ import io.substrait.utils.Util
 import java.util
 import java.util.{Collections, Optional}
 
-import scala.collection.JavaConverters.{asJavaIterableConverter, seqAsJavaList}
+import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -63,6 +65,10 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   private val TRUE = ExpressionCreator.bool(false, true)
 
   private val existenceJoins = scala.collection.mutable.Map[Long, SExpression.InPredicate]()
+
+  private var _rddLimit = 100
+  def rddLimit: Int = _rddLimit
+  def rddLimit_=(rddLimit: Int): Unit = _rddLimit = rddLimit
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
 
@@ -439,23 +445,25 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .build
     namedScan
   }
-  private def buildVirtualTableScan(localRelation: LocalRelation): relation.AbstractReadRel = {
-    val namedStruct = ToSubstraitType.toNamedStruct(localRelation.schema)
+  private def buildVirtualTableScan(
+      schema: StructType,
+      data: Seq[InternalRow]): relation.AbstractReadRel = {
+    val namedStruct = ToSubstraitType.toNamedStruct(schema)
 
-    if (localRelation.data.isEmpty) {
+    if (data.isEmpty) {
       relation.EmptyScan.builder().initialSchema(namedStruct).build()
     } else {
       relation.VirtualTableScan
         .builder()
         .initialSchema(namedStruct)
         .addAllRows(
-          localRelation.data
+          data
             .map(
               row => {
                 var idx = 0
                 val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
                 while (idx < row.numFields) {
-                  val dt = localRelation.schema(idx).dataType
+                  val dt = schema(idx).dataType
                   val l = Literal.apply(row.get(idx, dt), dt)
                   buf += ToSubstraitLiteral.apply(l)
                   idx += 1
@@ -528,7 +536,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       case hiveTableRelation: HiveTableRelation =>
         tableNames = hiveTableRelation.tableMeta.identifier.unquotedString.split("\\.").toList
         buildNamedScan(hiveTableRelation.schema, tableNames)
-      case localRelation: LocalRelation => buildVirtualTableScan(localRelation)
+      case localRelation: LocalRelation =>
+        buildVirtualTableScan(localRelation.schema, localRelation.data)
+      case rdd: LogicalRDD =>
+        if (rdd.rdd.count() > _rddLimit) {
+          logWarning(
+            s"LogicalRDD relation contains ${rdd.rdd.count()} rows.  Truncating to ${_rddLimit}. This limit can be changed by setting the `rddLimit` property on this ToSubstraitRel instance.")
+        }
+        buildVirtualTableScan(rdd.schema, rdd.rdd.take(_rddLimit))
       case logicalRelation: LogicalRelation =>
         logicalRelation.relation match {
           case fsRelation: HadoopFsRelation =>
