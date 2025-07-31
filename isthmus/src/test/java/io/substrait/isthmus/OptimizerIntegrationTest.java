@@ -19,7 +19,7 @@ public class OptimizerIntegrationTest extends PlanTestBase {
 
   @Test
   void conversionHandlesBuiltInSum0CallAddedByRule() throws SqlParseException, IOException {
-    var query =
+    String query =
         "select O_CUSTKEY, count(distinct O_ORDERKEY), count(*) from orders group by O_CUSTKEY";
     // verify that the query works generally
     assertFullRoundTrip(query);
@@ -41,7 +41,7 @@ public class OptimizerIntegrationTest extends PlanTestBase {
             .build();
     HepPlanner planner = new HepPlanner(program);
     planner.setRoot(originalPlan);
-    var newPlan = planner.findBestExp();
+    RelNode newPlan = planner.findBestExp();
 
     assertDoesNotThrow(
         () ->

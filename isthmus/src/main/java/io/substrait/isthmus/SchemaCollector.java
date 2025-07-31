@@ -78,7 +78,7 @@ public class SchemaCollector {
      * @return a map of qualified table names to their associated Substrait schemas
      */
     public static Map<List<String>, NamedStruct> gatherTables(Rel rootRel) {
-      var visitor = new TableGatherer();
+      TableGatherer visitor = new TableGatherer();
       rootRel.accept(visitor, EmptyVisitationContext.INSTANCE);
       return visitor.tableMap;
     }

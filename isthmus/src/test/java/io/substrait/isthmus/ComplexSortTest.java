@@ -37,7 +37,7 @@ public class ComplexSortTest extends PlanTestBase {
 
     @Override
     protected void explain_(RelNode rel, List<Pair<String, @Nullable Object>> values) {
-      var collation = rel.getTraitSet().getCollation();
+      RelCollation collation = rel.getTraitSet().getCollation();
       if (!collation.isDefault()) {
         StringBuilder s = new StringBuilder();
         spacer.spaces(s);
@@ -70,7 +70,7 @@ public class ComplexSortTest extends PlanTestBase {
             + "  LogicalTableScan(table=[[example]])\n";
 
     RelNode relReturned = substraitToCalcite.convert(rel);
-    var sw = new StringWriter();
+    StringWriter sw = new StringWriter();
     relReturned.explain(new CollationRelWriter(sw));
     assertEquals(expected, sw.toString());
   }
@@ -100,7 +100,7 @@ public class ComplexSortTest extends PlanTestBase {
             + "      LogicalTableScan(table=[[example]])\n";
 
     RelNode relReturned = substraitToCalcite.convert(rel);
-    var sw = new StringWriter();
+    StringWriter sw = new StringWriter();
     relReturned.explain(new CollationRelWriter(sw));
     assertEquals(expected, sw.toString());
   }
@@ -130,7 +130,7 @@ public class ComplexSortTest extends PlanTestBase {
             + "      LogicalTableScan(table=[[example]])\n";
 
     RelNode relReturned = substraitToCalcite.convert(rel);
-    var sw = new StringWriter();
+    StringWriter sw = new StringWriter();
     relReturned.explain(new CollationRelWriter(sw));
     assertEquals(expected, sw.toString());
   }
@@ -160,7 +160,7 @@ public class ComplexSortTest extends PlanTestBase {
             + "      LogicalTableScan(table=[[example]])\n";
 
     RelNode relReturned = substraitToCalcite.convert(rel);
-    var sw = new StringWriter();
+    StringWriter sw = new StringWriter();
     relReturned.explain(new CollationRelWriter(sw));
     assertEquals(expected, sw.toString());
   }
@@ -193,7 +193,7 @@ public class ComplexSortTest extends PlanTestBase {
             + "      LogicalTableScan(table=[[example]])\n";
 
     RelNode relReturned = substraitToCalcite.convert(rel);
-    var sw = new StringWriter();
+    StringWriter sw = new StringWriter();
     relReturned.explain(new CollationRelWriter(sw));
     assertEquals(expected, sw.toString());
   }

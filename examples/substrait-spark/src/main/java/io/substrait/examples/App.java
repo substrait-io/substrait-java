@@ -29,8 +29,8 @@ public final class App {
       }
       String exampleClass = args[0];
 
-      var clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
-      var action = (Action) clz.getDeclaredConstructor().newInstance();
+      Class<?> clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
+      Action action = (Action) clz.getDeclaredConstructor().newInstance();
 
       if (args.length == 2) {
         action.run(args[1]);

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
@@ -54,12 +55,12 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
 
   @Test
   public void switchExpression() {
-    var expr =
+    Switch expr =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
             List.of(b.switchClause(b.i32(0), b.fieldReference(commonTable, 3))),
             b.bool(false));
-    var calciteExpr = expr.accept(converter, Context.newContext());
+    RexNode calciteExpr = expr.accept(converter, Context.newContext());
 
     assertTypeMatch(calciteExpr.getType(), N.BOOLEAN);
   }

@@ -16,6 +16,7 @@ import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -45,7 +46,7 @@ public class RelCreator {
 
     try {
       SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
-      var parsed = parser.parseQuery();
+      SqlNode parsed = parser.parseQuery();
       cluster.setMetadataQuerySupplier(
           () ->
               new RelMetadataQuery(

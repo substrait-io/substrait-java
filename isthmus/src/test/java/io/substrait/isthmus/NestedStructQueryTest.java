@@ -77,7 +77,7 @@ public class NestedStructQueryTest extends PlanTestBase {
         new AbstractTable() {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "x", helper.i32(),
                 "a", helper.i32());
@@ -106,7 +106,7 @@ public class NestedStructQueryTest extends PlanTestBase {
         new AbstractTable() {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "x", helper.i32(),
                 "a", helper.struct("b", helper.i32()));
@@ -143,7 +143,7 @@ public class NestedStructQueryTest extends PlanTestBase {
         new AbstractTable() {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "aa", helper.i32(),
                 "a", helper.struct("b", helper.struct("c", helper.i32())));
@@ -185,7 +185,7 @@ public class NestedStructQueryTest extends PlanTestBase {
         new AbstractTable() {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
 
             return helper.struct2("x", helper.i32(), "a", helper.list(helper.i32()));
           }
@@ -221,7 +221,7 @@ public class NestedStructQueryTest extends PlanTestBase {
         new AbstractTable() {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
 
             return helper.struct2(
                 "x",
@@ -273,7 +273,7 @@ public class NestedStructQueryTest extends PlanTestBase {
           @Override
           public RelDataType getRowType(RelDataTypeFactory factory) {
 
-            var helper = new TypeHelper(factory);
+            TypeHelper helper = new TypeHelper(factory);
             return helper.struct(
                 "a",
                 helper.struct(

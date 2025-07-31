@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.CallConverter;
@@ -32,8 +33,8 @@ public class FieldSelectionConverter implements CallConverter {
       return Optional.empty();
     }
 
-    var toDereference = call.getOperands().get(0);
-    var reference = call.getOperands().get(1);
+    RexNode toDereference = call.getOperands().get(0);
+    RexNode reference = call.getOperands().get(1);
 
     if (reference.getKind() != SqlKind.LITERAL || !(reference instanceof RexLiteral)) {
       LOGGER
@@ -45,14 +46,14 @@ public class FieldSelectionConverter implements CallConverter {
       return Optional.empty();
     }
 
-    var literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
+    Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
 
-    var input = topLevelConverter.apply(toDereference);
+    Expression input = topLevelConverter.apply(toDereference);
 
     switch (toDereference.getType().getSqlTypeName()) {
       case ROW:
         {
-          var index = toInt(literal);
+          Optional<Integer> index = toInt(literal);
           if (index.isEmpty()) {
             return Optional.empty();
           }
@@ -64,7 +65,7 @@ public class FieldSelectionConverter implements CallConverter {
         }
       case ARRAY:
         {
-          var index = toInt(literal);
+          Optional<Integer> index = toInt(literal);
           if (index.isEmpty()) {
             return Optional.empty();
           }
@@ -78,7 +79,7 @@ public class FieldSelectionConverter implements CallConverter {
 
       case MAP:
         {
-          var mapKey = toString(literal);
+          Optional<String> mapKey = toString(literal);
           if (mapKey.isEmpty()) {
             return Optional.empty();
           }

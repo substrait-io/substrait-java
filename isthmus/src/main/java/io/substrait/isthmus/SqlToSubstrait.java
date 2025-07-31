@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
+import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.proto.Plan;
@@ -12,6 +13,7 @@ import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -42,7 +44,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    var builder = io.substrait.plan.Plan.builder();
+    Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
@@ -59,7 +61,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     SqlParser parser = SqlParser.create(sql, parserConfig);
-    var parsedList = parser.parseStmtList();
+    SqlNodeList parsedList = parser.parseStmtList();
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
     List<RelRoot> roots =
         parsedList.stream()
@@ -88,7 +90,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     {
       // RelBuilder seems to implicitly use the rule below,
       // need to add to avoid discrepancies in assertFullRoundTrip
-      var program = HepProgram.builder().addRuleInstance(CoreRules.PROJECT_REMOVE).build();
+      HepProgram program = HepProgram.builder().addRuleInstance(CoreRules.PROJECT_REMOVE).build();
       HepPlanner hepPlanner = new HepPlanner(program);
       hepPlanner.setRoot(root.rel);
       root = root.withRel(hepPlanner.findBestExp());

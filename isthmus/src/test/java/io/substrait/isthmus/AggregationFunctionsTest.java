@@ -70,7 +70,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
   void emptyGrouping(String aggFunction) {
-    var rel =
+    Aggregate rel =
         b.aggregate(
             input -> b.grouping(input), input -> functions(input, aggFunction), numericTypesTable);
     assertFullRoundTrip(rel);
@@ -79,7 +79,7 @@ public class AggregationFunctionsTest extends PlanTestBase {
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
   void withGrouping(String aggFunction) {
-    var rel =
+    Aggregate rel =
         b.aggregate(
             input -> b.grouping(input, 0),
             input -> functions(input, aggFunction),

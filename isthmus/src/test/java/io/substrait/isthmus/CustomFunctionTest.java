@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
@@ -14,6 +15,7 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.proto.Expression;
+import io.substrait.proto.Expression.Literal.Builder;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
@@ -299,7 +301,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -315,7 +317,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -334,7 +336,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.FP64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -354,7 +356,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.FP64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -398,7 +400,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -417,7 +419,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.I64))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -438,7 +440,7 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -457,7 +459,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -478,7 +480,7 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -503,7 +505,7 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of(R.list(R.STRING), R.STRING, R.STRING, R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -522,7 +524,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -543,7 +545,7 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -562,7 +564,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
@@ -584,15 +586,16 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
-    var relReturned = calciteToSubstrait.apply(calciteRel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
 
   @Test
   void customTypesLiteralInFunctionsRoundtrip() {
-    var bldr = Expression.Literal.newBuilder();
-    var anyValue = Any.pack(bldr.setI32(10).build());
-    var val = ExpressionCreator.userDefinedLiteral(false, NAMESPACE, "a_type", anyValue);
+    Builder bldr = Expression.Literal.newBuilder();
+    Any anyValue = Any.pack(bldr.setI32(10).build());
+    UserDefinedLiteral val =
+        ExpressionCreator.userDefinedLiteral(false, NAMESPACE, "a_type", anyValue);
 
     Rel rel1 =
         b.project(
@@ -608,7 +611,7 @@ public class CustomFunctionTest extends PlanTestBase {
     Rel rel2 = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel1, rel2);
 
-    var extensionCollector = new ExtensionCollector();
+    ExtensionCollector extensionCollector = new ExtensionCollector();
     io.substrait.proto.Rel protoRel = new RelProtoConverter(extensionCollector).toProto(rel1);
     Rel rel3 = new ProtoRelConverter(extensionCollector, extensionCollection).from(protoRel);
     assertEquals(rel1, rel3);

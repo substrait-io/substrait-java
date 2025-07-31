@@ -60,8 +60,8 @@ public class CallConverters {
             if (call.getKind() != SqlKind.REINTERPRET) {
               return null;
             }
-            var operand = visitor.apply(call.getOperands().get(0));
-            var type = typeConverter.toSubstrait(call.getType());
+            Expression operand = visitor.apply(call.getOperands().get(0));
+            Type type = typeConverter.toSubstrait(call.getType());
 
             // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
             // user-defined literals
@@ -100,12 +100,12 @@ public class CallConverters {
         // else)
         assert call.getOperands().size() % 2 == 1;
 
-        var caseArgs =
+        List<Expression> caseArgs =
             call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
 
-        var last = caseArgs.size() - 1;
+        int last = caseArgs.size() - 1;
         // for if/else, process in reverse to maintain query order
-        var caseConditions = new ArrayList<Expression.IfClause>();
+        List<Expression.IfClause> caseConditions = new ArrayList<>();
         for (int i = 0; i < last; i += 2) {
           caseConditions.add(
               Expression.IfClause.builder()
@@ -114,7 +114,7 @@ public class CallConverters {
                   .build());
         }
 
-        var defaultResult = caseArgs.get(last);
+        Expression defaultResult = caseArgs.get(last);
         return ExpressionCreator.ifThenStatement(defaultResult, caseConditions);
       };
 
@@ -129,7 +129,7 @@ public class CallConverters {
             if (call.getKind() != SqlKind.SEARCH) {
               return null;
             } else {
-              var expandSearch = RexUtil.expandSearch(rexBuilder, null, call);
+              RexNode expandSearch = RexUtil.expandSearch(rexBuilder, null, call);
               // if no expansion happened, avoid infinite recursion.
               return expandSearch.equals(call) ? null : visitor.apply(expandSearch);
             }

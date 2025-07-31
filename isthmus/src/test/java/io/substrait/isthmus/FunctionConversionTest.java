@@ -60,7 +60,7 @@ public class FunctionConversionTest extends PlanTestBase {
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
-    var calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
+    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
     assertEquals(
         TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
         calciteExpr.getType());

@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +44,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
                   input -> List.of(b.count(input, 0)),
                   commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING, R.I64);
     }
 
@@ -57,7 +58,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
                   b.remap(1, 2),
                   commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), N.STRING, R.I64);
     }
   }
@@ -68,7 +69,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.cross(commonTable, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableTypeTwice);
     }
 
@@ -76,7 +77,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void emit() {
       Plan.Root root = b.root(b.cross(commonTable, commonTable, b.remap(0, 1, 4, 6)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, R.FP32, R.I32, N.STRING);
     }
   }
@@ -87,7 +88,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.fetch(20, 40, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableType);
     }
 
@@ -95,7 +96,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void emit() {
       Plan.Root root = b.root(b.fetch(20, 40, b.remap(0, 2), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
   }
@@ -106,7 +107,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.filter(input -> b.bool(true), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableType);
     }
 
@@ -114,7 +115,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void emit() {
       Plan.Root root = b.root(b.filter(input -> b.bool(true), b.remap(0, 2), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
   }
@@ -125,7 +126,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.innerJoin(input -> b.bool(true), commonTable, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableTypeTwice);
     }
 
@@ -134,7 +135,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       Plan.Root root =
           b.root(b.innerJoin(input -> b.bool(true), b.remap(0, 6), commonTable, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
 
@@ -150,7 +151,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
                   b.remap(6, 7, 8),
                   b.join(ji -> b.bool(true), JoinType.LEFT, joinTable, joinTable)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.STRING, R.FP64, N.STRING);
     }
 
@@ -166,7 +167,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
                   b.remap(6, 7, 8),
                   b.join(ji -> b.bool(true), JoinType.RIGHT, joinTable, joinTable)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), N.STRING, N.FP64, R.STRING);
     }
 
@@ -182,7 +183,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
                   b.remap(6, 7, 8),
                   b.join(ji -> b.bool(true), JoinType.OUTER, joinTable, joinTable)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), N.STRING, N.FP64, N.STRING);
     }
   }
@@ -194,7 +195,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       Plan.Root root =
           b.root(b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I32, R.FP32)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, R.FP32);
     }
 
@@ -205,7 +206,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
               b.namedScan(
                   List.of("example"), List.of("a", "b"), List.of(R.I32, R.FP32), b.remap(1)));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.FP32);
     }
   }
@@ -216,7 +217,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.project(input -> b.fieldReferences(input, 1, 0, 2), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(
           relNode.getRowType(), R.I32, R.FP32, N.STRING, N.BOOLEAN, R.FP32, R.I32, N.STRING);
     }
@@ -228,7 +229,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
               b.project(
                   input -> b.fieldReferences(input, 1, 0, 2), b.remap(0, 2, 4, 6), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING, R.FP32, N.STRING);
     }
   }
@@ -239,7 +240,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.set(SetOp.UNION_ALL, commonTable, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableType);
     }
 
@@ -247,7 +248,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void emit() {
       Plan.Root root = b.root(b.set(SetOp.UNION_ALL, b.remap(0, 2), commonTable, commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
   }
@@ -258,7 +259,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     public void direct() {
       Plan.Root root = b.root(b.sort(input -> b.sortFields(input, 0, 1, 2), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), commonTableType);
     }
 
@@ -267,7 +268,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
       Plan.Root root =
           b.root(b.sort(input -> b.sortFields(input, 0, 1, 2), b.remap(0, 2), commonTable));
 
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
   }
@@ -283,7 +284,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
               .build();
 
       Plan.Root root = b.root(emptyScan);
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), List.of(R.I32, N.STRING));
     }
 
@@ -296,7 +297,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
               .build();
 
       Plan.Root root = b.root(emptyScanWithRemap);
-      var relNode = converter.convert(root.getInput());
+      RelNode relNode = converter.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32);
     }
   }

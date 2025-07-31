@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
@@ -14,9 +15,13 @@ import io.substrait.relation.Extension;
 import io.substrait.relation.ExtensionLeaf;
 import io.substrait.relation.ExtensionMulti;
 import io.substrait.relation.ExtensionSingle;
+import io.substrait.relation.ImmutableExtensionLeaf;
+import io.substrait.relation.ImmutableExtensionMulti;
+import io.substrait.relation.ImmutableExtensionSingle;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
+import io.substrait.type.ImmutableType;
 import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
@@ -39,22 +44,23 @@ import org.junit.jupiter.api.Test;
 public class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionLeafRelDetailTest() {
-    var detail = new ColumnAppendDetail(substraitBuilder.i32(1));
-    var rel = ExtensionLeaf.from(detail).build();
+    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(1));
+    ImmutableExtensionLeaf rel = ExtensionLeaf.from(detail).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionSingleRelDetailTest() {
-    var detail = new ColumnAppendDetail(substraitBuilder.i32(2));
-    var rel = ExtensionSingle.from(detail, substraitBuilder.emptyScan()).build();
+    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(2));
+    ImmutableExtensionSingle rel =
+        ExtensionSingle.from(detail, substraitBuilder.emptyScan()).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionMultiRelDetailTest() {
-    var detail = new ColumnAppendDetail(substraitBuilder.i32(3));
-    var rel =
+    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(3));
+    ImmutableExtensionMulti rel =
         ExtensionMulti.from(detail, substraitBuilder.emptyScan(), substraitBuilder.emptyScan())
             .build();
     roundtrip(rel);
@@ -67,17 +73,17 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
             new RelProtoConverter(new ExtensionCollector()), EmptyVisitationContext.INSTANCE);
 
     // Substrait Proto -> Substrait POJO 2
-    var pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
+    Rel pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
-    var calcite =
+    RelNode calcite =
         pojo2.accept(
             new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder),
             Context.newContext());
 
     // Calcite -> Substrait POJO 3
-    var pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
+    Rel pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
     assertEquals(pojo1, pojo3);
   }
 
@@ -108,7 +114,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
     @Override
     // MultiRelDetail
     public Type.Struct deriveRecordType(List<Rel> inputs) {
-      var builder = Type.Struct.builder().nullable(false);
+      ImmutableType.Struct.Builder builder = Type.Struct.builder().nullable(false);
       for (Rel input : inputs) {
         builder.addAllFields(input.getRecordType().fields());
       }
@@ -120,7 +126,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
       // the conversion of the literal in the detail requires the presence of the RelProtoConverter
       io.substrait.proto.Expression lit =
           converter.getExpressionProtoConverter().toProto(this.literal);
-      var inner =
+      io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail inner =
           io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.newBuilder()
               .setLiteral(lit.getLiteral())
               .build();
@@ -157,9 +163,9 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
 
     ColumnAppendDetail unpack(Any any) {
       try {
-        var proto =
+        io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail proto =
             any.unpack(io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.class);
-        var literal =
+        Literal literal =
             (new ProtoExpressionConverter(
                     lookup, extensions, Type.Struct.builder().nullable(false).build(), this)
                 .from(proto.getLiteral()));
@@ -291,7 +297,7 @@ public class RelExtensionRoundtripTest extends PlanTestBase {
       for (RelNode input : getInputs()) {
         fields.addAll(input.getRowType().getFieldList());
       }
-      var appendedField =
+      RelDataTypeFieldImpl appendedField =
           new RelDataTypeFieldImpl("appended_column", fields.size(), literal.getType());
       fields.add(appendedField);
       return getCluster()

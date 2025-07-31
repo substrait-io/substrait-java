@@ -21,7 +21,7 @@ public class ParentStringify {
 
   StringBuilder getIndent() {
 
-    var sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     if (indent != 0) {
       sb.append("\n");
     }
@@ -33,7 +33,7 @@ public class ParentStringify {
 
   StringBuilder getIndentString() {
 
-    var sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     sb.append(indentChar.repeat(this.indent * this.indentSize));
     sb.append("+- ");
     return sb;
@@ -41,7 +41,7 @@ public class ParentStringify {
 
   StringBuilder getContinuationIndentString() {
 
-    var sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     if (indent != 0) {
       sb.append("\n");
     }

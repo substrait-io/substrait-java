@@ -37,7 +37,7 @@ public class WindowFunctionTest extends PlanTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"rank", "dense_rank", "percent_rank"})
     void rankFunctions(String rankFunction) throws IOException, SqlParseException {
-      var query =
+      String query =
           String.format(
               "select O_ORDERKEY, %s() over (order by O_SHIPPRIORITY) from ORDERS", rankFunction);
       assertFullRoundTrip(query);
@@ -46,7 +46,7 @@ public class WindowFunctionTest extends PlanTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"rank", "dense_rank", "percent_rank"})
     void rankFunctionsWithPartitions(String rankFunction) throws IOException, SqlParseException {
-      var query =
+      String query =
           String.format(
               "select O_ORDERKEY, %s() over (partition by O_CUSTKEY order by O_SHIPPRIORITY) from ORDERS",
               rankFunction);
@@ -88,7 +88,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS UNBOUNDED PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
+      String overClause = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
@@ -99,7 +99,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MAX($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClaus =
+      String overClaus =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row AND unbounded following";
       assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClaus));
@@ -111,7 +111,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS 1 PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause =
+      String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between 1 preceding and current row";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -123,7 +123,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MAX($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause =
+      String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row and 2 following";
       assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -135,7 +135,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN 3 PRECEDING AND 4 FOLLOWING)])
        LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause =
+      String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE  rows between 3 preceding and 4 following";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -147,7 +147,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE 10 PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause =
+      String overClause =
           "partition by O_CUSTKEY order by O_TOTALPRICE range between 10 preceding and current row";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -159,7 +159,7 @@ public class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE BETWEEN CURRENT ROW AND 11 FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      var overClause =
+      String overClause =
           "partition by O_CUSTKEY order by O_TOTALPRICE range between current row and 11 following";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -182,7 +182,7 @@ public class WindowFunctionTest extends PlanTestBase {
   void rejectQueriesWithIgnoreNulls() {
     // IGNORE NULLS cannot be specified in the Substrait representation.
     // Queries using it should be rejected.
-    var query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
+    String query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
     assertThrows(IllegalArgumentException.class, () -> assertFullRoundTrip(query));
   }
 

@@ -136,7 +136,7 @@ public class PreCalciteAggregateValidator {
      * </ul>
      */
     public static Aggregate transformToValidCalciteAggregate(Aggregate aggregate) {
-      var at = new PreCalciteAggregateTransformer(aggregate);
+      PreCalciteAggregateTransformer at = new PreCalciteAggregateTransformer(aggregate);
 
       List<Aggregate.Measure> newMeasures =
           aggregate.getMeasures().stream().map(at::updateMeasure).collect(Collectors.toList());

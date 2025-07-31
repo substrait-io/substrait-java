@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.PlanTestBase;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.isthmus.expression.FunctionConverter.FunctionFinder;
 import java.util.List;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
@@ -20,7 +21,7 @@ public class AggregateFunctionConverterTest extends PlanTestBase {
         new AggregateFunctionConverter(
             extensions.aggregateFunctions(), List.of(), typeFactory, TypeConverter.DEFAULT);
 
-    var functionFinder =
+    FunctionFinder functionFinder =
         converter.getFunctionFinder(
             AggregateCall.create(
                 new SqlSumEmptyIsZeroAggFunction(),

@@ -1,8 +1,11 @@
 package io.substrait.isthmus;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression.EmptyListLiteral;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -14,9 +17,9 @@ public class EmptyArrayLiteralTest extends PlanTestBase {
 
   @Test
   void emptyArrayLiteral() {
-    var colType = N.I8;
-    var emptyListLiteral = ExpressionCreator.emptyList(false, N.I8);
-    var rel =
+    Type colType = N.I8;
+    EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(false, N.I8);
+    Project rel =
         b.project(
             input -> List.of(emptyListLiteral),
             Rel.Remap.offset(1, 1),
@@ -26,9 +29,9 @@ public class EmptyArrayLiteralTest extends PlanTestBase {
 
   @Test
   void nullableEmptyArrayLiteral() {
-    var colType = N.I8;
-    var emptyListLiteral = ExpressionCreator.emptyList(true, N.I8);
-    var rel =
+    Type colType = N.I8;
+    EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(true, N.I8);
+    Project rel =
         b.project(
             input -> List.of(emptyListLiteral),
             Rel.Remap.offset(1, 1),

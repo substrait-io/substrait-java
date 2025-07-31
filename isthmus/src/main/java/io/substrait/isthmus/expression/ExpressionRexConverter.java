@@ -13,6 +13,7 @@ import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
@@ -37,6 +38,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexWindowBound;
@@ -106,8 +108,9 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
       throws RuntimeException {
-    var binaryLiteral = rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
-    var type = typeConverter.toCalcite(typeFactory, expr.getType());
+    RexLiteral binaryLiteral =
+        rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
+    RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
   }
 
@@ -205,7 +208,7 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(SingleOrList expr, Context context) throws RuntimeException {
-    var lhs = expr.condition().accept(this, context);
+    RexNode lhs = expr.condition().accept(this, context);
     return rexBuilder.makeIn(
         lhs,
         expr.options().stream().map(e -> e.accept(this, context)).collect(Collectors.toList()));
@@ -316,14 +319,14 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.EmptyListLiteral expr, Context context) throws RuntimeException {
-    var calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
+    RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeCall(
         calciteType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, Collections.emptyList());
   }
 
   @Override
   public RexNode visit(Expression.MapLiteral expr, Context context) throws RuntimeException {
-    var args =
+    List<RexNode> args =
         expr.values().entrySet().stream()
             .flatMap(
                 entry ->
@@ -380,8 +383,8 @@ public class ExpressionRexConverter
                         callConversionFailureMessage(
                             "scalar", expr.declaration().name(), expr.arguments())));
 
-    var eArgs = scalarFunctionConverter.getExpressionArguments(expr);
-    var args =
+    List<FunctionArg> eArgs = scalarFunctionConverter.getExpressionArguments(expr);
+    List<RexNode> args =
         IntStream.range(0, eArgs.size())
             .mapToObj(i -> eArgs.get(i).accept(expr.declaration(), i, this, context))
             .collect(Collectors.toList());
@@ -539,13 +542,13 @@ public class ExpressionRexConverter
 
     @Override
     public RexWindowBound visit(WindowBound.Preceding preceding) {
-      var offset = BigDecimal.valueOf(preceding.offset());
+      BigDecimal offset = BigDecimal.valueOf(preceding.offset());
       return RexWindowBounds.preceding(rexBuilder.makeBigintLiteral(offset));
     }
 
     @Override
     public RexWindowBound visit(WindowBound.Following following) {
-      var offset = BigDecimal.valueOf(following.offset());
+      BigDecimal offset = BigDecimal.valueOf(following.offset());
       return RexWindowBounds.following(rexBuilder.makeBigintLiteral(offset));
     }
 
@@ -576,7 +579,7 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.Cast expr, Context context) throws RuntimeException {
-    var safeCast = expr.failureBehavior() == FailureBehavior.RETURN_NULL;
+    boolean safeCast = expr.failureBehavior() == FailureBehavior.RETURN_NULL;
     return rexBuilder.makeAbstractCast(
         typeConverter.toCalcite(typeFactory, expr.getType()),
         expr.input().accept(this, context),
@@ -586,7 +589,7 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(FieldReference expr, Context context) throws RuntimeException {
     if (expr.isSimpleRootReference()) {
-      var segment = expr.segments().get(0);
+      ReferenceSegment segment = expr.segments().get(0);
 
       RexInputRef rexInputRef;
       if (segment instanceof FieldReference.StructField) {

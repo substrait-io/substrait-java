@@ -151,7 +151,7 @@ public class TypeStringify extends ParentStringify
 
   @Override
   public String visit(Struct type) throws RuntimeException {
-    var sb = new StringBuffer(type.getClass().getSimpleName());
+    StringBuffer sb = new StringBuffer(type.getClass().getSimpleName());
     type.fields()
         .forEach(
             f -> {

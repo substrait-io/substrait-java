@@ -7,6 +7,7 @@ import io.substrait.function.NullableType;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
+import io.substrait.type.Type.Struct;
 import io.substrait.type.TypeCreator;
 import io.substrait.type.TypeVisitor;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.jspecify.annotations.Nullable;
@@ -52,14 +54,14 @@ public class TypeConverter {
       throw new IllegalArgumentException("Expected type of struct.");
     }
 
-    var names = new ArrayList<String>();
-    var struct = (Type.Struct) toSubstrait(type, names);
+    ArrayList<String> names = new ArrayList<String>();
+    Struct struct = (Type.Struct) toSubstrait(type, names);
     return NamedStruct.of(names, struct);
   }
 
   private Type toSubstrait(RelDataType type, List<String> names) {
     // Check for user mapped types first as they may re-use SqlTypeNames
-    var userType = userTypeMapper.toSubstrait(type);
+    Type userType = userTypeMapper.toSubstrait(type);
     if (userType != null) {
       return userType;
     }
@@ -136,8 +138,8 @@ public class TypeConverter {
         }
       case ROW:
         {
-          var children = new ArrayList<Type>();
-          for (var field : type.getFieldList()) {
+          ArrayList<Type> children = new ArrayList<Type>();
+          for (RelDataTypeField field : type.getFieldList()) {
             names.add(field.getName());
             children.add(toSubstrait(field.getType(), names));
           }
@@ -357,7 +359,7 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.UserDefined expr) throws RuntimeException {
-      var type = userTypeMapper.toCalcite(expr);
+      RelDataType type = userTypeMapper.toCalcite(expr);
       if (type != null) {
         return type;
       }

@@ -72,8 +72,9 @@ public class ScalarFunctionConverter
       SubstraitFunctionMapping mapping,
       RexCall call,
       Function<RexNode, Expression> topLevelConverter) {
-    var finder = new FunctionFinder(mapping.substraitName(), call.op, mapping.functions());
-    var wrapped =
+    FunctionFinder finder =
+        new FunctionFinder(mapping.substraitName(), call.op, mapping.functions());
+    WrappedScalarCall wrapped =
         new WrappedScalarCall(call) {
           @Override
           public Stream<RexNode> getOperands() {
@@ -87,7 +88,7 @@ public class ScalarFunctionConverter
   private Optional<Expression> defaultConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
     FunctionFinder finder = signatures.get(call.op);
-    var wrapped = new WrappedScalarCall(call);
+    WrappedScalarCall wrapped = new WrappedScalarCall(call);
 
     return attemptMatch(finder, wrapped, topLevelConverter);
   }

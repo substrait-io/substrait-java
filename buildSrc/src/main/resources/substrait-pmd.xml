@@ -12,6 +12,7 @@
 
   <rule ref="category/java/codestyle.xml/UnnecessaryModifier" />
   <rule ref="category/java/codestyle.xml/FieldDeclarationsShouldBeAtStartOfClass" />
+  <rule ref="category/java/codestyle.xml/UseExplicitTypes" />
   <rule ref="category/java/bestpractices.xml/MissingOverride" />
   <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes" />
 </ruleset>
