@@ -166,7 +166,7 @@ public class SubstraitRelNodeConverter
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
     RelNode node =
         relBuilder.push(input).filter(context.popCorrelationIds(), filterCondition).build();
-    context.popParentRelNodes();
+    context.popOuterRowType();
     return applyRemap(node, filter.getRemap());
   }
 
@@ -209,7 +209,7 @@ public class SubstraitRelNodeConverter
             .push(child)
             .project(rexExprs, List.of(), false, context.popCorrelationIds())
             .build();
-    context.popParentRelNodes();
+    context.popOuterRowType();
     return applyRemap(node, project.getRemap());
   }
 
@@ -239,7 +239,7 @@ public class SubstraitRelNodeConverter
             .push(right)
             .join(joinType, condition, context.popCorrelationIds())
             .build();
-    context.popParentRelNodes();
+    context.popOuterRowType();
     return applyRemap(node, join.getRemap());
   }
 
@@ -690,7 +690,7 @@ public class SubstraitRelNodeConverter
       this.correlationIds.push(new HashSet<>());
     }
 
-    public void popParentRelNodes() {
+    public void popOuterRowType() {
       outerRowTypes.pop();
     }
 
