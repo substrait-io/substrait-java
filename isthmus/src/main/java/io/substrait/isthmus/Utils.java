@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
 
 public class Utils {
@@ -52,8 +51,6 @@ public class Utils {
     lists = new ArrayList<>(lists);
     List<T> firstListToJoin = lists.remove(0);
     Stream<List<T>> startProduct = appendAndGen.apply(new ArrayList<T>(), firstListToJoin);
-
-    BinaryOperator<Stream<List<T>>> noOp = (a, b) -> null;
 
     return lists.stream() //
         .filter(Objects::nonNull) //

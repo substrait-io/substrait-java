@@ -112,8 +112,6 @@ public class ApplyJoinPlanTest extends PlanTestBase {
                 LogicalFilter(condition=[AND(=($4, $cor0.I_ITEM_SK), =($4, $cor2.SS_ITEM_SK))])
                   LogicalTableScan(table=[[tpcds, PROMOTION]])
      */
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
-    SqlToSubstrait s = new SqlToSubstrait(featureBoard);
     RelRoot root = getCalcitePlan(sql);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
@@ -136,9 +134,6 @@ public class ApplyJoinPlanTest extends PlanTestBase {
         "SELECT ss_sold_date_sk, ss_item_sk, ss_customer_sk\n"
             + "FROM store_sales CROSS APPLY\n"
             + "  (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)";
-
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
-    SqlToSubstrait s = new SqlToSubstrait(featureBoard);
 
     // TODO validate end to end conversion
     Assertions.assertThrows(

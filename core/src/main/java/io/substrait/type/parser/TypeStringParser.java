@@ -60,19 +60,13 @@ public class TypeStringParser {
         final int charPositionInLine,
         final String msg,
         final RecognitionException e) {
-      throw new ParseError(msg, e, line, charPositionInLine);
+      throw new ParseError(msg, e);
     }
   }
 
   public static class ParseError extends RuntimeException {
-    private final int line;
-    private final int posInLine;
-
-    public ParseError(
-        final String message, final Throwable cause, final int line, final int posInLine) {
+    public ParseError(final String message, final Throwable cause) {
       super(message, cause);
-      this.line = line;
-      this.posInLine = posInLine;
     }
   }
 }

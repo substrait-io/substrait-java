@@ -219,20 +219,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // right input of correlated-join is similar to a correlated sub-query
     apply(correlate.getRight());
 
-    JoinType joinType = asJoinType(correlate);
     return super.visit(correlate);
-  }
-
-  private Join.JoinType asJoinType(org.apache.calcite.rel.core.Correlate correlate) {
-    JoinRelType type = correlate.getJoinType();
-
-    if (type == JoinRelType.INNER) {
-      return Join.JoinType.INNER;
-    } else if (type == JoinRelType.LEFT) {
-      return Join.JoinType.LEFT;
-    }
-
-    throw new IllegalArgumentException("Invalid correlated join type: " + correlate.getJoinType());
   }
 
   @Override

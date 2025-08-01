@@ -14,5 +14,9 @@
   <rule ref="category/java/codestyle.xml/FieldDeclarationsShouldBeAtStartOfClass" />
   <rule ref="category/java/codestyle.xml/UseExplicitTypes" />
   <rule ref="category/java/bestpractices.xml/MissingOverride" />
+  <rule ref="category/java/bestpractices.xml/UnusedAssignment" />
+  <rule ref="category/java/bestpractices.xml/UnusedLocalVariable" />
+  <rule ref="category/java/bestpractices.xml/UnusedPrivateField" />
+  <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod" />
   <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes" />
 </ruleset>
