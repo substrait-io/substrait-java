@@ -3,6 +3,9 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
+import com.google.common.collect.TreeRangeMap;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
@@ -34,9 +37,11 @@ import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -49,6 +54,7 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalTableModify;
@@ -156,8 +162,11 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Filter filter, Context context) throws RuntimeException {
     RelNode input = filter.getInput().accept(this, context);
+    context.pushOuterRowType(input.getRowType());
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
-    RelNode node = relBuilder.push(input).filter(filterCondition).build();
+    RelNode node =
+        relBuilder.push(input).filter(context.popCorrelationIds(), filterCondition).build();
+    context.popOuterRowType();
     return applyRemap(node, filter.getRemap());
   }
 
@@ -183,6 +192,8 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Project project, Context context) throws RuntimeException {
     RelNode child = project.getInput().accept(this, context);
+    context.pushOuterRowType(child.getRowType());
+
     Stream<RexNode> directOutputs =
         IntStream.range(0, child.getRowType().getFieldCount())
             .mapToObj(fieldIndex -> rexBuilder.makeInputRef(child, fieldIndex));
@@ -193,7 +204,12 @@ public class SubstraitRelNodeConverter
     List<RexNode> rexExprs =
         Stream.concat(directOutputs, exprs).collect(java.util.stream.Collectors.toList());
 
-    RelNode node = relBuilder.push(child).project(rexExprs).build();
+    RelNode node =
+        relBuilder
+            .push(child)
+            .project(rexExprs, List.of(), false, context.popCorrelationIds())
+            .build();
+    context.popOuterRowType();
     return applyRemap(node, project.getRemap());
   }
 
@@ -211,12 +227,19 @@ public class SubstraitRelNodeConverter
   public RelNode visit(Join join, Context context) throws RuntimeException {
     RelNode left = join.getLeft().accept(this, context);
     RelNode right = join.getRight().accept(this, context);
+    context.pushOuterRowType(left.getRowType(), right.getRowType());
     RexNode condition =
         join.getCondition()
             .map(c -> c.accept(expressionRexConverter, context))
             .orElse(relBuilder.literal(true));
     JoinRelType joinType = asJoinRelType(join);
-    RelNode node = relBuilder.push(left).push(right).join(joinType, condition).build();
+    RelNode node =
+        relBuilder
+            .push(left)
+            .push(right)
+            .join(joinType, condition, context.popCorrelationIds())
+            .build();
+    context.popOuterRowType();
     return applyRemap(node, join.getRemap());
   }
 
@@ -626,9 +649,101 @@ public class SubstraitRelNodeConverter
     return relBuilder.push(relNode).project(rexList).build();
   }
 
+  /** A shared context for the Substrait to RelNode conversion. */
   public static class Context implements VisitationContext {
+    protected final Stack<RangeMap<Integer, RelDataType>> outerRowTypes = new Stack<>();
+
+    protected final Stack<java.util.Set<CorrelationId>> correlationIds = new Stack<>();
+
+    private int subqueryDepth;
+
+    /**
+     * Creates a new {@link Context} instance.
+     *
+     * @return the new {@link Context} instance
+     */
     public static Context newContext() {
       return new Context();
     }
+
+    /**
+     * Adds the outer row types to the top of the stack of outer row types.
+     *
+     * <p>Row types are stored as a {@link RangeMap} with field indices as keys and the {@link
+     * RelDataType} row type containing the field at the field index by continuously numbering the
+     * field indices from 0 across all provided row types in the order the row types are passed as
+     * arguments.
+     *
+     * @param inputs the row types to add
+     */
+    public void pushOuterRowType(final RelDataType... inputs) {
+      final RangeMap<Integer, RelDataType> fieldRangeMap = TreeRangeMap.create();
+      int begin = 0;
+      for (final RelDataType parent : inputs) {
+        final int end = begin + parent.getFieldCount();
+        final Range<Integer> range = Range.closedOpen(begin, end);
+        fieldRangeMap.put(range, parent);
+        begin = end;
+      }
+
+      outerRowTypes.push(fieldRangeMap);
+      this.correlationIds.push(new HashSet<>());
+    }
+
+    public void popOuterRowType() {
+      outerRowTypes.pop();
+    }
+
+    /**
+     * Returns the outer row type {@link RangeMap} walking up the given steps from the current
+     * subquery depth.
+     *
+     * @param stepsOut number of steps to walk up from the current subquery depth
+     * @return {@link RangeMap} with field indices as keys and the {@link RelDataType} row type
+     *     containing the field at the field index
+     */
+    public RangeMap<Integer, RelDataType> getOuterRowTypeRangeMap(final Integer stepsOut) {
+      return this.outerRowTypes.get(subqueryDepth - stepsOut);
+    }
+
+    /**
+     * Removes the correlation ids at the top of the stack.
+     *
+     * @return the correlation ids removed from the top of the stack
+     */
+    public java.util.Set<CorrelationId> popCorrelationIds() {
+      return correlationIds.pop();
+    }
+
+    /**
+     * Adds a {@link CorrelationId} to the subquery depth walking up the given steps from the
+     * current subquery depth.
+     *
+     * @param stepsOut number of steps to walk up from the current subquery depth
+     * @param correlationId the {@link CorrelationId} to add
+     */
+    public void addCorrelationId(final int stepsOut, final CorrelationId correlationId) {
+      final int index = subqueryDepth - stepsOut;
+      this.correlationIds.get(index).add(correlationId);
+    }
+
+    /** Increments the current subquery depth. */
+    public void incrementSubqueryDepth() {
+      this.subqueryDepth++;
+    }
+
+    /** Decrements the current subquery depth. */
+    public void decrementSubqueryDepth() {
+      this.subqueryDepth--;
+    }
+  }
+
+  /**
+   * Returns the {@link RelBuilder} of this converter.
+   *
+   * @return the {@link RelBuilder}
+   */
+  public RelBuilder getRelBuilder() {
+    return relBuilder;
   }
 }

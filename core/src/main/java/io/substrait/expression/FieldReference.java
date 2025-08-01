@@ -36,7 +36,13 @@ public abstract class FieldReference implements Expression {
   }
 
   public boolean isSimpleRootReference() {
-    return segments().size() == 1 && !inputExpression().isPresent();
+    return segments().size() == 1
+        && !inputExpression().isPresent()
+        && !outerReferenceStepsOut().isPresent();
+  }
+
+  public boolean isOuterReference() {
+    return outerReferenceStepsOut().orElse(0) > 0;
   }
 
   public FieldReference dereferenceStruct(int index) {
