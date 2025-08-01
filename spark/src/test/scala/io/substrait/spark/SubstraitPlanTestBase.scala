@@ -57,9 +57,14 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
 
   def assertSqlSubstraitRelRoundTrip(query: String): LogicalPlan = {
     val sparkPlan = plan(query)
+    assertSparkSubstraitRelRoundTrip(sparkPlan)
+  }
 
+  def assertSparkSubstraitRelRoundTrip(sparkPlan: LogicalPlan, rddLimit: Int = 10): LogicalPlan = {
     // convert spark logical plan to substrait
-    val substraitRel = new ToSubstraitRel().visit(sparkPlan)
+    val toSubstrait = new ToSubstraitRel
+    toSubstrait.rddLimit = rddLimit
+    val substraitRel = toSubstrait.visit(sparkPlan)
 
     // Serialize to protobuf byte array
     val extensionCollector = new ExtensionCollector
@@ -77,7 +82,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
     require(sparkPlan2.resolved)
 
     // and back to substrait again
-    val substraitRel3 = new ToSubstraitRel().visit(sparkPlan2)
+    val substraitRel3 = toSubstrait.visit(sparkPlan2)
 
     // compare with original substrait plan to ensure it round-tripped (via proto bytes) correctly
     substraitRel3.shouldEqualPlainly(substraitRel)
@@ -85,7 +90,7 @@ trait SubstraitPlanTestBase { self: SharedSparkSession =>
     // Do one more roundtrip, this time with Substrait Plan object which contains also names,
     // to test that the Spark schemas match. This in some cases adds an extra Project
     // to rename fields, which then would break the round trip test we do above.
-    val substraitPlan = new ToSubstraitRel().convert(sparkPlan)
+    val substraitPlan = toSubstrait.convert(sparkPlan)
     val sparkPlan3 = toLogicalPlan.convert(substraitPlan);
     require(sparkPlan3.resolved);
 
