@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.63.0](https://github.com/substrait-io/substrait-java/compare/v0.62.1...v0.63.0) (2025-08-03)
+
+### Features
+
+* **core,isthmus:** add DML support to SqlToSubstrait ([#431](https://github.com/substrait-io/substrait-java/issues/431)) ([76684d8](https://github.com/substrait-io/substrait-java/commit/76684d83f7bdc5295f6370c73ef2cb79acc927dd))
+* **spark:** add LogicalRDD support ([#451](https://github.com/substrait-io/substrait-java/issues/451)) ([142c574](https://github.com/substrait-io/substrait-java/commit/142c5749989532cc5198075c87ac1fedd08d60ab))
+* **spark:** support insert/append operations ([#429](https://github.com/substrait-io/substrait-java/issues/429)) ([1954fc8](https://github.com/substrait-io/substrait-java/commit/1954fc8df5fbd7366b0dcac7205ab69454a5843b))
+
+### Bug Fixes
+
+* **isthmus:** handle subqueries with outer field references ([#426](https://github.com/substrait-io/substrait-java/issues/426)) ([7cf1ccf](https://github.com/substrait-io/substrait-java/commit/7cf1ccff7abc249324f6bd52062d586087c94a3c))
+
 ## [0.62.1](https://github.com/substrait-io/substrait-java/compare/v0.62.0...v0.62.1) (2025-07-27)
 
 ### Bug Fixes
