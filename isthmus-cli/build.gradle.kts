@@ -1,3 +1,5 @@
+import java.nio.charset.StandardCharsets
+
 plugins {
   id("java")
   id("idea")
@@ -48,6 +50,8 @@ dependencies {
   compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
   runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
 }
+
+sourceSets { main { java.srcDir("build/generated/sources/version/") } }
 
 val initializeAtBuildTime =
   listOf(
@@ -143,3 +147,30 @@ graal {
   option("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
   option("-J--enable-preview")
 }
+
+tasks.register("writeIsthmusVersion") {
+  doLast {
+    val isthmusVersionClass =
+      layout.buildDirectory
+        .file("generated/sources/version/io/substrait/isthmus/cli/IsthmusCliVersion.java")
+        .get()
+        .getAsFile()
+    isthmusVersionClass.getParentFile().mkdirs()
+
+    isthmusVersionClass.printWriter(StandardCharsets.UTF_8).use {
+      it.println("package io.substrait.isthmus.cli;\n")
+      it.println("import io.substrait.SubstraitVersion;")
+      it.println("import picocli.CommandLine.IVersionProvider;\n")
+      it.println("public class IsthmusCliVersion implements IVersionProvider {")
+      it.println("  public String[] getVersion() throws Exception {")
+      it.println("    return new String[] {")
+      it.println("        \"\${COMMAND-NAME} version " + project.version + "\",")
+      it.println("        \"Substrait version \" + SubstraitVersion.VERSION,")
+      it.println("};")
+      it.println("  }")
+      it.println("}")
+    }
+  }
+}
+
+tasks.named("compileJava") { dependsOn("writeIsthmusVersion") }
