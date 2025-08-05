@@ -73,7 +73,7 @@ jobs:
           # fetch submodule tags since actions/checkout@v4 does not
           git submodule foreach 'git fetch --unshallow || true'
 
-          gradle build --rerun-tasks
+          ./gradlew build --rerun-tasks
   examples:
     name: Build Examples
     runs-on: ubuntu-latest
@@ -122,7 +122,7 @@ jobs:
         # fetch submodule tags since actions/checkout@v4 does not
         git submodule foreach 'git fetch --unshallow || true'
 
-        gradle nativeImage
+        ./gradlew nativeImage
     - name: Smoke Test
       run: |
         ./isthmus-cli/src/test/script/smoke.sh
