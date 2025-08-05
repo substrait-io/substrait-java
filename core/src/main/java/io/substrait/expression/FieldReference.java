@@ -272,13 +272,9 @@ public abstract class FieldReference implements Expression {
 
   private static class ListIndexFinder
       extends TypeVisitor.TypeThrowsVisitor<Type, RuntimeException> {
-
-    private final int index;
-
-    private ListIndexFinder(int index) {
+    private ListIndexFinder() {
       super(
           "This visitor only supports retrieving array index offsets. Was applied to a non-array type.");
-      this.index = index;
     }
 
     @Override
@@ -287,7 +283,7 @@ public abstract class FieldReference implements Expression {
     }
 
     public static Type getReferencedType(Type type, int index) {
-      return type.accept(new ListIndexFinder(index));
+      return type.accept(new ListIndexFinder());
     }
   }
 
