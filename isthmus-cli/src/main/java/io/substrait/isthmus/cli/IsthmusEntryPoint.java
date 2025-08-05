@@ -1,9 +1,5 @@
 package io.substrait.isthmus.cli;
 
-import static picocli.CommandLine.Command;
-import static picocli.CommandLine.Option;
-import static picocli.CommandLine.Parameters;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
@@ -22,10 +18,13 @@ import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
 import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Command(
     name = "isthmus",
-    version = "isthmus 0.1",
+    versionProvider = io.substrait.isthmus.cli.IsthmusCliVersion.class,
     description = "Convert SQL Queries and SQL Expressions to Substrait",
     mixinStandardHelpOptions = true)
 public class IsthmusEntryPoint implements Callable<Integer> {
