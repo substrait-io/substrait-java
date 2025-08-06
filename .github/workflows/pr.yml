@@ -27,6 +27,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - run: >
+          echo 'module.exports = {
+            // Workaround for https://github.com/dependabot/dependabot-core/issues/5923
+            "ignores": [(message) => /^Bumps \[.+]\(.+\) from .+ to .+\.$/m.test(message)]
+          }' > .commitlintrc.js
       - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
   security:
     name: Security validation
