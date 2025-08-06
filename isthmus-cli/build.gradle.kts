@@ -31,7 +31,7 @@ dependencies {
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
   implementation("org.reflections:reflections:0.9.12")
   implementation("com.google.guava:guava:${GUAVA_VERSION}")
-  implementation("org.graalvm.sdk:graal-sdk:22.1.0")
+  implementation("org.graalvm.sdk:graal-sdk:24.2.2")
   implementation("info.picocli:picocli:4.7.5")
   annotationProcessor("info.picocli:picocli-codegen:4.7.5")
   implementation("com.google.protobuf:protobuf-java-util:${PROTOBUF_VERSION}") {
