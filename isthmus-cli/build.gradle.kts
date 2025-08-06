@@ -3,7 +3,7 @@ import java.nio.charset.StandardCharsets
 plugins {
   id("java")
   id("idea")
-  id("com.palantir.graal") version "0.10.0"
+  id("com.palantir.graal") version "0.12.0"
   id("com.diffplug.spotless") version "7.1.0"
   id("substrait.java-conventions")
 }
