@@ -7,7 +7,7 @@ plugins {
   `maven-publish`
   id("java")
   id("idea")
-  id("com.github.vlsi.gradle-extensions") version "1.74"
+  id("com.github.vlsi.gradle-extensions") version "2.0.0"
   id("com.diffplug.spotless") version "7.1.0"
   id("org.jreleaser") version "1.18.0" apply false
 }
