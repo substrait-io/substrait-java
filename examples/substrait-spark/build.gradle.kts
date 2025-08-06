@@ -15,8 +15,8 @@ dependencies {
 
   // For a real Spark application, these would not be required since they would be in the Spark
   // server classpath
-  runtimeOnly("org.apache.spark:spark-core_2.12:3.5.1")
-  runtimeOnly("org.apache.spark:spark-hive_2.12:3.5.1")
+  runtimeOnly("org.apache.spark:spark-core_2.12:3.5.6")
+  runtimeOnly("org.apache.spark:spark-hive_2.12:3.5.6")
 }
 
 tasks.jar {
