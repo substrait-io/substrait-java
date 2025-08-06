@@ -73,12 +73,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Download isthmus-ubuntu-latest binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: isthmus-ubuntu-latest
           path: native/libs
       - name: Download isthmus-macOS-latest binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: isthmus-macOS-latest
           path: native/libs
