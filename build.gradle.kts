@@ -60,3 +60,9 @@ allprojects {
     }
   }
 }
+
+// run spotlessApply for build-logic module when running spotlessApply on the root
+tasks.spotlessApply { dependsOn(gradle.includedBuilds.map { it.task(":spotlessApply") }) }
+
+// run check for build-logic module when running check on the root
+tasks.check { dependsOn(gradle.includedBuilds.map { it.task(":check") }) }

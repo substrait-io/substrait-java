@@ -5,6 +5,4 @@ plugins {
 
 repositories { gradlePluginPortal() }
 
-spotless {
-  kotlinGradle { ktfmt().googleStyle() }
-}
+spotless { kotlinGradle { ktfmt().googleStyle() } }
