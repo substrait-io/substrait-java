@@ -6,6 +6,11 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
+import io.substrait.hint.Hint.ComputationType;
+import io.substrait.hint.Hint.LoadedComputation;
+import io.substrait.hint.Hint.RuntimeConstraint;
+import io.substrait.hint.Hint.SavedComputation;
+import io.substrait.hint.Hint.Stats;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
@@ -882,7 +887,7 @@ public class ProtoRelConverter {
         relCommon.hasEmit() ? Rel.Remap.of(relCommon.getEmit().getOutputMappingList()) : null);
   }
 
-  protected static Optional<Hint> optionalHint(io.substrait.proto.RelCommon relCommon) {
+  protected Optional<Hint> optionalHint(io.substrait.proto.RelCommon relCommon) {
     if (!relCommon.hasHint()) return Optional.empty();
     io.substrait.proto.RelCommon.Hint hint = relCommon.getHint();
     io.substrait.hint.ImmutableHint.Builder builder =
@@ -890,6 +895,45 @@ public class ProtoRelConverter {
     if (!hint.getAlias().isEmpty()) {
       builder.alias(hint.getAlias());
     }
+    if (hint.hasAdvancedExtension()) {
+      builder.extension(advancedExtension(hint.getAdvancedExtension()));
+    }
+    if (hint.hasStats()) {
+      io.substrait.proto.RelCommon.Hint.Stats stats = hint.getStats();
+      io.substrait.hint.ImmutableStats.Builder statsBuilder = Stats.builder();
+      statsBuilder.recordSize(stats.getRecordSize()).rowCount(stats.getRowCount());
+      if (stats.hasAdvancedExtension()) {
+        statsBuilder.extension(advancedExtension(stats.getAdvancedExtension()));
+      }
+      builder.stats(statsBuilder.build());
+    }
+    if (hint.hasConstraint()) {
+      io.substrait.proto.RelCommon.Hint.RuntimeConstraint constraint = hint.getConstraint();
+      io.substrait.hint.ImmutableRuntimeConstraint.Builder constraintBuilder =
+          RuntimeConstraint.builder();
+      if (constraint.hasAdvancedExtension()) {
+        constraintBuilder.extension(advancedExtension(constraint.getAdvancedExtension()));
+      }
+      builder.runtimeConstraint(constraintBuilder.build());
+    }
+
+    hint.getLoadedComputationsList()
+        .forEach(
+            loadedComp ->
+                builder.addLoadedComputations(
+                    LoadedComputation.builder()
+                        .computationId(loadedComp.getComputationIdReference())
+                        .computationType(ComputationType.fromProto(loadedComp.getType()))
+                        .build()));
+    hint.getSavedComputationsList()
+        .forEach(
+            savedComp ->
+                builder.addSavedComputations(
+                    SavedComputation.builder()
+                        .computationId(savedComp.getComputationId())
+                        .computationType(ComputationType.fromProto(savedComp.getType()))
+                        .build()));
+
     return Optional.of(builder.build());
   }
 

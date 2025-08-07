@@ -7,6 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.substrait.TestBase;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.hint.Hint;
+import io.substrait.hint.Hint.ComputationType;
+import io.substrait.hint.Hint.LoadedComputation;
+import io.substrait.hint.Hint.RuntimeConstraint;
+import io.substrait.hint.Hint.SavedComputation;
+import io.substrait.hint.Hint.Stats;
+import io.substrait.hint.ImmutableRuntimeConstraint;
+import io.substrait.hint.ImmutableStats;
 import io.substrait.relation.utils.StringHolder;
 import java.util.Arrays;
 import java.util.Collections;
@@ -130,28 +137,100 @@ public class ProtoRelConverterTest extends TestBase {
   @Nested
   class HintsTest {
 
-    @Test
-    void relWithHint() {
-      Rel relWithHints =
-          NamedScan.builder()
-              .from(commonTable)
-              .hint(Hint.builder().addOutputNames("Test hint").build())
-              .build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithHints);
-      Rel relReturned = protoRelConverter.from(protoRel);
-      assertEquals(relWithHints, relReturned);
+    Stats createStats(boolean includeEmptyOptimization) {
+      ImmutableStats.Builder builder = Stats.builder();
+      builder.rowCount(42).recordSize(42);
+      if (includeEmptyOptimization) {
+        builder.extension(AdvancedExtension.builder().addOptimizations().build());
+      }
+      return builder.build();
+    }
+
+    LoadedComputation createLoadedComputation() {
+      return LoadedComputation.builder()
+          .computationId(1)
+          .computationType(ComputationType.COMPUTATION_TYPE_UNKNOWN)
+          .build();
+    }
+
+    SavedComputation createSavedComputation() {
+      return SavedComputation.builder()
+          .computationId(1)
+          .computationType(ComputationType.COMPUTATION_TYPE_UNKNOWN)
+          .build();
+    }
+
+    RuntimeConstraint createRuntimeConstraint(boolean includeEmptyOptimization) {
+      ImmutableRuntimeConstraint.Builder builder = RuntimeConstraint.builder();
+      if (includeEmptyOptimization) {
+        builder.extension(AdvancedExtension.builder().addOptimizations().build());
+      }
+      return builder.build();
     }
 
     @Test
-    void relWithHints() {
-      Rel relWithHints =
-          NamedScan.builder()
-              .from(commonTable)
-              .hint(Hint.builder().addAllOutputNames(Arrays.asList("Hint 1", "Hint 2")).build())
+    void relWithCompleteHint() {
+      Hint test =
+          Hint.builder()
+              .alias("TestHint")
+              .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
+              .stats(createStats(true))
+              .addAllLoadedComputations(
+                  Arrays.asList(createLoadedComputation(), createLoadedComputation()))
+              .addAllSavedComputations(
+                  Arrays.asList(createSavedComputation(), createSavedComputation()))
+              .runtimeConstraint(createRuntimeConstraint(true))
               .build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithHints);
+
+      Rel relWithCompleteHint = NamedScan.builder().from(commonTable).hint(test).build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithCompleteHint);
       Rel relReturned = protoRelConverter.from(protoRel);
-      assertEquals(relWithHints, relReturned);
+      assertEquals(relWithCompleteHint, relReturned);
+    }
+
+    @Test
+    void relWithLoadedComputationHint() {
+      Hint test =
+          Hint.builder()
+              .alias("TestHint")
+              .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
+              .stats(createStats(false))
+              .addAllLoadedComputations(
+                  Arrays.asList(createLoadedComputation(), createLoadedComputation()))
+              .runtimeConstraint(createRuntimeConstraint(false))
+              .build();
+
+      Rel relWithLoadedComputationHint = NamedScan.builder().from(commonTable).hint(test).build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithLoadedComputationHint);
+      Rel relReturned = protoRelConverter.from(protoRel);
+      assertEquals(relWithLoadedComputationHint, relReturned);
+    }
+
+    @Test
+    void relWithSavedComputationHint() {
+      Hint test =
+          Hint.builder()
+              .alias("TestHint")
+              .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
+              .stats(createStats(false))
+              .addAllSavedComputations(
+                  Arrays.asList(createSavedComputation(), createSavedComputation()))
+              .runtimeConstraint(createRuntimeConstraint(false))
+              .build();
+
+      Rel relWithSavedComputationHint = NamedScan.builder().from(commonTable).hint(test).build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithSavedComputationHint);
+      Rel relReturned = protoRelConverter.from(protoRel);
+      assertEquals(relWithSavedComputationHint, relReturned);
+    }
+
+    @Test
+    void relWithMinimalHint() {
+      Hint test = Hint.builder().build();
+      Rel relWithMinimalHint = NamedScan.builder().from(commonTable).hint(test).build();
+      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithMinimalHint);
+      Rel relReturned = protoRelConverter.from(protoRel);
+      assertEquals(relWithMinimalHint, relReturned);
     }
   }
 }
