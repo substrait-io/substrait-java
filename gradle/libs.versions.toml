@@ -1,0 +1,79 @@
+[versions]
+antlr = "4.13.1"
+calcite = "1.40.0"
+commons-lang3 = "[3.18.0,)"
+graal = "22.1.0"
+graal-plugin = "0.10.0"
+gradle-extensions = "1.74"
+guava = "32.1.3-jre"
+httpclient5 = "5.4.4"
+immutables = "2.10.1"
+jackson = "2.16.1"
+jreleaser = "1.18.0"
+json-smart = "2.5.2"
+jspecify = "1.0.0"
+junit = "5.8.1"
+picocli = "4.7.5"
+protobuf-plugin = "0.9.4"
+protobuf = "3.25.5"
+reflections = "0.9.12"
+scala-library = "2.12.16"
+scalatest = "3.2.18"
+scalatestplus-junit5 = "3.2.18.0"
+shadow = "8.3.8"
+slf4j = "2.0.13"
+spark = "3.4.2"
+spotless = "7.1.0"
+
+[libraries]
+antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
+antlr4-runtime = { module = "org.antlr:antlr4-runtime" , version.ref = "antlr" }
+calcite-babel = { module = "org.apache.calcite:calcite-babel", version.ref = "calcite" }
+calcite-core = { module = "org.apache.calcite:calcite-core", version.ref = "calcite" }
+calcite-plus = { module = "org.apache.calcite:calcite-plus", version.ref = "calcite" }
+calcite-server = { module = "org.apache.calcite:calcite-server", version.ref = "calcite" }
+commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
+graal-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graal" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
+immutables-value = { module = "org.immutables:value", version.ref = "immutables" }
+immutables-annotations = { module = "org.immutables:value-annotations", version.ref = "immutables" }
+jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
+jackson-datatype-jdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8" }
+jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml" }
+json-smart = { module = "net.minidev:json-smart", version.ref = "json-smart" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-platform-engine = { module = "org.junit.platform:junit-platform-engine" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
+protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
+reflections = { module = "org.reflections:reflections", version.ref = "reflections"}
+scala-library = { module = "org.scala-lang:scala-library", version.ref = "scala-library" }
+scalatest = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest" }
+scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-10_2.12", version.ref = "scalatestplus-junit5" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
+spark-catalyst = { module = "org.apache.spark:spark-catalyst_2.12", version.ref = "spark" }
+spark-core = { module = "org.apache.spark:spark-core_2.12", version.ref = "spark" }
+spark-hive = { module = "org.apache.spark:spark-hive_2.12", version.ref = "spark" }
+spark-sql = { module = "org.apache.spark:spark-sql_2.12", version.ref = "spark" }
+
+[bundles]
+jackson = [ "jackson-databind", "jackson-annotations", "jackson-datatype-jdk8", "jackson-dataformat-yaml" ]
+
+[plugins]
+graal = { id = "com.palantir.graal", version.ref = "graal-plugin" }
+gradle-extensions = { id = "com.github.vlsi.gradle-extensions", version.ref = "gradle-extensions" }
+jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

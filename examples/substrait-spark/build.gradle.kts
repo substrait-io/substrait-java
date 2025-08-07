@@ -1,7 +1,7 @@
 plugins {
   // Apply the application plugin to add support for building a CLI application in Java.
   id("java")
-  id("com.diffplug.spotless") version "7.1.0"
+  alias(libs.plugins.spotless)
   id("substrait.java-conventions")
 }
 
@@ -15,8 +15,8 @@ dependencies {
 
   // For a real Spark application, these would not be required since they would be in the Spark
   // server classpath
-  runtimeOnly("org.apache.spark:spark-core_2.12:3.5.1")
-  runtimeOnly("org.apache.spark:spark-hive_2.12:3.5.1")
+  runtimeOnly(libs.spark.core)
+  runtimeOnly(libs.spark.hive)
 }
 
 tasks.jar {
