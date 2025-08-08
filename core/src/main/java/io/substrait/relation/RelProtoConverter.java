@@ -30,6 +30,11 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
 import io.substrait.proto.RelCommon;
+import io.substrait.proto.RelCommon.Hint;
+import io.substrait.proto.RelCommon.Hint.LoadedComputation;
+import io.substrait.proto.RelCommon.Hint.RuntimeConstraint;
+import io.substrait.proto.RelCommon.Hint.SavedComputation;
+import io.substrait.proto.RelCommon.Hint.Stats;
 import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
@@ -635,7 +640,48 @@ public class RelProtoConverter
       builder.setDirect(RelCommon.Direct.getDefaultInstance());
     }
 
-    rel.getHint().ifPresent(md -> builder.setHint(md.toProto()));
+    if (rel.getHint().isPresent()) {
+      io.substrait.hint.Hint hint = rel.getHint().get();
+      Hint.Builder hintBuilder = Hint.newBuilder();
+
+      hint.getAlias().ifPresent(hintBuilder::setAlias);
+      hintBuilder.addAllOutputNames(hint.getOutputNames());
+
+      if (hint.getStats().isPresent()) {
+        io.substrait.hint.Hint.Stats stats = hint.getStats().get();
+        Stats.Builder statsBuilder = Stats.newBuilder();
+
+        stats.getExtension().ifPresent(ae -> statsBuilder.setAdvancedExtension(ae.toProto(this)));
+        hintBuilder.setStats(
+            statsBuilder.setRowCount(stats.rowCount()).setRecordSize(stats.recordSize()));
+      }
+
+      if (hint.getRuntimeConstraint().isPresent()) {
+        io.substrait.hint.Hint.RuntimeConstraint rc = hint.getRuntimeConstraint().get();
+        RuntimeConstraint.Builder rcBuilder = RuntimeConstraint.newBuilder();
+
+        rc.getExtension().ifPresent(ae -> rcBuilder.setAdvancedExtension(ae.toProto(this)));
+        hintBuilder.setConstraint(rcBuilder);
+      }
+
+      hint.getLoadedComputations()
+          .forEach(
+              loadedComp ->
+                  hintBuilder.addLoadedComputations(
+                      LoadedComputation.newBuilder()
+                          .setComputationIdReference(loadedComp.computationId())
+                          .setType(loadedComp.computationType().toProto())));
+
+      hint.getSavedComputations()
+          .forEach(
+              savedComp ->
+                  hintBuilder.addSavedComputations(
+                      SavedComputation.newBuilder()
+                          .setComputationId(savedComp.computationId())
+                          .setType(savedComp.computationType().toProto())));
+
+      builder.setHint(hintBuilder.build());
+    }
 
     return builder.build();
   }
