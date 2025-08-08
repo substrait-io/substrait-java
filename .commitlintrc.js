@@ -124,5 +124,5 @@ module.exports = {
     }
   },
   // Workaround for https://github.com/dependabot/dependabot-core/issues/5923
-  "ignores": [(message) => /^Bumps \[.+]\(.+\) from .+ to .+\.$/m.test(message)]
+  "ignores": [(message) => /^build(deps): bump \[.+]\(.+\) from .+ to .+\.$/m.test(message)]
 }
