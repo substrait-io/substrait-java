@@ -120,7 +120,7 @@ dependencies {
     // calcite-core:1.39.0 has dependencies that contain vulnerabilities:
     // - CVE-2025-27820 (org.apache.httpcomponents.client5:httpclient5 < 5.4.3)
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.4.4")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.5")
     implementation("net.minidev:json-smart:2.5.2")
     // calcite-core:1.40.0 has dependencies that contain vulnerabilities:
     // - CVE-2025-48924 (org.apache.commons:commons-lang3 < 3.18.0)
