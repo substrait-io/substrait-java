@@ -11,10 +11,10 @@ plugins {
   id("java-library")
   id("idea")
   id("antlr")
-  id("com.google.protobuf") version "0.9.4"
-  id("com.diffplug.spotless") version "7.1.0"
-  id("com.gradleup.shadow") version "8.3.8"
-  id("org.jreleaser")
+  alias(libs.plugins.protobuf)
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.shadow)
+  alias(libs.plugins.jreleaser)
   id("substrait.java-conventions")
 }
 
@@ -99,13 +99,6 @@ jreleaser {
   release { github { enabled = false } }
 }
 
-val ANTLR_VERSION = properties.get("antlr.version")
-val IMMUTABLES_VERSION = properties.get("immutables.version")
-val JACKSON_VERSION = properties.get("jackson.version")
-val JUNIT_VERSION = properties.get("junit.version")
-val SLF4J_VERSION = properties.get("slf4j.version")
-val PROTOBUF_VERSION = properties.get("protobuf.version")
-
 // This allows specifying deps to be shadowed so that they don't get included in the POM file
 val shadowImplementation by configurations.creating
 
@@ -114,21 +107,21 @@ configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImp
 configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
 
 dependencies {
-  testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  api("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
-  implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${JACKSON_VERSION}")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${JACKSON_VERSION}")
-  api("org.jspecify:jspecify:1.0.0")
+  testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.junit.jupiter)
+  testRuntimeOnly(libs.junit.platform.launcher)
 
-  antlr("org.antlr:antlr4:${ANTLR_VERSION}")
-  shadowImplementation("org.antlr:antlr4-runtime:${ANTLR_VERSION}")
-  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
-  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
+  implementation(platform(libs.jackson.bom))
+  implementation(libs.bundles.jackson)
+
+  api(libs.protobuf.java)
+  api(libs.jspecify)
+
+  antlr(libs.antlr4)
+  shadowImplementation(libs.antlr4.runtime)
+  implementation(libs.slf4j.api)
+  annotationProcessor(libs.immutables.value)
+  compileOnly(libs.immutables.annotations)
 }
 
 configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
@@ -281,4 +274,4 @@ tasks.named<AntlrTask>("generateGrammarSource") {
     layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }
+protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }

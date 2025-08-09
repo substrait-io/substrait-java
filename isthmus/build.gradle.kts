@@ -5,10 +5,10 @@ plugins {
   signing
   id("java-library")
   id("idea")
-  id("com.diffplug.spotless") version "7.1.0"
-  id("com.gradleup.shadow") version "8.3.8"
-  id("com.google.protobuf") version "0.9.4"
-  id("org.jreleaser")
+  alias(libs.plugins.shadow)
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.protobuf)
+  alias(libs.plugins.jreleaser)
   id("substrait.java-conventions")
 }
 
@@ -101,16 +101,9 @@ java {
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
 
-val CALCITE_VERSION = properties.get("calcite.version")
-val GUAVA_VERSION = properties.get("guava.version")
-val IMMUTABLES_VERSION = properties.get("immutables.version")
-val JUNIT_VERSION = properties.get("junit.version")
-val SLF4J_VERSION = properties.get("slf4j.version")
-val PROTOBUF_VERSION = properties.get("protobuf.version")
-
 dependencies {
   api(project(":core"))
-  api("org.apache.calcite:calcite-core:${CALCITE_VERSION}") {
+  api(libs.calcite.core) {
     exclude(group = "commons-lang", module = "commons-lang")
       .because(
         "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
@@ -120,37 +113,37 @@ dependencies {
     // calcite-core:1.39.0 has dependencies that contain vulnerabilities:
     // - CVE-2025-27820 (org.apache.httpcomponents.client5:httpclient5 < 5.4.3)
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.4.4")
-    implementation("net.minidev:json-smart:2.5.2")
+    implementation(libs.httpclient5)
+    implementation(libs.json.smart)
     // calcite-core:1.40.0 has dependencies that contain vulnerabilities:
     // - CVE-2025-48924 (org.apache.commons:commons-lang3 < 3.18.0)
-    implementation("org.apache.commons:commons-lang3:[3.18.0,)")
+    implementation(libs.commons.lang3)
   }
-  implementation("org.apache.calcite:calcite-server:${CALCITE_VERSION}") {
+  implementation(libs.calcite.server) {
     exclude(group = "commons-lang", module = "commons-lang")
       .because(
         "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
       )
   }
-  testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  implementation("com.google.guava:guava:${GUAVA_VERSION}")
-  implementation("com.google.protobuf:protobuf-java-util:${PROTOBUF_VERSION}") {
+  testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.junit.jupiter)
+  testRuntimeOnly(libs.junit.platform.launcher)
+  implementation(libs.guava)
+  implementation(libs.protobuf.java.util) {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
-  implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
-  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
-  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}") {
+  annotationProcessor(libs.immutables.value)
+  compileOnly(libs.immutables.annotations)
+  implementation(libs.slf4j.api)
+  testImplementation(libs.calcite.plus) {
     exclude(group = "commons-lang", module = "commons-lang")
       .because(
         "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
       )
   }
-  testImplementation("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
-  api("org.jspecify:jspecify:1.0.0")
+  testImplementation(libs.protobuf.java)
+  api(libs.jspecify)
 }
 
 tasks {
@@ -173,4 +166,4 @@ tasks { build { dependsOn(shadowJar) } }
 
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:${PROTOBUF_VERSION}" } }
+protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }

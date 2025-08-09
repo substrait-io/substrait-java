@@ -7,25 +7,22 @@ plugins {
   `maven-publish`
   id("java")
   id("idea")
-  id("com.github.vlsi.gradle-extensions") version "1.74"
-  id("com.diffplug.spotless") version "7.1.0"
-  id("org.jreleaser") version "1.18.0" apply false
+  alias(libs.plugins.gradle.extensions)
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.jreleaser) apply false
 }
-
-var IMMUTABLES_VERSION = properties.get("immutables.version")
-var JUNIT_VERSION = properties.get("junit.version")
-var SLF4J_VERSION = properties.get("slf4j.version")
 
 repositories { mavenCentral() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 
 dependencies {
-  testImplementation("org.junit.jupiter:junit-jupiter-api:${JUNIT_VERSION}")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${JUNIT_VERSION}")
-  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
-  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  compileOnly("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
+  testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.junit.jupiter.api)
+  testImplementation(libs.junit.jupiter.engine)
+  implementation(libs.slf4j.api)
+  annotationProcessor(libs.immutables.value)
+  compileOnly(libs.immutables.annotations)
 }
 
 val submodulesUpdate by

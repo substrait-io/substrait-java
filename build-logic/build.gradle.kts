@@ -1,6 +1,6 @@
 plugins {
   `kotlin-dsl`
-  id("com.diffplug.spotless") version "6.19.0"
+  alias(libs.plugins.spotless)
 }
 
 repositories { gradlePluginPortal() }

@@ -4,8 +4,8 @@ plugins {
   id("java-library")
   id("scala")
   id("idea")
-  id("com.diffplug.spotless") version "7.1.0"
-  id("org.jreleaser")
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.jreleaser)
   id("substrait.java-conventions")
 }
 
@@ -104,30 +104,30 @@ java {
 
 tasks.withType<ScalaCompile>() { scalaCompileOptions.additionalParameters = listOf("-release:17") }
 
-var SLF4J_VERSION = properties.get("slf4j.version")
 var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
-var SPARK_VERSION = properties.get("spark.version")
 
 sourceSets {
-  main { scala { setSrcDirs(listOf("src/main/scala", "src/main/spark-${SPARKBUNDLE_VERSION}")) } }
+  main { scala { setSrcDirs(listOf("src/main/scala", "src/main/spark-3.4")) } }
   test { scala { setSrcDirs(listOf("src/test/scala", "src/test/spark-3.2", "src/main/scala")) } }
 }
 
 dependencies {
   api(project(":core"))
-  implementation("org.scala-lang:scala-library:2.12.16")
-  api("org.apache.spark:spark-core_2.12:${SPARK_VERSION}")
-  api("org.apache.spark:spark-sql_2.12:${SPARK_VERSION}")
-  implementation("org.apache.spark:spark-catalyst_2.12:${SPARK_VERSION}")
-  implementation("org.slf4j:slf4j-api:${SLF4J_VERSION}")
+  implementation(libs.scala.library)
+  api(libs.spark.core)
+  api(libs.spark.sql)
+  implementation(libs.spark.catalyst)
+  implementation(libs.slf4j.api)
 
-  testImplementation("org.scalatest:scalatest_2.12:3.2.18")
-  testRuntimeOnly("org.junit.platform:junit-platform-engine:1.10.0")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
-  testRuntimeOnly("org.scalatestplus:junit-5-10_2.12:3.2.18.0")
-  testImplementation("org.apache.spark:spark-core_2.12:${SPARK_VERSION}:tests")
-  testImplementation("org.apache.spark:spark-sql_2.12:${SPARK_VERSION}:tests")
-  testImplementation("org.apache.spark:spark-catalyst_2.12:${SPARK_VERSION}:tests")
+  testImplementation(libs.scalatest)
+  testImplementation(platform(libs.junit.bom))
+  testRuntimeOnly(libs.junit.platform.engine)
+  testRuntimeOnly(libs.junit.platform.launcher)
+  testRuntimeOnly(libs.scalatestplus.junit5)
+
+  testImplementation(variantOf(libs.spark.core) { classifier("tests") })
+  testImplementation(variantOf(libs.spark.sql) { classifier("tests") })
+  testImplementation(variantOf(libs.spark.catalyst) { classifier("tests") })
 }
 
 spotless {

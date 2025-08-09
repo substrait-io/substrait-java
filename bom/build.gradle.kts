@@ -21,30 +21,12 @@ plugins {
 
 val String.v: String get() = rootProject.extra["$this.version"] as String
 
-// Note: Gradle allows to declare dependency on "bom" as "api",
-// and it makes the contraints to be transitively visible
-// However Maven can't express that, so the approach is to use Gradle resolution
-// and generate pom files with resolved versions
-// See https://github.com/gradle/gradle/issues/9866
-
-fun DependencyConstraintHandlerScope.apiv(
-    notation: String,
-    versionProp: String = notation.substringAfterLast(':')
-) =
-    "api"(notation + ":" + versionProp.v)
-
-fun DependencyConstraintHandlerScope.runtimev(
-    notation: String,
-    versionProp: String = notation.substringAfterLast(':')
-) =
-    "runtime"(notation + ":" + versionProp.v)
-
 javaPlatform {
     allowDependencies()
 }
 
 dependencies {
-    api(platform("com.fasterxml.jackson:jackson-bom:${"jackson".v}"))
+    api(platform(libs.jackson.bom))
 
     // Parenthesis are needed here: https://github.com/gradle/gradle/issues/9248
     (constraints) {
