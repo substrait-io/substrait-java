@@ -1,4 +1,4 @@
-{
+module.exports = {
   "rules": {
     "body-leading-blank": [1, "always"],
     "body-max-line-length": [2, "always", 100],
@@ -122,5 +122,7 @@
         "description": "Add issue references (e.g. \"fix #123\", \"re #123\".)"
       }
     }
-  }
+  },
+  // Workaround for https://github.com/dependabot/dependabot-core/issues/5923
+  "ignores": [(message) => /^build(deps): bump \[.+]\(.+\) from .+ to .+\.$/m.test(message)]
 }
