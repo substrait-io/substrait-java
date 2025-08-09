@@ -29,9 +29,9 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
       SimpleExtension.FunctionAnchor.of(
-          "/functions_aggregate_approx.yaml", "approx_count_distinct:any");
+          "urn:substrait:functions_aggregate_approx", "approx_count_distinct:any");
   public static SimpleExtension.FunctionAnchor COUNT =
-      SimpleExtension.FunctionAnchor.of("/functions_aggregate_generic.yaml", "count:any");
+      SimpleExtension.FunctionAnchor.of("urn:substrait:functions_aggregate_generic", "count:any");
 
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
