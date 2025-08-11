@@ -3,8 +3,8 @@ import java.nio.charset.StandardCharsets
 plugins {
   id("java")
   id("idea")
-  id("com.palantir.graal") version "0.10.0"
-  id("com.diffplug.spotless") version "7.1.0"
+  alias(libs.plugins.graal)
+  alias(libs.plugins.spotless)
   id("substrait.java-conventions")
 }
 
@@ -16,39 +16,30 @@ java {
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
 
-val CALCITE_VERSION = properties.get("calcite.version")
-val GUAVA_VERSION = properties.get("guava.version")
-val IMMUTABLES_VERSION = properties.get("immutables.version")
-val JUNIT_VERSION = properties.get("junit.version")
-val PROTOBUF_VERSION = properties.get("protobuf.version")
-val SLF4J_VERSION = properties.get("slf4j.version")
-
 dependencies {
   implementation(project(":core"))
   implementation(project(":isthmus"))
-  testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  implementation("org.reflections:reflections:0.9.12")
-  implementation("com.google.guava:guava:${GUAVA_VERSION}")
-  implementation("org.graalvm.sdk:graal-sdk:22.1.0")
-  implementation("info.picocli:picocli:4.7.5")
-  annotationProcessor("info.picocli:picocli-codegen:4.7.5")
-  implementation("com.google.protobuf:protobuf-java-util:${PROTOBUF_VERSION}") {
+  testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.junit.jupiter)
+  testRuntimeOnly(libs.junit.platform.launcher)
+  implementation(libs.reflections)
+  implementation(libs.guava)
+  implementation(libs.graal.sdk)
+  implementation(libs.picocli)
+  annotationProcessor(libs.picocli.codegen)
+  implementation(libs.protobuf.java.util) {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
-  implementation("org.immutables:value-annotations:${IMMUTABLES_VERSION}")
-  annotationProcessor("org.immutables:value:${IMMUTABLES_VERSION}")
-  testImplementation("org.apache.calcite:calcite-plus:${CALCITE_VERSION}") {
+  annotationProcessor(libs.immutables.value)
+  implementation(libs.immutables.annotations)
+  testImplementation(libs.calcite.plus) {
     exclude(group = "commons-lang", module = "commons-lang")
       .because(
         "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
       )
   }
-  annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:0.4.2")
-  runtimeOnly("org.slf4j:slf4j-jdk14:${SLF4J_VERSION}")
+  runtimeOnly(libs.slf4j.jdk14)
 }
 
 sourceSets { main { java.srcDir("build/generated/sources/version/") } }
