@@ -62,7 +62,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     SqlToSubstrait sE2E = new SqlToSubstrait();
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> sE2E.execute(sql, TPCDS_CATALOG),
+        () -> sE2E.convert(sql, TPCDS_CATALOG),
         "Lateral join is not supported");
   }
 
@@ -83,7 +83,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().convert(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -123,7 +123,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().convert(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -138,7 +138,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> new SqlToSubstrait().convert(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 }

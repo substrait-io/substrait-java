@@ -25,14 +25,10 @@ public class NameRoundtripTest extends PlanTestBase {
     String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");
 
-    List<org.apache.calcite.rel.RelRoot> calciteRelRoots = s.sqlToRelNode(query, catalogReader);
-    assertEquals(1, calciteRelRoots.size());
+    Plan plan = s.convert(query, catalogReader);
+    assertEquals(1, plan.getRoots().size());
 
-    org.apache.calcite.rel.RelRoot calciteRelRoot1 = calciteRelRoots.get(0);
-    assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
-
-    io.substrait.plan.Plan.Root substraitRelRoot =
-        SubstraitRelVisitor.convert(calciteRelRoot1, EXTENSION_COLLECTION);
+    io.substrait.plan.Plan.Root substraitRelRoot = plan.getRoots().get(0);
     assertEquals(expectedNames, substraitRelRoot.getNames());
 
     org.apache.calcite.rel.RelRoot calciteRelRoot2 = substraitToCalcite.convert(substraitRelRoot);

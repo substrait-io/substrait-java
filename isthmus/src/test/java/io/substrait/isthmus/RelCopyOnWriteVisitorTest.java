@@ -9,7 +9,6 @@ import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
-import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.CopyOnWriteUtils;
 import io.substrait.relation.NamedScan;
@@ -77,8 +76,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
-    io.substrait.proto.Plan protoPlan1 = s.execute(query, TPCH_CATALOG);
-    return new ProtoPlanConverter().from(protoPlan1);
+    return s.convert(query, TPCH_CATALOG);
   }
 
   @Test

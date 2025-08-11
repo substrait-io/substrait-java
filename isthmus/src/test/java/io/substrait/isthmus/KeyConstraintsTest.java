@@ -14,6 +14,6 @@ public class KeyConstraintsTest extends PlanTestBase {
     String values = asString("keyconstraints_schema.sql");
     Prepare.CatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(values);
-    s.execute(asString(String.format("tpcds/queries/%02d.sql", query)), catalog);
+    s.convert(asString(String.format("tpcds/queries/%02d.sql", query)), catalog);
   }
 }
