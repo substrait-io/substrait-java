@@ -1,6 +1,16 @@
 Release Notes
 ---
 
+## [0.64.0](https://github.com/substrait-io/substrait-java/compare/v0.63.0...v0.64.0) (2025-08-11)
+
+### Features
+
+* **core:** handle all Hint fields ([#469](https://github.com/substrait-io/substrait-java/issues/469)) ([3dfe665](https://github.com/substrait-io/substrait-java/commit/3dfe665b421a832071de99d2a1bd996b53641583))
+
+### Bug Fixes
+
+* **isthmus-cli:** use correct version in Isthmus CLI help ([#456](https://github.com/substrait-io/substrait-java/issues/456)) ([d61d8c4](https://github.com/substrait-io/substrait-java/commit/d61d8c44b252ab2653ac282fa4266717bc0a7e4d))
+
 ## [0.63.0](https://github.com/substrait-io/substrait-java/compare/v0.62.1...v0.63.0) (2025-08-03)
 
 ### Features
