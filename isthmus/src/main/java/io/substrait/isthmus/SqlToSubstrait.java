@@ -3,9 +3,9 @@ package io.substrait.isthmus;
 import com.google.common.annotations.VisibleForTesting;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.plan.ImmutablePlan.Builder;
+import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
-import io.substrait.proto.Plan;
 import java.util.List;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -31,35 +31,51 @@ public class SqlToSubstrait extends SqlConverterBase {
     super(features);
   }
 
-  public Plan execute(String sql, Prepare.CatalogReader catalogReader) throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
-    return executeInner(sql, validator, catalogReader);
+  /**
+   * Converts a SQL statements string into a Substrait proto {@link io.substrait.proto.Plan}.
+   *
+   * @param sql the SQL statements string containing one more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements string
+   * @return the Substrait proto {@link io.substrait.proto.Plan}
+   * @throws SqlParseException if there is an error while parsing the SQL statements string
+   * @deprecated use {@link #convert(String, org.apache.calcite.prepare.Prepare.CatalogReader)}
+   *     instead to get a {@link Plan} and convert that to a {@link io.substrait.proto.Plan} using
+   *     {@link PlanProtoConverter#toProto(Plan)}
+   */
+  @Deprecated
+  public io.substrait.proto.Plan execute(String sql, Prepare.CatalogReader catalogReader)
+      throws SqlParseException {
+    PlanProtoConverter planToProto = new PlanProtoConverter();
+
+    return planToProto.toProto(convert(sql, catalogReader));
   }
 
-  List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
-      throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
-    return sqlToRelNode(sql, validator, catalogReader);
-  }
-
-  private Plan executeInner(String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
-      throws SqlParseException {
+  /**
+   * Converts a SQL statements string into a Substrait {@link Plan}.
+   *
+   * @param sql the SQL statements string containing one more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements string
+   * @return the Substrait {@link Plan}
+   * @throws SqlParseException if there is an error while parsing the SQL statements string
+   */
+  public Plan convert(String sql, Prepare.CatalogReader catalogReader) throws SqlParseException {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    sqlToRelNode(sql, validator, catalogReader).stream()
+    sqlToRelNode(sql, catalogReader).stream()
         .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
         .forEach(root -> builder.addRoots(root));
 
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-
-    return planToProto.toProto(builder.build());
+    return builder.build();
   }
 
-  private List<RelRoot> sqlToRelNode(
-      String sql, SqlValidator validator, Prepare.CatalogReader catalogReader)
+  @VisibleForTesting
+  List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNodeList parsedList = parser.parseStmtList();
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
@@ -70,8 +86,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     return roots;
   }
 
-  @VisibleForTesting
-  SqlToRelConverter createSqlToRelConverter(
+  protected SqlToRelConverter createSqlToRelConverter(
       SqlValidator validator, Prepare.CatalogReader catalogReader) {
     SqlToRelConverter converter =
         new SqlToRelConverter(
@@ -84,8 +99,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     return converter;
   }
 
-  @VisibleForTesting
-  static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
+  protected RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
       // RelBuilder seems to implicitly use the rule below,

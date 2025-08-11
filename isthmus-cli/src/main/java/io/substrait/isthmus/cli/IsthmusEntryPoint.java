@@ -10,6 +10,7 @@ import io.substrait.isthmus.ImmutableFeatureBoard;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.plan.PlanProtoConverter;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import java.io.IOException;
@@ -94,7 +95,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
               createStatements.toArray(String[]::new));
-      Plan plan = converter.execute(sql, catalog);
+      Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
       printMessage(plan);
     }
     return 0;

@@ -18,9 +18,10 @@ public class SubqueryPlanTest extends PlanTestBase {
   public void existsCorrelatedSubquery() throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     Plan plan =
-        s.execute(
-            "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)",
-            TPCH_CATALOG);
+        toProto(
+            s.convert(
+                "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)",
+                TPCH_CATALOG));
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -59,9 +60,10 @@ public class SubqueryPlanTest extends PlanTestBase {
   public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     Plan plan =
-        s.execute(
-            "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)",
-            TPCH_CATALOG);
+        toProto(
+            s.convert(
+                "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)",
+                TPCH_CATALOG));
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -104,7 +106,7 @@ public class SubqueryPlanTest extends PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql =
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)";
-    Plan plan = s.execute(sql, TPCH_CATALOG);
+    Plan plan = toProto(s.convert(sql, TPCH_CATALOG));
 
     Expression.Subquery subquery =
         plan.getRelations(0)
@@ -142,7 +144,7 @@ public class SubqueryPlanTest extends PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql =
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)";
-    Plan plan = s.execute(sql, TPCH_CATALOG);
+    Plan plan = toProto(s.convert(sql, TPCH_CATALOG));
     Expression.Subquery subquery =
         plan.getRelations(0)
             .getRoot()
@@ -192,7 +194,7 @@ public class SubqueryPlanTest extends PlanTestBase {
             + "          FROM partsupp ps\n"
             + "          WHERE ps.ps_partkey = p.p_partkey\n"
             + "          AND   PS.ps_suppkey = l.l_suppkey))";
-    Plan plan = s.execute(sql, TPCH_CATALOG);
+    Plan plan = toProto(s.convert(sql, TPCH_CATALOG));
 
     Expression.Subquery outer_subquery =
         plan.getRelations(0)
@@ -266,7 +268,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql = asString("subquery/nested_scalar_subquery_in_filter.sql");
-    Plan plan = s.execute(sql, TPCH_CATALOG);
+    Plan plan = toProto(s.convert(sql, TPCH_CATALOG));
     String planText = JsonFormat.printer().includingDefaultValueFields().print(plan);
 
     System.out.println(planText);
@@ -344,7 +346,7 @@ public class SubqueryPlanTest extends PlanTestBase {
     Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> {
-          s.execute(sql, TPCH_CATALOG);
+          s.convert(sql, TPCH_CATALOG);
         });
   }
 }
