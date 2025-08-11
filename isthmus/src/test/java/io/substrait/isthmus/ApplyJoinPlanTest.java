@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -11,10 +12,7 @@ import org.junit.jupiter.api.Test;
 
 public class ApplyJoinPlanTest extends PlanTestBase {
 
-  private static RelRoot getCalcitePlan(String sql) throws SqlParseException {
-    SqlToSubstrait s = new SqlToSubstrait();
-    return s.sqlToRelNode(sql, TPCDS_CATALOG).get(0);
-  }
+  static SqlToSubstrait s = new SqlToSubstrait();
 
   private static void validateOuterRef(
       Map<RexFieldAccess, Integer> fieldAccessDepthMap, String refName, String colName, int depth) {
@@ -53,16 +51,15 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     */
 
     // validate outer reference map
-    RelRoot root = getCalcitePlan(sql);
+    RelRoot root = SubstraitSqlToCalcite.convertSelect(sql, TPCDS_CATALOG);
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
     validateOuterRef(fieldAccessDepthMap, "$cor0", "SS_ITEM_SK", 1);
 
     // TODO validate end to end conversion
-    SqlToSubstrait sE2E = new SqlToSubstrait();
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> sE2E.execute(sql, TPCDS_CATALOG),
+        () -> s.execute(sql, TPCDS_CATALOG),
         "Lateral join is not supported");
   }
 
@@ -74,7 +71,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
             + "FROM store_sales OUTER APPLY\n"
             + "  (select i_item_sk from item where item.i_item_sk = store_sales.ss_item_sk)";
 
-    RelRoot root = getCalcitePlan(sql);
+    RelRoot root = SubstraitSqlToCalcite.convertSelect(sql, TPCDS_CATALOG);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
@@ -83,7 +80,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> s.execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -112,7 +109,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
                 LogicalFilter(condition=[AND(=($4, $cor0.I_ITEM_SK), =($4, $cor2.SS_ITEM_SK))])
                   LogicalTableScan(table=[[tpcds, PROMOTION]])
      */
-    RelRoot root = getCalcitePlan(sql);
+    RelRoot root = SubstraitSqlToCalcite.convertSelect(sql, TPCDS_CATALOG);
 
     Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(root);
     Assertions.assertEquals(3, fieldAccessDepthMap.size());
@@ -123,7 +120,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> s.execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 
@@ -138,7 +135,7 @@ public class ApplyJoinPlanTest extends PlanTestBase {
     // TODO validate end to end conversion
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> new SqlToSubstrait().execute(sql, TPCDS_CATALOG),
+        () -> s.execute(sql, TPCDS_CATALOG),
         "APPLY is not supported");
   }
 }
