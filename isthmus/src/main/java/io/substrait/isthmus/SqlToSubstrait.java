@@ -1,12 +1,13 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
+import io.substrait.isthmus.expression.DdlRelBuilder;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -109,6 +110,49 @@ public class SqlToSubstrait extends SqlConverterBase {
     return roots;
   }
 
+  protected void sqlToPlanRoots(
+      String sql, SqlValidator validator, Prepare.CatalogReader catalogReader, Builder builder)
+      throws SqlParseException {
+
+    SqlParser parser = SqlParser.create(sql, parserConfig);
+    SqlNodeList parsedList = parser.parseStmtList();
+    if (parsedList.isEmpty()) {
+      return;
+    }
+
+    SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
+    DdlRelBuilder ddlRelBuilder =
+        new DdlRelBuilder(
+            converter, SqlToSubstrait::getBestExpRelRoot, EXTENSION_COLLECTION, featureBoard);
+
+    List<SqlNode> nonDdlNodes = new ArrayList<>();
+
+    for (SqlNode sqlNode : parsedList) {
+      final io.substrait.plan.Plan.Root ddlRoot = sqlNode.accept(ddlRelBuilder);
+      if (ddlRoot != null) {
+        builder.addRoots(ddlRoot);
+      } else {
+        nonDdlNodes.add(sqlNode);
+      }
+    }
+
+    if (!nonDdlNodes.isEmpty()) {
+      SqlNodeList dmlNodes = new SqlNodeList(nonDdlNodes, parsedList.getParserPosition());
+
+      List<RelRoot> relRoots = sqlNodesToRelNode(dmlNodes, converter);
+      relRoots.stream()
+          .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+          .forEach(builder::addRoots);
+    }
+  }
+
+  private List<RelRoot> sqlNodesToRelNode(
+      final SqlNodeList parsedList, final SqlToRelConverter converter) {
+    return parsedList.stream()
+        .map(parsed -> getBestExpRelRoot(converter, parsed))
+        .collect(java.util.stream.Collectors.toList());
+  }
+
   protected SqlToRelConverter createSqlToRelConverter(
       SqlValidator validator, Prepare.CatalogReader catalogReader) {
     SqlToRelConverter converter =
@@ -122,7 +166,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     return converter;
   }
 
-  protected RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
+  protected static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
       // RelBuilder seems to implicitly use the rule below,
