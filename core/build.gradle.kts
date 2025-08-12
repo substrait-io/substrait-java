@@ -255,7 +255,7 @@ project.configure<IdeaModel> {
     generatedSourceDirs.addAll(
       listOf(
         file("build/generated/sources/antlr/main"),
-        file("build/generated/source/proto/main/java"),
+        file("build/generated/sources/proto/main/java"),
       )
     )
   }
