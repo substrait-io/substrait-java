@@ -2,7 +2,7 @@
 antlr = "4.13.1"
 calcite = "1.40.0"
 commons-lang3 = "[3.18.0,)"
-graal = "22.1.0"
+graal = "24.2.2"
 graal-plugin = "0.12.0"
 gradle-extensions = "1.74"
 guava = "32.1.3-jre"
