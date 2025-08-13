@@ -21,7 +21,7 @@ scala-library = "2.12.16"
 scalatest = "3.2.18"
 scalatestplus-junit5 = "3.2.18.0"
 shadow = "8.3.8"
-slf4j = "2.0.13"
+slf4j = "2.0.17"
 spark = "3.4.2"
 spotless = "7.1.0"
 
