@@ -18,8 +18,8 @@ protobuf-plugin = "0.9.5"
 protobuf = "3.25.5"
 reflections = "0.9.12"
 scala-library = "2.12.16"
-scalatest = "3.2.18"
-scalatestplus-junit5 = "3.2.18.0"
+scalatest = "3.2.19"
+scalatestplus-junit5 = "3.2.19.0"
 shadow = "8.3.8"
 slf4j = "2.0.17"
 spark = "3.4.2"
@@ -59,7 +59,7 @@ protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 reflections = { module = "org.reflections:reflections", version.ref = "reflections"}
 scala-library = { module = "org.scala-lang:scala-library", version.ref = "scala-library" }
 scalatest = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest" }
-scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-10_2.12", version.ref = "scalatestplus-junit5" }
+scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-13_2.12", version.ref = "scalatestplus-junit5" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 spark-catalyst = { module = "org.apache.spark:spark-catalyst_2.12", version.ref = "spark" }
