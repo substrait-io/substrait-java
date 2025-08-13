@@ -1,0 +1,44 @@
+%YAML 1.2
+---
+scalar_functions:
+  - name: "regexp_extract"
+    impls:
+      - args:
+          - name: "text"
+            value: string
+          - name: "pattern"
+            value: string
+        return: string
+
+  - name: "format_text"
+    description: "Formats text based on a mode. The output is nullable if the input is."
+    impls:
+      - args:
+          - name: "mode"
+#            options: ["UPPER", "LOWER"]
+            value: string
+          - name: "input_text"
+#            options: ["UPPER", "LOWER"]
+            value: string
+        return: string
+        nullability: MIRROR
+
+  - name: "system_property_get"
+    description: "Safely gets a system property. Always returns a nullable string."
+    impls:
+      - args:
+          - name: "property_name"
+            value: string
+        return: string?
+        nullability: DECLARED_OUTPUT
+
+  - name: "safe_divide"
+    description: "Performs division, returning NULL if the denominator is zero."
+    impls:
+      - args:
+          - name: "numerator"
+            value: i32
+          - name: "denominator"
+            value: i32
+        return: fp32?
+        nullability: DISCRETE

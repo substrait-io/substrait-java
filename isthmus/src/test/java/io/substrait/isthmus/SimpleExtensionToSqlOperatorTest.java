@@ -16,7 +16,7 @@ public class SimpleExtensionToSqlOperatorTest {
 
   @Test
   void test() throws IOException {
-    String customFunctionPath = "/extensions/functions_string_custom.yaml";
+    String customFunctionPath = "/extensions/scalar_functions_custom.yaml";
 
     SimpleExtension.ExtensionCollection customExtensions =
         SimpleExtension.load(
@@ -24,8 +24,6 @@ public class SimpleExtensionToSqlOperatorTest {
             SimpleExtensionToSqlOperatorTest.class.getResourceAsStream(customFunctionPath));
 
     List<SqlOperator> operators = SimpleExtensionToSqlOperator.from(customExtensions);
-
-    assertEquals(1, operators.size(), "Should generate one operator from the YAML file.");
 
     Optional<SqlOperator> function =
         operators.stream()

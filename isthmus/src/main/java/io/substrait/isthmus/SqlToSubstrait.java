@@ -47,7 +47,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     this.operatorTable =
         SqlOperatorTables.chain(
-            SqlOperatorTables.of(generatedDynamicOperators), SubstraitOperatorTable.INSTANCE);
+            SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
   /**
