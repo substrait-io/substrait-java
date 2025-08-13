@@ -1,5 +1,5 @@
 [versions]
-antlr = "4.13.1"
+antlr = "4.13.2"
 calcite = "1.40.0"
 commons-lang3 = "[3.18.0,)"
 graal = "22.1.0"
