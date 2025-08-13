@@ -140,6 +140,7 @@ graal {
 }
 
 tasks.register("writeIsthmusVersion") {
+  val version = project.version
   doLast {
     val isthmusVersionClass =
       layout.buildDirectory
@@ -155,7 +156,7 @@ tasks.register("writeIsthmusVersion") {
       it.println("public class IsthmusCliVersion implements IVersionProvider {")
       it.println("  public String[] getVersion() throws Exception {")
       it.println("    return new String[] {")
-      it.println("        \"\${COMMAND-NAME} version " + project.version + "\",")
+      it.println("        \"\${COMMAND-NAME} version " + version + "\",")
       it.println("        \"Substrait version \" + SubstraitVersion.VERSION,")
       it.println("};")
       it.println("  }")
