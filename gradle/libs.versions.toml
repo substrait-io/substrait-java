@@ -23,7 +23,7 @@ scalatestplus-junit5 = "3.2.18.0"
 shadow = "8.3.8"
 slf4j = "2.0.17"
 spark = "3.4.2"
-spotless = "7.1.0"
+spotless = "7.2.1"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
