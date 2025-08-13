@@ -86,7 +86,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
       - name: substrait-spark
         shell: bash
         run: |
