@@ -47,7 +47,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     this.operatorTable =
         SqlOperatorTables.chain(
-            SqlOperatorTables.of(generatedDynamicOperators), SubstraitOperatorTable.INSTANCE);
+            SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
   /**
@@ -94,7 +94,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   @VisibleForTesting
   List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNodeList parsedList = parser.parseStmtList();
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);

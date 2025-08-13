@@ -6,6 +6,7 @@ import io.substrait.function.ParameterizedTypeVisitor;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.Type;
 import io.substrait.type.TypeExpressionEvaluator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,17 +47,19 @@ public final class SimpleExtensionToSqlOperator {
       SimpleExtension.Function function,
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
-    List<SimpleExtension.Argument> requiredArgs =
-        function.args().stream()
-            .filter(SimpleExtension.Argument::required)
-            .filter(t -> t instanceof SimpleExtension.ValueArgument || t instanceof SimpleExtension.EnumArgument)
-            .map(t -> (SimpleExtension.Argument) t)
-            .collect(Collectors.toList());
 
-    List<SqlTypeFamily> argFamilies =
-        requiredArgs.stream()
-            .map(arg -> arg.value().accept(new CalciteTypeVisitor()).getFamily())
-            .collect(Collectors.toList());
+    List<SqlTypeFamily> argFamilies = new ArrayList<>();
+
+    for (SimpleExtension.Argument arg : function.requiredArguments()) {
+      if (arg instanceof SimpleExtension.ValueArgument) {
+        SimpleExtension.ValueArgument valueArg = (SimpleExtension.ValueArgument) arg;
+        SqlTypeName typeName = valueArg.value().accept(new CalciteTypeVisitor());
+        argFamilies.add(typeName.getFamily());
+      } else if (arg instanceof SimpleExtension.EnumArgument) {
+        // Treat an EnumArgument as a required string literal.
+        argFamilies.add(SqlTypeFamily.STRING);
+      }
+    }
 
     SqlReturnTypeInference returnTypeInference =
         new SubstraitReturnTypeInference(function, typeFactory, typeConverter);
@@ -97,7 +100,27 @@ public final class SimpleExtensionToSqlOperator {
           TypeExpressionEvaluator.evaluateExpression(
               returnExpression, function.args(), substraitArgTypes);
 
-      return typeConverter.toCalcite(typeFactory, resolvedSubstraitType);
+      boolean finalIsNullable;
+      switch (function.nullability()) {
+        case MIRROR:
+          // If any input is nullable, the output is nullable.
+          finalIsNullable =
+              opBinding.collectOperandTypes().stream().anyMatch(RelDataType::isNullable);
+          break;
+        case DISCRETE:
+          // The function can return null even if inputs are not null.
+          finalIsNullable = true;
+          break;
+        case DECLARED_OUTPUT:
+        default:
+          // Use the nullability declared on the resolved Substrait type.
+          finalIsNullable = resolvedSubstraitType.nullable();
+          break;
+      }
+
+      RelDataType baseCalciteType = typeConverter.toCalcite(typeFactory, resolvedSubstraitType);
+
+      return typeFactory.createTypeWithNullability(baseCalciteType, finalIsNullable);
     }
   }
 
