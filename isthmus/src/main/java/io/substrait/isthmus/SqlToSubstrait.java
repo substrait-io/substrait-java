@@ -1,29 +1,18 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
-import com.google.common.annotations.VisibleForTesting;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
-import io.substrait.isthmus.sql.SubstraitSqlValidator;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
+import java.util.List;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.util.SqlOperatorTables;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.calcite.sql2rel.StandardConvertletTable;
-
-import java.util.List;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
@@ -84,9 +73,9 @@ public class SqlToSubstrait extends SqlConverterBase {
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
-      SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader).stream()
-              .map(root -> SubstraitRelVisitor.convert(root, extensionCollection, featureBoard))
-              .forEach(root -> builder.addRoots(root));
+    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, operatorTable).stream()
+        .map(root -> SubstraitRelVisitor.convert(root, extensionCollection, featureBoard))
+        .forEach(root -> builder.addRoots(root));
 
     return builder.build();
   }

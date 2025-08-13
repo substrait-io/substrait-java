@@ -167,12 +167,10 @@ public class PlanTestBase {
     SqlToSubstrait s = new SqlToSubstrait(extensions, null);
 
     // 1. SQL -> Calcite RelRoot
-    List<RelRoot> relRoots = s.sqlToRelNode(query, catalogReader);
-    assertEquals(1, relRoots.size());
-    RelRoot relRoot1 = relRoots.get(0);
+    Plan plan1 = s.convert(query, catalogReader);
 
     // 2. Calcite RelRoot  -> Substrait Rel
-    Plan.Root pojo1 = SubstraitRelVisitor.convert(relRoot1, extensions);
+    Plan.Root pojo1 = plan1.getRoots().get(0);
 
     // 3. Substrait Rel -> Calcite RelNode
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
