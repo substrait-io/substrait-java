@@ -10,6 +10,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
@@ -30,14 +31,24 @@ import org.apache.calcite.tools.RelBuilder;
 public class RelCreator {
 
   private RelOptCluster cluster;
-  private CalciteCatalogReader catalog;
+  private CatalogReader catalog;
 
   public RelCreator() {
-    CalciteSchema schema = CalciteSchema.createRootSchema(false);
+    this(null);
+  }
+
+  public RelCreator(CatalogReader catalogReader) {
     RelDataTypeFactory factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
     CalciteConnectionConfig config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-    catalog = new CalciteCatalogReader(schema, Arrays.asList(), factory, config);
+
+    if (catalogReader == null) {
+      CalciteSchema schema = CalciteSchema.createRootSchema(false);
+      catalog = new CalciteCatalogReader(schema, Arrays.asList(), factory, config);
+    } else {
+      catalog = catalogReader;
+    }
+
     VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.EMPTY_CONTEXT);
     cluster = RelOptCluster.create(planner, new RexBuilder(factory));
   }
