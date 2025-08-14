@@ -26,19 +26,43 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
  */
 public class SubstraitSqlToCalcite {
 
-  public static RelRoot convertQuery(String statement, Prepare.CatalogReader catalogReader)
+  /**
+   * Converts a SQL statement to a Calcite {@link RelRoot}.
+   *
+   * @param sqlStatement a SQL statement string
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statement
+   * @return a {@link RelRoot} corresponding to the given SQL statement
+   * @throws SqlParseException if there is an error while parsing the SQL statement
+   */
+  public static RelRoot convertQuery(String sqlStatement, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader);
-    return convertQuery(statement, catalogReader, validator, createDefaultRelOptCluster());
+    return convertQuery(sqlStatement, catalogReader, validator, createDefaultRelOptCluster());
   }
 
+  /**
+   * Converts a SQL statement to a Calcite {@link RelRoot}.
+   *
+   * @param sqlStatement a SQL statement
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statement
+   * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
+   *     additional control of SQL functions and operators via {@link
+   *     SqlValidator#getOperatorTable()}
+   * @param cluster the {@link RelOptCluster} used when creating {@link RelNode}s during statement
+   *     processing. Calcite expects that the {@link RelOptCluster} used during statement processing
+   *     is the same as that used during query optimization.
+   * @return {@link RelRoot} corresponding to the given SQL statement
+   * @throws SqlParseException if there is an error while parsing the SQL statement string
+   */
   public static RelRoot convertQuery(
-      String statement,
+      String sqlStatement,
       Prepare.CatalogReader catalogReader,
       SqlValidator validator,
       RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(statement);
+    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(sqlStatement);
     if (sqlNodes.size() != 1) {
       throw new IllegalArgumentException(
           String.format("Expected one statement, found: %d", sqlNodes.size()));
@@ -48,19 +72,45 @@ public class SubstraitSqlToCalcite {
     return relRoots.get(0);
   }
 
-  public static List<RelRoot> convertQueries(String statements, Prepare.CatalogReader catalogReader)
-      throws SqlParseException {
+  /**
+   * Converts one or more SQL statement to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * statement.
+   *
+   * @param sqlStatements a string containing one or more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statement
+   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
+  public static List<RelRoot> convertQueries(
+      String sqlStatements, Prepare.CatalogReader catalogReader) throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader);
-    return convertQueries(statements, catalogReader, validator, createDefaultRelOptCluster());
+    return convertQueries(sqlStatements, catalogReader, validator, createDefaultRelOptCluster());
   }
 
+  /**
+   * Converts one or more SQL statement to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * statement.
+   *
+   * @param sqlStatements a string containing one or more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statement
+   * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
+   *     additional control of SQL functions and operators via {@link
+   *     SqlValidator#getOperatorTable()}
+   * @param cluster the {@link RelOptCluster} used when creating {@link RelNode}s during statement
+   *     processing. Calcite expects that the {@link RelOptCluster} used during statement processing
+   *     is the same as that used during query optimization.
+   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
   public static List<RelRoot> convertQueries(
-      String statements,
+      String sqlStatements,
       Prepare.CatalogReader catalogReader,
       SqlValidator validator,
       RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(statements);
+    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(sqlStatements);
     return convert(sqlNodes, catalogReader, validator, cluster);
   }
 

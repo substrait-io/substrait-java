@@ -20,39 +20,40 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   /**
-   * Converts a SQL statements string into a Substrait proto {@link io.substrait.proto.Plan}.
+   * Converts one or more SQL statements into a Substrait {@link io.substrait.proto.Plan}.
    *
-   * @param sql the SQL statements string containing one more SQL statements
+   * @param sqlStatements a string containing one more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statements string
-   * @return the Substrait proto {@link io.substrait.proto.Plan}
+   *     the SQL statements
+   * @return a Substrait proto {@link io.substrait.proto.Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements string
    * @deprecated use {@link #convert(String, org.apache.calcite.prepare.Prepare.CatalogReader)}
    *     instead to get a {@link Plan} and convert that to a {@link io.substrait.proto.Plan} using
    *     {@link PlanProtoConverter#toProto(Plan)}
    */
   @Deprecated
-  public io.substrait.proto.Plan execute(String sql, Prepare.CatalogReader catalogReader)
+  public io.substrait.proto.Plan execute(String sqlStatements, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     PlanProtoConverter planToProto = new PlanProtoConverter();
-    return planToProto.toProto(convert(sql, catalogReader));
+    return planToProto.toProto(convert(sqlStatements, catalogReader));
   }
 
   /**
-   * Converts a SQL statements string into a Substrait {@link Plan}.
+   * Converts one or more SQL statements into a Substrait {@link Plan}.
    *
-   * @param sql the SQL statements string containing one more SQL statements
+   * @param sqlStatements a string containing one more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statements string
+   *     the SQL statements
    * @return the Substrait {@link Plan}
-   * @throws SqlParseException if there is an error while parsing the SQL statements string
+   * @throws SqlParseException if there is an error while parsing the SQL statements
    */
-  public Plan convert(String sql, Prepare.CatalogReader catalogReader) throws SqlParseException {
+  public Plan convert(String sqlStatements, Prepare.CatalogReader catalogReader)
+      throws SqlParseException {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    SubstraitSqlToCalcite.convertQueries(sql, catalogReader).stream()
+    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader).stream()
         .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
         .forEach(root -> builder.addRoots(root));
 
