@@ -11,7 +11,7 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
  * Utility class for parsing SQL statements to {@link SqlNode}s using a Substrait flavoured SQL
  * parser. Intended for testing and experimentation.
  */
-public class SubstraitStatementParser {
+public class SubstraitSqlStatementParser {
 
   private static final SqlParser.Config PARSER_CONFIG =
       SqlParser.config()

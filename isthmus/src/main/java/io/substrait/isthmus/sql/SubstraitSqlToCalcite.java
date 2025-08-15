@@ -22,7 +22,7 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 /**
  * Substrait flavoured SQL processor provided as a utility for testing and experimentation,
- * utilizing {@link SubstraitStatementParser} and {@link SubstraitSqlValidator}
+ * utilizing {@link SubstraitSqlStatementParser} and {@link SubstraitSqlValidator}
  */
 public class SubstraitSqlToCalcite {
 
@@ -62,7 +62,7 @@ public class SubstraitSqlToCalcite {
       SqlValidator validator,
       RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(sqlStatement);
+    List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatement);
     if (sqlNodes.size() != 1) {
       throw new IllegalArgumentException(
           String.format("Expected one statement, found: %d", sqlNodes.size()));
@@ -110,7 +110,7 @@ public class SubstraitSqlToCalcite {
       SqlValidator validator,
       RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitStatementParser.parseStatements(sqlStatements);
+    List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatements);
     return convert(sqlNodes, catalogReader, validator, cluster);
   }
 
