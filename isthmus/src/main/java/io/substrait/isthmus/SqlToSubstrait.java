@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.substrait.isthmus.expression.DdlRelBuilder;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
@@ -64,10 +65,8 @@ public class SqlToSubstrait extends SqlConverterBase {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
-    // TODO: consider case in which one sql passes conversion while others don't
-    sqlToRelNode(sql, catalogReader).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
-        .forEach(root -> builder.addRoots(root));
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    sqlToPlanRoots(sql, validator, catalogReader, builder);
 
     return builder.build();
   }
@@ -86,6 +85,34 @@ public class SqlToSubstrait extends SqlConverterBase {
     return roots;
   }
 
+  void sqlToPlanRoots(
+      String sql, SqlValidator validator, Prepare.CatalogReader catalogReader, Builder builder)
+      throws SqlParseException {
+
+    SqlParser parser = SqlParser.create(sql, parserConfig);
+    SqlNodeList parsedList = parser.parseStmtList();
+    if (parsedList.isEmpty()) {
+      return;
+    }
+
+    SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
+    DdlRelBuilder ddlRelBuilder =
+        new DdlRelBuilder(
+            converter, SqlToSubstrait::getBestExpRelRoot, EXTENSION_COLLECTION, featureBoard);
+
+    for (SqlNode sqlNode : parsedList) {
+      final io.substrait.plan.Plan.Root ddlRoot = sqlNode.accept(ddlRelBuilder);
+      if (ddlRoot != null) {
+        builder.addRoots(ddlRoot);
+      } else {
+        RelRoot relRoot = getBestExpRelRoot(converter, sqlNode);
+        io.substrait.plan.Plan.Root planRoot =
+            SubstraitRelVisitor.convert(relRoot, EXTENSION_COLLECTION, featureBoard);
+        builder.addRoots(planRoot);
+      }
+    }
+  }
+
   protected SqlToRelConverter createSqlToRelConverter(
       SqlValidator validator, Prepare.CatalogReader catalogReader) {
     SqlToRelConverter converter =
@@ -99,7 +126,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     return converter;
   }
 
-  protected RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
+  protected static RelRoot getBestExpRelRoot(SqlToRelConverter converter, SqlNode parsed) {
     RelRoot root = converter.convertQuery(parsed, true, true);
     {
       // RelBuilder seems to implicitly use the rule below,
