@@ -47,7 +47,7 @@ public class SubstraitSqlToCalcite {
    * @param sqlStatement a SQL statement
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statement
-   * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
+   * @param validator the {@link SqlValidator} used to validate the SQL statement. Allows for
    *     additional control of SQL functions and operators via {@link
    *     SqlValidator#getOperatorTable()}
    * @param cluster the {@link RelOptCluster} used when creating {@link RelNode}s during statement
@@ -73,12 +73,12 @@ public class SubstraitSqlToCalcite {
   }
 
   /**
-   * Converts one or more SQL statement to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
    * statement.
    *
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statement
+   *     the SQL statements
    * @return a list of {@link RelRoot}s corresponding to the given SQL statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
@@ -89,12 +89,12 @@ public class SubstraitSqlToCalcite {
   }
 
   /**
-   * Converts one or more SQL statement to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
    * statement.
    *
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statement
+   *     the SQL statements
    * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
    *     additional control of SQL functions and operators via {@link
    *     SqlValidator#getOperatorTable()}
