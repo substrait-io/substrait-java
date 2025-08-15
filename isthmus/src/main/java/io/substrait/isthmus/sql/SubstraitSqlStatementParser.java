@@ -21,7 +21,7 @@ public class SubstraitSqlStatementParser {
           .withConformance(SqlConformanceEnum.LENIENT);
 
   /**
-   * Parse one or more SQL statements to a list of {@link SqlNode}s
+   * Parse one or more SQL statements to a list of {@link SqlNode}s.
    *
    * @param sqlStatements a string containing one or more SQL statements
    * @return a list of {@link SqlNode}s corresponding to the given statements
