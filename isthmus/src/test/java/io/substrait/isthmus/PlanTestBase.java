@@ -128,13 +128,14 @@ public class PlanTestBase {
     // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
     // Return list of sql -> Substrait rel -> Calcite rel.
 
+    SqlToSubstrait s2s = new SqlToSubstrait();
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
-    // 1. SQL -> Calcite RelRoot
-    RelRoot relRoot1 = SubstraitSqlToCalcite.convertQuery(query, catalogReader);
+    // 1. SQL -> Substrait Plan
+    Plan plan1 = s2s.convert(query, catalogReader);
 
-    // 2. Calcite RelRoot  -> Substrait Rel
-    Plan.Root pojo1 = SubstraitRelVisitor.convert(relRoot1, extensions);
+    // 2. Substrait Plan  -> Substrait Rel
+    Plan.Root pojo1 = plan1.getRoots().get(0);
 
     // 3. Substrait Rel -> Calcite RelNode
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
