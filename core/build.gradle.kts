@@ -171,6 +171,7 @@ abstract class SubstraitSpecVersionValueSource :
 }
 
 tasks.register("writeManifest") {
+  val version = project.version
   doLast {
     val substraitSpecVersionProvider =
       providers.of(SubstraitSpecVersionValueSource::class) {
@@ -187,7 +188,7 @@ tasks.register("writeManifest") {
     manifestFile.printWriter(StandardCharsets.UTF_8).use {
       it.println("Manifest-Version: 1.0")
       it.println("Implementation-Title: substrait-java")
-      it.println("Implementation-Version: " + project.version)
+      it.println("Implementation-Version: " + version)
       it.println("Specification-Title: substrait")
       it.println("Specification-Version: " + substraitSpecVersionProvider.get())
     }
@@ -255,7 +256,7 @@ project.configure<IdeaModel> {
     generatedSourceDirs.addAll(
       listOf(
         file("build/generated/sources/antlr/main"),
-        file("build/generated/source/proto/main/java"),
+        file("build/generated/sources/proto/main/java"),
       )
     )
   }
