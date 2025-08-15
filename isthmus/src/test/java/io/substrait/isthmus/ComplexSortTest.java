@@ -1,10 +1,10 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
@@ -19,6 +19,9 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 public class ComplexSortTest extends PlanTestBase {
+
+  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      SimpleExtension.loadDefaults();
 
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);

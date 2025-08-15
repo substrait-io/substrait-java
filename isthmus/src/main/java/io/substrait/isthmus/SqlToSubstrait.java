@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
@@ -14,21 +16,38 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.util.SqlOperatorTables;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
+  private final SqlOperatorTable operatorTable;
 
   public SqlToSubstrait() {
-    this(null);
+    this(SimpleExtension.loadDefaults(), null);
   }
 
   public SqlToSubstrait(FeatureBoard features) {
-    super(features);
+    this(SimpleExtension.loadDefaults(), features);
+  }
+
+  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    super(features, extensions);
+
+    SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+        ExtensionUtils.getDynamicExtensions(extensions);
+    List<SqlOperator> generatedDynamicOperators =
+        SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, this.factory);
+
+    this.operatorTable =
+        SqlOperatorTables.chain(
+            SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
   /**
@@ -66,7 +85,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     // TODO: consider case in which one sql passes conversion while others don't
     sqlToRelNode(sql, catalogReader).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+        .map(root -> SubstraitRelVisitor.convert(root, extensionCollection, featureBoard))
         .forEach(root -> builder.addRoots(root));
 
     return builder.build();
@@ -75,7 +94,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   @VisibleForTesting
   List<RelRoot> sqlToRelNode(String sql, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
     SqlParser parser = SqlParser.create(sql, parserConfig);
     SqlNodeList parsedList = parser.parseStmtList();
     SqlToRelConverter converter = createSqlToRelConverter(validator, catalogReader);
