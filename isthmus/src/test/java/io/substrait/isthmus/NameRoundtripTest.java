@@ -4,6 +4,7 @@ import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import java.util.List;
@@ -18,17 +19,18 @@ public class NameRoundtripTest extends PlanTestBase {
     CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatement);
 
-    SqlToSubstrait s = new SqlToSubstrait();
     SubstraitToCalcite substraitToCalcite =
         new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
     String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");
 
-    Plan plan = s.convert(query, catalogReader);
-    assertEquals(1, plan.getRoots().size());
+    org.apache.calcite.rel.RelRoot calciteRelRoot1 =
+        SubstraitSqlToCalcite.convertQuery(query, catalogReader);
+    assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
 
-    io.substrait.plan.Plan.Root substraitRelRoot = plan.getRoots().get(0);
+    io.substrait.plan.Plan.Root substraitRelRoot =
+        SubstraitRelVisitor.convert(calciteRelRoot1, EXTENSION_COLLECTION);
     assertEquals(expectedNames, substraitRelRoot.getNames());
 
     org.apache.calcite.rel.RelRoot calciteRelRoot2 = substraitToCalcite.convert(substraitRelRoot);
