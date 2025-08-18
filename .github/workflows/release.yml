@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - uses: graalvm/setup-graalvm@v1
@@ -36,7 +36,7 @@ jobs:
         run: gu install native-image
       - name: Build with Gradle
         run: |
-          # fetch submodule tags since actions/checkout@v4 does not
+          # fetch submodule tags since actions/checkout@v5 does not
           git submodule foreach 'git fetch --unshallow || true'
 
           ./gradlew nativeImage
@@ -59,7 +59,7 @@ jobs:
     needs: isthmus-native-image-mac-linux
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Set up JDK 17
