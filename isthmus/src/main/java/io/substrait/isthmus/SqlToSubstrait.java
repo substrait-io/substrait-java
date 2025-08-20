@@ -7,7 +7,6 @@ import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -110,7 +109,18 @@ public class SqlToSubstrait extends SqlConverterBase {
     return roots;
   }
 
-  protected void sqlToPlanRoots(
+  void sqlToPlanRoots(
+      String sql, SqlValidator validator, Prepare.CatalogReader catalogReader, Builder builder)
+      throws SqlParseException {
+    List<CalciteOperation> calciteOperations = sqlToCalciteOperation(sql, validator, catalogReader);
+    CalciteOperationToSubstrait calciteOperationToSubstrait =
+        new CalciteOperationToSubstrait(EXTENSION_COLLECTION, featureBoard);
+    calciteOperations.stream()
+        .map(operation -> operation.accept(calciteOperationToSubstrait))
+        .forEach(builder::addRoots);
+  }
+
+  void sqlToPlanRoots1(
       String sql, SqlValidator validator, Prepare.CatalogReader catalogReader, Builder builder)
       throws SqlParseException {
 
