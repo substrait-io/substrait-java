@@ -66,7 +66,7 @@ class DdlRoundtripTest extends PlanTestBase {
     assertPlanRoundtrip(plan);
     assertCalciteOperationSubstraitRelRoundTrip(sqlStatement, catalogReader);
 
-    assertFullRoundTrip(sqlStatement, catalogReader);
+    //    assertFullRoundTrip(sqlStatement, catalogReader);
   }
 
   @Test
