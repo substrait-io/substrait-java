@@ -178,7 +178,7 @@ public class PlanTestBase {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // SQL -> Calcite 1
-    RelRoot calcite1 = SubstraitSqlToCalcite.convertQuery(sqlQuery, catalogReader);
+    RelRoot calcite1 = SubstraitSqlToCalcite.convertRelationalQuery(sqlQuery, catalogReader);
 
     // Calcite 1 -> Substrait POJO 1
     Plan.Root root1 = SubstraitRelVisitor.convert(calcite1, extensions);
