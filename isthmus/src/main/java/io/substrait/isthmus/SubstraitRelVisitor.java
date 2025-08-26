@@ -244,9 +244,60 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Set.builder().inputs(inputs).setOp(setOp).build();
   }
 
+  /**
+   * Pre-processes the input to an Aggregate relation to handle nullability changes introduced by
+   * ROLLUP/CUBE/GROUPING SETS.
+   *
+   * @param aggregate The original Calcite aggregate node.
+   * @return A Substrait Rel node that is correctly typed to be the input to the Substrait
+   *     Aggregate.
+   */
+  private Rel handleRollupCorrection(org.apache.calcite.rel.core.Aggregate aggregate) {
+    Rel originalInput = apply(aggregate.getInput());
+
+    // Determine the correct final output type for the aggregate, which accounts for nullability.
+    NamedStruct aggregateOutputType = typeConverter.toNamedStruct(aggregate.getRowType());
+    List<Integer> groupKeyIndices = aggregate.getGroupSet().asList();
+
+    // Create a list of expressions to cast the original input to the correct final type if needed.
+    List<Expression> castExpressions = new ArrayList<>();
+
+    boolean needsCasting = false;
+    for (int i = 0; i < originalInput.getRecordType().fields().size(); i++) {
+      Expression fieldReference = FieldReference.newInputRelReference(i, originalInput);
+
+      if (groupKeyIndices.contains(i)) {
+        int groupKeyOutputIndex = groupKeyIndices.indexOf(i);
+        Type finalType = aggregateOutputType.struct().fields().get(groupKeyOutputIndex);
+
+        if (finalType.nullable() && !fieldReference.getType().nullable()) {
+          needsCasting = true; // Mark that a cast is necessary.
+          castExpressions.add(
+              Expression.Cast.builder()
+                  .type(finalType)
+                  .input(fieldReference)
+                  .failureBehavior(Expression.FailureBehavior.RETURN_NULL)
+                  .build());
+        } else {
+          castExpressions.add(fieldReference);
+        }
+      } else {
+        castExpressions.add(fieldReference);
+      }
+    }
+
+    // Only add the extra Project node if a cast was actually needed.
+    if (needsCasting) {
+      return Project.builder().input(originalInput).expressions(castExpressions).build();
+    }
+
+    // If no casting was needed, just return the original converted input.
+    return originalInput;
+  }
+
   @Override
   public Rel visit(org.apache.calcite.rel.core.Aggregate aggregate) {
-    Rel input = apply(aggregate.getInput());
+    Rel input = handleRollupCorrection(aggregate);
     Stream<ImmutableBitSet> sets;
     if (aggregate.groupSets != null) {
       sets = aggregate.groupSets.stream();
