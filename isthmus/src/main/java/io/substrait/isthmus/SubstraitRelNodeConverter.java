@@ -588,11 +588,8 @@ public class SubstraitRelNodeConverter
   public RelNode visit(NamedWrite write, Context context) {
     RelNode input = write.getInput().accept(this, context);
     assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(write.getNames());
-
-    if (table == null) {
-      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
-    }
+    final RelOptTable targetTable =
+        relBuilder.getRelOptSchema().getTableForMember(write.getNames());
 
     TableModify.Operation operation;
     switch (write.getOperation()) {
@@ -610,8 +607,12 @@ public class SubstraitRelNodeConverter
                 + "Check if a more specific relation type (e.g., NamedUpdate) should be used.");
     }
 
+    if (targetTable == null) {
+      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
+    }
+
     return LogicalTableModify.create(
-        table,
+        targetTable,
         (Prepare.CatalogReader) relBuilder.getRelOptSchema(),
         input,
         operation,
