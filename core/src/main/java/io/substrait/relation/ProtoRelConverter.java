@@ -620,8 +620,19 @@ public class ProtoRelConverter {
 
   protected Aggregate newAggregate(AggregateRel rel) {
     Rel input = from(rel.getInput());
+    Type.Struct inputSchema;
+    if (input instanceof Project) {
+      List<Type> types =
+          ((Project) input)
+              .getExpressions().stream().map(Expression::getType).collect(Collectors.toList());
+      inputSchema = Type.Struct.builder().fields(types).nullable(false).build();
+    } else {
+      inputSchema = input.getRecordType();
+    }
+
     ProtoExpressionConverter protoExprConverter =
-        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+        new ProtoExpressionConverter(lookup, extensions, inputSchema, this);
+
     ProtoAggregateFunctionConverter protoAggrFuncConverter =
         new ProtoAggregateFunctionConverter(lookup, extensions, protoExprConverter);
 
