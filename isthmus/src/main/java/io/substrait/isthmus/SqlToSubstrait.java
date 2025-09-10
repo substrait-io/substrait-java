@@ -1,12 +1,10 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.operation.CalciteOperation;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
-import java.util.List;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.sql.parser.SqlParseException;
 
@@ -55,13 +53,9 @@ public class SqlToSubstrait extends SqlConverterBase {
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    List<CalciteOperation> calciteOperations =
-        SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader);
-    CalciteOperationToSubstrait calciteOperationToSubstrait =
-        new CalciteOperationToSubstrait(EXTENSION_COLLECTION, featureBoard);
-    calciteOperations.stream()
-        .map(operation -> operation.accept(calciteOperationToSubstrait))
-        .forEach(builder::addRoots);
+    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader).stream()
+        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+        .forEach(root -> builder.addRoots(root));
 
     return builder.build();
   }

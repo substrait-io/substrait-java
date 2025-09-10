@@ -178,7 +178,8 @@ public class PlanTestBase {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // SQL -> Calcite 1
-    RelRoot calcite1 = SubstraitSqlToCalcite.convertRelationalQuery(sqlQuery, catalogReader);
+    //    RelRoot calcite1 = SubstraitSqlToCalcite.convertRelationalQuery(sqlQuery, catalogReader);
+    RelRoot calcite1 = SubstraitSqlToCalcite.convertQuery(sqlQuery, catalogReader);
 
     // Calcite 1 -> Substrait POJO 1
     Plan.Root root1 = SubstraitRelVisitor.convert(calcite1, extensions);
@@ -206,6 +207,71 @@ public class PlanTestBase {
 
     // Verify that POJOs are the same
     assertEquals(root1, root3);
+  }
+
+  /**
+   * Verifies that the given query can be converted from its Calcite form to the Substrait Proto
+   * representation and back. Since calcite optimizer (sql->calcite) and calcite RelBuilder might
+   * use different optimization (plus it is hard to disable optimization for the latter), calcite
+   * needs to be obtained after processing with RelBuilder. Therefore, a preparation step is
+   * required
+   *
+   * <p>Preparation: <code>
+   *   SQL -> Calcite 0 -> Substrait POJO 0 -> Substrait Proto 0 -> Substrait POJO 1 -> Calcite 1
+   * </code> this code also checks that: Main cycle:
+   *
+   * <ul>
+   *   <li>Substrait POJO 0 == Substrait POJO 1
+   * </ul>
+   *
+   * Calcite 1 -> Substrait POJO 2 -> Substrait Proto 2 -> Substrait POJO 3 -> Calcite 2 ->
+   * Substrait POJO 4
+   *
+   * <ul>
+   *   <li>Substrait POJO 2 == Substrait POJO 4
+   * </ul>
+   */
+  protected void assertFullRoundTripWorkaroundOptimizer(
+      String sqlQuery, Prepare.CatalogReader catalogReader) throws SqlParseException {
+    ExtensionCollector extensionCollector = new ExtensionCollector();
+
+    // preparation: SQL -> Calcite 0
+    RelRoot calcite0 = SubstraitSqlToCalcite.convertQuery(sqlQuery, catalogReader);
+
+    // Calcite 0 -> Substrait POJO 0
+    Plan.Root root0 = SubstraitRelVisitor.convert(calcite0, extensions);
+
+    // Substrait POJO 0 -> Substrait Proto 0
+    io.substrait.proto.RelRoot proto0 = new RelProtoConverter(extensionCollector).toProto(root0);
+
+    // Substrait Proto -> Substrait POJO 1
+    Plan.Root root1 = new ProtoRelConverter(extensionCollector, extensions).from(proto0);
+
+    // Verify that POJOs are the same
+    assertEquals(root0, root1);
+
+    final SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(extensions, typeFactory, catalogReader);
+    // Substrait POJO 1 -> Calcite 1
+    RelRoot calcite1 = substraitToCalcite.convert(root1);
+    // end of preparation
+
+    // Calcite 1 -> Substrait POJO 2
+    Plan.Root root2 = SubstraitRelVisitor.convert(calcite1, extensions);
+
+    // Substrait POJO 2 -> Substrait Proto 1
+    io.substrait.proto.RelRoot proto1 = new RelProtoConverter(extensionCollector).toProto(root2);
+
+    // Substrait Proto1 -> Substrait POJO 3
+    Plan.Root root3 = new ProtoRelConverter(extensionCollector, extensions).from(proto1);
+
+    // Substrait POJO 3 -> Calcite 2
+    RelRoot calcite2 = substraitToCalcite.convert(root3);
+    // Calcite 2 -> Substrait POJO 4
+    Plan.Root root4 = SubstraitRelVisitor.convert(calcite2, extensions);
+
+    // Verify that POJOs are the same
+    assertEquals(root2, root4);
   }
 
   /**

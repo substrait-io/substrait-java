@@ -23,7 +23,7 @@ public class OptimizerIntegrationTest extends PlanTestBase {
     // verify that the query works generally
     assertFullRoundTrip(query);
 
-    RelRoot relRoot = SubstraitSqlToCalcite.convertRelationalQuery(query, TPCH_CATALOG);
+    RelRoot relRoot = SubstraitSqlToCalcite.convertQuery(query, TPCH_CATALOG);
     RelNode originalPlan = relRoot.rel;
 
     // Create a program to apply the AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN rule.

@@ -26,7 +26,8 @@ public class NameRoundtripTest extends PlanTestBase {
     List<String> expectedNames = List.of("a", "B");
 
     org.apache.calcite.rel.RelRoot calciteRelRoot1 =
-        SubstraitSqlToCalcite.convertRelationalQuery(query, catalogReader);
+        SubstraitSqlToCalcite.convertQuery(query, catalogReader);
+
     assertEquals(expectedNames, calciteRelRoot1.validatedRowType.getFieldNames());
 
     io.substrait.plan.Plan.Root substraitRelRoot =

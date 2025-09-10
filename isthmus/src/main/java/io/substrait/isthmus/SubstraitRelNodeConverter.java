@@ -10,6 +10,8 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.rel.CreateTable;
+import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -24,6 +26,7 @@ import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.LocalFiles;
+import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
@@ -53,6 +56,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -68,6 +72,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
@@ -548,6 +553,17 @@ public class SubstraitRelNodeConverter
   }
 
   @Override
+  public RelNode visit(NamedDdl namedDdl, Context context) {
+    if (namedDdl.getViewDefinition().isEmpty()) {
+      throw new IllegalArgumentException("no view definition found");
+    }
+    Rel viewDefinition = namedDdl.getViewDefinition().get();
+    RelNode relNode = viewDefinition.accept(this, context);
+    RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
+    return new CreateView(namedDdl.getNames(), relRoot);
+  }
+
+  @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
 
     final RelDataType typeInfoOnly =
@@ -584,6 +600,13 @@ public class SubstraitRelNodeConverter
         relBuilder.getCluster(), rowTypeWithNames, ImmutableList.copyOf(tuples));
   }
 
+  private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
+    Rel input = namedWrite.getInput();
+    RelNode relNode = input.accept(this, context);
+    RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
+    return new CreateTable(namedWrite.getNames(), relRoot);
+  }
+
   @Override
   public RelNode visit(NamedWrite write, Context context) {
     RelNode input = write.getInput().accept(this, context);
@@ -599,6 +622,8 @@ public class SubstraitRelNodeConverter
       case DELETE:
         operation = TableModify.Operation.DELETE;
         break;
+      case CTAS:
+        return handleCreateTableAs(write, context);
       default:
         throw new UnsupportedOperationException(
             "Write operation '"
