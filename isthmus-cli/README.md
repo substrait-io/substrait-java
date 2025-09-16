@@ -6,10 +6,10 @@ Isthmus-CLI provides a native command-line interface to drive the [Isthmus](../i
 
 ## Build
 
-Isthmus can be built as a native executable via Graal
+Isthmus can be built as a native executable via Graal. This requires a GraalVM JDK to be installed, and its install location set in the `GRAALVM_HOME` environment variable.
 
 ```
-./gradlew nativeImage
+./gradlew nativeCompile
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ Isthmus can be built as a native executable via Graal
 ### Version
 
 ```
-$ ./isthmus-cli/build/graal/isthmus --version
+$ ./isthmus-cli/build/native/nativeCompile/isthmus --version
 
 isthmus 0.1
 ```
@@ -25,7 +25,7 @@ isthmus 0.1
 ### Help
 
 ```
-$ ./isthmus-cli/build/graal/isthmus --help
+$ ./isthmus-cli/build/native/nativeCompile/isthmus --help
 
 Usage: isthmus [-hV] [--outputformat=<outputFormat>]
                [--unquotedcasing=<unquotedCasing>] [-c=<createStatements>]...
@@ -52,7 +52,7 @@ Convert SQL Queries and SQL Expressions to Substrait
 ### SQL to Substrait Plan
 
 ```
-> $ ./isthmus-cli/build/graal/isthmus \
+> $ ./isthmus-cli/build/native/nativeCompile/isthmus \
   -c "CREATE TABLE Persons ( firstName VARCHAR, lastName VARCHAR, zip INT )" \
      "SELECT lastName, firstName FROM Persons WHERE zip = 90210"
 
@@ -183,7 +183,7 @@ Convert SQL Queries and SQL Expressions to Substrait
 #### Projection
 
 ```
-$ ./isthmus-cli/build/graal/isthmus -c "CREATE TABLE NATION (N_NATIONKEY BIGINT NOT NULL, N_NAME CHAR(25), N_REGIONKEY BIGINT NOT NULL, N_COMMENT VARCHAR(152))" \
+$ ./isthmus-cli/build/native/nativeCompile/isthmus -c "CREATE TABLE NATION (N_NATIONKEY BIGINT NOT NULL, N_NAME CHAR(25), N_REGIONKEY BIGINT NOT NULL, N_COMMENT VARCHAR(152))" \
     -e  "N_REGIONKEY + 10"
 
 {
@@ -283,7 +283,7 @@ $ ./isthmus-cli/build/graal/isthmus -c "CREATE TABLE NATION (N_NATIONKEY BIGINT 
 #### Filter
 
 ```
-$ ./isthmus-cli/build/graal/isthmus -c "CREATE TABLE NATION (N_NATIONKEY BIGINT NOT NULL, N_NAME CHAR(25), N_REGIONKEY BIGINT NOT NULL, N_COMMENT VARCHAR(152))" \
+$ ./isthmus-cli/build/native/nativeCompile/isthmus -c "CREATE TABLE NATION (N_NATIONKEY BIGINT NOT NULL, N_NAME CHAR(25), N_REGIONKEY BIGINT NOT NULL, N_COMMENT VARCHAR(152))" \
     -e  "N_REGIONKEY > 10"
 
 {

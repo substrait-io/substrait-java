@@ -4,7 +4,7 @@ set -eu -o pipefail
 
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "${parent_path}"
-CMD=../../../build/graal/isthmus
+CMD=../../../build/native/nativeCompile/isthmus
 
 TPCH="../../../../isthmus/src/test/resources/tpch"
 
