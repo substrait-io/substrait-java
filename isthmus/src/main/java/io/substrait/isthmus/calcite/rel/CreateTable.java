@@ -27,7 +27,6 @@ public class CreateTable extends AbstractRelNode {
 
   @Override
   protected RelDataType deriveRowType() {
-    // return new DdlRelDataType();
     return input.validatedRowType;
   }
 
