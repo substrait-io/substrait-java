@@ -236,7 +236,10 @@ java {
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
 
-tasks.named("sourcesJar") { mustRunAfter("generateGrammarSource") }
+tasks.named<Jar>("sourcesJar") {
+  mustRunAfter("generateGrammarSource")
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
 sourceSets {
   main {
