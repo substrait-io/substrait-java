@@ -16,8 +16,10 @@ import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.AbstractUpdate;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -94,7 +96,6 @@ public class SubstraitRelNodeConverter
   protected final RelBuilder relBuilder;
   protected final RexBuilder rexBuilder;
   private final TypeConverter typeConverter;
-  private final SubstraitRelNodeConverterDdmlValidator substraitRelNodeConverterDdmlValidator;
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
@@ -143,8 +144,6 @@ public class SubstraitRelNodeConverter
     this.aggregateFunctionConverter = aggregateFunctionConverter;
     this.expressionRexConverter = expressionRexConverter;
     this.expressionRexConverter.setRelNodeConverter(this);
-    this.substraitRelNodeConverterDdmlValidator =
-        new SubstraitRelNodeConverterDdmlValidator(relBuilder, this);
   }
 
   public static RelNode convert(
@@ -557,12 +556,21 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedDdl namedDdl, Context context) {
-    final ValidationResult validationResult =
-        namedDdl.accept(substraitRelNodeConverterDdmlValidator, context);
-    if (!validationResult.isValid()) {
-      throw new IllegalArgumentException(
-          String.join(System.lineSeparator(), validationResult.getMessages()));
+    if (namedDdl.getOperation() != AbstractDdlRel.DdlOp.CREATE
+        || namedDdl.getObject() != AbstractDdlRel.DdlObject.VIEW) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Can only handle NamedDdl with (%s, %s), given (%s, %s)",
+              AbstractDdlRel.DdlOp.CREATE,
+              AbstractDdlRel.DdlObject.VIEW,
+              namedDdl.getOperation(),
+              namedDdl.getObject()));
     }
+
+    if (namedDdl.getViewDefinition().isEmpty()) {
+      throw new IllegalArgumentException("NamedDdl view definition must be set");
+    }
+
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
     RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
@@ -606,6 +614,17 @@ public class SubstraitRelNodeConverter
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
+    if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
+        || namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Can only handle CTAS NamedWrite with (%s, %s), given (%s, %s)",
+              AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
+              AbstractWriteRel.OutputMode.NO_OUTPUT,
+              namedWrite.getCreateMode(),
+              namedWrite.getOutputMode()));
+    }
+
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
     RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
@@ -614,12 +633,6 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedWrite write, Context context) {
-    final ValidationResult validationResult =
-        write.accept(substraitRelNodeConverterDdmlValidator, context);
-    if (!validationResult.isValid()) {
-      throw new IllegalArgumentException(
-          String.join(System.lineSeparator(), validationResult.getMessages()));
-    }
     RelNode input = write.getInput().accept(this, context);
     assert relBuilder.getRelOptSchema() != null;
     final RelOptTable targetTable =
@@ -636,8 +649,10 @@ public class SubstraitRelNodeConverter
       case CTAS:
         return handleCreateTableAs(write, context);
       default:
-        // checked by validation
-        throw new IllegalArgumentException("Couldn't determine operation");
+        throw new UnsupportedOperationException(
+            String.format(
+                "NamedWrite with WriteOp %s cannot be converted to a Calcite RelNode. Consider using a more specific Rel (e.g NamedUpdate)",
+                write.getOperation()));
     }
 
     // checked by validation
