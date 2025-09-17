@@ -94,6 +94,7 @@ public class SubstraitRelNodeConverter
   protected final RelBuilder relBuilder;
   protected final RexBuilder rexBuilder;
   private final TypeConverter typeConverter;
+  private final SubstraitRelNodeConverterDdmlValidator substraitRelNodeConverterDdmlValidator;
 
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
@@ -142,6 +143,8 @@ public class SubstraitRelNodeConverter
     this.aggregateFunctionConverter = aggregateFunctionConverter;
     this.expressionRexConverter = expressionRexConverter;
     this.expressionRexConverter.setRelNodeConverter(this);
+    this.substraitRelNodeConverterDdmlValidator =
+        new SubstraitRelNodeConverterDdmlValidator(relBuilder, this);
   }
 
   public static RelNode convert(
@@ -554,8 +557,11 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedDdl namedDdl, Context context) {
-    if (namedDdl.getViewDefinition().isEmpty()) {
-      throw new IllegalArgumentException("no view definition found");
+    final ValidationResult validationResult =
+        namedDdl.accept(substraitRelNodeConverterDdmlValidator, context);
+    if (!validationResult.isValid()) {
+      throw new IllegalArgumentException(
+          String.join(System.lineSeparator(), validationResult.getMessages()));
     }
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
@@ -565,7 +571,6 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
-
     final RelDataType typeInfoOnly =
         typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
 
@@ -609,6 +614,12 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedWrite write, Context context) {
+    final ValidationResult validationResult =
+        write.accept(substraitRelNodeConverterDdmlValidator, context);
+    if (!validationResult.isValid()) {
+      throw new IllegalArgumentException(
+          String.join(System.lineSeparator(), validationResult.getMessages()));
+    }
     RelNode input = write.getInput().accept(this, context);
     assert relBuilder.getRelOptSchema() != null;
     final RelOptTable targetTable =
@@ -625,16 +636,12 @@ public class SubstraitRelNodeConverter
       case CTAS:
         return handleCreateTableAs(write, context);
       default:
-        throw new UnsupportedOperationException(
-            "Write operation '"
-                + write.getOperation()
-                + "' is not supported by the NamedWrite visitor. "
-                + "Check if a more specific relation type (e.g., NamedUpdate) should be used.");
+        // checked by validation
+        throw new IllegalArgumentException("Couldn't determine operation");
     }
 
-    if (targetTable == null) {
-      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
-    }
+    // checked by validation
+    assert targetTable != null;
 
     return LogicalTableModify.create(
         targetTable,
