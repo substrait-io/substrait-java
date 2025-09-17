@@ -7,16 +7,8 @@ import org.apache.calcite.rel.type.RelDataType;
 
 public class CreateTable extends AbstractRelNode {
 
-  private List<String> names;
-  private RelRoot input;
-
-  public RelRoot getInput() {
-    return input;
-  }
-
-  public void setInput(RelRoot input) {
-    this.input = input;
-  }
+  private final List<String> names;
+  private final RelRoot input;
 
   public CreateTable(List<String> names, RelRoot input) {
     super(input.rel.getCluster(), input.rel.getTraitSet());
@@ -34,7 +26,7 @@ public class CreateTable extends AbstractRelNode {
     return names;
   }
 
-  public void setNames(List<String> names) {
-    this.names = names;
+  public RelRoot getInput() {
+    return input;
   }
 }
