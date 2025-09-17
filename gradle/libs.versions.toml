@@ -3,7 +3,7 @@ antlr = "4.13.2"
 calcite = "1.40.0"
 commons-lang3 = "[3.18.0,)"
 graal = "22.1.0"
-graal-plugin = "0.12.0"
+graal-plugin = "0.11.0"
 gradle-extensions = "2.0.0"
 guava = "33.4.8-jre"
 httpclient5 = "5.5"
@@ -71,7 +71,7 @@ spark-sql = { module = "org.apache.spark:spark-sql_2.12", version.ref = "spark" 
 jackson = [ "jackson-databind", "jackson-annotations", "jackson-datatype-jdk8", "jackson-dataformat-yaml" ]
 
 [plugins]
-graal = { id = "com.palantir.graal", version.ref = "graal-plugin" }
+graal = { id = "org.graalvm.buildtools.native", version.ref = "graal-plugin" }
 gradle-extensions = { id = "com.github.vlsi.gradle-extensions", version.ref = "gradle-extensions" }
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }

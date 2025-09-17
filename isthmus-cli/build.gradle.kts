@@ -1,8 +1,8 @@
 import java.nio.charset.StandardCharsets
 
 plugins {
-  id("java")
   id("idea")
+  id("application")
   alias(libs.plugins.graal)
   alias(libs.plugins.spotless)
   id("substrait.java-conventions")
@@ -24,7 +24,7 @@ dependencies {
   testRuntimeOnly(libs.junit.platform.launcher)
   implementation(libs.reflections)
   implementation(libs.guava)
-  implementation(libs.graal.sdk)
+  compileOnly(libs.graal.sdk)
   implementation(libs.picocli)
   annotationProcessor(libs.picocli.codegen)
   implementation(libs.protobuf.java.util) {
@@ -68,6 +68,7 @@ val initializeAtBuildTime =
       "io.substrait.isthmus.metadata.LambdaMetadataSupplier",
       "io.substrait.isthmus.metadata.LegacyToLambdaGenerator",
       "org.apache.calcite.config.CalciteSystemProperty",
+      "org.apache.calcite.linq4j.tree.Primitive",
       "org.apache.calcite.rel.metadata.BuiltInMetadata\$AllPredicates",
       "org.apache.calcite.rel.metadata.BuiltInMetadata\$Collation",
       "org.apache.calcite.rel.metadata.BuiltInMetadata\$ColumnOrigin",
@@ -114,6 +115,8 @@ val initializeAtBuildTime =
       "org.apache.calcite.rel.metadata.RelMdSize",
       "org.apache.calcite.rel.metadata.RelMdTableReferences",
       "org.apache.calcite.rel.metadata.RelMdUniqueKeys",
+      "org.apache.calcite.sql.SqlKind",
+      "org.apache.calcite.util.BuiltInMethod",
       "org.apache.calcite.util.Pair",
       "org.apache.calcite.util.ReflectUtil",
       "org.apache.calcite.util.Util",
@@ -124,19 +127,26 @@ val initializeAtBuildTime =
     )
     .joinToString(",")
 
-graal {
-  mainClass("io.substrait.isthmus.cli.IsthmusEntryPoint")
-  outputName("isthmus")
-  graalVersion("22.1.0")
-  javaVersion("17")
-  option("--no-fallback")
-  option("--initialize-at-build-time=${initializeAtBuildTime}")
-  option("-H:IncludeResources=.*yaml")
-  option("--report-unsupported-elements-at-runtime")
-  option("-H:+ReportExceptionStackTraces")
-  option("-H:DynamicProxyConfigurationFiles=${project.file("proxies.json")}")
-  option("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
-  option("-J--enable-preview")
+application { mainClass.set("io.substrait.isthmus.cli.IsthmusEntryPoint") }
+
+graalvmNative {
+  binaries {
+    toolchainDetection.set(false)
+
+    all { verbose.set(true) }
+
+    named("main") {
+      imageName.set("isthmus")
+      fallback.set(false)
+      buildArgs.add("--initialize-at-build-time=${initializeAtBuildTime}")
+      buildArgs.add("-H:IncludeResources=.*yaml")
+      buildArgs.add("--report-unsupported-elements-at-runtime")
+      buildArgs.add("-H:+ReportExceptionStackTraces")
+      buildArgs.add("-H:DynamicProxyConfigurationFiles=${project.file("proxies.json")}")
+      buildArgs.add("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
+      buildArgs.add("-J--enable-preview")
+    }
+  }
 }
 
 tasks.register("writeIsthmusVersion") {
