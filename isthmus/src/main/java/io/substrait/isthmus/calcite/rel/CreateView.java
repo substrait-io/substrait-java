@@ -2,38 +2,41 @@ package io.substrait.isthmus.calcite.rel;
 
 import java.util.List;
 import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.type.RelDataType;
 
 public class CreateView extends AbstractRelNode {
-  private List<String> names;
-  private RelRoot input;
+  private final List<String> viewName;
+  private final RelRoot input;
 
-  public CreateView(List<String> names, RelRoot input) {
+  public CreateView(List<String> viewName, RelRoot input) {
     super(input.rel.getCluster(), input.rel.getTraitSet());
-    this.names = names;
+    this.viewName = viewName;
     this.input = input;
   }
 
   @Override
   protected RelDataType deriveRowType() {
-    // return new DdlRelDataType();
     return input.validatedRowType;
   }
 
-  public List<String> getNames() {
-    return names;
+  @Override
+  public RelWriter explainTerms(RelWriter pw) {
+    return super.explainTerms(pw).input("input", getInput().rel).item("viewName", getViewName());
   }
 
-  public void setNames(List<String> names) {
-    this.names = names;
+  @Override
+  public List<RelNode> getInputs() {
+    return List.of(input.rel);
+  }
+
+  public List<String> getViewName() {
+    return viewName;
   }
 
   public RelRoot getInput() {
     return input;
-  }
-
-  public void setInput(RelRoot input) {
-    this.input = input;
   }
 }
