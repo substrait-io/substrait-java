@@ -22,6 +22,16 @@ public class CreateView extends AbstractRelNode {
     return input.validatedRowType;
   }
 
+  @Override
+  public RelWriter explainTerms(RelWriter pw) {
+    return super.explainTerms(pw).input("input", getInput().rel).item("viewName", getViewName());
+  }
+
+  @Override
+  public List<RelNode> getInputs() {
+    return List.of(input.rel);
+  }
+
   public List<String> getViewName() {
     return viewName;
   }
