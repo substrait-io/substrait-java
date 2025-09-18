@@ -450,14 +450,14 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
   }
 
-  private NamedStruct getSchema(final RelRoot queryRelRoot) {
-    final RelDataType rowType = queryRelRoot.rel.getRowType();
+  private NamedStruct getSchema(final RelNode queryRelRoot) {
+    final RelDataType rowType = queryRelRoot.getRowType();
     return typeConverter.toNamedStruct(rowType);
   }
 
   public Rel handleCreateTable(CreateTable createTable) {
-    RelRoot input = createTable.getInput();
-    Rel inputRel = apply(input.project());
+    RelNode input = createTable.getInput();
+    Rel inputRel = apply(input);
     NamedStruct schema = getSchema(input);
     return NamedWrite.builder()
         .input(inputRel)
@@ -470,8 +470,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public Rel handleCreateView(CreateView createView) {
-    RelRoot input = createView.getInput();
-    Rel inputRel = apply(input.project());
+    RelNode input = createView.getInput();
+    Rel inputRel = apply(input);
 
     final Expression.StructLiteral defaults = ExpressionCreator.struct(false);
 

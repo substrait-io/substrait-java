@@ -58,7 +58,6 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -74,7 +73,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
@@ -573,8 +571,7 @@ public class SubstraitRelNodeConverter
 
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
-    RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
-    return new CreateView(namedDdl.getNames(), relRoot);
+    return new CreateView(namedDdl.getNames(), relNode);
   }
 
   @Override
@@ -627,8 +624,7 @@ public class SubstraitRelNodeConverter
 
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
-    RelRoot relRoot = RelRoot.of(relNode, SqlKind.SELECT);
-    return new CreateTable(namedWrite.getNames(), relRoot);
+    return new CreateTable(namedWrite.getNames(), relNode);
   }
 
   @Override

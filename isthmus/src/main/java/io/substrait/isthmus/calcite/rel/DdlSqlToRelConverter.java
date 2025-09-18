@@ -3,6 +3,7 @@ package io.substrait.isthmus.calcite.rel;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
@@ -53,12 +54,12 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
     if (sqlCreateTable.query == null) {
       throw new IllegalArgumentException("Only create table as select statements are supported");
     }
-    final RelRoot input = converter.convertQuery(sqlCreateTable.query, true, true);
+    final RelNode input = converter.convertQuery(sqlCreateTable.query, true, true).rel;
     return RelRoot.of(new CreateTable(sqlCreateTable.name.names, input), sqlCreateTable.getKind());
   }
 
   protected RelRoot handleCreateView(final SqlCreateView sqlCreateView) {
-    final RelRoot input = converter.convertQuery(sqlCreateView.query, true, true);
+    final RelNode input = converter.convertQuery(sqlCreateView.query, true, true).rel;
     return RelRoot.of(new CreateTable(sqlCreateView.name.names, input), sqlCreateView.getKind());
   }
 }
