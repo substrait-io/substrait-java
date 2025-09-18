@@ -209,11 +209,12 @@ public class PlanTestBase {
   }
 
   /**
-   * Verifies that the given query can be converted from its Calcite form to the Substrait Proto
-   * representation and back. Since calcite optimizer (sql->calcite) and calcite RelBuilder might
-   * use different optimization (plus it is hard to disable optimization for the latter), calcite
-   * needs to be obtained after processing with RelBuilder. Therefore, a preparation step is
-   * required
+   * Verifies that the given query can be converted from its Calcite representation to Substrait
+   * proto and back. Due to the various ways in which Calcite plans are produced, some plans contain
+   * identity projections and others do not. Fully removing this behaviour is quite tricky. As a
+   * workaround, this method prepares the plan such that identity projections are removed.
+   *
+   * <p>In the long-term, we should work to remove this test method.
    *
    * <p>Preparation: <code>
    *   SQL -> Calcite 0 -> Substrait POJO 0 -> Substrait Proto 0 -> Substrait POJO 1 -> Calcite 1
@@ -230,11 +231,12 @@ public class PlanTestBase {
    *   <li>Substrait POJO 2 == Substrait POJO 4
    * </ul>
    */
-  protected void assertFullRoundTripWorkaroundOptimizer(
+  protected void assertFullRoundTripWithIdentityProjectionWorkaround(
       String sqlQuery, Prepare.CatalogReader catalogReader) throws SqlParseException {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
-    // preparation: SQL -> Calcite 0
+    // Preparation
+    // SQL -> Calcite 0
     RelRoot calcite0 = SubstraitSqlToCalcite.convertQuery(sqlQuery, catalogReader);
 
     // Calcite 0 -> Substrait POJO 0
@@ -251,9 +253,11 @@ public class PlanTestBase {
 
     final SubstraitToCalcite substraitToCalcite =
         new SubstraitToCalcite(extensions, typeFactory, catalogReader);
+
     // Substrait POJO 1 -> Calcite 1
     RelRoot calcite1 = substraitToCalcite.convert(root1);
-    // end of preparation
+
+    // End Preparation
 
     // Calcite 1 -> Substrait POJO 2
     Plan.Root root2 = SubstraitRelVisitor.convert(calcite1, extensions);

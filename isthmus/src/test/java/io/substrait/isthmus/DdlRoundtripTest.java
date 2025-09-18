@@ -18,12 +18,12 @@ class DdlRoundtripTest extends PlanTestBase {
   @Test
   void testCreateTable() throws Exception {
     String sql = "create table dst1 as select * from src1";
-    assertFullRoundTripWorkaroundOptimizer(sql, catalogReader);
+    assertFullRoundTripWithIdentityProjectionWorkaround(sql, catalogReader);
   }
 
   @Test
   void testCreateView() throws Exception {
     String sql = "create view dst1 as select * from src1";
-    assertFullRoundTripWorkaroundOptimizer(sql, catalogReader);
+    assertFullRoundTripWithIdentityProjectionWorkaround(sql, catalogReader);
   }
 }
