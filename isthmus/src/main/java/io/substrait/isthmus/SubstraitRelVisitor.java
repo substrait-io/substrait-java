@@ -465,7 +465,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .operation(AbstractWriteRel.WriteOp.CTAS)
         .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
         .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
-        .names(createTable.getNames())
+        .names(createTable.getTableName())
         .build();
   }
 
@@ -481,7 +481,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .tableDefaults(defaults)
         .operation(AbstractDdlRel.DdlOp.CREATE)
         .object(AbstractDdlRel.DdlObject.VIEW)
-        .names(createView.getNames())
+        .names(createView.getViewName())
         .build();
   }
 
