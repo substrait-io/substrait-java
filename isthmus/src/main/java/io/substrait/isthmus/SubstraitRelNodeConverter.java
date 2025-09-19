@@ -10,12 +10,16 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.rel.CreateTable;
+import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.AbstractUpdate;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -24,6 +28,7 @@ import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.LocalFiles;
+import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
@@ -548,8 +553,29 @@ public class SubstraitRelNodeConverter
   }
 
   @Override
-  public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+  public RelNode visit(NamedDdl namedDdl, Context context) {
+    if (namedDdl.getOperation() != AbstractDdlRel.DdlOp.CREATE
+        || namedDdl.getObject() != AbstractDdlRel.DdlObject.VIEW) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Can only handle NamedDdl with (%s, %s), given (%s, %s)",
+              AbstractDdlRel.DdlOp.CREATE,
+              AbstractDdlRel.DdlObject.VIEW,
+              namedDdl.getOperation(),
+              namedDdl.getObject()));
+    }
 
+    if (namedDdl.getViewDefinition().isEmpty()) {
+      throw new IllegalArgumentException("NamedDdl view definition must be set");
+    }
+
+    Rel viewDefinition = namedDdl.getViewDefinition().get();
+    RelNode relNode = viewDefinition.accept(this, context);
+    return new CreateView(namedDdl.getNames(), relNode);
+  }
+
+  @Override
+  public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
     final RelDataType typeInfoOnly =
         typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
 
@@ -584,15 +610,29 @@ public class SubstraitRelNodeConverter
         relBuilder.getCluster(), rowTypeWithNames, ImmutableList.copyOf(tuples));
   }
 
+  private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
+    if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
+        || namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Can only handle CTAS NamedWrite with (%s, %s), given (%s, %s)",
+              AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
+              AbstractWriteRel.OutputMode.NO_OUTPUT,
+              namedWrite.getCreateMode(),
+              namedWrite.getOutputMode()));
+    }
+
+    Rel input = namedWrite.getInput();
+    RelNode relNode = input.accept(this, context);
+    return new CreateTable(namedWrite.getNames(), relNode);
+  }
+
   @Override
   public RelNode visit(NamedWrite write, Context context) {
     RelNode input = write.getInput().accept(this, context);
     assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(write.getNames());
-
-    if (table == null) {
-      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
-    }
+    final RelOptTable targetTable =
+        relBuilder.getRelOptSchema().getTableForMember(write.getNames());
 
     TableModify.Operation operation;
     switch (write.getOperation()) {
@@ -602,16 +642,20 @@ public class SubstraitRelNodeConverter
       case DELETE:
         operation = TableModify.Operation.DELETE;
         break;
+      case CTAS:
+        return handleCreateTableAs(write, context);
       default:
         throw new UnsupportedOperationException(
-            "Write operation '"
-                + write.getOperation()
-                + "' is not supported by the NamedWrite visitor. "
-                + "Check if a more specific relation type (e.g., NamedUpdate) should be used.");
+            String.format(
+                "NamedWrite with WriteOp %s cannot be converted to a Calcite RelNode. Consider using a more specific Rel (e.g NamedUpdate)",
+                write.getOperation()));
     }
 
+    // checked by validation
+    assert targetTable != null;
+
     return LogicalTableModify.create(
-        table,
+        targetTable,
         (Prepare.CatalogReader) relBuilder.getRelOptSchema(),
         input,
         operation,

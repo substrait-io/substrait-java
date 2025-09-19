@@ -5,6 +5,7 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
 /**
@@ -18,7 +19,8 @@ public class SubstraitSqlStatementParser {
           // TODO: switch to Casing.UNCHANGED
           .withUnquotedCasing(Casing.TO_UPPER)
           // use LENIENT conformance to allow for parsing a wide variety of dialects
-          .withConformance(SqlConformanceEnum.LENIENT);
+          .withConformance(SqlConformanceEnum.LENIENT)
+          .withParserFactory(SqlDdlParserImpl.FACTORY);
 
   /**
    * Parse one or more SQL statements to a list of {@link SqlNode}s.
