@@ -158,10 +158,11 @@ public class SubstraitToCalcite {
       }
       return RelRoot.of(tableModify, tableRowType, kind);
     }
-
+    SqlKindFromRel sqlKindFromRel = new SqlKindFromRel();
+    SqlKind kind = root.getInput().accept(sqlKindFromRel, EmptyVisitationContext.INSTANCE);
     RelDataType inputRowType = convertedNode.getRowType();
     RelDataType newRowType = renameFields(inputRowType, root.getNames(), 0).right;
-    return RelRoot.of(convertedNode, newRowType, SqlKind.SELECT);
+    return RelRoot.of(convertedNode, newRowType, kind);
   }
 
   /**
