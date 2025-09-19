@@ -11,7 +11,7 @@ After you've cloned the project through git, Substrait Java is built with a tool
 ./gradlew build
 ```
 
-To build the Isthmus executable that enables Substrait plans to be generated for a SQL statement, first ensure that you have GraalVM JDK installed and its install location set in the `GRAALVM_HOME` environment variable, then execute the following:
+To build the Isthmus executable that enables Substrait plans to be generated for a SQL statement, first ensure that you have GraalVM 25 JDK installed and its install location set in the `GRAALVM_HOME` environment variable, then execute the following:
 ```
 ./gradlew nativeCompile
 ```
