@@ -90,7 +90,7 @@ public abstract class FunctionConverter<
     for (String key : alm.keySet()) {
       Collection<Sig> sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
-        LOGGER.atInfo().log("No binding for function: {}", key);
+        LOGGER.atDebug().log("No binding for function: {}", key);
       }
 
       for (Sig sig : sigs) {
