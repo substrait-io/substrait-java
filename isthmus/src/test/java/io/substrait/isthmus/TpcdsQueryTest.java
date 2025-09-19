@@ -13,7 +13,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpcdsQueryTest extends PlanTestBase {
-  private static final Set<Integer> toSubstraitExclusions = Set.of(9, 27, 36, 70, 86);
+  private static final Set<Integer> alternateForms = Set.of(27, 36, 70, 86);
+  private static final Set<Integer> toSubstraitExclusions = Set.of(9);
   private static final Set<Integer> fromSubstraitPojoExclusions = Set.of(1, 30, 81);
   private static final Set<Integer> fromSubstraitProtoExclusions = Set.of(1, 30, 67, 81);
 
@@ -28,7 +29,7 @@ public class TpcdsQueryTest extends PlanTestBase {
   @ParameterizedTest
   @MethodSource("testCases")
   public void testQuery(int query) throws IOException {
-    String inputSql = asString(String.format("tpcds/queries/%02d.sql", query));
+    String inputSql = asString(inputSqlFile(query));
 
     Plan plan = assertDoesNotThrow(() -> toSubstraitPlan(inputSql), "SQL to Substrait POJO");
 
@@ -46,6 +47,14 @@ public class TpcdsQueryTest extends PlanTestBase {
     } else {
       assertThrows(Throwable.class, () -> toSql(proto), "Substrait PROTO to SQL");
     }
+  }
+
+  private String inputSqlFile(int query) {
+    if (alternateForms.contains(query)) {
+      return String.format("tpcds/queries/%02da.sql", query);
+    }
+
+    return String.format("tpcds/queries/%02d.sql", query);
   }
 
   private Plan toSubstraitPlan(String sql) throws SqlParseException {
