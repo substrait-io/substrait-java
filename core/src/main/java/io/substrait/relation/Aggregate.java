@@ -21,17 +21,24 @@ public abstract class Aggregate extends SingleInputRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    return TypeCreator.REQUIRED.struct(
-        Stream.concat(
-            // unique grouping expressions
-            getGroupings().stream()
-                .flatMap(g -> g.getExpressions().stream())
-                .collect(Collectors.toCollection(LinkedHashSet::new))
-                .stream()
-                .map(Expression::getType),
+    boolean isGroupingSet = getGroupings().size() > 1;
 
-            // measures
-            getMeasures().stream().map(t -> t.getFunction().getType())));
+    Stream<Type> groupingTypes =
+        getGroupings().stream()
+            .flatMap(g -> g.getExpressions().stream())
+            .collect(Collectors.toCollection(LinkedHashSet::new))
+            .stream()
+            .map(
+                expr -> {
+                  if (isGroupingSet) {
+                    return TypeCreator.asNullable(expr.getType());
+                  }
+                  return expr.getType();
+                });
+
+    Stream<Type> measureTypes = getMeasures().stream().map(t -> t.getFunction().getType());
+
+    return TypeCreator.REQUIRED.struct(Stream.concat(groupingTypes, measureTypes));
   }
 
   @Override
