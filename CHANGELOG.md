@@ -1,6 +1,22 @@
 Release Notes
 ---
 
+## [0.65.0](https://github.com/substrait-io/substrait-java/compare/v0.64.0...v0.65.0) (2025-09-22)
+
+### Features
+
+* **isthmus:** introduce SqlToSubstrait[#convert](https://github.com/substrait-io/substrait-java/issues/convert) method ([#473](https://github.com/substrait-io/substrait-java/issues/473)) ([418742f](https://github.com/substrait-io/substrait-java/commit/418742f81135d5ac6347289aae008e0a54720cef))
+* **isthmus:** introduce SubstraitSqlToCalcite and SubstraitStatementParser ([#474](https://github.com/substrait-io/substrait-java/issues/474)) ([8906eb8](https://github.com/substrait-io/substrait-java/commit/8906eb87a826da3188757b296bebbf83a6266bf8))
+* **isthmus:** support limited processing of DDL statements([#432](https://github.com/substrait-io/substrait-java/issues/432)) ([260a1c4](https://github.com/substrait-io/substrait-java/commit/260a1c42f7d1ffc771ee50b481972ca95ee3e4e4))
+
+### Bug Fixes
+
+* **isthmus:** tpcds q67 ([#503](https://github.com/substrait-io/substrait-java/issues/503)) ([77e7f8f](https://github.com/substrait-io/substrait-java/commit/77e7f8ff58286dedf11c30c0605b8c2ed2c49acf))
+
+### Reverts
+
+* remove incorrect override of Project output schema ([9c0248a](https://github.com/substrait-io/substrait-java/commit/9c0248afa987440c185c34eb99c6f35f8c073cfd))
+
 ## [0.64.0](https://github.com/substrait-io/substrait-java/compare/v0.63.0...v0.64.0) (2025-08-11)
 
 ### Features
