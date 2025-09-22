@@ -3,7 +3,7 @@ package io.substrait.extension;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
-import io.substrait.proto.SimpleExtensionURI;
+import io.substrait.proto.SimpleExtensionURN;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -30,20 +30,21 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
 
     public Builder from(Plan plan) {
-      return from(plan.getExtensionUrisList(), plan.getExtensionsList());
+      return from(plan.getExtensionUrnsList(), plan.getExtensionsList());
     }
 
     public Builder from(ExtendedExpression extendedExpression) {
       return from(
-          extendedExpression.getExtensionUrisList(), extendedExpression.getExtensionsList());
+          extendedExpression.getExtensionUrnsList(), extendedExpression.getExtensionsList());
     }
 
     private Builder from(
-        List<SimpleExtensionURI> simpleExtensionURIs,
+        List<SimpleExtensionURN> simpleExtensionURNs,
         List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
-      Map<Integer, String> namespaceMap = new HashMap<>();
-      for (SimpleExtensionURI extension : simpleExtensionURIs) {
-        namespaceMap.put(extension.getExtensionUriAnchor(), extension.getUri());
+      Map<Integer, String> urnMap = new HashMap<>();
+      // Handle URN format
+      for (SimpleExtensionURN extension : simpleExtensionURNs) {
+        urnMap.put(extension.getExtensionUrnAnchor(), extension.getUrn());
       }
 
       // Add all functions used in plan to the functionMap
@@ -53,13 +54,14 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         }
         SimpleExtensionDeclaration.ExtensionFunction func = extension.getExtensionFunction();
         int reference = func.getFunctionAnchor();
-        String namespace = namespaceMap.get(func.getExtensionUriReference());
-        if (namespace == null) {
+        String urn = urnMap.get(func.getExtensionUrnReference());
+        if (urn == null) {
           throw new IllegalStateException(
-              "Could not find extension URI of " + func.getExtensionUriReference());
+              "Could not find extension URN for function reference "
+                  + func.getExtensionUrnReference());
         }
         String name = func.getName();
-        SimpleExtension.FunctionAnchor anchor = SimpleExtension.FunctionAnchor.of(namespace, name);
+        SimpleExtension.FunctionAnchor anchor = SimpleExtension.FunctionAnchor.of(urn, name);
         functionMap.put(reference, anchor);
       }
 
@@ -70,13 +72,13 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         }
         SimpleExtensionDeclaration.ExtensionType type = extension.getExtensionType();
         int reference = type.getTypeAnchor();
-        String namespace = namespaceMap.get(type.getExtensionUriReference());
-        if (namespace == null) {
+        String urn = urnMap.get(type.getExtensionUrnReference());
+        if (urn == null) {
           throw new IllegalStateException(
-              "Could not find extension URI of " + type.getExtensionUriReference());
+              "Could not find extension URN for type reference " + type.getExtensionUrnReference());
         }
         String name = type.getName();
-        SimpleExtension.TypeAnchor anchor = SimpleExtension.TypeAnchor.of(namespace, name);
+        SimpleExtension.TypeAnchor anchor = SimpleExtension.TypeAnchor.of(urn, name);
         typeMap.put(reference, anchor);
       }
 

@@ -16,16 +16,16 @@ public class TypeStringParser {
 
   private TypeStringParser() {}
 
-  public static Type parseSimple(String str, String namespace) {
-    return parse(str, namespace, ParseToPojo::type);
+  public static Type parseSimple(String str, String urn) {
+    return parse(str, urn, ParseToPojo::type);
   }
 
-  public static ParameterizedType parseParameterized(String str, String namespace) {
-    return parse(str, namespace, ParseToPojo::parameterizedType);
+  public static ParameterizedType parseParameterized(String str, String urn) {
+    return parse(str, urn, ParseToPojo::parameterizedType);
   }
 
-  public static TypeExpression parseExpression(String str, String namespace) {
-    return parse(str, namespace, ParseToPojo::typeExpression);
+  public static TypeExpression parseExpression(String str, String urn) {
+    return parse(str, urn, ParseToPojo::typeExpression);
   }
 
   private static SubstraitTypeParser.StartContext parse(String str) {
@@ -40,8 +40,8 @@ public class TypeStringParser {
   }
 
   public static <T> T parse(
-      String str, String namespace, BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
-    return func.apply(namespace, parse(str));
+      String str, String urn, BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
+    return func.apply(urn, parse(str));
   }
 
   public static TypeExpression parse(String str, ParseToPojo.Visitor visitor) {

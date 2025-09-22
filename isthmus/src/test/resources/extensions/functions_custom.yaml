@@ -1,5 +1,6 @@
 %YAML 1.2
 ---
+urn: extension:substrait:functions_custom
 types:
   - name: "a_type"
   - name: "b_type"

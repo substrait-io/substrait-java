@@ -117,6 +117,7 @@ dependencies {
   testImplementation(platform("org.junit:junit-bom:${JUNIT_VERSION}"))
   testImplementation("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testRuntimeOnly("org.jetbrains.kotlin:kotlin-stdlib:${properties.get("kotlin.version")}")
   api("com.google.protobuf:protobuf-java:${PROTOBUF_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-databind:${JACKSON_VERSION}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${JACKSON_VERSION}")

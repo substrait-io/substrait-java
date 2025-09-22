@@ -44,7 +44,7 @@ public class Deserializers {
       String typeString = p.getValueAsString();
       try {
         String namespace =
-            (String) ctxt.findInjectableValue(SimpleExtension.URI_LOCATOR_KEY, null, null);
+            (String) ctxt.findInjectableValue(SimpleExtension.URN_LOCATOR_KEY, null, null);
         return TypeStringParser.parse(typeString, namespace, converter);
       } catch (Exception ex) {
         throw JsonMappingException.from(

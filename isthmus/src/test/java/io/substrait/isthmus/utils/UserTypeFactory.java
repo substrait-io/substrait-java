@@ -13,11 +13,11 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class UserTypeFactory {
   private final InnerType N;
   private final InnerType R;
-  private final String uri;
+  private final String urn;
   private final String name;
 
-  public UserTypeFactory(String uri, String name) {
-    this.uri = uri;
+  public UserTypeFactory(String urn, String name) {
+    this.urn = urn;
     this.name = name;
     this.N = new InnerType(true, name);
     this.R = new InnerType(false, name);
@@ -32,7 +32,7 @@ public class UserTypeFactory {
   }
 
   public Type createSubstrait(boolean nullable) {
-    return TypeCreator.of(nullable).userDefined(uri, name);
+    return TypeCreator.of(nullable).userDefined(urn, name);
   }
 
   public boolean isTypeFromFactory(RelDataType type) {
