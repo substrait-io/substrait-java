@@ -389,7 +389,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   @Value.Immutable
   abstract class UserDefined implements Type {
 
-    public abstract String uri();
+    public abstract String urn();
 
     public abstract String name();
 
