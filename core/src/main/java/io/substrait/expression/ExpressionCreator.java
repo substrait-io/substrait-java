@@ -287,10 +287,10 @@ public class ExpressionCreator {
   }
 
   public static Expression.UserDefinedLiteral userDefinedLiteral(
-      boolean nullable, String uri, String name, Any value) {
+      boolean nullable, String urn, String name, Any value) {
     return Expression.UserDefinedLiteral.builder()
         .nullable(nullable)
-        .uri(uri)
+        .urn(urn)
         .name(name)
         .value(value.toByteString())
         .build();

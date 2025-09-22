@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Test;
 public class CustomFunctionTest extends PlanTestBase {
 
   // Define custom functions in a "functions_custom.yaml" extension
-  static final String NAMESPACE = "/functions_custom";
+  static final String NAMESPACE = "extension:substrait:functions_custom";
   static final String FUNCTIONS_CUSTOM;
 
   static {
@@ -56,7 +56,7 @@ public class CustomFunctionTest extends PlanTestBase {
 
   // Load custom extension into an ExtensionCollection
   static final SimpleExtension.ExtensionCollection extensionCollection =
-      SimpleExtension.load("/functions_custom", FUNCTIONS_CUSTOM);
+      SimpleExtension.load(FUNCTIONS_CUSTOM);
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
 
@@ -84,7 +84,7 @@ public class CustomFunctionTest extends PlanTestBase {
         @Nullable
         @Override
         public RelDataType toCalcite(Type.UserDefined type) {
-          if (type.uri().equals(NAMESPACE)) {
+          if (type.urn().equals(NAMESPACE)) {
             if (type.name().equals(aTypeName)) {
               return aTypeFactory.createCalcite(type.nullable());
             }
