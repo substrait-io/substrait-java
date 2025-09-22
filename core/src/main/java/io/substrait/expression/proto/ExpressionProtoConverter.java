@@ -361,7 +361,7 @@ public class ExpressionProtoConverter
   public Expression visit(
       io.substrait.expression.Expression.UserDefinedLiteral expr, EmptyVisitationContext context) {
     int typeReference =
-        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
+        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
     return lit(
         bldr -> {
           try {

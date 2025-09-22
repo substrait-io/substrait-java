@@ -164,7 +164,7 @@ abstract class BaseProtoConverter<T, I>
   @Override
   public final T visit(final Type.UserDefined expr) {
     int ref =
-        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.uri(), expr.name()));
+        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
     return typeContainer(expr).userDefined(ref);
   }
 }

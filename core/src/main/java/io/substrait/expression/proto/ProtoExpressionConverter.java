@@ -495,7 +495,7 @@ public class ProtoExpressionConverter {
           SimpleExtension.Type type =
               lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
           return ExpressionCreator.userDefinedLiteral(
-              literal.getNullable(), type.uri(), type.name(), userDefinedLiteral.getValue());
+              literal.getNullable(), type.urn(), type.name(), userDefinedLiteral.getValue());
         }
       default:
         throw new IllegalStateException("Unexpected value: " + literal.getLiteralTypeCase());

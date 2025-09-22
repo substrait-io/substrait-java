@@ -28,13 +28,13 @@ public class TypeExtensionTest {
 
   static final TypeCreator R = TypeCreator.of(false);
 
-  static final String NAMESPACE = "/custom_extensions";
+  static final String NAMESPACE = "extension:test:custom_extensions";
   final SimpleExtension.ExtensionCollection extensionCollection;
 
   {
     InputStream inputStream =
         this.getClass().getResourceAsStream("/extensions/custom_extensions.yaml");
-    extensionCollection = SimpleExtension.load(NAMESPACE, inputStream);
+    extensionCollection = SimpleExtension.load(inputStream);
   }
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);

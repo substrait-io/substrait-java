@@ -3,7 +3,7 @@ package io.substrait.extension;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
-import io.substrait.proto.SimpleExtensionURI;
+import io.substrait.proto.SimpleExtensionURN;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,30 +52,30 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   public void addExtensionsToPlan(Plan.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 
-    builder.addAllExtensionUris(simpleExtensions.uris.values());
+    builder.addAllExtensionUrns(simpleExtensions.urns.values());
     builder.addAllExtensions(simpleExtensions.extensionList);
   }
 
   public void addExtensionsToExtendedExpression(ExtendedExpression.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 
-    builder.addAllExtensionUris(simpleExtensions.uris.values());
+    builder.addAllExtensionUrns(simpleExtensions.urns.values());
     builder.addAllExtensions(simpleExtensions.extensionList);
   }
 
   private SimpleExtensions getExtensions() {
-    AtomicInteger uriPos = new AtomicInteger(1);
-    HashMap<String, SimpleExtensionURI> uris = new HashMap<>();
+    AtomicInteger urnPos = new AtomicInteger(1);
+    HashMap<String, SimpleExtensionURN> urns = new HashMap<>();
 
     ArrayList<SimpleExtensionDeclaration> extensionList = new ArrayList<>();
     for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardMap.entrySet()) {
-      SimpleExtensionURI uri =
-          uris.computeIfAbsent(
-              e.getValue().namespace(),
+      SimpleExtensionURN urn =
+          urns.computeIfAbsent(
+              e.getValue().urn(),
               k ->
-                  SimpleExtensionURI.newBuilder()
-                      .setExtensionUriAnchor(uriPos.getAndIncrement())
-                      .setUri(k)
+                  SimpleExtensionURN.newBuilder()
+                      .setExtensionUrnAnchor(urnPos.getAndIncrement())
+                      .setUrn(k)
                       .build());
       SimpleExtensionDeclaration decl =
           SimpleExtensionDeclaration.newBuilder()
@@ -83,18 +83,18 @@ public class ExtensionCollector extends AbstractExtensionLookup {
                   SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
                       .setFunctionAnchor(e.getKey())
                       .setName(e.getValue().key())
-                      .setExtensionUriReference(uri.getExtensionUriAnchor()))
+                      .setExtensionUrnReference(urn.getExtensionUrnAnchor()))
               .build();
       extensionList.add(decl);
     }
     for (Map.Entry<Integer, SimpleExtension.TypeAnchor> e : typeMap.forwardMap.entrySet()) {
-      SimpleExtensionURI uri =
-          uris.computeIfAbsent(
-              e.getValue().namespace(),
+      SimpleExtensionURN urn =
+          urns.computeIfAbsent(
+              e.getValue().urn(),
               k ->
-                  SimpleExtensionURI.newBuilder()
-                      .setExtensionUriAnchor(uriPos.getAndIncrement())
-                      .setUri(k)
+                  SimpleExtensionURN.newBuilder()
+                      .setExtensionUrnAnchor(urnPos.getAndIncrement())
+                      .setUrn(k)
                       .build());
       SimpleExtensionDeclaration decl =
           SimpleExtensionDeclaration.newBuilder()
@@ -102,21 +102,21 @@ public class ExtensionCollector extends AbstractExtensionLookup {
                   SimpleExtensionDeclaration.ExtensionType.newBuilder()
                       .setTypeAnchor(e.getKey())
                       .setName(e.getValue().key())
-                      .setExtensionUriReference(uri.getExtensionUriAnchor()))
+                      .setExtensionUrnReference(urn.getExtensionUrnAnchor()))
               .build();
       extensionList.add(decl);
     }
-    return new SimpleExtensions(uris, extensionList);
+    return new SimpleExtensions(urns, extensionList);
   }
 
   private static final class SimpleExtensions {
-    final HashMap<String, SimpleExtensionURI> uris;
+    final HashMap<String, SimpleExtensionURN> urns;
     final ArrayList<SimpleExtensionDeclaration> extensionList;
 
     SimpleExtensions(
-        HashMap<String, SimpleExtensionURI> uris,
+        HashMap<String, SimpleExtensionURN> urns,
         ArrayList<SimpleExtensionDeclaration> extensionList) {
-      this.uris = uris;
+      this.urns = urns;
       this.extensionList = extensionList;
     }
   }
