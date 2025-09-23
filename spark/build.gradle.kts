@@ -102,7 +102,9 @@ java {
   withSourcesJar()
 }
 
-tasks.withType<ScalaCompile>() { scalaCompileOptions.additionalParameters = listOf("-release:17") }
+tasks.withType<ScalaCompile>() {
+  scalaCompileOptions.additionalParameters = listOf("-release:17", "-Xfatal-warnings")
+}
 
 var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
 
