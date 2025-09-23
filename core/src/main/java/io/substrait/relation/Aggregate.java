@@ -21,22 +21,40 @@ public abstract class Aggregate extends SingleInputRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    boolean isGroupingSet = getGroupings().size() > 1;
+    // If there's only one grouping set (or none), the nullability rule doesn't apply.
+    if (getGroupings().size() <= 1) {
+      final Stream<Type> groupingTypes =
+          getGroupings().stream()
+              .flatMap(g -> g.getExpressions().stream())
+              .map(Expression::getType);
+      final Stream<Type> measureTypes = getMeasures().stream().map(t -> t.getFunction().getType());
+      return TypeCreator.REQUIRED.struct(Stream.concat(groupingTypes, measureTypes));
+    }
 
-    Stream<Type> groupingTypes =
+    final LinkedHashSet<Expression> uniqueExpressions =
         getGroupings().stream()
             .flatMap(g -> g.getExpressions().stream())
-            .collect(Collectors.toCollection(LinkedHashSet::new))
-            .stream()
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    // For each unique expression, determine its final nullability based on the spec.
+    final Stream<Type> groupingTypes =
+        uniqueExpressions.stream()
             .map(
                 expr -> {
-                  if (isGroupingSet) {
+                  // the code below implements the following statement from the spec
+                  // (https://substrait.io/relations/logical_relations/#aggregate-operation):
+                  // "The values for the grouping expression columns that are not
+                  // part of the grouping set for a particular record will be set to null."
+                  final boolean appearsInAllSets =
+                      getGroupings().stream().allMatch(g -> g.getExpressions().contains(expr));
+                  if (appearsInAllSets) {
+                    return expr.getType();
+                  } else {
                     return TypeCreator.asNullable(expr.getType());
                   }
-                  return expr.getType();
                 });
 
-    Stream<Type> measureTypes = getMeasures().stream().map(t -> t.getFunction().getType());
+    final Stream<Type> measureTypes = getMeasures().stream().map(t -> t.getFunction().getType());
 
     return TypeCreator.REQUIRED.struct(Stream.concat(groupingTypes, measureTypes));
   }
