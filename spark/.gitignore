@@ -1,0 +1,4 @@
+metastore_db
+spark-warehouse
+/src/test/resources/write-a.csv
+derby.log
