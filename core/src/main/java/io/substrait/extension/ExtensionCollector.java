@@ -68,7 +68,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     HashMap<String, SimpleExtensionURN> urns = new HashMap<>();
 
     ArrayList<SimpleExtensionDeclaration> extensionList = new ArrayList<>();
-    for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardMap.entrySet()) {
+    for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardEntrySet()) {
       SimpleExtensionURN urn =
           urns.computeIfAbsent(
               e.getValue().urn(),
@@ -87,7 +87,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
               .build();
       extensionList.add(decl);
     }
-    for (Map.Entry<Integer, SimpleExtension.TypeAnchor> e : typeMap.forwardMap.entrySet()) {
+    for (Map.Entry<Integer, SimpleExtension.TypeAnchor> e : typeMap.forwardEntrySet()) {
       SimpleExtensionURN urn =
           urns.computeIfAbsent(
               e.getValue().urn(),
@@ -118,30 +118,6 @@ public class ExtensionCollector extends AbstractExtensionLookup {
         ArrayList<SimpleExtensionDeclaration> extensionList) {
       this.urns = urns;
       this.extensionList = extensionList;
-    }
-  }
-
-  /** We don't depend on guava... */
-  private static class BidiMap<T1, T2> {
-    private final Map<T1, T2> forwardMap;
-    private final Map<T2, T1> reverseMap;
-
-    public BidiMap(Map<T1, T2> forwardMap) {
-      this.forwardMap = forwardMap;
-      this.reverseMap = new HashMap<>();
-    }
-
-    public T2 get(T1 t1) {
-      return forwardMap.get(t1);
-    }
-
-    public T1 reverseGet(T2 t2) {
-      return reverseMap.get(t2);
-    }
-
-    public void put(T1 t1, T2 t2) {
-      forwardMap.put(t1, t2);
-      reverseMap.put(t2, t1);
     }
   }
 }
