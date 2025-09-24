@@ -50,6 +50,7 @@ import io.substrait.relation.files.FileFormat
 import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
+import scala.annotation.nowarn
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ArrayBuffer
 
@@ -180,6 +181,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
 
+  @nowarn("cat=deprecation")
   override def visit(join: relation.Join, context: EmptyVisitationContext): LogicalPlan = {
     val left = join.getLeft.accept(this, context)
     val right = join.getRight.accept(this, context)
