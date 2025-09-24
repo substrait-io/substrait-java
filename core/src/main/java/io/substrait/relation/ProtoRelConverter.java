@@ -628,38 +628,38 @@ public class ProtoRelConverter {
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
 
-//       the deprecated form of Grouping is not used
-      if (!rel.getGroupingExpressionsList().isEmpty()) {
-          List<io.substrait.proto.Expression> allGroupingKeys = rel.getGroupingExpressionsList();
+    //       the deprecated form of Grouping is not used
+    if (!rel.getGroupingExpressionsList().isEmpty()) {
+      List<io.substrait.proto.Expression> allGroupingKeys = rel.getGroupingExpressionsList();
 
-//          for every grouping object on aggregate, it has a list of references into the aggregate's expressionList for the specific sorting set
-          for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-              List<io.substrait.proto.Expression> groupingKeys =  new ArrayList<>();
-              for (int key: grouping.getExpressionReferencesList()) {
-                  groupingKeys.add(allGroupingKeys.get(key));
-              }
-              groupings.add(
-                      Aggregate.Grouping.builder()
-                              .expressions(
-                                      groupingKeys.stream()
-                                              .map(protoExprConverter::from)
-                                              .collect(Collectors.toList()))
-                              .build());
-          }
-          Aggregate.builder().input(input).groupings(groupings);
-      }else{
-          //        using the deprecated form of Grouping and Aggregate
-          for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-              groupings.add(
-                      Aggregate.Grouping.builder()
-                              .expressions(
-                                      grouping.getGroupingExpressionsList().stream()
-                                              .map(protoExprConverter::from)
-                                              .collect(Collectors.toList()))
-                              .build());
-          }
+      //          for every grouping object on aggregate, it has a list of references into the
+      // aggregate's expressionList for the specific sorting set
+      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+        List<io.substrait.proto.Expression> groupingKeys = new ArrayList<>();
+        for (int key : grouping.getExpressionReferencesList()) {
+          groupingKeys.add(allGroupingKeys.get(key));
+        }
+        groupings.add(
+            Aggregate.Grouping.builder()
+                .expressions(
+                    groupingKeys.stream()
+                        .map(protoExprConverter::from)
+                        .collect(Collectors.toList()))
+                .build());
       }
-
+      Aggregate.builder().input(input).groupings(groupings);
+    } else {
+      //        using the deprecated form of Grouping and Aggregate
+      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+        groupings.add(
+            Aggregate.Grouping.builder()
+                .expressions(
+                    grouping.getGroupingExpressionsList().stream()
+                        .map(protoExprConverter::from)
+                        .collect(Collectors.toList()))
+                .build());
+      }
+    }
 
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
     for (AggregateRel.Measure measure : rel.getMeasuresList()) {
