@@ -29,7 +29,7 @@ object SparkExtension {
   final val file = "/spark.yml"
 
   private val SparkImpls: SimpleExtension.ExtensionCollection =
-    SimpleExtension.load(getClass.getResourceAsStream(file))
+    SimpleExtension.load(file, getClass.getResourceAsStream(file))
 
   private val EXTENSION_COLLECTION: SimpleExtension.ExtensionCollection =
     SimpleExtension.loadDefaults()

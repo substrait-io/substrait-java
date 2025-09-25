@@ -32,9 +32,9 @@ public class TypeExtensionTest {
   final SimpleExtension.ExtensionCollection extensionCollection;
 
   {
-    InputStream inputStream =
-        this.getClass().getResourceAsStream("/extensions/custom_extensions.yaml");
-    extensionCollection = SimpleExtension.load(inputStream);
+    String path = "/extensions/custom_extensions.yaml";
+    InputStream inputStream = this.getClass().getResourceAsStream(path);
+    extensionCollection = SimpleExtension.load(path, inputStream);
   }
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
