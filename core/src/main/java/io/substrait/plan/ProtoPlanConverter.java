@@ -29,7 +29,8 @@ public class ProtoPlanConverter {
   }
 
   public Plan from(io.substrait.proto.Plan plan) {
-    ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
+    ExtensionLookup functionLookup =
+        ImmutableExtensionLookup.builder().from(plan, extensionCollection.uriUrnMap()).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
@@ -54,12 +55,23 @@ public class ProtoPlanConverter {
       versionBuilder.producer(Optional.of(plan.getVersion().getProducer()));
     }
 
+    List<String> extensionUrns =
+        plan.getExtensionUrnsList().stream()
+            .map(urn -> urn.getUrn())
+            .collect(java.util.stream.Collectors.toList());
+    List<String> extensionUris =
+        extensionUrns.stream()
+            .map(urn -> extensionCollection.getUri(urn))
+            .collect(java.util.stream.Collectors.toList());
+
     return Plan.builder()
         .roots(roots)
         .expectedTypeUrls(plan.getExpectedTypeUrlsList())
         .advancedExtension(
             Optional.ofNullable(plan.hasAdvancedExtensions() ? plan.getAdvancedExtensions() : null))
         .version(versionBuilder.build())
+        .extensionUrns(extensionUrns)
+        .extensionUris(extensionUris)
         .build();
   }
 }

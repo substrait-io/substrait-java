@@ -3,6 +3,7 @@ package io.substrait.extension;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
+import io.substrait.proto.SimpleExtensionURI;
 import io.substrait.proto.SimpleExtensionURN;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,22 +30,33 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
 
-    public Builder from(Plan plan) {
-      return from(plan.getExtensionUrnsList(), plan.getExtensionsList());
+    public Builder from(Plan plan, BidiMap<String, String> uriUrnMap) {
+      return from(
+          plan.getExtensionUrnsList(), plan.getExtensionUrisList(), plan.getExtensionsList(), uriUrnMap);
     }
 
-    public Builder from(ExtendedExpression extendedExpression) {
+    public Builder from(ExtendedExpression extendedExpression, BidiMap<String, String> uriUrnMap) {
       return from(
-          extendedExpression.getExtensionUrnsList(), extendedExpression.getExtensionsList());
+          extendedExpression.getExtensionUrnsList(),
+          extendedExpression.getExtensionUrisList(),
+          extendedExpression.getExtensionsList(),
+          uriUrnMap);
     }
 
     private Builder from(
         List<SimpleExtensionURN> simpleExtensionURNs,
-        List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
+        List<SimpleExtensionURI> simpleExtensionURIs,
+        List<SimpleExtensionDeclaration> simpleExtensionDeclarations,
+        BidiMap<String, String> uriUrnMap) {
       Map<Integer, String> urnMap = new HashMap<>();
+      Map<Integer, String> uriMap = new HashMap<>();
       // Handle URN format
       for (SimpleExtensionURN extension : simpleExtensionURNs) {
         urnMap.put(extension.getExtensionUrnAnchor(), extension.getUrn());
+      }
+
+      for (SimpleExtensionURI extension : simpleExtensionURIs) {
+        uriMap.put(extension.getExtensionUriAnchor(), extension.getUri());
       }
 
       // Add all functions used in plan to the functionMap
@@ -56,9 +68,22 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         int reference = func.getFunctionAnchor();
         String urn = urnMap.get(func.getExtensionUrnReference());
         if (urn == null) {
-          throw new IllegalStateException(
-              "Could not find extension URN for function reference "
-                  + func.getExtensionUrnReference());
+          int uriReference = func.getExtensionUriReference();
+          String uri = uriMap.get(uriReference);
+          if (uri == null) {
+            throw new IllegalStateException(
+                "Could not find extension URN for function reference "
+                    + func.getExtensionUrnReference()
+                    + " or extension URI for function reference "
+                    + func.getExtensionUriReference());
+          }
+          // Translate URI to URN using the BidiMap
+          urn = uriUrnMap.get(uri);
+          if (urn == null) {
+            throw new IllegalStateException(
+                "Could not translate URI '" + uri + "' to URN. "
+                    + "URI-URN mapping not found in the provided mapping.");
+          }
         }
         String name = func.getName();
         SimpleExtension.FunctionAnchor anchor = SimpleExtension.FunctionAnchor.of(urn, name);
@@ -74,8 +99,22 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         int reference = type.getTypeAnchor();
         String urn = urnMap.get(type.getExtensionUrnReference());
         if (urn == null) {
-          throw new IllegalStateException(
-              "Could not find extension URN for type reference " + type.getExtensionUrnReference());
+          int uriReference = type.getExtensionUriReference();
+          String uri = uriMap.get(uriReference);
+          if (uri == null) {
+            throw new IllegalStateException(
+                "Could not find extension URN for type reference "
+                    + type.getExtensionUrnReference()
+                    + " or extension URI for type reference "
+                    + type.getExtensionUriReference());
+          }
+          // Translate URI to URN using the BidiMap
+          urn = uriUrnMap.get(uri);
+          if (urn == null) {
+            throw new IllegalStateException(
+                "Could not translate URI '" + uri + "' to URN. "
+                    + "URI-URN mapping not found in the provided mapping.");
+          }
         }
         String name = type.getName();
         SimpleExtension.TypeAnchor anchor = SimpleExtension.TypeAnchor.of(urn, name);

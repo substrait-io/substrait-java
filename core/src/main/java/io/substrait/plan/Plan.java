@@ -21,6 +21,10 @@ public abstract class Plan {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
+  public abstract List<String> getExtensionUrns();
+
+  public abstract List<String> getExtensionUris();
+
   public static ImmutablePlan.Builder builder() {
     return ImmutablePlan.builder();
   }

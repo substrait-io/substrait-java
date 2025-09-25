@@ -588,7 +588,7 @@ public class SimpleExtension {
   @Value.Immutable
   public abstract static class ExtensionCollection {
     @Value.Default
-    BidiMap<String, String> uriUrnMap() {
+    public BidiMap<String, String> uriUrnMap() {
       return new BidiMap<>();
     }
 
