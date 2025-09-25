@@ -56,7 +56,7 @@ public class CustomFunctionTest extends PlanTestBase {
 
   // Load custom extension into an ExtensionCollection
   static final SimpleExtension.ExtensionCollection extensionCollection =
-      SimpleExtension.load(FUNCTIONS_CUSTOM);
+      SimpleExtension.load("custom.yaml", FUNCTIONS_CUSTOM);
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
 
