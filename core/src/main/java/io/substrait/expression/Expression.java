@@ -666,13 +666,13 @@ public interface Expression extends FunctionArg {
   abstract class UserDefinedLiteral implements Literal {
     public abstract ByteString value();
 
-    public abstract String uri();
+    public abstract String urn();
 
     public abstract String name();
 
     @Override
     public Type getType() {
-      return Type.withNullability(nullable()).userDefined(uri(), name());
+      return Type.withNullability(nullable()).userDefined(urn(), name());
     }
 
     public static ImmutableExpression.UserDefinedLiteral.Builder builder() {

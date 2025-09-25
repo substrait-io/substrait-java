@@ -71,7 +71,7 @@ public class CallConverters {
               Type.UserDefined t = (Type.UserDefined) type;
 
               return Expression.UserDefinedLiteral.builder()
-                  .uri(t.uri())
+                  .urn(t.urn())
                   .name(t.name())
                   .value(literal.value())
                   .build();
