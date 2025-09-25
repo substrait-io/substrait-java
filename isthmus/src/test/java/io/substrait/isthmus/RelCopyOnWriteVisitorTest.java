@@ -37,7 +37,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
           + "  count(distinct l.l_orderkey),\n"
-          + "  count(distinct l.l_orderkey) + 1,\n"
+          + " count(distinct l.l_orderkey) + 1,\n"
           + "  sum(l.l_extendedprice * (1 - l.l_discount)) as revenue,\n"
           + "  o.o_orderdate,\n"
           + "  count(distinct o.o_shippriority)\n"

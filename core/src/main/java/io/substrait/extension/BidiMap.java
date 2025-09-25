@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** We don't depend on guava... */
-class BidiMap<T1, T2> {
+public class BidiMap<T1, T2> {
   private final Map<T1, T2> forwardMap;
   private final Map<T2, T1> reverseMap;
 
