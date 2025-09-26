@@ -1,0 +1,110 @@
+{
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_arithmetic"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "functionAnchor": 1,
+        "name": "add:i32_i32",
+        "extensionUrnReference": 1
+      }
+    },
+    {
+      "extensionFunction": {
+        "functionAnchor": 2,
+        "name": "subtract:i32_i32",
+        "extensionUrnReference": 1
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "input": {
+              "read": {
+                "baseSchema": {
+                  "names": [
+                    "value1",
+                    "value2"
+                  ],
+                  "struct": {
+                    "types": [
+                      {
+                        "i32": {}
+                      },
+                      {
+                        "i32": {}
+                      }
+                    ]
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "numbers"
+                  ]
+                }
+              }
+            },
+            "expressions": [
+              {
+                "scalarFunction": {
+                  "functionReference": 1,
+                  "outputType": {
+                    "i32": {}
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "scalarFunction": {
+                          "functionReference": 2,
+                          "outputType": {
+                            "i32": {}
+                          },
+                          "arguments": [
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 20
+                                }
+                              }
+                            },
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 5
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 10
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "sum_result"
+        ]
+      }
+    }
+  ],
+  "version": {
+    "minorNumber": 75
+  }
+}

@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** We don't depend on guava... */
-class BidiMap<T1, T2> {
+public class BidiMap<T1, T2> {
   private final Map<T1, T2> forwardMap;
   private final Map<T2, T1> reverseMap;
 
@@ -27,8 +27,11 @@ class BidiMap<T1, T2> {
     return reverseMap.get(t2);
   }
 
+  /**
+   * Associates the specified values in both directions. Throws if either value is already mapped
+   * to a different value.
+   */
   public void put(T1 t1, T2 t2) {
-    // Check for conflicting mappings (different values for same key)
     T2 existingForward = forwardMap.get(t1);
     T1 existingReverse = reverseMap.get(t2);
 
@@ -39,7 +42,6 @@ class BidiMap<T1, T2> {
       throw new IllegalArgumentException("Key already exists in map with different value");
     }
 
-    // Allow identical mappings, only add if not already present
     forwardMap.put(t1, t2);
     reverseMap.put(t2, t1);
   }

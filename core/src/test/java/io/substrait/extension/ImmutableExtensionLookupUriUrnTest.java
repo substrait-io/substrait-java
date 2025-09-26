@@ -6,6 +6,8 @@ import io.substrait.proto.SimpleExtensionURI;
 import io.substrait.proto.SimpleExtensionURN;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class ImmutableExtensionLookupUriUrnTest {
 
   @Test

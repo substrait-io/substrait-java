@@ -1,5 +1,6 @@
 package io.substrait.plan;
 
+import io.substrait.extension.BidiMap;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
@@ -12,9 +13,19 @@ import java.util.List;
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
 
+  private final BidiMap<String, String> uriUrnMap;
+
+  public PlanProtoConverter() {
+    this(new BidiMap<>());
+  }
+
+  public PlanProtoConverter(BidiMap<String, String> uriUrnMap) {
+		this.uriUrnMap = uriUrnMap;
+  }
+
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();
-    ExtensionCollector functionCollector = new ExtensionCollector();
+    ExtensionCollector functionCollector = new ExtensionCollector(uriUrnMap);
     for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
       Rel input = new RelProtoConverter(functionCollector).toProto(root.getInput());
       planRels.add(
