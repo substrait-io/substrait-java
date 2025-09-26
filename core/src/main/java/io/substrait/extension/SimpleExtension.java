@@ -23,17 +23,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
-import java.util.Scanner;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -588,7 +587,7 @@ public class SimpleExtension {
   @Value.Immutable
   public abstract static class ExtensionCollection {
     @Value.Default
-    BidiMap<String, String> uriUrnMap() {
+    public BidiMap<String, String> uriUrnMap() {
       return new BidiMap<>();
     }
 

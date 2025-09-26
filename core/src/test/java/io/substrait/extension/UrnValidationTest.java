@@ -1,7 +1,6 @@
 package io.substrait.extension;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class UrnValidationTest {
 
