@@ -66,6 +66,10 @@ public class UriUrnMigrationEndToEndTest {
             new String[] {
               "uri-urn-migration/mixed-partial-coverage-input-plan.json",
               "uri-urn-migration/mixed-partial-coverage-expected-plan.json"
+            },
+            new String[] {
+              "uri-urn-migration/zero-urn-resolution-input-plan.json",
+              "uri-urn-migration/zero-urn-resolution-expected-plan.json"
             });
 
     for (String[] testCase : testCases) {
@@ -83,5 +87,22 @@ public class UriUrnMigrationEndToEndTest {
 
       assertEquals(expectedPlan, actualPlan);
     }
+  }
+
+  @Test
+  public void testUnresolvableUriThrowsException() throws IOException {
+    Plan inputPlan = loadPlanFromJson("uri-urn-migration/unresolvable-uri-plan.json");
+
+    ProtoPlanConverter protoToPojo = new ProtoPlanConverter(defaultExtensions);
+
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () -> {
+              protoToPojo.from(inputPlan);
+            });
+
+    assertTrue(exception.getMessage().contains("All resolution strategies failed"));
+    assertTrue(exception.getMessage().contains("/functions_nonexistent.yaml"));
   }
 }
