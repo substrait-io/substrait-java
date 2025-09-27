@@ -712,28 +712,6 @@ public class SimpleExtension {
     }
 
     /**
-     * Checks if a URI has a corresponding URN mapping. This is only useful during the URI -> URN
-     * migration, and will be dropped when the migration is complete.
-     *
-     * @param uri The URI to check
-     * @return true if the URI has a URN mapping, false otherwise
-     */
-    public boolean hasUrn(String uri) {
-      return uriUrnMap().get(uri) != null;
-    }
-
-    /**
-     * Checks if a URN has a corresponding URI mapping. This is only useful during the URI -> URN
-     * migration, and will be dropped when the migration is complete.
-     *
-     * @param urn The URN to check
-     * @return true if the URN has a URI mapping, false otherwise
-     */
-    public boolean hasUri(String urn) {
-      return uriUrnMap().reverseGet(urn) != null;
-    }
-
-    /**
      * Gets the URI for a given URN. This is for internal framework use during URI/URN migration.
      *
      * @param urn The URN to look up

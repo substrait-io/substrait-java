@@ -35,11 +35,6 @@ public class ExtensionCollectionMergeTest {
 
     SimpleExtension.ExtensionCollection merged = collection1.merge(collection2);
 
-    assertTrue(merged.hasUrn("uri1://extensions"));
-    assertTrue(merged.hasUrn("uri2://extensions"));
-    assertTrue(merged.hasUri("extension:ns1:collection1"));
-    assertTrue(merged.hasUri("extension:ns2:collection2"));
-
     assertEquals("extension:ns1:collection1", merged.getUrnFromUri("uri1://extensions"));
     assertEquals("extension:ns2:collection2", merged.getUrnFromUri("uri2://extensions"));
     assertEquals("uri1://extensions", merged.getUriFromUrn("extension:ns1:collection1"));

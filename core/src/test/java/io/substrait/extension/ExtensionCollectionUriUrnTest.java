@@ -18,10 +18,10 @@ public class ExtensionCollectionUriUrnTest {
     SimpleExtension.ExtensionCollection collection =
         SimpleExtension.load("file:///tmp/test.yaml", yamlContent);
 
-    assertTrue(collection.hasUrn("file:///tmp/test.yaml"));
-    assertTrue(collection.hasUri("extension:test:exists"));
-    assertFalse(collection.hasUrn("nonexistent://uri"));
-    assertFalse(collection.hasUri("extension:nonexistent:urn"));
+    assertTrue(collection.getUrnFromUri("file:///tmp/test.yaml") != null);
+    assertTrue(collection.getUriFromUrn("extension:test:exists") != null);
+    assertFalse(collection.getUrnFromUri("nonexistent://uri") != null);
+    assertFalse(collection.getUriFromUrn("extension:nonexistent:urn") != null);
   }
 
   @Test
