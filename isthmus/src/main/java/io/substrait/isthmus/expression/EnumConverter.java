@@ -108,7 +108,7 @@ public class EnumConverter {
   private static Optional<SimpleExtension.EnumArgument> findEnumArg(
       SimpleExtension.Function function, ArgAnchor enumAnchor) {
 
-    if (enumAnchor.fn == function.getAnchor()) {
+    if (enumAnchor.fn.equals(function.getAnchor())) {
       return Optional.empty();
     } else {
 
@@ -185,7 +185,7 @@ public class EnumConverter {
 
   private static ArgAnchor argAnchor(SimpleExtension.Function fnDef, int argIdx) {
     return new ArgAnchor(
-        SimpleExtension.FunctionAnchor.of(fnDef.getAnchor().namespace(), fnDef.getAnchor().key()),
+        SimpleExtension.FunctionAnchor.of(fnDef.getAnchor().urn(), fnDef.getAnchor().key()),
         argIdx);
   }
 }

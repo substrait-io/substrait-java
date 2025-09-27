@@ -1,0 +1,148 @@
+{
+  "extensionUris": [
+    {
+      "extensionUriAnchor": 1,
+      "uri": "/functions_arithmetic.yaml"
+    },
+    {
+      "extensionUriAnchor": 0,
+      "uri": "/functions_string.yaml"
+    }
+  ],
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 2,
+      "urn": "extension:io.substrait:functions_arithmetic"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "functionAnchor": 1,
+        "name": "add:i32_i32",
+        "extensionUriReference": 1
+      }
+    },
+    {
+      "extensionFunction": {
+        "functionAnchor": 2,
+        "name": "subtract:i32_i32",
+        "extensionUrnReference": 2
+      }
+    },
+    {
+      "extensionFunction": {
+        "functionAnchor": 3,
+        "name": "multiply:i32_i32",
+        "extensionUriReference": 1
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "input": {
+              "read": {
+                "baseSchema": {
+                  "names": [
+                    "dummy"
+                  ],
+                  "struct": {
+                    "types": [
+                      {
+                        "i32": {}
+                      }
+                    ]
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "test_table"
+                  ]
+                }
+              }
+            },
+            "expressions": [
+              {
+                "scalarFunction": {
+                  "functionReference": 1,
+                  "outputType": {
+                    "i32": {}
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "scalarFunction": {
+                          "functionReference": 2,
+                          "outputType": {
+                            "i32": {}
+                          },
+                          "arguments": [
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 5
+                                }
+                              }
+                            },
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 10
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 7
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "scalarFunction": {
+                  "functionReference": 3,
+                  "outputType": {
+                    "i32": {}
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 3
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 4
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "result",
+          "product"
+        ]
+      }
+    }
+  ],
+  "version": {
+    "minorNumber": 75
+  }
+}

@@ -1,6 +1,7 @@
 package io.substrait.plan;
 
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
@@ -12,9 +13,22 @@ import java.util.List;
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
 
+  private final SimpleExtension.ExtensionCollection extensionCollection;
+
+  public PlanProtoConverter() {
+    this(SimpleExtension.loadDefaults());
+  }
+
+  public PlanProtoConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+    if (extensionCollection == null) {
+      throw new IllegalArgumentException("ExtensionCollection is required");
+    }
+    this.extensionCollection = extensionCollection;
+  }
+
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();
-    ExtensionCollector functionCollector = new ExtensionCollector();
+    ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
     for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
       Rel input = new RelProtoConverter(functionCollector).toProto(root.getInput());
       planRels.add(
