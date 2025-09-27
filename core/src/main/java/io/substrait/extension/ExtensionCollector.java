@@ -20,20 +20,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ExtensionCollector extends AbstractExtensionLookup {
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
-  private final BidiMap<String, String> uriUrnMap;
+  private final SimpleExtension.ExtensionCollection extensionCollection;
 
   // start at 0 to make sure functionAnchors start with 1 according to spec
   private int counter = 0;
 
-  public ExtensionCollector() {
-    this(new BidiMap<>());
+  private String getUriFromUrn(String urn) {
+    return extensionCollection.getUriFromUrn(urn);
   }
 
-  public ExtensionCollector(BidiMap<String, String> uriUrnMap) {
+  public ExtensionCollector() {
+    this(SimpleExtension.loadDefaults());
+  }
+
+  public ExtensionCollector(SimpleExtension.ExtensionCollection extensionCollection) {
     super(new HashMap<>(), new HashMap<>());
+    if (extensionCollection == null) {
+      throw new IllegalArgumentException("ExtensionCollection is required");
+    }
     funcMap = new BidiMap<>(functionAnchorMap);
     typeMap = new BidiMap<>(typeAnchorMap);
-    this.uriUrnMap = uriUrnMap != null ? uriUrnMap : new BidiMap<>();
+    this.extensionCollection = extensionCollection;
   }
 
   public int getFunctionReference(SimpleExtension.Function declaration) {
@@ -81,7 +88,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     ArrayList<SimpleExtensionDeclaration> extensionList = new ArrayList<>();
     for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardEntrySet()) {
       String urn = e.getValue().urn();
-      String uri = uriUrnMap.reverseGet(urn);
+      String uri = getUriFromUrn(urn);
 
       // Create URN entry
       SimpleExtensionURN urnObj =
@@ -96,13 +103,14 @@ public class ExtensionCollector extends AbstractExtensionLookup {
       // Create URI entry if mapping exists
       SimpleExtensionURI uriObj = null;
       if (uri != null) {
-        uriObj = uris.computeIfAbsent(
-            uri,
-            k ->
-                SimpleExtensionURI.newBuilder()
-                    .setExtensionUriAnchor(uriPos.getAndIncrement())
-                    .setUri(k)
-                    .build());
+        uriObj =
+            uris.computeIfAbsent(
+                uri,
+                k ->
+                    SimpleExtensionURI.newBuilder()
+                        .setExtensionUriAnchor(uriPos.getAndIncrement())
+                        .setUri(k)
+                        .build());
       }
 
       // Create function declaration with both URN and URI references
@@ -117,15 +125,13 @@ public class ExtensionCollector extends AbstractExtensionLookup {
       }
 
       SimpleExtensionDeclaration decl =
-          SimpleExtensionDeclaration.newBuilder()
-              .setExtensionFunction(funcBuilder)
-              .build();
+          SimpleExtensionDeclaration.newBuilder().setExtensionFunction(funcBuilder).build();
       extensionList.add(decl);
     }
 
     for (Map.Entry<Integer, SimpleExtension.TypeAnchor> e : typeMap.forwardEntrySet()) {
       String urn = e.getValue().urn();
-      String uri = uriUrnMap.reverseGet(urn);
+      String uri = getUriFromUrn(urn);
 
       // Create URN entry
       SimpleExtensionURN urnObj =
@@ -140,13 +146,14 @@ public class ExtensionCollector extends AbstractExtensionLookup {
       // Create URI entry if mapping exists
       SimpleExtensionURI uriObj = null;
       if (uri != null) {
-        uriObj = uris.computeIfAbsent(
-            uri,
-            k ->
-                SimpleExtensionURI.newBuilder()
-                    .setExtensionUriAnchor(uriPos.getAndIncrement())
-                    .setUri(k)
-                    .build());
+        uriObj =
+            uris.computeIfAbsent(
+                uri,
+                k ->
+                    SimpleExtensionURI.newBuilder()
+                        .setExtensionUriAnchor(uriPos.getAndIncrement())
+                        .setUri(k)
+                        .build());
       }
 
       // Create type declaration with both URN and URI references
@@ -161,9 +168,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
       }
 
       SimpleExtensionDeclaration decl =
-          SimpleExtensionDeclaration.newBuilder()
-              .setExtensionType(typeBuilder)
-              .build();
+          SimpleExtensionDeclaration.newBuilder().setExtensionType(typeBuilder).build();
       extensionList.add(decl);
     }
     return new SimpleExtensions(urns, uris, extensionList);

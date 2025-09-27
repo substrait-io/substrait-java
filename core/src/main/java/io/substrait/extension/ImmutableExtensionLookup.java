@@ -25,31 +25,34 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     return new Builder();
   }
 
-  public static Builder builder(BidiMap<String, String> uriUrnMap) {
-    return new Builder(uriUrnMap);
+  public static Builder builder(SimpleExtension.ExtensionCollection extensionCollection) {
+    return new Builder(extensionCollection);
   }
 
   public static class Builder {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
-    private final BidiMap<String, String> uriUrnMap;
+    private final SimpleExtension.ExtensionCollection extensionCollection;
 
     public Builder() {
-      this(new BidiMap<>());
+      this.extensionCollection = SimpleExtension.loadDefaults();
     }
 
-    public Builder(BidiMap<String, String> uriUrnMap) {
-      this.uriUrnMap = uriUrnMap;
+    public Builder(SimpleExtension.ExtensionCollection extensionCollection) {
+      if (extensionCollection == null) {
+        throw new IllegalArgumentException("ExtensionCollection is required");
+      }
+      this.extensionCollection = extensionCollection;
     }
 
     /**
-     * Resolves URN from URI using the URI/URN mapping if available.
+     * Resolves URN from URI using the URI/URN mapping.
      *
      * @param uri The URI to resolve
      * @return The corresponding URN, or null if no mapping exists
      */
     private String resolveUrnFromUri(String uri) {
-      return uriUrnMap.get(uri);
+      return extensionCollection.getUrnFromUri(uri);
     }
 
     private SimpleExtension.FunctionAnchor resolveFunctionAnchor(

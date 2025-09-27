@@ -40,10 +40,10 @@ public class ExtensionCollectionMergeTest {
     assertTrue(merged.hasUri("extension:ns1:collection1"));
     assertTrue(merged.hasUri("extension:ns2:collection2"));
 
-    assertEquals("extension:ns1:collection1", merged.getUrn("uri1://extensions"));
-    assertEquals("extension:ns2:collection2", merged.getUrn("uri2://extensions"));
-    assertEquals("uri1://extensions", merged.getUri("extension:ns1:collection1"));
-    assertEquals("uri2://extensions", merged.getUri("extension:ns2:collection2"));
+    assertEquals("extension:ns1:collection1", merged.getUrnFromUri("uri1://extensions"));
+    assertEquals("extension:ns2:collection2", merged.getUrnFromUri("uri2://extensions"));
+    assertEquals("uri1://extensions", merged.getUriFromUrn("extension:ns1:collection1"));
+    assertEquals("uri2://extensions", merged.getUriFromUrn("extension:ns2:collection2"));
 
     assertTrue(merged.scalarFunctions().size() >= 2);
   }
@@ -66,8 +66,8 @@ public class ExtensionCollectionMergeTest {
     SimpleExtension.ExtensionCollection merged =
         assertDoesNotThrow(() -> collection1.merge(collection2));
 
-    assertEquals("extension:shared:extension", merged.getUrn("shared://uri"));
-    assertEquals("shared://uri", merged.getUri("extension:shared:extension"));
+    assertEquals("extension:shared:extension", merged.getUrnFromUri("shared://uri"));
+    assertEquals("shared://uri", merged.getUriFromUrn("extension:shared:extension"));
   }
 
   @Test

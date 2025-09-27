@@ -52,6 +52,6 @@ public class UrnValidationTest {
             + "  - name: test\n";
     SimpleExtension.ExtensionCollection collection =
         SimpleExtension.load("test://uri", yamlWithValidUrn);
-    assertEquals("extension:test:valid", collection.getUrn("test://uri"));
+    assertEquals("extension:test:valid", collection.getUrnFromUri("test://uri"));
   }
 }

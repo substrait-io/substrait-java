@@ -67,7 +67,7 @@ public class UriUrnMigrationEndToEndTest {
     ProtoPlanConverter protoToPojo = new ProtoPlanConverter(customExtensionCollection);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(originalProtoPlan);
 
-    PlanProtoConverter pojoToProto = new PlanProtoConverter(uriUrnMap);
+    PlanProtoConverter pojoToProto = new PlanProtoConverter(customExtensionCollection);
     Plan finalProtoPlan = pojoToProto.toProto(pojoPlan);
 
     // 3. LOAD EXPECTED PROTO PLAN FROM JSON (should have both URI and URN)
@@ -100,7 +100,7 @@ public class UriUrnMigrationEndToEndTest {
     ProtoPlanConverter protoToPojo = new ProtoPlanConverter(customExtensionCollection);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(originalProtoPlan);
 
-    PlanProtoConverter pojoToProto = new PlanProtoConverter(uriUrnMap);
+    PlanProtoConverter pojoToProto = new PlanProtoConverter(customExtensionCollection);
     Plan finalProtoPlan = pojoToProto.toProto(pojoPlan);
 
     // 3. LOAD EXPECTED PROTO PLAN FROM JSON
@@ -134,7 +134,7 @@ public class UriUrnMigrationEndToEndTest {
     ProtoPlanConverter protoToPojo = new ProtoPlanConverter(customExtensionCollection);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(originalProtoPlan);
 
-    PlanProtoConverter pojoToProto = new PlanProtoConverter(uriUrnMap);
+    PlanProtoConverter pojoToProto = new PlanProtoConverter(customExtensionCollection);
     Plan finalProtoPlan = pojoToProto.toProto(pojoPlan);
 
     // 3. LOAD EXPECTED PROTO PLAN FROM JSON (should have both URI and URN)
@@ -171,7 +171,7 @@ public class UriUrnMigrationEndToEndTest {
     ProtoPlanConverter protoToPojo = new ProtoPlanConverter(customExtensionCollection);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(originalProtoPlan);
 
-    PlanProtoConverter pojoToProto = new PlanProtoConverter(uriUrnMap);
+    PlanProtoConverter pojoToProto = new PlanProtoConverter(customExtensionCollection);
     Plan finalProtoPlan = pojoToProto.toProto(pojoPlan);
 
     // 3. LOAD EXPECTED PROTO PLAN FROM JSON (should consolidate and have exhaustive coverage)
@@ -228,7 +228,7 @@ public class UriUrnMigrationEndToEndTest {
     ProtoPlanConverter protoToPojo = new ProtoPlanConverter(customExtensionCollection);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(originalProtoPlan);
 
-    PlanProtoConverter pojoToProto = new PlanProtoConverter(uriUrnMap);
+    PlanProtoConverter pojoToProto = new PlanProtoConverter(customExtensionCollection);
     Plan finalProtoPlan = pojoToProto.toProto(pojoPlan);
 
     // Should remain empty but with proper nullability annotations

@@ -28,8 +28,8 @@ public class BidiMap<T1, T2> {
   }
 
   /**
-   * Associates the specified values in both directions. Throws if either value is already mapped
-   * to a different value.
+   * Associates the specified values in both directions. Throws if either value is already mapped to
+   * a different value.
    */
   public void put(T1 t1, T2 t2) {
     T2 existingForward = forwardMap.get(t1);

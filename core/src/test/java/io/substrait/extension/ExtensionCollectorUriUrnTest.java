@@ -12,7 +12,11 @@ public class ExtensionCollectorUriUrnTest {
     String uri = "test://uri";
     BidiMap<String, String> uriUrnMap = new BidiMap<String, String>();
     uriUrnMap.put(uri, "extension:test:basic");
-    ExtensionCollector collector = new ExtensionCollector(uriUrnMap);
+
+    SimpleExtension.ExtensionCollection extensionCollection =
+        SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
+
+    ExtensionCollector collector = new ExtensionCollector(extensionCollection);
 
     SimpleExtension.ScalarFunctionVariant func =
         ImmutableSimpleExtension.ScalarFunctionVariant.builder()

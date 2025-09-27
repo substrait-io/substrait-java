@@ -587,7 +587,7 @@ public class SimpleExtension {
   @Value.Immutable
   public abstract static class ExtensionCollection {
     @Value.Default
-    public BidiMap<String, String> uriUrnMap() {
+    BidiMap<String, String> uriUrnMap() {
       return new BidiMap<>();
     }
 
@@ -712,28 +712,6 @@ public class SimpleExtension {
     }
 
     /**
-     * Gets the URN for a given URI. This is only useful during the URI -> URN migration, and will
-     * be dropped when the migration is complete.
-     *
-     * @param uri The URI to look up
-     * @return The corresponding URN, or null if not found
-     */
-    public String getUrn(String uri) {
-      return uriUrnMap().get(uri);
-    }
-
-    /**
-     * Gets the URI for a given URN. This is only useful during the URI -> URN migration, and will
-     * be dropped when the migration is complete.
-     *
-     * @param urn The URN to look up
-     * @return The corresponding URI, or null if not found
-     */
-    public String getUri(String urn) {
-      return uriUrnMap().reverseGet(urn);
-    }
-
-    /**
      * Checks if a URI has a corresponding URN mapping. This is only useful during the URI -> URN
      * migration, and will be dropped when the migration is complete.
      *
@@ -753,6 +731,26 @@ public class SimpleExtension {
      */
     public boolean hasUri(String urn) {
       return uriUrnMap().reverseGet(urn) != null;
+    }
+
+    /**
+     * Gets the URI for a given URN. This is for internal framework use during URI/URN migration.
+     *
+     * @param urn The URN to look up
+     * @return The corresponding URI, or null if not found
+     */
+    public String getUriFromUrn(String urn) {
+      return uriUrnMap().reverseGet(urn);
+    }
+
+    /**
+     * Gets the URN for a given URI. This is for internal framework use during URI/URN migration.
+     *
+     * @param uri The URI to look up
+     * @return The corresponding URN, or null if not found
+     */
+    public String getUrnFromUri(String uri) {
+      return uriUrnMap().get(uri);
     }
 
     public ExtensionCollection merge(ExtensionCollection extensionCollection) {

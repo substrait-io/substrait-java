@@ -32,8 +32,8 @@ public class ExtensionCollectionUriUrnTest {
     SimpleExtension.ExtensionCollection collection =
         SimpleExtension.load("minimal://extension", yamlContent);
 
-    assertNull(collection.getUrn("nonexistent://uri"));
-    assertNull(collection.getUri("extension:nonexistent:urn"));
+    assertNull(collection.getUrnFromUri("nonexistent://uri"));
+    assertNull(collection.getUriFromUrn("extension:nonexistent:urn"));
   }
 
   @Test
@@ -64,10 +64,10 @@ public class ExtensionCollectionUriUrnTest {
     SimpleExtension.ExtensionCollection collection1 = SimpleExtension.load("uri1://test", yaml1);
     SimpleExtension.ExtensionCollection collection2 = SimpleExtension.load("uri2://test", yaml2);
 
-    assertEquals("extension:ns1:ext1", collection1.getUrn("uri1://test"));
-    assertEquals("extension:ns2:ext2", collection2.getUrn("uri2://test"));
+    assertEquals("extension:ns1:ext1", collection1.getUrnFromUri("uri1://test"));
+    assertEquals("extension:ns2:ext2", collection2.getUrnFromUri("uri2://test"));
 
-    assertEquals("uri1://test", collection1.getUri("extension:ns1:ext1"));
-    assertEquals("uri2://test", collection2.getUri("extension:ns2:ext2"));
+    assertEquals("uri1://test", collection1.getUriFromUrn("extension:ns1:ext1"));
+    assertEquals("uri2://test", collection2.getUriFromUrn("extension:ns2:ext2"));
   }
 }
