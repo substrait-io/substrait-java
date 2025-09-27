@@ -2,11 +2,11 @@
   "extensionUris": [
     {
       "extensionUriAnchor": 1,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_arithmetic.yaml"
+      "uri": "/functions_arithmetic.yaml"
     },
     {
       "extensionUriAnchor": 0,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_string.yaml"
+      "uri": "/functions_string.yaml"
     }
   ],
   "extensionUrns": [
