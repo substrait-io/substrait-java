@@ -796,7 +796,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String uri, String content) {
     try {
-      if (uri == null || uri == "") {
+      if (uri == null || uri.isEmpty()) {
         throw new IllegalArgumentException("URI cannot be null or empty");
       }
 

@@ -292,8 +292,8 @@ public class ImmutableExtensionLookupUriUrnTest {
               ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
             });
 
-    assertTrue(exception.getMessage().contains("0 reference for URI"));
-    assertTrue(exception.getMessage().contains("differing URN"));
+    assertTrue(exception.getMessage().contains("Conflicting URI/URN mapping"));
+    assertTrue(exception.getMessage().contains("These must be consistent"));
   }
 
   @Test
@@ -516,8 +516,8 @@ public class ImmutableExtensionLookupUriUrnTest {
               ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
             });
 
-    assertTrue(exception.getMessage().contains("0 reference for URI"));
-    assertTrue(exception.getMessage().contains("differing URN"));
+    assertTrue(exception.getMessage().contains("Conflicting URI/URN mapping"));
+    assertTrue(exception.getMessage().contains("These must be consistent"));
   }
 
   @Test

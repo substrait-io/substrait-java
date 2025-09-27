@@ -89,14 +89,15 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
       // 3. Try both 0 URI and 0 URN if both resolve
       if (uri != null && urn != null) {
-        if (urn == resolveUrnFromUri(uri)) {
+        String resolvedUrn = resolveUrnFromUri(uri);
+        if (urn.equals(resolvedUrn)) {
           return SimpleExtension.FunctionAnchor.of(urn, func.getName());
         }
-        // TODO: better exception
         throw new IllegalStateException(
             String.format(
-                "0 reference for URI %s and URN %s but URI resolved to differing URN %s",
-                uri, urn, resolveUrnFromUri(uri)));
+                "Conflicting URI/URN mapping at reference 0: URI '%s' maps to URN '%s', but reference 0 also specifies URN '%s'. "
+                + "These must be consistent for proper resolution.",
+                uri, resolvedUrn, urn));
       }
 
       // 4. Try only 0 URN
@@ -147,14 +148,15 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
       // 3. Try both 0 URI and 0 URN if both resolve
       if (uri != null && urn != null) {
-        if (urn == resolveUrnFromUri(uri)) {
+        String resolvedUrn = resolveUrnFromUri(uri);
+        if (urn.equals(resolvedUrn)) {
           return SimpleExtension.TypeAnchor.of(urn, type.getName());
         }
-        // TODO: better exception
         throw new IllegalStateException(
             String.format(
-                "0 reference for URI %s and URN %s but URI resolved to differing URN %s",
-                uri, urn, resolveUrnFromUri(uri)));
+                "Conflicting URI/URN mapping at reference 0: URI '%s' maps to URN '%s', but reference 0 also specifies URN '%s'. "
+                + "These must be consistent for proper resolution.",
+                uri, resolvedUrn, urn));
       }
 
       // 4. Try only 0 URN
