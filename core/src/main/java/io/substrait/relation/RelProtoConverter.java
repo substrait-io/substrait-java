@@ -47,8 +47,11 @@ import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -61,7 +64,7 @@ public class RelProtoConverter
 
   protected final ExtensionCollector extensionCollector;
 
-  public RelProtoConverter(ExtensionCollector extensionCollector) {
+    public RelProtoConverter(ExtensionCollector extensionCollector) {
     this.extensionCollector = extensionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
@@ -117,12 +120,41 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
-    AggregateRel.Builder builder =
+
+    List<io.substrait.proto.Expression> groupingExpressions = new ArrayList<>();
+    Map<Expression, Integer> map = new HashMap<>();
+    int i = 0;// unique reference values for each expression
+
+    List<AggregateRel.Grouping> newGroupings = new ArrayList<>();
+
+    for(Aggregate.Grouping gp : aggregate.getGroupings()) {
+      //  every grouping has an expression_reference list
+      List<Integer> expr_refs = new ArrayList<>();
+
+      for(Expression e: gp.getExpressions()) {
+          int ref;
+          if(!map.containsKey(e)) {
+              groupingExpressions.add(this.toProto(e)); // put unique expressions into full list
+              ref = i;
+              map.put(e, i++);
+          }else{
+            ref = map.get(e);
+          }
+          expr_refs.add(ref);
+      }
+
+      newGroupings.add(AggregateRel.Grouping.newBuilder()
+              .addAllExpressionReferences(expr_refs)
+              .addAllGroupingExpressions(gp.getExpressions().stream().map(this::toProto).collect(Collectors.toList()))
+              .build());
+    }
+
+      AggregateRel.Builder builder =
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
-            .addAllGroupings(
-                aggregate.getGroupings().stream().map(this::toProto).collect(Collectors.toList()))
+            .addAllGroupings(newGroupings) // adding groupings with the expression references and grouping expressions set
+            .addAllGroupingExpressions(groupingExpressions) // new grouping_expression attribute
             .addAllMeasures(
                 aggregate.getMeasures().stream().map(this::toProto).collect(Collectors.toList()));
 
