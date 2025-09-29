@@ -627,26 +627,23 @@ public class ProtoRelConverter {
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
 
-    //       the deprecated form of Grouping is not used
+    //      new proto form is used
     if (!rel.getGroupingExpressionsList().isEmpty()) {
+
       List<io.substrait.proto.Expression> allGroupingKeys = rel.getGroupingExpressionsList();
 
-      //          for every grouping object on aggregate, it has a list of references into the
-      // aggregate's expressionList for the specific sorting set
-      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-        List<io.substrait.proto.Expression> groupingKeys = new ArrayList<>();
-        for (int key : grouping.getExpressionReferencesList()) {
-          groupingKeys.add(allGroupingKeys.get(key));
-        }
-        groupings.add(
+      for (int i = 0; i < rel.getGroupingsList().size(); i++) {
+        //      put all groupingExpressions into the group
+        Aggregate.Grouping group =
             Aggregate.Grouping.builder()
                 .expressions(
-                    groupingKeys.stream()
+                    allGroupingKeys.stream()
                         .map(protoExprConverter::from)
-                        .collect(Collectors.toList()))
-                .build());
+                        .collect(java.util.stream.Collectors.toList()))
+                .build();
+        groupings.add(group);
       }
-      Aggregate.builder().input(input).groupings(groupings);
+
     } else {
       //        using the deprecated form of Grouping and Aggregate
       for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
