@@ -1,9 +1,11 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.isthmus.utils.SetUtils;
+import io.substrait.plan.Plan;
 import io.substrait.relation.Set;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
@@ -14,6 +16,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class Substrait2SqlTest extends PlanTestBase {
+  private void assertSqlRoundTripViaPojoAndProto(String inputSql) {
+    Plan plan =
+        assertDoesNotThrow(() -> toSubstraitPlan(inputSql, TPCH_CATALOG), "SQL to Substrait POJO");
+    assertDoesNotThrow(() -> toSql(plan), "Substrait POJO to SQL");
+    io.substrait.proto.Plan proto =
+        assertDoesNotThrow(() -> toProto(plan), "Substrait POJO to Substrait PROTO");
+    assertDoesNotThrow(() -> toSql(proto), "Substrait PROTO to SQL");
+  }
 
   @Test
   public void simpleTest() throws Exception {
@@ -82,6 +92,12 @@ public class Substrait2SqlTest extends PlanTestBase {
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate, ()), l_linestatus");
     assertSqlSubstraitRelRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), (l_orderkey, L_COMMITDATE, l_linestatus), l_shipdate, ())");
+  }
+
+  @Test
+  void testRollup() {
+    assertSqlRoundTripViaPojoAndProto(
+        "select charcol from (select charcol, count(*) from (values('a')) as t(charcol) group by rollup(charcol))");
   }
 
   @Test
