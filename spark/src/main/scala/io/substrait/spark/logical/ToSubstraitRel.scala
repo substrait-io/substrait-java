@@ -22,27 +22,31 @@ import io.substrait.spark.expression._
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.ResolvedIdentifier
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.LogicalRDD
-import org.apache.spark.sql.execution.command.CreateDataSourceTableAsSelectCommand
+import org.apache.spark.sql.execution.command.{CreateDataSourceTableAsSelectCommand, CreateTableCommand, DropTableCommand}
 import org.apache.spark.sql.execution.datasources.{FileFormat => DSFileFormat, HadoopFsRelation, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1WriteCommand, WriteFiles}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
-import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation}
+import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation, V2SessionCatalog}
+import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
 import org.apache.spark.sql.types.{NullType, StructType}
 
 import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
+import io.substrait.expression.Expression.StructLiteral
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.Plan
+import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
@@ -54,7 +58,7 @@ import io.substrait.utils.Util
 import java.util
 import java.util.{Collections, Optional}
 
-import scala.collection.JavaConverters.asJavaIterableConverter
+import scala.collection.JavaConverters.{asJavaIterableConverter, seqAsJavaList}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -75,9 +79,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   override def default(p: LogicalPlan): relation.Rel = p match {
     case c: CommandResult => visit(c.commandLogicalPlan)
     case w: WriteFiles => visit(w.child)
-    case c: V1WriteCommand => convertDataWritingCommand(c)
-    case CreateDataSourceTableAsSelectCommand(table, mode, query, names) =>
-      convertCTAS(table, mode, query, names)
+    case c: Command => convertCommand(c)
     case p: LeafNode => convertReadOperator(p)
     case s: SubqueryAlias => visit(s.child)
     case v: View => visit(v.child)
@@ -566,6 +568,28 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     }
   }
 
+  private def convertCommand(command: Command): relation.Rel = command match {
+    case c: V1WriteCommand => convertDataWritingCommand(c)
+    case CreateDataSourceTableAsSelectCommand(table, mode, query, names) =>
+      convertCTAS(table, mode, query, names)
+    case CreateHiveTableAsSelectCommand(table, query, names, mode) =>
+      convertCTAS(table, mode, query, names)
+    case CreateTableCommand(table, _) =>
+      convertCreateTable(table.identifier.unquotedString.split("\\."), table.schema)
+    case DropTableCommand(tableName, ifExists, _, _) =>
+      convertDropTable(tableName.unquotedString.split("\\."), ifExists)
+    case CreateTable(ResolvedIdentifier(c: V2SessionCatalog, id), tableSchema, _, _, _)
+        if id.namespace().length > 0 =>
+      val names = Seq(c.name(), id.namespace()(0), id.name())
+      convertCreateTable(names, tableSchema)
+    case DropTable(ResolvedIdentifier(c: V2SessionCatalog, id), ifExists, _)
+        if id.namespace().length > 0 =>
+      val names = Seq(c.name(), id.namespace()(0), id.name())
+      convertDropTable(names, ifExists)
+    case _ =>
+      throw new UnsupportedOperationException(s"Unable to convert command: $command")
+  }
+
   private def convertDataWritingCommand(command: V1WriteCommand): relation.AbstractWriteRel =
     command match {
       case InsertIntoHadoopFsRelationCommand(
@@ -600,6 +624,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .tableSchema(outputSchema(child.output, outputColumnNames))
           .detail(FileHolder(file))
           .build()
+      case InsertIntoHiveTable(table, _, child, overwrite, _, outputColumnNames, _, _, _, _, _) =>
+        relation.NamedWrite
+          .builder()
+          .input(visit(child))
+          .operation(WriteOp.INSERT)
+          .outputMode(OutputMode.UNSPECIFIED)
+          .createMode(if (overwrite) CreateMode.REPLACE_IF_EXISTS else CreateMode.ERROR_IF_EXISTS)
+          .names(seqAsJavaList(table.identifier.unquotedString.split("\\.").toList))
+          .tableSchema(outputSchema(child.output, outputColumnNames))
+          .build()
       case _ =>
         throw new UnsupportedOperationException(s"Unable to convert command: ${command.getClass}")
     }
@@ -618,6 +652,29 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .names(table.identifier.unquotedString.split("\\.").toList.asJava)
       .tableSchema(outputSchema(query.output, outputColumnNames))
       .build()
+
+  private def convertCreateTable(names: Seq[String], schema: StructType): relation.NamedDdl = {
+    relation.NamedDdl
+      .builder()
+      .operation(DdlOp.CREATE)
+      .`object`(DdlObject.TABLE)
+      .names(seqAsJavaList(names))
+      .tableSchema(ToSubstraitType.toNamedStruct(schema))
+      .tableDefaults(StructLiteral.builder.nullable(true).build())
+      .build()
+  }
+
+  private def convertDropTable(names: Seq[String], ifExists: Boolean): relation.NamedDdl = {
+    relation.NamedDdl
+      .builder()
+      .operation(if (ifExists) DdlOp.DROP_IF_EXIST else DdlOp.DROP)
+      .`object`(DdlObject.TABLE)
+      .names(seqAsJavaList(names))
+      .tableSchema(
+        NamedStruct.builder().struct(Type.Struct.builder().nullable(true).build()).build())
+      .tableDefaults(StructLiteral.builder.nullable(true).build())
+      .build()
+  }
 
   private def createMode(mode: SaveMode): CreateMode = mode match {
     case SaveMode.Append => CreateMode.APPEND_IF_EXISTS
