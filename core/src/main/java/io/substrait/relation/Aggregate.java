@@ -31,14 +31,14 @@ public abstract class Aggregate extends SingleInputRel implements HasExtension {
       return TypeCreator.REQUIRED.struct(Stream.concat(groupingTypes, measureTypes));
     }
 
-    final LinkedHashSet<Expression> uniqueExpressions =
+    final LinkedHashSet<Expression> uniqueGroupingExpressions =
         getGroupings().stream()
             .flatMap(g -> g.getExpressions().stream())
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
-    // For each unique expression, determine its final nullability based on the spec.
+    // For each unique grouping expression, determine its final nullability based on the spec.
     final Stream<Type> groupingTypes =
-        uniqueExpressions.stream()
+        uniqueGroupingExpressions.stream()
             .map(
                 expr -> {
                   // the code below implements the following statement from the spec
