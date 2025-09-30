@@ -118,6 +118,7 @@ dependencies {
   implementation(libs.scala.library)
   api(libs.spark.core)
   api(libs.spark.sql)
+  implementation(libs.spark.hive)
   implementation(libs.spark.catalyst)
   implementation(libs.slf4j.api)
 
@@ -150,6 +151,9 @@ tasks {
   test {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
-    jvmArgs("--add-exports=java.base/sun.nio.ch=ALL-UNNAMED")
+    jvmArgs(
+      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-opens=java.base/java.net=ALL-UNNAMED",
+    )
   }
 }
