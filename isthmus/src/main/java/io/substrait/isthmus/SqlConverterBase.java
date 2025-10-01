@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -20,7 +21,7 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 class SqlConverterBase {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   final RelDataTypeFactory factory;
   final RelOptCluster relOptCluster;

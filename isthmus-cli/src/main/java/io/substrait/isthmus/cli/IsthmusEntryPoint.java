@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
-import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.FeatureBoard;
 import io.substrait.isthmus.ImmutableFeatureBoard;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
@@ -87,7 +87,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
       SqlExpressionToSubstrait converter =
-          new SqlExpressionToSubstrait(featureBoard, SimpleExtension.loadDefaults());
+          new SqlExpressionToSubstrait(featureBoard, DefaultExtensionCatalog.DEFAULT_COLLECTION);
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
