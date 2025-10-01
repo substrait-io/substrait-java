@@ -35,7 +35,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final SimpleExtension.ExtensionCollection extensionCollection;
 
     public Builder() {
-      this.extensionCollection = SimpleExtension.loadDefaults();
+      this.extensionCollection = DefaultExtensionCatalog.DEFAULT_COLLECTION;
     }
 
     public Builder(SimpleExtension.ExtensionCollection extensionCollection) {

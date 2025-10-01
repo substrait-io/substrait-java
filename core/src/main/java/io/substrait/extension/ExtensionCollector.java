@@ -30,7 +30,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   }
 
   public ExtensionCollector() {
-    this(SimpleExtension.loadDefaults());
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public ExtensionCollector(SimpleExtension.ExtensionCollection extensionCollection) {

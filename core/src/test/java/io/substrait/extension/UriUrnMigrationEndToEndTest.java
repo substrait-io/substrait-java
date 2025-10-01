@@ -26,9 +26,6 @@ import org.junit.jupiter.api.Test;
  */
 public class UriUrnMigrationEndToEndTest {
 
-  private final SimpleExtension.ExtensionCollection defaultExtensions =
-      SimpleExtension.loadDefaults();
-
   /** Load a proto Plan from a JSON resource file using JsonFormat */
   private Plan loadPlanFromJson(String resourcePath) throws IOException {
     try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
@@ -81,10 +78,12 @@ public class UriUrnMigrationEndToEndTest {
       Plan inputPlan = loadPlanFromJson(inputPath);
       Plan expectedPlan = loadPlanFromJson(expectedPath);
 
-      ProtoPlanConverter protoToPojo = new ProtoPlanConverter(defaultExtensions);
+      ProtoPlanConverter protoToPojo =
+          new ProtoPlanConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
       io.substrait.plan.Plan pojoPlan = protoToPojo.from(inputPlan);
 
-      PlanProtoConverter pojoToProto = new PlanProtoConverter(defaultExtensions);
+      PlanProtoConverter pojoToProto =
+          new PlanProtoConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
       Plan actualPlan = pojoToProto.toProto(pojoPlan);
 
       assertEquals(expectedPlan, actualPlan);
@@ -95,7 +94,8 @@ public class UriUrnMigrationEndToEndTest {
   public void testUnresolvableUriThrowsException() throws IOException {
     Plan inputPlan = loadPlanFromJson("uri-urn-migration/unresolvable-uri-plan.json");
 
-    ProtoPlanConverter protoToPojo = new ProtoPlanConverter(defaultExtensions);
+    ProtoPlanConverter protoToPojo =
+        new ProtoPlanConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
 
     IllegalStateException exception =
         assertThrows(
