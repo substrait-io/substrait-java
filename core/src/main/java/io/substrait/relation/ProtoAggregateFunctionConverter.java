@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.proto.ProtoTypeConverter;
@@ -24,7 +25,7 @@ public class ProtoAggregateFunctionConverter {
 
   public ProtoAggregateFunctionConverter(
       ExtensionLookup lookup, ProtoExpressionConverter protoExpressionConverter) {
-    this(lookup, SimpleExtension.loadDefaults(), protoExpressionConverter);
+    this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExpressionConverter);
   }
 
   public ProtoAggregateFunctionConverter(

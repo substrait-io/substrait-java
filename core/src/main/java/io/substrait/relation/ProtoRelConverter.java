@@ -3,6 +3,7 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
@@ -55,7 +56,7 @@ public class ProtoRelConverter {
   private final ProtoTypeConverter protoTypeConverter;
 
   public ProtoRelConverter(ExtensionLookup lookup) {
-    this(lookup, SimpleExtension.loadDefaults());
+    this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public ProtoRelConverter(ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {

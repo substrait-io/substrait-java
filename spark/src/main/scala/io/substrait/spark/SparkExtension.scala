@@ -18,7 +18,7 @@ package io.substrait.spark
 
 import io.substrait.spark.expression.{ToAggregateFunction, ToWindowFunction}
 
-import io.substrait.extension.SimpleExtension
+import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 
 import java.util.Collections
 
@@ -32,7 +32,7 @@ object SparkExtension {
     SimpleExtension.load(Collections.singletonList(uri))
 
   private val EXTENSION_COLLECTION: SimpleExtension.ExtensionCollection =
-    SimpleExtension.loadDefaults()
+    DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   val COLLECTION: SimpleExtension.ExtensionCollection = EXTENSION_COLLECTION.merge(SparkImpls)
 
