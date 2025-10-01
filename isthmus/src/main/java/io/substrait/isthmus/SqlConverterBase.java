@@ -19,9 +19,7 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 class SqlConverterBase {
-  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
-
+  protected final SimpleExtension.ExtensionCollection extensionCollection;
   final RelDataTypeFactory factory;
   final RelOptCluster relOptCluster;
   final CalciteConnectionConfig config;
@@ -32,7 +30,8 @@ class SqlConverterBase {
   protected static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   final FeatureBoard featureBoard;
 
-  protected SqlConverterBase(FeatureBoard features) {
+  protected SqlConverterBase(
+      FeatureBoard features, SimpleExtension.ExtensionCollection extensionCollection) {
     this.factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
@@ -51,5 +50,11 @@ class SqlConverterBase {
             .withUnquotedCasing(featureBoard.unquotedCasing())
             .withParserFactory(SqlDdlParserImpl.FACTORY)
             .withConformance(SqlConformanceEnum.LENIENT);
+
+    this.extensionCollection = extensionCollection;
+  }
+
+  protected SqlConverterBase(FeatureBoard features) {
+    this(features, SimpleExtension.loadDefaults());
   }
 }
