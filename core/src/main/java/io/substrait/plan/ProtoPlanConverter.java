@@ -3,6 +3,7 @@ package io.substrait.plan;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
+import io.substrait.extension.ProtoAdvancedExtensionConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
@@ -15,16 +16,28 @@ import java.util.Optional;
 public class ProtoPlanConverter {
 
   protected final SimpleExtension.ExtensionCollection extensionCollection;
+  protected final ProtoAdvancedExtensionConverter advancedExtensionConverter;
 
   public ProtoPlanConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public ProtoPlanConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+  public ProtoPlanConverter(final SimpleExtension.ExtensionCollection extensionCollection) {
+    this(extensionCollection, new ProtoAdvancedExtensionConverter());
+  }
+
+  public ProtoPlanConverter(final ProtoAdvancedExtensionConverter advancedExtensionConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, advancedExtensionConverter);
+  }
+
+  public ProtoPlanConverter(
+      final SimpleExtension.ExtensionCollection extensionCollection,
+      final ProtoAdvancedExtensionConverter advancedExtensionConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
+    this.advancedExtensionConverter = advancedExtensionConverter;
   }
 
   /** Override hook for providing custom {@link ProtoRelConverter} implementations */
@@ -63,7 +76,10 @@ public class ProtoPlanConverter {
         .roots(roots)
         .expectedTypeUrls(plan.getExpectedTypeUrlsList())
         .advancedExtension(
-            Optional.ofNullable(plan.hasAdvancedExtensions() ? plan.getAdvancedExtensions() : null))
+            Optional.ofNullable(
+                plan.hasAdvancedExtensions()
+                    ? advancedExtensionConverter.fromProto(plan.getAdvancedExtensions())
+                    : null))
         .version(versionBuilder.build())
         .build();
   }

@@ -1,5 +1,6 @@
 package io.substrait.plan;
 
+import io.substrait.extension.AdvancedExtensionProtoConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
@@ -13,6 +14,7 @@ import java.util.List;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
+  protected final AdvancedExtensionProtoConverter advancedExtensionConverter;
 
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
@@ -20,11 +22,22 @@ public class PlanProtoConverter {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public PlanProtoConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+  public PlanProtoConverter(final SimpleExtension.ExtensionCollection extensionCollection) {
+    this(extensionCollection, new AdvancedExtensionProtoConverter());
+  }
+
+  public PlanProtoConverter(final AdvancedExtensionProtoConverter advancedExtensionConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, advancedExtensionConverter);
+  }
+
+  public PlanProtoConverter(
+      final SimpleExtension.ExtensionCollection extensionCollection,
+      final AdvancedExtensionProtoConverter advancedExtensionConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
+    this.advancedExtensionConverter = advancedExtensionConverter;
   }
 
   public Plan toProto(io.substrait.plan.Plan plan) {
@@ -46,7 +59,8 @@ public class PlanProtoConverter {
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
     functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
-      builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
+      builder.setAdvancedExtensions(
+          advancedExtensionConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
     Version.Builder versionBuilder =

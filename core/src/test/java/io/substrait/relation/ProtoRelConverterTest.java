@@ -14,7 +14,7 @@ import io.substrait.hint.Hint.SavedComputation;
 import io.substrait.hint.Hint.Stats;
 import io.substrait.hint.ImmutableRuntimeConstraint;
 import io.substrait.hint.ImmutableStats;
-import io.substrait.relation.utils.StringHolder;
+import io.substrait.utils.StringHolder;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Nested;
@@ -65,7 +65,7 @@ public class ProtoRelConverterTest extends TestBase {
       Rel rel = advancedExtensionWithEnhancement;
       io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
       // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(RuntimeException.class, () -> protoRelConverter.from(protoRel));
+      assertThrows(IllegalStateException.class, () -> protoRelConverter.from(protoRel));
     }
 
     @Test
@@ -85,7 +85,7 @@ public class ProtoRelConverterTest extends TestBase {
       Rel rel = advancedExtensionWithEnhancementAndOptimization;
       io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
       // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(RuntimeException.class, () -> protoRelConverter.from(protoRel));
+      assertThrows(IllegalStateException.class, () -> protoRelConverter.from(protoRel));
     }
   }
 

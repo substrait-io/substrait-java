@@ -5,6 +5,7 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
+import io.substrait.extension.ProtoAdvancedExtensionConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
 import io.substrait.hint.Hint.ComputationType;
@@ -34,7 +35,6 @@ import io.substrait.proto.SortRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
-import io.substrait.relation.extensions.EmptyOptimization;
 import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.HashJoin;
@@ -53,16 +53,26 @@ public class ProtoRelConverter {
 
   protected final ExtensionLookup lookup;
   protected final SimpleExtension.ExtensionCollection extensions;
-  private final ProtoTypeConverter protoTypeConverter;
+  protected final ProtoTypeConverter protoTypeConverter;
+  protected final ProtoAdvancedExtensionConverter advancedExtensionConverter;
 
-  public ProtoRelConverter(ExtensionLookup lookup) {
+  public ProtoRelConverter(final ExtensionLookup lookup) {
     this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public ProtoRelConverter(ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+  public ProtoRelConverter(
+      final ExtensionLookup lookup, final SimpleExtension.ExtensionCollection extensions) {
+    this(lookup, extensions, new ProtoAdvancedExtensionConverter());
+  }
+
+  public ProtoRelConverter(
+      final ExtensionLookup lookup,
+      final SimpleExtension.ExtensionCollection extensions,
+      final ProtoAdvancedExtensionConverter advancedExtensionConverter) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
+    this.advancedExtensionConverter = advancedExtensionConverter;
   }
 
   public Plan.Root from(io.substrait.proto.RelRoot rel) {
@@ -276,7 +286,7 @@ public class ProtoRelConverter {
             .addAllTransformations(transformations)
             .condition(converter.from(rel.getCondition()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -294,7 +304,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -343,7 +353,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -409,7 +419,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -424,7 +434,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -459,7 +469,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -536,7 +546,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -555,7 +565,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -577,7 +587,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -675,7 +685,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -702,7 +712,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -730,7 +740,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -744,7 +754,7 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -762,7 +772,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -797,7 +807,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -833,7 +843,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -862,7 +872,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -899,7 +909,7 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(rel.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
   }
@@ -918,14 +928,14 @@ public class ProtoRelConverter {
       builder.alias(hint.getAlias());
     }
     if (hint.hasAdvancedExtension()) {
-      builder.extension(advancedExtension(hint.getAdvancedExtension()));
+      builder.extension(advancedExtensionConverter.fromProto(hint.getAdvancedExtension()));
     }
     if (hint.hasStats()) {
       io.substrait.proto.RelCommon.Hint.Stats stats = hint.getStats();
       io.substrait.hint.ImmutableStats.Builder statsBuilder = Stats.builder();
       statsBuilder.recordSize(stats.getRecordSize()).rowCount(stats.getRowCount());
       if (stats.hasAdvancedExtension()) {
-        statsBuilder.extension(advancedExtension(stats.getAdvancedExtension()));
+        statsBuilder.extension(advancedExtensionConverter.fromProto(stats.getAdvancedExtension()));
       }
       builder.stats(statsBuilder.build());
     }
@@ -934,7 +944,8 @@ public class ProtoRelConverter {
       io.substrait.hint.ImmutableRuntimeConstraint.Builder constraintBuilder =
           RuntimeConstraint.builder();
       if (constraint.hasAdvancedExtension()) {
-        constraintBuilder.extension(advancedExtension(constraint.getAdvancedExtension()));
+        constraintBuilder.extension(
+            advancedExtensionConverter.fromProto(constraint.getAdvancedExtension()));
       }
       builder.runtimeConstraint(constraintBuilder.build());
     }
@@ -963,39 +974,8 @@ public class ProtoRelConverter {
       io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasAdvancedExtension()
-            ? advancedExtension(relCommon.getAdvancedExtension())
+            ? advancedExtensionConverter.fromProto(relCommon.getAdvancedExtension())
             : null);
-  }
-
-  protected AdvancedExtension advancedExtension(
-      io.substrait.proto.AdvancedExtension advancedExtension) {
-    io.substrait.extension.ImmutableAdvancedExtension.Builder builder = AdvancedExtension.builder();
-    if (advancedExtension.hasEnhancement()) {
-      builder.enhancement(enhancementFromAdvancedExtension(advancedExtension.getEnhancement()));
-    }
-    advancedExtension
-        .getOptimizationList()
-        .forEach(
-            optimization ->
-                builder.addOptimizations(optimizationFromAdvancedExtension(optimization)));
-
-    return builder.build();
-  }
-
-  /**
-   * Override to provide a custom converter for {@link
-   * io.substrait.proto.AdvancedExtension#getOptimizationList()} ()} data
-   */
-  protected Extension.Optimization optimizationFromAdvancedExtension(com.google.protobuf.Any any) {
-    return new EmptyOptimization();
-  }
-
-  /**
-   * Override to provide a custom converter for {@link
-   * io.substrait.proto.AdvancedExtension#getEnhancement()} data
-   */
-  protected Extension.Enhancement enhancementFromAdvancedExtension(com.google.protobuf.Any any) {
-    throw new IllegalStateException("enhancements cannot be ignored by consumers");
   }
 
   /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */
