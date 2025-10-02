@@ -71,6 +71,7 @@ class AggregateRelTest extends TestBase {
     // Build an input ReadRel
     ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
 
+
     // Build the AggregateRel with the new grouping_expressions field
     AggregateRel aggrProto =
         AggregateRel.newBuilder()
