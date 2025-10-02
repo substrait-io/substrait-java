@@ -632,18 +632,14 @@ public class ProtoRelConverter {
 
       List<io.substrait.proto.Expression> allGroupingKeys = rel.getGroupingExpressionsList();
 
-      for (int i = 0; i < rel.getGroupingsList().size(); i++) {
-        //      put all groupingExpressions into the group
-        Aggregate.Grouping group =
-            Aggregate.Grouping.builder()
-                .expressions(
-                    allGroupingKeys.stream()
-                        .map(protoExprConverter::from)
-                        .collect(java.util.stream.Collectors.toList()))
-                .build();
-        groupings.add(group);
+      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+        List<Integer> references = grouping.getExpressionReferencesList();
+        List<Expression> groupExpressions = new ArrayList<>();
+        for (int ref : references) {
+          groupExpressions.add(protoExprConverter.from(allGroupingKeys.get(ref)));
+        }
+        groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
       }
-
     } else {
       //        using the deprecated form of Grouping and Aggregate
       for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
@@ -652,7 +648,7 @@ public class ProtoRelConverter {
                 .expressions(
                     grouping.getGroupingExpressionsList().stream()
                         .map(protoExprConverter::from)
-                        .collect(Collectors.toList()))
+                        .collect(java.util.stream.Collectors.toList()))
                 .build());
       }
     }
