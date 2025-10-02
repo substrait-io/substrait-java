@@ -29,12 +29,13 @@ import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftAnti, LeftOute
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.toPrettySQL
 import org.apache.spark.sql.execution.QueryExecution
-import org.apache.spark.sql.execution.command.{CreateDataSourceTableAsSelectCommand, DataWritingCommand, LeafRunnableCommand}
+import org.apache.spark.sql.execution.command.{CreateDataSourceTableAsSelectCommand, CreateTableCommand, DataWritingCommand, DropTableCommand, LeafRunnableCommand}
 import org.apache.spark.sql.execution.datasources.{FileFormat => SparkFileFormat, HadoopFsRelation, InMemoryFileIndex, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1Writes}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
-import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
+import org.apache.spark.sql.internal.{SQLConf, StaticSQLConf}
 import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructType}
 
 import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
@@ -42,13 +43,16 @@ import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
 import io.substrait.relation
-import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedWrite}
+import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
+import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
 import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
+
+import java.net.URI
 
 import scala.annotation.nowarn
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -439,35 +443,44 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
 
   override def visit(write: NamedWrite, context: EmptyVisitationContext): LogicalPlan = {
     val child = write.getInput.accept(this, context)
-
-    val (table, database, catalog) = write.getNames.asScala match {
-      case Seq(table) => (table, None, None)
-      case Seq(database, table) => (table, Some(database), None)
-      case Seq(catalog, database, table) => (table, Some(database), Some(catalog))
-      case names =>
-        throw new UnsupportedOperationException(
-          s"NamedWrite requires up to three names ([[catalog,] database,] table): $names")
+    val table = catalogTable(write.getNames.asScala)
+    val isHive = spark.conf.get(StaticSQLConf.CATALOG_IMPLEMENTATION.key) match {
+      case "hive" => true
+      case _ => false
     }
-    val id = TableIdentifier(table, database, catalog)
-    val catalogTable = CatalogTable(
-      id,
-      CatalogTableType.MANAGED,
-      CatalogStorageFormat.empty,
-      new StructType(),
-      Some("parquet")
-    )
     write.getOperation match {
       case WriteOp.CTAS =>
         withChild(child) {
-          CreateDataSourceTableAsSelectCommand(
-            catalogTable,
-            saveMode(write.getCreateMode),
+          if (isHive) {
+            CreateHiveTableAsSelectCommand(
+              table,
+              child,
+              write.getTableSchema.names().asScala,
+              saveMode(write.getCreateMode)
+            )
+          } else {
+            CreateDataSourceTableAsSelectCommand(
+              table,
+              saveMode(write.getCreateMode),
+              child,
+              write.getTableSchema.names().asScala
+            )
+          }
+        }
+      case WriteOp.INSERT if isHive =>
+        withChild(child) {
+          InsertIntoHiveTable(
+            table,
+            Map.empty,
             child,
+            write.getCreateMode == CreateMode.REPLACE_IF_EXISTS,
+            false,
             write.getTableSchema.names().asScala
           )
         }
       case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
     }
+
   }
 
   override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
@@ -493,14 +506,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     val (format, options) = convertFileFormat(file.getFileFormat.get)
 
     val name = file.getPath.get.split('/').reverse.head
-    val id = TableIdentifier(name)
-    val table = CatalogTable(
-      id,
-      CatalogTableType.MANAGED,
-      CatalogStorageFormat.empty,
-      new StructType(),
-      None
-    )
+    val table = catalogTable(Seq(name))
 
     withChild(child) {
       V1Writes.apply(
@@ -519,6 +525,49 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
           outputColumnNames = write.getTableSchema.names.asScala
         ))
     }
+  }
+
+  override def visit(ddl: NamedDdl, context: EmptyVisitationContext): LogicalPlan = {
+    val table = catalogTable(ddl.getNames.asScala, ToSparkType.toStructType(ddl.getTableSchema))
+
+    (ddl.getOperation, ddl.getObject) match {
+      case (DdlOp.CREATE, DdlObject.TABLE) => CreateTableCommand(table, false)
+      case (DdlOp.DROP, DdlObject.TABLE) => DropTableCommand(table.identifier, false, false, false)
+      case (DdlOp.DROP_IF_EXIST, DdlObject.TABLE) =>
+        DropTableCommand(table.identifier, true, false, false)
+      case op => throw new UnsupportedOperationException(s"Ddl operation $op not supported")
+    }
+  }
+
+  private def catalogTable(
+      names: Seq[String],
+      schema: StructType = new StructType()): CatalogTable = {
+    val (table, database, catalog) = names match {
+      case Seq(table) => (table, None, None)
+      case Seq(database, table) => (table, Some(database), None)
+      case Seq(catalog, database, table) => (table, Some(database), Some(catalog))
+      case names =>
+        throw new UnsupportedOperationException(
+          s"NamedWrite requires up to three names ([[catalog,] database,] table): $names")
+    }
+
+    val loc = spark.conf.get(StaticSQLConf.WAREHOUSE_PATH.key)
+    val storage = CatalogStorageFormat(
+      locationUri = Some(URI.create(f"$loc/$table")),
+      inputFormat = None,
+      outputFormat = None,
+      serde = None,
+      compressed = false,
+      properties = Map.empty
+    )
+    val id = TableIdentifier(table, database, catalog)
+    CatalogTable(
+      id,
+      CatalogTableType.MANAGED,
+      storage,
+      schema,
+      Some("parquet")
+    )
   }
 
   private def saveMode(mode: CreateMode): SaveMode = mode match {

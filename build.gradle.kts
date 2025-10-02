@@ -52,7 +52,7 @@ allprojects {
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        removeWildcardImports()
+        forbidWildcardImports()
       }
     }
   }

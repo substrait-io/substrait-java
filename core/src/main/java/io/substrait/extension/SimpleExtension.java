@@ -22,7 +22,6 @@ import io.substrait.util.Util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -699,27 +698,6 @@ public class SimpleExtension {
           .addAllTypes(extensionCollection.types())
           .build();
     }
-  }
-
-  public static ExtensionCollection loadDefaults() {
-    List<String> defaultFiles =
-        Arrays.asList(
-                "boolean",
-                "aggregate_generic",
-                "aggregate_approx",
-                "arithmetic_decimal",
-                "arithmetic",
-                "comparison",
-                "datetime",
-                "logarithmic",
-                "rounding",
-                "rounding_decimal",
-                "string")
-            .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
-            .collect(Collectors.toList());
-
-    return load(defaultFiles);
   }
 
   public static ExtensionCollection load(List<String> resourcePaths) {

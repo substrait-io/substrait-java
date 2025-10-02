@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
@@ -249,7 +250,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     private final ReplaceCountDistinctWithApproxVisitor visitor;
 
     public ReplaceCountDistinctWithApprox() {
-      visitor = new ReplaceCountDistinctWithApproxVisitor(SimpleExtension.loadDefaults());
+      visitor =
+          new ReplaceCountDistinctWithApproxVisitor(DefaultExtensionCatalog.DEFAULT_COLLECTION);
     }
 
     public Optional<Plan> modify(Plan plan) {

@@ -1,5 +1,6 @@
 package io.substrait.plan;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -16,7 +17,7 @@ public class ProtoPlanConverter {
   protected final SimpleExtension.ExtensionCollection extensionCollection;
 
   public ProtoPlanConverter() {
-    this(SimpleExtension.loadDefaults());
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public ProtoPlanConverter(SimpleExtension.ExtensionCollection extensionCollection) {

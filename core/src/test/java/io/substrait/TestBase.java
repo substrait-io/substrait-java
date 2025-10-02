@@ -3,6 +3,7 @@ package io.substrait;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.ProtoRelConverter;
@@ -13,7 +14,7 @@ import io.substrait.type.TypeCreator;
 public abstract class TestBase {
 
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   protected TypeCreator R = TypeCreator.REQUIRED;
 
