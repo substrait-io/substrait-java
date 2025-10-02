@@ -1,19 +1,22 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.proto.Expression;
+import io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.Plan;
 import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class SubqueryPlanTest extends PlanTestBase {
   // TODO: Add a roundtrip test once the ProtoRelConverter is committed and updated to support
   // subqueries
+
   @Test
   public void existsCorrelatedSubquery() throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
@@ -34,9 +37,7 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getSubquery();
 
     assertTrue(subquery.hasSetPredicate());
-    assertTrue(
-        subquery.getSetPredicate().getPredicateOp()
-            == Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_EXISTS);
+    assertSame(PredicateOp.PREDICATE_OP_EXISTS, subquery.getSetPredicate().getPredicateOp());
 
     FilterRel setPredicateFilter =
         subquery
@@ -52,8 +53,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l_orderkey
 
-    assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 0);
-    assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
+    assertEquals(0, correlatedCol.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
   }
 
   @Test
@@ -85,9 +86,7 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getFilter(); // unique (select ... from orders where o_orderkey = l_orderkey)
 
     assertTrue(subquery.hasSetPredicate());
-    assertTrue(
-        subquery.getSetPredicate().getPredicateOp()
-            == Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNIQUE);
+    assertSame(PredicateOp.PREDICATE_OP_UNIQUE, subquery.getSetPredicate().getPredicateOp());
 
     Expression.FieldReference correlatedCol =
         setPredicateFilter
@@ -97,8 +96,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l_orderkey
 
-    assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 0);
-    assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
+    assertEquals(0, correlatedCol.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
   }
 
   @Test
@@ -135,8 +134,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l_partkey
 
-    assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 1);
-    assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
+    assertEquals(1, correlatedCol.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
   }
 
   @Test
@@ -175,8 +174,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l_partkey
 
-    assertTrue(correlatedCol.getDirectReference().getStructField().getField() == 1);
-    assertTrue(correlatedCol.getOuterReference().getStepsOut() == 1);
+    assertEquals(1, correlatedCol.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
   }
 
   @Test
@@ -207,9 +206,7 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getSubquery();
 
     assertTrue(outer_subquery.hasSetPredicate());
-    assertTrue(
-        outer_subquery.getSetPredicate().getPredicateOp()
-            == Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_EXISTS);
+    assertSame(PredicateOp.PREDICATE_OP_EXISTS, outer_subquery.getSetPredicate().getPredicateOp());
 
     FilterRel exists_filter =
         outer_subquery
@@ -221,9 +218,7 @@ public class SubqueryPlanTest extends PlanTestBase {
         exists_filter.getCondition().getScalarFunction().getArguments(1).getValue().getSubquery();
     assertTrue(inner_subquery.hasSetPredicate());
 
-    assertTrue(
-        inner_subquery.getSetPredicate().getPredicateOp()
-            == Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNIQUE);
+    assertSame(PredicateOp.PREDICATE_OP_UNIQUE, inner_subquery.getSetPredicate().getPredicateOp());
 
     Expression inner_subquery_condition =
         inner_subquery
@@ -251,8 +246,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getArguments(1)
             .getValue()
             .getSelection(); // p.p_partkey
-    assertTrue(correlatedCol1.getDirectReference().getStructField().getField() == 0);
-    assertTrue(correlatedCol1.getOuterReference().getStepsOut() == 2);
+    assertEquals(0, correlatedCol1.getDirectReference().getStructField().getField());
+    assertEquals(2, correlatedCol1.getOuterReference().getStepsOut());
 
     Expression.FieldReference correlatedCol2 =
         inner_subquery_cond2
@@ -260,8 +255,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getArguments(1)
             .getValue()
             .getSelection(); // l.l_suppkey
-    assertTrue(correlatedCol2.getDirectReference().getStructField().getField() == 2);
-    assertTrue(correlatedCol2.getOuterReference().getStepsOut() == 1);
+    assertEquals(2, correlatedCol2.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol2.getOuterReference().getStepsOut());
   }
 
   @Test
@@ -326,8 +321,8 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getArguments(1)
             .getValue()
             .getSelection(); // p.p_partkey
-    assertTrue(correlatedCol1.getDirectReference().getStructField().getField() == 0);
-    assertTrue(correlatedCol1.getOuterReference().getStepsOut() == 2);
+    assertEquals(0, correlatedCol1.getDirectReference().getStructField().getField());
+    assertEquals(2, correlatedCol1.getOuterReference().getStepsOut());
 
     Expression.FieldReference correlatedCol2 =
         inner_subquery_cond2
@@ -335,18 +330,13 @@ public class SubqueryPlanTest extends PlanTestBase {
             .getArguments(1)
             .getValue()
             .getSelection(); // l.l_suppkey
-    assertTrue(correlatedCol2.getDirectReference().getStructField().getField() == 2);
-    assertTrue(correlatedCol2.getOuterReference().getStepsOut() == 1);
+    assertEquals(2, correlatedCol2.getDirectReference().getStructField().getField());
+    assertEquals(1, correlatedCol2.getOuterReference().getStepsOut());
   }
 
   @Test
-  public void correlatedScalarSubQInSelect() throws IOException {
-    SqlToSubstrait s = new SqlToSubstrait();
+  public void correlatedScalarSubQueryInSelect() throws Exception {
     String sql = asString("subquery/nested_scalar_subquery_in_select.sql");
-    Assertions.assertThrows(
-        UnsupportedOperationException.class,
-        () -> {
-          s.convert(sql, TPCH_CATALOG);
-        });
+    assertSqlSubstraitRelRoundTrip(sql);
   }
 }

@@ -14,12 +14,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpcdsQueryTest extends PlanTestBase {
   private static final Set<Integer> alternateForms = Set.of(27, 36, 70, 86);
-  private static final Set<Integer> toSubstraitExclusions = Set.of(9);
   private static final Set<Integer> fromSubstraitPojoExclusions = Set.of(1, 30, 81);
   private static final Set<Integer> fromSubstraitProtoExclusions = Set.of(1, 30, 81);
 
   static IntStream testCases() {
-    return IntStream.rangeClosed(1, 99).filter(n -> !toSubstraitExclusions.contains(n));
+    return IntStream.rangeClosed(1, 99);
   }
 
   /**

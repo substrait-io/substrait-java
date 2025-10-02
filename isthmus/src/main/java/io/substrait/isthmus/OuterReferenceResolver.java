@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static org.apache.calcite.rex.RexUtil.SubQueryFinder.containsSubQuery;
-
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -15,15 +13,16 @@ import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexUtil.SubQueryCollector;
 
 /** Resolve correlated variable and get Depth map for RexFieldAccess */
 // See OuterReferenceResolver.md for explanation how the Depth map is computed.
 public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeException> {
 
-  private Map<CorrelationId, Integer> nestedDepth;
-  private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
+  private final Map<CorrelationId, Integer> nestedDepth;
+  private final Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
-  private RexVisitor rexVisitor = new RexVisitor(this);
+  private final RexVisitor rexVisitor = new RexVisitor(this);
 
   public OuterReferenceResolver() {
     nestedDepth = new HashMap<>();
@@ -45,9 +44,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   @Override
   public RelNode visit(Filter filter) throws RuntimeException {
     for (CorrelationId id : filter.getVariablesSet()) {
-      if (!nestedDepth.containsKey(id)) {
-        nestedDepth.put(id, 0);
-      }
+      nestedDepth.putIfAbsent(id, 0);
     }
     filter.getCondition().accept(rexVisitor);
     return super.visit(filter);
@@ -56,9 +53,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   @Override
   public RelNode visit(Correlate correlate) throws RuntimeException {
     for (CorrelationId id : correlate.getVariablesSet()) {
-      if (!nestedDepth.containsKey(id)) {
-        nestedDepth.put(id, 0);
-      }
+      nestedDepth.putIfAbsent(id, 0);
     }
 
     apply(correlate.getLeft());
@@ -66,15 +61,11 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     // Correlated join is a special case. The right-rel is a correlated sub-query but not a REX. So,
     // the RexVisitor cannot be applied to it to correctly compute the depth map. Hence, we need to
     // manually compute the depth map for the right-rel.
-    for (Map.Entry<CorrelationId, Integer> entry : nestedDepth.entrySet()) {
-      nestedDepth.put(entry.getKey(), entry.getValue() + 1);
-    }
+    nestedDepth.replaceAll((k, v) -> v + 1);
 
     apply(correlate.getRight()); // look inside sub-queries
 
-    for (Map.Entry<CorrelationId, Integer> entry : nestedDepth.entrySet()) {
-      nestedDepth.put(entry.getKey(), entry.getValue() - 1);
-    }
+    nestedDepth.replaceAll((k, v) -> v - 1);
 
     return correlate;
   }
@@ -89,14 +80,18 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
 
   @Override
   public RelNode visit(Project project) throws RuntimeException {
-    if (containsSubQuery(project)) {
-      throw new UnsupportedOperationException(
-          "Unsupported subquery nested in Project relational operator : " + project);
+    for (CorrelationId id : project.getVariablesSet()) {
+      nestedDepth.putIfAbsent(id, 0);
     }
+
+    for (RexSubQuery subQuery : SubQueryCollector.collect(project)) {
+      subQuery.accept(rexVisitor);
+    }
+
     return super.visit(project);
   }
 
-  private class RexVisitor extends RexShuttle {
+  private static class RexVisitor extends RexShuttle {
     final OuterReferenceResolver referenceResolver;
 
     RexVisitor(OuterReferenceResolver referenceResolver) {
@@ -105,15 +100,11 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
 
     @Override
     public RexNode visitSubQuery(RexSubQuery subQuery) {
-      for (Map.Entry<CorrelationId, Integer> entry : referenceResolver.nestedDepth.entrySet()) {
-        referenceResolver.nestedDepth.put(entry.getKey(), entry.getValue() + 1);
-      }
+      referenceResolver.nestedDepth.replaceAll((k, v) -> v + 1);
 
       referenceResolver.apply(subQuery.rel); // look inside sub-queries
 
-      for (Map.Entry<CorrelationId, Integer> entry : referenceResolver.nestedDepth.entrySet()) {
-        referenceResolver.nestedDepth.put(entry.getKey(), entry.getValue() - 1);
-      }
+      referenceResolver.nestedDepth.replaceAll((k, v) -> v - 1);
       return subQuery;
     }
 
