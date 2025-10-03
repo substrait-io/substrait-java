@@ -4,6 +4,9 @@ import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.ProtocolMessageEnum;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.ScanResult;
 import io.substrait.extension.SimpleExtension;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -41,46 +44,42 @@ import org.apache.calcite.util.BuiltInMethod;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 import org.immutables.value.Value;
-import org.reflections.Reflections;
-import org.reflections.scanners.FieldAnnotationsScanner;
-import org.reflections.scanners.SubTypesScanner;
 
-public class RegisterAtRuntime implements Feature {
+public final class RegisterAtRuntime implements Feature {
   @Override
   public void beforeAnalysis(BeforeAnalysisAccess access) {
     try {
-      Reflections substrait = new Reflections("io.substrait");
       // cli picocli
       register(IsthmusEntryPoint.class);
 
       // Empty class
       register(Empty.class);
 
-      // protobuf items
-      registerByParent(substrait, GeneratedMessageV3.class);
-      registerByParent(substrait, MessageLite.Builder.class);
-      registerByParent(substrait, ProtocolMessageEnum.class);
+      try (PackageScanner substrait = new PackageScanner("io.substrait")) {
+        // protobuf items
+        substrait.registerByParent(GeneratedMessageV3.class);
+        substrait.registerByParent(MessageLite.Builder.class);
+        substrait.registerByParent(ProtocolMessageEnum.class);
 
-      // Substrait immutables.
-      registerByAnnotation(substrait, Value.Immutable.class);
+        // Substrait immutables.
+        substrait.registerByAnnotation(Value.Immutable.class);
+      }
 
       // Records
       register(SimpleExtension.TypeArgument.class);
       register(SimpleExtension.EnumArgument.class);
       register(SimpleExtension.ValueArgument.class);
 
-      // calcite items
-      Reflections calcite =
-          new Reflections(
-              "org.apache.calcite", new FieldAnnotationsScanner(), new SubTypesScanner());
       register(BuiltInMetadata.class);
       register(SqlValidatorException.class);
       register(CalciteContextException.class);
       register(SqlStdOperatorTable.class);
       register(StandardConvertletTable.class);
-      registerByParent(calcite, Metadata.class);
-      registerByParent(calcite, MetadataHandler.class);
-      registerByParent(calcite, Resources.Element.class);
+      try (PackageScanner calcite = new PackageScanner("org.apache.calcite")) {
+        calcite.registerByParent(Metadata.class);
+        calcite.registerByParent(MetadataHandler.class);
+        calcite.registerByParent(Resources.Element.class);
+      }
 
       Arrays.asList(
               RelMdPercentageOriginalRows.class,
@@ -132,18 +131,39 @@ public class RegisterAtRuntime implements Feature {
     RuntimeReflection.register(c.getMethods());
   }
 
-  private static void registerByAnnotation(Reflections reflections, Class<? extends Annotation> c) {
-    reflections
-        .getTypesAnnotatedWith(c)
-        .forEach(
-            inner -> {
-              register(inner);
-              reflections.getSubTypesOf(c).forEach(RegisterAtRuntime::register);
-            });
-  }
+  private static final class PackageScanner implements AutoCloseable {
+    private final ScanResult scan;
 
-  private static void registerByParent(Reflections reflections, Class<?> c) {
-    register(c);
-    reflections.getSubTypesOf(c).forEach(RegisterAtRuntime::register);
+    PackageScanner(String... packageNames) {
+      scan =
+          new ClassGraph()
+              .enableAllInfo()
+              // GraalVM native-compile erases the classloader classpath
+              .overrideClasspath(System.getProperty("isthmus.classpath"))
+              .acceptPackages(packageNames)
+              .scan();
+    }
+
+    void registerByAnnotation(Class<? extends Annotation> annotation) {
+      scan.getClassesWithAnnotation(annotation).loadClasses().forEach(this::registerByParent);
+    }
+
+    void registerByParent(Class<?> c) {
+      register(c);
+      getSubTypes(c).loadClasses().forEach(RegisterAtRuntime::register);
+    }
+
+    private ClassInfoList getSubTypes(Class<?> c) {
+      if (c.isInterface()) {
+        return scan.getClassesImplementing(c);
+      }
+
+      return scan.getSubclasses(c);
+    }
+
+    @Override
+    public void close() {
+      scan.close();
+    }
   }
 }
