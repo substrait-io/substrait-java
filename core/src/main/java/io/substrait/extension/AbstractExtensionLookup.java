@@ -13,26 +13,6 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
     this.typeAnchorMap = typeAnchorMap;
   }
 
-  /**
-   * Gets the function anchor for a given reference (primarily for testing).
-   *
-   * @param reference The function reference
-   * @return The function anchor, or null if not found
-   */
-  public SimpleExtension.FunctionAnchor getFunctionAnchor(int reference) {
-    return functionAnchorMap.get(reference);
-  }
-
-  /**
-   * Gets the type anchor for a given reference (primarily for testing).
-   *
-   * @param reference The type reference
-   * @return The type anchor, or null if not found
-   */
-  public SimpleExtension.TypeAnchor getTypeAnchor(int reference) {
-    return typeAnchorMap.get(reference);
-  }
-
   @Override
   public SimpleExtension.ScalarFunctionVariant getScalarFunction(
       int reference, SimpleExtension.ExtensionCollection extensions) {

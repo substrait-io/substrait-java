@@ -104,7 +104,7 @@ public class UriUrnMigrationEndToEndTest {
               protoToPojo.from(inputPlan);
             });
 
-    assertTrue(exception.getMessage().contains("All resolution strategies failed"));
+    assertTrue(exception.getMessage().contains("could not be resolved to a URN"));
     assertTrue(exception.getMessage().contains("/functions_nonexistent.yaml"));
   }
 }

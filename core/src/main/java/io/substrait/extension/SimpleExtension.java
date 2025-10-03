@@ -554,13 +554,6 @@ public class SimpleExtension {
     @JsonProperty("urn")
     public abstract String urn();
 
-    // URI is not from YAML, but from the loading context
-    // this only needs to be present temporarily to handle the URI -> URN migration
-    @Value.Default
-    public String uri() {
-      return "";
-    }
-
     @JsonProperty("scalar_functions")
     public abstract List<ScalarFunction> scalars();
 
@@ -797,10 +790,7 @@ public class SimpleExtension {
           objectMapper(urn).readValue(content, ExtensionSignatures.class);
 
       ExtensionSignatures doc =
-          ImmutableSimpleExtension.ExtensionSignatures.builder()
-              .from(docWithoutUri)
-              .uri(uri)
-              .build();
+          ImmutableSimpleExtension.ExtensionSignatures.builder().from(docWithoutUri).build();
 
       return buildExtensionCollection(uri, doc);
     } catch (IOException e) {
