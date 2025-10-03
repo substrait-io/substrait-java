@@ -22,7 +22,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
   }
 
   public static Builder builder() {
-    return new Builder();
+    return builder(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public static Builder builder(SimpleExtension.ExtensionCollection extensionCollection) {
@@ -33,10 +33,6 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
     private final SimpleExtension.ExtensionCollection extensionCollection;
-
-    public Builder() {
-      this.extensionCollection = DefaultExtensionCatalog.DEFAULT_COLLECTION;
-    }
 
     public Builder(SimpleExtension.ExtensionCollection extensionCollection) {
       if (extensionCollection == null) {
@@ -63,26 +59,40 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       // 1. Try non-zero URN reference
       if (func.getExtensionUrnReference() != 0) {
         String urnFromUrnRef = urnMap.get(func.getExtensionUrnReference());
-        if (urnFromUrnRef != null) {
-          return SimpleExtension.FunctionAnchor.of(urnFromUrnRef, func.getName());
+        if (urnFromUrnRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Function '%s' references URN anchor %d, but no URN is registered at that anchor",
+                  func.getName(), func.getExtensionUrnReference()));
         }
+        return SimpleExtension.FunctionAnchor.of(urnFromUrnRef, func.getName());
       }
 
       // 2. Try non-zero URI reference
       if (func.getExtensionUriReference() != 0) {
         String uriFromUriRef = uriMap.get(func.getExtensionUriReference());
-        if (uriFromUriRef != null) {
-          String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
-          if (urnFromUriRef != null) {
-            return SimpleExtension.FunctionAnchor.of(urnFromUriRef, func.getName());
-          }
-          // URI found but could not be resolved to URN
+        if (uriFromUriRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Function '%s' references URI anchor %d, but no URI is registered at that anchor",
+                  func.getName(), func.getExtensionUriReference()));
         }
+        String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
+        if (urnFromUriRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Function '%s' references URI anchor %d with URI '%s', but this URI could not be resolved to a URN. "
+                      + "Ensure a URI <-> URN mapping is registered in the ExtensionCollection.",
+                  func.getName(), func.getExtensionUriReference(), uriFromUriRef));
+        }
+        return SimpleExtension.FunctionAnchor.of(urnFromUriRef, func.getName());
       }
 
-      /* At this point both URI and URN are 0, so we need to
-        first see if they both resolve.
-      */
+      /* At this point, both URI and URN are known be 0.
+       * With protobufs, we cannot distinguish between 0 as an
+       * intentional value vs 0 as a default value.
+       * We perform some additional checks to below to handle this.
+       */
 
       String urn = urnMap.get(func.getExtensionUrnReference());
       String uri = uriMap.get(func.getExtensionUriReference());
@@ -122,26 +132,40 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       // 1. Try non-zero URN reference
       if (type.getExtensionUrnReference() != 0) {
         String urnFromUrnRef = urnMap.get(type.getExtensionUrnReference());
-        if (urnFromUrnRef != null) {
-          return SimpleExtension.TypeAnchor.of(urnFromUrnRef, type.getName());
+        if (urnFromUrnRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Type '%s' references URN anchor %d, but no URN is registered at that anchor",
+                  type.getName(), type.getExtensionUrnReference()));
         }
+        return SimpleExtension.TypeAnchor.of(urnFromUrnRef, type.getName());
       }
 
       // 2. Try non-zero URI reference
       if (type.getExtensionUriReference() != 0) {
         String uriFromUriRef = uriMap.get(type.getExtensionUriReference());
-        if (uriFromUriRef != null) {
-          String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
-          if (urnFromUriRef != null) {
-            return SimpleExtension.TypeAnchor.of(urnFromUriRef, type.getName());
-          }
-          // URI found but could not be resolved to URN
+        if (uriFromUriRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Type '%s' references URI anchor %d, but no URI is registered at that anchor",
+                  type.getName(), type.getExtensionUriReference()));
         }
+        String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
+        if (urnFromUriRef == null) {
+          throw new IllegalStateException(
+              String.format(
+                  "Type '%s' references URI anchor %d with URI '%s', but this URI could not be resolved to a URN. "
+                      + "Ensure a URI <-> URN mapping is registered in the ExtensionCollection.",
+                  type.getName(), type.getExtensionUriReference(), uriFromUriRef));
+        }
+        return SimpleExtension.TypeAnchor.of(urnFromUriRef, type.getName());
       }
 
-      /* At this point both URI and URN are 0, so we need to
-        first see if they both resolve.
-      */
+      /* At this point, both URI and URN are known be 0.
+       * With protobufs, we cannot distinguish between 0 as an
+       * intentional value vs 0 as a default value.
+       * We perform some additional checks to below to handle this.
+       */
 
       String urn = urnMap.get(type.getExtensionUrnReference());
       String uri = uriMap.get(type.getExtensionUriReference());

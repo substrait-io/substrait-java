@@ -50,6 +50,9 @@ public class SimpleExtension {
   private static final Predicate<String> URN_CHECKER =
       Pattern.compile("^extension:[^:]+:[^:]+$").asPredicate();
 
+  // `\A` means beginning of input. Using it as a delimiter in a scanner reads in the whole file.
+  private static Pattern READ_WHOLE_FILE = Pattern.compile("\\A");
+
   private static void validateUrn(String urn) {
     if (urn == null || urn.trim().isEmpty()) {
       throw new IllegalArgumentException("URN cannot be null or empty");
@@ -554,13 +557,6 @@ public class SimpleExtension {
     @JsonProperty("urn")
     public abstract String urn();
 
-    // URI is not from YAML, but from the loading context
-    // this only needs to be present temporarily to handle the URI -> URN migration
-    @Value.Default
-    public String uri() {
-      return "";
-    }
-
     @JsonProperty("scalar_functions")
     public abstract List<ScalarFunction> scalars();
 
@@ -721,7 +717,7 @@ public class SimpleExtension {
      * @param urn The URN to look up
      * @return The corresponding URI, or null if not found
      */
-    public String getUriFromUrn(String urn) {
+    String getUriFromUrn(String urn) {
       return uriUrnMap().reverseGet(urn);
     }
 
@@ -731,7 +727,7 @@ public class SimpleExtension {
      * @param uri The URI to look up
      * @return The corresponding URN, or null if not found
      */
-    public String getUrnFromUri(String uri) {
+    String getUrnFromUri(String uri) {
       return uriUrnMap().get(uri);
     }
 
@@ -797,10 +793,7 @@ public class SimpleExtension {
           objectMapper(urn).readValue(content, ExtensionSignatures.class);
 
       ExtensionSignatures doc =
-          ImmutableSimpleExtension.ExtensionSignatures.builder()
-              .from(docWithoutUri)
-              .uri(uri)
-              .build();
+          ImmutableSimpleExtension.ExtensionSignatures.builder().from(docWithoutUri).build();
 
       return buildExtensionCollection(uri, doc);
     } catch (IOException e) {
@@ -810,7 +803,7 @@ public class SimpleExtension {
 
   public static ExtensionCollection load(String uri, InputStream stream) {
     try (Scanner scanner = new Scanner(stream)) {
-      scanner.useDelimiter("\\A");
+      scanner.useDelimiter(READ_WHOLE_FILE);
       String content = scanner.next();
       return load(uri, content);
     }

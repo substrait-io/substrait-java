@@ -36,8 +36,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     // Test with no ExtensionCollection (no URI/URN mapping available)
     ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
-    assertEquals("extension:test:urn", lookup.getFunctionAnchor(1).urn());
-    assertEquals("test_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:urn", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("test_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -72,8 +72,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:mapped", lookup.getFunctionAnchor(1).urn());
-    assertEquals("legacy_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:mapped", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("legacy_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class ImmutableExtensionLookupUriUrnTest {
               ImmutableExtensionLookup.builder().from(plan).build();
             });
 
-    assertTrue(exception.getMessage().contains("All resolution strategies failed"));
+    assertTrue(exception.getMessage().contains("could not be resolved to a URN"));
     assertTrue(exception.getMessage().contains("http://example.com/unmapped"));
     assertTrue(exception.getMessage().contains("URI <-> URN mapping"));
   }
@@ -133,8 +133,8 @@ public class ImmutableExtensionLookupUriUrnTest {
               ImmutableExtensionLookup.builder().from(plan).build();
             });
 
-    assertTrue(exception.getMessage().contains("All resolution strategies failed"));
-    assertTrue(exception.getMessage().contains("null")); // Both URI and URN should be null
+    assertTrue(exception.getMessage().contains("no URN is registered at that anchor"));
+    assertTrue(exception.getMessage().contains("999")); // The missing anchor reference
   }
 
   // ==========================================================================
@@ -164,8 +164,8 @@ public class ImmutableExtensionLookupUriUrnTest {
 
     ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
-    assertEquals("extension:test:case1", lookup.getFunctionAnchor(1).urn());
-    assertEquals("case1_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:case1", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("case1_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -198,8 +198,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case2", lookup.getFunctionAnchor(1).urn());
-    assertEquals("case2_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:case2", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("case2_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -244,8 +244,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case3", lookup.getFunctionAnchor(1).urn());
-    assertEquals("case3_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:case3", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("case3_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -322,8 +322,8 @@ public class ImmutableExtensionLookupUriUrnTest {
 
     ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
-    assertEquals("extension:test:case4", lookup.getFunctionAnchor(1).urn());
-    assertEquals("case4_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:case4", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("case4_func", lookup.functionAnchorMap.get(1).key());
   }
 
   @Test
@@ -357,8 +357,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case5", lookup.getFunctionAnchor(1).urn());
-    assertEquals("case5_func", lookup.getFunctionAnchor(1).key());
+    assertEquals("extension:test:case5", lookup.functionAnchorMap.get(1).urn());
+    assertEquals("case5_func", lookup.functionAnchorMap.get(1).key());
   }
 
   // ==========================================================================
@@ -388,8 +388,8 @@ public class ImmutableExtensionLookupUriUrnTest {
 
     ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
-    assertEquals("extension:test:case1", lookup.getTypeAnchor(1).urn());
-    assertEquals("case1_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:test:case1", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("case1_type", lookup.typeAnchorMap.get(1).key());
   }
 
   @Test
@@ -422,8 +422,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case2", lookup.getTypeAnchor(1).urn());
-    assertEquals("case2_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:test:case2", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("case2_type", lookup.typeAnchorMap.get(1).key());
   }
 
   @Test
@@ -468,8 +468,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case3", lookup.getTypeAnchor(1).urn());
-    assertEquals("case3_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:test:case3", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("case3_type", lookup.typeAnchorMap.get(1).key());
   }
 
   @Test
@@ -546,8 +546,8 @@ public class ImmutableExtensionLookupUriUrnTest {
 
     ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
-    assertEquals("extension:test:case4", lookup.getTypeAnchor(1).urn());
-    assertEquals("case4_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:test:case4", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("case4_type", lookup.typeAnchorMap.get(1).key());
   }
 
   @Test
@@ -581,8 +581,8 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:test:case5", lookup.getTypeAnchor(1).urn());
-    assertEquals("case5_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:test:case5", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("case5_type", lookup.typeAnchorMap.get(1).key());
   }
 
   @Test
@@ -615,7 +615,7 @@ public class ImmutableExtensionLookupUriUrnTest {
     ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
-    assertEquals("extension:types:mapped", lookup.getTypeAnchor(1).urn());
-    assertEquals("legacy_type", lookup.getTypeAnchor(1).key());
+    assertEquals("extension:types:mapped", lookup.typeAnchorMap.get(1).urn());
+    assertEquals("legacy_type", lookup.typeAnchorMap.get(1).key());
   }
 }
