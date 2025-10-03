@@ -627,15 +627,36 @@ public class ProtoRelConverter {
         new ProtoAggregateFunctionConverter(lookup, extensions, protoExprConverter);
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
-    for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-      groupings.add(
-          Aggregate.Grouping.builder()
-              .expressions(
-                  grouping.getGroupingExpressionsList().stream()
-                      .map(protoExprConverter::from)
-                      .collect(java.util.stream.Collectors.toList()))
-              .build());
+
+    // Groupings are set using the AggregateRel grouping_expression mechanism
+    if (!rel.getGroupingExpressionsList().isEmpty()) {
+      List<Expression> allGroupingExpressions =
+          rel.getGroupingExpressionsList().stream()
+              .map(protoExprConverter::from)
+              .collect(java.util.stream.Collectors.toList());
+
+      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+        List<Integer> references = grouping.getExpressionReferencesList();
+        List<Expression> groupExpressions = new ArrayList<>();
+        for (int ref : references) {
+          groupExpressions.add(allGroupingExpressions.get(ref));
+        }
+        groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
+      }
+
+    } else {
+      // Groupings are set using the deprecated Grouping grouping_expressions mechanism
+      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+        groupings.add(
+            Aggregate.Grouping.builder()
+                .expressions(
+                    grouping.getGroupingExpressionsList().stream()
+                        .map(protoExprConverter::from)
+                        .collect(java.util.stream.Collectors.toList()))
+                .build());
+      }
     }
+
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
     for (AggregateRel.Measure measure : rel.getMeasuresList()) {
       measures.add(
