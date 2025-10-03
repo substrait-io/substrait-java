@@ -278,4 +278,15 @@ tasks.named<AntlrTask>("generateGrammarSource") {
     layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }
+val submodulesUpdate by
+  tasks.registering(Exec::class) {
+    group = "Build Setup"
+    description = "Updates (and inits) substrait git submodule"
+    commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
+    workingDir = rootProject.projectDir
+  }
+
+protobuf {
+  generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
+  protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() }
+}
