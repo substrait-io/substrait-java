@@ -28,6 +28,9 @@ public class ProtoExtendedExpressionConverter {
   }
 
   public ProtoExtendedExpressionConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+    if (extensionCollection == null) {
+      throw new IllegalArgumentException("ExtensionCollection is required");
+    }
     this.extensionCollection = extensionCollection;
   }
 
@@ -35,7 +38,7 @@ public class ProtoExtendedExpressionConverter {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder().from(extendedExpression).build();
+        ImmutableExtensionLookup.builder(extensionCollection).from(extendedExpression).build();
 
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 

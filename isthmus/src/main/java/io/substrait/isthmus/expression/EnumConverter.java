@@ -185,7 +185,7 @@ public class EnumConverter {
 
   private static ArgAnchor argAnchor(SimpleExtension.Function fnDef, int argIdx) {
     return new ArgAnchor(
-        SimpleExtension.FunctionAnchor.of(fnDef.getAnchor().namespace(), fnDef.getAnchor().key()),
+        SimpleExtension.FunctionAnchor.of(fnDef.getAnchor().urn(), fnDef.getAnchor().key()),
         argIdx);
   }
 }
