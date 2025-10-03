@@ -1,7 +1,7 @@
 package io.substrait.plan;
 
 import io.substrait.SubstraitVersion;
-import io.substrait.proto.AdvancedExtension;
+import io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.Rel;
 import java.util.List;
 import java.util.Optional;

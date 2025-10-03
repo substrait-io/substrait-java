@@ -1,5 +1,6 @@
 package io.substrait.plan;
 
+import io.substrait.extension.AdvancedExtensionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
@@ -11,6 +12,16 @@ import java.util.List;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
+
+  protected final AdvancedExtensionProtoConverter advancedExtensionConverter;
+
+  public PlanProtoConverter() {
+    this(new AdvancedExtensionProtoConverter());
+  }
+
+  public PlanProtoConverter(final AdvancedExtensionProtoConverter advancedExtensionConverter) {
+    this.advancedExtensionConverter = advancedExtensionConverter;
+  }
 
   public Plan toProto(io.substrait.plan.Plan plan) {
     List<PlanRel> planRels = new ArrayList<>();
@@ -31,7 +42,8 @@ public class PlanProtoConverter {
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
     functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
-      builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
+      builder.setAdvancedExtensions(
+          advancedExtensionConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
     Version.Builder versionBuilder =

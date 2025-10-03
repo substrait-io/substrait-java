@@ -7,21 +7,6 @@ import java.util.List;
 /** Contains tag interfaces for handling {@link com.google.protobuf.Any} types within Substrait. */
 public class Extension {
 
-  /**
-   * Optimization associated with an {@link io.substrait.proto.AdvancedExtension}
-   *
-   * <p>An optimization is helpful information that don't influence semantics. May be ignored by a
-   * consumer.
-   */
-  public interface Optimization extends ToProto<com.google.protobuf.Any> {}
-
-  /**
-   * Enhancement associated with an {@link io.substrait.proto.AdvancedExtension}
-   *
-   * <p>An enhancement alter semantics. Cannot be ignored by a consumer.
-   */
-  public interface Enhancement extends ToProto<com.google.protobuf.Any> {}
-
   public interface LeafRelDetail extends ToProto<com.google.protobuf.Any> {
     /**
      * @return the record layout for the associated {@link ExtensionLeaf} relation
