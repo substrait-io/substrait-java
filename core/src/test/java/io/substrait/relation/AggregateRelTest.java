@@ -58,7 +58,7 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testDeprecatedGroupingExpressionsAreMapped() {
+  public void testDeprecatedGroupingExpressionConversion() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 
@@ -70,7 +70,6 @@ class AggregateRelTest extends TestBase {
 
     // Build an input ReadRel
     ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
-
 
     // Build the AggregateRel with the new grouping_expressions field
     AggregateRel aggrProto =
@@ -90,13 +89,13 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testNewAggregateProtoForm() {
+  public void testAggregateWithSingleGrouping() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 
     AggregateRel.Grouping grouping =
         AggregateRel.Grouping.newBuilder()
-            .addExpressionReferences(0) // new proto form
+            .addExpressionReferences(0)
             .addExpressionReferences(1)
             .build();
 
@@ -123,7 +122,7 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testNewAggregateProtoFormMultipleGroupings() {
+  public void testAggregateWithMultipleGroupings() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 

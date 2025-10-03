@@ -628,22 +628,24 @@ public class ProtoRelConverter {
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
 
-    //      new proto form is used
+    // Groupings are set using the AggregateRel grouping_expression mechanism
     if (!rel.getGroupingExpressionsList().isEmpty()) {
-
-      List<io.substrait.proto.Expression> allGroupingKeys = rel.getGroupingExpressionsList();
+      List<Expression> allGroupingExpressions =
+          rel.getGroupingExpressionsList().stream()
+              .map(protoExprConverter::from)
+              .collect(java.util.stream.Collectors.toList());
 
       for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
         List<Integer> references = grouping.getExpressionReferencesList();
         List<Expression> groupExpressions = new ArrayList<>();
         for (int ref : references) {
-          groupExpressions.add(protoExprConverter.from(allGroupingKeys.get(ref)));
+          groupExpressions.add(allGroupingExpressions.get(ref));
         }
         groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
       }
 
     } else {
-      //        using the deprecated form of Grouping and Aggregate
+      // Groupings are set using the deprecated Grouping grouping_expressions mechanism
       for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
         groupings.add(
             Aggregate.Grouping.builder()
