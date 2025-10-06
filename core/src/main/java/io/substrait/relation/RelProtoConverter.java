@@ -5,8 +5,8 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
-import io.substrait.extension.AdvancedExtensionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
@@ -61,19 +61,19 @@ public class RelProtoConverter
   protected final TypeProtoConverter typeProtoConverter;
 
   protected final ExtensionCollector extensionCollector;
-  protected final AdvancedExtensionProtoConverter advancedExtensionConverter;
+  protected final ExtensionProtoConverter extensionConverter;
 
   public RelProtoConverter(final ExtensionCollector extensionCollector) {
-    this(extensionCollector, new AdvancedExtensionProtoConverter());
+    this(extensionCollector, new ExtensionProtoConverter());
   }
 
   public RelProtoConverter(
       final ExtensionCollector extensionCollector,
-      final AdvancedExtensionProtoConverter advancedExtensionConverter) {
+      final ExtensionProtoConverter extensionConverter) {
     this.extensionCollector = extensionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
-    this.advancedExtensionConverter = advancedExtensionConverter;
+    this.extensionConverter = extensionConverter;
   }
 
   public ExpressionProtoConverter getExpressionProtoConverter() {
@@ -137,7 +137,7 @@ public class RelProtoConverter
 
     aggregate
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setAggregate(builder).build();
   }
 
@@ -204,7 +204,7 @@ public class RelProtoConverter
 
     fetch
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setFetch(builder).build();
   }
 
@@ -218,7 +218,7 @@ public class RelProtoConverter
 
     filter
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setFilter(builder).build();
   }
 
@@ -236,7 +236,7 @@ public class RelProtoConverter
     join.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
     join.getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setJoin(builder).build();
   }
 
@@ -251,7 +251,7 @@ public class RelProtoConverter
             });
 
     set.getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setSet(builder).build();
   }
 
@@ -268,7 +268,7 @@ public class RelProtoConverter
 
     namedScan
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -290,7 +290,7 @@ public class RelProtoConverter
 
     localFiles
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder.build()).build();
   }
 
@@ -307,7 +307,7 @@ public class RelProtoConverter
 
     extensionTable
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -334,7 +334,7 @@ public class RelProtoConverter
 
     hashJoin
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setHashJoin(builder).build();
   }
 
@@ -361,7 +361,7 @@ public class RelProtoConverter
 
     mergeJoin
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setMergeJoin(builder).build();
   }
 
@@ -378,7 +378,7 @@ public class RelProtoConverter
 
     nestedLoopJoin
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
@@ -398,7 +398,7 @@ public class RelProtoConverter
 
     consistentPartitionWindow
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
 
     return Rel.newBuilder().setWindow(builder).build();
   }
@@ -482,7 +482,7 @@ public class RelProtoConverter
             .setCondition(toProto(update.getCondition()));
     update
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setUpdate(builder).build();
   }
 
@@ -544,7 +544,7 @@ public class RelProtoConverter
 
     project
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setProject(builder).build();
   }
 
@@ -589,7 +589,7 @@ public class RelProtoConverter
             .addAllSorts(toProtoS(sort.getSortFields()));
 
     sort.getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setSort(builder).build();
   }
 
@@ -603,7 +603,7 @@ public class RelProtoConverter
 
     cross
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setCross(builder).build();
   }
 
@@ -628,7 +628,7 @@ public class RelProtoConverter
 
     virtualTableScan
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -670,8 +670,7 @@ public class RelProtoConverter
     RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getCommonExtension()
         .ifPresent(
-            extension ->
-                builder.setAdvancedExtension(advancedExtensionConverter.toProto(extension)));
+            extension -> builder.setAdvancedExtension(extensionConverter.toProto(extension)));
 
     io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
     if (remap != null) {
@@ -693,8 +692,7 @@ public class RelProtoConverter
 
         stats
             .getExtension()
-            .ifPresent(
-                ae -> statsBuilder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+            .ifPresent(ae -> statsBuilder.setAdvancedExtension(extensionConverter.toProto(ae)));
         hintBuilder.setStats(
             statsBuilder.setRowCount(stats.rowCount()).setRecordSize(stats.recordSize()));
       }
@@ -704,8 +702,7 @@ public class RelProtoConverter
         RuntimeConstraint.Builder rcBuilder = RuntimeConstraint.newBuilder();
 
         rc.getExtension()
-            .ifPresent(
-                ae -> rcBuilder.setAdvancedExtension(advancedExtensionConverter.toProto(ae)));
+            .ifPresent(ae -> rcBuilder.setAdvancedExtension(extensionConverter.toProto(ae)));
         hintBuilder.setConstraint(rcBuilder);
       }
 

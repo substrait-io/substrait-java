@@ -8,7 +8,7 @@ import com.google.protobuf.Any;
  * <p>Extend this class to customize and use with {@link io.substrait.relation.RelProtoConverter}
  * or @{link {@link io.substrait.plan.PlanProtoConverter}.
  */
-public class AdvancedExtensionProtoConverter {
+public class ExtensionProtoConverter {
   /**
    * Converts an {@link AdvancedExtension} to {@link io.substrait.proto.AdvancedExtension}.
    *

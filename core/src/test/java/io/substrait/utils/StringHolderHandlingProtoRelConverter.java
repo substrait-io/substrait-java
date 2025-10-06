@@ -15,7 +15,7 @@ import io.substrait.relation.ProtoRelConverter;
 public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
   public StringHolderHandlingProtoRelConverter(
       ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
-    super(lookup, extensions, new StringHolderHandlingProtoAdvancedExtensionConverter());
+    super(lookup, extensions, new StringHolderHandlingProtoExtensionConverter());
   }
 
   @Override

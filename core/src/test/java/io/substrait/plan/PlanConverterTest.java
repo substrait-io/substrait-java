@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.utils.StringHolder;
-import io.substrait.utils.StringHolderHandlingAdvancedExtensionProtoConverter;
-import io.substrait.utils.StringHolderHandlingProtoAdvancedExtensionConverter;
+import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
+import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import org.junit.jupiter.api.Test;
 
 class PlanConverterTest {
@@ -94,11 +94,11 @@ class PlanConverterTest {
                     .build())
             .build();
     final PlanProtoConverter toProtoConverter =
-        new PlanProtoConverter(new StringHolderHandlingAdvancedExtensionProtoConverter());
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
     final ProtoPlanConverter fromProtoConverter =
-        new ProtoPlanConverter(new StringHolderHandlingProtoAdvancedExtensionConverter());
+        new ProtoPlanConverter(new StringHolderHandlingProtoExtensionConverter());
     final Plan plan2 = fromProtoConverter.from(protoPlan);
 
     assertEquals(plan, plan2);

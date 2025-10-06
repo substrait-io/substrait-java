@@ -8,7 +8,7 @@ import io.substrait.relation.extensions.EmptyOptimization;
  * <p>Extend this class to customize and use with {@link io.substrait.relation.ProtoRelConverter} or
  * {@link io.substrait.plan.ProtoPlanConverter}.
  */
-public class ProtoAdvancedExtensionConverter {
+public class ProtoExtensionConverter {
   /**
    * Converts an {@link io.substrait.proto.AdvancedExtension} to {@link AdvancedExtension}.
    *

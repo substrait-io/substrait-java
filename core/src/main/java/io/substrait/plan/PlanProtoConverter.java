@@ -1,8 +1,8 @@
 package io.substrait.plan;
 
-import io.substrait.extension.AdvancedExtensionProtoConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
@@ -14,7 +14,7 @@ import java.util.List;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
-  protected final AdvancedExtensionProtoConverter advancedExtensionConverter;
+  protected final ExtensionProtoConverter extensionConverter;
 
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
@@ -23,21 +23,21 @@ public class PlanProtoConverter {
   }
 
   public PlanProtoConverter(final SimpleExtension.ExtensionCollection extensionCollection) {
-    this(extensionCollection, new AdvancedExtensionProtoConverter());
+    this(extensionCollection, new ExtensionProtoConverter());
   }
 
-  public PlanProtoConverter(final AdvancedExtensionProtoConverter advancedExtensionConverter) {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, advancedExtensionConverter);
+  public PlanProtoConverter(final ExtensionProtoConverter extensionConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, extensionConverter);
   }
 
   public PlanProtoConverter(
       final SimpleExtension.ExtensionCollection extensionCollection,
-      final AdvancedExtensionProtoConverter advancedExtensionConverter) {
+      final ExtensionProtoConverter extensionConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
-    this.advancedExtensionConverter = advancedExtensionConverter;
+    this.extensionConverter = extensionConverter;
   }
 
   public Plan toProto(io.substrait.plan.Plan plan) {
@@ -59,8 +59,7 @@ public class PlanProtoConverter {
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
     functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
-      builder.setAdvancedExtensions(
-          advancedExtensionConverter.toProto(plan.getAdvancedExtension().get()));
+      builder.setAdvancedExtensions(extensionConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
     Version.Builder versionBuilder =

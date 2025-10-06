@@ -6,6 +6,6 @@ import io.substrait.relation.RelProtoConverter;
 public class StringHolderHandlingRelProtoConverter extends RelProtoConverter {
 
   public StringHolderHandlingRelProtoConverter(final ExtensionCollector extensionCollector) {
-    super(extensionCollector, new StringHolderHandlingAdvancedExtensionProtoConverter());
+    super(extensionCollector, new StringHolderHandlingExtensionProtoConverter());
   }
 }
