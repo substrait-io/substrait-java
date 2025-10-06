@@ -1,0 +1,110 @@
+{
+  "extensionUris": [
+    {
+      "extensionUriAnchor": 1,
+      "uri": "/functions_arithmetic.yaml"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "functionAnchor": 1,
+        "name": "add:i32_i32",
+        "extensionUriReference": 1
+      }
+    },
+    {
+      "extensionFunction": {
+        "functionAnchor": 2,
+        "name": "multiply:i32_i32",
+        "extensionUriReference": 1
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "input": {
+              "read": {
+                "baseSchema": {
+                  "names": [
+                    "x",
+                    "y"
+                  ],
+                  "struct": {
+                    "types": [
+                      {
+                        "i32": {}
+                      },
+                      {
+                        "i32": {}
+                      }
+                    ]
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "test_table"
+                  ]
+                }
+              }
+            },
+            "expressions": [
+              {
+                "scalarFunction": {
+                  "functionReference": 1,
+                  "outputType": {
+                    "i32": {}
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 10
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "scalarFunction": {
+                          "functionReference": 2,
+                          "outputType": {
+                            "i32": {}
+                          },
+                          "arguments": [
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 2
+                                }
+                              }
+                            },
+                            {
+                              "value": {
+                                "literal": {
+                                  "i32": 3
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "calculation"
+        ]
+      }
+    }
+  ],
+  "version": {
+    "minorNumber": 75
+  }
+}

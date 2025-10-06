@@ -699,7 +699,7 @@ public class SubstraitBuilder {
   // Types
 
   public Type.UserDefined userDefinedType(String namespace, String typeName) {
-    return Type.UserDefined.builder().uri(namespace).name(typeName).nullable(false).build();
+    return Type.UserDefined.builder().urn(namespace).name(typeName).nullable(false).build();
   }
 
   // Misc
