@@ -22,7 +22,7 @@ dependencies {
   testImplementation(platform(libs.junit.bom))
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
-  implementation(libs.reflections)
+  implementation(libs.classgraph)
   implementation(libs.guava)
   compileOnly(libs.graal.sdk)
   implementation(libs.picocli)
@@ -62,6 +62,10 @@ graalvmNative {
       buildArgs.add("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
       buildArgs.add("--future-defaults=all")
       jvmArgs.add("--sun-misc-unsafe-memory-access=allow")
+
+      // Capture the classpath since native-compile erases it
+      val isthmusClasspath = classpath.joinToString(":")
+      jvmArgs.add("-Disthmus.classpath=$isthmusClasspath")
     }
   }
 }

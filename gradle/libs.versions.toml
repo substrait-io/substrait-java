@@ -1,6 +1,7 @@
 [versions]
 antlr = "4.13.2"
 calcite = "1.40.0"
+classgraph = "4.8.181"
 commons-lang3 = "[3.18.0,)"
 graal = "25.0.0"
 graal-plugin = "0.11.1"
@@ -16,7 +17,6 @@ junit = "5.13.4"
 picocli = "4.7.7"
 protobuf-plugin = "0.9.5"
 protobuf = "3.25.8"
-reflections = "0.10.2"
 scala-library = "2.12.20"
 scalatest = "3.2.19"
 scalatestplus-junit5 = "3.2.19.0"
@@ -32,6 +32,7 @@ calcite-babel = { module = "org.apache.calcite:calcite-babel", version.ref = "ca
 calcite-core = { module = "org.apache.calcite:calcite-core", version.ref = "calcite" }
 calcite-plus = { module = "org.apache.calcite:calcite-plus", version.ref = "calcite" }
 calcite-server = { module = "org.apache.calcite:calcite-server", version.ref = "calcite" }
+classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 graal-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graal" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
@@ -56,7 +57,6 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "pico
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
-reflections = { module = "org.reflections:reflections", version.ref = "reflections"}
 scala-library = { module = "org.scala-lang:scala-library", version.ref = "scala-library" }
 scalatest = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest" }
 scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-13_2.12", version.ref = "scalatestplus-junit5" }
