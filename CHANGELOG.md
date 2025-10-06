@@ -1,6 +1,26 @@
 Release Notes
 ---
 
+## [0.66.0](https://github.com/substrait-io/substrait-java/compare/v0.65.0...v0.66.0) (2025-10-06)
+
+### ⚠ BREAKING CHANGES
+
+* uri() methods are now urn()
+* namespace() methods are now urn()
+* removed SimpleExtension.loadDefaults
+
+### Features
+
+* enable handling of URNs alongside URIs ([#522](https://github.com/substrait-io/substrait-java/issues/522)) ([26e1e3e](https://github.com/substrait-io/substrait-java/commit/26e1e3e43b3ce63a4893707f13579ee42bb97025))
+* handle new grouping mechanism in AggregateRel protos ([#521](https://github.com/substrait-io/substrait-java/issues/521)) ([637ffbf](https://github.com/substrait-io/substrait-java/commit/637ffbfbdf5cb230fd60932a6aa7e2d235c74445))
+* introduce DefaultExtensionCatalog.DEFAULT_COLLECTION ([#529](https://github.com/substrait-io/substrait-java/issues/529)) ([a15d9c7](https://github.com/substrait-io/substrait-java/commit/a15d9c7608808da9ad54e40fca0f625b3db1adba))
+* **isthmus:** support subquery nested in project ([#530](https://github.com/substrait-io/substrait-java/issues/530)) ([c7a1a34](https://github.com/substrait-io/substrait-java/commit/c7a1a34686c8227fe6f9b92cdf9430c73868e9b6))
+* **spark:** support Hive DDL / Insert operations ([#518](https://github.com/substrait-io/substrait-java/issues/518)) ([c20836e](https://github.com/substrait-io/substrait-java/commit/c20836e1b5eef7dcc569b60466f33f49471d70ea))
+
+### Bug Fixes
+
+* **isthmus:** improve derivation of AggregateRel return type ([#508](https://github.com/substrait-io/substrait-java/issues/508)) ([cf4ad93](https://github.com/substrait-io/substrait-java/commit/cf4ad93df23f2df5b4252b28b663e76a27406989))
+
 ## [0.65.0](https://github.com/substrait-io/substrait-java/compare/v0.64.0...v0.65.0) (2025-09-22)
 
 ### Features
