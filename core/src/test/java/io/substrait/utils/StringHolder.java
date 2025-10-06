@@ -30,6 +30,8 @@ public class StringHolder
         Extension.WriteExtensionObject,
         Extension.DdlExtensionObject {
 
+  private static final String PROTO_TYPE_URL = "type.googleapis.com/google.protobuf.StringValue";
+
   private final String value;
 
   public StringHolder(String value) {
@@ -38,10 +40,15 @@ public class StringHolder
 
   public static StringHolder fromProto(final Any any) {
     try {
-      return new StringHolder(any.unpack(StringValue.class).getValue());
+      if (PROTO_TYPE_URL.equals(any.getTypeUrl())) {
+        return new StringHolder(any.unpack(StringValue.class).getValue());
+      }
     } catch (InvalidProtocolBufferException e) {
       throw new IllegalStateException(e);
     }
+
+    throw new IllegalArgumentException(
+        String.format("Missing handler for protobuf with type URL: %s", any.getTypeUrl()));
   }
 
   @Override

@@ -5,13 +5,15 @@ import java.util.Optional;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class AdvancedExtension {
-  public abstract List<AdvancedExtension.Optimization> getOptimizations();
+public abstract class AdvancedExtension<
+    O extends AdvancedExtension.Optimization, E extends AdvancedExtension.Enhancement> {
+  public abstract List<O> getOptimizations();
 
-  public abstract Optional<AdvancedExtension.Enhancement> getEnhancement();
+  public abstract Optional<E> getEnhancement();
 
-  public static ImmutableAdvancedExtension.Builder builder() {
-    return ImmutableAdvancedExtension.builder();
+  public static <O extends AdvancedExtension.Optimization, E extends AdvancedExtension.Enhancement>
+      ImmutableAdvancedExtension.Builder<O, E> builder() {
+    return ImmutableAdvancedExtension.<O, E>builder();
   }
 
   /**

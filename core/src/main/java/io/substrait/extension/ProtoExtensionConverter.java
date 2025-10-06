@@ -1,7 +1,5 @@
 package io.substrait.extension;
 
-import io.substrait.relation.extensions.EmptyOptimization;
-
 /**
  * Converter from proto to {@link AdvancedExtension}.
  *
@@ -41,7 +39,8 @@ public class ProtoExtensionConverter {
    */
   protected AdvancedExtension.Optimization optimizationFromAdvancedExtension(
       com.google.protobuf.Any any) {
-    return new EmptyOptimization();
+    throw new UnsupportedOperationException(
+        "missing deserialization logic for AdvancedExtension.Optimization");
   }
 
   /**
@@ -55,6 +54,7 @@ public class ProtoExtensionConverter {
    */
   protected AdvancedExtension.Enhancement enhancementFromAdvancedExtension(
       com.google.protobuf.Any any) {
-    throw new IllegalStateException("enhancements cannot be ignored by consumers");
+    throw new UnsupportedOperationException(
+        "missing deserialization logic for AdvancedExtension.Enhancement");
   }
 }

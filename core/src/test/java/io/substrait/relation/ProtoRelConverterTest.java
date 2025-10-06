@@ -65,19 +65,24 @@ public class ProtoRelConverterTest extends TestBase {
       Rel rel = advancedExtensionWithEnhancement;
       io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
       // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(IllegalStateException.class, () -> protoRelConverter.from(protoRel));
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> protoRelConverter.from(protoRel),
+          "missing deserialization logic for AdvancedExtension.Enhancement");
     }
 
     @Test
     void optimizationOnlyAdvancedExtension() {
       Rel rel = advancedExtensionWithOptimization;
       io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
 
       // The optimization is serialized correctly to protobuf.
-      // When it is read back in, the default ProtoRelConverter drops it.
-      // As such they are not equal anymore.
-      assertNotEquals(rel, relReturned);
+      // When it is read back in, the default ProtoRelConverter throws UnsupportedOperationException
+      // since it missing the logic to deserialize the optimization.
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> protoRelConverter.from(protoRel),
+          "missing deserialization logic for AdvancedExtension.Optimization");
     }
 
     @Test
@@ -85,7 +90,10 @@ public class ProtoRelConverterTest extends TestBase {
       Rel rel = advancedExtensionWithEnhancementAndOptimization;
       io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
       // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(IllegalStateException.class, () -> protoRelConverter.from(protoRel));
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> protoRelConverter.from(protoRel),
+          "missing deserialization logic for AdvancedExtension.Enhancement");
     }
   }
 

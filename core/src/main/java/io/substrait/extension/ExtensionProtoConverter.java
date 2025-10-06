@@ -8,14 +8,16 @@ import com.google.protobuf.Any;
  * <p>Extend this class to customize and use with {@link io.substrait.relation.RelProtoConverter}
  * or @{link {@link io.substrait.plan.PlanProtoConverter}.
  */
-public class ExtensionProtoConverter {
+public class ExtensionProtoConverter<
+    O extends AdvancedExtension.Optimization, E extends AdvancedExtension.Enhancement> {
   /**
    * Converts an {@link AdvancedExtension} to {@link io.substrait.proto.AdvancedExtension}.
    *
    * @param advancedExtension the {@link AdvancedExtension} to convert
    * @return the converted {@link io.substrait.proto.AdvancedExtension}
    */
-  public io.substrait.proto.AdvancedExtension toProto(final AdvancedExtension advancedExtension) {
+  public io.substrait.proto.AdvancedExtension toProto(
+      final AdvancedExtension<O, E> advancedExtension) {
     final io.substrait.proto.AdvancedExtension.Builder builder =
         io.substrait.proto.AdvancedExtension.newBuilder();
     advancedExtension.getEnhancement().ifPresent(e -> builder.setEnhancement(toProto(e)));
@@ -31,7 +33,7 @@ public class ExtensionProtoConverter {
    * @param optimization the {@link AdvancedExtension.Optimization} to convert
    * @return the converted proto
    */
-  protected Any toProto(final AdvancedExtension.Optimization optimization) {
+  protected Any toProto(final O optimization) {
     return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
   }
 
@@ -43,7 +45,7 @@ public class ExtensionProtoConverter {
    * @param enhancement the {@link AdvancedExtension.Enhancement} to convert
    * @return the converted proto
    */
-  protected Any toProto(final AdvancedExtension.Enhancement enhancement) {
+  protected Any toProto(final E enhancement) {
     return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
   }
 }

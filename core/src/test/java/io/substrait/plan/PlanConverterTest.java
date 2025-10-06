@@ -1,7 +1,6 @@
 package io.substrait.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.extension.AdvancedExtension;
@@ -35,7 +34,10 @@ class PlanConverterTest {
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
     final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
-    assertThrows(IllegalStateException.class, () -> fromProtoConverter.from(protoPlan));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> fromProtoConverter.from(protoPlan),
+        "missing deserialization logic for AdvancedExtension.Enhancement");
   }
 
   @Test
@@ -49,13 +51,15 @@ class PlanConverterTest {
     final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
-    final Plan plan2 = fromProtoConverter.from(protoPlan);
-
     // The optimization is serialized correctly to protobuf.
-    // When it is read back in, the default ProtoPlanConverter drops it.
-    // As such they are not equal anymore.
-    assertNotEquals(plan, plan2);
+    // When it is read back in, the default ProtoPlanConverter throws UnsupportedOperationException
+    // since it missing the logic to deserialize the optimization.
+
+    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> fromProtoConverter.from(protoPlan),
+        "missing deserialization logic for AdvancedExtension.Optimization");
   }
 
   @Test
@@ -77,11 +81,14 @@ class PlanConverterTest {
     final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
 
     // Enhancements are not handled by the default ProtoPlanConverter
-    assertThrows(IllegalStateException.class, () -> fromProtoConverter.from(protoPlan));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> fromProtoConverter.from(protoPlan),
+        "missing deserialization logic for AdvancedExtension.Enhancement");
   }
 
   @Test
-  void customAdvancedExtensionSerDes() {
+  void customAdvancedExtensionSerde() {
     final StringHolder enhanced = new StringHolder("ENHANCED");
     final StringHolder optimized = new StringHolder("OPTIMIZED");
 
