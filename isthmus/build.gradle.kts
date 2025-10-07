@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
   `maven-publish`
   signing
@@ -94,7 +92,7 @@ jreleaser {
 }
 
 java {
-  toolchain { languageVersion = JavaLanguageVersion.of(11) }
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -147,7 +145,7 @@ dependencies {
 }
 
 tasks {
-  named<ShadowJar>("shadowJar") {
+  shadowJar {
     archiveBaseName.set("isthmus")
     manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
   }
@@ -160,9 +158,12 @@ tasks {
       attributes("Implementation-Title" to "isthmus")
     }
   }
-}
 
-tasks { build { dependsOn(shadowJar) } }
+  build { dependsOn(shadowJar) }
+
+  // Only set the compile release since JUnit 6 requires Java 17 to run tests.
+  compileJava { options.release = 11 }
+}
 
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
 
