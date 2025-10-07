@@ -2,7 +2,8 @@ package io.substrait.plan;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
-import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.ExtensionProtoConverter;
+import io.substrait.extension.SimpleExtension.ExtensionCollection;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
@@ -10,21 +11,54 @@ import io.substrait.proto.Version;
 import io.substrait.relation.RelProtoConverter;
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
+  @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
-  private final SimpleExtension.ExtensionCollection extensionCollection;
+  @NonNull private final ExtensionCollection extensionCollection;
 
+  /** Default constructor. */
   public PlanProtoConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public PlanProtoConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+  /**
+   * Constructor with a custom {@link ExtensionCollection}.
+   *
+   * @param extensionCollection custom {@link ExtensionCollection} to use, must not be null
+   */
+  public PlanProtoConverter(@NonNull final ExtensionCollection extensionCollection) {
+    this(extensionCollection, new ExtensionProtoConverter<>());
+  }
+
+  /**
+   * Constructor with a custom {@link ExtensionProtoConverter}.
+   *
+   * @param extensionProtoConverter custom {@link ExtensionProtoConverter} to use, must not be null
+   */
+  public PlanProtoConverter(@NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, extensionProtoConverter);
+  }
+
+  /**
+   * Constructor with custom {@link ExtensionCollection} and {@link ExtensionProtoConverter}.
+   *
+   * @param extensionCollection custom {@link ExtensionCollection} to use, must not be null
+   * @param extensionProtoConverter custom {@link ExtensionProtoConverter} to use, must not be null
+   */
+  public PlanProtoConverter(
+      @NonNull final ExtensionCollection extensionCollection,
+      @NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
+    if (extensionProtoConverter == null) {
+      throw new IllegalArgumentException("ExtensionProtoConverter is required");
+    }
     this.extensionCollection = extensionCollection;
+    this.extensionProtoConverter = extensionProtoConverter;
   }
 
   public Plan toProto(io.substrait.plan.Plan plan) {
@@ -46,7 +80,8 @@ public class PlanProtoConverter {
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
     functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
-      builder.setAdvancedExtensions(plan.getAdvancedExtension().get());
+      builder.setAdvancedExtensions(
+          extensionProtoConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
     Version.Builder versionBuilder =
