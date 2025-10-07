@@ -34,7 +34,8 @@ public class ExtensionProtoConverter<
    * @return the converted proto
    */
   protected Any toProto(final O optimization) {
-    return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
+    throw new UnsupportedOperationException(
+        "missing serialization logic for AdvancedExtension.Optimization");
   }
 
   /**
@@ -46,6 +47,7 @@ public class ExtensionProtoConverter<
    * @return the converted proto
    */
   protected Any toProto(final E enhancement) {
-    return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
+    throw new UnsupportedOperationException(
+        "missing serialization logic for AdvancedExtension.Enhancement");
   }
 }

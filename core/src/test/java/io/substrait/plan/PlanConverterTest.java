@@ -23,7 +23,7 @@ class PlanConverterTest {
   }
 
   @Test
-  void enhancementOnlyAdvancedExtension() {
+  void enhancementOnlyAdvancedExtensionWithoutExtensionProtoConverter() {
     final StringHolder enhanced = new StringHolder("ENHANCED");
 
     final Plan plan =
@@ -31,6 +31,23 @@ class PlanConverterTest {
             .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
             .build();
     final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> toProtoConverter.toProto(plan),
+        "missing serialization logic for AdvancedExtension.Enhancement");
+  }
+
+  @Test
+  void enhancementOnlyAdvancedExtensionWithExtensionProtoConverter() {
+    final StringHolder enhanced = new StringHolder("ENHANCED");
+
+    final Plan plan =
+        Plan.builder()
+            .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
+            .build();
+    final PlanProtoConverter toProtoConverter =
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
     final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
@@ -41,7 +58,26 @@ class PlanConverterTest {
   }
 
   @Test
-  void optimizationOnlyAdvancedExtension() {
+  void enhancementOnlyAdvancedExtensionWithExtensionProtoConverterAndProtoExtensionConverter() {
+    final StringHolder enhanced = new StringHolder("ENHANCED");
+
+    final Plan plan =
+        Plan.builder()
+            .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
+            .build();
+    final PlanProtoConverter toProtoConverter =
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
+    final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
+
+    final ProtoPlanConverter fromProtoConverter =
+        new ProtoPlanConverter(new StringHolderHandlingProtoExtensionConverter());
+    final Plan plan2 = fromProtoConverter.from(protoPlan);
+
+    assertEquals(plan, plan2);
+  }
+
+  @Test
+  void optimizationOnlyAdvancedExtensionWithoutExtensionProtoConverter() {
     final StringHolder optimized = new StringHolder("OPTIMIZED");
 
     final Plan plan =
@@ -49,11 +85,24 @@ class PlanConverterTest {
             .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
             .build();
     final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
-    final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    // The optimization is serialized correctly to protobuf.
-    // When it is read back in, the default ProtoPlanConverter throws UnsupportedOperationException
-    // since it missing the logic to deserialize the optimization.
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> toProtoConverter.toProto(plan),
+        "missing sserialization logic for AdvancedExtension.Optimization");
+  }
+
+  @Test
+  void optimizationOnlyAdvancedExtensionWithExtensionProtoConverter() {
+    final StringHolder optimized = new StringHolder("OPTIMIZED");
+
+    final Plan plan =
+        Plan.builder()
+            .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
+            .build();
+    final PlanProtoConverter toProtoConverter =
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
+    final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
     final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
     assertThrows(
@@ -63,32 +112,26 @@ class PlanConverterTest {
   }
 
   @Test
-  void advancedExtensionWithEnhancementAndOptimization() {
-    final StringHolder enhanced = new StringHolder("ENHANCED");
+  void optimizationOnlyAdvancedExtensionWithExtensionProtoConverterAndProtoExtensionConverter() {
     final StringHolder optimized = new StringHolder("OPTIMIZED");
 
     final Plan plan =
         Plan.builder()
-            .advancedExtension(
-                AdvancedExtension.builder()
-                    .enhancement(enhanced)
-                    .addOptimizations(optimized)
-                    .build())
+            .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
             .build();
-    final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
+    final PlanProtoConverter toProtoConverter =
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
+    final ProtoPlanConverter fromProtoConverter =
+        new ProtoPlanConverter(new StringHolderHandlingProtoExtensionConverter());
+    final Plan plan2 = fromProtoConverter.from(protoPlan);
 
-    // Enhancements are not handled by the default ProtoPlanConverter
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> fromProtoConverter.from(protoPlan),
-        "missing deserialization logic for AdvancedExtension.Enhancement");
+    assertEquals(plan, plan2);
   }
 
   @Test
-  void customAdvancedExtensionSerde() {
+  void advancedExtensionWithEnhancementAndOptimization() {
     final StringHolder enhanced = new StringHolder("ENHANCED");
     final StringHolder optimized = new StringHolder("OPTIMIZED");
 
