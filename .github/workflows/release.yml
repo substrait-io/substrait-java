@@ -86,7 +86,7 @@ jobs:
       - name: Run semantic-release
         run: ./ci/release/run.sh
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.output.token }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
