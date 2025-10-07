@@ -470,7 +470,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       case WriteOp.INSERT if isHive =>
         withChild(child) {
           InsertIntoHiveTable(
-            table,
+            catalogTable(write.getNames.asScala, ToSparkType.toStructType(write.getTableSchema)),
             Map.empty,
             child,
             write.getCreateMode == CreateMode.REPLACE_IF_EXISTS,
@@ -554,8 +554,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     val loc = spark.conf.get(StaticSQLConf.WAREHOUSE_PATH.key)
     val storage = CatalogStorageFormat(
       locationUri = Some(URI.create(f"$loc/$table")),
-      inputFormat = None,
-      outputFormat = None,
+      inputFormat = Some("org.apache.hadoop.mapred.TextInputFormat"),
+      outputFormat = Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"),
       serde = None,
       compressed = false,
       properties = Map.empty
