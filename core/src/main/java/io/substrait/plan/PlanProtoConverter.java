@@ -14,7 +14,7 @@ import java.util.List;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
-  protected final ExtensionProtoConverter extensionConverter;
+  protected final ExtensionProtoConverter extensionProtoConverter;
 
   private final SimpleExtension.ExtensionCollection extensionCollection;
 
@@ -26,18 +26,18 @@ public class PlanProtoConverter {
     this(extensionCollection, new ExtensionProtoConverter());
   }
 
-  public PlanProtoConverter(final ExtensionProtoConverter extensionConverter) {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, extensionConverter);
+  public PlanProtoConverter(final ExtensionProtoConverter extensionProtoConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, extensionProtoConverter);
   }
 
   public PlanProtoConverter(
       final SimpleExtension.ExtensionCollection extensionCollection,
-      final ExtensionProtoConverter extensionConverter) {
+      final ExtensionProtoConverter extensionProtoConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
-    this.extensionConverter = extensionConverter;
+    this.extensionProtoConverter = extensionProtoConverter;
   }
 
   public Plan toProto(io.substrait.plan.Plan plan) {
@@ -59,7 +59,8 @@ public class PlanProtoConverter {
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
     functionCollector.addExtensionsToPlan(builder);
     if (plan.getAdvancedExtension().isPresent()) {
-      builder.setAdvancedExtensions(extensionConverter.toProto(plan.getAdvancedExtension().get()));
+      builder.setAdvancedExtensions(
+          extensionProtoConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
     Version.Builder versionBuilder =

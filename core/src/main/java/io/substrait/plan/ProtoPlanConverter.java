@@ -16,7 +16,7 @@ import java.util.Optional;
 public class ProtoPlanConverter {
 
   protected final SimpleExtension.ExtensionCollection extensionCollection;
-  protected final ProtoExtensionConverter extensionConverter;
+  protected final ProtoExtensionConverter protoExtensionConverter;
 
   public ProtoPlanConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
@@ -26,18 +26,18 @@ public class ProtoPlanConverter {
     this(extensionCollection, new ProtoExtensionConverter());
   }
 
-  public ProtoPlanConverter(final ProtoExtensionConverter extensionConverter) {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, extensionConverter);
+  public ProtoPlanConverter(final ProtoExtensionConverter protoExtensionConverter) {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExtensionConverter);
   }
 
   public ProtoPlanConverter(
       final SimpleExtension.ExtensionCollection extensionCollection,
-      final ProtoExtensionConverter extensionConverter) {
+      final ProtoExtensionConverter protoExtensionConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
-    this.extensionConverter = extensionConverter;
+    this.protoExtensionConverter = protoExtensionConverter;
   }
 
   /** Override hook for providing custom {@link ProtoRelConverter} implementations */
@@ -78,7 +78,7 @@ public class ProtoPlanConverter {
         .advancedExtension(
             Optional.ofNullable(
                 plan.hasAdvancedExtensions()
-                    ? extensionConverter.fromProto(plan.getAdvancedExtensions())
+                    ? protoExtensionConverter.fromProto(plan.getAdvancedExtensions())
                     : null))
         .version(versionBuilder.build())
         .build();
