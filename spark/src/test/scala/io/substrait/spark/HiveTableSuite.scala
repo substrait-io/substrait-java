@@ -95,6 +95,8 @@ class HiveTableSuite extends SparkFunSuite {
     // and again...
     spark.sessionState.executePlan(plan).executedPlan.execute()
     assertResult(5)(spark.sql("select * from test").count())
+    // check it has inserted the correct values
+    assertResult(3)(spark.sql("select * from test where ID = 1003 and VALUE = 'again'").count())
   }
 
   test("Create Table As Select") {
