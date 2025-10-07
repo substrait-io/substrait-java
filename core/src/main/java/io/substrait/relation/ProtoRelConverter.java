@@ -6,7 +6,7 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ProtoExtensionConverter;
-import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.SimpleExtension.ExtensionCollection;
 import io.substrait.hint.Hint;
 import io.substrait.hint.Hint.ComputationType;
 import io.substrait.hint.Hint.LoadedComputation;
@@ -47,28 +47,57 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
 
-  protected final ExtensionLookup lookup;
-  protected final SimpleExtension.ExtensionCollection extensions;
-  protected final ProtoTypeConverter protoTypeConverter;
-  protected final ProtoExtensionConverter protoExtensionConverter;
+  @NonNull protected final ExtensionLookup lookup;
+  @NonNull protected final ExtensionCollection extensions;
+  @NonNull protected final ProtoTypeConverter protoTypeConverter;
+  @NonNull protected final ProtoExtensionConverter protoExtensionConverter;
 
-  public ProtoRelConverter(final ExtensionLookup lookup) {
+  /**
+   * Constructor with custom {@link ExtensionLookup}.
+   *
+   * @param lookup the custom {@link ExtensionLookup} to use, must not be null
+   */
+  public ProtoRelConverter(@NonNull final ExtensionLookup lookup) {
     this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
+  /**
+   * Constructor with custom {@link ExtensionLookup} and {@link ExtensionCollection}.
+   *
+   * @param lookup custom {@link ExtensionLookup} to use, must not be null
+   * @param extensions custom {@link ExtensionCollection} to use, must not be null
+   */
   public ProtoRelConverter(
-      final ExtensionLookup lookup, final SimpleExtension.ExtensionCollection extensions) {
+      @NonNull final ExtensionLookup lookup, @NonNull final ExtensionCollection extensions) {
     this(lookup, extensions, new ProtoExtensionConverter());
   }
 
+  /**
+   * Constructor with custom {@link ExtensionLookup}, {@link ExtensionCollection} and {@link
+   * ProtoExtensionConverter}.
+   *
+   * @param lookup custom {@link ExtensionLookup} to use, must not be null
+   * @param extensions custom {@link ExtensionCollection} to use, must not be null
+   * @param protoExtensionConverter custom {@link ProtoExtensionConverter} to use, must not be null
+   */
   public ProtoRelConverter(
-      final ExtensionLookup lookup,
-      final SimpleExtension.ExtensionCollection extensions,
-      final ProtoExtensionConverter protoExtensionConverter) {
+      @NonNull final ExtensionLookup lookup,
+      @NonNull final ExtensionCollection extensions,
+      @NonNull final ProtoExtensionConverter protoExtensionConverter) {
+    if (lookup == null) {
+      throw new IllegalArgumentException("ExtensionLookup is required");
+    }
+    if (extensions == null) {
+      throw new IllegalArgumentException("ExtensionCollection is required");
+    }
+    if (protoExtensionConverter == null) {
+      throw new IllegalArgumentException("ProtoExtensionConverter is required");
+    }
     this.lookup = lookup;
     this.extensions = extensions;
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);

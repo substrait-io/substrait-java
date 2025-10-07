@@ -1,5 +1,7 @@
 package io.substrait.extension;
 
+import org.jspecify.annotations.NonNull;
+
 /**
  * Converter from proto to {@link AdvancedExtension}.
  *
@@ -10,10 +12,10 @@ public class ProtoExtensionConverter {
   /**
    * Converts an {@link io.substrait.proto.AdvancedExtension} to {@link AdvancedExtension}.
    *
-   * @param proto {@link io.substrait.proto.AdvancedExtension} to convert
+   * @param proto {@link io.substrait.proto.AdvancedExtension} to convert, must not be null
    * @return the converted {@link AdvancedExtension}
    */
-  public AdvancedExtension fromProto(final io.substrait.proto.AdvancedExtension proto) {
+  public AdvancedExtension fromProto(final io.substrait.proto.@NonNull AdvancedExtension proto) {
     final io.substrait.extension.ImmutableAdvancedExtension.Builder builder =
         AdvancedExtension.builder();
     if (proto.hasEnhancement()) {
@@ -34,11 +36,12 @@ public class ProtoExtensionConverter {
    * <p>Override to provide a custom converter for {@link
    * io.substrait.proto.AdvancedExtension#getOptimizationList()} ()} data
    *
-   * @param any the proto to convert the {@link AdvancedExtension.Optimization} from
+   * @param any the proto to convert the {@link AdvancedExtension.Optimization} from, must not be
+   *     null
    * @return the converted {@link AdvancedExtension.Optimization}
    */
   protected AdvancedExtension.Optimization optimizationFromAdvancedExtension(
-      com.google.protobuf.Any any) {
+      com.google.protobuf.@NonNull Any any) {
     throw new UnsupportedOperationException(
         "missing deserialization logic for AdvancedExtension.Optimization");
   }
@@ -49,11 +52,12 @@ public class ProtoExtensionConverter {
    * <p>Override to provide a custom converter for {@link
    * io.substrait.proto.AdvancedExtension#getEnhancement()} ()} data
    *
-   * @param any the proto to convert the {@link AdvancedExtension.Enhancement} from
+   * @param any the proto to convert the {@link AdvancedExtension.Enhancement} from, must not be
+   *     null
    * @return the converted {@link AdvancedExtension.Enhancement}
    */
   protected AdvancedExtension.Enhancement enhancementFromAdvancedExtension(
-      com.google.protobuf.Any any) {
+      com.google.protobuf.@NonNull Any any) {
     throw new UnsupportedOperationException(
         "missing deserialization logic for AdvancedExtension.Enhancement");
   }

@@ -1,6 +1,7 @@
 package io.substrait.extension;
 
 import com.google.protobuf.Any;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Converter from {@link AdvancedExtension} to proto.
@@ -13,11 +14,11 @@ public class ExtensionProtoConverter<
   /**
    * Converts an {@link AdvancedExtension} to {@link io.substrait.proto.AdvancedExtension}.
    *
-   * @param advancedExtension the {@link AdvancedExtension} to convert
+   * @param advancedExtension the {@link AdvancedExtension} to convert, must not be null
    * @return the converted {@link io.substrait.proto.AdvancedExtension}
    */
   public io.substrait.proto.AdvancedExtension toProto(
-      final AdvancedExtension<O, E> advancedExtension) {
+      @NonNull final AdvancedExtension<O, E> advancedExtension) {
     final io.substrait.proto.AdvancedExtension.Builder builder =
         io.substrait.proto.AdvancedExtension.newBuilder();
     advancedExtension.getEnhancement().ifPresent(e -> builder.setEnhancement(toProto(e)));
@@ -30,10 +31,10 @@ public class ExtensionProtoConverter<
    *
    * <p>Override to provide a custom converter for {@link AdvancedExtension.Optimization} data.
    *
-   * @param optimization the {@link AdvancedExtension.Optimization} to convert
+   * @param optimization the {@link AdvancedExtension.Optimization} to convert, must not be null
    * @return the converted proto
    */
-  protected Any toProto(final O optimization) {
+  protected Any toProto(@NonNull final O optimization) {
     throw new UnsupportedOperationException(
         "missing serialization logic for AdvancedExtension.Optimization");
   }
@@ -43,10 +44,10 @@ public class ExtensionProtoConverter<
    *
    * <p>Override to provide a custom converter for {@link AdvancedExtension.Enhancement} data.
    *
-   * @param enhancement the {@link AdvancedExtension.Enhancement} to convert
+   * @param enhancement the {@link AdvancedExtension.Enhancement} to convert, must not be null
    * @return the converted proto
    */
-  protected Any toProto(final E enhancement) {
+  protected Any toProto(@NonNull final E enhancement) {
     throw new UnsupportedOperationException(
         "missing serialization logic for AdvancedExtension.Enhancement");
   }

@@ -4,37 +4,58 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.ProtoExtensionConverter;
-import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.SimpleExtension.ExtensionCollection;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Plan} to {@link io.substrait.plan.Plan} */
 public class ProtoPlanConverter {
+  @NonNull protected final ExtensionCollection extensionCollection;
 
-  protected final SimpleExtension.ExtensionCollection extensionCollection;
-  protected final ProtoExtensionConverter protoExtensionConverter;
+  @NonNull protected final ProtoExtensionConverter protoExtensionConverter;
 
+  /** Default constructor. */
   public ProtoPlanConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public ProtoPlanConverter(final SimpleExtension.ExtensionCollection extensionCollection) {
+  /**
+   * Constructor with a custom {@link ExtensionCollection}.
+   *
+   * @param extensionCollection custom {@link ExtensionCollection} to use, must not be null
+   */
+  public ProtoPlanConverter(@NonNull final ExtensionCollection extensionCollection) {
     this(extensionCollection, new ProtoExtensionConverter());
   }
 
-  public ProtoPlanConverter(final ProtoExtensionConverter protoExtensionConverter) {
+  /**
+   * Constructor with a custom {@link ProtoExtensionConverter}.
+   *
+   * @param protoExtensionConverter custom {@link ProtoExtensionConverter} to use, must not be null
+   */
+  public ProtoPlanConverter(@NonNull final ProtoExtensionConverter protoExtensionConverter) {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExtensionConverter);
   }
 
+  /**
+   * Constructor with custom {@link ExtensionCollection} and {@link ProtoExtensionConverter}.
+   *
+   * @param extensionCollection custom {@link ExtensionCollection} to use, must not be null
+   * @param protoExtensionConverter custom {@link ProtoExtensionConverter} to use, must not be null
+   */
   public ProtoPlanConverter(
-      final SimpleExtension.ExtensionCollection extensionCollection,
-      final ProtoExtensionConverter protoExtensionConverter) {
+      @NonNull final ExtensionCollection extensionCollection,
+      @NonNull final ProtoExtensionConverter protoExtensionConverter) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
+    }
+    if (protoExtensionConverter == null) {
+      throw new IllegalArgumentException("ProtoExtensionConverter is required");
     }
     this.extensionCollection = extensionCollection;
     this.protoExtensionConverter = protoExtensionConverter;

@@ -52,24 +52,44 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.relation.Rel} to {@link io.substrait.proto.Rel} */
 public class RelProtoConverter
     implements RelVisitor<Rel, EmptyVisitationContext, RuntimeException> {
 
-  protected final ExpressionProtoConverter exprProtoConverter;
-  protected final TypeProtoConverter typeProtoConverter;
-  protected final ExtensionProtoConverter extensionProtoConverter;
+  @NonNull protected final ExpressionProtoConverter exprProtoConverter;
+  @NonNull protected final TypeProtoConverter typeProtoConverter;
+  @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
-  protected final ExtensionCollector extensionCollector;
+  @NonNull protected final ExtensionCollector extensionCollector;
 
-  public RelProtoConverter(final ExtensionCollector extensionCollector) {
-    this(extensionCollector, new ExtensionProtoConverter());
+  /**
+   * Constructor with custom {@link ExtensionCollector}.
+   *
+   * @param extensionCollector the custom {@link ExtensionCollector} to use, must not be null
+   */
+  public RelProtoConverter(@NonNull final ExtensionCollector extensionCollector) {
+    this(extensionCollector, new ExtensionProtoConverter<>());
   }
 
+  /**
+   * Constructor with custom {@link ExtensionCollector} and custom {@link ExtensionProtoConverter}.
+   *
+   * @param extensionCollector the custom {@link ExtensionCollector} to use, must not be null
+   * @param extensionProtoConverter the custom {@link ExtensionProtoConverter} to use, must not be
+   *     null
+   */
   public RelProtoConverter(
-      final ExtensionCollector extensionCollector,
-      final ExtensionProtoConverter extensionProtoConverter) {
+      @NonNull final ExtensionCollector extensionCollector,
+      @NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter) {
+    if (extensionCollector == null) {
+      throw new IllegalArgumentException("ExtensionCollector is required");
+    }
+    if (extensionProtoConverter == null) {
+      throw new IllegalArgumentException("ExtensionProtoConverter is required");
+    }
+
     this.extensionCollector = extensionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
