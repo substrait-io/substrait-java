@@ -14,7 +14,9 @@ import io.substrait.hint.Hint.SavedComputation;
 import io.substrait.hint.Hint.Stats;
 import io.substrait.hint.ImmutableRuntimeConstraint;
 import io.substrait.hint.ImmutableStats;
-import io.substrait.relation.utils.StringHolder;
+import io.substrait.utils.StringHolder;
+import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
+import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Nested;
@@ -54,38 +56,96 @@ public class ProtoRelConverterTest extends TestBase {
 
     @Test
     void emptyAdvancedExtension() {
-      Rel rel = emptyAdvancedExtension;
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel rel = emptyAdvancedExtension;
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+      final Rel relReturned = protoRelConverter.from(protoRel);
       assertEquals(rel, relReturned);
     }
 
     @Test
-    void enhancementOnlyAdvancedExtension() {
-      Rel rel = advancedExtensionWithEnhancement;
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(RuntimeException.class, () -> protoRelConverter.from(protoRel));
+    void enhancementOnlyAdvancedExtensionWithoutExtensionProtoConverter() {
+      final Rel rel = advancedExtensionWithEnhancement;
+
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> relProtoConverter.toProto(rel),
+          "missing serialization logic for AdvancedExtension.Enhancement");
     }
 
     @Test
-    void optimizationOnlyAdvancedExtension() {
-      Rel rel = advancedExtensionWithOptimization;
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+    void enhancementOnlyAdvancedExtensionWithExtensionProtoConverter() {
+      final Rel rel = advancedExtensionWithEnhancement;
+      final io.substrait.proto.Rel protoRel =
+          new RelProtoConverter(
+                  functionCollector, new StringHolderHandlingExtensionProtoConverter())
+              .toProto(rel);
 
-      // The optimization is serialized correctly to protobuf.
-      // When it is read back in, the default ProtoRelConverter drops it.
-      // As such they are not equal anymore.
-      assertNotEquals(rel, relReturned);
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> protoRelConverter.from(protoRel),
+          "missing deserialization logic for AdvancedExtension.Enhancement");
+    }
+
+    @Test
+    void optimizationOnlyAdvancedExtensionWithoutExtensionProtoConverter() {
+      final Rel rel = advancedExtensionWithOptimization;
+
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> relProtoConverter.toProto(rel),
+          "missing serialization logic for AdvancedExtension.Optimization");
+    }
+
+    @Test
+    void optimizationOnlyAdvancedExtensionWithExtensionProtoConverter() {
+      final Rel rel = advancedExtensionWithOptimization;
+
+      final io.substrait.proto.Rel protoRel =
+          new RelProtoConverter(
+                  functionCollector, new StringHolderHandlingExtensionProtoConverter())
+              .toProto(rel);
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> protoRelConverter.from(protoRel),
+          "missing serialization logic for AdvancedExtension.Optimization");
+    }
+
+    @Test
+    void optimizationOnlyAdvancedExtensionWithExtensionProtoConverterAndProtoExtensionConverter() {
+      final Rel rel = advancedExtensionWithOptimization;
+
+      final io.substrait.proto.Rel protoRel =
+          new RelProtoConverter(
+                  functionCollector, new StringHolderHandlingExtensionProtoConverter())
+              .toProto(rel);
+
+      final Rel relFromProto =
+          new ProtoRelConverter(
+                  functionCollector,
+                  defaultExtensionCollection,
+                  new StringHolderHandlingProtoExtensionConverter())
+              .from(protoRel);
+
+      assertEquals(rel, relFromProto);
     }
 
     @Test
     void advancedExtensionWithEnhancementAndOptimization() {
-      Rel rel = advancedExtensionWithEnhancementAndOptimization;
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      // Enhancements are not handled by the default ProtoRelConverter
-      assertThrows(RuntimeException.class, () -> protoRelConverter.from(protoRel));
+      final Rel rel = advancedExtensionWithEnhancementAndOptimization;
+
+      final io.substrait.proto.Rel protoRel =
+          new RelProtoConverter(
+                  functionCollector, new StringHolderHandlingExtensionProtoConverter())
+              .toProto(rel);
+
+      final Rel relFromProto =
+          new ProtoRelConverter(
+                  functionCollector,
+                  defaultExtensionCollection,
+                  new StringHolderHandlingProtoExtensionConverter())
+              .from(protoRel);
+
+      assertEquals(rel, relFromProto);
     }
   }
 

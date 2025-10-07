@@ -1,6 +1,9 @@
-package io.substrait.relation.utils;
+package io.substrait.utils;
 
 import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.StringValue;
+import io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.Extension;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
@@ -18,8 +21,8 @@ import java.util.Objects;
  * <p>Used to verify serde of {@link com.google.protobuf.Any} fields in the spec.
  */
 public class StringHolder
-    implements Extension.Enhancement,
-        Extension.Optimization,
+    implements AdvancedExtension.Enhancement,
+        AdvancedExtension.Optimization,
         Extension.LeafRelDetail,
         Extension.SingleRelDetail,
         Extension.MultiRelDetail,
@@ -27,10 +30,25 @@ public class StringHolder
         Extension.WriteExtensionObject,
         Extension.DdlExtensionObject {
 
+  private static final String PROTO_TYPE_URL = "type.googleapis.com/google.protobuf.StringValue";
+
   private final String value;
 
   public StringHolder(String value) {
     this.value = value;
+  }
+
+  public static StringHolder fromProto(final Any any) {
+    try {
+      if (PROTO_TYPE_URL.equals(any.getTypeUrl())) {
+        return new StringHolder(any.unpack(StringValue.class).getValue());
+      }
+    } catch (InvalidProtocolBufferException e) {
+      throw new IllegalStateException(e);
+    }
+
+    throw new IllegalArgumentException(
+        String.format("Missing handler for protobuf with type URL: %s", any.getTypeUrl()));
   }
 
   @Override

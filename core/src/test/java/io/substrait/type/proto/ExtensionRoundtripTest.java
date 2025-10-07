@@ -20,17 +20,19 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
-import io.substrait.relation.utils.StringHolder;
-import io.substrait.relation.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.utils.StringHolder;
+import io.substrait.utils.StringHolderHandlingProtoRelConverter;
+import io.substrait.utils.StringHolderHandlingRelProtoConverter;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,6 +68,8 @@ public class ExtensionRoundtripTest extends TestBase {
 
   @Override
   protected void verifyRoundTrip(Rel rel) {
+    RelProtoConverter relProtoConverter =
+        new StringHolderHandlingRelProtoConverter(functionCollector);
     io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
     Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);
