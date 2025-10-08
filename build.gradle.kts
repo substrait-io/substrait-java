@@ -44,7 +44,7 @@ allprojects {
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        forbidWildcardImports()
+        removeWildcardImports()
       }
     }
   }
