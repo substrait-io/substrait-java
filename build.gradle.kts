@@ -9,12 +9,25 @@ plugins {
   id("idea")
   alias(libs.plugins.gradle.extensions)
   alias(libs.plugins.spotless)
-  alias(libs.plugins.jreleaser) apply false
+  alias(libs.plugins.nmcp).apply(false)
+  alias(libs.plugins.nmcp.aggregation)
 }
 
 repositories { mavenCentral() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+
+nmcpAggregation {
+  centralPortal {
+    username =
+      System.getenv("MAVENCENTRAL_USERNAME").takeUnless { it.isNullOrEmpty() }
+        ?: extra["MAVENCENTRAL_USERNAME"].toString()
+    password =
+      System.getenv("MAVENCENTRAL_PASSWORD").takeUnless { it.isNullOrEmpty() }
+        ?: extra["MAVENCENTRAL_PASSWORD"].toString()
+    publishingType = "AUTOMATIC"
+  }
+}
 
 dependencies {
   testImplementation(platform(libs.junit.bom))
@@ -23,6 +36,10 @@ dependencies {
   implementation(libs.slf4j.api)
   annotationProcessor(libs.immutables.value)
   compileOnly(libs.immutables.annotations)
+
+  nmcpAggregation(project(":core"))
+  nmcpAggregation(project(":spark"))
+  nmcpAggregation(project(":isthmus"))
 }
 
 allprojects {
@@ -44,7 +61,7 @@ allprojects {
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        removeWildcardImports()
+        forbidWildcardImports()
       }
     }
   }
