@@ -62,6 +62,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
           submodules: recursive
       - name: Set up JDK 17
         uses: actions/setup-java@v5
