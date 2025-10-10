@@ -4,12 +4,11 @@ import com.github.vlsi.gradle.dsl.configureEach
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
-  `maven-publish`
   id("java")
   id("idea")
   alias(libs.plugins.gradle.extensions)
   alias(libs.plugins.spotless)
-  alias(libs.plugins.jreleaser) apply false
+  alias(libs.plugins.publish).apply(false)
 }
 
 repositories { mavenCentral() }
@@ -44,7 +43,7 @@ allprojects {
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
-        removeWildcardImports()
+        forbidWildcardImports()
       }
     }
   }
