@@ -90,7 +90,7 @@ public class ProtoTypeConverter {
         {
           io.substrait.proto.Type.UserDefined userDefined = type.getUserDefined();
           SimpleExtension.Type t = lookup.getType(userDefined.getTypeReference(), extensions);
-          return n(userDefined.getNullability()).userDefined(t.uri(), t.name());
+          return n(userDefined.getNullability()).userDefined(t.urn(), t.name());
         }
       case USER_DEFINED_TYPE_REFERENCE:
         throw new UnsupportedOperationException("Unsupported user defined reference: " + type);

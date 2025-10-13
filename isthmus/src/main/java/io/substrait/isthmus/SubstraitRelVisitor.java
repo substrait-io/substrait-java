@@ -6,6 +6,8 @@ import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.rel.CreateTable;
+import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.FunctionMappings;
@@ -14,6 +16,7 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
+import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Aggregate.Grouping;
@@ -26,6 +29,7 @@ import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.ImmutableMeasure.Builder;
 import io.substrait.relation.Join;
 import io.substrait.relation.Join.JoinType;
+import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
@@ -50,6 +54,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -462,8 +467,50 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
   }
 
+  private NamedStruct getSchema(final RelNode queryRelRoot) {
+    final RelDataType rowType = queryRelRoot.getRowType();
+    return typeConverter.toNamedStruct(rowType);
+  }
+
+  public Rel handleCreateTable(CreateTable createTable) {
+    RelNode input = createTable.getInput();
+    Rel inputRel = apply(input);
+    NamedStruct schema = getSchema(input);
+    return NamedWrite.builder()
+        .input(inputRel)
+        .tableSchema(schema)
+        .operation(AbstractWriteRel.WriteOp.CTAS)
+        .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
+        .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+        .names(createTable.getTableName())
+        .build();
+  }
+
+  public Rel handleCreateView(CreateView createView) {
+    RelNode input = createView.getInput();
+    Rel inputRel = apply(input);
+
+    final Expression.StructLiteral defaults = ExpressionCreator.struct(false);
+
+    return NamedDdl.builder()
+        .viewDefinition(inputRel)
+        .tableSchema(getSchema(input))
+        .tableDefaults(defaults)
+        .operation(AbstractDdlRel.DdlOp.CREATE)
+        .object(AbstractDdlRel.DdlObject.VIEW)
+        .names(createView.getViewName())
+        .build();
+  }
+
   @Override
   public Rel visitOther(RelNode other) {
+    if (other instanceof CreateTable) {
+      return handleCreateTable((CreateTable) other);
+
+    } else if (other instanceof CreateView) {
+      return handleCreateView((CreateView) other);
+    }
+
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 

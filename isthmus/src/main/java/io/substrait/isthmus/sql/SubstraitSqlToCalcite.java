@@ -1,6 +1,7 @@
 package io.substrait.isthmus.sql;
 
 import io.substrait.isthmus.SubstraitTypeSystem;
+import io.substrait.isthmus.calcite.rel.DdlSqlToRelConverter;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -168,10 +169,17 @@ public class SubstraitSqlToCalcite {
     boolean needsValidation = true;
     // query is the root of the tree
     boolean top = true;
+    DdlSqlToRelConverter ddlSqlToRelConverter = new DdlSqlToRelConverter(converter);
     return sqlNodes.stream()
         .map(
-            sqlNode ->
-                removeRedundantProjects(converter.convertQuery(sqlNode, needsValidation, top)))
+            sqlNode -> {
+              RelRoot relRoot = sqlNode.accept(ddlSqlToRelConverter);
+              if (relRoot == null) {
+                relRoot =
+                    removeRedundantProjects(converter.convertQuery(sqlNode, needsValidation, top));
+              }
+              return relRoot;
+            })
         .collect(Collectors.toList());
   }
 

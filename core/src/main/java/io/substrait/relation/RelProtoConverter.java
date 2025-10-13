@@ -6,6 +6,7 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.proto.AggregateFunction;
@@ -51,20 +52,48 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.relation.Rel} to {@link io.substrait.proto.Rel} */
 public class RelProtoConverter
     implements RelVisitor<Rel, EmptyVisitationContext, RuntimeException> {
 
-  protected final ExpressionProtoConverter exprProtoConverter;
-  protected final TypeProtoConverter typeProtoConverter;
+  @NonNull protected final ExpressionProtoConverter exprProtoConverter;
+  @NonNull protected final TypeProtoConverter typeProtoConverter;
+  @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
-  protected final ExtensionCollector extensionCollector;
+  @NonNull protected final ExtensionCollector extensionCollector;
 
-  public RelProtoConverter(ExtensionCollector extensionCollector) {
+  /**
+   * Constructor with custom {@link ExtensionCollector}.
+   *
+   * @param extensionCollector the custom {@link ExtensionCollector} to use, must not be null
+   */
+  public RelProtoConverter(@NonNull final ExtensionCollector extensionCollector) {
+    this(extensionCollector, new ExtensionProtoConverter<>());
+  }
+
+  /**
+   * Constructor with custom {@link ExtensionCollector} and custom {@link ExtensionProtoConverter}.
+   *
+   * @param extensionCollector the custom {@link ExtensionCollector} to use, must not be null
+   * @param extensionProtoConverter the custom {@link ExtensionProtoConverter} to use, must not be
+   *     null
+   */
+  public RelProtoConverter(
+      @NonNull final ExtensionCollector extensionCollector,
+      @NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter) {
+    if (extensionCollector == null) {
+      throw new IllegalArgumentException("ExtensionCollector is required");
+    }
+    if (extensionProtoConverter == null) {
+      throw new IllegalArgumentException("ExtensionProtoConverter is required");
+    }
+
     this.extensionCollector = extensionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
+    this.extensionProtoConverter = extensionProtoConverter;
   }
 
   public ExpressionProtoConverter getExpressionProtoConverter() {
@@ -126,7 +155,9 @@ public class RelProtoConverter
             .addAllMeasures(
                 aggregate.getMeasures().stream().map(this::toProto).collect(Collectors.toList()));
 
-    aggregate.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    aggregate
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setAggregate(builder).build();
   }
 
@@ -191,7 +222,9 @@ public class RelProtoConverter
             // -1 is used as a sentinel value to signal LIMIT ALL
             .setCount(fetch.getCount().orElse(-1));
 
-    fetch.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    fetch
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setFetch(builder).build();
   }
 
@@ -203,7 +236,9 @@ public class RelProtoConverter
             .setInput(toProto(filter.getInput()))
             .setCondition(toProto(filter.getCondition()));
 
-    filter.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    filter
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setFilter(builder).build();
   }
 
@@ -220,7 +255,8 @@ public class RelProtoConverter
 
     join.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    join.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    join.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setJoin(builder).build();
   }
 
@@ -234,7 +270,8 @@ public class RelProtoConverter
               builder.addInputs(toProto(inputRel));
             });
 
-    set.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    set.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setSet(builder).build();
   }
 
@@ -249,7 +286,9 @@ public class RelProtoConverter
     namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     namedScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
-    namedScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    namedScan
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -269,7 +308,9 @@ public class RelProtoConverter
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
     localFiles.getBestEffortFilter().ifPresent(t -> builder.setBestEffortFilter(toProto(t)));
 
-    localFiles.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    localFiles
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder.build()).build();
   }
 
@@ -284,7 +325,9 @@ public class RelProtoConverter
             .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
             .setExtensionTable(extensionTableBuilder);
 
-    extensionTable.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    extensionTable
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -309,7 +352,9 @@ public class RelProtoConverter
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    hashJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    hashJoin
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setHashJoin(builder).build();
   }
 
@@ -334,7 +379,9 @@ public class RelProtoConverter
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
-    mergeJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    mergeJoin
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setMergeJoin(builder).build();
   }
 
@@ -349,7 +396,9 @@ public class RelProtoConverter
             .setExpression(toProto(nestedLoopJoin.getCondition()))
             .setType(nestedLoopJoin.getJoinType().toProto());
 
-    nestedLoopJoin.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    nestedLoopJoin
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setNestedLoopJoin(builder).build();
   }
 
@@ -369,7 +418,7 @@ public class RelProtoConverter
 
     consistentPartitionWindow
         .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
 
     return Rel.newBuilder().setWindow(builder).build();
   }
@@ -451,7 +500,9 @@ public class RelProtoConverter
                     .map(this::toProto)
                     .collect(Collectors.toList()))
             .setCondition(toProto(update.getCondition()));
-    update.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    update
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setUpdate(builder).build();
   }
 
@@ -511,7 +562,9 @@ public class RelProtoConverter
             .setInput(toProto(project.getInput()))
             .addAllExpressions(toProto(project.getExpressions()));
 
-    project.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    project
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setProject(builder).build();
   }
 
@@ -555,7 +608,8 @@ public class RelProtoConverter
             .setInput(toProto(sort.getInput()))
             .addAllSorts(toProtoS(sort.getSortFields()));
 
-    sort.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    sort.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setSort(builder).build();
   }
 
@@ -567,7 +621,9 @@ public class RelProtoConverter
             .setLeft(toProto(cross.getLeft()))
             .setRight(toProto(cross.getRight()));
 
-    cross.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    cross
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setCross(builder).build();
   }
 
@@ -590,7 +646,9 @@ public class RelProtoConverter
     virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     virtualTableScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
 
-    virtualTableScan.getExtension().ifPresent(ae -> builder.setAdvancedExtension(ae.toProto(this)));
+    virtualTableScan
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
   }
 
@@ -631,7 +689,8 @@ public class RelProtoConverter
   private RelCommon common(io.substrait.relation.Rel rel) {
     RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getCommonExtension()
-        .ifPresent(extension -> builder.setAdvancedExtension(extension.toProto(this)));
+        .ifPresent(
+            extension -> builder.setAdvancedExtension(extensionProtoConverter.toProto(extension)));
 
     io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
     if (remap != null) {
@@ -651,7 +710,10 @@ public class RelProtoConverter
         io.substrait.hint.Hint.Stats stats = hint.getStats().get();
         Stats.Builder statsBuilder = Stats.newBuilder();
 
-        stats.getExtension().ifPresent(ae -> statsBuilder.setAdvancedExtension(ae.toProto(this)));
+        stats
+            .getExtension()
+            .ifPresent(
+                ae -> statsBuilder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
         hintBuilder.setStats(
             statsBuilder.setRowCount(stats.rowCount()).setRecordSize(stats.recordSize()));
       }
@@ -660,7 +722,8 @@ public class RelProtoConverter
         io.substrait.hint.Hint.RuntimeConstraint rc = hint.getRuntimeConstraint().get();
         RuntimeConstraint.Builder rcBuilder = RuntimeConstraint.newBuilder();
 
-        rc.getExtension().ifPresent(ae -> rcBuilder.setAdvancedExtension(ae.toProto(this)));
+        rc.getExtension()
+            .ifPresent(ae -> rcBuilder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
         hintBuilder.setConstraint(rcBuilder);
       }
 

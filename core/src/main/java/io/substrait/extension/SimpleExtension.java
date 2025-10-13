@@ -1,10 +1,10 @@
 package io.substrait.extension;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,13 +22,15 @@ import io.substrait.util.Util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -42,12 +44,28 @@ import org.slf4j.LoggerFactory;
 public class SimpleExtension {
   private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtension.class);
 
-  // Key for looking up URI in InjectableValues
-  public static final String URI_LOCATOR_KEY = "uri";
+  // Key for looking up URN in InjectableValues
+  public static final String URN_LOCATOR_KEY = "urn";
 
-  private static ObjectMapper objectMapper(String namespace) {
+  private static final Predicate<String> URN_CHECKER =
+      Pattern.compile("^extension:[^:]+:[^:]+$").asPredicate();
+
+  // `\A` means beginning of input. Using it as a delimiter in a scanner reads in the whole file.
+  private static Pattern READ_WHOLE_FILE = Pattern.compile("\\A");
+
+  private static void validateUrn(String urn) {
+    if (urn == null || urn.trim().isEmpty()) {
+      throw new IllegalArgumentException("URN cannot be null or empty");
+    }
+    if (!URN_CHECKER.test(urn)) {
+      throw new IllegalArgumentException(
+          "URN must follow format 'extension:<namespace>:<name>', got: " + urn);
+    }
+  }
+
+  private static ObjectMapper objectMapper(String urn) {
     InjectableValues.Std iv = new InjectableValues.Std();
-    iv.addValue(URI_LOCATOR_KEY, namespace);
+    iv.addValue(URN_LOCATOR_KEY, urn);
 
     return new ObjectMapper(new YAMLFactory())
         .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
@@ -185,25 +203,22 @@ public class SimpleExtension {
   }
 
   public interface Anchor {
-    String namespace();
+    String urn();
 
     String key();
   }
 
   @Value.Immutable
   public interface FunctionAnchor extends Anchor {
-    static FunctionAnchor of(String namespace, String key) {
-      return ImmutableSimpleExtension.FunctionAnchor.builder()
-          .namespace(namespace)
-          .key(key)
-          .build();
+    static FunctionAnchor of(String urn, String key) {
+      return ImmutableSimpleExtension.FunctionAnchor.builder().urn(urn).key(key).build();
     }
   }
 
   @Value.Immutable
   public interface TypeAnchor extends Anchor {
-    static TypeAnchor of(String namespace, String name) {
-      return ImmutableSimpleExtension.TypeAnchor.builder().namespace(namespace).key(name).build();
+    static TypeAnchor of(String urn, String name) {
+      return ImmutableSimpleExtension.TypeAnchor.builder().urn(urn).key(name).build();
     }
   }
 
@@ -227,7 +242,7 @@ public class SimpleExtension {
 
   public abstract static class Function {
     private final Supplier<FunctionAnchor> anchorSupplier =
-        Util.memoize(() -> FunctionAnchor.of(uri(), key()));
+        Util.memoize(() -> FunctionAnchor.of(urn(), key()));
     private final Supplier<String> keySupplier = Util.memoize(() -> constructKey(name(), args()));
     private final Supplier<List<Argument>> requiredArgsSupplier =
         Util.memoize(
@@ -242,8 +257,8 @@ public class SimpleExtension {
     }
 
     @Value.Default
-    public String uri() {
-      // we can't use null detection here since we initially construct this without a uri, then
+    public String urn() {
+      // we can't use null detection here since we initially construct this without a urn, then
       // resolve later.
       return "";
     }
@@ -367,8 +382,8 @@ public class SimpleExtension {
 
     public abstract List<ScalarFunctionVariant> impls();
 
-    public Stream<ScalarFunctionVariant> resolve(String uri) {
-      return impls().stream().map(f -> f.resolve(uri, name(), description()));
+    public Stream<ScalarFunctionVariant> resolve(String urn) {
+      return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
   }
 
@@ -376,9 +391,9 @@ public class SimpleExtension {
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @Value.Immutable
   public abstract static class ScalarFunctionVariant extends Function {
-    public ScalarFunctionVariant resolve(String uri, String name, String description) {
+    public ScalarFunctionVariant resolve(String urn, String name, String description) {
       return ImmutableSimpleExtension.ScalarFunctionVariant.builder()
-          .uri(uri)
+          .urn(urn)
           .name(name)
           .description(description)
           .nullability(nullability())
@@ -403,8 +418,8 @@ public class SimpleExtension {
 
     public abstract List<AggregateFunctionVariant> impls();
 
-    public Stream<AggregateFunctionVariant> resolve(String uri) {
-      return impls().stream().map(f -> f.resolve(uri, name(), description()));
+    public Stream<AggregateFunctionVariant> resolve(String urn) {
+      return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
   }
 
@@ -420,8 +435,8 @@ public class SimpleExtension {
 
     public abstract List<WindowFunctionVariant> impls();
 
-    public Stream<WindowFunctionVariant> resolve(String uri) {
-      return impls().stream().map(f -> f.resolve(uri, name(), description()));
+    public Stream<WindowFunctionVariant> resolve(String urn) {
+      return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
 
     public static ImmutableSimpleExtension.WindowFunction.Builder builder() {
@@ -447,9 +462,9 @@ public class SimpleExtension {
     @Nullable
     public abstract TypeExpression intermediate();
 
-    AggregateFunctionVariant resolve(String uri, String name, String description) {
+    AggregateFunctionVariant resolve(String urn, String name, String description) {
       return ImmutableSimpleExtension.AggregateFunctionVariant.builder()
-          .uri(uri)
+          .urn(urn)
           .name(name)
           .description(description)
           .nullability(nullability())
@@ -489,9 +504,9 @@ public class SimpleExtension {
       return super.toString();
     }
 
-    WindowFunctionVariant resolve(String uri, String name, String description) {
+    WindowFunctionVariant resolve(String urn, String name, String description) {
       return ImmutableSimpleExtension.WindowFunctionVariant.builder()
-          .uri(uri)
+          .urn(urn)
           .name(name)
           .description(description)
           .nullability(nullability())
@@ -516,12 +531,12 @@ public class SimpleExtension {
   @Value.Immutable
   public abstract static class Type {
     private final Supplier<TypeAnchor> anchorSupplier =
-        Util.memoize(() -> TypeAnchor.of(uri(), name()));
+        Util.memoize(() -> TypeAnchor.of(urn(), name()));
 
     public abstract String name();
 
-    @JacksonInject(SimpleExtension.URI_LOCATOR_KEY)
-    public abstract String uri();
+    @JacksonInject(SimpleExtension.URN_LOCATOR_KEY)
+    public abstract String urn();
 
     // TODO: Handle conversion of structure object to Named Struct representation
     protected abstract Optional<Object> structure();
@@ -533,10 +548,14 @@ public class SimpleExtension {
 
   @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @JsonSerialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
+  @JsonIgnoreProperties(ignoreUnknown = true)
   @Value.Immutable
   public abstract static class ExtensionSignatures {
     @JsonProperty("types")
     public abstract List<Type> types();
+
+    @JsonProperty("urn")
+    public abstract String urn();
 
     @JsonProperty("scalar_functions")
     public abstract List<ScalarFunction> scalars();
@@ -554,27 +573,27 @@ public class SimpleExtension {
           + (windows() == null ? 0 : windows().size());
     }
 
-    public Stream<SimpleExtension.Function> resolve(String uri) {
+    public Stream<SimpleExtension.Function> resolve(String urn) {
       return Stream.concat(
           Stream.concat(
-              scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(uri)),
+              scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(urn)),
               aggregates() == null
                   ? Stream.of()
-                  : aggregates().stream().flatMap(f -> f.resolve(uri))),
-          windows() == null ? Stream.of() : windows().stream().flatMap(f -> f.resolve(uri)));
+                  : aggregates().stream().flatMap(f -> f.resolve(urn))),
+          windows() == null ? Stream.of() : windows().stream().flatMap(f -> f.resolve(urn)));
     }
   }
 
   @Value.Immutable
   public abstract static class ExtensionCollection {
-    private final Supplier<Set<String>> namespaceSupplier =
+    private final Supplier<Set<String>> urnSupplier =
         Util.memoize(
             () -> {
               return Stream.concat(
                       Stream.concat(
-                          scalarFunctions().stream().map(Function::uri),
-                          aggregateFunctions().stream().map(Function::uri)),
-                      windowFunctions().stream().map(Function::uri))
+                          scalarFunctions().stream().map(Function::urn),
+                          aggregateFunctions().stream().map(Function::urn)),
+                      windowFunctions().stream().map(Function::urn))
                   .collect(Collectors.toSet());
             });
 
@@ -611,6 +630,11 @@ public class SimpleExtension {
                           Function::getAnchor, java.util.function.Function.identity()));
             });
 
+    @Value.Default
+    BidiMap<String, String> uriUrnMap() {
+      return new BidiMap<>();
+    }
+
     public abstract List<Type> types();
 
     public abstract List<ScalarFunctionVariant> scalarFunctions();
@@ -628,11 +652,11 @@ public class SimpleExtension {
       if (type != null) {
         return type;
       }
-      checkNamespace(anchor.namespace());
+      checkUrn(anchor.urn());
       throw new IllegalArgumentException(
           String.format(
-              "Unexpected type with name %s. The namespace %s is loaded but no type with this name found.",
-              anchor.key(), anchor.namespace()));
+              "Unexpected type with name %s. The URN %s is loaded but no type with this name found.",
+              anchor.key(), anchor.urn()));
     }
 
     public ScalarFunctionVariant getScalarFunction(FunctionAnchor anchor) {
@@ -640,16 +664,16 @@ public class SimpleExtension {
       if (variant != null) {
         return variant;
       }
-      checkNamespace(anchor.namespace());
+      checkUrn(anchor.urn());
       throw new IllegalArgumentException(
           String.format(
-              "Unexpected scalar function with key %s. The namespace %s is loaded "
+              "Unexpected scalar function with key %s. The URN %s is loaded "
                   + "but no scalar function with this key found.",
-              anchor.key(), anchor.namespace()));
+              anchor.key(), anchor.urn()));
     }
 
-    private void checkNamespace(String name) {
-      if (namespaceSupplier.get().contains(name)) {
+    private void checkUrn(String name) {
+      if (urnSupplier.get().contains(name)) {
         return;
       }
 
@@ -666,12 +690,12 @@ public class SimpleExtension {
         return variant;
       }
 
-      checkNamespace(anchor.namespace());
+      checkUrn(anchor.urn());
       throw new IllegalArgumentException(
           String.format(
-              "Unexpected aggregate function with key %s. The namespace %s is loaded "
+              "Unexpected aggregate function with key %s. The URN %s is loaded "
                   + "but no aggregate function with this key was found.",
-              anchor.key(), anchor.namespace()));
+              anchor.key(), anchor.urn()));
     }
 
     public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
@@ -679,15 +703,39 @@ public class SimpleExtension {
       if (variant != null) {
         return variant;
       }
-      checkNamespace(anchor.namespace());
+      checkUrn(anchor.urn());
       throw new IllegalArgumentException(
           String.format(
-              "Unexpected window aggregate function with key %s. The namespace %s is loaded "
+              "Unexpected window aggregate function with key %s. The URN %s is loaded "
                   + "but no window aggregate function with this key was found.",
-              anchor.key(), anchor.namespace()));
+              anchor.key(), anchor.urn()));
+    }
+
+    /**
+     * Gets the URI for a given URN. This is for internal framework use during URI/URN migration.
+     *
+     * @param urn The URN to look up
+     * @return The corresponding URI, or null if not found
+     */
+    String getUriFromUrn(String urn) {
+      return uriUrnMap().reverseGet(urn);
+    }
+
+    /**
+     * Gets the URN for a given URI. This is for internal framework use during URI/URN migration.
+     *
+     * @param uri The URI to look up
+     * @return The corresponding URN, or null if not found
+     */
+    String getUrnFromUri(String uri) {
+      return uriUrnMap().get(uri);
     }
 
     public ExtensionCollection merge(ExtensionCollection extensionCollection) {
+      BidiMap<String, String> mergedUriUrnMap = new BidiMap<>();
+      mergedUriUrnMap.merge(uriUrnMap());
+      mergedUriUrnMap.merge(extensionCollection.uriUrnMap());
+
       return ImmutableSimpleExtension.ExtensionCollection.builder()
           .addAllAggregateFunctions(aggregateFunctions())
           .addAllAggregateFunctions(extensionCollection.aggregateFunctions())
@@ -697,29 +745,9 @@ public class SimpleExtension {
           .addAllWindowFunctions(extensionCollection.windowFunctions())
           .addAllTypes(types())
           .addAllTypes(extensionCollection.types())
+          .uriUrnMap(mergedUriUrnMap)
           .build();
     }
-  }
-
-  public static ExtensionCollection loadDefaults() {
-    List<String> defaultFiles =
-        Arrays.asList(
-                "boolean",
-                "aggregate_generic",
-                "aggregate_approx",
-                "arithmetic_decimal",
-                "arithmetic",
-                "comparison",
-                "datetime",
-                "logarithmic",
-                "rounding",
-                "rounding_decimal",
-                "string")
-            .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
-            .collect(Collectors.toList());
-
-    return load(defaultFiles);
   }
 
   public static ExtensionCollection load(List<String> resourcePaths) {
@@ -745,41 +773,61 @@ public class SimpleExtension {
     return complete;
   }
 
-  public static ExtensionCollection load(String namespace, String str) {
+  public static ExtensionCollection load(String uri, String content) {
     try {
-      ExtensionSignatures doc = objectMapper(namespace).readValue(str, ExtensionSignatures.class);
-      return buildExtensionCollection(namespace, doc);
-    } catch (JsonProcessingException e) {
+      if (uri == null || uri.isEmpty()) {
+        throw new IllegalArgumentException("URI cannot be null or empty");
+      }
+
+      // Parse with basic YAML mapper first to extract URN
+      ObjectMapper basicYamlMapper = new ObjectMapper(new YAMLFactory());
+      com.fasterxml.jackson.databind.JsonNode rootNode = basicYamlMapper.readTree(content);
+      com.fasterxml.jackson.databind.JsonNode urnNode = rootNode.get("urn");
+      if (urnNode == null) {
+        throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
+      }
+      String urn = urnNode.asText();
+      validateUrn(urn);
+
+      ExtensionSignatures docWithoutUri =
+          objectMapper(urn).readValue(content, ExtensionSignatures.class);
+
+      ExtensionSignatures doc =
+          ImmutableSimpleExtension.ExtensionSignatures.builder().from(docWithoutUri).build();
+
+      return buildExtensionCollection(uri, doc);
+    } catch (IOException e) {
       throw new IllegalStateException(e);
     }
   }
 
-  public static ExtensionCollection load(String namespace, InputStream stream) {
-    try {
-      ExtensionSignatures doc =
-          objectMapper(namespace).readValue(stream, ExtensionSignatures.class);
-      return buildExtensionCollection(namespace, doc);
-    } catch (RuntimeException ex) {
-      throw ex;
-    } catch (Exception ex) {
-      throw new IllegalStateException("Failure while parsing " + namespace, ex);
+  public static ExtensionCollection load(String uri, InputStream stream) {
+    try (Scanner scanner = new Scanner(stream)) {
+      scanner.useDelimiter(READ_WHOLE_FILE);
+      String content = scanner.next();
+      return load(uri, content);
     }
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String namespace, ExtensionSignatures extensionSignatures) {
+      String uri, ExtensionSignatures extensionSignatures) {
+    String urn = extensionSignatures.urn();
+    validateUrn(urn);
+    if (uri == null || uri == "") {
+      throw new IllegalArgumentException("URI cannot be null or empty");
+    }
     List<ScalarFunctionVariant> scalarFunctionVariants =
         extensionSignatures.scalars().stream()
-            .flatMap(t -> t.resolve(namespace))
+            .flatMap(t -> t.resolve(urn))
             .collect(Collectors.toList());
 
     List<AggregateFunctionVariant> aggregateFunctionVariants =
         extensionSignatures.aggregates().stream()
-            .flatMap(t -> t.resolve(namespace))
+            .flatMap(t -> t.resolve(urn))
             .collect(Collectors.toList());
 
     Stream<WindowFunctionVariant> windowFunctionVariants =
-        extensionSignatures.windows().stream().flatMap(t -> t.resolve(namespace));
+        extensionSignatures.windows().stream().flatMap(t -> t.resolve(urn));
 
     // Aggregate functions can be used as Window Functions
     Stream<WindowFunctionVariant> windowAggFunctionVariants =
@@ -800,18 +848,23 @@ public class SimpleExtension {
         Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
             .collect(Collectors.toList());
 
+    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    uriUrnMap.put(uri, urn);
+
     ImmutableSimpleExtension.ExtensionCollection collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .scalarFunctions(scalarFunctionVariants)
             .aggregateFunctions(aggregateFunctionVariants)
             .windowFunctions(allWindowFunctionVariants)
             .addAllTypes(extensionSignatures.types())
+            .uriUrnMap(uriUrnMap)
             .build();
+
     LOGGER.atDebug().log(
         "Loaded {} aggregate functions and {} scalar functions from {}.",
         collection.aggregateFunctions().size(),
         collection.scalarFunctions().size(),
-        namespace);
+        extensionSignatures.urn());
     return collection;
   }
 }

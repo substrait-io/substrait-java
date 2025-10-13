@@ -37,7 +37,7 @@ class CalciteTypeTest extends CalciteObjs {
             @Nullable
             @Override
             public RelDataType toCalcite(Type.UserDefined type) {
-              if (type.uri().equals(uTypeURI) && type.name().equals(uTypeName)) {
+              if (type.urn().equals(uTypeURI) && type.name().equals(uTypeName)) {
                 return uTypeFactory.createCalcite(type.nullable());
               }
               return null;

@@ -2,6 +2,7 @@ package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
@@ -23,10 +24,13 @@ public class ProtoExtendedExpressionConverter {
           new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
 
   public ProtoExtendedExpressionConverter() {
-    this(SimpleExtension.loadDefaults());
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public ProtoExtendedExpressionConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+    if (extensionCollection == null) {
+      throw new IllegalArgumentException("ExtensionCollection is required");
+    }
     this.extensionCollection = extensionCollection;
   }
 
@@ -34,7 +38,7 @@ public class ProtoExtendedExpressionConverter {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder().from(extendedExpression).build();
+        ImmutableExtensionLookup.builder(extensionCollection).from(extendedExpression).build();
 
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 

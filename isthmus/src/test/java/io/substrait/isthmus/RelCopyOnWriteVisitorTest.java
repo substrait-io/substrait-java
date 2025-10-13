@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.plan.Plan;
@@ -28,14 +29,15 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
       SimpleExtension.FunctionAnchor.of(
-          "/functions_aggregate_approx.yaml", "approx_count_distinct:any");
+          "extension:io.substrait:functions_aggregate_approx", "approx_count_distinct:any");
   public static SimpleExtension.FunctionAnchor COUNT =
-      SimpleExtension.FunctionAnchor.of("/functions_aggregate_generic.yaml", "count:any");
+      SimpleExtension.FunctionAnchor.of(
+          "extension:io.substrait:functions_aggregate_generic", "count:any");
 
   private static final String COUNT_DISTINCT_SUBBQUERY =
       "select\n"
           + "  count(distinct l.l_orderkey),\n"
-          + "  count(distinct l.l_orderkey) + 1,\n"
+          + " count(distinct l.l_orderkey) + 1,\n"
           + "  sum(l.l_extendedprice * (1 - l.l_discount)) as revenue,\n"
           + "  o.o_orderdate,\n"
           + "  count(distinct o.o_shippriority)\n"
@@ -249,7 +251,8 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
     private final ReplaceCountDistinctWithApproxVisitor visitor;
 
     public ReplaceCountDistinctWithApprox() {
-      visitor = new ReplaceCountDistinctWithApproxVisitor(SimpleExtension.loadDefaults());
+      visitor =
+          new ReplaceCountDistinctWithApproxVisitor(DefaultExtensionCatalog.DEFAULT_COLLECTION);
     }
 
     public Optional<Plan> modify(Plan plan) {

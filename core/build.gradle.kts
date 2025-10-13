@@ -108,6 +108,8 @@ configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(sh
 
 dependencies {
   testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.protobuf.java.util)
+
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
 
@@ -236,7 +238,10 @@ java {
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
 
-tasks.named("sourcesJar") { mustRunAfter("generateGrammarSource") }
+tasks.named<Jar>("sourcesJar") {
+  mustRunAfter("generateGrammarSource")
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
 sourceSets {
   main {
@@ -275,4 +280,15 @@ tasks.named<AntlrTask>("generateGrammarSource") {
     layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
 }
 
-protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }
+val submodulesUpdate by
+  tasks.registering(Exec::class) {
+    group = "Build Setup"
+    description = "Updates (and inits) substrait git submodule"
+    commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
+    workingDir = rootProject.projectDir
+  }
+
+protobuf {
+  generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
+  protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() }
+}

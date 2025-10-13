@@ -25,13 +25,6 @@ dependencies {
   compileOnly(libs.immutables.annotations)
 }
 
-val submodulesUpdate by
-  tasks.registering(Exec::class) {
-    group = "Build Setup"
-    description = "Updates (and inits) substrait git submodule"
-    commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
-  }
-
 allprojects {
   repositories { mavenCentral() }
 
@@ -39,7 +32,6 @@ allprojects {
     useJUnitPlatform()
     testLogging { exceptionFormat = TestExceptionFormat.FULL }
   }
-  tasks.withType<JavaCompile> { dependsOn(submodulesUpdate) }
 
   group = "io.substrait"
   version = "${version}"
