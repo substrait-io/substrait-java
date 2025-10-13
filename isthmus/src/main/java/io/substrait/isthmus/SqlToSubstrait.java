@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
@@ -19,11 +20,11 @@ public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
 
   public SqlToSubstrait() {
-    this(SimpleExtension.loadDefaults(), null);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, null);
   }
 
   public SqlToSubstrait(FeatureBoard features) {
-    this(SimpleExtension.loadDefaults(), features);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, features);
   }
 
   public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {

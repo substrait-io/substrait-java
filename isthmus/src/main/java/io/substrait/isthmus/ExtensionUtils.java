@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import java.util.List;
@@ -28,7 +29,7 @@ public class ExtensionUtils {
   }
 
   public static SimpleExtension.ExtensionCollection loadExtensions(List<String> yamlFunctionFiles) {
-    SimpleExtension.ExtensionCollection allExtensions = SimpleExtension.loadDefaults();
+    SimpleExtension.ExtensionCollection allExtensions = DefaultExtensionCatalog.DEFAULT_COLLECTION;
     if (yamlFunctionFiles != null && !yamlFunctionFiles.isEmpty()) {
       allExtensions = allExtensions.merge(SimpleExtension.load(yamlFunctionFiles));
     }

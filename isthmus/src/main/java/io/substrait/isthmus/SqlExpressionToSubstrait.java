@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import io.substrait.extendedexpression.ExtendedExpression;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ImmutableExtendedExpression.Builder;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -34,7 +35,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   protected final RexExpressionConverter rexConverter;
 
   public SqlExpressionToSubstrait() {
-    this(FEATURES_DEFAULT, SimpleExtension.loadDefaults());
+    this(FEATURES_DEFAULT, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   public SqlExpressionToSubstrait(

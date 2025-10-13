@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -55,6 +56,6 @@ class SqlConverterBase {
   }
 
   protected SqlConverterBase(FeatureBoard features) {
-    this(features, SimpleExtension.loadDefaults());
+    this(features, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 }
