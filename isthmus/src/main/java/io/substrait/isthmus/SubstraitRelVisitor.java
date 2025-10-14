@@ -550,7 +550,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 
-  private void popFieldAccessDepthMap(RelNode root) {
+  protected void popFieldAccessDepthMap(RelNode root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
     resolver.apply(root);
     fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
@@ -575,9 +575,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   public static Plan.Root convert(
-      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+      RelRoot relRoot,
+      SimpleExtension.ExtensionCollection extensions,
+      FeatureBoard features,
+      SubstraitRelVisitorCreator visitorCreator) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
+        visitorCreator.create(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
@@ -587,15 +590,28 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Plan.Root.builder().input(rel).names(names).build();
   }
 
+  public static Plan.Root convert(
+      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    return convert(relRoot, extensions, features, SubstraitRelVisitor::new);
+  }
+
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
     return convert(relNode, extensions, FEATURES_DEFAULT);
   }
 
   public static Rel convert(
-      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+      RelNode relNode,
+      SimpleExtension.ExtensionCollection extensions,
+      FeatureBoard features,
+      SubstraitRelVisitorCreator visitorCreator) {
     SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features);
+        visitorCreator.create(relNode.getCluster().getTypeFactory(), extensions, features);
     visitor.popFieldAccessDepthMap(relNode);
     return visitor.apply(relNode);
+  }
+
+  public static Rel convert(
+      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    return convert(relNode, extensions, features, SubstraitRelVisitor::new);
   }
 }
