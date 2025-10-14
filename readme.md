@@ -3,7 +3,8 @@
 Substrait Java is a project that makes it easier to build [Substrait](https://substrait.io/) plans through Java. The project has two main parts:
 1) **Core** is the module that supports building Substrait plans directly through Java. This is much easier than manipulating the Substrait protobuf directly. It has no direct support for going from SQL to Substrait (that's covered by the second part)
 2) **Isthmus** is the module that allows going from SQL to a Substrait plan. Both Java APIs and a top level script for conversion are present. Not all SQL is supported yet by this module, but a lot is. For example, all of the TPC-H queries and all but a few of the TPC-DS queries are translatable.
-3) **Spark** is the module that provides an API for translating a Substrait plan to and from a Spark query plan.  The most commonly used logical relations and functions are supported, including those generated from all of the TPC-H and TCP-DS queries.
+3) **Spark** is the module that provides an API for translating a Substrait plan to and from a Spark query plan.  The most commonly used logical relations and functions are supported, including those generated from all of the TPC-H and TPC-DS queries.
+The supported features are formally specified in the Substrait dialect file [spark_dialect.yaml](spark/spark_dialect.yaml).
 
 ## Building
 After you've cloned the project through git, Substrait Java is built with a tool called [Gradle](https://gradle.org/). To build, execute the following:

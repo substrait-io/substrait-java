@@ -17,6 +17,7 @@
 package io.substrait.spark.expression
 
 import io.substrait.spark.ToSubstraitType
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, Literal}
 import org.apache.spark.sql.catalyst.util.{ArrayData, MapData}
@@ -25,7 +26,6 @@ import org.apache.spark.unsafe.types.UTF8String
 
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.expression.ExpressionCreator._
-import io.substrait.utils.Util
 
 import scala.collection.JavaConverters
 
