@@ -17,6 +17,7 @@
 package io.substrait.spark.expression
 
 import io.substrait.spark.ToSubstraitType
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.SQLConfHelper
@@ -31,7 +32,6 @@ import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCr
 import io.substrait.expression.Expression.FailureBehavior
 import io.substrait.extension.SimpleExtension
 import io.substrait.function.{ParameterizedType, ToTypeString}
-import io.substrait.utils.Util
 
 import java.{util => ju}
 

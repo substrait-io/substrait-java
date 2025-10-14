@@ -1,0 +1,864 @@
+---
+name: "Spark Dialect"
+supported_types:
+- type: "I8"
+  system_metadata:
+    name: "ByteType"
+    supported_as_column: true
+- type: "I16"
+  system_metadata:
+    name: "ShortType"
+    supported_as_column: true
+- type: "I32"
+  system_metadata:
+    name: "IntegerType"
+    supported_as_column: true
+- type: "I64"
+  system_metadata:
+    name: "LongType"
+    supported_as_column: true
+- type: "FP32"
+  system_metadata:
+    name: "FloatType"
+    supported_as_column: true
+- type: "FP64"
+  system_metadata:
+    name: "DoubleType"
+    supported_as_column: true
+- type: "DECIMAL"
+  system_metadata:
+    name: "DecimalType"
+    supported_as_column: true
+- type: "DATE"
+  system_metadata:
+    name: "DateType"
+    supported_as_column: true
+- type: "STRING"
+  system_metadata:
+    name: "StringType"
+    supported_as_column: true
+- type: "VARCHAR"
+  system_metadata:
+    name: "StringType"
+    supported_as_column: true
+- type: "FIXED_CHAR"
+  system_metadata:
+    name: "StringType"
+    supported_as_column: true
+- type: "BINARY"
+  system_metadata:
+    name: "BinaryType"
+    supported_as_column: true
+- type: "BOOL"
+  system_metadata:
+    name: "BooleanType"
+    supported_as_column: true
+- type: "PRECISION_TIMESTAMP"
+  system_metadata:
+    name: "TimestampNTZType"
+    supported_as_column: true
+- type: "PRECISION_TIMESTAMP_TZ"
+  system_metadata:
+    name: "TimestampType"
+    supported_as_column: true
+- type: "INTERVAL_DAY"
+  system_metadata:
+    name: "DayTimeIntervalType"
+    supported_as_column: true
+- type: "INTERVAL_YEAR"
+  system_metadata:
+    name: "YearMonthIntervalType"
+    supported_as_column: true
+- type: "LIST"
+  system_metadata:
+    name: "ArrayType"
+    supported_as_column: true
+- type: "MAP"
+  system_metadata:
+    name: "MapType"
+    supported_as_column: true
+- type: "STRUCT"
+  system_metadata:
+    name: "StructType"
+    supported_as_column: true
+supported_expressions:
+- "LITERAL"
+- "SELECTION"
+- "SCALAR_FUNCTION"
+- "IF_THEN"
+- "SINGULAR_OR_LIST"
+- "CAST"
+- expression: "SUBQUERY"
+  subquery_types:
+  - "SCALAR"
+  - "IN_PREDICATE"
+supported_relations:
+- "FILTER"
+- "FETCH"
+- "AGGREGATE"
+- "SORT"
+- "PROJECT"
+- "CROSS"
+- "UPDATE"
+- "CONSISTENT_PARTITION_WINDOW"
+- "EXPAND"
+- "WRITE"
+- relation: "READ"
+  read_types:
+  - "VIRTUAL_TABLE"
+  - "LOCAL_FILES"
+  - "NAMED_TABLE"
+- relation: "DDL"
+  write_types:
+  - "NAMED_OBJECT"
+- relation: "JOIN"
+  join_types:
+  - "INNER"
+  - "OUTER"
+  - "LEFT"
+  - "RIGHT"
+  - "LEFT_SEMI"
+  - "LEFT_ANTI"
+- relation: "SET"
+  operations:
+  - "UNION_ALL"
+dependencies:
+  rounding: "extension:io.substrait:functions_rounding"
+  comparison: "extension:io.substrait:functions_comparison"
+  logarithmic: "extension:io.substrait:functions_logarithmic"
+  datetime: "extension:io.substrait:functions_datetime"
+  rounding_decimal: "extension:io.substrait:functions_rounding_decimal"
+  string: "extension:io.substrait:functions_string"
+  arithmetic: "extension:io.substrait:functions_arithmetic"
+  aggregate_generic: "extension:io.substrait:functions_aggregate_generic"
+  boolean: "extension:io.substrait:functions_boolean"
+  spark: "extension:substrait:spark"
+  arithmetic_decimal: "extension:io.substrait:functions_arithmetic_decimal"
+  aggregate_approx: "extension:io.substrait:functions_aggregate_approx"
+supported_scalar_functions:
+- source: "arithmetic_decimal"
+  name: "add"
+  system_metadata:
+    name: "+"
+    notation: "INFIX"
+  supported_impls:
+  - "dec_dec"
+- source: "arithmetic"
+  name: "add"
+  system_metadata:
+    name: "+"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+  - "fp32_fp32"
+  - "fp64_fp64"
+- source: "arithmetic_decimal"
+  name: "subtract"
+  system_metadata:
+    name: "-"
+    notation: "INFIX"
+  supported_impls:
+  - "dec_dec"
+- source: "arithmetic"
+  name: "subtract"
+  system_metadata:
+    name: "-"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+  - "fp32_fp32"
+  - "fp64_fp64"
+- source: "arithmetic_decimal"
+  name: "multiply"
+  system_metadata:
+    name: "*"
+    notation: "INFIX"
+  supported_impls:
+  - "dec_dec"
+- source: "arithmetic"
+  name: "multiply"
+  system_metadata:
+    name: "*"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+  - "fp32_fp32"
+  - "fp64_fp64"
+- source: "arithmetic_decimal"
+  name: "divide"
+  system_metadata:
+    name: "/"
+    notation: "INFIX"
+  supported_impls:
+  - "dec_dec"
+- source: "arithmetic"
+  name: "divide"
+  system_metadata:
+    name: "/"
+    notation: "INFIX"
+  supported_impls:
+  - "fp64_fp64"
+- source: "arithmetic_decimal"
+  name: "abs"
+  system_metadata:
+    name: "abs"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "abs"
+  system_metadata:
+    name: "abs"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "fp32"
+  - "fp64"
+- source: "arithmetic_decimal"
+  name: "modulus"
+  system_metadata:
+    name: "%"
+    notation: "INFIX"
+  supported_impls:
+  - "dec_dec"
+- source: "arithmetic"
+  name: "modulus"
+  system_metadata:
+    name: "%"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+- source: "rounding"
+  name: "round"
+  system_metadata:
+    name: "round"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8_i32"
+  - "i16_i32"
+  - "i32_i32"
+  - "i64_i32"
+  - "fp32_i32"
+  - "fp64_i32"
+- source: "rounding_decimal"
+  name: "round"
+  system_metadata:
+    name: "round"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec_i32"
+- source: "rounding"
+  name: "floor"
+  system_metadata:
+    name: "FLOOR"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "rounding_decimal"
+  name: "floor"
+  system_metadata:
+    name: "FLOOR"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "rounding"
+  name: "ceil"
+  system_metadata:
+    name: "CEIL"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "rounding_decimal"
+  name: "ceil"
+  system_metadata:
+    name: "CEIL"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "power"
+  system_metadata:
+    name: "POWER"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64_fp64"
+- source: "arithmetic"
+  name: "exp"
+  system_metadata:
+    name: "EXP"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "sqrt"
+  system_metadata:
+    name: "SQRT"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "sin"
+  system_metadata:
+    name: "SIN"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "cos"
+  system_metadata:
+    name: "COS"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "tan"
+  system_metadata:
+    name: "TAN"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "asin"
+  system_metadata:
+    name: "ASIN"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "acos"
+  system_metadata:
+    name: "ACOS"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "atan"
+  system_metadata:
+    name: "ATAN"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "atan2"
+  system_metadata:
+    name: "ATAN2"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64_fp64"
+- source: "arithmetic"
+  name: "sinh"
+  system_metadata:
+    name: "SINH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "cosh"
+  system_metadata:
+    name: "COSH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "tanh"
+  system_metadata:
+    name: "TANH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "asinh"
+  system_metadata:
+    name: "ASINH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "acosh"
+  system_metadata:
+    name: "ACOSH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "atanh"
+  system_metadata:
+    name: "ATANH"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "logarithmic"
+  name: "ln"
+  system_metadata:
+    name: "ln"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "logarithmic"
+  name: "log10"
+  system_metadata:
+    name: "LOG10"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "boolean"
+  name: "not"
+  system_metadata:
+    name: "not"
+    notation: "FUNCTION"
+  supported_impls:
+  - "bool"
+- source: "comparison"
+  name: "lt"
+  system_metadata:
+    name: "<"
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "datetime"
+  name: "lt"
+  system_metadata:
+    name: "<"
+    notation: "INFIX"
+  supported_impls:
+  - "ts_ts"
+  - "pts_pts"
+  - "tstz_tstz"
+  - "ptstz_ptstz"
+  - "date_date"
+  - "iday_iday"
+  - "iyear_iyear"
+- source: "comparison"
+  name: "lte"
+  system_metadata:
+    name: "<="
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "datetime"
+  name: "lte"
+  system_metadata:
+    name: "<="
+    notation: "INFIX"
+  supported_impls:
+  - "ts_ts"
+  - "pts_pts"
+  - "tstz_tstz"
+  - "ptstz_ptstz"
+  - "date_date"
+  - "iday_iday"
+  - "iyear_iyear"
+- source: "comparison"
+  name: "gt"
+  system_metadata:
+    name: ">"
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "datetime"
+  name: "gt"
+  system_metadata:
+    name: ">"
+    notation: "INFIX"
+  supported_impls:
+  - "ts_ts"
+  - "pts_pts"
+  - "tstz_tstz"
+  - "ptstz_ptstz"
+  - "date_date"
+  - "iday_iday"
+  - "iyear_iyear"
+- source: "comparison"
+  name: "gte"
+  system_metadata:
+    name: ">="
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "datetime"
+  name: "gte"
+  system_metadata:
+    name: ">="
+    notation: "INFIX"
+  supported_impls:
+  - "ts_ts"
+  - "pts_pts"
+  - "tstz_tstz"
+  - "ptstz_ptstz"
+  - "date_date"
+  - "iday_iday"
+  - "iyear_iyear"
+- source: "comparison"
+  name: "equal"
+  system_metadata:
+    name: "="
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "comparison"
+  name: "is_not_distinct_from"
+  system_metadata:
+    name: "<=>"
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
+- source: "comparison"
+  name: "is_null"
+  system_metadata:
+    name: "isnull"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "comparison"
+  name: "is_not_null"
+  system_metadata:
+    name: "isnotnull"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "string"
+  name: "ends_with"
+  system_metadata:
+    name: "endswith"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_vchar"
+  - "vchar_str"
+  - "vchar_fchar"
+  - "str_str"
+  - "str_vchar"
+  - "str_fchar"
+  - "fchar_fchar"
+  - "fchar_str"
+  - "fchar_vchar"
+- source: "string"
+  name: "like"
+  system_metadata:
+    name: "like"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_vchar"
+  - "str_str"
+- source: "string"
+  name: "contains"
+  system_metadata:
+    name: "contains"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_vchar"
+  - "vchar_str"
+  - "vchar_fchar"
+  - "str_str"
+  - "str_vchar"
+  - "str_fchar"
+  - "fchar_fchar"
+  - "fchar_str"
+  - "fchar_vchar"
+- source: "string"
+  name: "starts_with"
+  system_metadata:
+    name: "startswith"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_vchar"
+  - "vchar_str"
+  - "vchar_fchar"
+  - "str_str"
+  - "str_vchar"
+  - "str_fchar"
+  - "fchar_fchar"
+  - "fchar_str"
+  - "fchar_vchar"
+- source: "string"
+  name: "substring"
+  system_metadata:
+    name: "substring"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_i32_i32"
+  - "str_i32_i32"
+  - "fchar_i32_i32"
+- source: "string"
+  name: "upper"
+  system_metadata:
+    name: "upper"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str"
+  - "vchar"
+  - "fchar"
+- source: "string"
+  name: "lower"
+  system_metadata:
+    name: "lower"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str"
+  - "vchar"
+  - "fchar"
+- source: "arithmetic"
+  name: "shift_left"
+  system_metadata:
+    name: "shiftleft"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i32_i32"
+  - "i64_i32"
+- source: "arithmetic"
+  name: "shift_right"
+  system_metadata:
+    name: "shiftright"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i32_i32"
+  - "i64_i32"
+- source: "arithmetic"
+  name: "shift_right_unsigned"
+  system_metadata:
+    name: "shiftrightunsigned"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i32_i32"
+  - "i64_i32"
+- source: "arithmetic"
+  name: "bitwise_and"
+  system_metadata:
+    name: "&"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+- source: "arithmetic"
+  name: "bitwise_or"
+  system_metadata:
+    name: "|"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+- source: "arithmetic"
+  name: "bitwise_xor"
+  system_metadata:
+    name: "^"
+    notation: "INFIX"
+  supported_impls:
+  - "i8_i8"
+  - "i16_i16"
+  - "i32_i32"
+  - "i64_i64"
+- source: "spark"
+  name: "add"
+  system_metadata:
+    name: "date_add"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date_i32"
+supported_aggregate_functions:
+- source: "arithmetic_decimal"
+  name: "sum"
+  system_metadata:
+    name: "sum"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "sum"
+  system_metadata:
+    name: "sum"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "fp32"
+  - "fp64"
+- source: "arithmetic_decimal"
+  name: "avg"
+  system_metadata:
+    name: "avg"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "avg"
+  system_metadata:
+    name: "avg"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "fp32"
+  - "fp64"
+- source: "arithmetic_decimal"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "fp32"
+  - "fp64"
+- source: "datetime"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "time"
+  - "ts"
+  - "pts"
+  - "tstz"
+  - "ptstz"
+  - "iday"
+  - "iyear"
+- source: "arithmetic_decimal"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i8"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "fp32"
+  - "fp64"
+- source: "datetime"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "time"
+  - "ts"
+  - "pts"
+  - "tstz"
+  - "ptstz"
+  - "iday"
+  - "iyear"
+- source: "aggregate_generic"
+  name: "any_value"
+  system_metadata:
+    name: "first"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "aggregate_approx"
+  name: "approx_count_distinct"
+  system_metadata:
+    name: "approx_count_distinct"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "arithmetic"
+  name: "std_dev"
+  system_metadata:
+    name: "stddev_samp"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+supported_window_functions:
+- source: "arithmetic"
+  name: "row_number"
+  system_metadata:
+    name: "row_number"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+- source: "arithmetic"
+  name: "rank"
+  system_metadata:
+    name: "rank"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+- source: "arithmetic"
+  name: "dense_rank"
+  system_metadata:
+    name: "dense_rank"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+- source: "arithmetic"
+  name: "percent_rank"
+  system_metadata:
+    name: "percent_rank"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+- source: "arithmetic"
+  name: "cume_dist"
+  system_metadata:
+    name: "cume_dist"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+- source: "arithmetic"
+  name: "ntile"
+  system_metadata:
+    name: "ntile"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i32"
+- source: "arithmetic"
+  name: "lead"
+  system_metadata:
+    name: "lead"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any_i32_any"
+- source: "arithmetic"
+  name: "lag"
+  system_metadata:
+    name: "lag"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any_i32_any"
+- source: "arithmetic"
+  name: "nth_value"
+  system_metadata:
+    name: "nth_value"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any_i32"

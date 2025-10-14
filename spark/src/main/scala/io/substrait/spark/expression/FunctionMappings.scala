@@ -16,12 +16,12 @@
  */
 package io.substrait.spark.expression
 
+import io.substrait.spark.utils.Util
+
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistryBase
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.types.{DayTimeIntervalType, IntegerType}
-
-import io.substrait.utils.Util
 
 import scala.reflect.ClassTag
 
@@ -85,6 +85,7 @@ object TrimFunction {
     case ("ltrim", Seq(srcStr, trimStr)) => Some(StringTrimLeft(srcStr, trimStr))
     case ("rtrim", Seq(srcStr)) => Some(StringTrimRight(srcStr))
     case ("rtrim", Seq(srcStr, trimStr)) => Some(StringTrimRight(srcStr, trimStr))
+    case _ => None
   }
 }
 
@@ -105,6 +106,8 @@ class FunctionMappings {
       (signature, args) match {
         case DateFunction(expr) => expr
         case TrimFunction(expr) => expr
+        case _ =>
+          throw new UnsupportedOperationException(s"Cannot convert $signature with arguments $args")
       }
     SpecialSig(scala.reflect.classTag[T].runtimeClass, name, key, builder)
   }
