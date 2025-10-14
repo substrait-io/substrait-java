@@ -1,5 +1,6 @@
 %YAML 1.2
 ---
+urn: extension:substrait:functions_custom
 scalar_functions:
   - name: "regexp_extract"
     impls:
