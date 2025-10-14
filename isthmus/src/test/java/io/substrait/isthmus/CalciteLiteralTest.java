@@ -10,6 +10,7 @@ import io.substrait.expression.Expression.IntervalYearLiteral;
 import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.Expression.TimestampLiteral;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -36,7 +37,7 @@ import org.junit.jupiter.api.Test;
 
 public class CalciteLiteralTest extends CalciteObjs {
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   private final ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);

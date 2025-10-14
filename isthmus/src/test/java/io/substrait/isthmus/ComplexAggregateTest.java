@@ -6,6 +6,7 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
@@ -18,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 public class ComplexAggregateTest extends PlanTestBase {
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);

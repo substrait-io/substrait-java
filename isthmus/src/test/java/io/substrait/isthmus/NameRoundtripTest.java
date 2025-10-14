@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.Test;
 public class NameRoundtripTest extends PlanTestBase {
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   @Test
   void preserveNamesFromSql() throws Exception {

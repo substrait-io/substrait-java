@@ -8,6 +8,7 @@ import com.google.common.annotations.Beta;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -67,7 +68,7 @@ public class PlanTestBase {
       PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
 
   protected PlanTestBase() {
-    this(SimpleExtension.loadDefaults());
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {

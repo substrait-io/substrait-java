@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import java.io.IOException;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test;
 public class OptimizerIntegrationTest extends PlanTestBase {
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      SimpleExtension.loadDefaults();
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   @Test
   void conversionHandlesBuiltInSum0CallAddedByRule() throws SqlParseException, IOException {

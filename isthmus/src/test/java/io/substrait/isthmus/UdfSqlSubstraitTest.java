@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import java.util.List;
@@ -33,7 +34,7 @@ public class UdfSqlSubstraitTest extends PlanTestBase {
 
   private static SimpleExtension.ExtensionCollection loadExtensions(
       List<String> yamlFunctionFiles) {
-    SimpleExtension.ExtensionCollection extensions = SimpleExtension.loadDefaults();
+    SimpleExtension.ExtensionCollection extensions = DefaultExtensionCatalog.DEFAULT_COLLECTION;
     if (yamlFunctionFiles != null && !yamlFunctionFiles.isEmpty()) {
       SimpleExtension.ExtensionCollection customExtensions =
           SimpleExtension.load(yamlFunctionFiles);
