@@ -24,6 +24,7 @@ shadow = "9.2.2"
 slf4j = "2.0.17"
 spark = "3.4.4"
 spotless = "8.0.0"
+validator = "1.5.9"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
@@ -44,6 +45,7 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 jackson-datatype-jdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8" }
 jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml" }
+json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "validator"}
 json-smart = { module = "net.minidev:json-smart", version.ref = "json-smart" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

@@ -18,6 +18,7 @@ package io.substrait.spark.expression
 
 import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtension, ToSparkType}
 import io.substrait.spark.logical.ToLogicalPlan
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, InSubquery, ListQuery, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
@@ -32,7 +33,6 @@ import io.substrait.expression.{EnumArg, Expression => SExpression}
 import io.substrait.extension.SimpleExtension
 import io.substrait.util.DecimalUtil
 import io.substrait.util.EmptyVisitationContext
-import io.substrait.utils.Util
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
