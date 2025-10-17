@@ -190,8 +190,6 @@ tasks.register("writeManifest") {
   }
 }
 
-tasks.named("compileJava") { dependsOn("writeManifest") }
-
 tasks {
   shadowJar {
     archiveClassifier.set("") // to override ".jar" instead of producing "-all.jar"
@@ -203,12 +201,17 @@ tasks {
   }
 
   jar { manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") } }
+
+  // Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run.
+  // Only set the compile release since JUnit 6 requires Java 17 to run tests.
+  compileJava {
+    options.release = 8
+    dependsOn("writeManifest")
+  }
 }
 
-// Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run
-tasks.withType<JavaCompile>().configureEach { options.release = 8 }
-
 java {
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }
