@@ -4,8 +4,8 @@ import io.substrait.spark.expression.{ToSparkExpression, ToSubstraitLiteral}
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.catalyst.expressions.{Literal, UnsafeArrayData}
+import org.apache.spark.sql.catalyst.util.{ArrayData, MapData}
 import org.apache.spark.sql.types._
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
@@ -211,5 +211,29 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     val sparkType = ToSparkType.toStructType(substraitType)
 
     assert(dt == sparkType)
+  }
+
+  test(s"test UnsafeArrayData literal") {
+    val originalValues = Array(1, 2, 3)
+    val l = Literal.create(
+      UnsafeArrayData.fromPrimitiveArray(originalValues),
+      ArrayType(IntegerType, containsNull = false))
+
+    val substraitLiteral = ToSubstraitLiteral.convert(l).get
+    val sparkLiteral = substraitLiteral
+      .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+      .asInstanceOf[Literal]
+
+    println("Before: " + l + " " + l.dataType)
+    println("After: " + sparkLiteral + " " + sparkLiteral.dataType)
+    println("Substrait: " + substraitLiteral)
+
+    assert(l.dataType == sparkLiteral.dataType)
+    assert(
+      sparkLiteral.value
+        .asInstanceOf[ArrayData]
+        .toArray[Integer](IntegerType)
+        .sorted
+        .sameElements(originalValues))
   }
 }
