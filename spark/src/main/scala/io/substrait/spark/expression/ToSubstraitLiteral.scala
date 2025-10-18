@@ -42,7 +42,8 @@ class ToSubstraitLiteral {
         arrayData: ArrayData,
         elementType: DataType,
         containsNull: Boolean): SExpression.Literal = {
-      val elements = arrayData.array.map(any => apply(Literal(any, elementType)))
+      val elements =
+        arrayData.toArray(elementType).map((any: Any) => apply(Literal(any, elementType)))
       if (elements.isEmpty) {
         return emptyList(false, ToSubstraitType.convert(elementType, nullable = containsNull).get)
       }
