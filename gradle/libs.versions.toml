@@ -1,6 +1,6 @@
 [versions]
 antlr = "4.13.2"
-calcite = "1.40.0"
+calcite = "1.41.0"
 classgraph = "4.8.184"
 commons-lang3 = "[3.18.0,)"
 graal = "25.0.0"
