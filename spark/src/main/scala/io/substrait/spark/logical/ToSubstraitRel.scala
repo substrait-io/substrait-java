@@ -18,6 +18,7 @@ package io.substrait.spark.logical
 
 import io.substrait.spark.{FileHolder, SparkExtension, ToSubstraitType}
 import io.substrait.spark.expression._
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SaveMode
@@ -53,7 +54,6 @@ import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, FileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
 import io.substrait.util.EmptyVisitationContext
-import io.substrait.utils.Util
 
 import java.util
 import java.util.{Collections, Optional}

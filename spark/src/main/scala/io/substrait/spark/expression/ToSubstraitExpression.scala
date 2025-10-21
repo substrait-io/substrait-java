@@ -17,6 +17,7 @@
 package io.substrait.spark.expression
 
 import io.substrait.spark.{HasOutputStack, ToSubstraitType}
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Project}
@@ -25,7 +26,6 @@ import org.apache.spark.substrait.SparkTypeUtil
 
 import io.substrait.expression.{EnumArg, Expression => SExpression, ExpressionCreator, FieldReference}
 import io.substrait.expression.Expression.FailureBehavior
-import io.substrait.utils.Util
 
 import java.util.Optional
 

@@ -100,6 +100,8 @@ dependencies {
   implementation(libs.spark.hive)
   implementation(libs.spark.catalyst)
   implementation(libs.slf4j.api)
+  implementation(libs.bundles.jackson)
+  implementation(libs.json.schema.validator)
 
   testImplementation(libs.scalatest)
   testImplementation(platform(libs.junit.bom))
@@ -117,6 +119,13 @@ spotless {
     scalafmt().configFile(".scalafmt.conf")
     toggleOffOn()
   }
+}
+
+tasks.register<JavaExec>("dialect") {
+  dependsOn(":core:shadowJar")
+  classpath = java.sourceSets["main"].runtimeClasspath
+  mainClass = "io.substrait.spark.utils.DialectGenerator"
+  args = listOf("spark_dialect.yaml")
 }
 
 tasks {
