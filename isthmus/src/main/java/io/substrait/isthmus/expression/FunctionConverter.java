@@ -75,9 +75,9 @@ public abstract class FunctionConverter<
     this.typeFactory = typeFactory;
     this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.create();
 
-    ArrayListMultimap<String, F> alm = ArrayListMultimap.<String, F>create();
+    ArrayListMultimap<String, F> nameToFn = ArrayListMultimap.<String, F>create();
     for (F f : functions) {
-      alm.put(f.name().toLowerCase(Locale.ROOT), f);
+      nameToFn.put(f.name().toLowerCase(Locale.ROOT), f);
     }
 
     Multimap<String, FunctionMappings.Sig> calciteOperators =
@@ -87,21 +87,21 @@ public abstract class FunctionConverter<
                     FunctionMappings.Sig::name, Function.identity(), ArrayListMultimap::create));
     IdentityHashMap<SqlOperator, FunctionFinder> matcherMap =
         new IdentityHashMap<SqlOperator, FunctionFinder>();
-    for (String key : alm.keySet()) {
+    for (String key : nameToFn.keySet()) {
       Collection<Sig> sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
         LOGGER.atDebug().log("No binding for function: {}", key);
       }
 
       for (Sig sig : sigs) {
-        List<F> implList = alm.get(key);
+        List<F> implList = nameToFn.get(key);
         if (!implList.isEmpty()) {
           matcherMap.put(sig.operator(), new FunctionFinder(key, sig.operator(), implList));
         }
       }
     }
 
-    for (Entry<String, F> entry : alm.entries()) {
+    for (Entry<String, F> entry : nameToFn.entries()) {
       String key = entry.getKey();
       F func = entry.getValue();
       for (FunctionMappings.Sig sig : calciteOperators.get(key)) {
