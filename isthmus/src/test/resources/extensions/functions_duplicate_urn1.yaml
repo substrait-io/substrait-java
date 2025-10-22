@@ -3,15 +3,6 @@
 urn: extension:io.substrait:functions_string
 
 scalar_functions:
-  - name: "ltrim"
-    description: "left trim from standard functions"
-    impls:
-      - args:
-          - name: str
-            value: string
-          - name: chars
-            value: string
-        return: string
   - name: "concat"
     description: "concatenate strings"
     impls:
