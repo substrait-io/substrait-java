@@ -2,7 +2,8 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
@@ -155,7 +156,7 @@ public abstract class FunctionConverter<
     private final String substraitName;
     private final SqlOperator operator;
     private final List<F> functions;
-    private final Map<String, F> directMap;
+    private final ListMultimap<String, F> directMap;
     private final Optional<SingularArgumentMatcher<F>> singularInputType;
     private final Util.IntRange argRange;
 
@@ -168,7 +169,7 @@ public abstract class FunctionConverter<
               functions.stream().mapToInt(t -> t.getRange().getStartInclusive()).min().getAsInt(),
               functions.stream().mapToInt(t -> t.getRange().getEndExclusive()).max().getAsInt());
       this.singularInputType = getSingularInputType(functions);
-      ImmutableMap.Builder<String, F> directMap = ImmutableMap.builder();
+      ImmutableListMultimap.Builder<String, F> directMap = ImmutableListMultimap.builder();
       for (F func : functions) {
         String key = func.key();
         directMap.put(key, func);
@@ -349,6 +350,9 @@ public abstract class FunctionConverter<
        * Not enough context here to construct a substrait EnumArg.
        * Once a FunctionVariant is resolved we can map the String Literal
        * to a EnumArg.
+       *
+       * Note that if there are multiple registered function extensions which can match a particular Call,
+       * the last one added to the extension collection will be matched.
        */
       List<RexNode> operandsList = call.getOperands().collect(Collectors.toList());
       List<Expression> operands =
@@ -369,7 +373,13 @@ public abstract class FunctionConverter<
               .findFirst();
 
       if (directMatchKey.isPresent()) {
-        F variant = directMap.get(directMatchKey.get());
+        List<F> variants = directMap.get(directMatchKey.get());
+        if (variants.isEmpty()) {
+
+          return Optional.empty();
+        }
+
+        F variant = variants.get(variants.size() - 1);
         variant.validateOutputType(operands, outputType);
         List<FunctionArg> funcArgs =
             IntStream.range(0, operandsList.size())
