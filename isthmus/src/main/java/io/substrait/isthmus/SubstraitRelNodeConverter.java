@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
@@ -14,6 +12,7 @@ import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractDdlRel;
@@ -102,7 +101,7 @@ public class SubstraitRelNodeConverter
     this(
         typeFactory,
         relBuilder,
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+        createScalarFunctionConverter(extensions, typeFactory),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT);
@@ -144,11 +143,45 @@ public class SubstraitRelNodeConverter
     this.expressionRexConverter.setRelNodeConverter(this);
   }
 
+  private static ScalarFunctionConverter createScalarFunctionConverter(
+      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+
+    java.util.Set<String> knownFunctionNames =
+        FunctionMappings.SCALAR_SIGS.stream()
+            .map(FunctionMappings.Sig::name)
+            .collect(Collectors.toSet());
+
+    List<SimpleExtension.ScalarFunctionVariant> dynamicFunctions =
+        extensions.scalarFunctions().stream()
+            .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
+            .collect(Collectors.toList());
+
+    List<FunctionMappings.Sig> additionalSignatures;
+    if (dynamicFunctions.isEmpty()) {
+      additionalSignatures = Collections.emptyList();
+    } else {
+      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+          SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
+
+      List<SqlOperator> dynamicOperators =
+          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+      additionalSignatures =
+          dynamicOperators.stream()
+              .map(op -> FunctionMappings.s(op, op.getName()))
+              .collect(Collectors.toList());
+    }
+
+    return new ScalarFunctionConverter(
+        extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+  }
+
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
       Prepare.CatalogReader catalogReader,
-      SqlParser.Config parserConfig) {
+      SqlParser.Config parserConfig,
+      SimpleExtension.ExtensionCollection extensions) {
     RelBuilder relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
@@ -159,8 +192,7 @@ public class SubstraitRelNodeConverter
                 .build());
 
     return relRoot.accept(
-        new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder),
+        new SubstraitRelNodeConverter(extensions, relOptCluster.getTypeFactory(), relBuilder),
         Context.newContext());
   }
 
