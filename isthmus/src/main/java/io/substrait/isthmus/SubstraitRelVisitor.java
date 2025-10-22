@@ -24,6 +24,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.ImmutableMeasure.Builder;
 import io.substrait.relation.Join;
@@ -34,6 +35,7 @@ import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
@@ -45,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
@@ -58,6 +61,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
 
@@ -262,16 +266,69 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     List<Grouping> groupings =
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
-    List<Measure> aggCalls =
+    // get GROUP_ID() function calls
+    List<AggregateCall> groupIdCalls =
         aggregate.getAggCallList().stream()
+            .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
+            .collect(Collectors.toList());
+
+    List<AggregateCall> filteredAggCalls =
+        aggregate.getAggCallList().stream()
+            // remove GROUP_ID() function calls
+            .filter(c -> !groupIdCalls.contains(c))
+            .collect(Collectors.toList());
+
+    List<Measure> aggCalls =
+        filteredAggCalls.stream()
             .map(c -> fromAggCall(aggregate.getInput(), input.getRecordType(), c))
             .collect(Collectors.toList());
 
-    return Aggregate.builder()
-        .input(input)
-        .addAllGroupings(groupings)
-        .addAllMeasures(aggCalls)
-        .build();
+    ImmutableAggregate.Builder builder =
+        Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(aggCalls);
+
+    if (groupings.size() > 1) {
+      // remove the grouping set index if there was no explicit GROUP_ID() function call
+      if (groupIdCalls.isEmpty()) {
+        int groupingExprSize =
+            groupings.stream()
+                .flatMap(g -> g.getExpressions().stream())
+                .distinct()
+                .collect(Collectors.toList())
+                .size();
+        builder.remap(Remap.offset(0, groupingExprSize + aggCalls.size()));
+      } else {
+        // remap grouping set index at the field positions where the GROUP_ID() function calls were
+        final int groupingFieldCount =
+            groupings.stream()
+                .flatMap(g -> g.getExpressions().stream())
+                .collect(Collectors.toList())
+                .size();
+        final int filterAggCallCount = aggCalls.size();
+        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
+
+        final List<Integer> groupingFieldIndices =
+            IntStream.range(0, groupingFieldCount).mapToObj(i -> i).collect(Collectors.toList());
+
+        final List<Integer> remap = new ArrayList<>(groupingFieldIndices);
+
+        for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
+          AggregateCall aggCall = aggregate.getAggCallList().get(i);
+          if (filteredAggCalls.contains(aggCall)) {
+            remap.add(
+                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
+          } else if (groupIdCalls.contains(aggCall)) {
+            remap.add(i + groupingFieldCount, groupingSetIndex);
+          } else {
+            throw new IllegalStateException(
+                "encountered AggregateCall that is neither in filteredAggCalls nor in groupIdCalls");
+          }
+        }
+
+        builder.remap(Remap.of(remap));
+      }
+    }
+
+    return builder.build();
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {

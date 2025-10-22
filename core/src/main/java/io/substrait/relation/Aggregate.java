@@ -56,7 +56,13 @@ public abstract class Aggregate extends SingleInputRel implements HasExtension {
 
     final Stream<Type> measureTypes = getMeasures().stream().map(t -> t.getFunction().getType());
 
-    return TypeCreator.REQUIRED.struct(Stream.concat(groupingTypes, measureTypes));
+    // an aggregate relation with more than one grouping set receives an extra i32 column on the
+    // right-hand side per spec:
+    // https://substrait.io/relations/logical_relations/#aggregate-operation
+    final Stream<Type> groupingSetIndex = Stream.of(TypeCreator.REQUIRED.I32);
+
+    return TypeCreator.REQUIRED.struct(
+        Stream.concat(Stream.concat(groupingTypes, measureTypes), groupingSetIndex));
   }
 
   @Override
