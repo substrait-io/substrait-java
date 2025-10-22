@@ -34,7 +34,7 @@ dependencies {
   testImplementation(libs.junit.jupiter.api)
   testImplementation(libs.junit.jupiter.engine)
   implementation(libs.slf4j.api)
-  annotationProcessor(libs.immutables.value)
+  annotationProcessor(libs.immutables.processor)
   compileOnly(libs.immutables.annotations)
 
   nmcpAggregation(project(":core"))

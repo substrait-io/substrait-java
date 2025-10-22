@@ -38,7 +38,7 @@ commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "co
 graal-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graal" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
-immutables-value = { module = "org.immutables:value", version.ref = "immutables" }
+immutables-processor = { module = "org.immutables:value-processor", version.ref = "immutables" }
 immutables-annotations = { module = "org.immutables:value-annotations", version.ref = "immutables" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }

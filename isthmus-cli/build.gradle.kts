@@ -31,7 +31,7 @@ dependencies {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
-  annotationProcessor(libs.immutables.value)
+  annotationProcessor(libs.immutables.processor)
   implementation(libs.immutables.annotations)
   testImplementation(libs.calcite.plus) {
     exclude(group = "commons-lang", module = "commons-lang")

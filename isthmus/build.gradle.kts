@@ -110,7 +110,7 @@ dependencies {
     exclude("com.google.guava", "guava")
       .because("Brings in Guava for Android, which we don't want (and breaks multimaps).")
   }
-  annotationProcessor(libs.immutables.value)
+  annotationProcessor(libs.immutables.processor)
   compileOnly(libs.immutables.annotations)
   implementation(libs.slf4j.api)
   testImplementation(libs.calcite.plus) {
