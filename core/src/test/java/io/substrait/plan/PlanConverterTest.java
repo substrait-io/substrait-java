@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.extension.AdvancedExtension;
+import io.substrait.plan.Plan.Root;
+import io.substrait.relation.EmptyScan;
+import io.substrait.type.NamedStruct;
+import io.substrait.type.TypeCreator;
 import io.substrait.utils.StringHolder;
 import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
 import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
@@ -141,6 +145,38 @@ class PlanConverterTest {
                 AdvancedExtension.builder()
                     .enhancement(enhanced)
                     .addOptimizations(optimized)
+                    .build())
+            .build();
+    final PlanProtoConverter toProtoConverter =
+        new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
+    final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
+
+    final ProtoPlanConverter fromProtoConverter =
+        new ProtoPlanConverter(new StringHolderHandlingProtoExtensionConverter());
+    final Plan plan2 = fromProtoConverter.from(protoPlan);
+
+    assertEquals(plan, plan2);
+  }
+
+  @Test
+  void planIncludingRelationWithAdvancedExtension() {
+    final StringHolder enhanced = new StringHolder("ENHANCED");
+    final StringHolder optimized = new StringHolder("OPTIMIZED");
+
+    final Plan plan =
+        Plan.builder()
+            .addRoots(
+                Root.builder()
+                    .input(
+                        EmptyScan.builder()
+                            .initialSchema(
+                                NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
+                            .extension(
+                                AdvancedExtension.builder()
+                                    .enhancement(enhanced)
+                                    .addOptimizations(optimized)
+                                    .build())
+                            .build())
                     .build())
             .build();
     final PlanProtoConverter toProtoConverter =

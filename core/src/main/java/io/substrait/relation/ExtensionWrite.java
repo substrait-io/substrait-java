@@ -4,7 +4,7 @@ import io.substrait.util.VisitationContext;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class ExtensionWrite extends AbstractWriteRel implements HasExtension {
+public abstract class ExtensionWrite extends AbstractWriteRel {
   public abstract Extension.WriteExtensionObject getDetail();
 
   @Override
