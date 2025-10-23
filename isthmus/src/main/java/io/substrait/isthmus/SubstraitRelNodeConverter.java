@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -375,7 +376,7 @@ public class SubstraitRelNodeConverter
               null));
       final int groupingCallIndex = aggregateCalls.size() - 1;
       if (groupingSetIndexGetsRemapped) {
-        List<Integer> remapList = new ArrayList<>(remap.get().indices());
+        List<Integer> remapList = new LinkedList<>(remap.get().indices());
         for (int i = 0; i < remapList.size(); i++) {
           if (remapList.get(i).equals(lastFieldIndex)) {
             // replace last field index with field index of the GROUP_ID() function call
