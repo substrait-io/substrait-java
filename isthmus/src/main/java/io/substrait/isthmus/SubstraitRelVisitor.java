@@ -313,8 +313,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           } else if (groupIdCalls.contains(aggCall)) {
             remap.add(i + groupingFieldCount, groupingSetIndex);
           } else {
+            // this should never get triggered
             throw new IllegalStateException(
-                "encountered AggregateCall that is neither in filteredAggCalls nor in groupIdCalls");
+                "encountered AggregateCall that is neither in filteredAggCalls nor in groupIdCalls"
+                    + aggCall);
           }
         }
 
