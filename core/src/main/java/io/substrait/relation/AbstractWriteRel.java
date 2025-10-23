@@ -4,7 +4,7 @@ import io.substrait.proto.WriteRel;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 
-public abstract class AbstractWriteRel extends SingleInputRel {
+public abstract class AbstractWriteRel extends SingleInputRel implements HasExtension {
 
   public abstract NamedStruct getTableSchema();
 

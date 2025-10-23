@@ -65,7 +65,9 @@ public class PlanProtoConverter {
     List<PlanRel> planRels = new ArrayList<>();
     ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
     for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
-      Rel input = new RelProtoConverter(functionCollector).toProto(root.getInput());
+      Rel input =
+          new RelProtoConverter(functionCollector, extensionProtoConverter)
+              .toProto(root.getInput());
       planRels.add(
           PlanRel.newBuilder()
               .setRoot(

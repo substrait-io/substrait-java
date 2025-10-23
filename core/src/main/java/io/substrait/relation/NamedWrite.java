@@ -5,7 +5,7 @@ import java.util.List;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class NamedWrite extends AbstractWriteRel implements HasExtension {
+public abstract class NamedWrite extends AbstractWriteRel {
   public abstract List<String> getNames();
 
   @Override
