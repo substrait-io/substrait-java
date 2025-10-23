@@ -34,15 +34,18 @@ import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -74,6 +77,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
@@ -348,8 +352,43 @@ public class SubstraitRelNodeConverter
         aggregate.getMeasures().stream()
             .map(measure -> fromMeasure(measure, context))
             .collect(java.util.stream.Collectors.toList());
+
+    Optional<Remap> remap = aggregate.getRemap();
+    final int lastFieldIndex = groupExprs.size() + aggregateCalls.size();
+
+    // map grouping set index if it is not removed via remap
+    final boolean emitDirect = remap.isEmpty();
+    final boolean groupingSetIndexGetsRemapped =
+        remap.map(r -> r.indices().contains(lastFieldIndex)).orElse(false);
+    if (aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped)) {
+      aggregateCalls.add(
+          AggregateCall.create(
+              SqlStdOperatorTable.GROUP_ID,
+              false,
+              false,
+              false,
+              Collections.emptyList(),
+              Collections.emptyList(),
+              -1,
+              null,
+              RelCollations.EMPTY,
+              typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
+              null));
+      final int groupingCallIndex = aggregateCalls.size() - 1;
+      if (groupingSetIndexGetsRemapped) {
+        List<Integer> remapList = new LinkedList<>(remap.get().indices());
+        for (int i = 0; i < remapList.size(); i++) {
+          if (remapList.get(i).equals(lastFieldIndex)) {
+            // replace last field index with field index of the GROUP_ID() function call
+            remapList.set(i, groupingCallIndex);
+          }
+        }
+        remap = Optional.of(Remap.of(remapList));
+      }
+    }
+
     RelNode node = relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
-    return applyRemap(node, aggregate.getRemap());
+    return applyRemap(node, remap);
   }
 
   private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {

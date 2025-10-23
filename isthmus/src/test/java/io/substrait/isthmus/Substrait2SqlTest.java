@@ -92,6 +92,14 @@ public class Substrait2SqlTest extends PlanTestBase {
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate, ()), l_linestatus");
     assertSqlSubstraitRelRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), (l_orderkey, L_COMMITDATE, l_linestatus), l_shipdate, ())");
+
+    // GROUP_ID()
+    assertSqlSubstraitRelRoundTrip(
+        "select sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
+    assertSqlSubstraitRelRoundTrip(
+        "select group_id(), sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
+    assertSqlSubstraitRelRoundTrip(
+        "select group_id(), sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
   }
 
   @Test
