@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+urn: extension:com.domain:string
+
+scalar_functions:
+  - name: "ltrim"
+    description: "left trim from custom domain"
+    impls:
+      - args:
+          - name: str
+            value: string
+          - name: chars
+            value: string
+        return: string
+  - name: "concat"
+    description: "concatenate strings from custom domain"
+    impls:
+      - args:
+          - name: str1
+            value: string
+          - name: str2
+            value: string
+        variadic:
+          min: 0
+        return: string

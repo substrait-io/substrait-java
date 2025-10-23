@@ -1,0 +1,16 @@
+%YAML 1.2
+---
+urn: extension:io.substrait:functions_string
+
+scalar_functions:
+  - name: "concat"
+    description: "concatenate strings"
+    impls:
+      - args:
+          - name: str1
+            value: string
+          - name: str2
+            value: string
+        variadic:
+          min: 0
+        return: string
