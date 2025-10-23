@@ -358,7 +358,7 @@ public class SubstraitRelNodeConverter
     // map grouping set index if it is not removed via remap
     final boolean emitDirect = remap.isEmpty();
     final boolean groupingSetIndexGetsRemapped =
-        remap.isPresent() && remap.get().indices().contains(lastFieldIndex);
+        remap.map(r -> r.indices().contains(lastFieldIndex)).orElse(false);
     if (aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped)) {
       aggregateCalls.add(
           AggregateCall.create(
@@ -379,8 +379,7 @@ public class SubstraitRelNodeConverter
         for (int i = 0; i < remapList.size(); i++) {
           if (remapList.get(i).equals(lastFieldIndex)) {
             // replace last field index with field index of the GROUP_ID() function call
-            remapList.remove(i);
-            remapList.add(i, groupingCallIndex);
+            remapList.set(i, groupingCallIndex);
           }
         }
         remap = Optional.of(Remap.of(remapList));

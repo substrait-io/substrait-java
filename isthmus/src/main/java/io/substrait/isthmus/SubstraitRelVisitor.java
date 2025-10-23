@@ -290,26 +290,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       // remove the grouping set index if there was no explicit GROUP_ID() function call
       if (groupIdCalls.isEmpty()) {
         int groupingExprSize =
-            groupings.stream()
-                .flatMap(g -> g.getExpressions().stream())
-                .distinct()
-                .collect(Collectors.toList())
-                .size();
+            Math.toIntExact(
+                groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
         builder.remap(Remap.offset(0, groupingExprSize + aggCalls.size()));
       } else {
         // remap grouping set index at the field positions where the GROUP_ID() function calls were
         final int groupingFieldCount =
-            groupings.stream()
-                .flatMap(g -> g.getExpressions().stream())
-                .collect(Collectors.toList())
-                .size();
+            Math.toIntExact(groupings.stream().flatMap(g -> g.getExpressions().stream()).count());
         final int filterAggCallCount = aggCalls.size();
         final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
 
-        final List<Integer> groupingFieldIndices =
-            IntStream.range(0, groupingFieldCount).mapToObj(i -> i).collect(Collectors.toList());
-
-        final List<Integer> remap = new ArrayList<>(groupingFieldIndices);
+        final List<Integer> remap =
+            IntStream.range(0, groupingFieldCount)
+                .mapToObj(i -> i)
+                .collect(Collectors.toCollection(ArrayList::new));
 
         for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
           AggregateCall aggCall = aggregate.getAggCallList().get(i);
