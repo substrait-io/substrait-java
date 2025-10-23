@@ -570,10 +570,42 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using default features.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
+   *
+   * @param relRoot The Calcite RelRoot to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @return The resulting Substrait Plan.Root.
+   */
   public static Plan.Root convert(RelRoot relRoot, SimpleExtension.ExtensionCollection extensions) {
     return convert(relRoot, extensions, FEATURES_DEFAULT);
   }
 
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor
+   * creator and feature board.
+   *
+   * <p>This is the main conversion entry point for a complete plan. It creates the {@link
+   * SubstraitRelVisitor} using the provided creator, applies the visitor to the final projected
+   * {@link RelNode} from the {@code relRoot}, and wraps the resulting {@link Rel} in a {@link
+   * Plan.Root}.
+   *
+   * <p>This method also correctly extracts the final output field names, paying special attention
+   * to nested types (structs, maps) via the visitor's type converter, rather than using the names
+   * from {@code relRoot.validatedRowType} directly.
+   *
+   * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete, optimized
+   *     plan.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @param visitorCreator A factory for creating the {@link SubstraitRelVisitor}. This allows for
+   *     custom visitor behavior (e.g., extensions).
+   * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
+   *     output names.
+   */
   public static Plan.Root convert(
       RelRoot relRoot,
       SimpleExtension.ExtensionCollection extensions,
@@ -590,15 +622,61 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Plan.Root.builder().input(rel).names(names).build();
   }
 
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using the specified
+   * features.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection, FeatureBoard, SubstraitRelVisitorCreator)} using the
+   * default {@code SubstraitRelVisitor::new} creator.
+   *
+   * @param relRoot The Calcite RelRoot to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @return The resulting Substrait Plan.Root.
+   */
   public static Plan.Root convert(
       RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     return convert(relRoot, extensions, features, SubstraitRelVisitor::new);
   }
 
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using default features.
+   *
+   * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
+   * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection)}.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @return The resulting Substrait Rel.
+   */
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
     return convert(relNode, extensions, FEATURES_DEFAULT);
   }
 
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using a custom visitor creator
+   * and feature board.
+   *
+   * <p>This is the main conversion entry point for a partial plan or a single node (and its
+   * children). It creates the {@link SubstraitRelVisitor} using the provided creator and applies it
+   * to the given {@code relNode}.
+   *
+   * <p>This method does not wrap the result in a {@link Plan.Root} or extract output names. For
+   * that, use {@link #convert(RelRoot, SimpleExtension.ExtensionCollection, FeatureBoard,
+   * SubstraitRelVisitorCreator)}.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @param visitorCreator A factory for creating the {@link SubstraitRelVisitor}. This allows for
+   *     custom visitor behavior.
+   * @return The resulting Substrait Rel.
+   */
   public static Rel convert(
       RelNode relNode,
       SimpleExtension.ExtensionCollection extensions,
@@ -610,6 +688,22 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return visitor.apply(relNode);
   }
 
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using the specified features.
+   *
+   * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
+   * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)}.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
+   * SimpleExtension.ExtensionCollection, FeatureBoard, SubstraitRelVisitorCreator)} using the
+   * default {@code SubstraitRelVisitor::new} creator.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @return The resulting Substrait Rel.
+   */
   public static Rel convert(
       RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     return convert(relNode, extensions, features, SubstraitRelVisitor::new);
