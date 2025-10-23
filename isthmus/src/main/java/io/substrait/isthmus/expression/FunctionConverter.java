@@ -47,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Abstract base class for converting between Calcite SqlOperators and Substrait function
+ * Abstract base class for converting between Calcite {@link SqlOperator}s and Substrait function
  * invocations.
  *
  * <p>This class handles bidirectional conversion:
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  *   <li><b>Calcite → Substrait:</b> Subclasses implement {@code convert()} methods to convert
  *       Calcite calls to Substrait function invocations
  *   <li><b>Substrait → Calcite:</b> {@link #getSqlOperatorFromSubstraitFunc} converts Substrait
- *       function keys to Calcite SqlOperators
+ *       function keys to Calcite {@link SqlOperator}s
  * </ul>
  *
  * <p>When multiple functions with the same name and signature are passed into the constructor, a
@@ -157,15 +157,15 @@ public abstract class FunctionConverter<
   }
 
   /**
-   * Converts a Substrait function to a Calcite SqlOperator (Substrait → Calcite direction).
+   * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
    *
    * <p>Given a Substrait function key (e.g., "concat:str_str") and output type, this method finds
-   * the corresponding Calcite SqlOperator. When multiple operators match, the output type is used
-   * to disambiguate.
+   * the corresponding Calcite {@link SqlOperator}. When multiple operators match, the output type
+   * is used to disambiguate.
    *
    * @param key the Substrait function key (function name with type signature)
    * @param outputType the expected output type
-   * @return the matching SqlOperator, or empty if no match found
+   * @return the matching {@link SqlOperator}, or empty if no match found
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
     Map<SqlOperator, TypeBasedResolver> resolver = getTypeBasedResolver();
