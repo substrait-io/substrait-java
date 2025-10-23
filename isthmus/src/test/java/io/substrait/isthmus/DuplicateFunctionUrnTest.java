@@ -1,7 +1,7 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
@@ -20,7 +20,7 @@ import org.apache.calcite.sql.fun.SqlTrimFunction.Flag;
 import org.junit.jupiter.api.Test;
 
 /** Tests to reproduce #562 */
-public class DuplicateFunctionUrnTest extends PlanTestBase {
+class DuplicateFunctionUrnTest extends PlanTestBase {
 
   static final SimpleExtension.ExtensionCollection collection1;
   static final SimpleExtension.ExtensionCollection collection2;
@@ -30,8 +30,9 @@ public class DuplicateFunctionUrnTest extends PlanTestBase {
     try {
       String extensions1 = asString("extensions/functions_duplicate_urn1.yaml");
       String extensions2 = asString("extensions/functions_duplicate_urn2.yaml");
-      collection1 = SimpleExtension.load("urn1://functions", extensions1);
-      collection2 = SimpleExtension.load("urn2://functions", extensions2);
+      collection1 =
+          SimpleExtension.load("urn:extension:io.substrait:functions_string", extensions1);
+      collection2 = SimpleExtension.load("urn:extension:com.domain:string", extensions2);
       collection = collection1.merge(collection2);
 
       // Verify that the merged collection contains duplicate concat functions with different URNs
@@ -58,26 +59,20 @@ public class DuplicateFunctionUrnTest extends PlanTestBase {
 
   @Test
   void testDuplicateFunctionWithDifferentUrns() {
-    ScalarFunctionConverter converter =
-        new ScalarFunctionConverter(collection.scalarFunctions(), typeFactory);
-
-    assertNotNull(converter);
+    assertDoesNotThrow(
+        () -> new ScalarFunctionConverter(collection.scalarFunctions(), typeFactory));
   }
 
   @Test
   void testDuplicateAggregateFunctionWithDifferentUrns() {
-    AggregateFunctionConverter converter =
-        new AggregateFunctionConverter(collection.aggregateFunctions(), typeFactory);
-
-    assertNotNull(converter);
+    assertDoesNotThrow(
+        () -> new AggregateFunctionConverter(collection.aggregateFunctions(), typeFactory));
   }
 
   @Test
   void testDuplicateWindowFunctionWithDifferentUrns() {
-    WindowFunctionConverter converter =
-        new WindowFunctionConverter(collection.windowFunctions(), typeFactory);
-
-    assertNotNull(converter);
+    assertDoesNotThrow(
+        () -> new WindowFunctionConverter(collection.windowFunctions(), typeFactory));
   }
 
   @Test

@@ -46,6 +46,27 @@ import org.apache.calcite.sql.SqlOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Abstract base class for converting between Calcite SqlOperators and Substrait function
+ * invocations.
+ *
+ * <p>This class handles bidirectional conversion:
+ *
+ * <ul>
+ *   <li><b>Calcite → Substrait:</b> Subclasses implement {@code convert()} methods to convert
+ *       Calcite calls to Substrait function invocations
+ *   <li><b>Substrait → Calcite:</b> {@link #getSqlOperatorFromSubstraitFunc} converts Substrait
+ *       function keys to Calcite SqlOperators
+ * </ul>
+ *
+ * <p>When multiple functions with the same name and signature are passed into the constructor, a
+ * <b>last-wins precedence strategy</b> is used for resolution. The last function in the input list
+ * takes precedence during Calcite to Substrait conversion.
+ *
+ * @param <F> the function type (ScalarFunctionVariant, AggregateFunctionVariant, etc.)
+ * @param <T> the return type for Calcite→Substrait conversion
+ * @param <C> the call type being converted
+ */
 public abstract class FunctionConverter<
     F extends SimpleExtension.Function, T, C extends FunctionConverter.GenericCall> {
 
@@ -58,10 +79,32 @@ public abstract class FunctionConverter<
 
   protected final Multimap<String, SqlOperator> substraitFuncKeyToSqlOperatorMap;
 
+  /**
+   * Creates a FunctionConverter with the given functions.
+   *
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
+   *
+   * @param functions the list of function variants to register
+   * @param typeFactory the Calcite type factory
+   */
   public FunctionConverter(List<F> functions, RelDataTypeFactory typeFactory) {
     this(functions, Collections.EMPTY_LIST, typeFactory, TypeConverter.DEFAULT);
   }
 
+  /**
+   * Creates a FunctionConverter with the given functions and additional signatures.
+   *
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
+   *
+   * @param functions the list of function variants to register
+   * @param additionalSignatures additional Calcite operator signatures to map
+   * @param typeFactory the Calcite type factory
+   * @param typeConverter the type converter to use
+   */
   public FunctionConverter(
       List<F> functions,
       List<FunctionMappings.Sig> additionalSignatures,
@@ -113,6 +156,17 @@ public abstract class FunctionConverter<
     this.signatures = matcherMap;
   }
 
+  /**
+   * Converts a Substrait function to a Calcite SqlOperator (Substrait → Calcite direction).
+   *
+   * <p>Given a Substrait function key (e.g., "concat:str_str") and output type, this method finds
+   * the corresponding Calcite SqlOperator. When multiple operators match, the output type is used
+   * to disambiguate.
+   *
+   * @param key the Substrait function key (function name with type signature)
+   * @param outputType the expected output type
+   * @return the matching SqlOperator, or empty if no match found
+   */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
     Map<SqlOperator, TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
@@ -343,6 +397,19 @@ public abstract class FunctionConverter<
       }
     }
 
+    /**
+     * Converts a Calcite call to a Substrait function invocation (Calcite → Substrait direction).
+     *
+     * <p>This method tries to find a matching Substrait function for the given Calcite call using
+     * direct signature matching, type coercion, and least-restrictive type resolution.
+     *
+     * <p>If multiple registered function extensions have the same name and signature, the last one
+     * in the list passed into the constructor will be matched.
+     *
+     * @param call the Calcite call to match
+     * @param topLevelConverter function to convert RexNode operands to Substrait Expressions
+     * @return the matched Substrait function binding, or empty if no match found
+     */
     public Optional<T> attemptMatch(C call, Function<RexNode, Expression> topLevelConverter) {
 
       /*
