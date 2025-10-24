@@ -585,13 +585,11 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor
-   * creator and feature board.
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor.
    *
-   * <p>This is the main conversion entry point for a complete plan. It creates the {@link
-   * SubstraitRelVisitor} using the provided creator, applies the visitor to the final projected
-   * {@link RelNode} from the {@code relRoot}, and wraps the resulting {@link Rel} in a {@link
-   * Plan.Root}.
+   * <p>This is the main conversion entry point for a complete plan. It applies the provided {@link
+   * SubstraitRelVisitor} to the final projected {@link RelNode} from the {@code relRoot}, and wraps
+   * the resulting {@link Rel} in a {@link Plan.Root}.
    *
    * <p>This method also correctly extracts the final output field names, paying special attention
    * to nested types (structs, maps) via the visitor's type converter, rather than using the names
@@ -599,20 +597,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    *
    * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete, optimized
    *     plan.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @param visitorCreator A factory for creating the {@link SubstraitRelVisitor}. This allows for
-   *     custom visitor behavior (e.g., extensions).
+   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
+   *     behavior.
    * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
    *     output names.
    */
-  public static Plan.Root convert(
-      RelRoot relRoot,
-      SimpleExtension.ExtensionCollection extensions,
-      FeatureBoard features,
-      SubstraitRelVisitorCreator visitorCreator) {
-    SubstraitRelVisitor visitor =
-        visitorCreator.create(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
+  public static Plan.Root convert(RelRoot relRoot, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
@@ -627,8 +617,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * features.
    *
    * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
-   * SimpleExtension.ExtensionCollection, FeatureBoard, SubstraitRelVisitorCreator)} using the
-   * default {@code SubstraitRelVisitor::new} creator.
+   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
    *
    * @param relRoot The Calcite RelRoot to convert.
    * @param extensions The extension collection to use for the conversion.
@@ -637,7 +626,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   public static Plan.Root convert(
       RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    return convert(relRoot, extensions, features, SubstraitRelVisitor::new);
+    return convert(
+        relRoot,
+        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features));
   }
 
   /**
@@ -659,31 +650,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using a custom visitor creator
-   * and feature board.
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using a custom visitor.
    *
    * <p>This is the main conversion entry point for a partial plan or a single node (and its
-   * children). It creates the {@link SubstraitRelVisitor} using the provided creator and applies it
-   * to the given {@code relNode}.
+   * children). It applies the provided {@link SubstraitRelVisitor} to the given {@code relNode}.
    *
    * <p>This method does not wrap the result in a {@link Plan.Root} or extract output names. For
-   * that, use {@link #convert(RelRoot, SimpleExtension.ExtensionCollection, FeatureBoard,
-   * SubstraitRelVisitorCreator)}.
+   * that, use {@link #convert(RelRoot, SubstraitRelVisitor)}.
    *
    * @param relNode The Calcite RelNode (and its subtree) to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @param visitorCreator A factory for creating the {@link SubstraitRelVisitor}. This allows for
-   *     custom visitor behavior.
+   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
+   *     behavior.
    * @return The resulting Substrait Rel.
    */
-  public static Rel convert(
-      RelNode relNode,
-      SimpleExtension.ExtensionCollection extensions,
-      FeatureBoard features,
-      SubstraitRelVisitorCreator visitorCreator) {
-    SubstraitRelVisitor visitor =
-        visitorCreator.create(relNode.getCluster().getTypeFactory(), extensions, features);
+  public static Rel convert(RelNode relNode, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relNode);
     return visitor.apply(relNode);
   }
@@ -696,8 +676,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * SimpleExtension.ExtensionCollection, FeatureBoard)}.
    *
    * <p>This is a convenience method that delegates to {@link #convert(RelNode,
-   * SimpleExtension.ExtensionCollection, FeatureBoard, SubstraitRelVisitorCreator)} using the
-   * default {@code SubstraitRelVisitor::new} creator.
+   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
    *
    * @param relNode The Calcite RelNode (and its subtree) to convert.
    * @param extensions The extension collection to use for the conversion.
@@ -706,6 +685,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   public static Rel convert(
       RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    return convert(relNode, extensions, features, SubstraitRelVisitor::new);
+    return convert(
+        relNode,
+        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features));
   }
 }
