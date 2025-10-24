@@ -29,7 +29,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Test;
 
-public class SubtraitRelVisitorExtensionTest {
+class SubtraitRelVisitorExtensionTest {
 
   public class Employee {
     public final int DEPT_ID;
