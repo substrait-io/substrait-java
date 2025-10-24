@@ -79,6 +79,18 @@ public class ProtoRelConverter {
   }
 
   /**
+   * Constructor with custom {@link ExtensionLookup} and {@link ProtoExtensionConverter}.
+   *
+   * @param lookup custom {@link ExtensionLookup} to use, must not be null
+   * @param protoExtensionConverter custom {@link ProtoExtensionConverter} to use, must not be null
+   */
+  public ProtoRelConverter(
+      @NonNull final ExtensionLookup lookup,
+      @NonNull final ProtoExtensionConverter protoExtensionConverter) {
+    this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExtensionConverter);
+  }
+
+  /**
    * Constructor with custom {@link ExtensionLookup}, {@link ExtensionCollection} and {@link
    * ProtoExtensionConverter}.
    *
@@ -475,9 +487,11 @@ public class ProtoRelConverter {
   }
 
   protected ExtensionTable newExtensionTable(ReadRel rel) {
+    NamedStruct namedStruct = newNamedStruct(rel);
     Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
-    ImmutableExtensionTable.Builder builder = ExtensionTable.from(detail);
+    ImmutableExtensionTable.Builder builder =
+        ExtensionTable.from(detail).initialSchema(namedStruct);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
