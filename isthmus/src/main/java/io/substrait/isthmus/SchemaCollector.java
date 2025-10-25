@@ -3,6 +3,8 @@ package io.substrait.isthmus;
 import io.substrait.isthmus.calcite.SubstraitSchema;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelCopyOnWriteVisitor;
 import io.substrait.type.NamedStruct;
@@ -72,7 +74,8 @@ public class SchemaCollector {
     }
 
     /**
-     * Gathers all tables defined in {@link NamedScan}s under the given {@link Rel}
+     * Gathers all tables defined in {@link NamedScan}s and {@link NamedWrite}s under the given
+     * {@link Rel}
      *
      * @param rootRel under which to search for {@link NamedScan}s
      * @return a map of qualified table names to their associated Substrait schemas
@@ -97,6 +100,43 @@ public class SchemaCollector {
         }
       }
       tableMap.put(tableName, namedScan.getInitialSchema());
+
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Rel> visit(NamedWrite namedWrite, EmptyVisitationContext context) {
+      super.visit(namedWrite, context);
+      List<String> tableName = namedWrite.getNames();
+
+      if (tableMap.containsKey(tableName)) {
+        NamedStruct existingSchema = tableMap.get(tableName);
+        if (!existingSchema.equals(namedWrite.getTableSchema())) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "NamedWrite for %s is present multiple times with different schemas", tableName));
+        }
+      }
+      tableMap.put(tableName, namedWrite.getTableSchema());
+
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Rel> visit(NamedUpdate namedUpdate, EmptyVisitationContext context) {
+      super.visit(namedUpdate, context);
+      List<String> tableName = namedUpdate.getNames();
+
+      if (tableMap.containsKey(tableName)) {
+        NamedStruct existingSchema = tableMap.get(tableName);
+        if (!existingSchema.equals(namedUpdate.getTableSchema())) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "NamedUpdate for %s is present multiple times with different schemas",
+                  tableName));
+        }
+      }
+      tableMap.put(tableName, namedUpdate.getTableSchema());
 
       return Optional.empty();
     }
