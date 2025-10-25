@@ -63,7 +63,8 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.COALESCE, "coalesce"),
               s(SqlStdOperatorTable.TRIM, "trim"),
               s(SqlStdOperatorTable.TRIM, "ltrim"),
-              s(SqlStdOperatorTable.TRIM, "rtrim"))
+              s(SqlStdOperatorTable.TRIM, "rtrim"),
+              s(SqlStdOperatorTable.SQRT, "sqrt"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =

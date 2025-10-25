@@ -107,4 +107,11 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT sum0(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i64", "fp32", "fp64"})
+  void sqrt(String column) throws Exception {
+    String query = String.format("SELECT sqrt(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
 }

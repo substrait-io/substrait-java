@@ -43,7 +43,7 @@ public class ScalarFunctionConverter
       TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
 
-    mappers = List.of(new TrimFunctionMapper(functions));
+    mappers = List.of(new TrimFunctionMapper(functions), new SqrtFunctionMapper(functions));
   }
 
   @Override
