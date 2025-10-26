@@ -1,6 +1,21 @@
 Release Notes
 ---
 
+## [0.67.0](https://github.com/substrait-io/substrait-java/compare/v0.66.0...v0.67.0) (2025-10-26)
+
+### Features
+
+* **core,isthmus:** support grouping set index in Aggregate ([#565](https://github.com/substrait-io/substrait-java/issues/565)) ([a00a811](https://github.com/substrait-io/substrait-java/commit/a00a811bb2043151b242169e92a65969b93bf5a4))
+* **isthmus:** improve extensibility of SubstraitRelVisitor ([#553](https://github.com/substrait-io/substrait-java/issues/553)) ([3c3db23](https://github.com/substrait-io/substrait-java/commit/3c3db23b7c508cd50a6317a9970c1d0fe7b0ec16))
+* **isthmus:** mapping of square root function from substrait to calcite ([#568](https://github.com/substrait-io/substrait-java/issues/568)) ([a140d21](https://github.com/substrait-io/substrait-java/commit/a140d21e88732f377effd61abd8e2a2958ce4d43))
+* **spark:** dialect YAML file for spark converter ([#554](https://github.com/substrait-io/substrait-java/issues/554)) ([c4c6153](https://github.com/substrait-io/substrait-java/commit/c4c6153958182941a83b96beade193fd62652d81))
+
+### Bug Fixes
+
+* **core:** disable @Generated annotations for immutables ([#560](https://github.com/substrait-io/substrait-java/issues/560)) ([7222906](https://github.com/substrait-io/substrait-java/commit/7222906351ecec1e8cf06085529fb4c53c1d25d0))
+* prevents exception on construction of `FunctionConverter` with duplicate functions ([#564](https://github.com/substrait-io/substrait-java/issues/564)) ([1b1dc73](https://github.com/substrait-io/substrait-java/commit/1b1dc73f6bab54abfdb41f810b77eaa01ebb7b01)), closes [#562](https://github.com/substrait-io/substrait-java/issues/562)
+* **spark:** convert UnsafeArrayData literal to substrait ([#557](https://github.com/substrait-io/substrait-java/issues/557)) ([a6b2187](https://github.com/substrait-io/substrait-java/commit/a6b21874b24431699d75d9b22d528d7b02e3fd9a))
+
 ## [0.66.0](https://github.com/substrait-io/substrait-java/compare/v0.65.0...v0.66.0) (2025-10-09)
 
 ### ⚠ BREAKING CHANGES
