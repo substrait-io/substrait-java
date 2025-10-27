@@ -201,8 +201,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(EmptyScan emptyScan, EmptyVisitationContext context) throws RuntimeException {
-    ReadRel.Builder builder =
+  public Rel visit(final EmptyScan emptyScan, EmptyVisitationContext context)
+      throws RuntimeException {
+    final ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(emptyScan))
             .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())

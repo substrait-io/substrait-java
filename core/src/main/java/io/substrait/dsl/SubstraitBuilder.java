@@ -611,7 +611,7 @@ public class SubstraitBuilder {
    * @return the {@link Measure} representing {@code COUNT(*)}
    */
   public Measure countStar() {
-    SimpleExtension.AggregateFunctionVariant declaration =
+    final SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:"));

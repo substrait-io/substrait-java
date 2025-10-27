@@ -257,7 +257,7 @@ public class ProtoRelConverter {
     }
   }
 
-  protected NamedDdl newNamedDdl(DdlRel rel) {
+  protected NamedDdl newNamedDdl(final DdlRel rel) {
     final NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     final ImmutableNamedDdl.Builder builder =
         NamedDdl.builder()
@@ -485,11 +485,11 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  protected ExtensionTable newExtensionTable(ReadRel rel) {
-    NamedStruct namedStruct = newNamedStruct(rel);
-    Extension.ExtensionTableDetail detail =
+  protected ExtensionTable newExtensionTable(final ReadRel rel) {
+    final NamedStruct namedStruct = newNamedStruct(rel);
+    final Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
-    ImmutableExtensionTable.Builder builder =
+    final ImmutableExtensionTable.Builder builder =
         ExtensionTable.from(detail).initialSchema(namedStruct);
 
     builder
