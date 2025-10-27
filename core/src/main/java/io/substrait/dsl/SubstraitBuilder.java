@@ -17,6 +17,7 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
 import io.substrait.plan.Plan;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
@@ -25,6 +26,8 @@ import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
@@ -314,6 +317,92 @@ public class SubstraitBuilder {
   public EmptyScan emptyScan() {
     return EmptyScan.builder()
         .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
+        .build();
+  }
+
+  public NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input) {
+    return namedWrite(tableName, columnNames, op, createMode, outputMode, input, Optional.empty());
+  }
+
+  public NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input,
+      Rel.Remap remap) {
+    return namedWrite(
+        tableName, columnNames, op, createMode, outputMode, input, Optional.of(remap));
+  }
+
+  private NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input,
+      Optional<Rel.Remap> remap) {
+    Type.Struct struct = input.getRecordType();
+    NamedStruct namedStruct = NamedStruct.of(columnNames, struct);
+    return NamedWrite.builder()
+        .names(tableName)
+        .tableSchema(namedStruct)
+        .operation(op)
+        .createMode(createMode)
+        .outputMode(outputMode)
+        .input(input)
+        .remap(remap)
+        .build();
+  }
+
+  public NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable) {
+    return namedUpdate(
+        tableName, columnNames, transformations, condition, nullable, Optional.empty());
+  }
+
+  public NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable,
+      Rel.Remap remap) {
+    return namedUpdate(
+        tableName, columnNames, transformations, condition, nullable, Optional.of(remap));
+  }
+
+  private NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable,
+      Optional<Rel.Remap> remap) {
+    List<Type> types =
+        transformations.stream()
+            .map(t -> t.getTransformation().getType())
+            .collect(Collectors.toList());
+    Type.Struct struct = Type.Struct.builder().fields(types).nullable(nullable).build();
+    NamedStruct namedStruct = NamedStruct.of(columnNames, struct);
+    return NamedUpdate.builder()
+        .names(tableName)
+        .tableSchema(namedStruct)
+        .transformations(transformations)
+        .condition(condition)
+        .remap(remap)
         .build();
   }
 
