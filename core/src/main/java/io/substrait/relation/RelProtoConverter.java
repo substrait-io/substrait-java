@@ -201,15 +201,17 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(EmptyScan emptyScan, EmptyVisitationContext context) throws RuntimeException {
-    return Rel.newBuilder()
-        .setRead(
-            ReadRel.newBuilder()
-                .setCommon(common(emptyScan))
-                .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
-                .setBaseSchema(emptyScan.getInitialSchema().toProto(typeProtoConverter))
-                .build())
-        .build();
+  public Rel visit(final EmptyScan emptyScan, EmptyVisitationContext context)
+      throws RuntimeException {
+    final ReadRel.Builder builder =
+        ReadRel.newBuilder()
+            .setCommon(common(emptyScan))
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
+            .setBaseSchema(emptyScan.getInitialSchema().toProto(typeProtoConverter));
+    emptyScan
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+    return Rel.newBuilder().setRead(builder.build()).build();
   }
 
   @Override
@@ -435,6 +437,10 @@ public class RelProtoConverter
             .setCreateMode(write.getCreateMode().toProto())
             .setOutput(write.getOutputMode().toProto());
 
+    write
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+
     return Rel.newBuilder().setWrite(builder).build();
   }
 
@@ -450,6 +456,10 @@ public class RelProtoConverter
             .setOp(write.getOperation().toProto())
             .setCreateMode(write.getCreateMode().toProto())
             .setOutput(write.getOutputMode().toProto());
+
+    write
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
 
     return Rel.newBuilder().setWrite(builder).build();
   }
@@ -468,6 +478,9 @@ public class RelProtoConverter
       builder.setViewDefinition(toProto(ddl.getViewDefinition().get()));
     }
 
+    ddl.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+
     return Rel.newBuilder().setDdl(builder).build();
   }
 
@@ -485,6 +498,9 @@ public class RelProtoConverter
     if (ddl.getViewDefinition().isPresent()) {
       builder.setViewDefinition(toProto(ddl.getViewDefinition().get()));
     }
+
+    ddl.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
 
     return Rel.newBuilder().setDdl(builder).build();
   }
