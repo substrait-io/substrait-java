@@ -34,7 +34,6 @@ import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
-import io.substrait.relation.ImmutableExtensionDdl.Builder;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
@@ -283,7 +282,7 @@ public class ProtoRelConverter {
     final Extension.DdlExtensionObject detail =
         detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
     final NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
-    final Builder builder =
+    final ImmutableExtensionDdl.Builder builder =
         ExtensionDdl.builder()
             .detail(detail)
             .tableSchema(newNamedStruct(rel.getTableSchema()))
