@@ -19,6 +19,7 @@ import io.substrait.function.ToTypeString;
 import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.Aggregate.Measure;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
@@ -597,6 +598,25 @@ public class SubstraitBuilder {
     return measure(
         AggregateFunctionInvocation.builder()
             .arguments(fieldReferences(input, field))
+            .outputType(R.I64)
+            .declaration(declaration)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
+  }
+
+  /**
+   * Returns a {@link Measure} representing the equivalent of a {@code COUNT(*)} SQL aggregation.
+   *
+   * @return the {@link Measure} representing {@code COUNT(*)}
+   */
+  public Measure countStar() {
+    final SimpleExtension.AggregateFunctionVariant declaration =
+        extensions.getAggregateFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:"));
+    return measure(
+        AggregateFunctionInvocation.builder()
             .outputType(R.I64)
             .declaration(declaration)
             .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)

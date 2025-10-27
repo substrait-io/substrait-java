@@ -61,11 +61,13 @@ public class PlanProtoConverter {
     this.extensionProtoConverter = extensionProtoConverter;
   }
 
-  public Plan toProto(io.substrait.plan.Plan plan) {
-    List<PlanRel> planRels = new ArrayList<>();
-    ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
-    for (io.substrait.plan.Plan.Root root : plan.getRoots()) {
-      Rel input = new RelProtoConverter(functionCollector).toProto(root.getInput());
+  public Plan toProto(final io.substrait.plan.Plan plan) {
+    final List<PlanRel> planRels = new ArrayList<>();
+    final ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
+    for (final io.substrait.plan.Plan.Root root : plan.getRoots()) {
+      final Rel input =
+          new RelProtoConverter(functionCollector, extensionProtoConverter)
+              .toProto(root.getInput());
       planRels.add(
           PlanRel.newBuilder()
               .setRoot(
@@ -74,7 +76,7 @@ public class PlanProtoConverter {
                       .addAllNames(root.getNames()))
               .build());
     }
-    Plan.Builder builder =
+    final Plan.Builder builder =
         Plan.newBuilder()
             .addAllRelations(planRels)
             .addAllExpectedTypeUrls(plan.getExpectedTypeUrls());
@@ -84,7 +86,7 @@ public class PlanProtoConverter {
           extensionProtoConverter.toProto(plan.getAdvancedExtension().get()));
     }
 
-    Version.Builder versionBuilder =
+    final Version.Builder versionBuilder =
         Version.newBuilder()
             .setMajorNumber(plan.getVersion().getMajor())
             .setMinorNumber(plan.getVersion().getMinor())

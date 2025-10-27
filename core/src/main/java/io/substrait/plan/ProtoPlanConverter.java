@@ -62,8 +62,8 @@ public class ProtoPlanConverter {
   }
 
   /** Override hook for providing custom {@link ProtoRelConverter} implementations */
-  protected ProtoRelConverter getProtoRelConverter(ExtensionLookup functionLookup) {
-    return new ProtoRelConverter(functionLookup, this.extensionCollection);
+  protected ProtoRelConverter getProtoRelConverter(final ExtensionLookup functionLookup) {
+    return new ProtoRelConverter(functionLookup, this.extensionCollection, protoExtensionConverter);
   }
 
   public Plan from(io.substrait.proto.Plan plan) {

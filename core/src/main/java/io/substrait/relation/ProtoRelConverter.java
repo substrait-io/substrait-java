@@ -78,6 +78,18 @@ public class ProtoRelConverter {
   }
 
   /**
+   * Constructor with custom {@link ExtensionLookup} and {@link ProtoExtensionConverter}.
+   *
+   * @param lookup custom {@link ExtensionLookup} to use, must not be null
+   * @param protoExtensionConverter custom {@link ProtoExtensionConverter} to use, must not be null
+   */
+  public ProtoRelConverter(
+      @NonNull final ExtensionLookup lookup,
+      @NonNull final ProtoExtensionConverter protoExtensionConverter) {
+    this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExtensionConverter);
+  }
+
+  /**
    * Constructor with custom {@link ExtensionLookup}, {@link ExtensionCollection} and {@link
    * ProtoExtensionConverter}.
    *
@@ -175,8 +187,8 @@ public class ProtoRelConverter {
     }
   }
 
-  protected Rel newWrite(WriteRel rel) {
-    WriteRel.WriteTypeCase relType = rel.getWriteTypeCase();
+  protected Rel newWrite(final WriteRel rel) {
+    final WriteRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
       case NAMED_TABLE:
         return newNamedWrite(rel);
@@ -187,9 +199,9 @@ public class ProtoRelConverter {
     }
   }
 
-  protected NamedWrite newNamedWrite(WriteRel rel) {
-    Rel input = from(rel.getInput());
-    ImmutableNamedWrite.Builder builder =
+  protected NamedWrite newNamedWrite(final WriteRel rel) {
+    final Rel input = from(rel.getInput());
+    final ImmutableNamedWrite.Builder builder =
         NamedWrite.builder()
             .input(input)
             .names(rel.getNamedTable().getNamesList())
@@ -202,14 +214,18 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
     return builder.build();
   }
 
-  protected Rel newExtensionWrite(WriteRel rel) {
-    Rel input = from(rel.getInput());
-    Extension.WriteExtensionObject detail =
+  protected Rel newExtensionWrite(final WriteRel rel) {
+    final Rel input = from(rel.getInput());
+    final Extension.WriteExtensionObject detail =
         detailFromWriteExtensionObject(rel.getExtensionTable().getDetail());
-    ImmutableExtensionWrite.Builder builder =
+    final ImmutableExtensionWrite.Builder builder =
         ExtensionWrite.builder()
             .input(input)
             .detail(detail)
@@ -222,11 +238,15 @@ public class ProtoRelConverter {
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
     return builder.build();
   }
 
-  protected Rel newDdl(DdlRel rel) {
-    DdlRel.WriteTypeCase relType = rel.getWriteTypeCase();
+  protected Rel newDdl(final DdlRel rel) {
+    final DdlRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
       case NAMED_OBJECT:
         return newNamedDdl(rel);
@@ -237,36 +257,48 @@ public class ProtoRelConverter {
     }
   }
 
-  protected NamedDdl newNamedDdl(DdlRel rel) {
-    NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
-    return NamedDdl.builder()
-        .names(rel.getNamedObject().getNamesList())
-        .tableSchema(tableSchema)
-        .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
-        .operation(NamedDdl.DdlOp.fromProto(rel.getOp()))
-        .object(NamedDdl.DdlObject.fromProto(rel.getObject()))
-        .viewDefinition(optionalViewDefinition(rel))
-        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .hint(optionalHint(rel.getCommon()))
-        .build();
+  protected NamedDdl newNamedDdl(final DdlRel rel) {
+    final NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
+    final ImmutableNamedDdl.Builder builder =
+        NamedDdl.builder()
+            .names(rel.getNamedObject().getNamesList())
+            .tableSchema(tableSchema)
+            .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
+            .operation(NamedDdl.DdlOp.fromProto(rel.getOp()))
+            .object(NamedDdl.DdlObject.fromProto(rel.getObject()))
+            .viewDefinition(optionalViewDefinition(rel))
+            .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()))
+            .hint(optionalHint(rel.getCommon()));
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+
+    return builder.build();
   }
 
-  protected ExtensionDdl newExtensionDdl(DdlRel rel) {
-    Extension.DdlExtensionObject detail =
+  protected ExtensionDdl newExtensionDdl(final DdlRel rel) {
+    final Extension.DdlExtensionObject detail =
         detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
-    NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
-    return ExtensionDdl.builder()
-        .detail(detail)
-        .tableSchema(newNamedStruct(rel.getTableSchema()))
-        .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
-        .operation(ExtensionDdl.DdlOp.fromProto(rel.getOp()))
-        .object(ExtensionDdl.DdlObject.fromProto(rel.getObject()))
-        .viewDefinition(optionalViewDefinition(rel))
-        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .hint(optionalHint(rel.getCommon()))
-        .build();
+    final NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
+    final ImmutableExtensionDdl.Builder builder =
+        ExtensionDdl.builder()
+            .detail(detail)
+            .tableSchema(newNamedStruct(rel.getTableSchema()))
+            .tableDefaults(tableDefaults(rel.getTableDefaults(), tableSchema))
+            .operation(ExtensionDdl.DdlOp.fromProto(rel.getOp()))
+            .object(ExtensionDdl.DdlObject.fromProto(rel.getObject()))
+            .viewDefinition(optionalViewDefinition(rel))
+            .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+            .remap(optionalRelmap(rel.getCommon()))
+            .hint(optionalHint(rel.getCommon()));
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+
+    return builder.build();
   }
 
   protected Optional<Rel> optionalViewDefinition(DdlRel rel) {
@@ -453,10 +485,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
-  protected ExtensionTable newExtensionTable(ReadRel rel) {
-    Extension.ExtensionTableDetail detail =
+  protected ExtensionTable newExtensionTable(final ReadRel rel) {
+    final NamedStruct namedStruct = newNamedStruct(rel);
+    final Extension.ExtensionTableDetail detail =
         detailFromExtensionTable(rel.getExtensionTable().getDetail());
-    ImmutableExtensionTable.Builder builder = ExtensionTable.from(detail);
+    final ImmutableExtensionTable.Builder builder =
+        ExtensionTable.from(detail).initialSchema(namedStruct);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
