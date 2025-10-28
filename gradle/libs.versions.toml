@@ -24,7 +24,7 @@ shadow = "9.2.2"
 slf4j = "2.0.17"
 spark = "3.4.4"
 spotless = "8.0.0"
-validator = "1.5.9"
+validator = "2.0.0"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
