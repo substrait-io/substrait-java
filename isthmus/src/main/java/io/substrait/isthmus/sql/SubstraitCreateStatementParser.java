@@ -58,6 +58,9 @@ public class SubstraitCreateStatementParser {
   /**
    * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s
    *
+   * <p>This method only supports simple table names without any additional qualifiers. Only used
+   * with {@link io.substrait.isthmus.SqlExpressionToSubstrait}.
+   *
    * @param createStatements a SQL string containing only CREATE statements
    * @return a list of {@link SubstraitTable}s generated from the CREATE statements
    * @throws SqlParseException
