@@ -306,11 +306,11 @@ public class ProtoRelConverter {
     return Optional.ofNullable(rel.hasViewDefinition() ? from(rel.getViewDefinition()) : null);
   }
 
-  protected Expression.StructNested tableDefaults(
-      io.substrait.proto.Expression.Nested.Struct struct, NamedStruct tableSchema) {
+  protected Expression.StructLiteral tableDefaults(
+      io.substrait.proto.Expression.Literal.Struct struct, NamedStruct tableSchema) {
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
-    return Expression.StructNested.builder()
+    return Expression.StructLiteral.builder()
         .fields(
             struct.getFieldsList().stream()
                 .map(converter::from)

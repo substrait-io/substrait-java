@@ -557,7 +557,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     RelNode input = createView.getInput();
     Rel inputRel = apply(input);
 
-    final Expression.StructNested defaults = ExpressionCreator.struct(new ArrayList<>());
+    final Expression.StructLiteral defaults = ExpressionCreator.struct(false);
 
     return NamedDdl.builder()
         .viewDefinition(inputRel)

@@ -44,6 +44,7 @@ import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.expression.Expression.StructNested
+import io.substrait.expression.ImmutableExpression.StructLiteral
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.Plan
@@ -455,25 +456,25 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     if (data.isEmpty) {
       relation.EmptyScan.builder().initialSchema(namedStruct).build()
     } else {
-      var list = data
-        .map(
-          row => {
-            var idx = 0
-            val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
-            while (idx < row.numFields) {
-              val dt = schema(idx).dataType
-              val l = Literal.apply(row.get(idx, dt), dt)
-              buf += ToSubstraitLiteral.apply(l)
-              idx += 1
-            }
-            ExpressionCreator.struct(false, buf.asJava)
-          })
-        .asJava
 
       relation.VirtualTableScan
         .builder()
         .initialSchema(namedStruct)
-        .addAllRows(ExpressionCreator.toNested(list))
+        .addAllRows(
+          data
+            .map(
+              row => {
+                var idx = 0
+                val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
+                while (idx < row.numFields) {
+                  val dt = schema(idx).dataType
+                  val l = Literal.apply(row.get(idx, dt), dt)
+                  buf += ToSubstraitLiteral.apply(l)
+                  idx += 1
+                }
+                ExpressionCreator.struct(buf.asJava)
+              })
+            .asJava)
         .build()
     }
   }
@@ -661,7 +662,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .`object`(DdlObject.TABLE)
       .names(seqAsJavaList(names))
       .tableSchema(ToSubstraitType.toNamedStruct(schema))
-      .tableDefaults(StructNested.builder().build())
+      .tableDefaults(StructLiteral.builder.nullable(true).build())
       .build()
   }
 
@@ -673,7 +674,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .names(seqAsJavaList(names))
       .tableSchema(
         NamedStruct.builder().struct(Type.Struct.builder().nullable(true).build()).build())
-      .tableDefaults(StructNested.builder().build())
+      .tableDefaults(StructLiteral.builder.nullable(true).build())
       .build()
   }
 

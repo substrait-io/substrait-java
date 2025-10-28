@@ -471,7 +471,7 @@ public class RelProtoConverter
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
-            .setTableDefaults(toProto(ddl.getTableDefaults()).getNested().getStruct())
+            .setTableDefaults(toProto(ddl.getTableDefaults()).getLiteral().getStruct())
             .setNamedObject(NamedObjectWrite.newBuilder().addAllNames(ddl.getNames()))
             .setObject(ddl.getObject().toProto())
             .setOp(ddl.getOperation().toProto());
@@ -491,7 +491,7 @@ public class RelProtoConverter
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
-            .setTableDefaults(toProto(ddl.getTableDefaults()).getNested().getStruct())
+            .setTableDefaults(toProto(ddl.getTableDefaults()).getLiteral().getStruct())
             .setExtensionObject(
                 ExtensionObject.newBuilder().setDetail(ddl.getDetail().toProto(this)))
             .setObject(ddl.getObject().toProto())

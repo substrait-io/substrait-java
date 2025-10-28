@@ -9,7 +9,7 @@ import java.util.Optional;
 public abstract class AbstractDdlRel extends ZeroInputRel implements HasExtension {
   public abstract NamedStruct getTableSchema();
 
-  public abstract Expression.StructNested getTableDefaults();
+  public abstract Expression.StructLiteral getTableDefaults();
 
   public abstract DdlObject getObject();
 
