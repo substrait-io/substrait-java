@@ -469,10 +469,11 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             ExpressionCreator.struct(false, buf.asJava)
           })
         .asJava
+
       relation.VirtualTableScan
         .builder()
         .initialSchema(namedStruct)
-        .addAllRows(list)
+        .addAllRows(ExpressionCreator.toNested(list))
         .build()
     }
   }
@@ -560,7 +561,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .initialSchema(NamedStruct
             .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
-          .addRows(ExpressionCreator.struct(false))
+          .addRows(ExpressionCreator.struct(null))
           .build()
       case _ =>
         throw new UnsupportedOperationException(
