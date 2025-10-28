@@ -1,6 +1,7 @@
 package io.substrait.isthmus.sql;
 
 import io.substrait.isthmus.SubstraitTypeSystem;
+import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,18 +25,19 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.jspecify.annotations.Nullable;
 
 /** Utility class for parsing CREATE statements into a {@link CalciteCatalogReader} */
 public class SubstraitCreateStatementParser {
 
-  private static final RelDataTypeFactory TYPE_FACTORY =
+  protected static final RelDataTypeFactory TYPE_FACTORY =
       new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
 
-  private static final CalciteConnectionConfig CONNECTION_CONFIG =
+  protected static final CalciteConnectionConfig CONNECTION_CONFIG =
       CalciteConnectionConfig.DEFAULT.set(
           CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
 
-  private static final SqlParser.Config PARSER_CONFIG =
+  protected static final SqlParser.Config PARSER_CONFIG =
       SqlParser.config()
           // To process CREATE statements we must use the SqlDdlParserImpl, as the default
           // parser does not handle them
@@ -43,12 +45,12 @@ public class SubstraitCreateStatementParser {
           .withUnquotedCasing(Casing.TO_UPPER)
           .withConformance(SqlConformanceEnum.LENIENT);
 
-  private static final CalciteCatalogReader EMPTY_CATALOG =
+  protected static final CalciteCatalogReader EMPTY_CATALOG =
       new CalciteCatalogReader(
           CalciteSchema.createRootSchema(false), List.of(), TYPE_FACTORY, CONNECTION_CONFIG);
 
   // A validator is needed to convert the types in column declarations to Calcite types
-  private static final SqlValidator VALIDATOR =
+  protected static final SqlValidator VALIDATOR =
       new SubstraitSqlValidator(
           // as we are validating CREATE statements, an empty catalog suffices
           EMPTY_CATALOG);
@@ -81,33 +83,7 @@ public class SubstraitCreateStatementParser {
         throw fail("CTAS not supported.", create.name.getParserPosition());
       }
 
-      List<String> names = new ArrayList<>();
-      List<RelDataType> columnTypes = new ArrayList<>();
-
-      for (SqlNode node : create.columnList) {
-        if (!(node instanceof SqlColumnDeclaration)) {
-          if (node instanceof SqlKeyConstraint) {
-            // key constraints declarations, like primary key declaration, are valid and should not
-            // result in parse exceptions. Ignore the constraint declaration.
-            continue;
-          }
-
-          throw fail("Unexpected column list construction.", node.getParserPosition());
-        }
-
-        SqlColumnDeclaration col = (SqlColumnDeclaration) node;
-
-        if (col.name.names.size() != 1) {
-          throw fail("Expected simple column names.", col.name.getParserPosition());
-        }
-
-        names.add(col.name.names.get(0));
-        columnTypes.add(col.dataType.deriveType(VALIDATOR));
-      }
-
-      tableList.add(
-          new SubstraitTable(
-              create.name.names.get(0), TYPE_FACTORY.createStructType(columnTypes, names)));
+      tableList.add(createSubstraitTable(create.name.names.get(0), create.columnList));
     }
 
     return tableList;
@@ -123,23 +99,107 @@ public class SubstraitCreateStatementParser {
    */
   public static CalciteCatalogReader processCreateStatementsToCatalog(String... createStatements)
       throws SqlParseException {
-    List<SubstraitTable> tables = new ArrayList<>();
-    for (String statement : createStatements) {
-      tables.addAll(processCreateStatements(statement));
-    }
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    for (SubstraitTable table : tables) {
-      rootSchema.add(table.getName(), table);
-    }
+    CalciteSchema rootSchema = processCreateStatementsToSchema(createStatements);
     List<String> defaultSchema = Collections.emptyList();
     return new CalciteCatalogReader(rootSchema, defaultSchema, TYPE_FACTORY, CONNECTION_CONFIG);
   }
 
-  private static SqlParseException fail(String text, SqlParserPos pos) {
-    return new SqlParseException(text, pos, null, null, new RuntimeException("fake lineage"));
+  /**
+   * Creates a new {@link SqlParseException} with the given message and {@link SqlParserPos}.
+   *
+   * @param message the exception message, may be null
+   * @param pos the position where this error occured, may be null
+   * @return the {@link SqlParseException} with the given message and {@link SqlParserPos}
+   */
+  protected static SqlParseException fail(@Nullable String message, @Nullable SqlParserPos pos) {
+    return new SqlParseException(message, pos, null, null, new RuntimeException("fake lineage"));
   }
 
-  private static SqlParseException fail(String text) {
-    return fail(text, SqlParserPos.ZERO);
+  /**
+   * Creates a new {@link SqlParseException} with the given message.
+   *
+   * @param message the exception message, may be null
+   * @return the {@link SqlParseException} with the given message
+   */
+  protected static SqlParseException fail(@Nullable String message) {
+    return fail(message, SqlParserPos.ZERO);
+  }
+
+  /**
+   * Parses one or more SQL strings containing only CREATE statements into a {@link CalciteSchema}.
+   *
+   * @param createStatements a SQL string containing only CREATE statements
+   * @return a {@link CalciteSchema} generated from the CREATE statements
+   * @throws SqlParseException
+   */
+  protected static CalciteSchema processCreateStatementsToSchema(final String... createStatements)
+      throws SqlParseException {
+    final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+
+    for (final String statement : createStatements) {
+      final SqlParser parser = SqlParser.create(statement, PARSER_CONFIG);
+
+      final SqlNodeList sqlNode = parser.parseStmtList();
+      for (final SqlNode parsed : sqlNode) {
+        if (!(parsed instanceof SqlCreateTable)) {
+          throw fail("Not a valid CREATE TABLE statement.");
+        }
+
+        final SqlCreateTable create = (SqlCreateTable) parsed;
+        final List<String> names = create.name.names;
+
+        CalciteSchema schema = Utils.createCalciteSchemaFromNames(rootSchema, names);
+
+        // Create the table if it is not present
+        final String tableName = names.get(names.size() - 1);
+        final CalciteSchema.TableEntry table = schema.getTable(tableName, false);
+        if (table == null) {
+          schema.add(tableName, createSubstraitTable(tableName, create.columnList));
+        } else {
+          throw fail("Table must not be defined more than once", parsed.getParserPosition());
+        }
+      }
+    }
+
+    return rootSchema;
+  }
+
+  /**
+   * Creates a new {@link SubstraitTable} with the given table name and the table schema from the
+   * given {@link SqlNodeList} containing {@link SqlColumnDeclaration}s.
+   *
+   * @param tableName the table name to use
+   * @param columnList the {@link SqlNodeList} containing {@link SqlColumnDeclaration}s to create
+   *     the table schema from
+   * @return the {@link SubstraitTable}
+   * @throws SqlParseException
+   */
+  protected static SubstraitTable createSubstraitTable(String tableName, SqlNodeList columnList)
+      throws SqlParseException {
+    List<String> names = new ArrayList<>();
+    List<RelDataType> columnTypes = new ArrayList<>();
+
+    for (SqlNode node : columnList) {
+      if (!(node instanceof SqlColumnDeclaration)) {
+        if (node instanceof SqlKeyConstraint) {
+          // key constraints declarations, like primary key declaration, are valid and should not
+          // result in parse exceptions. Ignore the constraint declaration.
+          continue;
+        }
+
+        throw fail("Unexpected column list construction.", node.getParserPosition());
+      }
+
+      SqlColumnDeclaration col = (SqlColumnDeclaration) node;
+
+      if (col.name.names.size() != 1) {
+        throw fail("Expected simple column names.", col.name.getParserPosition());
+      }
+
+      names.add(col.name.names.get(0));
+      columnTypes.add(col.dataType.deriveType(VALIDATOR));
+    }
+
+    return new SubstraitTable(tableName, TYPE_FACTORY.createStructType(columnTypes, names));
   }
 }
