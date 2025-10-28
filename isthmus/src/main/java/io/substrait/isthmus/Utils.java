@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.jspecify.annotations.NonNull;
 
 public class Utils {
   /**
@@ -73,14 +74,14 @@ public class Utils {
    * @see io.substrait.isthmus.SchemaCollector#toSchema
    */
   public static CalciteSchema createCalciteSchemaFromNames(
-      CalciteSchema rootSchema, List<String> names) {
+      @NonNull final CalciteSchema rootSchema, @NonNull final List<String> names) {
     CalciteSchema schema = rootSchema;
-    for (String schemaName : names.subList(0, names.size() - 1)) {
-      CalciteSchema subSchema = schema.getSubSchema(schemaName, false);
+    for (final String schemaName : names.subList(0, names.size() - 1)) {
+      final CalciteSchema subSchema = schema.getSubSchema(schemaName, false);
       if (subSchema != null) {
         schema = subSchema;
       } else {
-        SubstraitSchema newSubSchema = new SubstraitSchema();
+        final SubstraitSchema newSubSchema = new SubstraitSchema();
         schema = schema.add(schemaName, newSubSchema);
       }
     }

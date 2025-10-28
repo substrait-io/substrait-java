@@ -12,7 +12,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithSingleCreateTableWithTableNameOnly()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table src1 (intcol int, charcol varchar(10))");
 
@@ -23,7 +23,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithMultipleCreateTableWithTableNameOnly()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table src1 (intcol int, charcol varchar(10))",
             "create table src2 (intcol int, charcol varchar(10))");
@@ -36,7 +36,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithSingleCreateTableWithSchemaAndTableName()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table schema1.src1 (intcol int, charcol varchar(10))");
 
@@ -50,7 +50,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithMultipleCreateTableWithSameSchema()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table schema1.src1 (intcol int, charcol varchar(10))",
             "create table schema1.src2 (intcol int, charcol varchar(10))");
@@ -67,7 +67,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithMultipleCreateTableWithDifferentSchemas()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table schema1.src1 (intcol int, charcol varchar(10))",
             "create table schema2.src2 (intcol int, charcol varchar(10))");
@@ -85,7 +85,7 @@ class SubstraitCreateStatementParserTest {
   @Test
   void testProcessCreateStatementsToCatalogWithSingleCreateTableWithCatalogAndSchemaAndTableName()
       throws SqlParseException {
-    CalciteCatalogReader catalogReader =
+    final CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table catalog1.schema1.src1 (intcol int, charcol varchar(10))");
 
