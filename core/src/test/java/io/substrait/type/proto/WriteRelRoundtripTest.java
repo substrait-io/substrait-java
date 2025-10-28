@@ -3,6 +3,7 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
+import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.ExtensionWrite;
 import io.substrait.relation.NamedWrite;
@@ -28,8 +29,10 @@ public class WriteRelRoundtripTest extends TestBase {
         VirtualTableScan.builder()
             .initialSchema(schema)
             .addRows(
-                ExpressionCreator.struct(
-                    false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2)))
+                Expression.StructNested.builder()
+                    .addFields(ExpressionCreator.i64(false, 2))
+                    .addFields(ExpressionCreator.i64(false, 1))
+                    .build())
             .build();
     virtTable =
         VirtualTableScan.builder()
@@ -65,8 +68,10 @@ public class WriteRelRoundtripTest extends TestBase {
         VirtualTableScan.builder()
             .initialSchema(schema)
             .addRows(
-                ExpressionCreator.struct(
-                    false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2)))
+                Expression.StructNested.builder()
+                    .addFields(ExpressionCreator.i64(false, 1))
+                    .addFields(ExpressionCreator.i64(false, 2))
+                    .build())
             .build();
 
     ExtensionWrite command =

@@ -43,13 +43,13 @@ import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
-import io.substrait.expression.Expression.StructLiteral
+import io.substrait.expression.Expression.StructNested
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.Plan
+import io.substrait.relation.{RelProtoConverter, VirtualTableScan}
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
-import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, FileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
@@ -455,24 +455,24 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     if (data.isEmpty) {
       relation.EmptyScan.builder().initialSchema(namedStruct).build()
     } else {
+      var list = data
+        .map(
+          row => {
+            var idx = 0
+            val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
+            while (idx < row.numFields) {
+              val dt = schema(idx).dataType
+              val l = Literal.apply(row.get(idx, dt), dt)
+              buf += ToSubstraitLiteral.apply(l)
+              idx += 1
+            }
+            ExpressionCreator.struct(false, buf.asJava)
+          })
+        .asJava
       relation.VirtualTableScan
         .builder()
         .initialSchema(namedStruct)
-        .addAllRows(
-          data
-            .map(
-              row => {
-                var idx = 0
-                val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
-                while (idx < row.numFields) {
-                  val dt = schema(idx).dataType
-                  val l = Literal.apply(row.get(idx, dt), dt)
-                  buf += ToSubstraitLiteral.apply(l)
-                  idx += 1
-                }
-                ExpressionCreator.struct(false, buf.asJava)
-              })
-            .asJava)
+        .addAllRows(list)
         .build()
     }
   }
@@ -660,7 +660,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .`object`(DdlObject.TABLE)
       .names(seqAsJavaList(names))
       .tableSchema(ToSubstraitType.toNamedStruct(schema))
-      .tableDefaults(StructLiteral.builder.nullable(true).build())
+      .tableDefaults(StructNested.builder().build())
       .build()
   }
 
@@ -672,7 +672,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .names(seqAsJavaList(names))
       .tableSchema(
         NamedStruct.builder().struct(Type.Struct.builder().nullable(true).build()).build())
-      .tableDefaults(StructLiteral.builder.nullable(true).build())
+      .tableDefaults(StructNested.builder().build())
       .build()
   }
 

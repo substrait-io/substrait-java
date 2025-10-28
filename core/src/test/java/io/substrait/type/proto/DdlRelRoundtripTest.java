@@ -25,9 +25,11 @@ public class DdlRelRoundtripTest extends TestBase {
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    Expression.StructLiteral defaults =
-        ExpressionCreator.struct(
-            false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
+    Expression.StructNested defaults =
+        Expression.StructNested.builder()
+            .addFields(ExpressionCreator.i64(false, 1))
+            .addFields(ExpressionCreator.i64(false, 2))
+            .build();
 
     NamedDdl command =
         NamedDdl.builder()
@@ -52,9 +54,11 @@ public class DdlRelRoundtripTest extends TestBase {
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    Expression.StructLiteral defaults =
-        ExpressionCreator.struct(
-            false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
+    Expression.StructNested defaults =
+        Expression.StructNested.builder()
+            .addFields(ExpressionCreator.i64(false, 1))
+            .addFields(ExpressionCreator.i64(false, 2))
+            .build();
 
     VirtualTableScan virtTable =
         VirtualTableScan.builder().initialSchema(schema).addRows(defaults).build();

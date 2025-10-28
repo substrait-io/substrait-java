@@ -76,7 +76,7 @@ public class ExpressionProtoConverter
   }
 
   private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
-    var builder = Expression.Nested.newBuilder();
+    Expression.Nested.Builder builder = Expression.Nested.newBuilder();
     consumer.accept(builder);
     return Expression.newBuilder().setNested(builder).build();
   }
@@ -364,13 +364,12 @@ public class ExpressionProtoConverter
   }
 
   @Override
-  public Expression visit(io.substrait.expression.Expression.StructNested expr) {
+  public Expression visit(
+      io.substrait.expression.Expression.StructNested expr, EmptyVisitationContext context) {
     return nested(
         bldr -> {
-          var values =
-              expr.fields().stream()
-                  .map(this::toProto)
-                  .collect(java.util.stream.Collectors.toList());
+          List<Expression> values =
+              expr.fields().stream().map(this::toProto).collect(Collectors.toList());
           bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values));
         });
   }

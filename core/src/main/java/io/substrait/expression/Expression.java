@@ -663,9 +663,10 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
-  abstract static class StructNested implements Expression {
+  abstract class StructNested implements Expression {
     public abstract List<Expression> fields();
 
+    @Override
     public Type getType() {
       return Type.withNullability(false)
           .struct(
@@ -678,8 +679,10 @@ public interface Expression extends FunctionArg {
       return ImmutableExpression.StructNested.builder();
     }
 
-    public <R, E extends Throwable> R accept(ExpressionVisitor<R, E> visitor) throws E {
-      return visitor.visit(this);
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
     }
   }
 

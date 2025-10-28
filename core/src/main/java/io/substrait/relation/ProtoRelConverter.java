@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -170,7 +171,7 @@ public class ProtoRelConverter {
 
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
-      var virtualTable = rel.getVirtualTable();
+      ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
       if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
         return newEmptyScan(rel);
       } else {
@@ -305,11 +306,11 @@ public class ProtoRelConverter {
     return Optional.ofNullable(rel.hasViewDefinition() ? from(rel.getViewDefinition()) : null);
   }
 
-  protected Expression.StructLiteral tableDefaults(
-      io.substrait.proto.Expression.Literal.Struct struct, NamedStruct tableSchema) {
+  protected Expression.StructNested tableDefaults(
+      io.substrait.proto.Expression.Nested.Struct struct, NamedStruct tableSchema) {
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
-    return Expression.StructLiteral.builder()
+    return Expression.StructNested.builder()
         .fields(
             struct.getFieldsList().stream()
                 .map(converter::from)
@@ -580,16 +581,16 @@ public class ProtoRelConverter {
   }
 
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
-      ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
+    ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
     // If both values and expressions are set, raise an error
     if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
       throw new IllegalArgumentException(
           "Virtual table cannot have both values and expressions set");
     }
 
-      NamedStruct virtualTableSchema = newNamedStruct(rel);
+    NamedStruct virtualTableSchema = newNamedStruct(rel);
 
-      ProtoExpressionConverter converter =
+    ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 
     List<Expression> expressions =
@@ -603,7 +604,7 @@ public class ProtoRelConverter {
               .build());
     }
 
-    for (var expr : virtualTable.getExpressionsList()) {
+    for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
       expressions.add(
           ImmutableExpression.StructNested.builder()
               .fields(

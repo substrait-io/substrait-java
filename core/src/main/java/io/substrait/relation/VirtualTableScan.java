@@ -29,7 +29,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    List<Expression.StructLiteral> rows = getRows();
+    List<Expression> rows = getRows();
 
     assert !rows.isEmpty()
         && names.stream().noneMatch(Objects::isNull)

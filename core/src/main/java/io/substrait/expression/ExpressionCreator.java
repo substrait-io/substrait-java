@@ -286,6 +286,10 @@ public class ExpressionCreator {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
   }
 
+  public static Expression.StructNested struct(Iterable<? extends Expression> values) {
+    return Expression.StructNested.builder().addAllFields(values).build();
+  }
+
   public static Expression.UserDefinedLiteral userDefinedLiteral(
       boolean nullable, String urn, String name, Any value) {
     return Expression.UserDefinedLiteral.builder()

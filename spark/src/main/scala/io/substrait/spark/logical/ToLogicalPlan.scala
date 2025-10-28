@@ -361,17 +361,19 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     LocalRelation(ToSparkType.toAttributeSeq(emptyScan.getInitialSchema))
   }
 
-  override def visit(virtualTableScan: relation.VirtualTableScan,  context: EmptyVisitationContext): LogicalPlan = {
+  override def visit(
+      virtualTableScan: relation.VirtualTableScan,
+      context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map {
       case structLit: SExpression.StructLiteral =>
         InternalRow.fromSeq(
           structLit.fields.asScala
-            .map(field => field.accept(expressionConverter).asInstanceOf[Literal].value)
+            .map(field => field.accept(expressionConverter, context).asInstanceOf[Literal].value)
         )
       case structNested: SExpression.StructNested =>
         InternalRow.fromSeq(
           structNested.fields.asScala
-            .map(expr => expr.accept(expressionConverter))
+            .map(expr => expr.accept(expressionConverter, context).asInstanceOf[Literal].value)
         )
       case other =>
         throw new UnsupportedOperationException(
