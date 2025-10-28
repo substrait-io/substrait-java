@@ -100,6 +100,7 @@ dependencies {
   implementation(libs.spark.hive)
   implementation(libs.spark.catalyst)
   implementation(libs.slf4j.api)
+  implementation(platform(libs.jackson.bom))
   implementation(libs.bundles.jackson)
   implementation(libs.json.schema.validator)
 
