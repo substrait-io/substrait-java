@@ -10,10 +10,10 @@ import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, Doub
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.networknt.schema.{InputFormat, JsonSchemaFactory, SchemaValidatorsConfig, SpecVersion}
+import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
 import io.substrait.extension.SimpleExtension
 
-import java.io.{File, FileInputStream, FileWriter, OutputStreamWriter, PrintWriter}
+import java.io.{File, FileInputStream, FileWriter, OutputStreamWriter}
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 
@@ -84,12 +84,10 @@ class DialectGenerator {
     val yaml = mapper.writeValueAsString(generate())
 
     // Validate against the substrait dialect schema
-    val jsonSchemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
-    val config = SchemaValidatorsConfig.builder.build
-    val schema = jsonSchemaFactory.getSchema(
-      new FileInputStream(new File(schemaPath)),
-      InputFormat.YAML,
-      config)
+    val jsonSchemaFactory = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
+
+    val schema =
+      jsonSchemaFactory.getSchema(new FileInputStream(new File(schemaPath)), InputFormat.YAML)
     val errors = schema.validate(yaml, InputFormat.YAML)
     if (!errors.isEmpty) {
       throw new Exception(errors.toString)
