@@ -1,29 +1,22 @@
 package io.substrait.isthmus.sql;
 
+import io.substrait.isthmus.SqlConverterBase;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.calcite.avatica.util.Casing;
-import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.ddl.SqlColumnDeclaration;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
 import org.apache.calcite.sql.ddl.SqlKeyConstraint;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -31,27 +24,15 @@ import org.jspecify.annotations.Nullable;
 /** Utility class for parsing CREATE statements into a {@link CalciteCatalogReader} */
 public class SubstraitCreateStatementParser {
 
-  protected static final RelDataTypeFactory TYPE_FACTORY =
-      new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
-
-  protected static final CalciteConnectionConfig CONNECTION_CONFIG =
-      CalciteConnectionConfig.DEFAULT.set(
-          CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
-
-  protected static final SqlParser.Config PARSER_CONFIG =
-      SqlParser.config()
-          // To process CREATE statements we must use the SqlDdlParserImpl, as the default
-          // parser does not handle them
-          .withParserFactory(SqlDdlParserImpl.FACTORY)
-          .withUnquotedCasing(Casing.TO_UPPER)
-          .withConformance(SqlConformanceEnum.LENIENT);
-
-  protected static final CalciteCatalogReader EMPTY_CATALOG =
+  public static final CalciteCatalogReader EMPTY_CATALOG =
       new CalciteCatalogReader(
-          CalciteSchema.createRootSchema(false), List.of(), TYPE_FACTORY, CONNECTION_CONFIG);
+          CalciteSchema.createRootSchema(false),
+          List.of(),
+          SubstraitTypeSystem.TYPE_FACTORY,
+          SqlConverterBase.CONNECTION_CONFIG);
 
   // A validator is needed to convert the types in column declarations to Calcite types
-  protected static final SqlValidator VALIDATOR =
+  public static final SqlValidator VALIDATOR =
       new SubstraitSqlValidator(
           // as we are validating CREATE statements, an empty catalog suffices
           EMPTY_CATALOG);
@@ -68,10 +49,9 @@ public class SubstraitCreateStatementParser {
    */
   public static List<SubstraitTable> processCreateStatements(@NonNull final String createStatements)
       throws SqlParseException {
-    final SqlParser parser = SqlParser.create(createStatements, PARSER_CONFIG);
     final List<SubstraitTable> tableList = new ArrayList<>();
 
-    final SqlNodeList sqlNode = parser.parseStmtList();
+    final List<SqlNode> sqlNode = SubstraitSqlStatementParser.parseStatements(createStatements);
     for (final SqlNode parsed : sqlNode) {
       if (!(parsed instanceof SqlCreateTable)) {
         throw fail("Not a valid CREATE TABLE statement.");
@@ -107,7 +87,11 @@ public class SubstraitCreateStatementParser {
       @NonNull final String... createStatements) throws SqlParseException {
     final CalciteSchema rootSchema = processCreateStatementsToSchema(createStatements);
     final List<String> defaultSchema = Collections.emptyList();
-    return new CalciteCatalogReader(rootSchema, defaultSchema, TYPE_FACTORY, CONNECTION_CONFIG);
+    return new CalciteCatalogReader(
+        rootSchema,
+        defaultSchema,
+        SubstraitTypeSystem.TYPE_FACTORY,
+        SqlConverterBase.CONNECTION_CONFIG);
   }
 
   /**
@@ -144,9 +128,7 @@ public class SubstraitCreateStatementParser {
     final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
 
     for (final String statement : createStatements) {
-      final SqlParser parser = SqlParser.create(statement, PARSER_CONFIG);
-
-      final SqlNodeList sqlNode = parser.parseStmtList();
+      final List<SqlNode> sqlNode = SubstraitSqlStatementParser.parseStatements(statement);
       for (final SqlNode parsed : sqlNode) {
         if (!(parsed instanceof SqlCreateTable)) {
           throw fail("Not a valid CREATE TABLE statement.");
@@ -209,6 +191,7 @@ public class SubstraitCreateStatementParser {
       columnTypes.add(col.dataType.deriveType(VALIDATOR));
     }
 
-    return new SubstraitTable(tableName, TYPE_FACTORY.createStructType(columnTypes, names));
+    return new SubstraitTable(
+        tableName, SubstraitTypeSystem.TYPE_FACTORY.createStructType(columnTypes, names));
   }
 }

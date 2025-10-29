@@ -12,6 +12,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   public static final RelDataTypeSystem TYPE_SYSTEM = new SubstraitTypeSystem();
 
+  public static final RelDataTypeFactory TYPE_FACTORY = new JavaTypeFactoryImpl(TYPE_SYSTEM);
+
   // Interval qualifier from year to month
   public static final SqlIntervalQualifier YEAR_MONTH_INTERVAL =
       new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO);
@@ -50,9 +52,5 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   @Override
   public boolean shouldConvertRaggedUnionTypesToVarying() {
     return true;
-  }
-
-  public static RelDataTypeFactory createTypeFactory() {
-    return new JavaTypeFactoryImpl(TYPE_SYSTEM);
   }
 }

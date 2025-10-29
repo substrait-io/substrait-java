@@ -9,7 +9,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 /** Set of classes/methods that make it easier to work with Calcite. */
 public abstract class CalciteObjs {
 
-  final RelDataTypeFactory type = SubstraitTypeSystem.createTypeFactory();
+  final RelDataTypeFactory type = SubstraitTypeSystem.TYPE_FACTORY;
   final RexBuilder rex = new RexBuilder(type);
 
   RelDataType t(SqlTypeName typeName, int... vals) {
