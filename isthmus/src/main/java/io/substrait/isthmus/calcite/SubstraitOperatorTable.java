@@ -12,6 +12,8 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.fun.SqlLibrary;
+import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.SqlOperatorTables;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
@@ -41,14 +43,21 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               .map(SqlOperator::getKind)
               .collect(Collectors.toList()));
 
+  // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
+  // functions
+  private static final SqlOperatorTable LIBRARY_OPERATOR_TABLE =
+      SqlLibraryOperatorTableFactory.INSTANCE.getOperatorTable(SqlLibrary.ALL);
+
   private static final SqlOperatorTable STANDARD_OPERATOR_TABLE = SqlStdOperatorTable.instance();
 
   private static final List<SqlOperator> OPERATOR_LIST =
       Stream.concat(
               SUBSTRAIT_OPERATOR_TABLE.getOperatorList().stream(),
-              // filter out the kinds that have been overriden from the standard operator table
-              STANDARD_OPERATOR_TABLE.getOperatorList().stream()
-                  .filter(op -> !OVERRIDE_KINDS.contains(op.kind)))
+              Stream.concat(
+                  LIBRARY_OPERATOR_TABLE.getOperatorList().stream(),
+                  // filter out the kinds that have been overriden from the standard operator table
+                  STANDARD_OPERATOR_TABLE.getOperatorList().stream()
+                      .filter(op -> !OVERRIDE_KINDS.contains(op.kind))))
           .collect(Collectors.toUnmodifiableList());
 
   private SubstraitOperatorTable() {}
@@ -68,6 +77,13 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
       // It then fails to resolve a specific operator as it can't pick between them
       return;
     }
+
+    LIBRARY_OPERATOR_TABLE.lookupOperatorOverloads(
+        opName, category, syntax, operatorList, nameMatcher);
+    if (!operatorList.isEmpty()) {
+      return;
+    }
+
     STANDARD_OPERATOR_TABLE.lookupOperatorOverloads(
         opName, category, syntax, operatorList, nameMatcher);
   }
