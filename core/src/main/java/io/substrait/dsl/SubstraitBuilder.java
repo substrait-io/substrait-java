@@ -569,9 +569,9 @@ public class SubstraitBuilder {
   // Aggregate Functions
 
   public AggregateFunctionInvocation aggregateFn(
-      String namespace, String key, Type outputType, Expression... args) {
+      String urn, String key, Type outputType, Expression... args) {
     SimpleExtension.AggregateFunctionVariant declaration =
-        extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return AggregateFunctionInvocation.builder()
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
         .outputType(outputType)
@@ -771,9 +771,9 @@ public class SubstraitBuilder {
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
-      String namespace, String key, Type outputType, FunctionArg... args) {
+      String urn, String key, Type outputType, FunctionArg... args) {
     SimpleExtension.ScalarFunctionVariant declaration =
-        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -782,7 +782,7 @@ public class SubstraitBuilder {
   }
 
   public Expression.WindowFunctionInvocation windowFn(
-      String namespace,
+      String urn,
       String key,
       Type outputType,
       Expression.AggregationPhase aggregationPhase,
@@ -792,7 +792,7 @@ public class SubstraitBuilder {
       WindowBound upperBound,
       Expression... args) {
     SimpleExtension.WindowFunctionVariant declaration =
-        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -807,8 +807,8 @@ public class SubstraitBuilder {
 
   // Types
 
-  public Type.UserDefined userDefinedType(String namespace, String typeName) {
-    return Type.UserDefined.builder().urn(namespace).name(typeName).nullable(false).build();
+  public Type.UserDefined userDefinedType(String urn, String typeName) {
+    return Type.UserDefined.builder().urn(urn).name(typeName).nullable(false).build();
   }
 
   // Misc

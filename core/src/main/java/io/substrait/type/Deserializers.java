@@ -43,9 +43,8 @@ public class Deserializers {
         throws IOException, JsonProcessingException {
       String typeString = p.getValueAsString();
       try {
-        String namespace =
-            (String) ctxt.findInjectableValue(SimpleExtension.URN_LOCATOR_KEY, null, null);
-        return TypeStringParser.parse(typeString, namespace, converter);
+        String urn = (String) ctxt.findInjectableValue(SimpleExtension.URN_LOCATOR_KEY, null, null);
+        return TypeStringParser.parse(typeString, urn, converter);
       } catch (Exception ex) {
         throw JsonMappingException.from(
             p, "Unable to parse string " + typeString.replace("\n", " \\n"), ex);
