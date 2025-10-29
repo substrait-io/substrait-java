@@ -63,20 +63,20 @@ public class Utils {
   }
 
   /**
-   * Traverses all names identifying a table, creating any schemas if they are not present in the
-   * root schema, returning the final sub schema.
+   * Traverses a list of hierarchical schema names, creating any schemas if they are not present in
+   * the root schema, returning the final sub schema or the root schema if the list of names is
+   * empty.
    *
    * @param rootSchema the root schema to add the missing schemas to
-   * @param names the list of hierarchical schema and table names ordered from parent to child with
-   *     the last element containing the table name
-   * @return the final sub schema
+   * @param names the list of hierarchical schema names ordered from parent to child
+   * @return the final sub schema or the root schema
    * @see io.substrait.isthmus.sql.SubstraitCreateStatementParser#processCreateStatementsToSchema
    * @see io.substrait.isthmus.SchemaCollector#toSchema
    */
   public static CalciteSchema createCalciteSchemaFromNames(
       @NonNull final CalciteSchema rootSchema, @NonNull final List<String> names) {
     CalciteSchema schema = rootSchema;
-    for (final String schemaName : names.subList(0, names.size() - 1)) {
+    for (final String schemaName : names) {
       final CalciteSchema subSchema = schema.getSubSchema(schemaName, false);
       if (subSchema != null) {
         schema = subSchema;

@@ -97,6 +97,8 @@ public class SubstraitCreateStatementParser {
    * Parses one or more SQL strings containing only CREATE statements into a {@link
    * CalciteCatalogReader}
    *
+   * <p>This method expects the use of fully qualified table names in the CREATE statements.
+   *
    * @param createStatements a SQL string containing only CREATE statements, must not be null
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
    * @throws SqlParseException
@@ -153,7 +155,8 @@ public class SubstraitCreateStatementParser {
         final SqlCreateTable create = (SqlCreateTable) parsed;
         final List<String> names = create.name.names;
 
-        final CalciteSchema schema = Utils.createCalciteSchemaFromNames(rootSchema, names);
+        final CalciteSchema schema =
+            Utils.createCalciteSchemaFromNames(rootSchema, names.subList(0, names.size() - 1));
 
         // Create the table if it is not present
         final String tableName = names.get(names.size() - 1);

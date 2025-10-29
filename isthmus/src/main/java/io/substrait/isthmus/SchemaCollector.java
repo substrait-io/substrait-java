@@ -48,7 +48,8 @@ public class SchemaCollector {
       // The last name in names is the table name. All others are schema names.
       String tableName = names.get(names.size() - 1);
 
-      CalciteSchema schema = Utils.createCalciteSchemaFromNames(rootSchema, names);
+      CalciteSchema schema =
+          Utils.createCalciteSchemaFromNames(rootSchema, names.subList(0, names.size() - 1));
 
       // Create the table if it is not present
       CalciteSchema.TableEntry table = schema.getTable(tableName, CASE_SENSITIVE);
