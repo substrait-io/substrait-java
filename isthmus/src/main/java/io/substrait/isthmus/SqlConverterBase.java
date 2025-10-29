@@ -4,7 +4,6 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -19,9 +18,13 @@ import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
-class SqlConverterBase {
+public class SqlConverterBase {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
+
+  public static final CalciteConnectionConfig CONNECTION_CONFIG =
+      CalciteConnectionConfig.DEFAULT.set(
+          CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
 
   final RelDataTypeFactory factory;
   final RelOptCluster relOptCluster;
@@ -34,7 +37,7 @@ class SqlConverterBase {
   final FeatureBoard featureBoard;
 
   protected SqlConverterBase(FeatureBoard features) {
-    this.factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
+    this.factory = SubstraitTypeSystem.TYPE_FACTORY;
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);

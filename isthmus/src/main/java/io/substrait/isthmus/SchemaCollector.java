@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.calcite.SubstraitSchema;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
@@ -16,6 +15,7 @@ import java.util.Optional;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.jspecify.annotations.NonNull;
 
 /** For use in generating {@link CalciteSchema}s from Substrait {@link Rel}s */
 public class SchemaCollector {
@@ -30,7 +30,14 @@ public class SchemaCollector {
     this.typeConverter = typeConverter;
   }
 
-  public CalciteSchema toSchema(Rel rel) {
+  /**
+   * Returns a {@link CalciteSchema} containing all tables and schemas defined in {@link NamedScan}s
+   * and {@link NamedWrite}s within the provided relation operation tree.
+   *
+   * @param rel the relation operation tree to gather the tables and schemas from, must not be null
+   * @return the {@link CalciteSchema} containing the discovered tables and schemas
+   */
+  public CalciteSchema toSchema(@NonNull final Rel rel) {
     // Create the root schema under which all tables and schemas will be nested.
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false, false);
 
@@ -41,17 +48,8 @@ public class SchemaCollector {
       // The last name in names is the table name. All others are schema names.
       String tableName = names.get(names.size() - 1);
 
-      // Traverse all schemas, creating them if they are not present
-      CalciteSchema schema = rootSchema;
-      for (String schemaName : names.subList(0, names.size() - 1)) {
-        CalciteSchema subSchema = schema.getSubSchema(schemaName, CASE_SENSITIVE);
-        if (subSchema != null) {
-          schema = subSchema;
-        } else {
-          SubstraitSchema newSubSchema = new SubstraitSchema();
-          schema = schema.add(schemaName, newSubSchema);
-        }
-      }
+      CalciteSchema schema =
+          Utils.createCalciteSchemaFromNames(rootSchema, names.subList(0, names.size() - 1));
 
       // Create the table if it is not present
       CalciteSchema.TableEntry table = schema.getTable(tableName, CASE_SENSITIVE);
