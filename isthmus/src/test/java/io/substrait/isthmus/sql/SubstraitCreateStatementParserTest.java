@@ -1,9 +1,10 @@
 package io.substrait.isthmus.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Set;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -18,8 +19,7 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(1, rootSchema.getTableNames().size());
-    assertNotNull(rootSchema.getTable("src1", false));
+    assertEquals(Set.of("SRC1"), rootSchema.getTableNames());
   }
 
   @Test
@@ -31,9 +31,7 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(2, rootSchema.getTableNames().size());
-    assertNotNull(rootSchema.getTable("src1", false));
-    assertNotNull(rootSchema.getTable("src2", false));
+    assertEquals(Set.of("SRC1", "SRC2"), rootSchema.getTableNames());
   }
 
   @Test
@@ -44,10 +42,9 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(0, rootSchema.getTableNames().size());
-    assertEquals(1, rootSchema.getSubSchemaMap().size());
-    assertNotNull(rootSchema.getSubSchema("schema1", false));
-    assertNotNull(rootSchema.getSubSchema("schema1", false).getTable("src1", false));
+    assertTrue(rootSchema.getTableNames().isEmpty());
+    assertEquals(Set.of("SCHEMA1"), rootSchema.getSubSchemaMap().keySet());
+    assertEquals(Set.of("SRC1"), rootSchema.getSubSchema("schema1", false).getTableNames());
   }
 
   @Test
@@ -59,11 +56,9 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(0, rootSchema.getTableNames().size());
-    assertEquals(1, rootSchema.getSubSchemaMap().size());
-    assertNotNull(rootSchema.getSubSchema("schema1", false));
-    assertNotNull(rootSchema.getSubSchema("schema1", false).getTable("src1", false));
-    assertNotNull(rootSchema.getSubSchema("schema1", false).getTable("src2", false));
+    assertTrue(rootSchema.getTableNames().isEmpty());
+    assertEquals(Set.of("SCHEMA1"), rootSchema.getSubSchemaMap().keySet());
+    assertEquals(Set.of("SRC1", "SRC2"), rootSchema.getSubSchema("schema1", false).getTableNames());
   }
 
   @Test
@@ -75,12 +70,10 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(0, rootSchema.getTableNames().size());
-    assertEquals(2, rootSchema.getSubSchemaMap().size());
-    assertNotNull(rootSchema.getSubSchema("schema1", false));
-    assertNotNull(rootSchema.getSubSchema("schema1", false).getTable("src1", false));
-    assertNotNull(rootSchema.getSubSchema("schema2", false));
-    assertNotNull(rootSchema.getSubSchema("schema2", false).getTable("src2", false));
+    assertTrue(rootSchema.getTableNames().isEmpty());
+    assertEquals(Set.of("SCHEMA1", "SCHEMA2"), rootSchema.getSubSchemaMap().keySet());
+    assertEquals(Set.of("SRC1"), rootSchema.getSubSchema("schema1", false).getTableNames());
+    assertEquals(Set.of("SRC2"), rootSchema.getSubSchema("schema2", false).getTableNames());
   }
 
   @Test
@@ -92,15 +85,13 @@ class SubstraitCreateStatementParserTest {
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
-    assertEquals(0, rootSchema.getTableNames().size());
-    assertEquals(1, rootSchema.getSubSchemaMap().size());
-    assertNotNull(rootSchema.getSubSchema("catalog1", false));
-    assertNotNull(rootSchema.getSubSchema("catalog1", false).getSubSchema("schema1", false));
-    assertNotNull(
-        rootSchema
-            .getSubSchema("catalog1", false)
-            .getSubSchema("schema1", false)
-            .getTable("src1", false));
+    assertTrue(rootSchema.getTableNames().isEmpty());
+    assertEquals(Set.of("CATALOG1"), rootSchema.getSubSchemaMap().keySet());
+    assertEquals(
+        Set.of("SCHEMA1"), rootSchema.getSubSchema("catalog1", false).getSubSchemaMap().keySet());
+    assertEquals(
+        Set.of("SRC1"),
+        rootSchema.getSubSchema("catalog1", false).getSubSchema("schema1", false).getTableNames());
   }
 
   @Test
