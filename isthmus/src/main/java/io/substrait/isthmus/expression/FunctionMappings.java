@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 public class FunctionMappings {
@@ -64,7 +65,13 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.TRIM, "trim"),
               s(SqlStdOperatorTable.TRIM, "ltrim"),
               s(SqlStdOperatorTable.TRIM, "rtrim"),
-              s(SqlStdOperatorTable.SQRT, "sqrt"))
+              s(SqlStdOperatorTable.SQRT, "sqrt"),
+              s(SqlLibraryOperators.SINH, "sinh"),
+              s(SqlLibraryOperators.TANH, "tanh"),
+              s(SqlLibraryOperators.COSH, "cosh"),
+              s(SqlLibraryOperators.ASINH, "asinh"),
+              s(SqlLibraryOperators.ATANH, "atanh"),
+              s(SqlLibraryOperators.ACOSH, "acosh"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =

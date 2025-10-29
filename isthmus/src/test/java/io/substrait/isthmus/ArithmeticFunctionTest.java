@@ -114,4 +114,46 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT sqrt(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void sinh(String column) throws Exception {
+    String query = String.format("SELECT SINH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void tanh(String column) throws Exception {
+    String query = String.format("SELECT TANH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void cosh(String column) throws Exception {
+    String query = String.format("SELECT COSH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void asinh(String column) throws Exception {
+    String query = String.format("SELECT ASINH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void atanh(String column) throws Exception {
+    String query = String.format("SELECT ATANH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void acosh(String column) throws Exception {
+    String query = String.format("SELECT ACOSH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
 }
