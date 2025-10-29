@@ -101,7 +101,7 @@ public class SubstraitCreateStatementParser {
    * @param pos the position where this error occured, may be null
    * @return the {@link SqlParseException} with the given message and {@link SqlParserPos}
    */
-  protected static SqlParseException fail(
+  private static SqlParseException fail(
       @Nullable final String message, @Nullable final SqlParserPos pos) {
     return new SqlParseException(message, pos, null, null, new RuntimeException("fake lineage"));
   }
@@ -112,7 +112,7 @@ public class SubstraitCreateStatementParser {
    * @param message the exception message, may be null
    * @return the {@link SqlParseException} with the given message
    */
-  protected static SqlParseException fail(@Nullable final String message) {
+  private static SqlParseException fail(@Nullable final String message) {
     return fail(message, SqlParserPos.ZERO);
   }
 
@@ -123,7 +123,7 @@ public class SubstraitCreateStatementParser {
    * @return a {@link CalciteSchema} generated from the CREATE statements
    * @throws SqlParseException
    */
-  protected static CalciteSchema processCreateStatementsToSchema(
+  private static CalciteSchema processCreateStatementsToSchema(
       @NonNull final String... createStatements) throws SqlParseException {
     final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
 
@@ -164,7 +164,7 @@ public class SubstraitCreateStatementParser {
    * @return the {@link SubstraitTable}
    * @throws SqlParseException
    */
-  protected static SubstraitTable createSubstraitTable(
+  private static SubstraitTable createSubstraitTable(
       @NonNull final String tableName, @NonNull final SqlNodeList columnList)
       throws SqlParseException {
     final List<String> names = new ArrayList<>();
