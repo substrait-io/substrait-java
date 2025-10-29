@@ -156,4 +156,50 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT ACOSH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void bitwise_not_scalar(String column) throws Exception {
+    String query = String.format("SELECT BITNOT(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_and_scalar(String params) throws Exception {
+
+    String[] col_mask_parts = params.split(",", 2);
+    String column = col_mask_parts[0].trim();
+    String mask = col_mask_parts[1].trim();
+
+    String query =
+        String.format("SELECT BITAND(" + column + ", " + mask + ") AS m FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_xor_scalar(String params) throws Exception {
+
+    String[] col_mask_parts = params.split(",", 2);
+    String column = col_mask_parts[0].trim();
+    String mask = col_mask_parts[1].trim();
+
+    String query =
+        String.format("SELECT BITXOR(" + column + ", " + mask + ") AS m FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_or_scalar(String params) throws Exception {
+
+    String[] col_mask_parts = params.split(",", 2);
+    String column = col_mask_parts[0].trim();
+    String mask = col_mask_parts[1].trim();
+
+    String query =
+        String.format("SELECT BITOR(" + column + ", " + mask + ") AS m FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
 }
