@@ -168,24 +168,21 @@ public class ArithmeticFunctionTest extends PlanTestBase {
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
   void bitwise_and_scalar(String column, String mask) throws Exception {
-    String query =
-        String.format("SELECT BITAND(" + column + ", " + mask + ") AS m FROM numbers", column);
+    String query = String.format("SELECT BITAND(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
   void bitwise_xor_scalar(String column, String mask) throws Exception {
-    String query =
-        String.format("SELECT BITXOR(" + column + ", " + mask + ") AS m FROM numbers", column);
+    String query = String.format("SELECT BITXOR(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
   void bitwise_or_scalar(String column, String mask) throws Exception {
-    String query =
-        String.format("SELECT BITOR(" + column + ", " + mask + ") AS m FROM numbers", column);
+    String query = String.format("SELECT BITOR(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 }
