@@ -185,4 +185,18 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT BITOR(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void radians(String column) throws Exception {
+    String query = String.format("SELECT RADIANS(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"fp32", "fp64"})
+  void degrees(String column) throws Exception {
+    String query = String.format("SELECT DEGREES(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
 }

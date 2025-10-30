@@ -75,7 +75,9 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.BITNOT, "bitwise_not"),
               s(SqlStdOperatorTable.BITOR, "bitwise_or"),
               s(SqlStdOperatorTable.BITAND, "bitwise_and"),
-              s(SqlStdOperatorTable.BITXOR, "bitwise_xor"))
+              s(SqlStdOperatorTable.BITXOR, "bitwise_xor"),
+              s(SqlStdOperatorTable.RADIANS, "radians"),
+              s(SqlStdOperatorTable.DEGREES, "degrees"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
