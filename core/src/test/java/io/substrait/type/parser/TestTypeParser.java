@@ -17,56 +17,56 @@ public class TestTypeParser {
   private final ParameterizedTypeCreator pr = ParameterizedTypeCreator.REQUIRED;
   private final ParameterizedTypeCreator pn = ParameterizedTypeCreator.NULLABLE;
 
-  private static final String NAMESPACE = "test";
+  private static final String URN = "test";
 
   @Test
   public void basic() {
-    simpleTests(ParseToPojo.Visitor.simple(NAMESPACE));
+    simpleTests(ParseToPojo.Visitor.simple(URN));
   }
 
   @Test
   public void compound() {
-    compoundTests(ParseToPojo.Visitor.simple(NAMESPACE));
+    compoundTests(ParseToPojo.Visitor.simple(URN));
   }
 
   @Test
   public void parameterizedSimple() {
-    simpleTests(ParseToPojo.Visitor.parameterized(NAMESPACE));
+    simpleTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
   public void parameterizedCompound() {
-    compoundTests(ParseToPojo.Visitor.parameterized(NAMESPACE));
+    compoundTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
   public void parameterizedParameterized() {
-    parameterizedTests(ParseToPojo.Visitor.parameterized(NAMESPACE));
+    parameterizedTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
   public void derivationSimple() {
-    simpleTests(ParseToPojo.Visitor.expression(NAMESPACE));
+    simpleTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
   public void derivationCompound() {
-    compoundTests(ParseToPojo.Visitor.expression(NAMESPACE));
+    compoundTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
   public void derivationParameterized() {
-    parameterizedTests(ParseToPojo.Visitor.expression(NAMESPACE));
+    parameterizedTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
   public void derivationExpression() {
     test(
-        ParseToPojo.Visitor.expression(NAMESPACE),
+        ParseToPojo.Visitor.expression(URN),
         eo.fixedCharE(eo.plus(pr.parameter("L1"), pr.parameter("L2"))),
         "FIXEDCHAR<L1+L2>");
     test(
-        ParseToPojo.Visitor.expression(NAMESPACE),
+        ParseToPojo.Visitor.expression(URN),
         eo.program(pr.fixedCharE("L1"), new TypeExpressionCreator.Assign("L1", eo.i(1))),
         "L1=1\nFIXEDCHAR<L1>");
   }
@@ -78,7 +78,7 @@ public class TestTypeParser {
     test(v, r.I64, "I64");
     test(v, r.FP32, "FP32");
     test(v, r.FP64, "FP64");
-    test(v, r.userDefined(NAMESPACE, "foo"), "u!foo");
+    test(v, r.userDefined(URN, "foo"), "u!foo");
 
     // Nullable
     test(v, n.I8, "I8?");
@@ -87,7 +87,7 @@ public class TestTypeParser {
     test(v, n.I64, "i64?");
     test(v, n.FP32, "FP32?");
     test(v, n.FP64, "FP64?");
-    test(v, n.userDefined(NAMESPACE, "foo"), "u!foo?");
+    test(v, n.userDefined(URN, "foo"), "u!foo?");
   }
 
   private void compoundTests(ParseToPojo.Visitor v) {
