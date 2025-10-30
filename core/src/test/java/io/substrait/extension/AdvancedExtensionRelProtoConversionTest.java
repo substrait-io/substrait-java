@@ -3,6 +3,7 @@ package io.substrait.extension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
@@ -77,7 +78,7 @@ class AdvancedExtensionRelProtoConversionTest {
         VirtualTableScan.builder()
             .extension(extension)
             .addRows(
-                StructLiteral.builder()
+                Expression.StructNested.builder()
                     .addFields(BoolLiteral.builder().value(true).build())
                     .build())
             .initialSchema(
