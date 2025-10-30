@@ -71,7 +71,11 @@ public class FunctionMappings {
               s(SqlLibraryOperators.COSH, "cosh"),
               s(SqlLibraryOperators.ASINH, "asinh"),
               s(SqlLibraryOperators.ATANH, "atanh"),
-              s(SqlLibraryOperators.ACOSH, "acosh"))
+              s(SqlLibraryOperators.ACOSH, "acosh"),
+              s(SqlStdOperatorTable.BITNOT, "bitwise_not"),
+              s(SqlStdOperatorTable.BITOR, "bitwise_or"),
+              s(SqlStdOperatorTable.BITAND, "bitwise_and"),
+              s(SqlStdOperatorTable.BITXOR, "bitwise_xor"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =

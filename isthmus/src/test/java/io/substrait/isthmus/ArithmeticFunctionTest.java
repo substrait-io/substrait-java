@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class ArithmeticFunctionTest extends PlanTestBase {
@@ -154,6 +155,37 @@ public class ArithmeticFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"fp32", "fp64"})
   void acosh(String column) throws Exception {
     String query = String.format("SELECT ACOSH(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void bitwise_not_scalar(String column) throws Exception {
+    String query = String.format("SELECT BITNOT(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_and_scalar(String column, String mask) throws Exception {
+    String query =
+        String.format("SELECT BITAND(" + column + ", " + mask + ") AS m FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_xor_scalar(String column, String mask) throws Exception {
+    String query =
+        String.format("SELECT BITXOR(" + column + ", " + mask + ") AS m FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
+  void bitwise_or_scalar(String column, String mask) throws Exception {
+    String query =
+        String.format("SELECT BITOR(" + column + ", " + mask + ") AS m FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 }
