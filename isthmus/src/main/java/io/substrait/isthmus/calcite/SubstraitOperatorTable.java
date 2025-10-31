@@ -46,7 +46,8 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
   // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
   // functions
   private static final SqlOperatorTable LIBRARY_OPERATOR_TABLE =
-      SqlLibraryOperatorTableFactory.INSTANCE.getOperatorTable(SqlLibrary.ALL);
+      SqlLibraryOperatorTableFactory.INSTANCE.getOperatorTable(
+          EnumSet.of(SqlLibrary.HIVE, SqlLibrary.SPARK, SqlLibrary.ALL));
 
   private static final SqlOperatorTable STANDARD_OPERATOR_TABLE = SqlStdOperatorTable.instance();
 
