@@ -663,6 +663,30 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
+  abstract class StructNested implements Expression {
+    public abstract List<Expression> fields();
+
+    @Override
+    public Type getType() {
+      return Type.withNullability(false)
+          .struct(
+              fields().stream()
+                  .map(Expression::getType)
+                  .collect(java.util.stream.Collectors.toList()));
+    }
+
+    public static ImmutableExpression.StructNested.Builder builder() {
+      return ImmutableExpression.StructNested.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  @Value.Immutable
   abstract class UserDefinedLiteral implements Literal {
     public abstract ByteString value();
 

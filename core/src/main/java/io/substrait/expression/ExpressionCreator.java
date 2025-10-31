@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -284,6 +285,24 @@ public class ExpressionCreator {
   public static Expression.StructLiteral struct(
       boolean nullable, Iterable<? extends Expression.Literal> values) {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
+  }
+
+  public static Expression.StructNested struct(Iterable<? extends Expression> values) {
+    if (values == null) {
+      return Expression.StructNested.builder().build();
+    }
+    return Expression.StructNested.builder().addAllFields(values).build();
+  }
+
+  public static List<Expression.StructNested> toNested(
+      Iterable<? extends Expression.StructLiteral> structLiterals) {
+    List<Expression.StructNested> structs = new ArrayList<>();
+    for (Expression.StructLiteral structLiteral : structLiterals) {
+      Expression.StructNested struct =
+          Expression.StructNested.builder().addAllFields(structLiteral.fields()).build();
+      structs.add(struct);
+    }
+    return structs;
   }
 
   public static Expression.UserDefinedLiteral userDefinedLiteral(
