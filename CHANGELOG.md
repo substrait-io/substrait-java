@@ -1,6 +1,16 @@
 Release Notes
 ---
 
+## [0.68.0](https://github.com/substrait-io/substrait-java/compare/v0.67.0...v0.68.0) (2025-11-02)
+
+### Features
+
+* **isthmus:** mapping of angular scalar functions ([#586](https://github.com/substrait-io/substrait-java/issues/586)) ([9c4db92](https://github.com/substrait-io/substrait-java/commit/9c4db9207cec12a7cf1625ee29343ba402c864d6))
+* **isthmus:** mapping of bitwise functions from substrait ([#582](https://github.com/substrait-io/substrait-java/issues/582)) ([e1e8689](https://github.com/substrait-io/substrait-java/commit/e1e86891369ee69be302a9c2eb3405395acee9f4))
+* **isthmus:** mapping of factorial function from substrait ([#589](https://github.com/substrait-io/substrait-java/issues/589)) ([4b83666](https://github.com/substrait-io/substrait-java/commit/4b8366675108d506fd29f1cd355bd27712cafe73))
+* **isthmus:** mapping of hyperbolic functions from substrait ([#581](https://github.com/substrait-io/substrait-java/issues/581)) ([ac9ad28](https://github.com/substrait-io/substrait-java/commit/ac9ad2839feb77288bee4d910133f89ef0324a16))
+* **isthmus:** support fully qualified table names in SubstraitCreateStatementParser ([#575](https://github.com/substrait-io/substrait-java/issues/575)) ([ab5943e](https://github.com/substrait-io/substrait-java/commit/ab5943e53f73ed73f816f2c3f59502378b3bf15c))
+
 ## [0.67.0](https://github.com/substrait-io/substrait-java/compare/v0.66.0...v0.67.0) (2025-10-28)
 
 ### Features
