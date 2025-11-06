@@ -535,11 +535,18 @@ public class SimpleExtension {
 
     public abstract String name();
 
+    public abstract Optional<String> description();
+
     @JacksonInject(SimpleExtension.URN_LOCATOR_KEY)
     public abstract String urn();
 
     // TODO: Handle conversion of structure object to Named Struct representation
     protected abstract Optional<Object> structure();
+
+    // TODO: Properly handle parameters
+    protected abstract Optional<List<Object>> parameters();
+
+    protected abstract Optional<Boolean> variadic();
 
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
