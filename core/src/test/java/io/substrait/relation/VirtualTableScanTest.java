@@ -13,6 +13,7 @@ import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
@@ -27,6 +28,27 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends TestBase {
+
+  io.substrait.proto.Expression expression =
+      io.substrait.proto.Expression.newBuilder()
+          .setLiteral(io.substrait.proto.Expression.Literal.newBuilder().setI32(3))
+          .build();
+
+  io.substrait.proto.Expression.Literal literal =
+      io.substrait.proto.Expression.Literal.newBuilder().setI32(3).build();
+
+  Type type =
+      Type.newBuilder()
+          .setI32(
+              Type.I32.newBuilder().setNullability(Type.Nullability.NULLABILITY_NULLABLE).build())
+          .build();
+
+  io.substrait.proto.NamedStruct schema =
+      io.substrait.proto.NamedStruct.newBuilder()
+          .setStruct(Type.Struct.newBuilder().addTypes(type).addTypes(type).build())
+          .addNames("col1")
+          .addNames("col2")
+          .build();
 
   @Test
   void check() {
@@ -100,29 +122,43 @@ class VirtualTableScanTest extends TestBase {
     assertEquals(relWithValues, relWithFields);
   }
 
+  @Test
+  void setUsingValuesOrFieldsTest() {
+    io.substrait.proto.Rel valuesAndFieldsProto = setBothValuesAndFields();
+    assertThrows(
+        IllegalArgumentException.class, () -> protoRelConverter.from(valuesAndFieldsProto));
+  }
+
+  io.substrait.proto.Rel setBothValuesAndFields() {
+    io.substrait.proto.Expression.Literal.Struct literalStruct =
+        io.substrait.proto.Expression.Literal.Struct.newBuilder()
+            .addFields(literal)
+            .addFields(literal)
+            .build();
+    io.substrait.proto.Expression.Nested.Struct nestedStruct =
+        io.substrait.proto.Expression.Nested.Struct.newBuilder()
+            .addFields(expression)
+            .addFields(expression)
+            .build();
+
+    io.substrait.proto.ReadRel readRel =
+        ReadRel.newBuilder()
+            .setVirtualTable(
+                ReadRel.VirtualTable.newBuilder()
+                    .addExpressions(nestedStruct)
+                    .addValues(literalStruct)
+                    .build())
+            .setBaseSchema(schema)
+            .build();
+
+    return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+  }
+
   io.substrait.proto.Rel protoRelVTFields() {
-    io.substrait.proto.Expression literal =
-        io.substrait.proto.Expression.newBuilder()
-            .setLiteral(io.substrait.proto.Expression.Literal.newBuilder().setI32(3))
-            .build();
-
-    Type type =
-        Type.newBuilder()
-            .setI32(
-                Type.I32.newBuilder().setNullability(Type.Nullability.NULLABILITY_NULLABLE).build())
-            .build();
-
-    io.substrait.proto.NamedStruct schema =
-        io.substrait.proto.NamedStruct.newBuilder()
-            .setStruct(Type.Struct.newBuilder().addTypes(type).addTypes(type).build())
-            .addNames("col1")
-            .addNames("col2")
-            .build();
-
     io.substrait.proto.Expression.Nested.Struct struct =
         io.substrait.proto.Expression.Nested.Struct.newBuilder()
-            .addFields(literal)
-            .addFields(literal)
+            .addFields(expression)
+            .addFields(expression)
             .build();
 
     io.substrait.proto.ReadRel readRel =
@@ -135,22 +171,6 @@ class VirtualTableScanTest extends TestBase {
   }
 
   io.substrait.proto.Rel protoRelVTValues() {
-    io.substrait.proto.Expression.Literal literal =
-        io.substrait.proto.Expression.Literal.newBuilder().setI32(3).build();
-
-    Type type =
-        Type.newBuilder()
-            .setI32(
-                Type.I32.newBuilder().setNullability(Type.Nullability.NULLABILITY_NULLABLE).build())
-            .build();
-
-    io.substrait.proto.NamedStruct schema =
-        io.substrait.proto.NamedStruct.newBuilder()
-            .setStruct(Type.Struct.newBuilder().addTypes(type).addTypes(type).build())
-            .addNames("col1")
-            .addNames("col2")
-            .build();
-
     io.substrait.proto.Expression.Literal.Struct struct =
         io.substrait.proto.Expression.Literal.Struct.newBuilder()
             .addFields(literal)
