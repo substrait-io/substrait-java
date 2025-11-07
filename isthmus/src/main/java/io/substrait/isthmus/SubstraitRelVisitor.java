@@ -147,18 +147,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       return EmptyScan.builder().initialSchema(type).build();
     }
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Expression.StructNested> newStructs =
+    List<Expression.StructNested> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  List<Literal> fields =
+                  List<Expression.Literal> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
-                  return ExpressionCreator.struct(fields);
+                  return ExpressionCreator.nestedStruct(false, fields);
                 })
             .collect(Collectors.toUnmodifiableList());
-    return VirtualTableScan.builder().initialSchema(type).addAllRows(newStructs).build();
+    return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
   }
 
   @Override

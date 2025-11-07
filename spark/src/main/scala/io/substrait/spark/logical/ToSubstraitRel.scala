@@ -472,7 +472,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
                   buf += ToSubstraitLiteral.apply(l)
                   idx += 1
                 }
-                ExpressionCreator.struct(buf.asJava)
+                ExpressionCreator.nestedStruct(false, buf.asJava)
               })
             .asJava)
         .build()
@@ -562,7 +562,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .initialSchema(NamedStruct
             .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
-          .addRows(ExpressionCreator.struct(null))
+          .addRows(
+            ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression.Literal].asJava))
           .build()
       case _ =>
         throw new UnsupportedOperationException(

@@ -365,11 +365,6 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       virtualTableScan: relation.VirtualTableScan,
       context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map {
-      case structLit: SExpression.StructLiteral =>
-        InternalRow.fromSeq(
-          structLit.fields.asScala
-            .map(field => field.accept(expressionConverter, context).asInstanceOf[Literal].value)
-        )
       case structNested: SExpression.StructNested =>
         InternalRow.fromSeq(
           structNested.fields.asScala

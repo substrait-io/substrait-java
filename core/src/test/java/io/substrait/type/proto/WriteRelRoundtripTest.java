@@ -30,8 +30,8 @@ public class WriteRelRoundtripTest extends TestBase {
             .initialSchema(schema)
             .addRows(
                 Expression.StructNested.builder()
-                    .addFields(ExpressionCreator.i64(false, 2))
                     .addFields(ExpressionCreator.i64(false, 1))
+                    .addFields(ExpressionCreator.i64(false, 2))
                     .build())
             .build();
     virtTable =

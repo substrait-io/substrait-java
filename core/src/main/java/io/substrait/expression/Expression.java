@@ -32,6 +32,13 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  interface Nested extends Expression {
+    @Value.Default
+    default boolean nullable() {
+      return false;
+    }
+  }
+
   <R, C extends VisitationContext, E extends Throwable> R accept(
       ExpressionVisitor<R, C, E> visitor, C context) throws E;
 
@@ -663,7 +670,7 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
-  abstract class StructNested implements Expression {
+  abstract class StructNested implements Nested {
     public abstract List<Expression> fields();
 
     @Override

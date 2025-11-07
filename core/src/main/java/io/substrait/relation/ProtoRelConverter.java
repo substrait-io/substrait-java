@@ -1,7 +1,6 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -593,23 +592,15 @@ public class ProtoRelConverter {
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 
-    List<Expression> expressions =
+    List<Expression.StructNested> expressions =
         new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
 
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      expressions.add(
-          ImmutableExpression.StructLiteral.builder()
-              .fields(
-                  struct.getFieldsList().stream().map(converter::from).collect(Collectors.toList()))
-              .build());
+      expressions.add(converter.from(struct));
     }
 
     for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
-      expressions.add(
-          ImmutableExpression.StructNested.builder()
-              .fields(
-                  expr.getFieldsList().stream().map(converter::from).collect(Collectors.toList()))
-              .build());
+      expressions.add(converter.from(expr));
     }
 
     ImmutableVirtualTableScan.Builder builder =

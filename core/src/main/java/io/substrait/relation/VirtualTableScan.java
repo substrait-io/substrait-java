@@ -11,7 +11,7 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
-  public abstract List<Expression> getRows();
+  public abstract List<Expression.StructNested> getRows();
 
   /**
    *
@@ -29,13 +29,13 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    List<Expression> rows = getRows();
+    List<Expression.StructNested> rows = getRows();
 
-    assert !rows.isEmpty();
-    assert names.stream().noneMatch(Objects::isNull);
-    assert rows.stream().noneMatch(Objects::isNull);
-    assert rows.stream()
-        .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
+    assert !rows.isEmpty()
+        && names.stream().noneMatch(Objects::isNull)
+        && rows.stream().noneMatch(Objects::isNull)
+        && rows.stream()
+            .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
   }
 
   @Override
