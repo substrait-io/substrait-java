@@ -3,6 +3,10 @@
 urn: extension:test:custom_extensions
 types:
   - name: "customType1"
+    description: >-
+      some description
+    variadic: true
+    parameters: []
   - name: "customType2"
     structure:
       field1: i32
