@@ -21,4 +21,11 @@ public class LogarithmicFunctionTest extends PlanTestBase {
     String query = String.format("SELECT log10(%s) FROM numbers", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i64", "fp32", "fp64"})
+  void log2(String column) throws Exception {
+    String query = String.format("SELECT log2(%s) FROM numbers", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
 }

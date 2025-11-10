@@ -83,7 +83,10 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.IS_FALSE, "is_false"),
               s(SqlStdOperatorTable.IS_NOT_TRUE, "is_not_true"),
               s(SqlStdOperatorTable.IS_NOT_FALSE, "is_not_false"),
-              s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"))
+              s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"),
+              s(SqlLibraryOperators.LOG2, "log2"),
+              s(SqlLibraryOperators.LEAST, "least"),
+              s(SqlLibraryOperators.GREATEST, "greatest"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
