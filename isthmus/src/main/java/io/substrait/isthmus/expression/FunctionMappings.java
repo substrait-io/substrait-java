@@ -78,7 +78,12 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.BITXOR, "bitwise_xor"),
               s(SqlStdOperatorTable.RADIANS, "radians"),
               s(SqlStdOperatorTable.DEGREES, "degrees"),
-              s(SqlLibraryOperators.FACTORIAL, "factorial"))
+              s(SqlLibraryOperators.FACTORIAL, "factorial"),
+              s(SqlStdOperatorTable.IS_TRUE, "is_true"),
+              s(SqlStdOperatorTable.IS_FALSE, "is_false"),
+              s(SqlStdOperatorTable.IS_NOT_TRUE, "is_not_true"),
+              s(SqlStdOperatorTable.IS_NOT_FALSE, "is_not_false"),
+              s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
