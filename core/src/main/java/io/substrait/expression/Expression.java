@@ -675,7 +675,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public Type getType() {
-      return Type.withNullability(false)
+      return Type.withNullability(nullable())
           .struct(
               fields().stream()
                   .map(Expression::getType)

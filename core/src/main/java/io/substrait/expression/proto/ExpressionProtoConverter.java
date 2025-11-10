@@ -77,6 +77,7 @@ public class ExpressionProtoConverter
 
   private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
     Expression.Nested.Builder builder = Expression.Nested.newBuilder();
+    builder.setNullable(builder.getNullable());
     consumer.accept(builder);
     return Expression.newBuilder().setNested(builder).build();
   }
@@ -370,7 +371,8 @@ public class ExpressionProtoConverter
         bldr -> {
           List<Expression> values =
               expr.fields().stream().map(this::toProto).collect(Collectors.toList());
-          bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values));
+          bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values))
+              .setNullable(expr.nullable());
         });
   }
 

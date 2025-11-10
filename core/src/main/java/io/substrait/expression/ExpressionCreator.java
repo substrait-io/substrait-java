@@ -287,12 +287,11 @@ public class ExpressionCreator {
   }
 
   public static Expression.StructNested nestedStruct(
-      boolean nullable, Iterable<Expression.Literal> fields) {
+      boolean nullable, Iterable<Expression> fields) {
     return Expression.StructNested.builder().nullable(nullable).addAllFields(fields).build();
   }
 
-  public static Expression.StructNested nestedStruct(
-      boolean nullable, Expression.Literal... fields) {
+  public static Expression.StructNested nestedStruct(boolean nullable, Expression... fields) {
     return Expression.StructNested.builder()
         .nullable(nullable)
         .addAllFields(Arrays.asList(fields))

@@ -6,7 +6,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
-import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -504,13 +503,13 @@ public class ProtoExpressionConverter {
   }
 
   public Expression.StructNested from(io.substrait.proto.Expression.Literal.Struct struct) {
-    return ImmutableExpression.StructNested.builder()
+    return Expression.StructNested.builder()
         .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
         .build();
   }
 
   public Expression.StructNested from(io.substrait.proto.Expression.Nested.Struct struct) {
-    return ImmutableExpression.StructNested.builder()
+    return Expression.StructNested.builder()
         .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
         .build();
   }

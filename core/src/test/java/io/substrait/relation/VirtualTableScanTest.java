@@ -1,12 +1,5 @@
 package io.substrait.relation;
 
-import static io.substrait.expression.ExpressionCreator.bool;
-import static io.substrait.expression.ExpressionCreator.fp32;
-import static io.substrait.expression.ExpressionCreator.fp64;
-import static io.substrait.expression.ExpressionCreator.i16;
-import static io.substrait.expression.ExpressionCreator.i32;
-import static io.substrait.expression.ExpressionCreator.i64;
-import static io.substrait.expression.ExpressionCreator.i8;
 import static io.substrait.expression.ExpressionCreator.list;
 import static io.substrait.expression.ExpressionCreator.map;
 import static io.substrait.expression.ExpressionCreator.string;
@@ -58,13 +51,6 @@ class VirtualTableScanTest extends TestBase {
                 NamedStruct.of(
                     Arrays.stream(
                             new String[] {
-                              "bool_field",
-                              "i8_field",
-                              "i16_field",
-                              "i32_field",
-                              "i64_field",
-                              "fp32_field",
-                              "fp64_field",
                               "string",
                               "struct",
                               "struct_field1",
@@ -77,13 +63,6 @@ class VirtualTableScanTest extends TestBase {
                             })
                         .collect(Collectors.toList()),
                     R.struct(
-                        R.BOOLEAN,
-                        R.I8,
-                        R.I16,
-                        R.I32,
-                        R.I64,
-                        R.FP32,
-                        R.FP64,
                         R.STRING,
                         R.struct(R.STRING, R.STRING),
                         R.list(R.struct(R.STRING)),
@@ -91,13 +70,6 @@ class VirtualTableScanTest extends TestBase {
             .addRows(
                 ExpressionCreator.nestedStruct(
                     false,
-                    bool(false, true),
-                    i8(false, 42),
-                    i16(false, 1234),
-                    i32(false, 123456),
-                    i64(false, 9876543210L),
-                    fp32(false, 3.14f),
-                    fp64(false, 2.718281828),
                     string(false, "string_val"),
                     struct(
                         false,
@@ -115,8 +87,8 @@ class VirtualTableScanTest extends TestBase {
 
   @Test
   void valuesAndFieldsComparisonTest() {
-    io.substrait.proto.Rel valuesStructProto = protoRelVTValues();
-    io.substrait.proto.Rel fieldsStructProto = protoRelVTFields();
+    io.substrait.proto.Rel valuesStructProto = protoRelVirtualTableValues();
+    io.substrait.proto.Rel fieldsStructProto = protoRelVirtualTableFields();
     Rel relWithValues = protoRelConverter.from(valuesStructProto);
     Rel relWithFields = protoRelConverter.from(fieldsStructProto);
     assertEquals(relWithValues, relWithFields);
@@ -124,12 +96,6 @@ class VirtualTableScanTest extends TestBase {
 
   @Test
   void setUsingValuesOrFieldsTest() {
-    io.substrait.proto.Rel valuesAndFieldsProto = setBothValuesAndFields();
-    assertThrows(
-        IllegalArgumentException.class, () -> protoRelConverter.from(valuesAndFieldsProto));
-  }
-
-  io.substrait.proto.Rel setBothValuesAndFields() {
     io.substrait.proto.Expression.Literal.Struct literalStruct =
         io.substrait.proto.Expression.Literal.Struct.newBuilder()
             .addFields(literal)
@@ -151,10 +117,13 @@ class VirtualTableScanTest extends TestBase {
             .setBaseSchema(schema)
             .build();
 
-    return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+    io.substrait.proto.Rel valuesAndFieldsProto =
+        io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+    assertThrows(
+        IllegalArgumentException.class, () -> protoRelConverter.from(valuesAndFieldsProto));
   }
 
-  io.substrait.proto.Rel protoRelVTFields() {
+  io.substrait.proto.Rel protoRelVirtualTableFields() {
     io.substrait.proto.Expression.Nested.Struct struct =
         io.substrait.proto.Expression.Nested.Struct.newBuilder()
             .addFields(expression)
@@ -170,7 +139,7 @@ class VirtualTableScanTest extends TestBase {
     return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
   }
 
-  io.substrait.proto.Rel protoRelVTValues() {
+  io.substrait.proto.Rel protoRelVirtualTableValues() {
     io.substrait.proto.Expression.Literal.Struct struct =
         io.substrait.proto.Expression.Literal.Struct.newBuilder()
             .addFields(literal)

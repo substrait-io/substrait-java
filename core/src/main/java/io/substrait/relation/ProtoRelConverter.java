@@ -586,9 +586,7 @@ public class ProtoRelConverter {
       throw new IllegalArgumentException(
           "Virtual table cannot have both values and expressions set");
     }
-
     NamedStruct virtualTableSchema = newNamedStruct(rel);
-
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 

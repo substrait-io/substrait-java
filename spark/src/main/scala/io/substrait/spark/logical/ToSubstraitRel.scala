@@ -43,14 +43,13 @@ import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
-import io.substrait.expression.Expression.StructNested
-import io.substrait.expression.ImmutableExpression.StructLiteral
+import io.substrait.expression.Expression.StructLiteral
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.Plan
-import io.substrait.relation.{RelProtoConverter, VirtualTableScan}
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
+import io.substrait.relation.RelProtoConverter
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.{FileFormat, FileOrFiles}
 import io.substrait.relation.files.FileOrFiles.PathType
@@ -456,7 +455,6 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     if (data.isEmpty) {
       relation.EmptyScan.builder().initialSchema(namedStruct).build()
     } else {
-
       relation.VirtualTableScan
         .builder()
         .initialSchema(namedStruct)
@@ -465,7 +463,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             .map(
               row => {
                 var idx = 0
-                val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
+                val buf = new ArrayBuffer[SExpression](row.numFields)
                 while (idx < row.numFields) {
                   val dt = schema(idx).dataType
                   val l = Literal.apply(row.get(idx, dt), dt)
@@ -562,8 +560,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .initialSchema(NamedStruct
             .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
-          .addRows(
-            ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression.Literal].asJava))
+          .addRows(ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression].asJava))
           .build()
       case _ =>
         throw new UnsupportedOperationException(

@@ -151,7 +151,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         values.getTuples().stream()
             .map(
                 list -> {
-                  List<Expression.Literal> fields =
+                  List<Expression> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
