@@ -7,7 +7,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 public class ComparisonFunctionsTest extends PlanTestBase {
   static String CREATES =
-      "CREATE TABLE numbers (int_a INT, int_b INT, double_a DOUBLE, double_b DOUBLE)";
+      "CREATE TABLE numbers (int_a INT, int_b INT, int_c INT, double_a DOUBLE, double_b DOUBLE, double_c DOUBLE)";
 
   @Test
   void is_true() throws Exception {
@@ -44,6 +44,34 @@ public class ComparisonFunctionsTest extends PlanTestBase {
   @ValueSource(strings = {"int_a", "int_b", "double_a", "double_b"})
   void is_distinct_from_null_vs_col(String column) throws Exception {
     String query = String.format("SELECT (NULL IS DISTINCT FROM %s) FROM numbers", column);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "int_a, int_b, int_c",
+    "double_a, double_b, double_c",
+    "int_a, int_b",
+    "int_a, int_b, double_a",
+    "CAST(NULL AS INT), int_a, int_b"
+  })
+  void least(String args) throws Exception {
+    String join_args = String.join(", ", args);
+    String query = String.format("SELECT LEAST(%s) FROM numbers", join_args);
+    assertSqlSubstraitRelRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "int_a, int_b, int_c",
+    "double_a, double_b, double_c",
+    "int_a, int_b",
+    "int_a, int_b, double_a",
+    "CAST(NULL AS INT), int_a, int_b"
+  })
+  void greatest(String args) throws Exception {
+    String join_args = String.join(", ", args);
+    String query = String.format("SELECT LEAST(%s) FROM numbers", join_args);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 }
