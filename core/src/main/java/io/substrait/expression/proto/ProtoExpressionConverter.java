@@ -502,6 +502,18 @@ public class ProtoExpressionConverter {
     }
   }
 
+  public Expression.StructNested from(io.substrait.proto.Expression.Literal.Struct struct) {
+    return Expression.StructNested.builder()
+        .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
+        .build();
+  }
+
+  public Expression.StructNested from(io.substrait.proto.Expression.Nested.Struct struct) {
+    return Expression.StructNested.builder()
+        .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
+        .build();
+  }
+
   private static List<FunctionArg> fromFunctionArgumentList(
       int argumentsCount,
       FunctionArg.ProtoFrom argVisitor,

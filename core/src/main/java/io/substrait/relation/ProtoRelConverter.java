@@ -171,7 +171,7 @@ public class ProtoRelConverter {
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0) {
+      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
         return newEmptyScan(rel);
       } else {
         return newVirtualTable(rel);
@@ -581,18 +581,24 @@ public class ProtoRelConverter {
 
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
+    // If both values and expressions are set, raise an error
+    if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
+      throw new IllegalArgumentException(
+          "Virtual table cannot have both values and expressions set");
+    }
     NamedStruct virtualTableSchema = newNamedStruct(rel);
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
-    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
+
+    List<Expression.StructNested> expressions =
+        new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
+
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      structLiterals.add(
-          Expression.StructLiteral.builder()
-              .fields(
-                  struct.getFieldsList().stream()
-                      .map(converter::from)
-                      .collect(java.util.stream.Collectors.toList()))
-              .build());
+      expressions.add(converter.from(struct));
+    }
+
+    for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
+      expressions.add(converter.from(expr));
     }
 
     ImmutableVirtualTableScan.Builder builder =
@@ -602,7 +608,7 @@ public class ProtoRelConverter {
                     rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
-            .rows(structLiterals);
+            .rows(expressions);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))

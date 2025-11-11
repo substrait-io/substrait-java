@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.Literal;
@@ -56,10 +57,12 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -143,17 +146,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
     }
-
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Expression.StructLiteral> structs =
+    List<Expression.StructNested> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  List<Literal> fields =
+                  List<Expression> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
-                  return ExpressionCreator.struct(false, fields);
+                  return ExpressionCreator.nestedStruct(false, fields);
                 })
             .collect(Collectors.toUnmodifiableList());
     return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
@@ -176,6 +178,35 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         project.getProjects().stream()
             .map(this::toExpression)
             .collect(java.util.stream.Collectors.toList());
+
+    //    a project stores the expressions that Calcite logicalValues do not support
+    //  put non literal expressions back into the nestedStruct
+    if (project.getInput() instanceof Values) {
+      org.apache.calcite.rel.core.Values values = (Values) project.getInput();
+
+      NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
+      if (values.getTuples().isEmpty()) {
+        return Project.builder().input(EmptyScan.builder().initialSchema(type).build()).build();
+      }
+
+      LiteralConverter literalConverter = new LiteralConverter(typeConverter);
+      int expIndex = 0;
+      List<Expression.StructNested> structs = new ArrayList<>();
+      for (ImmutableList<RexLiteral> row : values.getTuples()) {
+        List<Expression> fields = new ArrayList<>();
+        for (RexLiteral field : row) {
+          // is null from the non-literal expression conversion in SubstraitRelNodeConverter
+          if (field.getValue() == null) {
+            fields.add(expressions.get(expIndex++));
+          } else {
+            Literal literal = literalConverter.convert(field);
+            fields.add(literal);
+          }
+        }
+        structs.add(Expression.StructNested.builder().addAllFields(fields).build());
+      }
+      return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
+    }
 
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()

@@ -1,6 +1,7 @@
 package io.substrait.type.proto;
 
 import io.substrait.TestBase;
+import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.VirtualTableScan;
@@ -46,8 +47,10 @@ public class ReadRelRoundtripTest extends TestBase {
                     Stream.of("column1", "column2").collect(Collectors.toList()),
                     R.struct(R.I64, R.I64)))
             .addRows(
-                ExpressionCreator.struct(
-                    false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2)))
+                Expression.StructNested.builder()
+                    .addFields(ExpressionCreator.i64(false, 1))
+                    .addFields(ExpressionCreator.i64(false, 2))
+                    .build())
             .build();
     virtTable =
         VirtualTableScan.builder()

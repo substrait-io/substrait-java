@@ -23,13 +23,14 @@ public class AggregateRoundtripTest extends TestBase {
 
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     Expression.DecimalLiteral expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    Expression.StructLiteral literal =
-        Expression.StructLiteral.builder().addFields(expression).build();
+    Expression.StructNested struct =
+        Expression.StructNested.builder().addFields(expression).build();
     io.substrait.relation.ImmutableVirtualTableScan input =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
-            .addRows(literal)
+            .addRows(struct)
             .build();
+
     ExtensionCollector functionCollector = new ExtensionCollector();
     RelProtoConverter to = new RelProtoConverter(functionCollector);
     io.substrait.extension.SimpleExtension.ExtensionCollection extensions =

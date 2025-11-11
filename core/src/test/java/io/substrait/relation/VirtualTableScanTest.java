@@ -5,9 +5,14 @@ import static io.substrait.expression.ExpressionCreator.map;
 import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.proto.ReadRel;
+import io.substrait.proto.Type;
 import io.substrait.type.NamedStruct;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,6 +21,27 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends TestBase {
+
+  io.substrait.proto.Expression expression =
+      io.substrait.proto.Expression.newBuilder()
+          .setLiteral(io.substrait.proto.Expression.Literal.newBuilder().setI32(3))
+          .build();
+
+  io.substrait.proto.Expression.Literal literal =
+      io.substrait.proto.Expression.Literal.newBuilder().setI32(3).build();
+
+  Type type =
+      Type.newBuilder()
+          .setI32(
+              Type.I32.newBuilder().setNullability(Type.Nullability.NULLABILITY_NULLABLE).build())
+          .build();
+
+  io.substrait.proto.NamedStruct schema =
+      io.substrait.proto.NamedStruct.newBuilder()
+          .setStruct(Type.Struct.newBuilder().addTypes(type).addTypes(type).build())
+          .addNames("col1")
+          .addNames("col2")
+          .build();
 
   @Test
   void check() {
@@ -42,7 +68,7 @@ class VirtualTableScanTest extends TestBase {
                         R.list(R.struct(R.STRING)),
                         R.map(R.struct(R.STRING), R.struct(R.STRING)))))
             .addRows(
-                struct(
+                ExpressionCreator.nestedStruct(
                     false,
                     string(false, "string_val"),
                     struct(
@@ -57,6 +83,76 @@ class VirtualTableScanTest extends TestBase {
                             struct(false, string(false, "map_value_struct_field1_val"))))))
             .build();
     assertDoesNotThrow(virtualTableScan::check);
+  }
+
+  @Test
+  void valuesAndFieldsComparisonTest() {
+    io.substrait.proto.Rel valuesStructProto = protoRelVirtualTableValues();
+    io.substrait.proto.Rel fieldsStructProto = protoRelVirtualTableFields();
+    Rel relWithValues = protoRelConverter.from(valuesStructProto);
+    Rel relWithFields = protoRelConverter.from(fieldsStructProto);
+    assertEquals(relWithValues, relWithFields);
+  }
+
+  @Test
+  void setUsingValuesOrFieldsTest() {
+    io.substrait.proto.Expression.Literal.Struct literalStruct =
+        io.substrait.proto.Expression.Literal.Struct.newBuilder()
+            .addFields(literal)
+            .addFields(literal)
+            .build();
+    io.substrait.proto.Expression.Nested.Struct nestedStruct =
+        io.substrait.proto.Expression.Nested.Struct.newBuilder()
+            .addFields(expression)
+            .addFields(expression)
+            .build();
+
+    io.substrait.proto.ReadRel readRel =
+        ReadRel.newBuilder()
+            .setVirtualTable(
+                ReadRel.VirtualTable.newBuilder()
+                    .addExpressions(nestedStruct)
+                    .addValues(literalStruct)
+                    .build())
+            .setBaseSchema(schema)
+            .build();
+
+    io.substrait.proto.Rel valuesAndFieldsProto =
+        io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+    assertThrows(
+        IllegalArgumentException.class, () -> protoRelConverter.from(valuesAndFieldsProto));
+  }
+
+  io.substrait.proto.Rel protoRelVirtualTableFields() {
+    io.substrait.proto.Expression.Nested.Struct struct =
+        io.substrait.proto.Expression.Nested.Struct.newBuilder()
+            .addFields(expression)
+            .addFields(expression)
+            .build();
+
+    io.substrait.proto.ReadRel readRel =
+        ReadRel.newBuilder()
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().addExpressions(struct).build())
+            .setBaseSchema(schema)
+            .build();
+
+    return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+  }
+
+  io.substrait.proto.Rel protoRelVirtualTableValues() {
+    io.substrait.proto.Expression.Literal.Struct struct =
+        io.substrait.proto.Expression.Literal.Struct.newBuilder()
+            .addFields(literal)
+            .addFields(literal)
+            .build();
+
+    io.substrait.proto.ReadRel readRel =
+        ReadRel.newBuilder()
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().addValues(struct).build())
+            .setBaseSchema(schema)
+            .build();
+
+    return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
   }
 
   private Map<Expression.Literal, Expression.Literal> mapOf(
