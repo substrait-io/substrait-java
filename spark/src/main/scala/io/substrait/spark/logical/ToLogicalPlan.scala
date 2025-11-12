@@ -49,6 +49,7 @@ import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
+import io.substrait.relation.physical.{BroadcastExchange, MultiBucketExchange, RoundRobinExchange, ScatterExchange, SingleBucketExchange}
 import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
@@ -660,5 +661,29 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
 
     require(renamedLogicalPlan.resolved)
     renamedLogicalPlan
+  }
+
+  override def visit(exchange: ScatterExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(
+      exchange: SingleBucketExchange,
+      context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(
+      exchange: MultiBucketExchange,
+      context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(exchange: RoundRobinExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(exchange: BroadcastExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
   }
 }
