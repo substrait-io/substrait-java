@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import io.substrait.plan.Plan;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public final class StringFunctionTest extends PlanTestBase {
@@ -136,5 +137,137 @@ public final class StringFunctionTest extends PlanTestBase {
   private void assertSqlRoundTrip(String sql) throws SqlParseException {
     Plan plan = assertProtoPlanRoundrip(sql, new SqlToSubstrait(), CREATES);
     assertDoesNotThrow(() -> toSql(plan), "Substrait plan to SQL");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testStarts_With(String left, String right) throws Exception {
+
+    String query = String.format("SELECT STARTS_WITH(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testStarts_WithLiteral(String left, String right) throws Exception {
+    String query = String.format("SELECT STARTS_WITH(%s, %s) FROM strings", left, right);
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testStartsWith(String left, String right) throws Exception {
+
+    String query = String.format("SELECT STARTSWITH(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testStartsWithLiteral(String left, String right) throws Exception {
+    String query = String.format("SELECT STARTSWITH(%s, %s) FROM strings", left, right);
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testEnds_With(String left, String right) throws Exception {
+
+    String query = String.format("SELECT ENDS_WITH(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testEnds_WithLiteral(String left, String right) throws Exception {
+    String query = String.format("SELECT ENDS_WITH(%s, %s) FROM strings", left, right);
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testEndsWith(String left, String right) throws Exception {
+
+    String query = String.format("SELECT ENDSWITH(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testEndsWithLiteral(String left, String right) throws Exception {
+    String query = String.format("SELECT ENDSWITH(%s, %s) FROM strings", left, right);
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testContains(String left, String right) throws Exception {
+
+    String query = String.format("SELECT CONTAINS_SUBSTR(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testContainsWithLiteral(String left, String right) throws Exception {
+
+    String query = String.format("SELECT CONTAINS_SUBSTR(%s, %s) FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testPosition(String left, String right) throws Exception {
+
+    String query = String.format("SELECT POSITION(%s IN %s) > 0 FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testPositionWithLiteral(String left, String right) throws Exception {
+
+    String query = String.format("SELECT POSITION(%s IN %s) > 0 FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
+  void testStrpos(String left, String right) throws Exception {
+
+    String query = String.format("SELECT STRPOS(%s, %s) > 0 FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"'start', vc", "vc, 'end'"},
+      quoteCharacter = '`')
+  void testStrposWithLiteral(String left, String right) throws Exception {
+
+    String query = String.format("SELECT STRPOS(%s, %s) > 0 FROM strings", left, right);
+
+    assertSqlRoundTrip(query);
   }
 }

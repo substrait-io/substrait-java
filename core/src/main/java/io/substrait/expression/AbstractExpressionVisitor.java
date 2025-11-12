@@ -152,6 +152,16 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   @Override
+  public O visit(Expression.UserDefinedAny expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  @Override
+  public O visit(Expression.UserDefinedStruct expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  @Override
   public O visit(Expression.Switch expr, C context) throws E {
     return visitFallback(expr, context);
   }

@@ -393,6 +393,23 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
 
     public abstract String name();
 
+    /**
+     * Returns the type parameters for this user-defined type.
+     *
+     * <p>Type parameters are used to represent parameterized/generic types, such as {@code
+     * List<i32>} or {@code Map<String, i64>}. Each parameter in the list represents a type argument
+     * that specializes the generic user-defined type.
+     *
+     * <p>For example, a user-defined type {@code MyList} parameterized by {@code i32} would have
+     * one type parameter containing the {@code i32} type definition.
+     *
+     * @return a list of type parameters, or an empty list if this type is not parameterized
+     */
+    @Value.Default
+    public java.util.List<io.substrait.proto.Type.Parameter> typeParameters() {
+      return java.util.Collections.emptyList();
+    }
+
     public static ImmutableType.UserDefined.Builder builder() {
       return ImmutableType.UserDefined.builder();
     }
