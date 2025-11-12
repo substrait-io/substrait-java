@@ -27,9 +27,14 @@ import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.type.NamedStruct;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
@@ -391,6 +396,41 @@ public class SubstraitStringify extends ParentStringify
   @Override
   public String visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
     StringBuilder sb = getIndent().append("namedUpdate:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(ScatterExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb = getIndent().append("scatterExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb = getIndent().append("singleBucketExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb = getIndent().append("multiBucketExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb = getIndent().append("roundRobinExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(BroadcastExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb = getIndent().append("broadcastExchange:: ");
     return getOutdent(sb);
   }
 }

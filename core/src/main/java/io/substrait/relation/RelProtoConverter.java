@@ -14,6 +14,7 @@ import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
 import io.substrait.proto.DdlRel;
+import io.substrait.proto.ExchangeRel;
 import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
@@ -43,9 +44,16 @@ import io.substrait.proto.SortRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.physical.AbstractExchangeRel;
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TargetType;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.Collection;
@@ -520,6 +528,111 @@ public class RelProtoConverter
         .getExtension()
         .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setUpdate(builder).build();
+  }
+
+  @Override
+  public Rel visit(ScatterExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    ExchangeRel.Builder builder =
+        ExchangeRel.newBuilder()
+            .setScatterByFields(
+                ExchangeRel.ScatterFields.newBuilder()
+                    .addAllFields(
+                        exchange.getFields().stream()
+                            .map(this::toProto)
+                            .collect(Collectors.toList()))
+                    .build());
+    if (exchange.getPartitionCount().isPresent()) {
+      builder.setPartitionCount(exchange.getPartitionCount().get());
+    }
+    if (exchange.getTargets().isPresent()) {
+      builder.addAllTargets(
+          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
+    }
+    return Rel.newBuilder().setExchange(builder).build();
+  }
+
+  @Override
+  public Rel visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    ExchangeRel.Builder builder =
+        ExchangeRel.newBuilder()
+            .setSingleTarget(
+                ExchangeRel.SingleBucketExpression.newBuilder()
+                    .setExpression(toProto(exchange.getExpression()))
+                    .build());
+    if (exchange.getPartitionCount().isPresent()) {
+      builder.setPartitionCount(exchange.getPartitionCount().get());
+    }
+    if (exchange.getTargets().isPresent()) {
+      builder.addAllTargets(
+          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
+    }
+    return Rel.newBuilder().setExchange(builder).build();
+  }
+
+  @Override
+  public Rel visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    ExchangeRel.Builder builder =
+        ExchangeRel.newBuilder()
+            .setMultiTarget(
+                ExchangeRel.MultiBucketExpression.newBuilder()
+                    .setExpression(toProto(exchange.getExpression()))
+                    .setConstrainedToCount(exchange.getConstrainedToCount())
+                    .build());
+    if (exchange.getPartitionCount().isPresent()) {
+      builder.setPartitionCount(exchange.getPartitionCount().get());
+    }
+    if (exchange.getTargets().isPresent()) {
+      builder.addAllTargets(
+          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
+    }
+    return Rel.newBuilder().setExchange(builder).build();
+  }
+
+  @Override
+  public Rel visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    ExchangeRel.Builder builder =
+        ExchangeRel.newBuilder()
+            .setRoundRobin(
+                ExchangeRel.RoundRobin.newBuilder().setExact(exchange.getExact()).build());
+    if (exchange.getPartitionCount().isPresent()) {
+      builder.setPartitionCount(exchange.getPartitionCount().get());
+    }
+    if (exchange.getTargets().isPresent()) {
+      builder.addAllTargets(
+          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
+    }
+    return Rel.newBuilder().setExchange(builder).build();
+  }
+
+  @Override
+  public Rel visit(BroadcastExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    ExchangeRel.Builder builder =
+        ExchangeRel.newBuilder().setBroadcast(ExchangeRel.Broadcast.newBuilder().build());
+    if (exchange.getPartitionCount().isPresent()) {
+      builder.setPartitionCount(exchange.getPartitionCount().get());
+    }
+    if (exchange.getTargets().isPresent()) {
+      builder.addAllTargets(
+          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
+    }
+    return Rel.newBuilder().setExchange(builder).build();
+  }
+
+  private ExchangeRel.ExchangeTarget toProto(AbstractExchangeRel.ExchangeTarget target) {
+    ExchangeRel.ExchangeTarget.Builder builder =
+        ExchangeRel.ExchangeTarget.newBuilder().addAllPartitionId(target.getPartitionIds());
+    if (target.getType() instanceof TargetType.Uri) {
+      builder.setUri(((TargetType.Uri) target.getType()).getUri());
+    }
+    if (target.getType() instanceof TargetType.Extended) {
+      builder.setExtended(((TargetType.Extended) target.getType()).getExtended());
+    }
+    return builder.build();
   }
 
   UpdateRel.TransformExpression toProto(AbstractUpdate.TransformExpression transformation) {

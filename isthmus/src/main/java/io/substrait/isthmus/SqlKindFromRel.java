@@ -24,9 +24,14 @@ import io.substrait.relation.RelVisitor;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.util.EmptyVisitationContext;
 import org.apache.calcite.sql.SqlKind;
 
@@ -236,5 +241,35 @@ public class SqlKindFromRel
   @Override
   public SqlKind visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
     return SqlKind.UPDATE;
+  }
+
+  @Override
+  public SqlKind visit(ScatterExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(BroadcastExchange exchange, EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER_DDL;
   }
 }

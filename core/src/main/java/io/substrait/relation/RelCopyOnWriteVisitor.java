@@ -8,9 +8,14 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -271,6 +276,91 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .from(update)
             .condition(condition.orElse(update.getCondition()))
             .transformations(transformations.orElse(update.getTransformations()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(ScatterExchange exchange, EmptyVisitationContext context) throws E {
+    Optional<Rel> input = exchange.getInput().accept(this, context);
+    Optional<List<FieldReference>> fields =
+        transformList(exchange.getFields(), context, this::visitFieldReference);
+
+    if (allEmpty(input, fields)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        ScatterExchange.builder()
+            .from(exchange)
+            .input(input.orElse(exchange.getInput()))
+            .fields(fields.orElse(exchange.getFields()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+      throws E {
+    Optional<Rel> input = exchange.getInput().accept(this, context);
+
+    Optional<Expression> expression =
+        exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
+
+    if (allEmpty(input, expression)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        SingleBucketExchange.builder()
+            .from(exchange)
+            .input(input.orElse(exchange.getInput()))
+            .expression(expression.orElse(exchange.getExpression()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+      throws E {
+    Optional<Rel> input = exchange.getInput().accept(this, context);
+    Optional<Expression> expression =
+        exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
+
+    if (allEmpty(input)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        MultiBucketExchange.builder()
+            .from(exchange)
+            .input(input.orElse(exchange.getInput()))
+            .expression(expression.orElse(exchange.getExpression()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(RoundRobinExchange exchange, EmptyVisitationContext context) throws E {
+    Optional<Rel> input = exchange.getInput().accept(this, context);
+    if (allEmpty(input)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        RoundRobinExchange.builder()
+            .from(exchange)
+            .input(input.orElse(exchange.getInput()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(BroadcastExchange exchange, EmptyVisitationContext context) throws E {
+    Optional<Rel> input = exchange.getInput().accept(this, context);
+    if (allEmpty(input)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        BroadcastExchange.builder()
+            .from(exchange)
+            .input(input.orElse(exchange.getInput()))
             .build());
   }
 
