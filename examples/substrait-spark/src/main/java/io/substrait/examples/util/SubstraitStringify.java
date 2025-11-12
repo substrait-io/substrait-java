@@ -91,7 +91,7 @@ public class SubstraitStringify extends ParentStringify
   /**
    * Explains the Sustrait relation
    *
-   * @param plan Subsrait relation
+   * @param rel Subsrait relation
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.relation.Rel rel) {

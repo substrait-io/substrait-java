@@ -1,7 +1,5 @@
 package io.substrait.expression.proto;
 
-import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -359,21 +357,43 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.UserDefinedLiteral expr, EmptyVisitationContext context) {
+      io.substrait.expression.Expression.UserDefinedAny expr, EmptyVisitationContext context) {
     int typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
     return lit(
         bldr -> {
-          try {
-            bldr.setNullable(expr.nullable())
-                .setUserDefined(
-                    Expression.Literal.UserDefined.newBuilder()
-                        .setTypeReference(typeReference)
-                        .setValue(Any.parseFrom(expr.value())))
-                .build();
-          } catch (InvalidProtocolBufferException e) {
-            throw new IllegalStateException(e);
-          }
+          Expression.Literal.UserDefined.Builder userDefinedBuilder =
+              Expression.Literal.UserDefined.newBuilder()
+                  .setTypeReference(typeReference)
+                  .addAllTypeParameters(expr.typeParameters())
+                  .setValue(expr.value());
+
+          bldr.setNullable(expr.nullable()).setUserDefined(userDefinedBuilder).build();
+        });
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.UserDefinedStruct expr, EmptyVisitationContext context) {
+    int typeReference =
+        extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
+    return lit(
+        bldr -> {
+          Expression.Literal.Struct structLiteral =
+              Expression.Literal.Struct.newBuilder()
+                  .addAllFields(
+                      expr.fields().stream()
+                          .map(this::toLiteral)
+                          .collect(java.util.stream.Collectors.toList()))
+                  .build();
+
+          Expression.Literal.UserDefined.Builder userDefinedBuilder =
+              Expression.Literal.UserDefined.newBuilder()
+                  .setTypeReference(typeReference)
+                  .addAllTypeParameters(expr.typeParameters())
+                  .setStruct(structLiteral);
+
+          bldr.setNullable(expr.nullable()).setUserDefined(userDefinedBuilder).build();
         });
   }
 

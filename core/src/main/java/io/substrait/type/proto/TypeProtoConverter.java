@@ -134,6 +134,17 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
+    public Type userDefined(
+        int ref, java.util.List<io.substrait.proto.Type.Parameter> typeParameters) {
+      return wrap(
+          Type.UserDefined.newBuilder()
+              .setTypeReference(ref)
+              .setNullability(nullability)
+              .addAllTypeParameters(typeParameters)
+              .build());
+    }
+
+    @Override
     protected Type wrap(final Object o) {
       Type.Builder bldr = Type.newBuilder();
       if (o instanceof Type.Boolean) {
