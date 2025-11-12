@@ -109,12 +109,47 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
-      throws RuntimeException {
+  public RexNode visit(Expression.UserDefinedAny expr, Context context) throws RuntimeException {
+    io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType customType =
+        io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
+            expr.getType());
+
     RexLiteral binaryLiteral =
         rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
-    RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
-    return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
+    return rexBuilder.makeReinterpretCast(customType, binaryLiteral, rexBuilder.makeLiteral(false));
+  }
+
+  @Override
+  public RexNode visit(Expression.UserDefinedStruct expr, Context context) throws RuntimeException {
+    // Convert field types to Calcite types for the struct representation
+    java.util.List<org.apache.calcite.rel.type.RelDataType> fieldTypes =
+        expr.fields().stream()
+            .map(field -> typeConverter.toCalcite(typeFactory, field.getType()))
+            .collect(java.util.stream.Collectors.toList());
+
+    // Generate dummy field names (f0, f1, f2, etc.) to satisfy Calcite's ROW type requirements.
+    // Substrait UserDefinedStruct doesn't have field names - just ordered field values.
+    // These synthetic names are discarded during conversion back to Substrait.
+    java.util.List<String> fieldNames =
+        java.util.stream.IntStream.range(0, expr.fields().size())
+            .mapToObj(i -> "f" + i)
+            .collect(java.util.stream.Collectors.toList());
+
+    io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType customType =
+        new io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType(
+            expr.urn(),
+            expr.name(),
+            expr.typeParameters(),
+            expr.nullable(),
+            fieldTypes,
+            fieldNames);
+
+    java.util.List<RexLiteral> fieldLiterals =
+        expr.fields().stream()
+            .map(field -> (RexLiteral) field.accept(this, context))
+            .collect(java.util.stream.Collectors.toList());
+
+    return rexBuilder.makeLiteral(fieldLiterals, customType, false);
   }
 
   @Override

@@ -5,7 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.type.Type;
+import io.substrait.isthmus.type.SubstraitUserDefinedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,18 +41,26 @@ public class CallConverters {
           };
 
   /**
-   * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link
-   * Expression.UserDefinedLiteral}s within Calcite.
+   * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent {@link
+   * Expression.UserDefinedAny} literals within Calcite.
    *
-   * <p>When converting from Substrait to Calcite, the {@link Expression.UserDefinedLiteral#value()}
-   * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
-   * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
+   * <p>When converting from Substrait to Calcite, UserDefinedAny literals are serialized to binary
+   * and stored as {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
+   * org.apache.calcite.rex.RexLiteral}, then re-interpreted to have a custom {@link
+   * SubstraitUserDefinedType.SubstraitUserDefinedAnyType} that preserves all metadata including
+   * type parameters.
    *
-   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral,
-   * SubstraitRelNodeConverter.Context)} for this conversion.
+   * <p>Note: {@link Expression.UserDefinedStruct} literals are NOT handled via REINTERPRET.
+   * Instead, they are represented as Calcite ROW literals with {@link
+   * SubstraitUserDefinedType.SubstraitUserDefinedStructType} and converted via {@link
+   * LiteralConverter}.
    *
-   * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
-   * Expression.UserDefinedLiteral} that was stored.
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedAny,
+   * SubstraitRelNodeConverter.Context)} for the UserDefinedAny conversion.
+   *
+   * <p>When converting from Calcite back to Substrait, this call converter deserializes the binary
+   * value and reconstructs the UserDefinedAny literal with all metadata preserved (including type
+   * parameters).
    */
   public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
@@ -61,20 +69,28 @@ public class CallConverters {
               return null;
             }
             Expression operand = visitor.apply(call.getOperands().get(0));
-            Type type = typeConverter.toSubstrait(call.getType());
 
-            // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
-            // user-defined literals
             if (operand instanceof Expression.FixedBinaryLiteral
-                && type instanceof Type.UserDefined) {
+                && call.getType() instanceof SubstraitUserDefinedType.SubstraitUserDefinedAnyType) {
               Expression.FixedBinaryLiteral literal = (Expression.FixedBinaryLiteral) operand;
-              Type.UserDefined t = (Type.UserDefined) type;
+              SubstraitUserDefinedType.SubstraitUserDefinedAnyType customType =
+                  (SubstraitUserDefinedType.SubstraitUserDefinedAnyType) call.getType();
 
-              return Expression.UserDefinedLiteral.builder()
-                  .urn(t.urn())
-                  .name(t.name())
-                  .value(literal.value())
-                  .build();
+              try {
+                com.google.protobuf.Any anyValue =
+                    com.google.protobuf.Any.parseFrom(literal.value().toByteArray());
+
+                return Expression.UserDefinedAny.builder()
+                    .urn(customType.getUrn())
+                    .name(customType.getName())
+                    .typeParameters(customType.getTypeParameters())
+                    .value(anyValue)
+                    .nullable(customType.isNullable())
+                    .build();
+              } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+                throw new IllegalArgumentException(
+                    "Failed to parse UserDefinedAny literal value", e);
+              }
             }
             return null;
           };

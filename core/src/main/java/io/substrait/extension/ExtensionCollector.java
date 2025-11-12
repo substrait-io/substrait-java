@@ -63,6 +63,77 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     return counter;
   }
 
+  /**
+   * Returns an ExtensionCollection containing only the types and functions that have been tracked
+   * by this collector. This provides a minimal collection with exactly what was used during
+   * serialization.
+   *
+   * <p>This collection contains:
+   *
+   * <ul>
+   *   <li>Only the types that were referenced via {@link #getTypeReference}
+   *   <li>Only the functions that were referenced via {@link #getFunctionReference}
+   *   <li>URI/URN mappings for only the used extension URNs
+   * </ul>
+   *
+   * <p>Types from the catalog are resolved, while custom UserDefined types (not in the catalog) are
+   * created via {@link SimpleExtension.Type#of(String, String)}.
+   *
+   * @return an ExtensionCollection with only the used types, functions, and URI/URN mappings
+   */
+  public SimpleExtension.ExtensionCollection getExtensionCollection() {
+    java.util.List<SimpleExtension.Type> types = new ArrayList<>();
+    java.util.List<SimpleExtension.ScalarFunctionVariant> scalarFunctions = new ArrayList<>();
+    java.util.List<SimpleExtension.AggregateFunctionVariant> aggregateFunctions = new ArrayList<>();
+    java.util.List<SimpleExtension.WindowFunctionVariant> windowFunctions = new ArrayList<>();
+
+    java.util.Set<String> usedUrns = new java.util.HashSet<>();
+
+    for (Map.Entry<Integer, SimpleExtension.TypeAnchor> entry : typeMap.forwardEntrySet()) {
+      SimpleExtension.TypeAnchor anchor = entry.getValue();
+      usedUrns.add(anchor.urn());
+      if (extensionCollection.hasType(anchor)) {
+        types.add(extensionCollection.getType(anchor));
+      } else {
+        types.add(SimpleExtension.Type.of(anchor.urn(), anchor.key()));
+      }
+    }
+
+    for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> entry : funcMap.forwardEntrySet()) {
+      SimpleExtension.FunctionAnchor anchor = entry.getValue();
+      usedUrns.add(anchor.urn());
+
+      if (extensionCollection.hasScalarFunction(anchor)) {
+        scalarFunctions.add(extensionCollection.getScalarFunction(anchor));
+      } else if (extensionCollection.hasAggregateFunction(anchor)) {
+        aggregateFunctions.add(extensionCollection.getAggregateFunction(anchor));
+      } else if (extensionCollection.hasWindowFunction(anchor)) {
+        windowFunctions.add(extensionCollection.getWindowFunction(anchor));
+      } else {
+        throw new IllegalArgumentException(
+            String.format(
+                "Function %s::%s was tracked but not found in catalog as scalar, aggregate, or window function",
+                anchor.urn(), anchor.key()));
+      }
+    }
+
+    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    for (String urn : usedUrns) {
+      String uri = extensionCollection.getUriFromUrn(urn);
+      if (uri != null) {
+        uriUrnMap.put(uri, urn);
+      }
+    }
+
+    return SimpleExtension.ExtensionCollection.builder()
+        .addAllTypes(types)
+        .addAllScalarFunctions(scalarFunctions)
+        .addAllAggregateFunctions(aggregateFunctions)
+        .addAllWindowFunctions(windowFunctions)
+        .uriUrnMap(uriUrnMap)
+        .build();
+  }
+
   public void addExtensionsToPlan(Plan.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 

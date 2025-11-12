@@ -27,8 +27,6 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
 public class LiteralConverter {
-  // TODO: Handle conversion of user-defined type literals
-
   static final DateTimeFormatter CALCITE_LOCAL_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
   static final DateTimeFormatter CALCITE_LOCAL_TIME_FORMATTER =
       new DateTimeFormatterBuilder()
@@ -195,6 +193,25 @@ public class LiteralConverter {
 
       case ROW:
         {
+          // Check if this is a SubstraitUserDefinedStructType
+          if (literal.getType()
+              instanceof
+              io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType) {
+            io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType
+                udtType =
+                    (io.substrait.isthmus.type.SubstraitUserDefinedType
+                            .SubstraitUserDefinedStructType)
+                        literal.getType();
+            List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
+            return ExpressionCreator.userDefinedLiteralStruct(
+                udtType.isNullable(),
+                udtType.getUrn(),
+                udtType.getName(),
+                udtType.getTypeParameters(),
+                literals.stream().map(this::convert).collect(Collectors.toList()));
+          }
+
+          // Regular struct
           List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
           return ExpressionCreator.struct(
               n, literals.stream().map(this::convert).collect(Collectors.toList()));

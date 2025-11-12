@@ -286,13 +286,87 @@ public class ExpressionCreator {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
   }
 
-  public static Expression.UserDefinedLiteral userDefinedLiteral(
+  /**
+   * Create a UserDefinedAny with google.protobuf.Any representation.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param value the value, encoded as google.protobuf.Any
+   */
+  public static Expression.UserDefinedAny userDefinedLiteralAny(
       boolean nullable, String urn, String name, Any value) {
-    return Expression.UserDefinedLiteral.builder()
+    return Expression.UserDefinedAny.builder()
         .nullable(nullable)
         .urn(urn)
         .name(name)
-        .value(value.toByteString())
+        .value(value)
+        .build();
+  }
+
+  /**
+   * Create a UserDefinedAny with google.protobuf.Any representation and type parameters.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param typeParameters the type parameters for the user-defined type
+   * @param value the value, encoded as google.protobuf.Any
+   */
+  public static Expression.UserDefinedAny userDefinedLiteralAny(
+      boolean nullable,
+      String urn,
+      String name,
+      java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
+      Any value) {
+    return Expression.UserDefinedAny.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .addAllTypeParameters(typeParameters)
+        .value(value)
+        .build();
+  }
+
+  /**
+   * Create a UserDefinedStruct with Struct representation.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param fields the fields, as a list of Literal values
+   */
+  public static Expression.UserDefinedStruct userDefinedLiteralStruct(
+      boolean nullable, String urn, String name, java.util.List<Expression.Literal> fields) {
+    return Expression.UserDefinedStruct.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .addAllFields(fields)
+        .build();
+  }
+
+  /**
+   * Create a UserDefinedStruct with Struct representation and type parameters.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param typeParameters the type parameters for the user-defined type
+   * @param fields the fields, as a list of Literal values
+   */
+  public static Expression.UserDefinedStruct userDefinedLiteralStruct(
+      boolean nullable,
+      String urn,
+      String name,
+      java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
+      java.util.List<Expression.Literal> fields) {
+    return Expression.UserDefinedStruct.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .addAllTypeParameters(typeParameters)
+        .addAllFields(fields)
         .build();
   }
 

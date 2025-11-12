@@ -363,8 +363,8 @@ public class TypeConverter {
       if (type != null) {
         return type;
       }
-      throw new UnsupportedOperationException(
-          String.format("Unable to map user-defined type: %s", expr));
+      return io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
+          expr);
     }
 
     private boolean n(NullableType type) {
