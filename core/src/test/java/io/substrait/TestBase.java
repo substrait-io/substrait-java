@@ -17,6 +17,7 @@ public abstract class TestBase {
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   protected TypeCreator R = TypeCreator.REQUIRED;
+  protected TypeCreator N = TypeCreator.NULLABLE;
 
   protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
   protected ExtensionCollector functionCollector = new ExtensionCollector();
