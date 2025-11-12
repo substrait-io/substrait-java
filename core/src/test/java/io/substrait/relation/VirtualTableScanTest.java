@@ -6,6 +6,7 @@ import static io.substrait.expression.ExpressionCreator.list;
 import static io.substrait.expression.ExpressionCreator.map;
 import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
+import static io.substrait.expression.ExpressionCreator.typedNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -70,10 +71,10 @@ class VirtualTableScanTest extends TestBase {
         ImmutableVirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.of(
-                    Arrays.asList("id", "name", "age"), R.struct(R.I64, R.STRING, R.I32)))
+                    Arrays.asList("id", "name", "age"), R.struct(R.I64, N.STRING, R.I32)))
             .addRows(
-                struct(false, i64(false, 1L), string(false, "Alice"), i32(false, 30)),
-                struct(false, i64(false, 2L), string(false, "Bob"), i32(false, 25)))
+                struct(false, i64(false, 1L), string(true, "Alice"), i32(false, 30)),
+                struct(false, i64(false, 2L), typedNull(N.STRING), i32(false, 25)))
             .build();
     assertDoesNotThrow(virtualTableScan::check);
   }
