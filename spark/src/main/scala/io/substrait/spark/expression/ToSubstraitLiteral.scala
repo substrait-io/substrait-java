@@ -139,23 +139,20 @@ class ToSubstraitLiteral {
    */
   def apply(literal: Literal, nullable: Option[Boolean] = None): SExpression.Literal = {
     nullable match {
+      case Some(false) if (literal.value == null) =>
+        throw new IllegalArgumentException("Cannot create a non-nullable type for a null value")
+      case Some(true) if (literal.value == null) =>
+        ToSubstraitType
+          .convert(literal.dataType, nullable = true)
+          .map(typedNull)
+          .getOrElse(throw new UnsupportedOperationException(
+            s"Unable to convert the type ${literal.dataType.typeName}"))
       case Some(n) =>
         // Use explicit nullability
-        if (literal.value == null) {
-          if (!n) {
-            throw new IllegalArgumentException("Cannot create a non-nullable type for a null value")
-          }
-          ToSubstraitType
-            .convert(literal.dataType, nullable = true)
-            .map(typedNull)
-            .getOrElse(throw new UnsupportedOperationException(
+        convertWithValue(literal, n)
+          .getOrElse(
+            throw new UnsupportedOperationException(
               s"Unable to convert the type ${literal.dataType.typeName}"))
-        } else {
-          convertWithValue(literal, n)
-            .getOrElse(
-              throw new UnsupportedOperationException(
-                s"Unable to convert the type ${literal.dataType.typeName}"))
-        }
       case None =>
         // Use literal's inferred nullability
         convert(literal)
