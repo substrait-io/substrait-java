@@ -38,6 +38,11 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.MultiBucketExchange;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
@@ -589,6 +594,31 @@ public class SubstraitRelNodeConverter
         updateColumnList,
         sourceExpressionList,
         false);
+  }
+
+  @Override
+  public RelNode visit(ScatterExchange exchange, Context context) throws RuntimeException {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public RelNode visit(SingleBucketExchange exchange, Context context) throws RuntimeException {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public RelNode visit(MultiBucketExchange exchange, Context context) throws RuntimeException {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public RelNode visit(RoundRobinExchange exchange, Context context) throws RuntimeException {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public RelNode visit(BroadcastExchange exchange, Context context) throws RuntimeException {
+    return visitFallback(exchange, context);
   }
 
   @Override
