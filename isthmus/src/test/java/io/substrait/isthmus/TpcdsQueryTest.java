@@ -1,7 +1,6 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.plan.Plan;
 import java.io.IOException;
@@ -14,8 +13,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
 public class TpcdsQueryTest extends PlanTestBase {
   private static final Set<Integer> alternateForms = Set.of(27, 36, 70, 86);
-  private static final Set<Integer> fromSubstraitPojoExclusions = Set.of(1, 30, 81);
-  private static final Set<Integer> fromSubstraitProtoExclusions = Set.of(1, 30, 81);
 
   static IntStream testCases() {
     return IntStream.rangeClosed(1, 99);
@@ -29,23 +26,11 @@ public class TpcdsQueryTest extends PlanTestBase {
   @MethodSource("testCases")
   public void testQuery(int query) throws IOException {
     String inputSql = asString(inputSqlFile(query));
-
     Plan plan = assertDoesNotThrow(() -> toSubstraitPlan(inputSql), "SQL to Substrait POJO");
-
-    if (!fromSubstraitPojoExclusions.contains(query)) {
-      assertDoesNotThrow(() -> toSql(plan), "Substrait POJO to SQL");
-    } else {
-      assertThrows(Throwable.class, () -> toSql(plan), "Substrait POJO to SQL");
-    }
-
+    assertDoesNotThrow(() -> toSql(plan), "Substrait POJO to SQL");
     io.substrait.proto.Plan proto =
         assertDoesNotThrow(() -> toProto(plan), "Substrait POJO to Substrait PROTO");
-
-    if (!fromSubstraitProtoExclusions.contains(query)) {
-      assertDoesNotThrow(() -> toSql(proto), "Substrait PROTO to SQL");
-    } else {
-      assertThrows(Throwable.class, () -> toSql(proto), "Substrait PROTO to SQL");
-    }
+    assertDoesNotThrow(() -> toSql(proto), "Substrait PROTO to SQL");
   }
 
   private String inputSqlFile(int query) {
