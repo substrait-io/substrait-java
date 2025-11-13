@@ -47,7 +47,12 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
   // functions
   private static final SqlOperatorTable LIBRARY_OPERATOR_TABLE =
       SqlLibraryOperatorTableFactory.INSTANCE.getOperatorTable(
-          EnumSet.of(SqlLibrary.HIVE, SqlLibrary.SPARK, SqlLibrary.ALL));
+          EnumSet.of(
+              SqlLibrary.HIVE,
+              SqlLibrary.SPARK,
+              SqlLibrary.ALL,
+              SqlLibrary.BIG_QUERY,
+              SqlLibrary.STANDARD));
 
   private static final SqlOperatorTable STANDARD_OPERATOR_TABLE = SqlStdOperatorTable.instance();
 

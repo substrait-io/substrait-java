@@ -86,7 +86,11 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"),
               s(SqlLibraryOperators.LOG2, "log2"),
               s(SqlLibraryOperators.LEAST, "least"),
-              s(SqlLibraryOperators.GREATEST, "greatest"))
+              s(SqlLibraryOperators.GREATEST, "greatest"),
+              s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
+              s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
+              s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
+              s(SqlStdOperatorTable.POSITION, "strpos"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
