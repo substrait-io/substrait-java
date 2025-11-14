@@ -86,7 +86,9 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"),
               s(SqlLibraryOperators.LOG2, "log2"),
               s(SqlLibraryOperators.LEAST, "least"),
-              s(SqlLibraryOperators.GREATEST, "greatest"))
+              s(SqlLibraryOperators.GREATEST, "greatest"),
+              s(SqlStdOperatorTable.BIT_LEFT_SHIFT, "shift_left"),
+              s(SqlStdOperatorTable.LEFTSHIFT, "shift_left"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
@@ -131,7 +133,9 @@ public class FunctionMappings {
           resolver(
               SqlStdOperatorTable.MINUS, Set.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
           SqlStdOperatorTable.MINUS_DATE,
-          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
+          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")),
+          SqlStdOperatorTable.BIT_LEFT_SHIFT,
+          resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
 
   public static void main(String[] args) {
     SCALAR_SIGS.forEach(System.out::println);
