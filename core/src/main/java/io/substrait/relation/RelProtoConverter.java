@@ -649,27 +649,14 @@ public class RelProtoConverter
       throws RuntimeException {
 
     List<io.substrait.proto.Expression.Nested.Struct> structs = new ArrayList<>();
-    for (Expression row : virtualTableScan.getRows()) {
-
-      if (row instanceof Expression.StructNested) {
-        Expression.StructNested expression = (Expression.StructNested) row;
-        structs.add(
-            io.substrait.proto.Expression.Nested.Struct.newBuilder()
-                .addAllFields(
-                    expression.fields().stream()
-                        .map(this::toProto)
-                        .collect(java.util.stream.Collectors.toList()))
-                .build());
-      } else if (row instanceof Expression.StructLiteral) {
-        Expression.StructLiteral expression = (Expression.StructLiteral) row;
-        structs.add(
-            io.substrait.proto.Expression.Nested.Struct.newBuilder()
-                .addAllFields(
-                    expression.fields().stream()
-                        .map(this::toProto)
-                        .collect(java.util.stream.Collectors.toList()))
-                .build());
-      }
+    for (Expression.StructNested row : virtualTableScan.getRows()) {
+      structs.add(
+          io.substrait.proto.Expression.Nested.Struct.newBuilder()
+              .addAllFields(
+                  row.fields().stream()
+                      .map(this::toProto)
+                      .collect(java.util.stream.Collectors.toList()))
+              .build());
     }
 
     ReadRel.Builder builder =

@@ -38,9 +38,8 @@ class VirtualTableScanTest extends TestBase {
 
   io.substrait.proto.NamedStruct schema =
       io.substrait.proto.NamedStruct.newBuilder()
-          .setStruct(Type.Struct.newBuilder().addTypes(type).addTypes(type).build())
+          .setStruct(Type.Struct.newBuilder().addTypes(type).build())
           .addNames("col1")
-          .addNames("col2")
           .build();
 
   @Test
@@ -97,15 +96,9 @@ class VirtualTableScanTest extends TestBase {
   @Test
   void setUsingValuesOrFieldsTest() {
     io.substrait.proto.Expression.Literal.Struct literalStruct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(literal)
-            .addFields(literal)
-            .build();
+        io.substrait.proto.Expression.Literal.Struct.newBuilder().addFields(literal).build();
     io.substrait.proto.Expression.Nested.Struct nestedStruct =
-        io.substrait.proto.Expression.Nested.Struct.newBuilder()
-            .addFields(expression)
-            .addFields(expression)
-            .build();
+        io.substrait.proto.Expression.Nested.Struct.newBuilder().addFields(expression).build();
 
     io.substrait.proto.ReadRel readRel =
         ReadRel.newBuilder()
@@ -125,10 +118,7 @@ class VirtualTableScanTest extends TestBase {
 
   io.substrait.proto.Rel protoRelVirtualTableFields() {
     io.substrait.proto.Expression.Nested.Struct struct =
-        io.substrait.proto.Expression.Nested.Struct.newBuilder()
-            .addFields(expression)
-            .addFields(expression)
-            .build();
+        io.substrait.proto.Expression.Nested.Struct.newBuilder().addFields(expression).build();
 
     io.substrait.proto.ReadRel readRel =
         ReadRel.newBuilder()
@@ -141,10 +131,7 @@ class VirtualTableScanTest extends TestBase {
 
   io.substrait.proto.Rel protoRelVirtualTableValues() {
     io.substrait.proto.Expression.Literal.Struct struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(literal)
-            .addFields(literal)
-            .build();
+        io.substrait.proto.Expression.Literal.Struct.newBuilder().addFields(literal).build();
 
     io.substrait.proto.ReadRel readRel =
         ReadRel.newBuilder()

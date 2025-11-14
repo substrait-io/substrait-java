@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -594,7 +595,7 @@ public class ProtoRelConverter {
         new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
 
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      expressions.add(converter.from(struct));
+      expressions.addAll(ExpressionCreator.nestedStruct(false, converter.from(struct)));
     }
 
     for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {

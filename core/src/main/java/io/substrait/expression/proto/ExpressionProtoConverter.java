@@ -77,7 +77,6 @@ public class ExpressionProtoConverter
 
   private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
     Expression.Nested.Builder builder = Expression.Nested.newBuilder();
-    builder.setNullable(builder.getNullable());
     consumer.accept(builder);
     return Expression.newBuilder().setNested(builder).build();
   }

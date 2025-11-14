@@ -209,11 +209,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     Optional<List<Expression>> expressions = visitExprList(expr.fields(), context);
     return expressions.map(
         expressionList ->
-            Expression.StructNested.builder()
-                .from(expr)
-                .nullable(expr.nullable())
-                .fields(expressionList)
-                .build());
+            Expression.StructNested.builder().from(expr).fields(expressionList).build());
   }
 
   @Override
