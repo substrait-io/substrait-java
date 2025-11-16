@@ -1,6 +1,19 @@
 Release Notes
 ---
 
+## [0.69.0](https://github.com/substrait-io/substrait-java/compare/v0.68.0...v0.69.0) (2025-11-16)
+
+### Features
+
+* enforce row type consistency with schema in virtual tables ([#601](https://github.com/substrait-io/substrait-java/issues/601)) ([a5322ea](https://github.com/substrait-io/substrait-java/commit/a5322eadfab67bfcdd34453fd94c9a559ccc762c))
+* **isthmus:** log2, greatest and least scalar fn mappings added ([#598](https://github.com/substrait-io/substrait-java/issues/598)) ([848bfcf](https://github.com/substrait-io/substrait-java/commit/848bfcf83f4235574a686a4d48407a8f8ba5d99e))
+* **isthmus:** true, false, distinct comparator scalar fn mappings ([#597](https://github.com/substrait-io/substrait-java/issues/597)) ([f59ecc5](https://github.com/substrait-io/substrait-java/commit/f59ecc5ad78eb8f8e79c664fbb4f81c572bb9aa1))
+
+### Bug Fixes
+
+* handle valid YAML extension types ([#595](https://github.com/substrait-io/substrait-java/issues/595)) ([ed25bed](https://github.com/substrait-io/substrait-java/commit/ed25bed9233b1bd393f128c580cf1ab7fbcca0b9)), closes [#594](https://github.com/substrait-io/substrait-java/issues/594)
+* **isthmus:** support TPC-DS queries 1, 30, 81 ([#593](https://github.com/substrait-io/substrait-java/issues/593)) ([442f1f2](https://github.com/substrait-io/substrait-java/commit/442f1f2b171d8eb691f3dcc01c2d6fe03c6add8a))
+
 ## [0.68.0](https://github.com/substrait-io/substrait-java/compare/v0.67.0...v0.68.0) (2025-11-02)
 
 ### Features
