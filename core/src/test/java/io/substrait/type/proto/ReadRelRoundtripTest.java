@@ -1,11 +1,8 @@
 package io.substrait.type.proto;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.relation.ImmutableVirtualTableScan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
@@ -63,36 +60,5 @@ public class ReadRelRoundtripTest extends TestBase {
             .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
             .build();
     verifyRoundTrip(virtTable);
-  }
-
-  @Test
-  void nonNullNullableVirtualTable() {
-    io.substrait.relation.ImmutableVirtualTableScan virtTable =
-        VirtualTableScan.builder()
-            .initialSchema(
-                NamedStruct.of(Stream.of("column1").collect(Collectors.toList()), R.struct(R.I64)))
-            .addRows(
-                Expression.StructNested.builder()
-                    .addFields(ExpressionCreator.i64(false, 1))
-                    .nullable(false)
-                    .build())
-            .build();
-    virtTable = VirtualTableScan.builder().from(virtTable).build();
-    verifyRoundTrip(virtTable);
-  }
-
-  @Test
-  void notNullableVirtualTable() {
-    ImmutableVirtualTableScan.Builder bldr =
-        VirtualTableScan.builder()
-            .initialSchema(
-                NamedStruct.of(Stream.of("column1").collect(Collectors.toList()), R.struct(R.I64)))
-            .addRows(
-                Expression.StructNested.builder()
-                    .addFields(ExpressionCreator.i64(true, 1))
-                    .nullable(true) // can't have nullable rows
-                    .build());
-
-    assertThrows(AssertionError.class, bldr::build);
   }
 }

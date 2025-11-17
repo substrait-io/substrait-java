@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends TestBase {
@@ -94,7 +95,7 @@ class VirtualTableScanTest extends TestBase {
   }
 
   @Test
-  void setUsingValuesOrFieldsTest() {
+  void setUsingOnlyValuesOrFieldsTest() {
     io.substrait.proto.Expression.Literal.Struct literalStruct =
         io.substrait.proto.Expression.Literal.Struct.newBuilder().addFields(literal).build();
     io.substrait.proto.Expression.Nested.Struct nestedStruct =
@@ -140,6 +141,20 @@ class VirtualTableScanTest extends TestBase {
             .build();
 
     return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
+  }
+
+  @Test
+  void notNullableVirtualTable() {
+    ImmutableVirtualTableScan.Builder bldr =
+        VirtualTableScan.builder()
+            .initialSchema(
+                NamedStruct.of(Stream.of("column1").collect(Collectors.toList()), R.struct(R.I64)))
+            .addRows(
+                Expression.StructNested.builder()
+                    .addFields(ExpressionCreator.i64(true, 1))
+                    .nullable(true) // can't have nullable rows
+                    .build());
+    assertThrows(AssertionError.class, bldr::build);
   }
 
   private Map<Expression.Literal, Expression.Literal> mapOf(

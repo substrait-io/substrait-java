@@ -289,7 +289,6 @@ public class ExpressionCreator {
 
   public static Expression.StructNested nestedStruct(
       boolean nullable, Iterable<Expression> fields) {
-
     return Expression.StructNested.builder().nullable(nullable).addAllFields(fields).build();
   }
 
@@ -300,6 +299,8 @@ public class ExpressionCreator {
         .build();
   }
 
+  //  This function is meant to convert the deprecated StructLiteral rows in a VirtualTable to the
+  // new StructNested type
   public static List<Expression.StructNested> nestedStruct(
       boolean nullable, Expression.StructLiteral... structs) {
     List<Expression.StructNested> nestedStructs = new ArrayList<>();
