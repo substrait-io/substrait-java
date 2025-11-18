@@ -152,7 +152,7 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   @Override
-  public O visit(Expression.StructNested expr, C context) throws E {
+  public O visit(Expression.NestedStruct expr, C context) throws E {
     return visitFallback(expr, context);
   }
 

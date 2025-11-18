@@ -150,7 +150,7 @@ class VirtualTableScanTest extends TestBase {
             .initialSchema(
                 NamedStruct.of(Stream.of("column1").collect(Collectors.toList()), R.struct(R.I64)))
             .addRows(
-                Expression.StructNested.builder()
+                Expression.NestedStruct.builder()
                     .addFields(ExpressionCreator.i64(true, 1))
                     .nullable(true) // can't have nullable rows
                     .build());

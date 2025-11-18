@@ -670,7 +670,7 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
-  abstract class StructNested implements Nested {
+  abstract class NestedStruct implements Nested {
     public abstract List<Expression> fields();
 
     @Override
@@ -682,8 +682,8 @@ public interface Expression extends FunctionArg {
                   .collect(java.util.stream.Collectors.toList()));
     }
 
-    public static ImmutableExpression.StructNested.Builder builder() {
-      return ImmutableExpression.StructNested.builder();
+    public static ImmutableExpression.NestedStruct.Builder builder() {
+      return ImmutableExpression.NestedStruct.builder();
     }
 
     @Override

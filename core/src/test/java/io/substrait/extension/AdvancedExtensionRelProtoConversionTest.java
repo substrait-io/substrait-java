@@ -78,7 +78,7 @@ class AdvancedExtensionRelProtoConversionTest {
         VirtualTableScan.builder()
             .extension(extension)
             .addRows(
-                Expression.StructNested.builder()
+                Expression.NestedStruct.builder()
                     .addFields(BoolLiteral.builder().value(true).build())
                     .build())
             .initialSchema(

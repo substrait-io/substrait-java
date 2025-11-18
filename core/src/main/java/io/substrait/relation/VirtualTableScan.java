@@ -11,7 +11,7 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
-  public abstract List<Expression.StructNested> getRows();
+  public abstract List<Expression.NestedStruct> getRows();
 
   /**
    *
@@ -29,18 +29,18 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    List<Expression.StructNested> rows = getRows();
+    List<Expression.NestedStruct> rows = getRows();
 
+    //  In the codebase, we use `NestedStruct` to represent two subtly distinct cases:
+    //  - an instanceof the Expression proto with the particular case of
+    //    `rex_type` set to `Nested` (and then `Struct`)
+    // - access to the raw proto of `Expression.Struct.Nested` itself
     /**
-     * In the codebase, we use `StructNested` to represent two subtly distinct cases: - an instance
-     * of the Expression proto with the particular case of `rex_type` set to `Nested` (and then
-     * `Struct`) - access to the raw proto of `Expression.Struct.Nested` itself
-     *
-     * <p>Here we are using the second case, and thus we are carrying around a nullable field as a
+     * Here we are using the second case, and thus we are carrying around a nullable field as a
      * consequence of the first option, but we enforce it to be false to ensure a user doesn't
      * accidentally pass around meaningless additional context.
      */
-    for (Expression.StructNested row : rows) {
+    for (Expression.NestedStruct row : rows) {
       assert !row.nullable();
     }
 

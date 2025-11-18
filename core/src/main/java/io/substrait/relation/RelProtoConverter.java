@@ -649,7 +649,7 @@ public class RelProtoConverter
       throws RuntimeException {
 
     List<io.substrait.proto.Expression.Nested.Struct> structs = new ArrayList<>();
-    for (Expression.StructNested row : virtualTableScan.getRows()) {
+    for (Expression.NestedStruct row : virtualTableScan.getRows()) {
       structs.add(
           io.substrait.proto.Expression.Nested.Struct.newBuilder()
               .addAllFields(

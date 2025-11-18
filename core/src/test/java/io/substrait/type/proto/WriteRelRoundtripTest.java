@@ -29,7 +29,7 @@ public class WriteRelRoundtripTest extends TestBase {
         VirtualTableScan.builder()
             .initialSchema(schema)
             .addRows(
-                Expression.StructNested.builder()
+                Expression.NestedStruct.builder()
                     .addFields(ExpressionCreator.i64(false, 1))
                     .addFields(ExpressionCreator.i64(false, 2))
                     .build())
@@ -68,7 +68,7 @@ public class WriteRelRoundtripTest extends TestBase {
         VirtualTableScan.builder()
             .initialSchema(schema)
             .addRows(
-                Expression.StructNested.builder()
+                Expression.NestedStruct.builder()
                     .addFields(ExpressionCreator.i64(false, 1))
                     .addFields(ExpressionCreator.i64(false, 2))
                     .build())

@@ -41,6 +41,7 @@ import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructTyp
 import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
+import io.substrait.expression.Expression.NestedStruct
 import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
@@ -365,9 +366,9 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       virtualTableScan: relation.VirtualTableScan,
       context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map {
-      case structNested: SExpression.StructNested =>
+      case nestedStruct: NestedStruct =>
         InternalRow.fromSeq(
-          structNested.fields.asScala
+          nestedStruct.fields.asScala
             .map(expr => expr.accept(expressionConverter, context).asInstanceOf[Literal].value)
         )
       case other =>

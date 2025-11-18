@@ -631,42 +631,22 @@ public class SubstraitRelNodeConverter
     final List<ImmutableList<RexLiteral>> tuples = new ArrayList<>();
     final List<RexNode> projectExpressions = new ArrayList<>();
 
-    for (final Expression rowExpr : virtualTableScan.getRows()) {
+    for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
       final List<RexLiteral> rexRow = new ArrayList<>();
-      if (rowExpr instanceof Expression.StructLiteral) {
-        Expression.StructLiteral structLit = (Expression.StructLiteral) rowExpr;
-        for (final Expression.Literal literal : structLit.fields()) {
-          final RexNode rexNode = literal.accept(expressionRexConverter, context);
-          if (rexNode instanceof RexLiteral) {
-            rexRow.add((RexLiteral) rexNode);
-          } else {
-            throw new UnsupportedOperationException(
-                "VirtualTableScan literal struct contained a non-literal expression: "
-                    + rexNode.getClass().getName());
-          }
+      for (Expression field : rowExpr.fields()) {
+        // Build the expression for project
+        final RexNode rexNode = field.accept(expressionRexConverter, context);
+        if (rexNode instanceof RexLiteral) {
+          rexRow.add((RexLiteral) rexNode);
+        } else {
+          // Determine correct type from expression
+          final RelDataType type = rexNode.getType();
+          final RexLiteral placeholder = (RexLiteral) rexBuilder.makeLiteral(null, type, false);
+          rexRow.add(placeholder);
+          projectExpressions.add(rexNode);
         }
-        tuples.add(ImmutableList.copyOf(rexRow));
-      } else if (rowExpr instanceof Expression.StructNested) {
-        Expression.StructNested structNested = (Expression.StructNested) rowExpr;
-
-        for (Expression field : structNested.fields()) {
-          // Build the expression for project
-          final RexNode rexNode = field.accept(expressionRexConverter, context);
-          if (rexNode instanceof RexLiteral) {
-            rexRow.add((RexLiteral) rexNode);
-          } else {
-            // Determine correct type from expression
-            final RelDataType type = rexNode.getType();
-            final RexLiteral placeholder = (RexLiteral) rexBuilder.makeLiteral(null, type, false);
-            rexRow.add(placeholder);
-            projectExpressions.add(rexNode);
-          }
-        }
-        tuples.add(ImmutableList.copyOf(rexRow));
-      } else {
-        throw new UnsupportedOperationException(
-            "VirtualTableScan row type not supported: " + rowExpr.getClass().getName());
       }
+      tuples.add(ImmutableList.copyOf(rexRow));
     }
     LogicalValues logicalValues =
         LogicalValues.create(

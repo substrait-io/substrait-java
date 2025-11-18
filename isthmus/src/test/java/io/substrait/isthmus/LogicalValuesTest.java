@@ -2,8 +2,6 @@ package io.substrait.isthmus;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
-import io.substrait.extension.DefaultExtensionCatalog;
-// import io.substrait.proto.Expression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.ReadRel;
 import io.substrait.relation.Rel;
@@ -25,7 +23,7 @@ public class LogicalValuesTest extends PlanTestBase {
   RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
 
   @Test
-  void testStructNested() throws Exception {
+  void testNestedStruct() {
     VirtualTableScan virtualTableScan = createVirtualTableScan();
     RelNode relNode = substraitToCalcite.convert(virtualTableScan); //    substrait rel to calcite
 
@@ -48,18 +46,11 @@ public class LogicalValuesTest extends PlanTestBase {
   }
 
   VirtualTableScan createVirtualTableScan() {
-    Expression.ScalarFunctionInvocation scalarExpr =
-        b.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
-            "add:i32_i32",
-            R.I32,
-            b.i32(7),
-            b.i32(42));
-
+    Expression.ScalarFunctionInvocation scalarExpr = b.add(b.i32(7), b.i32(42));
     Expression literalExpr = b.i32(100);
 
-    Expression.StructNested structRow =
-        Expression.StructNested.builder().addFields(scalarExpr).addFields(literalExpr).build();
+    Expression.NestedStruct structRow =
+        Expression.NestedStruct.builder().addFields(scalarExpr).addFields(literalExpr).build();
 
     return VirtualTableScan.builder()
         .initialSchema(

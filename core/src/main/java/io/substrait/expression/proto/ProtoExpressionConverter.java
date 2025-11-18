@@ -508,8 +508,8 @@ public class ProtoExpressionConverter {
         .build();
   }
 
-  public Expression.StructNested from(io.substrait.proto.Expression.Nested.Struct struct) {
-    return Expression.StructNested.builder()
+  public Expression.NestedStruct from(io.substrait.proto.Expression.Nested.Struct struct) {
+    return Expression.NestedStruct.builder()
         .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
         .build();
   }

@@ -62,7 +62,7 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
 
   R visit(Expression.StructLiteral expr, C context) throws E;
 
-  R visit(Expression.StructNested expr, C context) throws E;
+  R visit(Expression.NestedStruct expr, C context) throws E;
 
   R visit(Expression.UserDefinedLiteral expr, C context) throws E;
 

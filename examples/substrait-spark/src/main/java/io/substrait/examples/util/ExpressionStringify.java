@@ -189,9 +189,9 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Expression.StructNested expr, EmptyVisitationContext context)
+  public String visit(Expression.NestedStruct expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<StructNested >";
+    return "<NestedStruct >";
   }
 
   @Override

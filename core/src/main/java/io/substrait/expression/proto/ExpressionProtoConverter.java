@@ -365,7 +365,7 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.StructNested expr, EmptyVisitationContext context) {
+      io.substrait.expression.Expression.NestedStruct expr, EmptyVisitationContext context) {
     return nested(
         bldr -> {
           List<Expression> values =

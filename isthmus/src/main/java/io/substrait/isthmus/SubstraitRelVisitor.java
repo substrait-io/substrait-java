@@ -147,7 +147,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       return EmptyScan.builder().initialSchema(type).build();
     }
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Expression.StructNested> structs =
+    List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
@@ -191,7 +191,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
       LiteralConverter literalConverter = new LiteralConverter(typeConverter);
       int expIndex = 0;
-      List<Expression.StructNested> structs = new ArrayList<>();
+      List<Expression.NestedStruct> structs = new ArrayList<>();
       for (ImmutableList<RexLiteral> row : values.getTuples()) {
         List<Expression> fields = new ArrayList<>();
         for (RexLiteral field : row) {
@@ -203,7 +203,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             fields.add(literal);
           }
         }
-        structs.add(Expression.StructNested.builder().addAllFields(fields).build());
+        structs.add(Expression.NestedStruct.builder().addAllFields(fields).build());
       }
       return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
     }

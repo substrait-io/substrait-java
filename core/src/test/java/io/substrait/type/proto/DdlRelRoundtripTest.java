@@ -56,8 +56,8 @@ public class DdlRelRoundtripTest extends TestBase {
         ExpressionCreator.struct(
             false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
 
-    Expression.StructNested nested =
-        Expression.StructNested.builder()
+    Expression.NestedStruct nested =
+        Expression.NestedStruct.builder()
             .addFields(ExpressionCreator.i64(false, 1))
             .addFields(ExpressionCreator.i64(false, 2))
             .build();

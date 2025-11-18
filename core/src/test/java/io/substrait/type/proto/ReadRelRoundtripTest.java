@@ -47,7 +47,7 @@ public class ReadRelRoundtripTest extends TestBase {
                     Stream.of("column1", "column2").collect(Collectors.toList()),
                     R.struct(R.I64, R.I64)))
             .addRows(
-                Expression.StructNested.builder()
+                Expression.NestedStruct.builder()
                     .addFields(ExpressionCreator.i64(false, 1))
                     .addFields(ExpressionCreator.i64(false, 2))
                     .build())
@@ -58,6 +58,28 @@ public class ReadRelRoundtripTest extends TestBase {
             .bestEffortFilter(
                 b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
             .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
+            .build();
+    verifyRoundTrip(virtTable);
+  }
+
+  @Test
+  void virtualTableWithNullable() {
+    io.substrait.relation.ImmutableVirtualTableScan virtTable =
+        VirtualTableScan.builder()
+            .initialSchema(
+                NamedStruct.of(
+                    Stream.of("nullable_col", "non_nullable_col").collect(Collectors.toList()),
+                    R.struct(N.I64, R.I64)))
+            .addRows(
+                Expression.NestedStruct.builder()
+                    .addFields(ExpressionCreator.typedNull(N.I64))
+                    .addFields(ExpressionCreator.i64(false, 1))
+                    .build())
+            .addRows(
+                Expression.NestedStruct.builder()
+                    .addFields(ExpressionCreator.i64(true, 2))
+                    .addFields(ExpressionCreator.i64(false, 3))
+                    .build())
             .build();
     verifyRoundTrip(virtTable);
   }

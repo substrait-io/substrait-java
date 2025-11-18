@@ -287,26 +287,30 @@ public class ExpressionCreator {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
   }
 
-  public static Expression.StructNested nestedStruct(
+  public static Expression.NestedStruct nestedStruct(
       boolean nullable, Iterable<Expression> fields) {
-    return Expression.StructNested.builder().nullable(nullable).addAllFields(fields).build();
+    return Expression.NestedStruct.builder().nullable(nullable).addAllFields(fields).build();
   }
 
-  public static Expression.StructNested nestedStruct(boolean nullable, Expression... fields) {
-    return Expression.StructNested.builder()
-        .nullable(nullable)
-        .addAllFields(Arrays.asList(fields))
-        .build();
+  public static Expression.NestedStruct nestedStruct(boolean nullable, Expression... fields) {
+    return Expression.NestedStruct.builder().nullable(nullable).addFields(fields).build();
   }
 
-  //  This function is meant to convert the deprecated StructLiteral rows in a VirtualTable to the
-  // new StructNested type
-  public static List<Expression.StructNested> nestedStruct(
+  /**
+   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
+   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
+   * NestedStruct-based API.
+   *
+   * @param nullable whether the resulting NestedStruct instances should be nullable
+   * @param structs the StructLiteral instances to convert
+   * @return a list of NestedStruct instances with the same field structure
+   */
+  public static List<Expression.NestedStruct> nestedStruct(
       boolean nullable, Expression.StructLiteral... structs) {
-    List<Expression.StructNested> nestedStructs = new ArrayList<>();
+    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
     for (Expression.StructLiteral struct : structs) {
       nestedStructs.add(
-          Expression.StructNested.builder()
+          Expression.NestedStruct.builder()
               .nullable(nullable)
               .addAllFields(struct.fields())
               .build());

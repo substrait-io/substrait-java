@@ -585,13 +585,13 @@ public class ProtoRelConverter {
     // If both values and expressions are set, raise an error
     if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
       throw new IllegalArgumentException(
-          "Virtual table cannot have both values and expressions set");
+          "VirtualTable cannot have both values and expressions set");
     }
     NamedStruct virtualTableSchema = newNamedStruct(rel);
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 
-    List<Expression.StructNested> expressions =
+    List<Expression.NestedStruct> expressions =
         new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
 
     //   We cannot have a null row in VirtualTable, therefore we set the nullability to false
