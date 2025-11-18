@@ -206,4 +206,18 @@ public class ArithmeticFunctionTest extends PlanTestBase {
     String query = String.format("SELECT FACTORIAL(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void bit_left_shift(String column) throws Exception {
+    String query = String.format("SELECT %s << 1 FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void leftshift(String column) throws Exception {
+    String query = String.format("SELECT LEFTSHIFT(%s, 1) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
 }
