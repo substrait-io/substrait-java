@@ -187,6 +187,11 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   @Override
+  public O visit(Expression.NestedList expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  @Override
   public O visit(FieldReference expr, C context) throws E {
     return visitFallback(expr, context);
   }

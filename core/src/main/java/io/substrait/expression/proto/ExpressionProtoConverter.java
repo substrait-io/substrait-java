@@ -496,6 +496,26 @@ public class ExpressionProtoConverter
         .build();
   }
 
+  private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
+    Expression.Nested.Builder builder = Expression.Nested.newBuilder();
+    builder.setNullable(builder.getNullable());
+    consumer.accept(builder);
+    return Expression.newBuilder().setNested(builder).build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.NestedList expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return nested(
+        bldr -> {
+          List<Expression> values =
+              expr.values().stream().map(this::toProto).collect(Collectors.toList());
+          bldr.setNullable(expr.nullable())
+              .setList(Expression.Nested.List.newBuilder().addAllValues(values));
+        });
+  }
+
   @Override
   public Expression visit(FieldReference expr, EmptyVisitationContext context) {
 
