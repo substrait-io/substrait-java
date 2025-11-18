@@ -11,7 +11,6 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -294,28 +293,6 @@ public class ExpressionCreator {
 
   public static Expression.NestedStruct nestedStruct(boolean nullable, Expression... fields) {
     return Expression.NestedStruct.builder().nullable(nullable).addFields(fields).build();
-  }
-
-  /**
-   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
-   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
-   * NestedStruct-based API.
-   *
-   * @param nullable whether the resulting NestedStruct instances should be nullable
-   * @param structs the StructLiteral instances to convert
-   * @return a list of NestedStruct instances with the same field structure
-   */
-  public static List<Expression.NestedStruct> nestedStruct(
-      boolean nullable, Expression.StructLiteral... structs) {
-    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
-    for (Expression.StructLiteral struct : structs) {
-      nestedStructs.add(
-          Expression.NestedStruct.builder()
-              .nullable(nullable)
-              .addAllFields(struct.fields())
-              .build());
-    }
-    return nestedStructs;
   }
 
   public static Expression.UserDefinedLiteral userDefinedLiteral(

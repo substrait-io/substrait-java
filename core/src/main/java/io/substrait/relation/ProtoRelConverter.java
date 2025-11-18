@@ -1,7 +1,6 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -580,6 +579,28 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
+   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
+   * NestedStruct-based API.
+   *
+   * @param nullable whether the resulting NestedStruct instances should be nullable
+   * @param structs the StructLiteral instances to convert
+   * @return a list of NestedStruct instances with the same field structure
+   */
+  public static List<Expression.NestedStruct> nestedStruct(
+      boolean nullable, Expression.StructLiteral... structs) {
+    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
+    for (Expression.StructLiteral struct : structs) {
+      nestedStructs.add(
+          Expression.NestedStruct.builder()
+              .nullable(nullable)
+              .addAllFields(struct.fields())
+              .build());
+    }
+    return nestedStructs;
+  }
+
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
     // If both values and expressions are set, raise an error
@@ -597,7 +618,7 @@ public class ProtoRelConverter {
     //   We cannot have a null row in VirtualTable, therefore we set the nullability to false
     // nullability is also not supported at the Expression.Nested.Struct level
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      expressions.addAll(ExpressionCreator.nestedStruct(false, converter.from(struct)));
+      expressions.addAll(nestedStruct(false, converter.from(struct)));
     }
 
     for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
