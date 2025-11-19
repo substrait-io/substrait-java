@@ -1,16 +1,10 @@
 package io.substrait.type.proto;
 
-import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import com.google.protobuf.Any;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.proto.ExpressionProtoConverter;
-import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.util.EmptyVisitationContext;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
@@ -24,10 +18,7 @@ public class LiteralRoundtripTest extends TestBase {
   void decimal() {
     io.substrait.expression.Expression.DecimalLiteral val =
         ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
-    ProtoExpressionConverter from =
-        new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
-    assertEquals(val, from.from(val.accept(to, EmptyVisitationContext.INSTANCE)));
+    assertLiteralRoundtrip(val);
   }
 
   @Test
@@ -42,12 +33,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(false, urn, typeName, anyValue);
 
-    ExpressionProtoConverter exprProtoConv =
-        new ExpressionProtoConverter(functionCollector, relProtoConverter);
-    ProtoExpressionConverter protoExprConv =
-        new ProtoExpressionConverter(
-            functionCollector, testExtensions, EMPTY_TYPE, protoRelConverter);
-    assertEquals(val, protoExprConv.from(exprProtoConv.toProto(val)));
+    assertLiteralRoundtrip(val, testExtensions);
   }
 
   @Test
@@ -61,12 +47,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(false, urn, typeName, fields);
 
-    ExpressionProtoConverter exprProtoConv =
-        new ExpressionProtoConverter(functionCollector, relProtoConverter);
-    ProtoExpressionConverter protoExprConv =
-        new ProtoExpressionConverter(
-            functionCollector, testExtensions, EMPTY_TYPE, protoRelConverter);
-    assertEquals(val, protoExprConv.from(exprProtoConv.toProto(val)));
+    assertLiteralRoundtrip(val, testExtensions);
   }
 
   @Test
@@ -93,16 +74,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(false, urn, typeName, typeParams, anyValue);
 
-    ExpressionProtoConverter exprProtoConv =
-        new ExpressionProtoConverter(functionCollector, relProtoConverter);
-    ProtoExpressionConverter protoExprConv =
-        new ProtoExpressionConverter(
-            functionCollector, testExtensions, EMPTY_TYPE, protoRelConverter);
-
-    Expression.UserDefinedLiteral roundtripped =
-        (Expression.UserDefinedLiteral) protoExprConv.from(exprProtoConv.toProto(val));
-
-    assertEquals(val, roundtripped);
+    assertLiteralRoundtrip(val, testExtensions);
   }
 
   @Test
@@ -128,15 +100,6 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(false, urn, typeName, typeParams, fields);
 
-    ExpressionProtoConverter exprProtoConv =
-        new ExpressionProtoConverter(functionCollector, relProtoConverter);
-    ProtoExpressionConverter protoExprConv =
-        new ProtoExpressionConverter(
-            functionCollector, testExtensions, EMPTY_TYPE, protoRelConverter);
-
-    Expression.UserDefinedLiteral roundtripped =
-        (Expression.UserDefinedLiteral) protoExprConv.from(exprProtoConv.toProto(val));
-
-    assertEquals(val, roundtripped);
+    assertLiteralRoundtrip(val, testExtensions);
   }
 }

@@ -275,12 +275,50 @@ public class PlanTestBase {
   }
 
   /**
-   * Verifies that the given POJO can be converted:
+   * Verifies that a relation roundtrips correctly through Calcite conversion. This is isthmus' core
+   * responsibility: Substrait ↔ Calcite.
    *
-   * <ul>
-   *   <li>From POJO to Proto and back
-   *   <li>From POJO to Calcite and back
-   * </ul>
+   * @param rel the relation to roundtrip
+   */
+  protected void assertCalciteRoundtrip(Rel rel) {
+    assertCalciteRoundtrip(rel, null, null, null);
+  }
+
+  /**
+   * Verifies that a relation roundtrips correctly through Calcite conversion. This is isthmus' core
+   * responsibility: Substrait ↔ Calcite.
+   *
+   * @param rel the relation to roundtrip
+   * @param substraitToCalcite custom SubstraitToCalcite converter, or null to use default
+   * @param substraitRelVisitor custom SubstraitRelVisitor converter, or null to use default
+   * @param customExtensions custom extension collection, or null to use default
+   */
+  protected void assertCalciteRoundtrip(
+      Rel rel,
+      @org.jspecify.annotations.Nullable SubstraitToCalcite substraitToCalcite,
+      @org.jspecify.annotations.Nullable SubstraitRelVisitor substraitRelVisitor,
+      SimpleExtension.@org.jspecify.annotations.Nullable ExtensionCollection customExtensions) {
+    SimpleExtension.ExtensionCollection exts =
+        customExtensions != null ? customExtensions : extensions;
+
+    // Substrait -> Calcite
+    SubstraitToCalcite s2c =
+        substraitToCalcite != null ? substraitToCalcite : new SubstraitToCalcite(exts, typeFactory);
+    RelNode calcite = s2c.convert(rel);
+
+    // Calcite -> Substrait
+    io.substrait.relation.Rel roundtripped =
+        substraitRelVisitor != null
+            ? substraitRelVisitor.apply(calcite)
+            : SubstraitRelVisitor.convert(calcite, exts);
+
+    assertEquals(rel, roundtripped);
+  }
+
+  /**
+   * Verifies that a relation can be converted through both proto and Calcite roundtrips.
+   *
+   * @param pojo1 the relation to roundtrip
    */
   protected void assertFullRoundTrip(Rel pojo1) {
     // TODO: reuse the Plan.Root based assertFullRoundTrip by generating names
@@ -315,6 +353,25 @@ public class PlanTestBase {
    * </ul>
    */
   protected void assertFullRoundTrip(Plan.Root pojo1) {
+    assertFullRoundTrip(pojo1, null, null);
+  }
+
+  /**
+   * Verifies that the given POJO can be converted:
+   *
+   * <ul>
+   *   <li>From POJO to Proto and back
+   *   <li>From POJO to Calcite and back
+   * </ul>
+   *
+   * @param pojo1 the plan root to roundtrip
+   * @param substraitToCalcite custom SubstraitToCalcite converter, or null to use default
+   * @param substraitRelVisitor custom SubstraitRelVisitor converter, or null to use default
+   */
+  protected void assertFullRoundTrip(
+      Plan.Root pojo1,
+      @org.jspecify.annotations.Nullable SubstraitToCalcite substraitToCalcite,
+      @org.jspecify.annotations.Nullable SubstraitRelVisitor substraitRelVisitor) {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // Substrait POJO 1 -> Substrait Proto
@@ -328,10 +385,17 @@ public class PlanTestBase {
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
-    RelRoot calcite = new SubstraitToCalcite(extensions, typeFactory).convert(pojo2);
+    SubstraitToCalcite s2c =
+        substraitToCalcite != null
+            ? substraitToCalcite
+            : new SubstraitToCalcite(extensions, typeFactory);
+    RelRoot calcite = s2c.convert(pojo2);
 
     // Calcite -> Substrait POJO 3
-    io.substrait.plan.Plan.Root pojo3 = SubstraitRelVisitor.convert(calcite, extensions);
+    io.substrait.plan.Plan.Root pojo3 =
+        substraitRelVisitor != null
+            ? SubstraitRelVisitor.convert(calcite, substraitRelVisitor)
+            : SubstraitRelVisitor.convert(calcite, extensions);
 
     // Verify that POJOs are the same
     assertEquals(pojo1, pojo3);

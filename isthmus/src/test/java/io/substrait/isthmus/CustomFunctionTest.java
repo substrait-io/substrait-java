@@ -7,7 +7,6 @@ import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
@@ -15,9 +14,7 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.proto.Expression;
-import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
@@ -284,31 +281,6 @@ public class CustomFunctionTest extends PlanTestBase {
           windowFunctionConverter,
           typeConverter);
     }
-  }
-
-  // Helper methods for roundtrip assertions
-
-  /** Assert that a relation roundtrips correctly through Calcite conversion. */
-  private void assertCalciteRoundtrip(Rel originalRel) {
-    RelNode calciteRel = substraitToCalcite.convert(originalRel);
-    Rel calciteRoundtrippedRel = calciteToSubstrait.apply(calciteRel);
-    assertEquals(originalRel, calciteRoundtrippedRel);
-  }
-
-  /** Assert that a relation roundtrips correctly through Proto serialization. */
-  private void assertProtoRoundtrip(Rel originalRel) {
-    ExtensionCollector extensionCollector = new ExtensionCollector();
-    io.substrait.proto.Rel protoRel =
-        new RelProtoConverter(extensionCollector).toProto(originalRel);
-    Rel protoRoundtrippedRel =
-        new ProtoRelConverter(extensionCollector, extensionCollection).from(protoRel);
-    assertEquals(originalRel, protoRoundtrippedRel);
-  }
-
-  /** Assert that a relation roundtrips correctly through both Calcite and Proto conversions. */
-  private void assertRoundtrip(Rel originalRel) {
-    assertCalciteRoundtrip(originalRel);
-    assertProtoRoundtrip(originalRel);
   }
 
   @Test
@@ -621,195 +593,7 @@ public class CustomFunctionTest extends PlanTestBase {
             b.remap(1),
             b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
-    assertRoundtrip(originalRel);
-  }
-
-  @Test
-  void multipleDifferentUserDefinedAnyTypesProtoRoundtrip() {
-    // Test that UserDefinedAny literals with different payload types have different type names
-    // a_type wraps int, b_type wraps string - proto only
-    Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI32(100).build());
-    UserDefinedLiteral aTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
-
-    Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
-    Any anyValue2 = Any.pack(bldr2.setString("b_value").build());
-    UserDefinedLiteral bTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "b_type", anyValue2);
-
-    Rel originalRel =
-        b.project(
-            input -> List.of(aTypeLit, bTypeLit),
-            b.remap(2),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
-  }
-
-  @Test
-  void userDefinedStructWithPrimitivesProtoRoundtrip() {
-    // Test UserDefinedStruct with various primitive field types - proto roundtrip only
-    io.substrait.expression.Expression.UserDefinedStruct val =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 42))
-            .addFields(ExpressionCreator.string(false, "hello"))
-            .addFields(ExpressionCreator.bool(false, true))
-            .addFields(ExpressionCreator.fp64(false, 2.718))
-            .build();
-
-    Rel originalRel =
-        b.project(
-            input ->
-                List.of(b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
-  }
-
-  @Test
-  void userDefinedStructWithNestedStructProtoRoundtrip() {
-    // Test UserDefinedStruct with nested struct fields - proto roundtrip only
-    io.substrait.expression.Expression.StructLiteral innerStruct =
-        ExpressionCreator.struct(
-            false, ExpressionCreator.i32(false, 10), ExpressionCreator.string(false, "nested"));
-
-    io.substrait.expression.Expression.UserDefinedStruct val =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 100))
-            .addFields(innerStruct)
-            .addFields(ExpressionCreator.bool(false, false))
-            .build();
-
-    Rel originalRel =
-        b.project(
-            input ->
-                List.of(b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
-  }
-
-  @Test
-  void multipleUserDefinedStructDifferentStructuresProtoRoundtrip() {
-    // Test multiple UserDefinedStruct types with different struct schemas
-    // a_type: {content: string}
-    // b_type: {content_int: i32, content_fp: fp64}
-    io.substrait.expression.Expression.UserDefinedStruct aTypeStruct =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.string(false, "hello"))
-            .build();
-
-    io.substrait.expression.Expression.UserDefinedStruct bTypeStruct =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("b_type")
-            .addFields(ExpressionCreator.i32(false, 42))
-            .addFields(ExpressionCreator.fp64(false, 3.14159))
-            .build();
-
-    Rel originalRel =
-        b.project(
-            input -> List.of(aTypeStruct, bTypeStruct),
-            b.remap(2),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
-  }
-
-  @Test
-  void intermixedUserDefinedAnyAndStructProtoRoundtrip() {
-    // Test intermixing UserDefinedAny and UserDefinedStruct in the same query
-    Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI64(999L).build());
-    UserDefinedLiteral anyLit1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
-
-    io.substrait.expression.Expression.UserDefinedStruct structLit1 =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 123))
-            .addFields(ExpressionCreator.bool(false, false))
-            .build();
-
-    Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
-    Any anyValue2 = Any.pack(bldr2.setString("mixed").build());
-    UserDefinedLiteral anyLit2 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue2);
-
-    io.substrait.expression.Expression.UserDefinedStruct structLit2 =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.fp64(false, 1.414))
-            .build();
-
-    Rel originalRel =
-        b.project(
-            input ->
-                List.of(
-                    b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), anyLit1),
-                    b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), structLit1),
-                    b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), anyLit2),
-                    b.scalarFn(
-                        URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), structLit2)),
-            b.remap(4),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
-  }
-
-  @Test
-  void multipleDifferentUDTTypesWithAnyAndStructProtoRoundtrip() {
-    // Test multiple different UDT type names (a_type, b_type) with both Any and Struct
-    Expression.Literal.Builder aTypeBldr = Expression.Literal.newBuilder();
-    Any aTypeAny = Any.pack(aTypeBldr.setI32(42).build());
-    UserDefinedLiteral aTypeAny1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", aTypeAny);
-
-    io.substrait.expression.Expression.UserDefinedStruct aTypeStruct =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 100))
-            .build();
-
-    Expression.Literal.Builder bTypeBldr = Expression.Literal.newBuilder();
-    Any bTypeAny = Any.pack(bTypeBldr.setString("b_val").build());
-    UserDefinedLiteral bTypeAny1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "b_type", bTypeAny);
-
-    io.substrait.expression.Expression.UserDefinedStruct bTypeStruct =
-        io.substrait.expression.Expression.UserDefinedStruct.builder()
-            .nullable(false)
-            .urn(URN)
-            .name("b_type")
-            .addFields(ExpressionCreator.string(false, "struct_b"))
-            .addFields(ExpressionCreator.bool(false, true))
-            .build();
-
-    Rel originalRel =
-        b.project(
-            input -> List.of(aTypeAny1, aTypeStruct, bTypeAny1, bTypeStruct),
-            b.remap(4),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
-    assertProtoRoundtrip(originalRel);
+    assertCalciteRoundtrip(
+        originalRel, substraitToCalcite, calciteToSubstrait, extensionCollection);
   }
 }

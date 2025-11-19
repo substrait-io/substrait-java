@@ -36,7 +36,18 @@ public class UserTypeFactory {
   }
 
   public boolean isTypeFromFactory(RelDataType type) {
-    return type == N || type == R;
+    // Use value-based comparison instead of reference equality to handle
+    // cases where the same type is created by different factory instances
+    if (type == N || type == R) {
+      return true;
+    }
+    // Check if this is a type with the same name and SqlTypeName.OTHER
+    if (type != null
+        && type.getSqlTypeName() == SqlTypeName.OTHER
+        && type.toString().equals(this.name)) {
+      return true;
+    }
+    return false;
   }
 
   private static class InnerType extends RelDataTypeImpl {
