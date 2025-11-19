@@ -218,9 +218,9 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
     withBuilder(exchange, 10)(
       builder => {
         builder
-          .append("=partitionCount")
+          .append("partitionCount=")
           .append(exchange.getPartitionCount)
-          .append("=targets")
+          .append("targets=")
           .append(exchange.getTargets)
           .append("fields=")
           .append(exchange.getFields)
@@ -231,11 +231,11 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
     withBuilder(exchange, 10)(
       builder => {
         builder
-          .append("=partitionCount")
+          .append("partitionCount=")
           .append(exchange.getPartitionCount)
-          .append("=targets")
+          .append("targets=")
           .append(exchange.getTargets)
-          .append("=expression")
+          .append("expression=")
           .append(exchange.getExpression)
       })
   }
@@ -244,13 +244,13 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
     withBuilder(exchange, 10)(
       builder => {
         builder
-          .append("=partitionCount")
+          .append("partitionCount=")
           .append(exchange.getPartitionCount)
-          .append("=targets")
+          .append("targets=")
           .append(exchange.getTargets)
-          .append("=expression")
+          .append("expression=")
           .append(exchange.getExpression)
-          .append("=constrainedToCount")
+          .append("constrainedToCount=")
           .append(exchange.getConstrainedToCount)
       })
   }
@@ -259,11 +259,11 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
     withBuilder(exchange, 10)(
       builder => {
         builder
-          .append("=partitionCount")
+          .append("partitionCount=")
           .append(exchange.getPartitionCount)
-          .append("=targets")
+          .append("targets=")
           .append(exchange.getTargets)
-          .append("=exact")
+          .append("exact=")
           .append(exchange.getExact)
       })
   }
@@ -272,9 +272,9 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
     withBuilder(exchange, 10)(
       builder => {
         builder
-          .append("=partitionCount")
+          .append("partitionCount=")
           .append(exchange.getPartitionCount)
-          .append("=targets")
+          .append("targets=")
           .append(exchange.getTargets)
       })
   }
