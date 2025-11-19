@@ -628,8 +628,7 @@ public class RelProtoConverter
         ExchangeRel.ExchangeTarget.newBuilder().addAllPartitionId(target.getPartitionIds());
     if (target.getType() instanceof TargetType.Uri) {
       builder.setUri(((TargetType.Uri) target.getType()).getUri());
-    }
-    if (target.getType() instanceof TargetType.Extended) {
+    } else if (target.getType() instanceof TargetType.Extended) {
       builder.setExtended(((TargetType.Extended) target.getType()).getExtended());
     }
     return builder.build();

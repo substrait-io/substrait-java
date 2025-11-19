@@ -1017,11 +1017,11 @@ public class ProtoRelConverter {
     List<AbstractExchangeRel.ExchangeTarget> targets =
         rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
 
-    ProtoExpressionConverter converter =
+    ProtoExpressionConverter protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
     List<FieldReference> fieldReferences =
         rel.getScatterByFields().getFieldsList().stream()
-            .map(converter::from)
+            .map(protoExprConverter::from)
             .collect(Collectors.toList());
 
     ImmutableScatterExchange.Builder builder =
@@ -1045,7 +1045,7 @@ public class ProtoRelConverter {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
         rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
-    ProtoExpressionConverter converter =
+    ProtoExpressionConverter protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
 
     ImmutableSingleBucketExchange.Builder builder =
@@ -1053,7 +1053,7 @@ public class ProtoRelConverter {
             .input(input)
             .partitionCount(rel.getPartitionCount())
             .targets(targets)
-            .expression(converter.from(rel.getSingleTarget().getExpression()));
+            .expression(protoExprConverter.from(rel.getSingleTarget().getExpression()));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -1069,7 +1069,7 @@ public class ProtoRelConverter {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
         rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
-    ProtoExpressionConverter converter =
+    ProtoExpressionConverter protoExprConverter =
         new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
 
     ImmutableMultiBucketExchange.Builder builder =
@@ -1077,7 +1077,7 @@ public class ProtoRelConverter {
             .input(input)
             .partitionCount(rel.getPartitionCount())
             .targets(targets)
-            .expression(converter.from(rel.getMultiTarget().getExpression()))
+            .expression(protoExprConverter.from(rel.getMultiTarget().getExpression()))
             .constrainedToCount(rel.getMultiTarget().getConstrainedToCount());
 
     builder
