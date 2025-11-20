@@ -18,7 +18,7 @@ public class LiteralRoundtripTest extends TestBase {
   void decimal() {
     io.substrait.expression.Expression.DecimalLiteral val =
         ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    assertLiteralRoundtrip(val);
+    verifyRoundTrip(val, null);
   }
 
   @Test
@@ -33,7 +33,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(false, urn, typeName, anyValue);
 
-    assertLiteralRoundtrip(val, testExtensions);
+    verifyRoundTrip(val, testExtensions);
   }
 
   @Test
@@ -47,7 +47,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(false, urn, typeName, fields);
 
-    assertLiteralRoundtrip(val, testExtensions);
+    verifyRoundTrip(val, testExtensions);
   }
 
   @Test
@@ -74,7 +74,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(false, urn, typeName, typeParams, anyValue);
 
-    assertLiteralRoundtrip(val, testExtensions);
+    verifyRoundTrip(val, testExtensions);
   }
 
   @Test
@@ -100,6 +100,6 @@ public class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(false, urn, typeName, typeParams, fields);
 
-    assertLiteralRoundtrip(val, testExtensions);
+    verifyRoundTrip(val, testExtensions);
   }
 }
