@@ -12,6 +12,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 public class FunctionMappings {
   // Static list of signature mapping between Calcite SQL operators and Substrait base function
   // names.
+
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -88,7 +89,11 @@ public class FunctionMappings {
               s(SqlLibraryOperators.LEAST, "least"),
               s(SqlLibraryOperators.GREATEST, "greatest"),
               s(SqlStdOperatorTable.BIT_LEFT_SHIFT, "shift_left"),
-              s(SqlStdOperatorTable.LEFTSHIFT, "shift_left"))
+              s(SqlStdOperatorTable.LEFTSHIFT, "shift_left"),
+              s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
+              s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
+              s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
+              s(SqlStdOperatorTable.POSITION, "strpos"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
