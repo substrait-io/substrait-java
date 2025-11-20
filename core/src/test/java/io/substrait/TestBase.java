@@ -29,29 +29,22 @@ public abstract class TestBase {
   protected ProtoRelConverter protoRelConverter =
       new ProtoRelConverter(functionCollector, defaultExtensionCollection);
 
+  protected ExpressionProtoConverter expressionProtoConverter =
+      new ExpressionProtoConverter(functionCollector, relProtoConverter);
+
+  protected ProtoExpressionConverter protoExpressionConverter =
+      new ProtoExpressionConverter(
+          functionCollector, defaultExtensionCollection, EMPTY_TYPE, protoRelConverter);
+
   protected void verifyRoundTrip(Rel rel) {
     io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
     Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);
   }
 
-  /**
-   * Assert that an expression roundtrips correctly through Proto serialization.
-   *
-   * @param expression the expression to roundtrip
-   * @param extensions custom extension collection, or null to use no extensions
-   */
-  protected void verifyRoundTrip(
-      Expression expression,
-      SimpleExtension.@org.jspecify.annotations.Nullable ExtensionCollection extensions) {
-    ExpressionProtoConverter expressionProtoConverter =
-        new ExpressionProtoConverter(functionCollector, relProtoConverter);
-    ProtoExpressionConverter protoExpressionConverter =
-        new ProtoExpressionConverter(functionCollector, extensions, EMPTY_TYPE, protoRelConverter);
-
+  protected void verifyRoundTrip(Expression expression) {
     io.substrait.proto.Expression protoExpression = expressionProtoConverter.toProto(expression);
     Expression expressionReturned = protoExpressionConverter.from(protoExpression);
-
     assertEquals(expression, expressionReturned);
   }
 }
