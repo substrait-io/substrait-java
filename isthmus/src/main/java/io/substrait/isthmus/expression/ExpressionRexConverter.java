@@ -121,18 +121,19 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.UserDefinedStruct expr, Context context) throws RuntimeException {
+    return toUserDefinedStructLiteral(expr, context);
+  }
+
+  private RexLiteral toUserDefinedStructLiteral(Expression.UserDefinedStruct expr, Context context) {
     java.util.List<org.apache.calcite.rel.type.RelDataType> fieldTypes =
         new java.util.ArrayList<>(expr.fields().size());
     java.util.List<RexLiteral> fieldLiterals = new java.util.ArrayList<>(expr.fields().size());
 
     for (Expression.Literal field : expr.fields()) {
       fieldTypes.add(toStructFieldType(field));
-      fieldLiterals.add(toStructFieldLiteral(field, context));
+      fieldLiterals.add(literalToRexLiteral(field, context));
     }
 
-    // Generate dummy field names (f0, f1, f2, etc.) to satisfy Calcite's ROW type requirements.
-    // Substrait UserDefinedStruct doesn't have field names - just ordered field values.
-    // These synthetic names are discarded during conversion back to Substrait.
     java.util.List<String> fieldNames =
         java.util.stream.IntStream.range(0, expr.fields().size())
             .mapToObj(i -> "f" + i)
@@ -147,7 +148,7 @@ public class ExpressionRexConverter
             fieldTypes,
             fieldNames);
 
-    return rexBuilder.makeLiteral(fieldLiterals, customType, false);
+    return (RexLiteral) rexBuilder.makeLiteral(fieldLiterals, customType, false);
   }
 
   private org.apache.calcite.rel.type.RelDataType toStructFieldType(Expression.Literal field) {
@@ -161,14 +162,52 @@ public class ExpressionRexConverter
   }
 
   private RexLiteral toStructFieldLiteral(Expression.Literal field, Context context) {
-    if (field instanceof Expression.UserDefinedAny) {
-      Expression.UserDefinedAny userDefinedAny = (Expression.UserDefinedAny) field;
+    return literalToRexLiteral(field, context);
+  }
+
+  private RexLiteral literalToRexLiteral(Expression.Literal literal, Context context) {
+    if (literal instanceof Expression.UserDefinedAny) {
+      Expression.UserDefinedAny userDefinedAny = (Expression.UserDefinedAny) literal;
       org.apache.calcite.avatica.util.ByteString bytes =
           new org.apache.calcite.avatica.util.ByteString(userDefinedAny.value().toByteArray());
       return rexBuilder.makeBinaryLiteral(bytes);
     }
 
-    RexNode rexField = field.accept(this, context);
+    if (literal instanceof Expression.UserDefinedStruct) {
+      return toUserDefinedStructLiteral((Expression.UserDefinedStruct) literal, context);
+    }
+
+    if (literal instanceof Expression.StructLiteral) {
+      java.util.List<RexLiteral> fieldValues =
+          new java.util.ArrayList<>(((Expression.StructLiteral) literal).fields().size());
+      for (Expression.Literal child : ((Expression.StructLiteral) literal).fields()) {
+        fieldValues.add(literalToRexLiteral(child, context));
+      }
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              fieldValues, typeConverter.toCalcite(typeFactory, literal.getType()), false);
+    }
+
+    if (literal instanceof Expression.ListLiteral) {
+      java.util.List<RexLiteral> elements =
+          new java.util.ArrayList<>(((Expression.ListLiteral) literal).values().size());
+      for (Expression.Literal child : ((Expression.ListLiteral) literal).values()) {
+        elements.add(literalToRexLiteral(child, context));
+      }
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              elements, typeConverter.toCalcite(typeFactory, literal.getType()), false);
+    }
+
+    if (literal instanceof Expression.EmptyListLiteral) {
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              java.util.Collections.emptyList(),
+              typeConverter.toCalcite(typeFactory, literal.getType()),
+              false);
+    }
+
+    RexNode rexField = literal.accept(this, context);
     if (!(rexField instanceof RexLiteral)) {
       throw new IllegalArgumentException(
           "Expected literal when converting UserDefinedStruct field but found " + rexField);

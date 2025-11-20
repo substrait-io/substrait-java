@@ -256,6 +256,50 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
   }
 
   @Test
+  void nestedUserDefinedStructCalciteRoundtrip() {
+    io.substrait.expression.Expression.UserDefinedStruct startPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 5))
+            .addFields(ExpressionCreator.i32(false, 15))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct endPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 25))
+            .addFields(ExpressionCreator.i32(false, 35))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct lineStructLit =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(startPoint)
+            .addFields(endPoint)
+            .build();
+
+    Rel originalRel =
+        b.project(
+            input -> List.of(lineStructLit),
+            b.remap(1),
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line"))));
+
+    assertCalciteRoundtrip(
+        originalRel,
+        substraitToCalcite,
+        calciteToSubstrait,
+        DefaultExtensionCatalog.DEFAULT_COLLECTION);
+  }
+
   void multipleDifferentUserDefinedAnyTypesCalciteRoundtrip() {
     // Test that multiple UserDefinedAny literals with different types can roundtrip through Calcite
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();

@@ -1,7 +1,9 @@
 package io.substrait.isthmus.type;
 
+import com.google.protobuf.TextFormat;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
@@ -85,14 +87,29 @@ public class SubstraitUserDefinedType extends RelDataTypeImpl {
 
   @Override
   protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-    // Include URN in type string to ensure types with same name but different URNs
-    // are not considered equal by Calcite's type system
+    appendDigest(sb);
+  }
+
+  protected void appendDigest(StringBuilder sb) {
     sb.append(urn).append("::").append(name);
-    if (!typeParameters.isEmpty()) {
-      sb.append("<");
-      sb.append(String.join(", ", java.util.Collections.nCopies(typeParameters.size(), "_")));
-      sb.append(">");
+    appendTypeParameters(sb, typeParameters);
+  }
+
+  private static void appendTypeParameters(
+      StringBuilder sb, java.util.List<io.substrait.proto.Type.Parameter> parameters) {
+    if (parameters.isEmpty()) {
+      return;
     }
+    sb.append("<");
+    sb.append(
+        parameters.stream()
+            .map(SubstraitUserDefinedType::formatParameter)
+            .collect(Collectors.joining(",")));
+    sb.append(">");
+  }
+
+  private static String formatParameter(io.substrait.proto.Type.Parameter parameter) {
+    return TextFormat.shortDebugString(parameter);
   }
 
   /**
@@ -208,15 +225,7 @@ public class SubstraitUserDefinedType extends RelDataTypeImpl {
 
     @Override
     protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-      // Include URN in type string to ensure types with same name but different URNs
-      // are not considered equal by Calcite's type system
-      sb.append(getUrn()).append("::").append(getName());
-      if (!getTypeParameters().isEmpty()) {
-        sb.append("<");
-        sb.append(
-            String.join(", ", java.util.Collections.nCopies(getTypeParameters().size(), "_")));
-        sb.append(">");
-      }
+      appendDigest(sb);
       if (withDetail && fieldNames != null) {
         sb.append("(");
         sb.append(
