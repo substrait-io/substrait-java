@@ -551,18 +551,6 @@ public class SimpleExtension {
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
     }
-
-    /**
-     * Creates a minimal Type instance for custom UserDefined types that aren't loaded from YAML.
-     * This is useful for programmatically constructed types during protobuf deserialization.
-     *
-     * @param urn the extension URN (e.g., "extension:test:custom")
-     * @param name the type name (e.g., "MyCustomType")
-     * @return a Type instance with the specified urn and name
-     */
-    public static Type of(String urn, String name) {
-      return ImmutableSimpleExtension.Type.builder().urn(urn).name(name).build();
-    }
   }
 
   @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
@@ -678,10 +666,6 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
-    public boolean hasType(TypeAnchor anchor) {
-      return typeLookup.get().containsKey(anchor);
-    }
-
     public ScalarFunctionVariant getScalarFunction(FunctionAnchor anchor) {
       ScalarFunctionVariant variant = scalarFunctionsLookup.get().get(anchor);
       if (variant != null) {
@@ -732,18 +716,6 @@ public class SimpleExtension {
               "Unexpected window aggregate function with key %s. The URN %s is loaded "
                   + "but no window aggregate function with this key was found.",
               anchor.key(), anchor.urn()));
-    }
-
-    public boolean hasScalarFunction(FunctionAnchor anchor) {
-      return scalarFunctionsLookup.get().containsKey(anchor);
-    }
-
-    public boolean hasAggregateFunction(FunctionAnchor anchor) {
-      return aggregateFunctionsLookup.get().containsKey(anchor);
-    }
-
-    public boolean hasWindowFunction(FunctionAnchor anchor) {
-      return windowFunctionsLookup.get().containsKey(anchor);
     }
 
     /**
