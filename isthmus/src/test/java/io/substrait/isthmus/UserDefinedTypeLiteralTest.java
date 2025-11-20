@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
@@ -365,9 +366,61 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
             b.namedScan(
                 List.of("example"),
                 List.of("a"),
-                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line"))));
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
+  }
+
+  @Test
+  void userDefinedStructWithNestedAnyCalciteRoundtrip() {
+    // Mix struct-encoded and Any-encoded fields inside a single UserDefinedStruct literal
+    Expression.Literal.Builder pointBuilder = Expression.Literal.newBuilder();
+    Expression.Literal.Struct pointStructProto =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(5))
+            .addFields(Expression.Literal.newBuilder().setI32(10))
+            .build();
+    Any pointAny = Any.pack(pointBuilder.setStruct(pointStructProto).build());
+    UserDefinedLiteral pointAnyLiteral =
+        ExpressionCreator.userDefinedLiteralAny(
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            pointAny);
+
+    io.substrait.expression.Expression.UserDefinedStruct pointStructLiteral =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 20))
+            .addFields(ExpressionCreator.i32(false, 30))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct line =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(pointAnyLiteral)
+            .addFields(pointStructLiteral)
+            .build();
+
+    Rel originalRel =
+        b.project(
+            input -> List.of(line),
+            b.remap(1),
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
+
+    assertCalciteRoundtrip(
+        originalRel,
+        substraitToCalcite,
+        calciteToSubstrait,
+        DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   @Test
@@ -421,6 +474,92 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
                 List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
+  }
+
+  @Test
+  void sameUdTypeDifferentEncodingsCalciteRoundtrip() {
+    // Validate that "line" UDT survives Calcite roundtrip in both Any and Struct encodings
+    Expression.Literal.Builder lineBuilder = Expression.Literal.newBuilder();
+    Expression.Literal.Builder pointBuilder = Expression.Literal.newBuilder();
+    Expression.Literal.Struct pointStructProto =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(pointBuilder.clear().setI32(5).build())
+            .addFields(pointBuilder.clear().setI32(15).build())
+            .build();
+    Expression.Literal.Struct lineStructProto =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setStruct(pointStructProto).build())
+            .addFields(Expression.Literal.newBuilder().setStruct(pointStructProto).build())
+            .build();
+    Any lineAnyValue = Any.pack(lineBuilder.setStruct(lineStructProto).build());
+    UserDefinedLiteral lineAny =
+        ExpressionCreator.userDefinedLiteralAny(
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "line",
+            java.util.Collections.emptyList(),
+            lineAnyValue);
+
+    io.substrait.expression.Expression.UserDefinedStruct startPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 1))
+            .addFields(ExpressionCreator.i32(false, 2))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct endPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 3))
+            .addFields(ExpressionCreator.i32(false, 4))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct lineStruct =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(startPoint)
+            .addFields(endPoint)
+            .build();
+
+    Rel relWithAny =
+        b.project(
+            input -> List.of(lineAny),
+            b.remap(1),
+            b.namedScan(
+                List.of("example_any"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line"))));
+    Rel relWithStruct =
+        b.project(
+            input -> List.of(lineStruct),
+            b.remap(1),
+            b.namedScan(
+                List.of("example_struct"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line"))));
+
+    Rel roundtrippedAny = calciteToSubstrait.apply(substraitToCalcite.convert(relWithAny));
+    assertInstanceOf(io.substrait.relation.Project.class, roundtrippedAny);
+    io.substrait.relation.Project anyProject = (io.substrait.relation.Project) roundtrippedAny;
+    assertEquals(1, anyProject.getExpressions().size());
+    assertInstanceOf(
+        io.substrait.expression.Expression.UserDefinedAny.class,
+        anyProject.getExpressions().get(0));
+
+    Rel roundtrippedStruct = calciteToSubstrait.apply(substraitToCalcite.convert(relWithStruct));
+    assertInstanceOf(io.substrait.relation.Project.class, roundtrippedStruct);
+    io.substrait.relation.Project structProject =
+        (io.substrait.relation.Project) roundtrippedStruct;
+    assertEquals(1, structProject.getExpressions().size());
+    assertInstanceOf(
+        io.substrait.expression.Expression.UserDefinedStruct.class,
+        structProject.getExpressions().get(0));
   }
 
   @Test

@@ -1,6 +1,8 @@
 package io.substrait.isthmus.expression;
 
+import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.TypeConverter;
@@ -14,13 +16,16 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
@@ -193,7 +198,14 @@ public class LiteralConverter {
 
       case ROW:
         {
-          // Check if this is a SubstraitUserDefinedStructType
+          @SuppressWarnings("unchecked")
+          List<RexNode> fieldNodes = (List<RexNode>) literal.getValue();
+          List<RelDataTypeField> relFields = literal.getType().getFieldList();
+          ArrayList<Expression.Literal> convertedFields = new ArrayList<>(fieldNodes.size());
+          for (int i = 0; i < fieldNodes.size(); i++) {
+            convertedFields.add(convertStructField(fieldNodes.get(i), relFields.get(i).getType()));
+          }
+
           if (literal.getType()
               instanceof
               io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType) {
@@ -202,19 +214,15 @@ public class LiteralConverter {
                     (io.substrait.isthmus.type.SubstraitUserDefinedType
                             .SubstraitUserDefinedStructType)
                         literal.getType();
-            List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
             return ExpressionCreator.userDefinedLiteralStruct(
                 udtType.isNullable(),
                 udtType.getUrn(),
                 udtType.getName(),
                 udtType.getTypeParameters(),
-                literals.stream().map(this::convert).collect(Collectors.toList()));
+                convertedFields);
           }
 
-          // Regular struct
-          List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
-          return ExpressionCreator.struct(
-              n, literals.stream().map(this::convert).collect(Collectors.toList()));
+          return ExpressionCreator.struct(n, convertedFields);
         }
 
       case ARRAY:
@@ -251,5 +259,59 @@ public class LiteralConverter {
     byte[] newArray = new byte[length];
     System.arraycopy(value, 0, newArray, 0, value.length);
     return newArray;
+  }
+
+  private Expression.Literal convertStructField(RexNode fieldNode, RelDataType expectedType) {
+    if (expectedType
+        instanceof io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType) {
+      return convertUserDefinedAnyStructField(
+          fieldNode,
+          (io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType)
+              expectedType);
+    }
+
+    if (!(fieldNode instanceof RexLiteral)) {
+      throw new UnsupportedOperationException(
+          "Expected literal struct field but found " + fieldNode);
+    }
+    return convert((RexLiteral) fieldNode);
+  }
+
+  private Expression.Literal convertUserDefinedAnyStructField(
+      RexNode fieldNode,
+      io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType expectedType) {
+    if (!(fieldNode instanceof RexLiteral)) {
+      throw new UnsupportedOperationException(
+          "Expected literal for UserDefinedAny struct field but found " + fieldNode);
+    }
+
+    RexLiteral literal = (RexLiteral) fieldNode;
+    if (literal.isNull()) {
+      return ExpressionCreator.typedNull(
+          Type.UserDefined.builder()
+              .urn(expectedType.getUrn())
+              .name(expectedType.getName())
+              .typeParameters(expectedType.getTypeParameters())
+              .nullable(true)
+              .build());
+    }
+
+    org.apache.calcite.avatica.util.ByteString bytes =
+        literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class);
+    if (bytes == null) {
+      throw new IllegalArgumentException(
+          "Expected binary literal for UserDefinedAny struct field but value was null");
+    }
+    try {
+      Any anyValue = Any.parseFrom(bytes.getBytes());
+      return ExpressionCreator.userDefinedLiteralAny(
+          expectedType.isNullable(),
+          expectedType.getUrn(),
+          expectedType.getName(),
+          expectedType.getTypeParameters(),
+          anyValue);
+    } catch (InvalidProtocolBufferException e) {
+      throw new IllegalArgumentException("Failed to parse UserDefinedAny literal", e);
+    }
   }
 }

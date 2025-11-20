@@ -121,11 +121,14 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.UserDefinedStruct expr, Context context) throws RuntimeException {
-    // Convert field types to Calcite types for the struct representation
     java.util.List<org.apache.calcite.rel.type.RelDataType> fieldTypes =
-        expr.fields().stream()
-            .map(field -> typeConverter.toCalcite(typeFactory, field.getType()))
-            .collect(java.util.stream.Collectors.toList());
+        new java.util.ArrayList<>(expr.fields().size());
+    java.util.List<RexLiteral> fieldLiterals = new java.util.ArrayList<>(expr.fields().size());
+
+    for (Expression.Literal field : expr.fields()) {
+      fieldTypes.add(toStructFieldType(field));
+      fieldLiterals.add(toStructFieldLiteral(field, context));
+    }
 
     // Generate dummy field names (f0, f1, f2, etc.) to satisfy Calcite's ROW type requirements.
     // Substrait UserDefinedStruct doesn't have field names - just ordered field values.
@@ -144,12 +147,33 @@ public class ExpressionRexConverter
             fieldTypes,
             fieldNames);
 
-    java.util.List<RexLiteral> fieldLiterals =
-        expr.fields().stream()
-            .map(field -> (RexLiteral) field.accept(this, context))
-            .collect(java.util.stream.Collectors.toList());
-
     return rexBuilder.makeLiteral(fieldLiterals, customType, false);
+  }
+
+  private org.apache.calcite.rel.type.RelDataType toStructFieldType(Expression.Literal field) {
+    if (field instanceof Expression.UserDefinedAny) {
+      io.substrait.type.Type.UserDefined userDefinedType =
+          (io.substrait.type.Type.UserDefined) field.getType();
+      return io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
+          userDefinedType);
+    }
+    return typeConverter.toCalcite(typeFactory, field.getType());
+  }
+
+  private RexLiteral toStructFieldLiteral(Expression.Literal field, Context context) {
+    if (field instanceof Expression.UserDefinedAny) {
+      Expression.UserDefinedAny userDefinedAny = (Expression.UserDefinedAny) field;
+      org.apache.calcite.avatica.util.ByteString bytes =
+          new org.apache.calcite.avatica.util.ByteString(userDefinedAny.value().toByteArray());
+      return rexBuilder.makeBinaryLiteral(bytes);
+    }
+
+    RexNode rexField = field.accept(this, context);
+    if (!(rexField instanceof RexLiteral)) {
+      throw new IllegalArgumentException(
+          "Expected literal when converting UserDefinedStruct field but found " + rexField);
+    }
+    return (RexLiteral) rexField;
   }
 
   @Override

@@ -1,5 +1,6 @@
 package io.substrait.isthmus.utils;
 
+import io.substrait.isthmus.type.SubstraitUserDefinedType;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.apache.calcite.rel.type.RelDataType;
@@ -35,19 +36,45 @@ public class UserTypeFactory {
     return TypeCreator.of(nullable).userDefined(urn, name);
   }
 
+  /**
+   * Test-specific variant of the core implementation that treats Calcite-copied types as
+   * equivalent, even when they are not the same Java instance. Calcite often clones UDTs during
+   * planning, so reference equality alone would fail in tests.
+   */
   public boolean isTypeFromFactory(RelDataType type) {
-    // Use value-based comparison instead of reference equality to handle
-    // cases where the same type is created by different factory instances
-    if (type == N || type == R) {
-      return true;
-    }
-    // Check if this is a type with the same name and SqlTypeName.OTHER
-    if (type != null
-        && type.getSqlTypeName() == SqlTypeName.OTHER
-        && type.toString().equals(this.name)) {
-      return true;
+    return matchesSubstraitType(type) || type == N || type == R || matchesCalciteAlias(type);
+  }
+
+  /**
+   * Detects Substrait-backed Calcite types by interrogating their metadata.
+   *
+   * <p>If Calcite preserves the original {@link SubstraitUserDefinedType}, the urn/name are both
+   * available directly. Otherwise, Calcite may create an anonymous {@link RelDataTypeImpl} copy,
+   * exposing only its alias string. In that case we fall back to comparing the formatted alias (see
+   * {@link InnerType#generateTypeString}).
+   */
+  private boolean matchesSubstraitType(RelDataType type) {
+    if (type instanceof SubstraitUserDefinedType) {
+      SubstraitUserDefinedType udt = (SubstraitUserDefinedType) type;
+      return this.urn.equals(udt.getUrn()) && this.name.equals(udt.getName());
     }
     return false;
+  }
+
+  /**
+   * Calcite may copy a user-defined type into an anonymous {@link RelDataTypeImpl} where the only
+   * identifier left is its alias string. This helper captures the "find by alias" fallback so it’s
+   * clear we’re matching against the formatted <code>urn::name</code> when the rich metadata is not
+   * available.
+   */
+  private boolean matchesCalciteAlias(RelDataType type) {
+    return type != null
+        && (type.getSqlTypeName() == SqlTypeName.OTHER || type.getSqlTypeName() == SqlTypeName.ROW)
+        && type.toString().equals(calciteDisplayName());
+  }
+
+  private String calciteDisplayName() {
+    return String.format("%s::%s", this.urn, this.name);
   }
 
   private class InnerType extends RelDataTypeImpl {
@@ -72,8 +99,6 @@ public class UserTypeFactory {
 
     @Override
     protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-      // Include URN in type string to ensure types with same name but different URNs
-      // are not considered equal by Calcite's type system
       sb.append(UserTypeFactory.this.urn).append("::").append(name);
     }
   }
