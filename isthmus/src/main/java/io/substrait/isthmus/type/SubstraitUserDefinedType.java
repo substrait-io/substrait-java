@@ -9,13 +9,11 @@ import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
- * Base class for custom Calcite {@link RelDataType} implementations representing Substrait
- * user-defined types.
+ * Custom Calcite {@link RelDataType} for Substrait user-defined types.
  *
- * <p>These custom types preserve all UDT metadata (URN, name, type parameters) during Calcite
- * roundtrips, unlike the previous approach which flattened everything to binary with REINTERPRET.
- *
- * <p>Two concrete implementations exist:
+ * <p>This type preserves all UDT metadata (URN, name, type parameters) during Calcite roundtrips.
+ * It is used when converting types without literal context. For literals, specialized subclasses
+ * provide representation-specific handling:
  *
  * <ul>
  *   <li>{@link SubstraitUserDefinedAnyType} - For opaque binary UDT literals (wraps protobuf Any)
@@ -27,14 +25,14 @@ import org.apache.calcite.sql.type.SqlTypeName;
  * @see io.substrait.expression.Expression.UserDefinedAny
  * @see io.substrait.expression.Expression.UserDefinedStruct
  */
-public abstract class SubstraitUserDefinedType extends RelDataTypeImpl {
+public class SubstraitUserDefinedType extends RelDataTypeImpl {
 
   private final String urn;
   private final String name;
   private final List<io.substrait.proto.Type.Parameter> typeParameters;
   private final boolean nullable;
 
-  protected SubstraitUserDefinedType(
+  public SubstraitUserDefinedType(
       String urn,
       String name,
       List<io.substrait.proto.Type.Parameter> typeParameters,
@@ -79,6 +77,12 @@ public abstract class SubstraitUserDefinedType extends RelDataTypeImpl {
         .build();
   }
 
+  /** Creates a SubstraitUserDefinedType from a Substrait Type.UserDefined. */
+  public static SubstraitUserDefinedType from(io.substrait.type.Type.UserDefined type) {
+    return new SubstraitUserDefinedType(
+        type.urn(), type.name(), type.typeParameters(), type.nullable());
+  }
+
   @Override
   protected void generateTypeString(StringBuilder sb, boolean withDetail) {
     sb.append(name);
@@ -99,13 +103,13 @@ public abstract class SubstraitUserDefinedType extends RelDataTypeImpl {
    * <p>Note: The actual value (protobuf Any) is not stored in the type itself - it's stored in the
    * literal. This type only carries the metadata (URN, name, type parameters).
    *
-   * <p>Both {@link io.substrait.expression.Expression.UserDefinedAny UserDefinedAny} and {@link
-   * io.substrait.expression.Expression.UserDefinedStruct UserDefinedStruct} literals use this type
-   * when passing through Calcite, as they both need to be serialized to binary with REINTERPRET.
+   * <p>{@link io.substrait.expression.Expression.UserDefinedAny UserDefinedAny} literals use this
+   * type when passing through Calcite, as they need to be serialized to binary with REINTERPRET.
+   * {@link io.substrait.expression.Expression.UserDefinedStruct UserDefinedStruct} literals use
+   * {@link SubstraitUserDefinedStructType} instead to preserve field structure.
    *
    * @see SubstraitUserDefinedStructType
    * @see io.substrait.expression.Expression.UserDefinedAny
-   * @see io.substrait.expression.Expression.UserDefinedStruct
    */
   public static class SubstraitUserDefinedAnyType extends SubstraitUserDefinedType {
 
@@ -132,9 +136,10 @@ public abstract class SubstraitUserDefinedType extends RelDataTypeImpl {
    * SubstraitUserDefinedAnyType}, the fields are accessible and can be represented as a Calcite
    * STRUCT/ROW type with additional UDT metadata (URN, name, type parameters).
    *
-   * <p>Note: Currently, UserDefinedStruct literals are serialized to binary when passing through
-   * Calcite (using {@link SubstraitUserDefinedAnyType}), so this structured type is primarily for
-   * future use when Calcite can better handle structured user-defined types.
+   * <p>{@link io.substrait.expression.Expression.UserDefinedStruct UserDefinedStruct} literals use
+   * this type when passing through Calcite, preserving field structure and enabling field access.
+   * The fields are converted to Calcite literals and wrapped in a ROW type with synthetic field
+   * names (f0, f1, f2, etc.).
    *
    * @see SubstraitUserDefinedAnyType
    * @see io.substrait.expression.Expression.UserDefinedStruct

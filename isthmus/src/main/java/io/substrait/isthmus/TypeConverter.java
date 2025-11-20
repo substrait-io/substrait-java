@@ -363,8 +363,7 @@ public class TypeConverter {
       if (type != null) {
         return type;
       }
-      return io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
-          expr);
+      return io.substrait.isthmus.type.SubstraitUserDefinedType.from(expr);
     }
 
     private boolean n(NullableType type) {
