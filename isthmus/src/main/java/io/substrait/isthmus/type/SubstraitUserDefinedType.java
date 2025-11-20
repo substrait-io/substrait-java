@@ -85,7 +85,9 @@ public class SubstraitUserDefinedType extends RelDataTypeImpl {
 
   @Override
   protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-    sb.append(name);
+    // Include URN in type string to ensure types with same name but different URNs
+    // are not considered equal by Calcite's type system
+    sb.append(urn).append("::").append(name);
     if (!typeParameters.isEmpty()) {
       sb.append("<");
       sb.append(String.join(", ", java.util.Collections.nCopies(typeParameters.size(), "_")));
@@ -206,7 +208,9 @@ public class SubstraitUserDefinedType extends RelDataTypeImpl {
 
     @Override
     protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-      sb.append(getName());
+      // Include URN in type string to ensure types with same name but different URNs
+      // are not considered equal by Calcite's type system
+      sb.append(getUrn()).append("::").append(getName());
       if (!getTypeParameters().isEmpty()) {
         sb.append("<");
         sb.append(

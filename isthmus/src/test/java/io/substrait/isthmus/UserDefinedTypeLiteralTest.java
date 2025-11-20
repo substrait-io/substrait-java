@@ -6,6 +6,7 @@ import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
@@ -18,8 +19,6 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.List;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -31,34 +30,18 @@ import org.junit.jupiter.api.Test;
  * Tests for User-Defined Type literals, including both UserDefinedAny (protobuf Any-based) and
  * UserDefinedStruct (struct-based) encoding strategies.
  *
- * <p>These tests verify proto serialization/deserialization of UDT literals (core's
- * responsibility), using custom extensions defined in isthmus test resources.
+ * <p>These tests verify proto serialization/deserialization and Calcite roundtrips of UDT literals,
+ * using standard types from extension_types.yaml (point and line).
  */
 public class UserDefinedTypeLiteralTest extends PlanTestBase {
 
-  // Define custom types in a "functions_custom.yaml" extension
-  static final String URN = "extension:substrait:functions_custom";
-  static final String FUNCTIONS_CUSTOM;
+  final SubstraitBuilder b = new SubstraitBuilder(DefaultExtensionCatalog.DEFAULT_COLLECTION);
 
-  static {
-    try {
-      FUNCTIONS_CUSTOM = asString("extensions/functions_custom.yaml");
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-
-  // Load custom extension into an ExtensionCollection
-  static final SimpleExtension.ExtensionCollection testExtensions =
-      SimpleExtension.load("custom.yaml", FUNCTIONS_CUSTOM);
-
-  final SubstraitBuilder b = new SubstraitBuilder(testExtensions);
-
-  // Create user-defined types
-  static final String aTypeName = "a_type";
-  static final String bTypeName = "b_type";
-  static final UserTypeFactory aTypeFactory = new UserTypeFactory(URN, aTypeName);
-  static final UserTypeFactory bTypeFactory = new UserTypeFactory(URN, bTypeName);
+  // Create user-defined types using standard types from extension_types.yaml
+  static final UserTypeFactory pointTypeFactory =
+      new UserTypeFactory(DefaultExtensionCatalog.EXTENSION_TYPES, "point");
+  static final UserTypeFactory lineTypeFactory =
+      new UserTypeFactory(DefaultExtensionCatalog.EXTENSION_TYPES, "line");
 
   // Mapper for user-defined types
   static final UserTypeMapper userTypeMapper =
@@ -66,11 +49,13 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
         @Nullable
         @Override
         public Type toSubstrait(RelDataType relDataType) {
-          if (aTypeFactory.isTypeFromFactory(relDataType)) {
-            return TypeCreator.of(relDataType.isNullable()).userDefined(URN, aTypeName);
+          if (pointTypeFactory.isTypeFromFactory(relDataType)) {
+            return TypeCreator.of(relDataType.isNullable())
+                .userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point");
           }
-          if (bTypeFactory.isTypeFromFactory(relDataType)) {
-            return TypeCreator.of(relDataType.isNullable()).userDefined(URN, bTypeName);
+          if (lineTypeFactory.isTypeFromFactory(relDataType)) {
+            return TypeCreator.of(relDataType.isNullable())
+                .userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line");
           }
           return null;
         }
@@ -78,12 +63,12 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
         @Nullable
         @Override
         public RelDataType toCalcite(Type.UserDefined type) {
-          if (type.urn().equals(URN)) {
-            if (type.name().equals(aTypeName)) {
-              return aTypeFactory.createCalcite(type.nullable());
+          if (type.urn().equals(DefaultExtensionCatalog.EXTENSION_TYPES)) {
+            if (type.name().equals("point")) {
+              return pointTypeFactory.createCalcite(type.nullable());
             }
-            if (type.name().equals(bTypeName)) {
-              return bTypeFactory.createCalcite(type.nullable());
+            if (type.name().equals("line")) {
+              return lineTypeFactory.createCalcite(type.nullable());
             }
           }
           return null;
@@ -92,18 +77,26 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
 
   TypeConverter typeConverter = new TypeConverter(userTypeMapper);
 
-  // Create Function Converters that can handle the custom types
+  // Create Function Converters that can handle the user-defined types
   ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(
-          testExtensions.scalarFunctions(), List.of(), typeFactory, typeConverter);
+          DefaultExtensionCatalog.DEFAULT_COLLECTION.scalarFunctions(),
+          List.of(),
+          typeFactory,
+          typeConverter);
   AggregateFunctionConverter aggregateFunctionConverter =
       new AggregateFunctionConverter(
-          testExtensions.aggregateFunctions(), List.of(), typeFactory, typeConverter);
+          DefaultExtensionCatalog.DEFAULT_COLLECTION.aggregateFunctions(),
+          List.of(),
+          typeFactory,
+          typeConverter);
   WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(testExtensions.windowFunctions(), typeFactory);
+      new WindowFunctionConverter(
+          DefaultExtensionCatalog.DEFAULT_COLLECTION.windowFunctions(), typeFactory);
 
   final SubstraitToCalcite substraitToCalcite =
-      new CustomSubstraitToCalcite(testExtensions, typeFactory, typeConverter);
+      new CustomSubstraitToCalcite(
+          DefaultExtensionCatalog.DEFAULT_COLLECTION, typeFactory, typeConverter);
 
   // Create a SubstraitRelVisitor that uses the custom Function Converters
   final SubstraitRelVisitor calciteToSubstrait =
@@ -139,13 +132,14 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
 
   /**
    * Verifies proto roundtrip for a relation. This test class needs this method locally since it's
-   * testing proto serialization (core's responsibility) but must reside in isthmus to access custom
-   * test extensions.
+   * testing proto serialization (core's responsibility) but must reside in isthmus to access
+   * Calcite integration components.
    */
   private void verifyProtoRoundTrip(Rel rel) {
     ExtensionCollector functionCollector = new ExtensionCollector();
     RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
-    ProtoRelConverter protoRelConverter = new ProtoRelConverter(functionCollector, testExtensions);
+    ProtoRelConverter protoRelConverter =
+        new ProtoRelConverter(functionCollector, DefaultExtensionCatalog.DEFAULT_COLLECTION);
 
     io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
     Rel relReturned = protoRelConverter.from(protoRel);
@@ -154,25 +148,46 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
 
   @Test
   void multipleDifferentUserDefinedAnyTypesProtoRoundtrip() {
-    // Test that UserDefinedAny literals with different payload types have different type names
-    // a_type wraps int, b_type wraps string - proto only
+    // Test that UserDefinedAny literals with different type names - proto only
+    // point wraps struct with two i32 fields, line wraps struct with two point fields
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI32(100).build());
-    UserDefinedLiteral aTypeLit =
+    Expression.Literal.Struct pointStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(42))
+            .addFields(Expression.Literal.newBuilder().setI32(100))
+            .build();
+    Any anyValue1 = Any.pack(bldr1.setStruct(pointStruct).build());
+    UserDefinedLiteral pointLit =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue1);
 
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
-    Any anyValue2 = Any.pack(bldr2.setString("b_value").build());
-    UserDefinedLiteral bTypeLit =
+    Expression.Literal.Struct lineStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(bldr1.build()) // reuse point struct as start
+            .addFields(bldr1.build()) // reuse point struct as end
+            .build();
+    Any anyValue2 = Any.pack(bldr2.setStruct(lineStruct).build());
+    UserDefinedLiteral lineLit =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "b_type", java.util.Collections.emptyList(), anyValue2);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "line",
+            java.util.Collections.emptyList(),
+            anyValue2);
 
     Rel originalRel =
         b.project(
-            input -> List.of(aTypeLit, bTypeLit),
+            input -> List.of(pointLit, lineLit),
             b.remap(1, 2), // Select both expressions
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
   }
@@ -181,18 +196,34 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
   void singleUserDefinedAnyCalciteRoundtrip() {
     // Test that a single UserDefinedAny literal can roundtrip through Calcite
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI32(100).build());
-    UserDefinedLiteral aTypeLit =
+    Expression.Literal.Struct pointStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(42))
+            .addFields(Expression.Literal.newBuilder().setI32(100))
+            .build();
+    Any anyValue1 = Any.pack(bldr1.setStruct(pointStruct).build());
+    UserDefinedLiteral pointLit =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue1);
 
     Rel originalRel =
         b.project(
-            input -> List.of(aTypeLit),
+            input -> List.of(pointLit),
             b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
-    assertCalciteRoundtrip(originalRel, substraitToCalcite, calciteToSubstrait, testExtensions);
+    assertCalciteRoundtrip(
+        originalRel,
+        substraitToCalcite,
+        calciteToSubstrait,
+        DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   @Test
@@ -201,90 +232,140 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     io.substrait.expression.Expression.UserDefinedStruct val =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
             .addFields(ExpressionCreator.i32(false, 42))
-            .addFields(ExpressionCreator.string(false, "hello"))
+            .addFields(ExpressionCreator.i32(false, 100))
             .build();
 
     Rel originalRel =
         b.project(
             input -> List.of(val),
             b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
-    assertCalciteRoundtrip(originalRel, substraitToCalcite, calciteToSubstrait, testExtensions);
+    assertCalciteRoundtrip(
+        originalRel,
+        substraitToCalcite,
+        calciteToSubstrait,
+        DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   @Test
   void multipleDifferentUserDefinedAnyTypesCalciteRoundtrip() {
     // Test that multiple UserDefinedAny literals with different types can roundtrip through Calcite
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI32(100).build());
-    UserDefinedLiteral aTypeLit =
+    Expression.Literal.Struct pointStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(42))
+            .addFields(Expression.Literal.newBuilder().setI32(100))
+            .build();
+    Any anyValue1 = Any.pack(bldr1.setStruct(pointStruct).build());
+    UserDefinedLiteral pointLit =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue1);
 
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
-    Any anyValue2 = Any.pack(bldr2.setString("b_value").build());
-    UserDefinedLiteral bTypeLit =
+    Expression.Literal.Struct lineStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(bldr1.build())
+            .addFields(bldr1.build())
+            .build();
+    Any anyValue2 = Any.pack(bldr2.setStruct(lineStruct).build());
+    UserDefinedLiteral lineLit =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "b_type", java.util.Collections.emptyList(), anyValue2);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "line",
+            java.util.Collections.emptyList(),
+            anyValue2);
 
     Rel originalRel =
         b.project(
-            input -> List.of(aTypeLit, bTypeLit),
+            input -> List.of(pointLit, lineLit),
             b.remap(1, 2), // Select both expressions
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
-    assertCalciteRoundtrip(originalRel, substraitToCalcite, calciteToSubstrait, testExtensions);
+    assertCalciteRoundtrip(
+        originalRel,
+        substraitToCalcite,
+        calciteToSubstrait,
+        DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
   @Test
   void userDefinedStructWithPrimitivesProtoRoundtrip() {
-    // Test UserDefinedStruct with various primitive field types - proto roundtrip only
+    // Test UserDefinedStruct with primitive field types - proto roundtrip only
     io.substrait.expression.Expression.UserDefinedStruct val =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
             .addFields(ExpressionCreator.i32(false, 42))
-            .addFields(ExpressionCreator.string(false, "hello"))
-            .addFields(ExpressionCreator.bool(false, true))
-            .addFields(ExpressionCreator.fp64(false, 2.718))
+            .addFields(ExpressionCreator.i32(false, 100))
             .build();
 
     Rel originalRel =
         b.project(
             input -> List.of(val),
             b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
   }
 
   @Test
   void userDefinedStructWithNestedStructProtoRoundtrip() {
-    // Test UserDefinedStruct with nested struct fields - proto roundtrip only
-    io.substrait.expression.Expression.StructLiteral innerStruct =
-        ExpressionCreator.struct(
-            false, ExpressionCreator.i32(false, 10), ExpressionCreator.string(false, "nested"));
-
-    io.substrait.expression.Expression.UserDefinedStruct val =
+    // Test UserDefinedStruct with nested UDT fields - proto roundtrip only
+    // line contains nested point UDT fields
+    io.substrait.expression.Expression.UserDefinedStruct startPoint =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 100))
-            .addFields(innerStruct)
-            .addFields(ExpressionCreator.bool(false, false))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 10))
+            .addFields(ExpressionCreator.i32(false, 20))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct endPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 30))
+            .addFields(ExpressionCreator.i32(false, 40))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct line =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(startPoint)
+            .addFields(endPoint)
             .build();
 
     Rel originalRel =
         b.project(
-            input -> List.of(val),
+            input -> List.of(line),
             b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "line"))));
 
     verifyProtoRoundTrip(originalRel);
   }
@@ -292,30 +373,52 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
   @Test
   void multipleUserDefinedStructDifferentStructuresProtoRoundtrip() {
     // Test multiple UserDefinedStruct types with different struct schemas
-    // a_type: {content: string}
-    // b_type: {content_int: i32, content_fp: fp64}
-    io.substrait.expression.Expression.UserDefinedStruct aTypeStruct =
+    // point: {latitude: i32, longitude: i32}
+    // line: {start: point, end: point}
+    io.substrait.expression.Expression.UserDefinedStruct pointStruct =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.string(false, "hello"))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 42))
+            .addFields(ExpressionCreator.i32(false, 100))
             .build();
 
-    io.substrait.expression.Expression.UserDefinedStruct bTypeStruct =
+    io.substrait.expression.Expression.UserDefinedStruct startPoint =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("b_type")
-            .addFields(ExpressionCreator.i32(false, 42))
-            .addFields(ExpressionCreator.fp64(false, 3.14159))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 10))
+            .addFields(ExpressionCreator.i32(false, 20))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct endPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 30))
+            .addFields(ExpressionCreator.i32(false, 40))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct lineStruct =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(startPoint)
+            .addFields(endPoint)
             .build();
 
     Rel originalRel =
         b.project(
-            input -> List.of(aTypeStruct, bTypeStruct),
+            input -> List.of(pointStruct, lineStruct),
             b.remap(2),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
   }
@@ -324,80 +427,142 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
   void intermixedUserDefinedAnyAndStructProtoRoundtrip() {
     // Test intermixing UserDefinedAny and UserDefinedStruct in the same query
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
-    Any anyValue1 = Any.pack(bldr1.setI64(999L).build());
+    Expression.Literal.Struct pointStruct1 =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(10))
+            .addFields(Expression.Literal.newBuilder().setI32(20))
+            .build();
+    Any anyValue1 = Any.pack(bldr1.setStruct(pointStruct1).build());
     UserDefinedLiteral anyLit1 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue1);
 
     io.substrait.expression.Expression.UserDefinedStruct structLit1 =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
             .addFields(ExpressionCreator.i32(false, 123))
-            .addFields(ExpressionCreator.bool(false, false))
+            .addFields(ExpressionCreator.i32(false, 456))
             .build();
 
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
-    Any anyValue2 = Any.pack(bldr2.setString("mixed").build());
+    Expression.Literal.Struct pointStruct2 =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(30))
+            .addFields(Expression.Literal.newBuilder().setI32(40))
+            .build();
+    Any anyValue2 = Any.pack(bldr2.setStruct(pointStruct2).build());
     UserDefinedLiteral anyLit2 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), anyValue2);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue2);
 
     io.substrait.expression.Expression.UserDefinedStruct structLit2 =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.fp64(false, 1.414))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 789))
+            .addFields(ExpressionCreator.i32(false, 101))
             .build();
 
     Rel originalRel =
         b.project(
             input -> List.of(anyLit1, structLit1, anyLit2, structLit2),
             b.remap(4),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
   }
 
   @Test
   void multipleDifferentUDTTypesWithAnyAndStructProtoRoundtrip() {
-    // Test multiple different UDT type names (a_type, b_type) with both Any and Struct
-    Expression.Literal.Builder aTypeBldr = Expression.Literal.newBuilder();
-    Any aTypeAny = Any.pack(aTypeBldr.setI32(42).build());
-    UserDefinedLiteral aTypeAny1 =
+    // Test multiple different UDT type names (point, line) with both Any and Struct
+    Expression.Literal.Builder pointBldr = Expression.Literal.newBuilder();
+    Expression.Literal.Struct pointStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(Expression.Literal.newBuilder().setI32(42))
+            .addFields(Expression.Literal.newBuilder().setI32(100))
+            .build();
+    Any pointAny = Any.pack(pointBldr.setStruct(pointStruct).build());
+    UserDefinedLiteral pointAny1 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "a_type", java.util.Collections.emptyList(), aTypeAny);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            pointAny);
 
-    io.substrait.expression.Expression.UserDefinedStruct aTypeStruct =
+    io.substrait.expression.Expression.UserDefinedStruct pointStructLit =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("a_type")
-            .addFields(ExpressionCreator.i32(false, 100))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 10))
+            .addFields(ExpressionCreator.i32(false, 20))
             .build();
 
-    Expression.Literal.Builder bTypeBldr = Expression.Literal.newBuilder();
-    Any bTypeAny = Any.pack(bTypeBldr.setString("b_val").build());
-    UserDefinedLiteral bTypeAny1 =
+    Expression.Literal.Builder lineBldr = Expression.Literal.newBuilder();
+    Expression.Literal.Struct lineStruct =
+        Expression.Literal.Struct.newBuilder()
+            .addFields(pointBldr.build())
+            .addFields(pointBldr.build())
+            .build();
+    Any lineAny = Any.pack(lineBldr.setStruct(lineStruct).build());
+    UserDefinedLiteral lineAny1 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, URN, "b_type", java.util.Collections.emptyList(), bTypeAny);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "line",
+            java.util.Collections.emptyList(),
+            lineAny);
 
-    io.substrait.expression.Expression.UserDefinedStruct bTypeStruct =
+    io.substrait.expression.Expression.UserDefinedStruct startPoint =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
             .nullable(false)
-            .urn(URN)
-            .name("b_type")
-            .addFields(ExpressionCreator.string(false, "struct_b"))
-            .addFields(ExpressionCreator.bool(false, true))
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 50))
+            .addFields(ExpressionCreator.i32(false, 60))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct endPoint =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("point")
+            .addFields(ExpressionCreator.i32(false, 70))
+            .addFields(ExpressionCreator.i32(false, 80))
+            .build();
+
+    io.substrait.expression.Expression.UserDefinedStruct lineStructLit =
+        io.substrait.expression.Expression.UserDefinedStruct.builder()
+            .nullable(false)
+            .urn(DefaultExtensionCatalog.EXTENSION_TYPES)
+            .name("line")
+            .addFields(startPoint)
+            .addFields(endPoint)
             .build();
 
     Rel originalRel =
         b.project(
-            input -> List.of(aTypeAny1, aTypeStruct, bTypeAny1, bTypeStruct),
+            input -> List.of(pointAny1, pointStructLit, lineAny1, lineStructLit),
             b.remap(4),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+            b.namedScan(
+                List.of("example"),
+                List.of("a"),
+                List.of(N.userDefined(DefaultExtensionCatalog.EXTENSION_TYPES, "point"))));
 
     verifyProtoRoundTrip(originalRel);
   }

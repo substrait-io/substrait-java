@@ -50,7 +50,7 @@ public class UserTypeFactory {
     return false;
   }
 
-  private static class InnerType extends RelDataTypeImpl {
+  private class InnerType extends RelDataTypeImpl {
     private final boolean nullable;
     private final String name;
 
@@ -72,7 +72,9 @@ public class UserTypeFactory {
 
     @Override
     protected void generateTypeString(StringBuilder sb, boolean withDetail) {
-      sb.append(name);
+      // Include URN in type string to ensure types with same name but different URNs
+      // are not considered equal by Calcite's type system
+      sb.append(UserTypeFactory.this.urn).append("::").append(name);
     }
   }
 }
