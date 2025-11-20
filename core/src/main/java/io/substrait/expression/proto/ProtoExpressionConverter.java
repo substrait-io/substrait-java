@@ -492,10 +492,36 @@ public class ProtoExpressionConverter {
         {
           io.substrait.proto.Expression.Literal.UserDefined userDefinedLiteral =
               literal.getUserDefined();
+
           SimpleExtension.Type type =
               lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
-          return ExpressionCreator.userDefinedLiteral(
-              literal.getNullable(), type.urn(), type.name(), userDefinedLiteral.getValue());
+          String urn = type.urn();
+          String name = type.name();
+
+          switch (userDefinedLiteral.getValCase()) {
+            case VALUE:
+              return ExpressionCreator.userDefinedLiteralAny(
+                  literal.getNullable(),
+                  urn,
+                  name,
+                  userDefinedLiteral.getTypeParametersList(),
+                  userDefinedLiteral.getValue());
+            case STRUCT:
+              return ExpressionCreator.userDefinedLiteralStruct(
+                  literal.getNullable(),
+                  urn,
+                  name,
+                  userDefinedLiteral.getTypeParametersList(),
+                  userDefinedLiteral.getStruct().getFieldsList().stream()
+                      .map(this::from)
+                      .collect(Collectors.toList()));
+            case VAL_NOT_SET:
+              throw new IllegalStateException(
+                  "UserDefined literal has no value (neither 'value' nor 'struct' is set)");
+            default:
+              throw new IllegalStateException(
+                  "Unknown UserDefined literal value case: " + userDefinedLiteral.getValCase());
+          }
         }
       default:
         throw new IllegalStateException("Unexpected value: " + literal.getLiteralTypeCase());

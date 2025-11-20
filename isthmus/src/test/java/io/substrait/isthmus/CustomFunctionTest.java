@@ -7,7 +7,6 @@ import com.google.protobuf.Any;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
@@ -15,10 +14,7 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.proto.Expression;
-import io.substrait.proto.Expression.Literal.Builder;
-import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
@@ -585,24 +581,20 @@ public class CustomFunctionTest extends PlanTestBase {
 
   @Test
   void customTypesLiteralInFunctionsRoundtrip() {
-    Builder bldr = Expression.Literal.newBuilder();
+    Expression.Literal.Builder bldr = Expression.Literal.newBuilder();
     Any anyValue = Any.pack(bldr.setI32(10).build());
-    UserDefinedLiteral val = ExpressionCreator.userDefinedLiteral(false, URN, "a_type", anyValue);
+    UserDefinedLiteral val =
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue);
 
-    Rel rel1 =
+    Rel originalRel =
         b.project(
             input ->
                 List.of(b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
             b.remap(1),
             b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
-    RelNode calciteRel = substraitToCalcite.convert(rel1);
-    Rel rel2 = calciteToSubstrait.apply(calciteRel);
-    assertEquals(rel1, rel2);
-
-    ExtensionCollector extensionCollector = new ExtensionCollector();
-    io.substrait.proto.Rel protoRel = new RelProtoConverter(extensionCollector).toProto(rel1);
-    Rel rel3 = new ProtoRelConverter(extensionCollector, extensionCollection).from(protoRel);
-    assertEquals(rel1, rel3);
+    assertCalciteRoundtrip(
+        originalRel, substraitToCalcite, calciteToSubstrait, extensionCollection);
   }
 }
