@@ -159,12 +159,14 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
     Any anyValue1 = Any.pack(bldr1.setI32(100).build());
     UserDefinedLiteral aTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
 
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
     Any anyValue2 = Any.pack(bldr2.setString("b_value").build());
     UserDefinedLiteral bTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "b_type", anyValue2);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "b_type", java.util.Collections.emptyList(), anyValue2);
 
     Rel originalRel =
         b.project(
@@ -181,7 +183,8 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
     Any anyValue1 = Any.pack(bldr1.setI32(100).build());
     UserDefinedLiteral aTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
 
     Rel originalRel =
         b.project(
@@ -219,12 +222,14 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
     Any anyValue1 = Any.pack(bldr1.setI32(100).build());
     UserDefinedLiteral aTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
 
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
     Any anyValue2 = Any.pack(bldr2.setString("b_value").build());
     UserDefinedLiteral bTypeLit =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "b_type", anyValue2);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "b_type", java.util.Collections.emptyList(), anyValue2);
 
     Rel originalRel =
         b.project(
@@ -321,7 +326,8 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bldr1 = Expression.Literal.newBuilder();
     Any anyValue1 = Any.pack(bldr1.setI64(999L).build());
     UserDefinedLiteral anyLit1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue1);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue1);
 
     io.substrait.expression.Expression.UserDefinedStruct structLit1 =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
@@ -335,7 +341,8 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bldr2 = Expression.Literal.newBuilder();
     Any anyValue2 = Any.pack(bldr2.setString("mixed").build());
     UserDefinedLiteral anyLit2 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", anyValue2);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue2);
 
     io.substrait.expression.Expression.UserDefinedStruct structLit2 =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
@@ -360,7 +367,8 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder aTypeBldr = Expression.Literal.newBuilder();
     Any aTypeAny = Any.pack(aTypeBldr.setI32(42).build());
     UserDefinedLiteral aTypeAny1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "a_type", aTypeAny);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), aTypeAny);
 
     io.substrait.expression.Expression.UserDefinedStruct aTypeStruct =
         io.substrait.expression.Expression.UserDefinedStruct.builder()
@@ -373,7 +381,8 @@ public class UserDefinedTypeLiteralTest extends PlanTestBase {
     Expression.Literal.Builder bTypeBldr = Expression.Literal.newBuilder();
     Any bTypeAny = Any.pack(bTypeBldr.setString("b_val").build());
     UserDefinedLiteral bTypeAny1 =
-        ExpressionCreator.userDefinedLiteralAny(false, URN, "b_type", bTypeAny);
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "b_type", java.util.Collections.emptyList(), bTypeAny);
 
     io.substrait.expression.Expression.UserDefinedStruct bTypeStruct =
         io.substrait.expression.Expression.UserDefinedStruct.builder()

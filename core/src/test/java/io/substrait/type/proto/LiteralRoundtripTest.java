@@ -31,7 +31,11 @@ public class LiteralRoundtripTest extends TestBase {
 
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(
-            false, DefaultExtensionCatalog.EXTENSION_TYPES, "point", anyValue);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            anyValue);
 
     verifyRoundTrip(val);
   }
@@ -43,7 +47,11 @@ public class LiteralRoundtripTest extends TestBase {
             ExpressionCreator.i32(false, 42), ExpressionCreator.i32(false, 100));
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(
-            false, DefaultExtensionCatalog.EXTENSION_TYPES, "point", fields);
+            false,
+            DefaultExtensionCatalog.EXTENSION_TYPES,
+            "point",
+            java.util.Collections.emptyList(),
+            fields);
 
     verifyRoundTrip(val);
   }
