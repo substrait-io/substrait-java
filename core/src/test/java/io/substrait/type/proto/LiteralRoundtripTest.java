@@ -75,15 +75,8 @@ public class LiteralRoundtripTest extends TestBase {
   /** Verifies round-trip conversion of a simple user-defined type using Any representation. */
   @Test
   void userDefinedLiteralWithAnyRepresentation() {
-    // Create a struct literal inline representing a point with latitude=42, longitude=100
-    io.substrait.proto.Expression.Literal.Struct pointStruct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(42))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(100))
-            .build();
-    io.substrait.proto.Expression.Literal innerLiteral =
-        io.substrait.proto.Expression.Literal.newBuilder().setStruct(pointStruct).build();
-    Any anyValue = Any.pack(innerLiteral);
+    Any anyValue =
+        Any.pack(com.google.protobuf.StringValue.of("<Some User-Defined Representation>"));
 
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(
@@ -166,51 +159,8 @@ public class LiteralRoundtripTest extends TestBase {
    */
   @Test
   void nestedUserDefinedLiteralWithAnyRepresentation() {
-
-    // Create three point UDTs using Any representation
-    io.substrait.proto.Expression.Literal.Struct p1Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .build();
-    Any p1Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p1Struct).build());
-    Expression.UserDefinedAny p1 =
-        ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p1Any);
-
-    io.substrait.proto.Expression.Literal.Struct p2Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(10))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .build();
-    Any p2Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p2Struct).build());
-    Expression.UserDefinedAny p2 =
-        ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p2Any);
-
-    io.substrait.proto.Expression.Literal.Struct p3Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(5))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(10))
-            .build();
-    Any p3Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p3Struct).build());
-    Expression.UserDefinedAny p3 =
-        ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p3Any);
-
-    // Create a "triangle" struct containing three point UDTs
-    io.substrait.proto.Expression.Literal.Struct triangleStruct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(p1).getLiteral())
-            .addFields(NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(p2).getLiteral())
-            .addFields(NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(p3).getLiteral())
-            .build();
     Any triangleAny =
-        Any.pack(
-            io.substrait.proto.Expression.Literal.newBuilder().setStruct(triangleStruct).build());
+        Any.pack(com.google.protobuf.StringValue.of("<Some User-Defined Representation>"));
 
     Expression.UserDefinedAny triangle =
         ExpressionCreator.userDefinedLiteralAny(
@@ -228,38 +178,21 @@ public class LiteralRoundtripTest extends TestBase {
    */
   @Test
   void mixedRepresentationNestedUserDefinedLiteral() {
-    io.substrait.proto.Expression.Literal.Struct p1Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .build();
-    Any p1Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p1Struct).build());
+    Any anyValue =
+        Any.pack(com.google.protobuf.StringValue.of("<Some User-Defined Representation>"));
+
+    // Create point UDTs using Any representation
     Expression.UserDefinedAny p1 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p1Any);
+            false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
-    io.substrait.proto.Expression.Literal.Struct p2Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(10))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(0))
-            .build();
-    Any p2Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p2Struct).build());
     Expression.UserDefinedAny p2 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p2Any);
+            false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
-    io.substrait.proto.Expression.Literal.Struct p3Struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder()
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(5))
-            .addFields(io.substrait.proto.Expression.Literal.newBuilder().setI32(10))
-            .build();
-    Any p3Any =
-        Any.pack(io.substrait.proto.Expression.Literal.newBuilder().setStruct(p3Struct).build());
     Expression.UserDefinedAny p3 =
         ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", Collections.emptyList(), p3Any);
+            false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
     // Create a "triangle" UDT using Struct representation, but with Any-encoded point fields
     Expression.UserDefinedStruct triangle =
