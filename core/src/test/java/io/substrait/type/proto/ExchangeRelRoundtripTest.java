@@ -96,7 +96,6 @@ public class ExchangeRelRoundtripTest extends TestBase {
     verifyRoundTrip(exchange);
   }
 
-
   @Test
   void nestedExchangeRelations() {
     Rel innerExchange = BroadcastExchange.builder().input(baseTable).partitionCount(1).build();
