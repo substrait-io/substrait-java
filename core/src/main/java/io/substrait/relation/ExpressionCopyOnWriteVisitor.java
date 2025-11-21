@@ -204,8 +204,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.UserDefinedAny expr, EmptyVisitationContext context)
+      throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
   public Optional<Expression> visit(
-      Expression.UserDefinedLiteral expr, EmptyVisitationContext context) throws E {
+      Expression.UserDefinedStruct expr, EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 

@@ -587,7 +587,9 @@ public class CustomFunctionTest extends PlanTestBase {
   void customTypesLiteralInFunctionsRoundtrip() {
     Builder bldr = Expression.Literal.newBuilder();
     Any anyValue = Any.pack(bldr.setI32(10).build());
-    UserDefinedLiteral val = ExpressionCreator.userDefinedLiteral(false, URN, "a_type", anyValue);
+    UserDefinedLiteral val =
+        ExpressionCreator.userDefinedLiteralAny(
+            false, URN, "a_type", java.util.Collections.emptyList(), anyValue);
 
     Rel rel1 =
         b.project(
