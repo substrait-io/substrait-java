@@ -19,6 +19,7 @@ package io.substrait.debug
 import io.substrait.spark.DefaultRelVisitor
 
 import io.substrait.relation._
+import io.substrait.relation.physical.{BroadcastExchange, MultiBucketExchange, RoundRobinExchange, ScatterExchange, SingleBucketExchange}
 import io.substrait.util.EmptyVisitationContext
 
 import scala.collection.mutable
@@ -210,6 +211,71 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
         builder
           .append("items=")
           .append(localFiles.getItems)
+      })
+  }
+
+  override def visit(exchange: ScatterExchange, context: EmptyVisitationContext): String = {
+    withBuilder(exchange, 10)(
+      builder => {
+        builder
+          .append("partitionCount=")
+          .append(exchange.getPartitionCount)
+          .append("targets=")
+          .append(exchange.getTargets)
+          .append("fields=")
+          .append(exchange.getFields)
+      })
+  }
+
+  override def visit(exchange: SingleBucketExchange, context: EmptyVisitationContext): String = {
+    withBuilder(exchange, 10)(
+      builder => {
+        builder
+          .append("partitionCount=")
+          .append(exchange.getPartitionCount)
+          .append("targets=")
+          .append(exchange.getTargets)
+          .append("expression=")
+          .append(exchange.getExpression)
+      })
+  }
+
+  override def visit(exchange: MultiBucketExchange, context: EmptyVisitationContext): String = {
+    withBuilder(exchange, 10)(
+      builder => {
+        builder
+          .append("partitionCount=")
+          .append(exchange.getPartitionCount)
+          .append("targets=")
+          .append(exchange.getTargets)
+          .append("expression=")
+          .append(exchange.getExpression)
+          .append("constrainedToCount=")
+          .append(exchange.getConstrainedToCount)
+      })
+  }
+
+  override def visit(exchange: RoundRobinExchange, context: EmptyVisitationContext): String = {
+    withBuilder(exchange, 10)(
+      builder => {
+        builder
+          .append("partitionCount=")
+          .append(exchange.getPartitionCount)
+          .append("targets=")
+          .append(exchange.getTargets)
+          .append("exact=")
+          .append(exchange.getExact)
+      })
+  }
+
+  override def visit(exchange: BroadcastExchange, context: EmptyVisitationContext): String = {
+    withBuilder(exchange, 10)(
+      builder => {
+        builder
+          .append("partitionCount=")
+          .append(exchange.getPartitionCount)
+          .append("targets=")
+          .append(exchange.getTargets)
       })
   }
 }
