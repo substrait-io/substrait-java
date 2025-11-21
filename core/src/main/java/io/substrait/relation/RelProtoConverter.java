@@ -541,14 +541,12 @@ public class RelProtoConverter
                         exchange.getFields().stream()
                             .map(this::toProto)
                             .collect(Collectors.toList()))
-                    .build());
-    if (exchange.getPartitionCount().isPresent()) {
-      builder.setPartitionCount(exchange.getPartitionCount().get());
-    }
-    if (exchange.getTargets().isPresent()) {
-      builder.addAllTargets(
-          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
-    }
+                    .build())
+            .setPartitionCount(exchange.getPartitionCount())
+            .addAllTargets(
+                exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
+            .setCommon(common(exchange))
+            .setInput(toProto(exchange.getInput()));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -560,14 +558,12 @@ public class RelProtoConverter
             .setSingleTarget(
                 ExchangeRel.SingleBucketExpression.newBuilder()
                     .setExpression(toProto(exchange.getExpression()))
-                    .build());
-    if (exchange.getPartitionCount().isPresent()) {
-      builder.setPartitionCount(exchange.getPartitionCount().get());
-    }
-    if (exchange.getTargets().isPresent()) {
-      builder.addAllTargets(
-          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
-    }
+                    .build())
+            .setPartitionCount(exchange.getPartitionCount())
+            .addAllTargets(
+                exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
+            .setCommon(common(exchange))
+            .setInput(toProto(exchange.getInput()));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -580,14 +576,12 @@ public class RelProtoConverter
                 ExchangeRel.MultiBucketExpression.newBuilder()
                     .setExpression(toProto(exchange.getExpression()))
                     .setConstrainedToCount(exchange.getConstrainedToCount())
-                    .build());
-    if (exchange.getPartitionCount().isPresent()) {
-      builder.setPartitionCount(exchange.getPartitionCount().get());
-    }
-    if (exchange.getTargets().isPresent()) {
-      builder.addAllTargets(
-          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
-    }
+                    .build())
+            .setPartitionCount(exchange.getPartitionCount())
+            .addAllTargets(
+                exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
+            .setCommon(common(exchange))
+            .setInput(toProto(exchange.getInput()));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -597,14 +591,12 @@ public class RelProtoConverter
     ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setRoundRobin(
-                ExchangeRel.RoundRobin.newBuilder().setExact(exchange.getExact()).build());
-    if (exchange.getPartitionCount().isPresent()) {
-      builder.setPartitionCount(exchange.getPartitionCount().get());
-    }
-    if (exchange.getTargets().isPresent()) {
-      builder.addAllTargets(
-          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
-    }
+                ExchangeRel.RoundRobin.newBuilder().setExact(exchange.getExact()).build())
+            .setPartitionCount(exchange.getPartitionCount())
+            .addAllTargets(
+                exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
+            .setCommon(common(exchange))
+            .setInput(toProto(exchange.getInput()));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -612,14 +604,13 @@ public class RelProtoConverter
   public Rel visit(BroadcastExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
     ExchangeRel.Builder builder =
-        ExchangeRel.newBuilder().setBroadcast(ExchangeRel.Broadcast.newBuilder().build());
-    if (exchange.getPartitionCount().isPresent()) {
-      builder.setPartitionCount(exchange.getPartitionCount().get());
-    }
-    if (exchange.getTargets().isPresent()) {
-      builder.addAllTargets(
-          exchange.getTargets().get().stream().map(this::toProto).collect(Collectors.toList()));
-    }
+        ExchangeRel.newBuilder()
+            .setBroadcast(ExchangeRel.Broadcast.newBuilder().build())
+            .setPartitionCount(exchange.getPartitionCount())
+            .addAllTargets(
+                exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
+            .setCommon(common(exchange))
+            .setInput(toProto(exchange.getInput()));
     return Rel.newBuilder().setExchange(builder).build();
   }
 

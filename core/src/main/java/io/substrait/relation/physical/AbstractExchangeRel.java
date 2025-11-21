@@ -4,13 +4,12 @@ import io.substrait.relation.HasExtension;
 import io.substrait.relation.SingleInputRel;
 import io.substrait.type.Type;
 import java.util.List;
-import java.util.Optional;
 import org.immutables.value.Value;
 
 public abstract class AbstractExchangeRel extends SingleInputRel implements HasExtension {
-  public abstract Optional<Integer> getPartitionCount();
+  public abstract Integer getPartitionCount();
 
-  public abstract Optional<List<ExchangeTarget>> getTargets();
+  public abstract List<ExchangeTarget> getTargets();
 
   @Override
   protected Type.Struct deriveRecordType() {
