@@ -36,7 +36,15 @@ public class LiteralRoundtripTest extends TestBase {
           + "    structure:\n"
           + "      p1: point\n"
           + "      p2: point\n"
-          + "      p3: point\n";
+          + "      p3: point\n"
+          + "  - name: vector\n"
+          + "    parameters:\n"
+          + "      - name: T\n"
+          + "        type: dataType\n"
+          + "    structure:\n"
+          + "      x: T\n"
+          + "      y: T\n"
+          + "      z: T\n";
 
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
       SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
@@ -266,5 +274,44 @@ public class LiteralRoundtripTest extends TestBase {
         NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(triangle);
     Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
     assertEquals(triangle, result);
+  }
+
+  /**
+   * Verifies round-trip conversion of a parameterized user-defined type. Tests that type parameters
+   * are correctly preserved during serialization and deserialization.
+   */
+  @Test
+  void userDefinedLiteralWithTypeParameters() {
+    // Create a type parameter for i32
+    io.substrait.proto.Type i32Type =
+        io.substrait.proto.Type.newBuilder()
+            .setI32(
+                io.substrait.proto.Type.I32
+                    .newBuilder()
+                    .setNullability(io.substrait.proto.Type.Nullability.NULLABILITY_REQUIRED))
+            .build();
+    io.substrait.proto.Type.Parameter typeParam =
+        io.substrait.proto.Type.Parameter.newBuilder().setDataType(i32Type).build();
+
+    // Create a vector<i32> instance with fields (x: 1, y: 2, z: 3)
+    Expression.UserDefinedStruct vectorI32 =
+        ExpressionCreator.userDefinedLiteralStruct(
+            false,
+            NESTED_TYPES_URN,
+            "vector",
+            java.util.Arrays.asList(typeParam),
+            java.util.Arrays.asList(
+                ExpressionCreator.i32(false, 1),
+                ExpressionCreator.i32(false, 2),
+                ExpressionCreator.i32(false, 3)));
+
+    io.substrait.proto.Expression protoExpression =
+        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(vectorI32);
+    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
+    assertEquals(vectorI32, result);
+
+    Expression.UserDefinedStruct resultStruct = (Expression.UserDefinedStruct) result;
+    assertEquals(1, resultStruct.typeParameters().size());
+    assertEquals(typeParam, resultStruct.typeParameters().get(0));
   }
 }
