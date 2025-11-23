@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.70.0](https://github.com/substrait-io/substrait-java/compare/v0.69.0...v0.70.0) (2025-11-23)
+
+### Features
+
+* **isthmus:** mapping of positional scalar fns ([#610](https://github.com/substrait-io/substrait-java/issues/610)) ([96541a9](https://github.com/substrait-io/substrait-java/commit/96541a9f2cc0cc0c38215b0a31473246732347c3))
+* **isthmus:** support bitwise left shift ([#605](https://github.com/substrait-io/substrait-java/issues/605)) ([22448d1](https://github.com/substrait-io/substrait-java/commit/22448d1bd36c5face8675e31b85d5378d40901a0))
+
 ## [0.69.0](https://github.com/substrait-io/substrait-java/compare/v0.68.0...v0.69.0) (2025-11-16)
 
 ### Features
