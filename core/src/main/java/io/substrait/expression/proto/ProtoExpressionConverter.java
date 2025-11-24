@@ -504,14 +504,18 @@ public class ProtoExpressionConverter {
                   literal.getNullable(),
                   urn,
                   name,
-                  userDefinedLiteral.getTypeParametersList(),
+                  userDefinedLiteral.getTypeParametersList().stream()
+                      .map(protoTypeConverter::from)
+                      .collect(Collectors.toList()),
                   userDefinedLiteral.getValue());
             case STRUCT:
               return ExpressionCreator.userDefinedLiteralStruct(
                   literal.getNullable(),
                   urn,
                   name,
-                  userDefinedLiteral.getTypeParametersList(),
+                  userDefinedLiteral.getTypeParametersList().stream()
+                      .map(protoTypeConverter::from)
+                      .collect(Collectors.toList()),
                   userDefinedLiteral.getStruct().getFieldsList().stream()
                       .map(this::from)
                       .collect(Collectors.toList()));

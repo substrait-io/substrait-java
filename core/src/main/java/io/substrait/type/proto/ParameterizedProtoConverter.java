@@ -264,7 +264,7 @@ public class ParameterizedProtoConverter
 
     @Override
     public ParameterizedType userDefined(
-        int ref, java.util.List<io.substrait.proto.Type.Parameter> typeParameters) {
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
       throw new UnsupportedOperationException(
           "User defined types are not supported in Parameterized Types for now");
     }

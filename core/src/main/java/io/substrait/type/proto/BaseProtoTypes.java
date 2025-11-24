@@ -132,7 +132,7 @@ abstract class BaseProtoTypes<T, I> {
   public abstract T userDefined(int ref);
 
   public abstract T userDefined(
-      int ref, java.util.List<io.substrait.proto.Type.Parameter> typeParameters);
+      int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters);
 
   protected abstract T wrap(Object o);
 

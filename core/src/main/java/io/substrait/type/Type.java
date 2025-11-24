@@ -406,7 +406,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
      * @return a list of type parameters, or an empty list if this type is not parameterized
      */
     @Value.Default
-    public java.util.List<io.substrait.proto.Type.Parameter> typeParameters() {
+    public java.util.List<Parameter> typeParameters() {
       return java.util.Collections.emptyList();
     }
 
@@ -418,5 +418,51 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
       return typeVisitor.visit(this);
     }
+  }
+
+  /**
+   * Represents a type parameter for user-defined types.
+   *
+   * <p>Type parameters can be data types (like {@code i32} in {@code List<i32>}), or value
+   * parameters (like the {@code 10} in {@code VARCHAR<10>}). This interface provides a type-safe
+   * representation of all possible parameter kinds.
+   */
+  interface Parameter {}
+
+  /** A data type parameter, such as the {@code i32} in {@code List<i32>}. */
+  @Value.Immutable
+  abstract class ParameterDataType implements Parameter {
+    public abstract Type type();
+  }
+
+  /** A boolean value parameter. */
+  @Value.Immutable
+  abstract class ParameterBooleanValue implements Parameter {
+    public abstract boolean value();
+  }
+
+  /** An integer value parameter, such as the {@code 10} in {@code VARCHAR<10>}. */
+  @Value.Immutable
+  abstract class ParameterIntegerValue implements Parameter {
+    public abstract long value();
+  }
+
+  /** An enum value parameter (represented as a string). */
+  @Value.Immutable
+  abstract class ParameterEnumValue implements Parameter {
+    public abstract String value();
+  }
+
+  /** A string value parameter. */
+  @Value.Immutable
+  abstract class ParameterStringValue implements Parameter {
+    public abstract String value();
+  }
+
+  /** An explicitly null/unspecified parameter, used to select the default value (if any). */
+  class ParameterNull implements Parameter {
+    public static final ParameterNull INSTANCE = new ParameterNull();
+
+    private ParameterNull() {}
   }
 }

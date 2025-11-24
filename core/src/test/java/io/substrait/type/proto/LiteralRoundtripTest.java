@@ -216,15 +216,10 @@ public class LiteralRoundtripTest extends TestBase {
   @Test
   void userDefinedLiteralWithTypeParameters() {
     // Create a type parameter for i32
-    io.substrait.proto.Type i32Type =
-        io.substrait.proto.Type.newBuilder()
-            .setI32(
-                io.substrait.proto.Type.I32
-                    .newBuilder()
-                    .setNullability(io.substrait.proto.Type.Nullability.NULLABILITY_REQUIRED))
+    io.substrait.type.Type.Parameter typeParam =
+        io.substrait.type.ImmutableType.ParameterDataType.builder()
+            .type(io.substrait.type.Type.I32.builder().nullable(false).build())
             .build();
-    io.substrait.proto.Type.Parameter typeParam =
-        io.substrait.proto.Type.Parameter.newBuilder().setDataType(i32Type).build();
 
     // Create a vector<i32> instance with fields (x: 1, y: 2, z: 3)
     Expression.UserDefinedStructLiteral vectorI32 =

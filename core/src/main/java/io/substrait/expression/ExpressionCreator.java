@@ -299,7 +299,7 @@ public class ExpressionCreator {
       boolean nullable,
       String urn,
       String name,
-      java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
+      java.util.List<io.substrait.type.Type.Parameter> typeParameters,
       Any value) {
     return Expression.UserDefinedAnyLiteral.builder()
         .nullable(nullable)
@@ -323,7 +323,7 @@ public class ExpressionCreator {
       boolean nullable,
       String urn,
       String name,
-      java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
+      java.util.List<io.substrait.type.Type.Parameter> typeParameters,
       java.util.List<Expression.Literal> fields) {
     return Expression.UserDefinedStructLiteral.builder()
         .nullable(nullable)

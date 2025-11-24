@@ -135,12 +135,15 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
 
     @Override
     public Type userDefined(
-        int ref, java.util.List<io.substrait.proto.Type.Parameter> typeParameters) {
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
       return wrap(
           Type.UserDefined.newBuilder()
               .setTypeReference(ref)
               .setNullability(nullability)
-              .addAllTypeParameters(typeParameters)
+              .addAllTypeParameters(
+                  typeParameters.stream()
+                      .map(TypeProtoConverter::toProto)
+                      .collect(java.util.stream.Collectors.toList()))
               .build());
     }
 
@@ -208,6 +211,40 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     @Override
     protected Integer i(final int integerValue) {
       return integerValue;
+    }
+  }
+
+  public static io.substrait.proto.Type.Parameter toProto(
+      io.substrait.type.Type.Parameter parameter) {
+    if (parameter instanceof io.substrait.type.Type.ParameterNull) {
+      return Type.Parameter.newBuilder()
+          .setNull(com.google.protobuf.Empty.getDefaultInstance())
+          .build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterDataType) {
+      io.substrait.type.Type.ParameterDataType dataType =
+          (io.substrait.type.Type.ParameterDataType) parameter;
+      TypeProtoConverter converter =
+          new TypeProtoConverter(new io.substrait.extension.ExtensionCollector());
+      return Type.Parameter.newBuilder().setDataType(converter.toProto(dataType.type())).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterBooleanValue) {
+      io.substrait.type.Type.ParameterBooleanValue boolValue =
+          (io.substrait.type.Type.ParameterBooleanValue) parameter;
+      return Type.Parameter.newBuilder().setBoolean(boolValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterIntegerValue) {
+      io.substrait.type.Type.ParameterIntegerValue intValue =
+          (io.substrait.type.Type.ParameterIntegerValue) parameter;
+      return Type.Parameter.newBuilder().setInteger(intValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterEnumValue) {
+      io.substrait.type.Type.ParameterEnumValue enumValue =
+          (io.substrait.type.Type.ParameterEnumValue) parameter;
+      return Type.Parameter.newBuilder().setEnum(enumValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterStringValue) {
+      io.substrait.type.Type.ParameterStringValue stringValue =
+          (io.substrait.type.Type.ParameterStringValue) parameter;
+      return Type.Parameter.newBuilder().setString(stringValue.value()).build();
+    } else {
+      throw new UnsupportedOperationException(
+          "Unsupported parameter type: " + parameter.getClass());
     }
   }
 }

@@ -366,7 +366,10 @@ public class ExpressionProtoConverter
           Expression.Literal.UserDefined.Builder userDefinedBuilder =
               Expression.Literal.UserDefined.newBuilder()
                   .setTypeReference(typeReference)
-                  .addAllTypeParameters(expr.typeParameters())
+                  .addAllTypeParameters(
+                      expr.typeParameters().stream()
+                          .map(io.substrait.type.proto.TypeProtoConverter::toProto)
+                          .collect(java.util.stream.Collectors.toList()))
                   .setValue(expr.value());
 
           bldr.setNullable(expr.nullable()).setUserDefined(userDefinedBuilder).build();
@@ -392,7 +395,10 @@ public class ExpressionProtoConverter
           Expression.Literal.UserDefined.Builder userDefinedBuilder =
               Expression.Literal.UserDefined.newBuilder()
                   .setTypeReference(typeReference)
-                  .addAllTypeParameters(expr.typeParameters())
+                  .addAllTypeParameters(
+                      expr.typeParameters().stream()
+                          .map(io.substrait.type.proto.TypeProtoConverter::toProto)
+                          .collect(java.util.stream.Collectors.toList()))
                   .setStruct(structLiteral);
 
           bldr.setNullable(expr.nullable()).setUserDefined(userDefinedBuilder).build();

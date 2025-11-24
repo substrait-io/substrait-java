@@ -680,7 +680,7 @@ public interface Expression extends FunctionArg {
 
     String name();
 
-    List<io.substrait.proto.Type.Parameter> typeParameters();
+    List<io.substrait.type.Type.Parameter> typeParameters();
   }
 
   /**
@@ -697,7 +697,7 @@ public interface Expression extends FunctionArg {
     public abstract String name();
 
     @Override
-    public abstract List<io.substrait.proto.Type.Parameter> typeParameters();
+    public abstract List<io.substrait.type.Type.Parameter> typeParameters();
 
     public abstract com.google.protobuf.Any value();
 
@@ -736,7 +736,7 @@ public interface Expression extends FunctionArg {
     public abstract String name();
 
     @Override
-    public abstract List<io.substrait.proto.Type.Parameter> typeParameters();
+    public abstract List<io.substrait.type.Type.Parameter> typeParameters();
 
     public abstract List<Literal> fields();
 

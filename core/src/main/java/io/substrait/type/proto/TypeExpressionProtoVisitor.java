@@ -357,7 +357,7 @@ public class TypeExpressionProtoVisitor
 
     @Override
     public DerivationExpression userDefined(
-        int ref, java.util.List<io.substrait.proto.Type.Parameter> typeParameters) {
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
       throw new UnsupportedOperationException(
           "User defined types are not supported in Derivation Expressions for now");
     }
