@@ -12,6 +12,7 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
+import io.substrait.isthmus.calcite.rel.LogicalExpressions;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -628,34 +629,35 @@ public class SubstraitRelNodeConverter
     final RelDataType rowTypeWithNames =
         typeFactory.createStructType(fieldTypes, correctFieldNames);
 
-    final List<ImmutableList<RexLiteral>> tuples = new ArrayList<>();
-    final List<RexNode> projectExpressions = new ArrayList<>();
-
-    for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
-      final List<RexLiteral> rexRow = new ArrayList<>();
-      for (Expression field : rowExpr.fields()) {
-        // Build the expression for project
-        final RexNode rexNode = field.accept(expressionRexConverter, context);
-        if (rexNode instanceof RexLiteral) {
-          rexRow.add((RexLiteral) rexNode);
-        } else {
-          // Determine correct type from expression
-          final RelDataType type = rexNode.getType();
-          final RexLiteral placeholder = (RexLiteral) rexBuilder.makeLiteral(null, type, false);
-          rexRow.add(placeholder);
-          projectExpressions.add(rexNode);
+    // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
+    // standard LogicalValues relation. If any of the expressions IS NOT a literal, we must use the
+    // Substrait specific LogicalExpression relation
+    boolean allLiterals =
+        virtualTableScan.getRows().stream()
+            .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
+    if (allLiterals) {
+      ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
+        for (Expression expr : rowExpr.fields()) {
+          final Expression.Literal literal = (Expression.Literal) expr;
+          final RexLiteral rexNode = (RexLiteral) literal.accept(expressionRexConverter, context);
+          tupleBuilder.add(rexNode);
         }
+        tuplesBuilder.add(tupleBuilder.build());
       }
-      tuples.add(ImmutableList.copyOf(rexRow));
+      return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
+    } else {
+      List<List<RexNode>> tuples = new ArrayList<>();
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        List<RexNode> tuple = new ArrayList<>();
+        for (Expression expr : rowExpr.fields()) {
+          tuple.add(expr.accept(expressionRexConverter, context));
+        }
+        tuples.add(tuple);
+      }
+      return LogicalExpressions.create(relBuilder.getCluster(), rowTypeWithNames, tuples);
     }
-    LogicalValues logicalValues =
-        LogicalValues.create(
-            relBuilder.getCluster(), rowTypeWithNames, ImmutableList.copyOf(tuples));
-    if (projectExpressions.isEmpty()) {
-      return logicalValues;
-    }
-
-    return relBuilder.push(logicalValues).project(projectExpressions).build();
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
