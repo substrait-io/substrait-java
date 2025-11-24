@@ -112,7 +112,7 @@ public class LiteralRoundtripTest extends TestBase {
    */
   @Test
   void nestedUserDefinedLiteralWithStructRepresentation() {
-    Expression.UserDefinedStruct p1 =
+    Expression.UserDefinedStructLiteral p1 =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -121,7 +121,7 @@ public class LiteralRoundtripTest extends TestBase {
             java.util.Arrays.asList(
                 ExpressionCreator.i32(false, 0), ExpressionCreator.i32(false, 0)));
 
-    Expression.UserDefinedStruct p2 =
+    Expression.UserDefinedStructLiteral p2 =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -130,7 +130,7 @@ public class LiteralRoundtripTest extends TestBase {
             java.util.Arrays.asList(
                 ExpressionCreator.i32(false, 10), ExpressionCreator.i32(false, 0)));
 
-    Expression.UserDefinedStruct p3 =
+    Expression.UserDefinedStructLiteral p3 =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -139,7 +139,7 @@ public class LiteralRoundtripTest extends TestBase {
             java.util.Arrays.asList(
                 ExpressionCreator.i32(false, 5), ExpressionCreator.i32(false, 10)));
 
-    Expression.UserDefinedStruct triangle =
+    Expression.UserDefinedStructLiteral triangle =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -162,7 +162,7 @@ public class LiteralRoundtripTest extends TestBase {
     Any triangleAny =
         Any.pack(com.google.protobuf.StringValue.of("<Some User-Defined Representation>"));
 
-    Expression.UserDefinedAny triangle =
+    Expression.UserDefinedAnyLiteral triangle =
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "triangle", Collections.emptyList(), triangleAny);
 
@@ -182,20 +182,20 @@ public class LiteralRoundtripTest extends TestBase {
         Any.pack(com.google.protobuf.StringValue.of("<Some User-Defined Representation>"));
 
     // Create point UDTs using Any representation
-    Expression.UserDefinedAny p1 =
+    Expression.UserDefinedAnyLiteral p1 =
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
-    Expression.UserDefinedAny p2 =
+    Expression.UserDefinedAnyLiteral p2 =
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
-    Expression.UserDefinedAny p3 =
+    Expression.UserDefinedAnyLiteral p3 =
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "point", Collections.emptyList(), anyValue);
 
     // Create a "triangle" UDT using Struct representation, but with Any-encoded point fields
-    Expression.UserDefinedStruct triangle =
+    Expression.UserDefinedStructLiteral triangle =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -227,7 +227,7 @@ public class LiteralRoundtripTest extends TestBase {
         io.substrait.proto.Type.Parameter.newBuilder().setDataType(i32Type).build();
 
     // Create a vector<i32> instance with fields (x: 1, y: 2, z: 3)
-    Expression.UserDefinedStruct vectorI32 =
+    Expression.UserDefinedStructLiteral vectorI32 =
         ExpressionCreator.userDefinedLiteralStruct(
             false,
             NESTED_TYPES_URN,
@@ -243,7 +243,7 @@ public class LiteralRoundtripTest extends TestBase {
     Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
     assertEquals(vectorI32, result);
 
-    Expression.UserDefinedStruct resultStruct = (Expression.UserDefinedStruct) result;
+    Expression.UserDefinedStructLiteral resultStruct = (Expression.UserDefinedStructLiteral) result;
     assertEquals(1, resultStruct.typeParameters().size());
     assertEquals(typeParam, resultStruct.typeParameters().get(0));
   }

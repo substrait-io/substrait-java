@@ -357,7 +357,8 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.UserDefinedAny expr, EmptyVisitationContext context) {
+      io.substrait.expression.Expression.UserDefinedAnyLiteral expr,
+      EmptyVisitationContext context) {
     int typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
     return lit(
@@ -374,7 +375,8 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.UserDefinedStruct expr, EmptyVisitationContext context) {
+      io.substrait.expression.Expression.UserDefinedStructLiteral expr,
+      EmptyVisitationContext context) {
     int typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
     return lit(

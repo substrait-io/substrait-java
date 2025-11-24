@@ -76,12 +76,14 @@ class ExpressionToString extends DefaultExpressionVisitor[String] {
     s"${expr.declaration().key()}[${expr.outputType().accept(ToTypeString.INSTANCE)}]($args)"
   }
 
-  override def visit(expr: Expression.UserDefinedAny, context: EmptyVisitationContext): String = {
+  override def visit(
+      expr: Expression.UserDefinedAnyLiteral,
+      context: EmptyVisitationContext): String = {
     expr.toString
   }
 
   override def visit(
-      expr: Expression.UserDefinedStruct,
+      expr: Expression.UserDefinedStructLiteral,
       context: EmptyVisitationContext): String = {
     expr.toString
   }

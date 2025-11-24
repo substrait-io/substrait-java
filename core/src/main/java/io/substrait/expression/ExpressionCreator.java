@@ -287,7 +287,7 @@ public class ExpressionCreator {
   }
 
   /**
-   * Create a UserDefinedAny with google.protobuf.Any representation.
+   * Create a UserDefinedAnyLiteral with google.protobuf.Any representation.
    *
    * @param nullable whether the literal is nullable
    * @param urn the URN of the user-defined type
@@ -295,13 +295,13 @@ public class ExpressionCreator {
    * @param typeParameters the type parameters for the user-defined type (can be empty list)
    * @param value the value, encoded as google.protobuf.Any
    */
-  public static Expression.UserDefinedAny userDefinedLiteralAny(
+  public static Expression.UserDefinedAnyLiteral userDefinedLiteralAny(
       boolean nullable,
       String urn,
       String name,
       java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
       Any value) {
-    return Expression.UserDefinedAny.builder()
+    return Expression.UserDefinedAnyLiteral.builder()
         .nullable(nullable)
         .urn(urn)
         .name(name)
@@ -311,7 +311,7 @@ public class ExpressionCreator {
   }
 
   /**
-   * Create a UserDefinedStruct with Struct representation.
+   * Create a UserDefinedStructLiteral with Struct representation.
    *
    * @param nullable whether the literal is nullable
    * @param urn the URN of the user-defined type
@@ -319,13 +319,13 @@ public class ExpressionCreator {
    * @param typeParameters the type parameters for the user-defined type (can be empty list)
    * @param fields the fields, as a list of Literal values
    */
-  public static Expression.UserDefinedStruct userDefinedLiteralStruct(
+  public static Expression.UserDefinedStructLiteral userDefinedLiteralStruct(
       boolean nullable,
       String urn,
       String name,
       java.util.List<io.substrait.proto.Type.Parameter> typeParameters,
       java.util.List<Expression.Literal> fields) {
-    return Expression.UserDefinedStruct.builder()
+    return Expression.UserDefinedStructLiteral.builder()
         .nullable(nullable)
         .urn(urn)
         .name(name)

@@ -668,12 +668,12 @@ public interface Expression extends FunctionArg {
    * <p>User-defined literals can be encoded in one of two ways as per the Substrait spec:
    *
    * <ul>
-   *   <li>As {@code google.protobuf.Any} - see {@link UserDefinedAny}
-   *   <li>As {@code Literal.Struct} - see {@link UserDefinedStruct}
+   *   <li>As {@code google.protobuf.Any} - see {@link UserDefinedAnyLiteral}
+   *   <li>As {@code Literal.Struct} - see {@link UserDefinedStructLiteral}
    * </ul>
    *
-   * @see UserDefinedAny
-   * @see UserDefinedStruct
+   * @see UserDefinedAnyLiteral
+   * @see UserDefinedStructLiteral
    */
   interface UserDefinedLiteral extends Literal {
     String urn();
@@ -689,7 +689,7 @@ public interface Expression extends FunctionArg {
    * <p>This encoding allows for arbitrary binary data to be stored in the literal value.
    */
   @Value.Immutable
-  abstract class UserDefinedAny implements UserDefinedLiteral {
+  abstract class UserDefinedAnyLiteral implements UserDefinedLiteral {
     @Override
     public abstract String urn();
 
@@ -711,8 +711,8 @@ public interface Expression extends FunctionArg {
           .build();
     }
 
-    public static ImmutableExpression.UserDefinedAny.Builder builder() {
-      return ImmutableExpression.UserDefinedAny.builder();
+    public static ImmutableExpression.UserDefinedAnyLiteral.Builder builder() {
+      return ImmutableExpression.UserDefinedAnyLiteral.builder();
     }
 
     @Override
@@ -728,7 +728,7 @@ public interface Expression extends FunctionArg {
    * <p>This encoding uses a structured list of fields to represent the literal value.
    */
   @Value.Immutable
-  abstract class UserDefinedStruct implements UserDefinedLiteral {
+  abstract class UserDefinedStructLiteral implements UserDefinedLiteral {
     @Override
     public abstract String urn();
 
@@ -750,8 +750,8 @@ public interface Expression extends FunctionArg {
           .build();
     }
 
-    public static ImmutableExpression.UserDefinedStruct.Builder builder() {
-      return ImmutableExpression.UserDefinedStruct.builder();
+    public static ImmutableExpression.UserDefinedStructLiteral.Builder builder() {
+      return ImmutableExpression.UserDefinedStructLiteral.builder();
     }
 
     @Override

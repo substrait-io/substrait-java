@@ -65,9 +65,11 @@ class DefaultExpressionVisitor[T]
       context: EmptyVisitationContext): T =
     e.accept(this, context)
 
-  override def visit(expr: Expression.UserDefinedAny, context: EmptyVisitationContext): T =
+  override def visit(expr: Expression.UserDefinedAnyLiteral, context: EmptyVisitationContext): T =
     visitFallback(expr, context)
 
-  override def visit(expr: Expression.UserDefinedStruct, context: EmptyVisitationContext): T =
+  override def visit(
+      expr: Expression.UserDefinedStructLiteral,
+      context: EmptyVisitationContext): T =
     visitFallback(expr, context)
 }
