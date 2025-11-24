@@ -17,7 +17,7 @@ import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.junit.jupiter.api.Test;
 
-public class LogicalValuesTest extends PlanTestBase {
+public class VirtualTableScanTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
   final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
