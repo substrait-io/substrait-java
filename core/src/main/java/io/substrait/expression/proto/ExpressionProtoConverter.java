@@ -368,7 +368,7 @@ public class ExpressionProtoConverter
                   .setTypeReference(typeReference)
                   .addAllTypeParameters(
                       expr.typeParameters().stream()
-                          .map(io.substrait.type.proto.TypeProtoConverter::toProto)
+                          .map(typeProtoConverter::toProto)
                           .collect(java.util.stream.Collectors.toList()))
                   .setValue(expr.value());
 
@@ -397,7 +397,7 @@ public class ExpressionProtoConverter
                   .setTypeReference(typeReference)
                   .addAllTypeParameters(
                       expr.typeParameters().stream()
-                          .map(io.substrait.type.proto.TypeProtoConverter::toProto)
+                          .map(typeProtoConverter::toProto)
                           .collect(java.util.stream.Collectors.toList()))
                   .setStruct(structLiteral);
 
