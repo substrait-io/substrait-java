@@ -93,7 +93,11 @@ public class FunctionMappings {
               s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
               s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
               s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
-              s(SqlStdOperatorTable.POSITION, "strpos"))
+              s(SqlStdOperatorTable.POSITION, "strpos"),
+              s(SqlLibraryOperators.LEFT, "left"),
+              s(SqlLibraryOperators.RIGHT, "right"),
+              s(SqlLibraryOperators.LPAD, "lpad"),
+              s(SqlLibraryOperators.RPAD, "rpad"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
