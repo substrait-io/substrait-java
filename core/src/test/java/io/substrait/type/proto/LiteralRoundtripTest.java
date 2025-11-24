@@ -44,7 +44,23 @@ public class LiteralRoundtripTest extends TestBase {
           + "    structure:\n"
           + "      x: T\n"
           + "      y: T\n"
-          + "      z: T\n";
+          + "      z: T\n"
+          + "  - name: multi_param\n"
+          + "    parameters:\n"
+          + "      - name: T\n"
+          + "        type: dataType\n"
+          + "      - name: size\n"
+          + "        type: integer\n"
+          + "      - name: nullable\n"
+          + "        type: boolean\n"
+          + "      - name: encoding\n"
+          + "        type: string\n"
+          + "      - name: precision\n"
+          + "        type: dataType\n"
+          + "      - name: mode\n"
+          + "        type: enum\n"
+          + "    structure:\n"
+          + "      value: T\n";
 
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
       SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
@@ -64,6 +80,13 @@ public class LiteralRoundtripTest extends TestBase {
           NESTED_TYPES_EXTENSIONS,
           EMPTY_TYPE,
           NESTED_TYPES_PROTO_REL_CONVERTER);
+
+  private void verifyNestedTypesRoundTrip(Expression expression) {
+    io.substrait.proto.Expression protoExpression =
+        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(expression);
+    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
+    assertEquals(expression, result);
+  }
 
   @Test
   void decimal() {
@@ -147,10 +170,7 @@ public class LiteralRoundtripTest extends TestBase {
             Collections.emptyList(),
             java.util.Arrays.asList(p1, p2, p3));
 
-    io.substrait.proto.Expression protoExpression =
-        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(triangle);
-    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
-    assertEquals(triangle, result);
+    verifyNestedTypesRoundTrip(triangle);
   }
 
   /**
@@ -166,10 +186,7 @@ public class LiteralRoundtripTest extends TestBase {
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "triangle", Collections.emptyList(), triangleAny);
 
-    io.substrait.proto.Expression protoExpression =
-        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(triangle);
-    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
-    assertEquals(triangle, result);
+    verifyNestedTypesRoundTrip(triangle);
   }
 
   /**
@@ -203,10 +220,7 @@ public class LiteralRoundtripTest extends TestBase {
             Collections.emptyList(),
             java.util.Arrays.asList(p1, p2, p3));
 
-    io.substrait.proto.Expression protoExpression =
-        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(triangle);
-    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
-    assertEquals(triangle, result);
+    verifyNestedTypesRoundTrip(triangle);
   }
 
   /**
@@ -233,13 +247,44 @@ public class LiteralRoundtripTest extends TestBase {
                 ExpressionCreator.i32(false, 2),
                 ExpressionCreator.i32(false, 3)));
 
-    io.substrait.proto.Expression protoExpression =
-        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(vectorI32);
-    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
-    assertEquals(vectorI32, result);
+    verifyNestedTypesRoundTrip(vectorI32);
+  }
 
-    Expression.UserDefinedStructLiteral resultStruct = (Expression.UserDefinedStructLiteral) result;
-    assertEquals(1, resultStruct.typeParameters().size());
-    assertEquals(typeParam, resultStruct.typeParameters().get(0));
+  /**
+   * Verifies round-trip conversion of a user-defined type with all parameter types. Tests that all
+   * parameter kinds (type, integer, boolean, string, null, enum) are correctly preserved during
+   * serialization and deserialization.
+   */
+  @Test
+  void userDefinedLiteralWithAllParameterTypes() {
+    io.substrait.type.Type.Parameter typeParam =
+        io.substrait.type.ImmutableType.ParameterDataType.builder()
+            .type(io.substrait.type.Type.I32.builder().nullable(false).build())
+            .build();
+
+    io.substrait.type.Type.Parameter intParam =
+        io.substrait.type.ImmutableType.ParameterIntegerValue.builder().value(100L).build();
+
+    io.substrait.type.Type.Parameter boolParam =
+        io.substrait.type.ImmutableType.ParameterBooleanValue.builder().value(true).build();
+
+    io.substrait.type.Type.Parameter stringParam =
+        io.substrait.type.ImmutableType.ParameterStringValue.builder().value("utf8").build();
+
+    io.substrait.type.Type.Parameter nullParam = io.substrait.type.Type.ParameterNull.INSTANCE;
+
+    io.substrait.type.Type.Parameter enumParam =
+        io.substrait.type.ImmutableType.ParameterEnumValue.builder().value("FAST").build();
+
+    Expression.UserDefinedStructLiteral multiParam =
+        ExpressionCreator.userDefinedLiteralStruct(
+            false,
+            NESTED_TYPES_URN,
+            "multi_param",
+            java.util.Arrays.asList(
+                typeParam, intParam, boolParam, stringParam, nullParam, enumParam),
+            java.util.Arrays.asList(ExpressionCreator.i32(false, 42)));
+
+    verifyNestedTypesRoundTrip(multiParam);
   }
 }
