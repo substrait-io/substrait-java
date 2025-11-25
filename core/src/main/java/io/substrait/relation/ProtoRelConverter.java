@@ -615,7 +615,7 @@ public class ProtoRelConverter {
     List<Expression.NestedStruct> expressions =
         new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
 
-    //   We cannot have a null row in VirtualTable, therefore we set the nullability to false
+    // We cannot have a null row in VirtualTable, therefore we set the nullability to false
     // nullability is also not supported at the Expression.Nested.Struct level
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
       expressions.addAll(nestedStruct(false, converter.from(struct)));
