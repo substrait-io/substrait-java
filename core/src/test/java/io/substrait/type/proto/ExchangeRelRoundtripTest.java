@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ExchangeRelRoundtripTest extends TestBase {
+class ExchangeRelRoundtripTest extends TestBase {
 
   final Rel baseTable =
       b.namedScan(
