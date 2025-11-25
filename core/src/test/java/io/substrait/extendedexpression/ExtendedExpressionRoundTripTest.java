@@ -22,7 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class ExtendedExpressionRoundTripTest extends TestBase {
+class ExtendedExpressionRoundTripTest extends TestBase {
 
   private static Stream<Arguments> expressionReferenceProvider() {
     return Stream.of(
@@ -34,7 +34,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
 
   @ParameterizedTest
   @MethodSource("expressionReferenceProvider")
-  public void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference) {
+  void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference) {
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
     NamedStruct namedStruct = getImmutableNamedStruct();
@@ -42,7 +42,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
   }
 
   @Test
-  public void getNoExpressionDefined() {
+  void getNoExpressionDefined() {
     IllegalStateException illegalStateException =
         Assertions.assertThrows(
             IllegalStateException.class,
@@ -55,7 +55,7 @@ public class ExtendedExpressionRoundTripTest extends TestBase {
   }
 
   @Test
-  public void getNoAggregateFunctionDefined() {
+  void getNoAggregateFunctionDefined() {
     IllegalStateException illegalStateException =
         Assertions.assertThrows(
             IllegalStateException.class,

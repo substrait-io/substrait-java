@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-public class UrnValidationTest {
+class UrnValidationTest {
 
   @Test
-  public void testMissingUrnThrowsException() {
+  void testMissingUrnThrowsException() {
     String yamlWithoutUrn = "%YAML 1.2\n" + "---\n" + "scalar_functions:\n" + "  - name: test\n";
     IllegalArgumentException exception =
         assertThrows(
@@ -19,7 +19,7 @@ public class UrnValidationTest {
   }
 
   @Test
-  public void testInvalidUrnFormatThrowsException() {
+  void testInvalidUrnFormatThrowsException() {
     String yamlWithInvalidUrn =
         "%YAML 1.2\n"
             + "---\n"
@@ -35,7 +35,7 @@ public class UrnValidationTest {
   }
 
   @Test
-  public void testValidUrnWorks() {
+  void testValidUrnWorks() {
     String yamlWithValidUrn =
         "%YAML 1.2\n"
             + "---\n"
@@ -46,7 +46,7 @@ public class UrnValidationTest {
   }
 
   @Test
-  public void testUriUrnMapIsPopulated() {
+  void testUriUrnMapIsPopulated() {
     String yamlWithValidUrn =
         "%YAML 1.2\n"
             + "---\n"

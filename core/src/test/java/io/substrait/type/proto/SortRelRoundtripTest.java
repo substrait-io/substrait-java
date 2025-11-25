@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
-public class SortRelRoundtripTest extends TestBase {
+class SortRelRoundtripTest extends TestBase {
 
   final Rel baseTable =
       b.namedScan(

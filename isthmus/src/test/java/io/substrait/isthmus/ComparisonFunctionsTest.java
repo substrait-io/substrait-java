@@ -5,7 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class ComparisonFunctionsTest extends PlanTestBase {
+class ComparisonFunctionsTest extends PlanTestBase {
   static String CREATES =
       "CREATE TABLE numbers (int_a INT, int_b INT, int_c INT, double_a DOUBLE, double_b DOUBLE, double_c DOUBLE)";
 

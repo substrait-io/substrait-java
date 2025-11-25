@@ -11,7 +11,7 @@ import io.substrait.util.EmptyVisitationContext;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
-public class LiteralRoundtripTest extends TestBase {
+class LiteralRoundtripTest extends TestBase {
 
   @Test
   void decimal() {

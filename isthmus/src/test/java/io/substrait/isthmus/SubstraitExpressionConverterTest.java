@@ -26,7 +26,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Test;
 
-public class SubstraitExpressionConverterTest extends PlanTestBase {
+class SubstraitExpressionConverterTest extends PlanTestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
@@ -54,7 +54,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void switchExpression() {
+  void switchExpression() {
     Switch expr =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
@@ -66,7 +66,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void scalarSubQuery() {
+  void scalarSubQuery() {
     Rel subQueryRel = createSubQueryRel();
 
     Expression.ScalarSubquery expr =
@@ -84,7 +84,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void existsSetPredicate() {
+  void existsSetPredicate() {
     Rel subQueryRel = createSubQueryRel();
 
     Expression.SetPredicate expr =
@@ -105,7 +105,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void uniqueSetPredicate() {
+  void uniqueSetPredicate() {
     Rel subQueryRel = createSubQueryRel();
 
     Expression.SetPredicate expr =
@@ -126,7 +126,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void unspecifiedSetPredicate() {
+  void unspecifiedSetPredicate() {
     Rel subQueryRel = createSubQueryRel();
 
     Expression.SetPredicate expr =
@@ -165,7 +165,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void useSubstraitReturnTypeDuringScalarFunctionConversion() {
+  void useSubstraitReturnTypeDuringScalarFunctionConversion() {
     Expression.ScalarFunctionInvocation expr =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
@@ -181,7 +181,7 @@ public class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void useSubstraitReturnTypeDuringWindowFunctionConversion() {
+  void useSubstraitReturnTypeDuringWindowFunctionConversion() {
     Expression.WindowFunctionInvocation expr =
         b.windowFn(
             DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,

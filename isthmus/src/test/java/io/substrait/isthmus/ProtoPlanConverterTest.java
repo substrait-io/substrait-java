@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class ProtoPlanConverterTest extends PlanTestBase {
+class ProtoPlanConverterTest extends PlanTestBase {
 
   private io.substrait.proto.Plan getProtoPlan(String query1) throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
@@ -26,12 +26,12 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void aggregate() throws IOException, SqlParseException {
+  void aggregate() throws IOException, SqlParseException {
     assertProtoPlanRoundrip("select count(L_ORDERKEY),sum(L_ORDERKEY) from lineitem");
   }
 
   @Test
-  public void simpleSelect() throws IOException, SqlParseException {
+  void simpleSelect() throws IOException, SqlParseException {
     assertProtoPlanRoundrip("select l_orderkey,l_extendedprice from lineitem");
   }
 
@@ -49,7 +49,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void distinctCount() throws IOException, SqlParseException {
+  void distinctCount() throws IOException, SqlParseException {
     String distinctQuery = "select count(DISTINCT L_ORDERKEY) from lineitem";
     io.substrait.proto.Plan protoPlan = getProtoPlan(distinctQuery);
     assertAggregateInvocationDistinct(protoPlan);
@@ -57,12 +57,12 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void filter() throws IOException, SqlParseException {
+  void filter() throws IOException, SqlParseException {
     assertProtoPlanRoundrip("select L_ORDERKEY from lineitem WHERE L_ORDERKEY + 1 > 10");
   }
 
   @Test
-  public void crossJoin() throws IOException, SqlParseException {
+  void crossJoin() throws IOException, SqlParseException {
     int[] counter = new int[1];
     RelCopyOnWriteVisitor<RuntimeException> crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
@@ -105,7 +105,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void joinAggSortLimit() throws IOException, SqlParseException {
+  void joinAggSortLimit() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select\n"
             + "  l.l_orderkey,\n"
@@ -137,36 +137,36 @@ public class ProtoPlanConverterTest extends PlanTestBase {
 
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
-  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+  void setTest(Set.SetOp op, boolean multi) throws Exception {
     assertProtoPlanRoundrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test
-  public void existsCorrelatedSubquery() throws IOException, SqlParseException {
+  void existsCorrelatedSubquery() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select l_partkey from lineitem where exists (select o_orderdate from orders where o_orderkey = l_orderkey)");
   }
 
   @Test
-  public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
+  void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select l_partkey from lineitem where unique (select o_orderdate from orders where o_orderkey = l_orderkey)");
   }
 
   @Test
-  public void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
+  void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)");
   }
 
   @Test
-  public void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
+  void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)");
   }
 
   @Test
-  public void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
+  void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
     String sql =
         "SELECT p_partkey\n"
             + "FROM part p\n"
@@ -183,7 +183,7 @@ public class ProtoPlanConverterTest extends PlanTestBase {
   }
 
   @Test
-  public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
+  void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
     assertProtoPlanRoundrip(asString("subquery/nested_scalar_subquery_in_filter.sql"));
   }
 }

@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public final class StringFunctionTest extends PlanTestBase {
+final class StringFunctionTest extends PlanTestBase {
 
   static String CREATES = "CREATE TABLE strings (c16 CHAR(16), vc32 VARCHAR(32), vc VARCHAR)";
   static String REPLACE_CREATES =

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  * 3. Convert POJO -> proto using PlanProtoConverter 4. Verify output contains proper
  * extensioninformation
  */
-public class UriUrnMigrationEndToEndTest {
+class UriUrnMigrationEndToEndTest {
 
   /** Load a proto Plan from a JSON resource file using JsonFormat */
   private Plan loadPlanFromJson(String resourcePath) throws IOException {
@@ -45,7 +45,7 @@ public class UriUrnMigrationEndToEndTest {
   }
 
   @Test
-  public void testUriUrnMigrationEndToEnd() throws IOException {
+  void testUriUrnMigrationEndToEnd() throws IOException {
 
     // List of (inputPath, expectedPath, extensionCollection) tuples
     List<String[]> testCases =
@@ -91,7 +91,7 @@ public class UriUrnMigrationEndToEndTest {
   }
 
   @Test
-  public void testUnresolvableUriThrowsException() throws IOException {
+  void testUnresolvableUriThrowsException() throws IOException {
     Plan inputPlan = loadPlanFromJson("uri-urn-migration/unresolvable-uri-plan.json");
 
     ProtoPlanConverter protoToPojo =

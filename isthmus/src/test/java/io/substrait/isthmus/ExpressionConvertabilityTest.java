@@ -29,7 +29,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 /** Tests which test that an expression can be converted to and from Calcite expressions. */
-public class ExpressionConvertabilityTest extends PlanTestBase {
+class ExpressionConvertabilityTest extends PlanTestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
@@ -54,24 +54,24 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
       b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
 
   @Test
-  public void listLiteral() throws IOException, SqlParseException {
+  void listLiteral() throws IOException, SqlParseException {
     assertFullRoundTrip("select ARRAY[1,2,3] from ORDERS");
   }
 
   @Test
-  public void mapLiteral() throws IOException, SqlParseException {
+  void mapLiteral() throws IOException, SqlParseException {
     assertFullRoundTrip("select MAP[1, 'hello'] from ORDERS");
   }
 
   @Test
-  public void inPredicate() throws IOException, SqlParseException {
+  void inPredicate() throws IOException, SqlParseException {
     assertFullRoundTrip(
         "select L_PARTKEY from LINEITEM where L_PARTKEY in "
             + "(SELECT L_SUPPKEY from LINEITEM where L_SUPPKEY < L_ORDERKEY)");
   }
 
   @Test
-  public void singleOrList() {
+  void singleOrList() {
     Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
     RexNode rexNode = singleOrList.accept(converter, Context.newContext());
     Expression substraitExpression =
@@ -89,7 +89,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void switchExpression() {
+  void switchExpression() {
     Expression switchExpression =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
@@ -112,7 +112,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void castFailureCondition() {
+  void castFailureCondition() {
     Rel rel =
         b.project(
             input ->
@@ -138,7 +138,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void supportedPrecisionForPrecisionTimestampLiteral() {
+  void supportedPrecisionForPrecisionTimestampLiteral() {
     assertPrecisionTimestampLiteral(0);
     assertPrecisionTimestampLiteral(3);
     assertPrecisionTimestampLiteral(6);
@@ -155,7 +155,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void supportedPrecisionForPrecisionTimestampTZLiteral() {
+  void supportedPrecisionForPrecisionTimestampTZLiteral() {
     assertPrecisionTimestampTZLiteral(0);
     assertPrecisionTimestampTZLiteral(3);
     assertPrecisionTimestampTZLiteral(6);
@@ -172,7 +172,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedPrecisionForPrecisionTimestampLiteral() {
+  void unsupportedPrecisionForPrecisionTimestampLiteral() {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(-1);
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(1);
@@ -203,7 +203,7 @@ public class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedPrecisionPrecisionTimestampTZLiteral() {
+  void unsupportedPrecisionPrecisionTimestampTZLiteral() {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(-1);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(1);

@@ -7,9 +7,9 @@ import io.substrait.plan.Plan.Version;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class SpecVersionTest {
+class SpecVersionTest {
   @Test
-  public void testSubstraitVersionDefaultValues() {
+  void testSubstraitVersionDefaultValues() {
     Version version = Version.DEFAULT_VERSION;
 
     assertNotNull(version.getMajor());

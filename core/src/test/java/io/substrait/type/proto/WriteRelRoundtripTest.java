@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-public class WriteRelRoundtripTest extends TestBase {
+class WriteRelRoundtripTest extends TestBase {
 
   @Test
   void insert() {

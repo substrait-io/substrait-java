@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  *   <li>Roundtrip between POJO and Proto
  * </ul>
  */
-public class TypeExtensionTest {
+class TypeExtensionTest {
 
   static final TypeCreator R = TypeCreator.of(false);
 
