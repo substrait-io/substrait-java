@@ -13,12 +13,12 @@ import java.io.IOException;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class SubqueryPlanTest extends PlanTestBase {
+class SubqueryPlanTest extends PlanTestBase {
   // TODO: Add a roundtrip test once the ProtoRelConverter is committed and updated to support
   // subqueries
 
   @Test
-  public void existsCorrelatedSubquery() throws SqlParseException {
+  void existsCorrelatedSubquery() throws SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     Plan plan =
         toProto(
@@ -58,7 +58,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
+  void uniqueCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     Plan plan =
         toProto(
@@ -101,7 +101,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
+  void inPredicateCorrelatedSubQuery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql =
         "select l_orderkey from lineitem where l_partkey in (select p_partkey from part where p_partkey = l_partkey)";
@@ -139,7 +139,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
+  void notInPredicateCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql =
         "select l_orderkey from lineitem where l_partkey not in (select p_partkey from part where p_partkey = l_partkey)";
@@ -179,7 +179,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
+  void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql =
         "SELECT p_partkey\n"
@@ -260,7 +260,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
+  void nestedScalarCorrelatedSubquery() throws IOException, SqlParseException {
     SqlToSubstrait s = new SqlToSubstrait();
     String sql = asString("subquery/nested_scalar_subquery_in_filter.sql");
     Plan plan = toProto(s.convert(sql, TPCH_CATALOG));
@@ -335,7 +335,7 @@ public class SubqueryPlanTest extends PlanTestBase {
   }
 
   @Test
-  public void correlatedScalarSubQueryInSelect() throws Exception {
+  void correlatedScalarSubQueryInSelect() throws Exception {
     String sql = asString("subquery/nested_scalar_subquery_in_select.sql");
     assertSqlSubstraitRelRoundTrip(sql);
   }

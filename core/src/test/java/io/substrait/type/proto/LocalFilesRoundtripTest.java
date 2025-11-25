@@ -17,7 +17,7 @@ import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-public class LocalFilesRoundtripTest extends TestBase {
+class LocalFilesRoundtripTest extends TestBase {
 
   private void assertLocalFilesRoundtrip(FileOrFiles file) {
     io.substrait.relation.ImmutableLocalFiles.Builder builder =

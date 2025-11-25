@@ -5,11 +5,11 @@ import org.apache.calcite.prepare.Prepare;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class KeyConstraintsTest extends PlanTestBase {
+class KeyConstraintsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(ints = {7})
-  public void tpcds(int query) throws Exception {
+  void tpcds(int query) throws Exception {
     SqlToSubstrait s = new SqlToSubstrait();
     String values = asString("keyconstraints_schema.sql");
     Prepare.CatalogReader catalog =

@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-public class ExpandRelRoundtripTest extends TestBase {
+class ExpandRelRoundtripTest extends TestBase {
   final Rel input =
       b.namedScan(
           Stream.of("a_table").collect(Collectors.toList()),

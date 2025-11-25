@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class WindowFunctionTest extends PlanTestBase {
+class WindowFunctionTest extends PlanTestBase {
 
   @Nested
   class WindowFunctionInvocations {

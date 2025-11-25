@@ -22,7 +22,7 @@ import java.util.Collections;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class ProtoRelConverterTest extends TestBase {
+class ProtoRelConverterTest extends TestBase {
 
   final NamedScan commonTable =
       b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());

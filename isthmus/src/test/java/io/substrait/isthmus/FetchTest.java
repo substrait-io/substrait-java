@@ -6,7 +6,7 @@ import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class FetchTest extends PlanTestBase {
+class FetchTest extends PlanTestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
 

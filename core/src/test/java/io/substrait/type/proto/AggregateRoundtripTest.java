@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
-public class AggregateRoundtripTest extends TestBase {
+class AggregateRoundtripTest extends TestBase {
 
   private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
     Expression.DecimalLiteral expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);

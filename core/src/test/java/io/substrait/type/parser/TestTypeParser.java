@@ -8,7 +8,7 @@ import io.substrait.function.TypeExpressionCreator;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.api.Test;
 
-public class TestTypeParser {
+class TestTypeParser {
 
   private final TypeCreator n = TypeCreator.NULLABLE;
   private final TypeCreator r = TypeCreator.REQUIRED;
@@ -20,47 +20,47 @@ public class TestTypeParser {
   private static final String URN = "test";
 
   @Test
-  public void basic() {
+  void basic() {
     simpleTests(ParseToPojo.Visitor.simple(URN));
   }
 
   @Test
-  public void compound() {
+  void compound() {
     compoundTests(ParseToPojo.Visitor.simple(URN));
   }
 
   @Test
-  public void parameterizedSimple() {
+  void parameterizedSimple() {
     simpleTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
-  public void parameterizedCompound() {
+  void parameterizedCompound() {
     compoundTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
-  public void parameterizedParameterized() {
+  void parameterizedParameterized() {
     parameterizedTests(ParseToPojo.Visitor.parameterized(URN));
   }
 
   @Test
-  public void derivationSimple() {
+  void derivationSimple() {
     simpleTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
-  public void derivationCompound() {
+  void derivationCompound() {
     compoundTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
-  public void derivationParameterized() {
+  void derivationParameterized() {
     parameterizedTests(ParseToPojo.Visitor.expression(URN));
   }
 
   @Test
-  public void derivationExpression() {
+  void derivationExpression() {
     test(
         ParseToPojo.Visitor.expression(URN),
         eo.fixedCharE(eo.plus(pr.parameter("L1"), pr.parameter("L2"))),

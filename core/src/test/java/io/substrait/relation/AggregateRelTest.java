@@ -58,7 +58,7 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testDeprecatedGroupingExpressionConversion() {
+  void testDeprecatedGroupingExpressionConversion() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 
@@ -89,7 +89,7 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testAggregateWithSingleGrouping() {
+  void testAggregateWithSingleGrouping() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 
@@ -122,7 +122,7 @@ class AggregateRelTest extends TestBase {
   }
 
   @Test
-  public void testAggregateWithMultipleGroupings() {
+  void testAggregateWithMultipleGroupings() {
     Expression col1Ref = createFieldReference(0);
     Expression col2Ref = createFieldReference(1);
 

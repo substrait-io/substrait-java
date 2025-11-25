@@ -14,7 +14,7 @@ import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class OptimizerIntegrationTest extends PlanTestBase {
+class OptimizerIntegrationTest extends PlanTestBase {
 
   @Test
   void conversionHandlesBuiltInSum0CallAddedByRule() throws SqlParseException, IOException {

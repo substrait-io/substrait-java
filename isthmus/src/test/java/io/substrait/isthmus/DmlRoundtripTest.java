@@ -5,7 +5,7 @@ import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class DmlRoundtripTest extends PlanTestBase {
+class DmlRoundtripTest extends PlanTestBase {
 
   final Prepare.CatalogReader catalogReader =
       SubstraitCreateStatementParser.processCreateStatementsToCatalog(

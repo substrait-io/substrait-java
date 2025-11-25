@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Verify that "problematic" Substrait functions can be converted to Calcite and back successfully
  */
-public class FunctionConversionTest extends PlanTestBase {
+class FunctionConversionTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
@@ -46,7 +46,7 @@ public class FunctionConversionTest extends PlanTestBase {
           TypeConverter.DEFAULT);
 
   @Test
-  public void subtractDateIDay() {
+  void subtractDateIDay() {
     // When this function is converted to Calcite, if the Calcite type derivation is used an
     // java.lang.ArrayIndexOutOfBoundsException is thrown. It is quite likely that this is being
     // mapped to the wrong
@@ -70,7 +70,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractTimestampTzScalarFunction() {
+  void extractTimestampTzScalarFunction() {
     ScalarFunctionInvocation reqTstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -91,7 +91,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractPrecisionTimestampTzScalarFunction() {
+  void extractPrecisionTimestampTzScalarFunction() {
     ScalarFunctionInvocation reqPtstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -112,7 +112,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractTimestampScalarFunction() {
+  void extractTimestampScalarFunction() {
     ScalarFunctionInvocation reqTsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -130,7 +130,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractPrecisionTimestampScalarFunction() {
+  void extractPrecisionTimestampScalarFunction() {
     ScalarFunctionInvocation reqPtsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -148,7 +148,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractDateScalarFunction() {
+  void extractDateScalarFunction() {
     ScalarFunctionInvocation reqDateFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -166,7 +166,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void extractTimeScalarFunction() {
+  void extractTimeScalarFunction() {
     ScalarFunctionInvocation reqTimeFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -184,7 +184,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedExtractTimestampTzWithIndexing() {
+  void unsupportedExtractTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqTstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -201,7 +201,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedExtractPrecisionTimestampTzWithIndexing() {
+  void unsupportedExtractPrecisionTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqPtstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -218,7 +218,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedExtractTimestampWithIndexing() {
+  void unsupportedExtractTimestampWithIndexing() {
     ScalarFunctionInvocation reqReqTsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -234,7 +234,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedExtractPrecisionTimestampWithIndexing() {
+  void unsupportedExtractPrecisionTimestampWithIndexing() {
     ScalarFunctionInvocation reqReqPtsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -250,7 +250,7 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void unsupportedExtractDateWithIndexing() {
+  void unsupportedExtractDateWithIndexing() {
     ScalarFunctionInvocation reqReqDateFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -266,17 +266,17 @@ public class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  public void concatStringLiteralAndVarchar() throws Exception {
+  void concatStringLiteralAndVarchar() throws Exception {
     assertProtoPlanRoundrip("select 'part_'||P_NAME from PART");
   }
 
   @Test
-  public void concatCharAndVarchar() throws Exception {
+  void concatCharAndVarchar() throws Exception {
     assertProtoPlanRoundrip("select P_BRAND||P_NAME from PART");
   }
 
   @Test
-  public void concatStringLiteralAndChar() throws Exception {
+  void concatStringLiteralAndChar() throws Exception {
     assertProtoPlanRoundrip("select 'brand_'||P_BRAND from PART");
   }
 }

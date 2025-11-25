@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
-public class TpcdsQueryTest extends PlanTestBase {
+class TpcdsQueryTest extends PlanTestBase {
   private static final Set<Integer> alternateForms = Set.of(27, 36, 70, 86);
 
   static IntStream testCases() {
@@ -24,7 +24,7 @@ public class TpcdsQueryTest extends PlanTestBase {
    */
   @ParameterizedTest
   @MethodSource("testCases")
-  public void testQuery(int query) throws IOException {
+  void testQuery(int query) throws IOException {
     String inputSql = asString(inputSqlFile(query));
     Plan plan = assertDoesNotThrow(() -> toSubstraitPlan(inputSql), "SQL to Substrait POJO");
     assertDoesNotThrow(() -> toSql(plan), "Substrait POJO to SQL");
