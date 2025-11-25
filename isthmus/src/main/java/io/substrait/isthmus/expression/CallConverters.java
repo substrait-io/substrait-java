@@ -77,6 +77,7 @@ public class CallConverters {
                     com.google.protobuf.Any.parseFrom(literal.value().toByteArray());
 
                 return Expression.UserDefinedAnyLiteral.builder()
+                    .nullable(t.nullable())
                     .urn(t.urn())
                     .name(t.name())
                     .addAllTypeParameters(t.typeParameters())
