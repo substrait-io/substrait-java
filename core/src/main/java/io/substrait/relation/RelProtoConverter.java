@@ -647,7 +647,6 @@ public class RelProtoConverter
   @Override
   public Rel visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws RuntimeException {
-
     List<io.substrait.proto.Expression.Nested.Struct> structs = new ArrayList<>();
     for (Expression.NestedStruct row : virtualTableScan.getRows()) {
       structs.add(

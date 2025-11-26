@@ -9,6 +9,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
+import io.substrait.isthmus.calcite.rel.Expressions;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.LiteralConverter;
@@ -569,6 +570,25 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .build();
   }
 
+  public Rel handleExpressions(Expressions expressions) {
+    NamedStruct type = typeConverter.toNamedStruct(expressions.getRowType());
+    if (expressions.tuples.isEmpty()) {
+      return EmptyScan.builder().initialSchema(type).build();
+    }
+    List<Expression.NestedStruct> structs =
+        expressions.tuples.stream()
+            .map(
+                list -> {
+                  List<Expression> fields =
+                      list.stream()
+                          .map(l -> l.accept(this.rexExpressionConverter))
+                          .collect(Collectors.toUnmodifiableList());
+                  return ExpressionCreator.nestedStruct(false, fields);
+                })
+            .collect(Collectors.toUnmodifiableList());
+    return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
+  }
+
   @Override
   public Rel visitOther(RelNode other) {
     if (other instanceof CreateTable) {
@@ -576,8 +596,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
+    } else if (other instanceof Expressions) {
+      return handleExpressions((Expressions) other);
     }
-
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 

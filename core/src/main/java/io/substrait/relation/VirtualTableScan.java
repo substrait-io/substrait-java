@@ -14,7 +14,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
   public abstract List<Expression.NestedStruct> getRows();
 
   /**
-   *
+   * Checks the following invariants when construction a VirtualTableScan
    *
    * <ul>
    *   <li>non-empty rowset
@@ -31,15 +31,15 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
     List<Expression.NestedStruct> rows = getRows();
 
-    //  In the codebase, we use `NestedStruct` to represent two subtly distinct cases:
-    //  - an instanceof the Expression proto with the particular case of
-    //    `rex_type` set to `Nested` (and then `Struct`)
-    // - access to the raw proto of `Expression.Struct.Nested` itself
-    /**
-     * Here we are using the second case, and thus we are carrying around a nullable field as a
-     * consequence of the first option, but we enforce it to be false to ensure a user doesn't
-     * accidentally pass around meaningless additional context.
-     */
+    // At the PROTOBUF layer, the Nested.Struct message does not carry nullability information.
+    // Nullability is attached to the Nested message, which can contain a Nested.Struct.
+    // The NestedStruct POJO flattens the Nested and Nested.Struct messages together, allowing the
+    // nullability of a NestedStruct to be set directly.
+    //
+    // HOWEVER, the VirtualTable message contains a list of Nested.Struct messages, and as such
+    // the nullability cannot be set at the protobuf layer. To avoid users attaching meaningless
+    // nullability information in the POJOs, we restrict the nullability of NestedStructs to false
+    // when used in VirtualTableScans.
     for (Expression.NestedStruct row : rows) {
       assert !row.nullable();
     }
