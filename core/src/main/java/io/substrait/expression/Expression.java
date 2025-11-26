@@ -671,9 +671,6 @@ public interface Expression extends FunctionArg {
    *   <li>As {@code google.protobuf.Any} - see {@link UserDefinedAnyLiteral}
    *   <li>As {@code Literal.Struct} - see {@link UserDefinedStructLiteral}
    * </ul>
-   *
-   * @see UserDefinedAnyLiteral
-   * @see UserDefinedStructLiteral
    */
   interface UserDefinedLiteral extends Literal {
     String urn();
@@ -684,7 +681,7 @@ public interface Expression extends FunctionArg {
   }
 
   /**
-   * User-defined literal with value encoded as {@code google.protobuf.Any}.
+   * User-defined literal with value encoded as {@link com.google.protobuf.Any}.
    *
    * <p>This encoding allows for arbitrary binary data to be stored in the literal value.
    */
@@ -723,7 +720,8 @@ public interface Expression extends FunctionArg {
   }
 
   /**
-   * User-defined literal with value encoded as {@code Literal.Struct}.
+   * User-defined literal with value encoded as {@link
+   * io.substrait.proto.Expression.Literal.Struct}.
    *
    * <p>This encoding uses a structured list of fields to represent the literal value.
    */
