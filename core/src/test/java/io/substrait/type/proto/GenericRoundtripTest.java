@@ -143,6 +143,9 @@ class GenericRoundtripTest extends TestBase {
 
   // Class used to propagate type generation errors from param generator to test cases
   private static class UnsupportedTypeGenerationException extends Exception {
+
+    private static final long serialVersionUID = -8627552468610061245L;
+
     public UnsupportedTypeGenerationException(String s) {
       super(s);
     }

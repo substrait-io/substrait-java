@@ -20,4 +20,5 @@
   <rule ref="category/java/bestpractices.xml/UnusedPrivateField" />
   <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod" />
   <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes" />
+  <rule ref="category/java/errorprone.xml/MissingSerialVersionUID" />
 </ruleset>

@@ -11,6 +11,9 @@ import org.immutables.value.Value;
 public interface ParameterizedType extends TypeExpression {
 
   class RequiredParameterizedVisitorException extends RuntimeException {
+
+    private static final long serialVersionUID = 5009974222890249956L;
+
     @Override
     public synchronized Throwable fillInStackTrace() {
       return this;
