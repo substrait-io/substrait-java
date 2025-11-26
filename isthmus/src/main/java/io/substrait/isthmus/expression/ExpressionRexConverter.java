@@ -109,12 +109,110 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
-      throws RuntimeException {
+  public RexNode visit(Expression.UserDefinedAny expr, Context context) throws RuntimeException {
+    io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType customType =
+        io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
+            expr.getType());
+
     RexLiteral binaryLiteral =
         rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
-    RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
-    return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
+    return rexBuilder.makeReinterpretCast(customType, binaryLiteral, rexBuilder.makeLiteral(false));
+  }
+
+  @Override
+  public RexNode visit(Expression.UserDefinedStruct expr, Context context) throws RuntimeException {
+    return toUserDefinedStructLiteral(expr, context);
+  }
+
+  private RexLiteral toUserDefinedStructLiteral(Expression.UserDefinedStruct expr, Context context) {
+    java.util.List<org.apache.calcite.rel.type.RelDataType> fieldTypes =
+        new java.util.ArrayList<>(expr.fields().size());
+    java.util.List<RexLiteral> fieldLiterals = new java.util.ArrayList<>(expr.fields().size());
+
+    for (Expression.Literal field : expr.fields()) {
+      fieldTypes.add(toStructFieldType(field));
+      fieldLiterals.add(literalToRexLiteral(field, context));
+    }
+
+    java.util.List<String> fieldNames =
+        java.util.stream.IntStream.range(0, expr.fields().size())
+            .mapToObj(i -> "f" + i)
+            .collect(java.util.stream.Collectors.toList());
+
+    io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType customType =
+        new io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedStructType(
+            expr.urn(),
+            expr.name(),
+            expr.typeParameters(),
+            expr.nullable(),
+            fieldTypes,
+            fieldNames);
+
+    return (RexLiteral) rexBuilder.makeLiteral(fieldLiterals, customType, false);
+  }
+
+  private org.apache.calcite.rel.type.RelDataType toStructFieldType(Expression.Literal field) {
+    if (field instanceof Expression.UserDefinedAny) {
+      io.substrait.type.Type.UserDefined userDefinedType =
+          (io.substrait.type.Type.UserDefined) field.getType();
+      return io.substrait.isthmus.type.SubstraitUserDefinedType.SubstraitUserDefinedAnyType.from(
+          userDefinedType);
+    }
+    return typeConverter.toCalcite(typeFactory, field.getType());
+  }
+
+  private RexLiteral toStructFieldLiteral(Expression.Literal field, Context context) {
+    return literalToRexLiteral(field, context);
+  }
+
+  private RexLiteral literalToRexLiteral(Expression.Literal literal, Context context) {
+    if (literal instanceof Expression.UserDefinedAny) {
+      Expression.UserDefinedAny userDefinedAny = (Expression.UserDefinedAny) literal;
+      org.apache.calcite.avatica.util.ByteString bytes =
+          new org.apache.calcite.avatica.util.ByteString(userDefinedAny.value().toByteArray());
+      return rexBuilder.makeBinaryLiteral(bytes);
+    }
+
+    if (literal instanceof Expression.UserDefinedStruct) {
+      return toUserDefinedStructLiteral((Expression.UserDefinedStruct) literal, context);
+    }
+
+    if (literal instanceof Expression.StructLiteral) {
+      java.util.List<RexLiteral> fieldValues =
+          new java.util.ArrayList<>(((Expression.StructLiteral) literal).fields().size());
+      for (Expression.Literal child : ((Expression.StructLiteral) literal).fields()) {
+        fieldValues.add(literalToRexLiteral(child, context));
+      }
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              fieldValues, typeConverter.toCalcite(typeFactory, literal.getType()), false);
+    }
+
+    if (literal instanceof Expression.ListLiteral) {
+      java.util.List<RexLiteral> elements =
+          new java.util.ArrayList<>(((Expression.ListLiteral) literal).values().size());
+      for (Expression.Literal child : ((Expression.ListLiteral) literal).values()) {
+        elements.add(literalToRexLiteral(child, context));
+      }
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              elements, typeConverter.toCalcite(typeFactory, literal.getType()), false);
+    }
+
+    if (literal instanceof Expression.EmptyListLiteral) {
+      return (RexLiteral)
+          rexBuilder.makeLiteral(
+              java.util.Collections.emptyList(),
+              typeConverter.toCalcite(typeFactory, literal.getType()),
+              false);
+    }
+
+    RexNode rexField = literal.accept(this, context);
+    if (!(rexField instanceof RexLiteral)) {
+      throw new IllegalArgumentException(
+          "Expected literal when converting UserDefinedStruct field but found " + rexField);
+    }
+    return (RexLiteral) rexField;
   }
 
   @Override
