@@ -30,7 +30,7 @@ public abstract class TestBase {
       new ProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   protected ExpressionProtoConverter expressionProtoConverter =
-      new ExpressionProtoConverter(functionCollector, relProtoConverter);
+      relProtoConverter.getExpressionProtoConverter();
 
   protected ProtoExpressionConverter protoExpressionConverter =
       new ProtoExpressionConverter(

@@ -400,11 +400,11 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
      * vector<i32>} or custom types like {@code FixedArray<100>}. Each parameter in the list can be
      * either a type (like {@code i32}) or a value (like the integer {@code 100}).
      *
-     * <p>Unlike built-in parameterized types ({@link Map}, {@link ListType}, {@link Decimal}),
-     * which have fixed, known schemas with concrete typed fields, user-defined types have variable,
-     * unknown schemas. This is why UserDefined uses a generic {@link Parameter} list that can hold
-     * any mix of types or values, while other parameterized types use concrete fields like {@code
-     * Type key()} or {@code int precision()}.
+     * <p>Unlike built-in parameterized types ({@link Type.Map}, {@link Type.ListType}, {@link
+     * Type.Decimal}), which have fixed, known schemas with concrete typed fields, user-defined
+     * types have variable, unknown schemas. This is why UserDefined uses a generic {@link
+     * Parameter} list that can hold any mix of types or values, while other parameterized types use
+     * concrete fields like {@code Type key()} or {@code int precision()}.
      *
      * <p>For example, a user-defined {@code vector} type parameterized by {@code i32} would have
      * one type parameter containing the {@code i32} type definition, while a {@code FixedArray}

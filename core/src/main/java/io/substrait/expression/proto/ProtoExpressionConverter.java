@@ -497,25 +497,21 @@ public class ProtoExpressionConverter {
               lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
           String urn = type.urn();
           String name = type.name();
+          List<io.substrait.type.Type.Parameter> typeParameters =
+              userDefinedLiteral.getTypeParametersList().stream()
+                  .map(protoTypeConverter::from)
+                  .collect(Collectors.toList());
 
           switch (userDefinedLiteral.getValCase()) {
             case VALUE:
               return ExpressionCreator.userDefinedLiteralAny(
-                  literal.getNullable(),
-                  urn,
-                  name,
-                  userDefinedLiteral.getTypeParametersList().stream()
-                      .map(protoTypeConverter::from)
-                      .collect(Collectors.toList()),
-                  userDefinedLiteral.getValue());
+                  literal.getNullable(), urn, name, typeParameters, userDefinedLiteral.getValue());
             case STRUCT:
               return ExpressionCreator.userDefinedLiteralStruct(
                   literal.getNullable(),
                   urn,
                   name,
-                  userDefinedLiteral.getTypeParametersList().stream()
-                      .map(protoTypeConverter::from)
-                      .collect(Collectors.toList()),
+                  typeParameters,
                   userDefinedLiteral.getStruct().getFieldsList().stream()
                       .map(this::from)
                       .collect(Collectors.toList()));
