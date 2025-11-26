@@ -6,7 +6,9 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface TypeExpression {
 
-  class RequiredTypeExpressionVisitorException extends RuntimeException {}
+  class RequiredTypeExpressionVisitorException extends RuntimeException {
+    private static final long serialVersionUID = 8381558691397737963L;
+  }
 
   <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
 
