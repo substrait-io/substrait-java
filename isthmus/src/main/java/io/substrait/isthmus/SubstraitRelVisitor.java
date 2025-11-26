@@ -25,6 +25,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.ImmutableMeasure.Builder;
 import io.substrait.relation.Join;
@@ -35,17 +36,20 @@ import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
@@ -58,8 +62,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
 
@@ -279,16 +285,65 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     List<Grouping> groupings =
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
-    List<Measure> aggCalls =
+    // get GROUP_ID() function calls
+    List<AggregateCall> groupIdCalls =
         aggregate.getAggCallList().stream()
+            .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
+            .collect(Collectors.toList());
+
+    List<AggregateCall> filteredAggCalls =
+        aggregate.getAggCallList().stream()
+            // remove GROUP_ID() function calls
+            .filter(c -> !groupIdCalls.contains(c))
+            .collect(Collectors.toList());
+
+    List<Measure> aggCalls =
+        filteredAggCalls.stream()
             .map(c -> fromAggCall(aggregate.getInput(), input.getRecordType(), c))
             .collect(Collectors.toList());
 
-    return Aggregate.builder()
-        .input(input)
-        .addAllGroupings(groupings)
-        .addAllMeasures(aggCalls)
-        .build();
+    ImmutableAggregate.Builder builder =
+        Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(aggCalls);
+
+    if (groupings.size() > 1) {
+      // remove the grouping set index if there was no explicit GROUP_ID() function call
+      if (groupIdCalls.isEmpty()) {
+        int groupingExprSize =
+            Math.toIntExact(
+                groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
+        builder.remap(Remap.offset(0, groupingExprSize + aggCalls.size()));
+      } else {
+        // remap grouping set index at the field positions where the GROUP_ID() function calls were
+        final int groupingFieldCount =
+            Math.toIntExact(groupings.stream().flatMap(g -> g.getExpressions().stream()).count());
+        final int filterAggCallCount = aggCalls.size();
+        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
+
+        final List<Integer> remap =
+            IntStream.range(0, groupingFieldCount)
+                .mapToObj(i -> i)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
+          AggregateCall aggCall = aggregate.getAggCallList().get(i);
+          if (filteredAggCalls.contains(aggCall)) {
+            remap.add(
+                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
+          } else if (groupIdCalls.contains(aggCall)) {
+            remap.add(i + groupingFieldCount, groupingSetIndex);
+          } else {
+            // this should never get triggered
+            throw new IllegalStateException(
+                "encountered AggregateCall that is neither in filteredAggCalls nor in groupIdCalls"
+                    + aggCall);
+          }
+        }
+
+        builder.remap(Remap.of(remap));
+      }
+    }
+
+    return builder.build();
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {
@@ -421,17 +476,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         {
           assert modify.getTable() != null;
 
-          Expression condition;
-          if (modify.getInput() instanceof org.apache.calcite.rel.core.Filter) {
-            org.apache.calcite.rel.core.Filter filter =
-                (org.apache.calcite.rel.core.Filter) modify.getInput();
+          RelNode input = modify.getInput();
+          final Expression condition;
+          if (input instanceof org.apache.calcite.rel.core.Filter) {
+            org.apache.calcite.rel.core.Filter filter = (org.apache.calcite.rel.core.Filter) input;
             condition = toExpression(filter.getCondition());
           } else {
             condition = Expression.BoolLiteral.builder().nullable(false).value(true).build();
           }
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
-          List<RexNode> sourceExpressions = modify.getSourceExpressionList();
+          List<RexNode> sourceExpressions = getSourceExpressions(modify);
           List<String> allTableColumnNames = modify.getTable().getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
@@ -465,6 +520,36 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       default:
         return super.visit(modify);
     }
+  }
+
+  private List<RexNode> getSourceExpressions(TableModify modify) {
+    List<RexNode> results = modify.getSourceExpressionList();
+    if (results == null) {
+      return Collections.emptyList();
+    }
+
+    RelNode input = modify.getInput();
+    if (input instanceof org.apache.calcite.rel.core.Project) {
+      return resolveProjectedRefs(results, (org.apache.calcite.rel.core.Project) input);
+    }
+
+    return results;
+  }
+
+  private List<RexNode> resolveProjectedRefs(
+      List<RexNode> expressions, org.apache.calcite.rel.core.Project project) {
+    List<RexNode> projects = project.getProjects();
+    return expressions.stream()
+        .map(
+            expression -> {
+              if (expression instanceof RexInputRef) {
+                int refIndex = ((RexInputRef) expression).getIndex();
+                return projects.get(refIndex);
+              }
+
+              return expression;
+            })
+        .collect(Collectors.toList());
   }
 
   private NamedStruct getSchema(final RelNode queryRelRoot) {
@@ -514,7 +599,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 
-  private void popFieldAccessDepthMap(RelNode root) {
+  protected void popFieldAccessDepthMap(RelNode root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
     resolver.apply(root);
     fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
@@ -534,14 +619,39 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using default features.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
+   *
+   * @param relRoot The Calcite RelRoot to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @return The resulting Substrait Plan.Root.
+   */
   public static Plan.Root convert(RelRoot relRoot, SimpleExtension.ExtensionCollection extensions) {
     return convert(relRoot, extensions, FEATURES_DEFAULT);
   }
 
-  public static Plan.Root convert(
-      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features);
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor.
+   *
+   * <p>This is the main conversion entry point for a complete plan. It applies the provided {@link
+   * SubstraitRelVisitor} to the final projected {@link RelNode} from the {@code relRoot}, and wraps
+   * the resulting {@link Rel} in a {@link Plan.Root}.
+   *
+   * <p>This method also correctly extracts the final output field names, paying special attention
+   * to nested types (structs, maps) via the visitor's type converter, rather than using the names
+   * from {@code relRoot.validatedRowType} directly.
+   *
+   * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete, optimized
+   *     plan.
+   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
+   *     behavior.
+   * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
+   *     output names.
+   */
+  public static Plan.Root convert(RelRoot relRoot, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
@@ -551,15 +661,81 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Plan.Root.builder().input(rel).names(names).build();
   }
 
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using the specified
+   * features.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
+   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
+   *
+   * @param relRoot The Calcite RelRoot to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @return The resulting Substrait Plan.Root.
+   */
+  public static Plan.Root convert(
+      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    return convert(
+        relRoot,
+        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features));
+  }
+
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using default features.
+   *
+   * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
+   * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection)}.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @return The resulting Substrait Rel.
+   */
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
     return convert(relNode, extensions, FEATURES_DEFAULT);
   }
 
-  public static Rel convert(
-      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    SubstraitRelVisitor visitor =
-        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features);
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using a custom visitor.
+   *
+   * <p>This is the main conversion entry point for a partial plan or a single node (and its
+   * children). It applies the provided {@link SubstraitRelVisitor} to the given {@code relNode}.
+   *
+   * <p>This method does not wrap the result in a {@link Plan.Root} or extract output names. For
+   * that, use {@link #convert(RelRoot, SubstraitRelVisitor)}.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
+   *     behavior.
+   * @return The resulting Substrait Rel.
+   */
+  public static Rel convert(RelNode relNode, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relNode);
     return visitor.apply(relNode);
+  }
+
+  /**
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using the specified features.
+   *
+   * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
+   * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)}.
+   *
+   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
+   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
+   *
+   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param extensions The extension collection to use for the conversion.
+   * @param features The feature board specifying enabled Substrait features.
+   * @return The resulting Substrait Rel.
+   */
+  public static Rel convert(
+      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
+    return convert(
+        relNode,
+        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features));
   }
 }

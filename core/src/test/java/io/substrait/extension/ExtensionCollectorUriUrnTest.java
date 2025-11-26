@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.proto.Plan;
 import org.junit.jupiter.api.Test;
 
-public class ExtensionCollectorUriUrnTest {
+class ExtensionCollectorUriUrnTest {
 
   @Test
-  public void testExtensionCollectorScalarFuncWithoutURI() {
+  void testExtensionCollectorScalarFuncWithoutURI() {
     String uri = "test://uri";
     BidiMap<String, String> uriUrnMap = new BidiMap<String, String>();
     uriUrnMap.put(uri, "extension:test:basic");

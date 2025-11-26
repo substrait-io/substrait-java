@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class Substrait2SqlTest extends PlanTestBase {
+class Substrait2SqlTest extends PlanTestBase {
   private void assertSqlRoundTripViaPojoAndProto(String inputSql) {
     Plan plan =
         assertDoesNotThrow(() -> toSubstraitPlan(inputSql, TPCH_CATALOG), "SQL to Substrait POJO");
@@ -26,20 +26,20 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTest() throws Exception {
+  void simpleTest() throws Exception {
     String query = "select p_size  from part where p_partkey > cast(100 as bigint)";
     assertSqlSubstraitRelRoundTrip(query);
   }
 
   @Test
-  public void simpleTest2() throws Exception {
+  void simpleTest2() throws Exception {
     String query =
         "select l_partkey, l_discount from lineitem where l_orderkey > cast(100 as bigint)";
     assertSqlSubstraitRelRoundTrip(query);
   }
 
   @Test
-  public void simpleTestDateInterval() throws Exception {
+  void simpleTestDateInterval() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' ");
     assertSqlSubstraitRelRoundTrip(
@@ -51,13 +51,13 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestDecimal() throws Exception {
+  void simpleTestDecimal() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0 from lineitem where l_shipdate < date '1998-01-01' ");
   }
 
   @Test
-  public void simpleJoin() throws Exception {
+  void simpleJoin() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0, o_orderkey from lineitem join orders on l_orderkey = o_orderkey where l_shipdate < date '1998-01-01' ");
     assertSqlSubstraitRelRoundTrip(
@@ -69,7 +69,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestAgg() throws Exception {
+  void simpleTestAgg() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey, count(l_tax), COUNT(distinct l_discount) from lineitem group by l_partkey");
 
@@ -79,7 +79,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestGroupingSets() throws Exception {
+  void simpleTestGroupingSets() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
     assertSqlSubstraitRelRoundTrip(
@@ -92,6 +92,14 @@ public class Substrait2SqlTest extends PlanTestBase {
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate, ()), l_linestatus");
     assertSqlSubstraitRelRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), (l_orderkey, L_COMMITDATE, l_linestatus), l_shipdate, ())");
+
+    // GROUP_ID()
+    assertSqlSubstraitRelRoundTrip(
+        "select sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
+    assertSqlSubstraitRelRoundTrip(
+        "select group_id(), sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
+    assertSqlSubstraitRelRoundTrip(
+        "select group_id(), sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
   }
 
   @Test
@@ -101,7 +109,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestAggFilter() throws Exception {
+  void simpleTestAggFilter() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select sum(l_tax) filter(WHERE l_orderkey > l_partkey) from lineitem");
     // cast is added to avoid the difference by implicit cast
@@ -110,30 +118,30 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestAggNoGB() throws Exception {
+  void simpleTestAggNoGB() throws Exception {
     assertSqlSubstraitRelRoundTrip("select count(l_tax), count(distinct l_discount) from lineitem");
   }
 
   @Test
-  public void simpleTestAgg2() throws Exception {
+  void simpleTestAgg2() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey, sum(l_tax), sum(distinct l_tax), avg(l_discount), avg(distinct l_discount) from lineitem group by l_partkey");
   }
 
   @Test
-  public void simpleTestAgg3() throws Exception {
+  void simpleTestAgg3() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey, sum(l_extendedprice * (1.0 - l_discount)) from lineitem group by l_partkey");
   }
 
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
-  public void setTest(Set.SetOp op, boolean multi) throws Exception {
+  void setTest(Set.SetOp op, boolean multi) throws Exception {
     assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test
-  public void tpch_q1_variant() throws Exception {
+  void tpch_q1_variant() throws Exception {
     // difference from tpch_q1 : 1) remove order by clause; 2) remove interval date literal
     assertSqlSubstraitRelRoundTrip(
         "select\n"
@@ -157,7 +165,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleTestApproxCountDistinct() throws Exception {
+  void simpleTestApproxCountDistinct() throws Exception {
     String query = "select approx_count_distinct(l_tax)  from lineitem";
     RelRoot relRoot = assertSqlSubstraitRelRoundTrip(query);
     RelNode relNode = relRoot.project();
@@ -171,7 +179,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleOrderByClause() throws Exception {
+  void simpleOrderByClause() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select l_partkey from lineitem where l_shipdate < date '1998-01-01' order by l_shipdate, l_discount");
     assertSqlSubstraitRelRoundTrip(
@@ -189,7 +197,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void simpleStringOpTest() throws Exception {
+  void simpleStringOpTest() throws Exception {
     assertSqlSubstraitRelRoundTrip("select substring(l_comment, 1, 5) from lineitem");
 
     assertSqlSubstraitRelRoundTrip("select lower(l_comment) from lineitem");
@@ -202,7 +210,7 @@ public class Substrait2SqlTest extends PlanTestBase {
   }
 
   @Test
-  public void caseWhenTest() throws Exception {
+  void caseWhenTest() throws Exception {
     assertSqlSubstraitRelRoundTrip(
         "select case when p_size > 100 then 'large' when p_size > 50 then 'medium' else 'small' end from part");
   }

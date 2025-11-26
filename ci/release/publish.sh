@@ -7,5 +7,4 @@ set -euo pipefail
 git submodule foreach 'git fetch --unshallow || true'
 
 ./gradlew clean
-./gradlew publishAllPublicationsToStagingRepository
-./gradlew jreleaserDeploy
+./gradlew publishAggregationToCentralPortal

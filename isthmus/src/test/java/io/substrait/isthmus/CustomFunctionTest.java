@@ -40,10 +40,10 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /** Verify that custom functions can convert from Substrait to Calcite and back. */
-public class CustomFunctionTest extends PlanTestBase {
+class CustomFunctionTest extends PlanTestBase {
 
   // Define custom functions in a "functions_custom.yaml" extension
-  static final String NAMESPACE = "extension:substrait:functions_custom";
+  static final String URN = "extension:substrait:functions_custom";
   static final String FUNCTIONS_CUSTOM;
 
   static {
@@ -63,8 +63,8 @@ public class CustomFunctionTest extends PlanTestBase {
   // Create user-defined types
   static final String aTypeName = "a_type";
   static final String bTypeName = "b_type";
-  static final UserTypeFactory aTypeFactory = new UserTypeFactory(NAMESPACE, aTypeName);
-  static final UserTypeFactory bTypeFactory = new UserTypeFactory(NAMESPACE, bTypeName);
+  static final UserTypeFactory aTypeFactory = new UserTypeFactory(URN, aTypeName);
+  static final UserTypeFactory bTypeFactory = new UserTypeFactory(URN, bTypeName);
 
   // Mapper for user-defined types
   static final UserTypeMapper userTypeMapper =
@@ -73,10 +73,10 @@ public class CustomFunctionTest extends PlanTestBase {
         @Override
         public Type toSubstrait(RelDataType relDataType) {
           if (aTypeFactory.isTypeFromFactory(relDataType)) {
-            return TypeCreator.of(relDataType.isNullable()).userDefined(NAMESPACE, aTypeName);
+            return TypeCreator.of(relDataType.isNullable()).userDefined(URN, aTypeName);
           }
           if (bTypeFactory.isTypeFromFactory(relDataType)) {
-            return TypeCreator.of(relDataType.isNullable()).userDefined(NAMESPACE, bTypeName);
+            return TypeCreator.of(relDataType.isNullable()).userDefined(URN, bTypeName);
           }
           return null;
         }
@@ -84,7 +84,7 @@ public class CustomFunctionTest extends PlanTestBase {
         @Nullable
         @Override
         public RelDataType toCalcite(Type.UserDefined type) {
-          if (type.urn().equals(NAMESPACE)) {
+          if (type.urn().equals(URN)) {
             if (type.name().equals(aTypeName)) {
               return aTypeFactory.createCalcite(type.nullable());
             }
@@ -294,9 +294,7 @@ public class CustomFunctionTest extends PlanTestBase {
     Rel rel =
         b.project(
             input ->
-                List.of(
-                    b.scalarFn(
-                        NAMESPACE, "custom_scalar:str", R.STRING, b.fieldReference(input, 0))),
+                List.of(b.scalarFn(URN, "custom_scalar:str", R.STRING, b.fieldReference(input, 0))),
             b.remap(1),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING)));
 
@@ -311,8 +309,7 @@ public class CustomFunctionTest extends PlanTestBase {
         b.project(
             input ->
                 List.of(
-                    b.scalarFn(
-                        NAMESPACE, "custom_scalar_any:any", R.STRING, b.fieldReference(input, 0))),
+                    b.scalarFn(URN, "custom_scalar_any:any", R.STRING, b.fieldReference(input, 0))),
             b.remap(1),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
@@ -328,10 +325,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
-                        "custom_scalar_any_to_any:any",
-                        R.FP64,
-                        b.fieldReference(input, 0))),
+                        URN, "custom_scalar_any_to_any:any", R.FP64, b.fieldReference(input, 0))),
             b.remap(1),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.FP64)));
 
@@ -347,7 +341,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_any1any1_to_any1:any_any",
                         R.FP64,
                         b.fieldReference(input, 0),
@@ -367,7 +361,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_any1any1_to_any1:any_any",
                         R.FP64,
                         b.fieldReference(input, 0),
@@ -391,7 +385,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_any1any2_to_any2:any_any",
                         R.STRING,
                         b.fieldReference(input, 0),
@@ -411,7 +405,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_listany_to_listany:list",
                         R.list(R.I64),
                         b.fieldReference(input, 0))),
@@ -430,7 +424,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_listany_any_to_listany:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0),
@@ -451,7 +445,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_liststring_to_liststring:list",
                         R.list(R.STRING),
                         b.fieldReference(input, 0))),
@@ -470,7 +464,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_liststring_any_to_liststring:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0),
@@ -491,7 +485,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0),
@@ -516,7 +510,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0))),
@@ -535,7 +529,7 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "custom_scalar_liststring_anyvariadic1_to_liststring:list_any",
                         R.list(R.STRING),
                         b.fieldReference(input, 0),
@@ -560,7 +554,7 @@ public class CustomFunctionTest extends PlanTestBase {
                 List.of(
                     b.measure(
                         b.aggregateFn(
-                            NAMESPACE, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0)))),
+                            URN, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0)))),
             b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
@@ -577,13 +571,12 @@ public class CustomFunctionTest extends PlanTestBase {
             input ->
                 List.of(
                     b.scalarFn(
-                        NAMESPACE,
+                        URN,
                         "to_b_type:u!a_type",
-                        R.userDefined(NAMESPACE, "b_type"),
+                        R.userDefined(URN, "b_type"),
                         b.fieldReference(input, 0))),
             b.remap(1),
-            b.namedScan(
-                List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
+            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -594,18 +587,14 @@ public class CustomFunctionTest extends PlanTestBase {
   void customTypesLiteralInFunctionsRoundtrip() {
     Builder bldr = Expression.Literal.newBuilder();
     Any anyValue = Any.pack(bldr.setI32(10).build());
-    UserDefinedLiteral val =
-        ExpressionCreator.userDefinedLiteral(false, NAMESPACE, "a_type", anyValue);
+    UserDefinedLiteral val = ExpressionCreator.userDefinedLiteral(false, URN, "a_type", anyValue);
 
     Rel rel1 =
         b.project(
             input ->
-                List.of(
-                    b.scalarFn(
-                        NAMESPACE, "to_b_type:u!a_type", R.userDefined(NAMESPACE, "b_type"), val)),
+                List.of(b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
             b.remap(1),
-            b.namedScan(
-                List.of("example"), List.of("a"), List.of(N.userDefined(NAMESPACE, "a_type"))));
+            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel1);
     Rel rel2 = calciteToSubstrait.apply(calciteRel);

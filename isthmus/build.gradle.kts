@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
   `maven-publish`
   signing
@@ -8,7 +6,7 @@ plugins {
   alias(libs.plugins.shadow)
   alias(libs.plugins.spotless)
   alias(libs.plugins.protobuf)
-  alias(libs.plugins.jreleaser)
+  alias(libs.plugins.nmcp)
   id("substrait.java-conventions")
 }
 
@@ -52,16 +50,12 @@ publishing {
       val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
-    maven {
-      name = "staging"
-      url = stagingRepositoryUrl
-    }
   }
 }
 
 signing {
   setRequired({
-    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToStagingRepository")
+    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToNmcpRepository")
   })
   val signingKeyId =
     System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
@@ -76,25 +70,8 @@ signing {
   sign(publishing.publications["maven-publish"])
 }
 
-jreleaser {
-  gitRootSearch = true
-  deploy {
-    maven {
-      mavenCentral {
-        register("sonatype") {
-          active = org.jreleaser.model.Active.ALWAYS
-          url = "https://central.sonatype.com/api/v1/publisher"
-          sign = false
-          stagingRepository(file(stagingRepositoryUrl).toString())
-        }
-      }
-    }
-  }
-  release { github { enabled = false } }
-}
-
 java {
-  toolchain { languageVersion = JavaLanguageVersion.of(11) }
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }
@@ -147,7 +124,7 @@ dependencies {
 }
 
 tasks {
-  named<ShadowJar>("shadowJar") {
+  shadowJar {
     archiveBaseName.set("isthmus")
     manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
   }
@@ -160,9 +137,12 @@ tasks {
       attributes("Implementation-Title" to "isthmus")
     }
   }
-}
 
-tasks { build { dependsOn(shadowJar) } }
+  build { dependsOn(shadowJar) }
+
+  // Only set the compile release since JUnit 6 requires Java 17 to run tests.
+  compileJava { options.release = 11 }
+}
 
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
 

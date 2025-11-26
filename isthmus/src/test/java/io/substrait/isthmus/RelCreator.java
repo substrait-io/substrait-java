@@ -1,10 +1,7 @@
 package io.substrait.isthmus;
 
 import java.util.Arrays;
-import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
@@ -38,19 +35,20 @@ public class RelCreator {
   }
 
   public RelCreator(CatalogReader catalogReader) {
-    RelDataTypeFactory factory = new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
-    CalciteConnectionConfig config =
-        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-
     if (catalogReader == null) {
       CalciteSchema schema = CalciteSchema.createRootSchema(false);
-      catalog = new CalciteCatalogReader(schema, Arrays.asList(), factory, config);
+      catalog =
+          new CalciteCatalogReader(
+              schema,
+              Arrays.asList(),
+              SubstraitTypeSystem.TYPE_FACTORY,
+              SqlConverterBase.CONNECTION_CONFIG);
     } else {
       catalog = catalogReader;
     }
 
     VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.EMPTY_CONTEXT);
-    cluster = RelOptCluster.create(planner, new RexBuilder(factory));
+    cluster = RelOptCluster.create(planner, new RexBuilder(SubstraitTypeSystem.TYPE_FACTORY));
   }
 
   public RelRoot parse(String sql) {

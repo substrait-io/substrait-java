@@ -24,11 +24,11 @@ import org.junit.jupiter.api.Test;
  *   <li>Roundtrip between POJO and Proto
  * </ul>
  */
-public class TypeExtensionTest {
+class TypeExtensionTest {
 
   static final TypeCreator R = TypeCreator.of(false);
 
-  static final String NAMESPACE = "extension:test:custom_extensions";
+  static final String URN = "extension:test:custom_extensions";
   final SimpleExtension.ExtensionCollection extensionCollection;
 
   {
@@ -38,8 +38,8 @@ public class TypeExtensionTest {
   }
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
-  Type customType1 = b.userDefinedType(NAMESPACE, "customType1");
-  Type customType2 = b.userDefinedType(NAMESPACE, "customType2");
+  Type customType1 = b.userDefinedType(URN, "customType1");
+  Type customType2 = b.userDefinedType(URN, "customType2");
   final PlanProtoConverter planProtoConverter = new PlanProtoConverter();
   final ProtoPlanConverter protoPlanConverter = new ProtoPlanConverter(extensionCollection);
 
@@ -61,15 +61,12 @@ public class TypeExtensionTest {
                         Stream.of(
                                 b.fieldReference(input, 0),
                                 b.scalarFn(
-                                    NAMESPACE,
+                                    URN,
                                     "scalar1:u!customType1",
                                     R.I64,
                                     b.fieldReference(input, 0)),
                                 b.scalarFn(
-                                    NAMESPACE,
-                                    "scalar2:i64",
-                                    customType2,
-                                    b.fieldReference(input, 1)))
+                                    URN, "scalar2:i64", customType2, b.fieldReference(input, 1)))
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
 
@@ -93,10 +90,7 @@ public class TypeExtensionTest {
                     input ->
                         Stream.of(
                                 b.scalarFn(
-                                    NAMESPACE,
-                                    "array_index:list_i64",
-                                    R.I64,
-                                    b.fieldReference(input, 0)))
+                                    URN, "array_index:list_i64", R.I64, b.fieldReference(input, 0)))
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
     io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);

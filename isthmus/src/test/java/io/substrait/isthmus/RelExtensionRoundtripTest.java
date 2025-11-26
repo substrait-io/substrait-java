@@ -41,7 +41,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Test;
 
-public class RelExtensionRoundtripTest extends PlanTestBase {
+class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionLeafRelDetailTest() {
     ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(1));

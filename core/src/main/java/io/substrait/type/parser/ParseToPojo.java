@@ -21,40 +21,39 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class ParseToPojo {
 
-  public static Type type(String namespace, SubstraitTypeParser.StartContext ctx) {
-    Visitor visitor = Visitor.simple(namespace);
+  public static Type type(String urn, SubstraitTypeParser.StartContext ctx) {
+    Visitor visitor = Visitor.simple(urn);
     return (Type) ctx.accept(visitor);
   }
 
   public static ParameterizedType parameterizedType(
-      String namespace, SubstraitTypeParser.StartContext ctx) {
-    return (ParameterizedType) ctx.accept(Visitor.parameterized(namespace));
+      String urn, SubstraitTypeParser.StartContext ctx) {
+    return (ParameterizedType) ctx.accept(Visitor.parameterized(urn));
   }
 
-  public static TypeExpression typeExpression(
-      String namespace, SubstraitTypeParser.StartContext ctx) {
-    return ctx.accept(Visitor.expression(namespace));
+  public static TypeExpression typeExpression(String urn, SubstraitTypeParser.StartContext ctx) {
+    return ctx.accept(Visitor.expression(urn));
   }
 
   public static class Visitor implements SubstraitTypeVisitor<TypeExpression> {
     private final VisitorType expressionType;
-    private final String namespace;
+    private final String urn;
 
-    public static Visitor simple(String namespace) {
-      return new Visitor(VisitorType.SIMPLE, namespace);
+    public static Visitor simple(String urn) {
+      return new Visitor(VisitorType.SIMPLE, urn);
     }
 
-    public static Visitor parameterized(String namespace) {
-      return new Visitor(VisitorType.PARAMETERIZED, namespace);
+    public static Visitor parameterized(String urn) {
+      return new Visitor(VisitorType.PARAMETERIZED, urn);
     }
 
-    public static Visitor expression(String namespace) {
-      return new Visitor(VisitorType.EXPRESSION, namespace);
+    public static Visitor expression(String urn) {
+      return new Visitor(VisitorType.EXPRESSION, urn);
     }
 
-    private Visitor(VisitorType exprType, String namespace) {
+    private Visitor(VisitorType exprType, String urn) {
       this.expressionType = exprType;
-      this.namespace = namespace;
+      this.urn = urn;
     }
 
     enum VisitorType {
@@ -199,7 +198,7 @@ public class ParseToPojo {
     @Override
     public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
       String name = ctx.Identifier().getSymbol().getText();
-      return withNull(ctx).userDefined(namespace, name);
+      return withNull(ctx).userDefined(urn, name);
     }
 
     @Override

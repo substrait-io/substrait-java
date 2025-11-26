@@ -16,12 +16,13 @@
  */
 package io.substrait.spark
 
+import io.substrait.spark.utils.Util
+
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.types._
 
 import io.substrait.`type`.{NamedStruct, Type, TypeVisitor}
 import io.substrait.function.TypeExpression
-import io.substrait.utils.Util
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -36,55 +37,55 @@ private class ToSparkType(dfsNames: Seq[String])
 
   var nameIdx: Int = 0 // where in dfsNames we're currently at
 
-  override def visit(expr: Type.I8): DataType = ByteType
-  override def visit(expr: Type.I16): DataType = ShortType
-  override def visit(expr: Type.I32): DataType = IntegerType
-  override def visit(expr: Type.I64): DataType = LongType
+  override def visit(expr: Type.I8): ByteType = ByteType
+  override def visit(expr: Type.I16): ShortType = ShortType
+  override def visit(expr: Type.I32): IntegerType = IntegerType
+  override def visit(expr: Type.I64): LongType = LongType
 
-  override def visit(expr: Type.FP32): DataType = FloatType
-  override def visit(expr: Type.FP64): DataType = DoubleType
+  override def visit(expr: Type.FP32): FloatType = FloatType
+  override def visit(expr: Type.FP64): DoubleType = DoubleType
 
-  override def visit(expr: Type.Decimal): DataType =
+  override def visit(expr: Type.Decimal): DecimalType =
     DecimalType(expr.precision(), expr.scale())
 
-  override def visit(expr: Type.Date): DataType = DateType
+  override def visit(expr: Type.Date): DateType = DateType
 
-  override def visit(expr: Type.Str): DataType = StringType
+  override def visit(expr: Type.Str): StringType = StringType
 
-  override def visit(expr: Type.Binary): DataType = BinaryType
+  override def visit(expr: Type.Binary): BinaryType = BinaryType
 
-  override def visit(expr: Type.FixedChar): DataType = StringType
+  override def visit(expr: Type.FixedChar): StringType = StringType
 
-  override def visit(expr: Type.VarChar): DataType = StringType
+  override def visit(expr: Type.VarChar): StringType = StringType
 
-  override def visit(expr: Type.Bool): DataType = BooleanType
+  override def visit(expr: Type.Bool): BooleanType = BooleanType
 
-  override def visit(expr: Type.PrecisionTimestamp): DataType = {
+  override def visit(expr: Type.PrecisionTimestamp): TimestampNTZType = {
     Util.assertMicroseconds(expr.precision())
     TimestampNTZType
   }
-  override def visit(expr: Type.PrecisionTimestampTZ): DataType = {
+  override def visit(expr: Type.PrecisionTimestampTZ): TimestampType = {
     Util.assertMicroseconds(expr.precision())
     TimestampType
   }
 
-  override def visit(expr: Type.IntervalDay): DataType = {
+  override def visit(expr: Type.IntervalDay): DayTimeIntervalType = {
     Util.assertMicroseconds(expr.precision())
     DayTimeIntervalType.DEFAULT
   }
 
-  override def visit(expr: Type.IntervalYear): DataType = YearMonthIntervalType.DEFAULT
+  override def visit(expr: Type.IntervalYear): YearMonthIntervalType = YearMonthIntervalType.DEFAULT
 
-  override def visit(expr: Type.ListType): DataType =
+  override def visit(expr: Type.ListType): ArrayType =
     ArrayType(expr.elementType().accept(this), containsNull = expr.elementType().nullable())
 
-  override def visit(expr: Type.Map): DataType =
+  override def visit(expr: Type.Map): MapType =
     MapType(
       expr.key().accept(this),
       expr.value().accept(this),
       valueContainsNull = expr.value().nullable())
 
-  override def visit(expr: Type.Struct): DataType =
+  override def visit(expr: Type.Struct): StructType =
     StructType(
       expr.fields.asScala.zipWithIndex
         .map {

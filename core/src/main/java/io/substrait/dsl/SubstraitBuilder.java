@@ -17,7 +17,9 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
 import io.substrait.plan.Plan;
+import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
+import io.substrait.relation.Aggregate.Measure;
 import io.substrait.relation.Cross;
 import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
@@ -25,6 +27,8 @@ import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
@@ -317,6 +321,92 @@ public class SubstraitBuilder {
         .build();
   }
 
+  public NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input) {
+    return namedWrite(tableName, columnNames, op, createMode, outputMode, input, Optional.empty());
+  }
+
+  public NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input,
+      Rel.Remap remap) {
+    return namedWrite(
+        tableName, columnNames, op, createMode, outputMode, input, Optional.of(remap));
+  }
+
+  private NamedWrite namedWrite(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      AbstractWriteRel.WriteOp op,
+      AbstractWriteRel.CreateMode createMode,
+      AbstractWriteRel.OutputMode outputMode,
+      Rel input,
+      Optional<Rel.Remap> remap) {
+    Type.Struct struct = input.getRecordType();
+    NamedStruct namedStruct = NamedStruct.of(columnNames, struct);
+    return NamedWrite.builder()
+        .names(tableName)
+        .tableSchema(namedStruct)
+        .operation(op)
+        .createMode(createMode)
+        .outputMode(outputMode)
+        .input(input)
+        .remap(remap)
+        .build();
+  }
+
+  public NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable) {
+    return namedUpdate(
+        tableName, columnNames, transformations, condition, nullable, Optional.empty());
+  }
+
+  public NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable,
+      Rel.Remap remap) {
+    return namedUpdate(
+        tableName, columnNames, transformations, condition, nullable, Optional.of(remap));
+  }
+
+  private NamedUpdate namedUpdate(
+      Iterable<String> tableName,
+      Iterable<String> columnNames,
+      List<NamedUpdate.TransformExpression> transformations,
+      Expression condition,
+      boolean nullable,
+      Optional<Rel.Remap> remap) {
+    List<Type> types =
+        transformations.stream()
+            .map(t -> t.getTransformation().getType())
+            .collect(Collectors.toList());
+    Type.Struct struct = Type.Struct.builder().fields(types).nullable(nullable).build();
+    NamedStruct namedStruct = NamedStruct.of(columnNames, struct);
+    return NamedUpdate.builder()
+        .names(tableName)
+        .tableSchema(namedStruct)
+        .transformations(transformations)
+        .condition(condition)
+        .remap(remap)
+        .build();
+  }
+
   public Project project(Function<Rel, Iterable<? extends Expression>> expressionsFn, Rel input) {
     return project(expressionsFn, Optional.empty(), input);
   }
@@ -479,9 +569,9 @@ public class SubstraitBuilder {
   // Aggregate Functions
 
   public AggregateFunctionInvocation aggregateFn(
-      String namespace, String key, Type outputType, Expression... args) {
+      String urn, String key, Type outputType, Expression... args) {
     SimpleExtension.AggregateFunctionVariant declaration =
-        extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getAggregateFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return AggregateFunctionInvocation.builder()
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
         .outputType(outputType)
@@ -508,6 +598,25 @@ public class SubstraitBuilder {
     return measure(
         AggregateFunctionInvocation.builder()
             .arguments(fieldReferences(input, field))
+            .outputType(R.I64)
+            .declaration(declaration)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
+  }
+
+  /**
+   * Returns a {@link Measure} representing the equivalent of a {@code COUNT(*)} SQL aggregation.
+   *
+   * @return the {@link Measure} representing {@code COUNT(*)}
+   */
+  public Measure countStar() {
+    final SimpleExtension.AggregateFunctionVariant declaration =
+        extensions.getAggregateFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC, "count:"));
+    return measure(
+        AggregateFunctionInvocation.builder()
             .outputType(R.I64)
             .declaration(declaration)
             .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
@@ -662,9 +771,9 @@ public class SubstraitBuilder {
   }
 
   public Expression.ScalarFunctionInvocation scalarFn(
-      String namespace, String key, Type outputType, FunctionArg... args) {
+      String urn, String key, Type outputType, FunctionArg... args) {
     SimpleExtension.ScalarFunctionVariant declaration =
-        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -673,7 +782,7 @@ public class SubstraitBuilder {
   }
 
   public Expression.WindowFunctionInvocation windowFn(
-      String namespace,
+      String urn,
       String key,
       Type outputType,
       Expression.AggregationPhase aggregationPhase,
@@ -683,7 +792,7 @@ public class SubstraitBuilder {
       WindowBound upperBound,
       Expression... args) {
     SimpleExtension.WindowFunctionVariant declaration =
-        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(namespace, key));
+        extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -698,8 +807,8 @@ public class SubstraitBuilder {
 
   // Types
 
-  public Type.UserDefined userDefinedType(String namespace, String typeName) {
-    return Type.UserDefined.builder().urn(namespace).name(typeName).nullable(false).build();
+  public Type.UserDefined userDefinedType(String urn, String typeName) {
+    return Type.UserDefined.builder().urn(urn).name(typeName).nullable(false).build();
   }
 
   // Misc

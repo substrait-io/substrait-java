@@ -1,7 +1,5 @@
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
-import org.gradle.api.provider.ValueSource
-import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.slf4j.LoggerFactory
 
@@ -14,7 +12,7 @@ plugins {
   alias(libs.plugins.protobuf)
   alias(libs.plugins.spotless)
   alias(libs.plugins.shadow)
-  alias(libs.plugins.jreleaser)
+  alias(libs.plugins.nmcp)
   id("substrait.java-conventions")
 }
 
@@ -58,16 +56,12 @@ publishing {
       val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
     }
-    maven {
-      name = "staging"
-      url = stagingRepositoryUrl
-    }
   }
 }
 
 signing {
   setRequired({
-    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToStagingRepository")
+    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToNmcpRepository")
   })
   val signingKeyId =
     System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
@@ -80,23 +74,6 @@ signing {
       ?: extra["SIGNING_KEY"].toString()
   useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
   sign(publishing.publications["maven-publish"])
-}
-
-jreleaser {
-  gitRootSearch = true
-  deploy {
-    maven {
-      mavenCentral {
-        register("sonatype") {
-          active = org.jreleaser.model.Active.ALWAYS
-          url = "https://central.sonatype.com/api/v1/publisher"
-          sign = false
-          stagingRepository(file(stagingRepositoryUrl).toString())
-        }
-      }
-    }
-  }
-  release { github { enabled = false } }
 }
 
 // This allows specifying deps to be shadowed so that they don't get included in the POM file
@@ -213,8 +190,6 @@ tasks.register("writeManifest") {
   }
 }
 
-tasks.named("compileJava") { dependsOn("writeManifest") }
-
 tasks {
   shadowJar {
     archiveClassifier.set("") // to override ".jar" instead of producing "-all.jar"
@@ -226,12 +201,17 @@ tasks {
   }
 
   jar { manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") } }
+
+  // Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run.
+  // Only set the compile release since JUnit 6 requires Java 17 to run tests.
+  compileJava {
+    options.release = 8
+    dependsOn("writeManifest")
+  }
 }
 
-// Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run
-tasks.withType<JavaCompile>().configureEach { options.release = 8 }
-
 java {
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
   withJavadocJar()
   withSourcesJar()
 }

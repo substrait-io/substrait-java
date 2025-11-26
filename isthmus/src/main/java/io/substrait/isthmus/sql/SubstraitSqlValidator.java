@@ -8,7 +8,7 @@ import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
 public class SubstraitSqlValidator extends SqlValidatorImpl {
 
-  static SqlValidator.Config CONFIG = Config.DEFAULT;
+  static SqlValidator.Config CONFIG = Config.DEFAULT.withIdentifierExpansion(true);
 
   public SubstraitSqlValidator(Prepare.CatalogReader catalogReader) {
     super(SubstraitOperatorTable.INSTANCE, catalogReader, catalogReader.getTypeFactory(), CONFIG);

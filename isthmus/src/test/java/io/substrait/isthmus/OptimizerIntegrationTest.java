@@ -15,7 +15,7 @@ import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class OptimizerIntegrationTest extends PlanTestBase {
+class OptimizerIntegrationTest extends PlanTestBase {
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;

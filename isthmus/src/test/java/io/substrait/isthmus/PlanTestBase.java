@@ -27,10 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
-import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
@@ -425,8 +422,7 @@ public class PlanTestBase {
     return new CalciteCatalogReader(
         rootSchema,
         defaultSchema,
-        new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM),
-        CalciteConnectionConfig.DEFAULT.set(
-            CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString()));
+        SubstraitTypeSystem.TYPE_FACTORY,
+        SqlConverterBase.CONNECTION_CONFIG);
   }
 }

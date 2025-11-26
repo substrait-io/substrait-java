@@ -5,7 +5,7 @@ set -euo pipefail
 export GPG_TTY=$(tty)
 
 echo "Validate Central Publisher API credentials."
-BEARER=$(printf "%s:%s" "${SONATYPE_USER}" "${SONATYPE_PASSWORD}" | base64)
+BEARER=$(printf "%s:%s" "${MAVENCENTRAL_USERNAME}" "${MAVENCENTRAL_PASSWORD}" | base64)
 CODE=$(curl --request GET 'https://central.sonatype.com/api/v1/publisher/published?namespace=io.substrait&name=core&version=0.1.0' --header 'accept: application/json' --header "Authorization: Bearer ${BEARER}" -sSL -w '%{http_code}' -o /dev/null)
 if [[ "$CODE" =~ ^2 ]]; then
     echo "Central Publisher API credentials configured successfully."

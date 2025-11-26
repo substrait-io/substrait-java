@@ -21,7 +21,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.junit.jupiter.api.Test;
 
-public class NestedStructQueryTest extends PlanTestBase {
+class NestedStructQueryTest extends PlanTestBase {
   private class TypeHelper {
     private final RelDataTypeFactory factory;
 
@@ -72,7 +72,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testNestedStruct() throws SqlParseException, IOException {
+  void testNestedStruct() throws SqlParseException, IOException {
     final Table table =
         new AbstractTable() {
           @Override
@@ -101,7 +101,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testNestedStruct2() throws SqlParseException, IOException {
+  void testNestedStruct2() throws SqlParseException, IOException {
     final Table table =
         new AbstractTable() {
           @Override
@@ -138,7 +138,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testNestedStruct3() throws SqlParseException, IOException {
+  void testNestedStruct3() throws SqlParseException, IOException {
     final Table table =
         new AbstractTable() {
           @Override
@@ -180,7 +180,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testNestedList() throws SqlParseException, IOException {
+  void testNestedList() throws SqlParseException, IOException {
     final Table table =
         new AbstractTable() {
           @Override
@@ -216,7 +216,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testNestedList2() throws SqlParseException, IOException {
+  void testNestedList2() throws SqlParseException, IOException {
     final Table table =
         new AbstractTable() {
           @Override
@@ -266,7 +266,7 @@ public class NestedStructQueryTest extends PlanTestBase {
   }
 
   @Test
-  public void testProtobufDoc() throws SqlParseException, IOException {
+  void testProtobufDoc() throws SqlParseException, IOException {
 
     final Table table =
         new AbstractTable() {

@@ -1,19 +1,19 @@
 [versions]
 antlr = "4.13.2"
-calcite = "1.40.0"
-classgraph = "4.8.181"
+calcite = "1.41.0"
+classgraph = "4.8.184"
 commons-lang3 = "[3.18.0,)"
 graal = "25.0.0"
-graal-plugin = "0.11.1"
-gradle-extensions = "2.0.0"
+graal-plugin = "0.11.3"
+gradle-extensions = "3.0.1"
 guava = "33.5.0-jre"
 httpclient5 = "5.5.1"
-immutables = "2.11.4"
-jackson = "2.20.0"
-jreleaser = "1.20.0"
+immutables = "2.11.7"
+jackson = "2.20.1"
 json-smart = "2.6.0"
 jspecify = "1.0.0"
-junit = "5.13.4"
+junit = "6.0.1"
+nmcp = "1.3.0"
 picocli = "4.7.7"
 protobuf-plugin = "0.9.5"
 protobuf = "3.25.8"
@@ -23,7 +23,8 @@ scalatestplus-junit5 = "3.2.19.0"
 shadow = "9.2.2"
 slf4j = "2.0.17"
 spark = "3.4.4"
-spotless = "7.2.1"
+spotless = "8.0.0"
+validator = "2.0.0"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
@@ -44,6 +45,7 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 jackson-datatype-jdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8" }
 jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml" }
+json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "validator"}
 json-smart = { module = "net.minidev:json-smart", version.ref = "json-smart" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -73,7 +75,8 @@ jackson = [ "jackson-databind", "jackson-annotations", "jackson-datatype-jdk8", 
 [plugins]
 graal = { id = "org.graalvm.buildtools.native", version.ref = "graal-plugin" }
 gradle-extensions = { id = "com.github.vlsi.gradle-extensions", version.ref = "gradle-extensions" }
-jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
+nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
+nmcp-aggregation = { id = "com.gradleup.nmcp.aggregation", version.ref = "nmcp" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

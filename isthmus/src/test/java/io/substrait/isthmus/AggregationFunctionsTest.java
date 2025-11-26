@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class AggregationFunctionsTest extends PlanTestBase {
+class AggregationFunctionsTest extends PlanTestBase {
 
   SubstraitBuilder b = new SubstraitBuilder(extensions);
 

@@ -35,8 +35,8 @@ import org.apache.calcite.util.TimestampString;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class CalciteLiteralTest extends CalciteObjs {
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+class CalciteLiteralTest extends CalciteObjs {
+  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   private final ScalarFunctionConverter scalarFunctionConverter =

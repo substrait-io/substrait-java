@@ -2,7 +2,8 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
@@ -24,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -44,6 +46,27 @@ import org.apache.calcite.sql.SqlOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Abstract base class for converting between Calcite {@link SqlOperator}s and Substrait function
+ * invocations.
+ *
+ * <p>This class handles bidirectional conversion:
+ *
+ * <ul>
+ *   <li><b>Calcite → Substrait:</b> Subclasses implement {@code convert()} methods to convert
+ *       Calcite calls to Substrait function invocations
+ *   <li><b>Substrait → Calcite:</b> {@link #getSqlOperatorFromSubstraitFunc} converts Substrait
+ *       function keys to Calcite {@link SqlOperator}s
+ * </ul>
+ *
+ * <p>When multiple functions with the same name and signature are passed into the constructor, a
+ * <b>last-wins precedence strategy</b> is used for resolution. The last function in the input list
+ * takes precedence during Calcite to Substrait conversion.
+ *
+ * @param <F> the function type (ScalarFunctionVariant, AggregateFunctionVariant, etc.)
+ * @param <T> the return type for Calcite→Substrait conversion
+ * @param <C> the call type being converted
+ */
 public abstract class FunctionConverter<
     F extends SimpleExtension.Function, T, C extends FunctionConverter.GenericCall> {
 
@@ -56,10 +79,32 @@ public abstract class FunctionConverter<
 
   protected final Multimap<String, SqlOperator> substraitFuncKeyToSqlOperatorMap;
 
+  /**
+   * Creates a FunctionConverter with the given functions.
+   *
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
+   *
+   * @param functions the list of function variants to register
+   * @param typeFactory the Calcite type factory
+   */
   public FunctionConverter(List<F> functions, RelDataTypeFactory typeFactory) {
     this(functions, Collections.EMPTY_LIST, typeFactory, TypeConverter.DEFAULT);
   }
 
+  /**
+   * Creates a FunctionConverter with the given functions and additional signatures.
+   *
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
+   *
+   * @param functions the list of function variants to register
+   * @param additionalSignatures additional Calcite operator signatures to map
+   * @param typeFactory the Calcite type factory
+   * @param typeConverter the type converter to use
+   */
   public FunctionConverter(
       List<F> functions,
       List<FunctionMappings.Sig> additionalSignatures,
@@ -74,9 +119,9 @@ public abstract class FunctionConverter<
     this.typeFactory = typeFactory;
     this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.create();
 
-    ArrayListMultimap<String, F> alm = ArrayListMultimap.<String, F>create();
+    ArrayListMultimap<String, F> nameToFn = ArrayListMultimap.<String, F>create();
     for (F f : functions) {
-      alm.put(f.name().toLowerCase(Locale.ROOT), f);
+      nameToFn.put(f.name().toLowerCase(Locale.ROOT), f);
     }
 
     Multimap<String, FunctionMappings.Sig> calciteOperators =
@@ -84,22 +129,23 @@ public abstract class FunctionConverter<
             .collect(
                 Multimaps.toMultimap(
                     FunctionMappings.Sig::name, Function.identity(), ArrayListMultimap::create));
-    Map<SqlOperator, FunctionFinder> matcherMap = new HashMap<>();
-    for (String key : alm.keySet()) {
+    IdentityHashMap<SqlOperator, FunctionFinder> matcherMap =
+        new IdentityHashMap<SqlOperator, FunctionFinder>();
+    for (String key : nameToFn.keySet()) {
       Collection<Sig> sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
         LOGGER.atDebug().log("No binding for function: {}", key);
       }
 
       for (Sig sig : sigs) {
-        List<F> implList = alm.get(key);
+        List<F> implList = nameToFn.get(key);
         if (!implList.isEmpty()) {
           matcherMap.put(sig.operator(), new FunctionFinder(key, sig.operator(), implList));
         }
       }
     }
 
-    for (Entry<String, F> entry : alm.entries()) {
+    for (Entry<String, F> entry : nameToFn.entries()) {
       String key = entry.getKey();
       F func = entry.getValue();
       for (FunctionMappings.Sig sig : calciteOperators.get(key)) {
@@ -110,6 +156,17 @@ public abstract class FunctionConverter<
     this.signatures = matcherMap;
   }
 
+  /**
+   * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
+   *
+   * <p>Given a Substrait function key (e.g., "concat:str_str") and output type, this method finds
+   * the corresponding Calcite {@link SqlOperator}. When multiple operators match, the output type
+   * is used to disambiguate.
+   *
+   * @param key the Substrait function key (function name with type signature)
+   * @param outputType the expected output type
+   * @return the matching {@link SqlOperator}, or empty if no match found
+   */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
     Map<SqlOperator, TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
@@ -153,7 +210,7 @@ public abstract class FunctionConverter<
     private final String substraitName;
     private final SqlOperator operator;
     private final List<F> functions;
-    private final Map<String, F> directMap;
+    private final ListMultimap<String, F> directMap;
     private final Optional<SingularArgumentMatcher<F>> singularInputType;
     private final Util.IntRange argRange;
 
@@ -166,7 +223,7 @@ public abstract class FunctionConverter<
               functions.stream().mapToInt(t -> t.getRange().getStartInclusive()).min().getAsInt(),
               functions.stream().mapToInt(t -> t.getRange().getEndExclusive()).max().getAsInt());
       this.singularInputType = getSingularInputType(functions);
-      ImmutableMap.Builder<String, F> directMap = ImmutableMap.builder();
+      ImmutableListMultimap.Builder<String, F> directMap = ImmutableListMultimap.builder();
       for (F func : functions) {
         String key = func.key();
         directMap.put(key, func);
@@ -340,6 +397,19 @@ public abstract class FunctionConverter<
       }
     }
 
+    /**
+     * Converts a Calcite call to a Substrait function invocation (Calcite → Substrait direction).
+     *
+     * <p>This method tries to find a matching Substrait function for the given Calcite call using
+     * direct signature matching, type coercion, and least-restrictive type resolution.
+     *
+     * <p>If multiple registered function extensions have the same name and signature, the last one
+     * in the list passed into the constructor will be matched.
+     *
+     * @param call the Calcite call to match
+     * @param topLevelConverter function to convert RexNode operands to Substrait Expressions
+     * @return the matched Substrait function binding, or empty if no match found
+     */
     public Optional<T> attemptMatch(C call, Function<RexNode, Expression> topLevelConverter) {
 
       /*
@@ -347,6 +417,9 @@ public abstract class FunctionConverter<
        * Not enough context here to construct a substrait EnumArg.
        * Once a FunctionVariant is resolved we can map the String Literal
        * to a EnumArg.
+       *
+       * Note that if there are multiple registered function extensions which can match a particular Call,
+       * the last one added to the extension collection will be matched.
        */
       List<RexNode> operandsList = call.getOperands().collect(Collectors.toList());
       List<Expression> operands =
@@ -367,7 +440,13 @@ public abstract class FunctionConverter<
               .findFirst();
 
       if (directMatchKey.isPresent()) {
-        F variant = directMap.get(directMatchKey.get());
+        List<F> variants = directMap.get(directMatchKey.get());
+        if (variants.isEmpty()) {
+
+          return Optional.empty();
+        }
+
+        F variant = variants.get(variants.size() - 1);
         variant.validateOutputType(operands, outputType);
         List<FunctionArg> funcArgs =
             IntStream.range(0, operandsList.size())

@@ -12,7 +12,7 @@ import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
 import org.junit.jupiter.api.Test;
 
-public class SimpleExtensionToSqlOperatorTest {
+class SimpleExtensionToSqlOperatorTest {
 
   @Test
   void test() throws IOException {

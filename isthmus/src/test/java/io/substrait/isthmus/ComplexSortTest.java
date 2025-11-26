@@ -19,7 +19,7 @@ import org.apache.calcite.util.Pair;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-public class ComplexSortTest extends PlanTestBase {
+class ComplexSortTest extends PlanTestBase {
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;

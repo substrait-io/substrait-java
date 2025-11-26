@@ -7,7 +7,7 @@ import java.util.List;
 import org.apache.calcite.prepare.Prepare;
 import org.junit.jupiter.api.Test;
 
-public class UdfSqlSubstraitTest extends PlanTestBase {
+class UdfSqlSubstraitTest extends PlanTestBase {
 
   private static final String CUSTOM_FUNCTION_PATH = "/extensions/scalar_functions_custom.yaml";
 
@@ -16,7 +16,7 @@ public class UdfSqlSubstraitTest extends PlanTestBase {
   }
 
   @Test
-  public void customUdfTest() throws Exception {
+  void customUdfTest() throws Exception {
 
     final Prepare.CatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(

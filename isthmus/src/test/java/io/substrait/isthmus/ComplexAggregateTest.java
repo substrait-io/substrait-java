@@ -17,8 +17,8 @@ import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
-public class ComplexAggregateTest extends PlanTestBase {
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+class ComplexAggregateTest extends PlanTestBase {
+  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   final TypeCreator R = TypeCreator.of(false);

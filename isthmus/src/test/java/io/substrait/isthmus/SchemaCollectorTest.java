@@ -5,12 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.relation.AbstractWriteRel;
+import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Rel;
+import io.substrait.type.TypeCreator;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.junit.jupiter.api.Test;
 
-public class SchemaCollectorTest extends PlanTestBase {
+class SchemaCollectorTest extends PlanTestBase {
 
   SubstraitBuilder b = substraitBuilder;
   SchemaCollector schemaCollector = new SchemaCollector(typeFactory, TypeConverter.DEFAULT);
@@ -42,17 +51,23 @@ public class SchemaCollectorTest extends PlanTestBase {
   @Test
   void canCollectTablesInSchemas() {
     Rel rel =
-        b.cross(
+        b.namedWrite(
+            List.of("schema3", "table4"),
+            List.of("col1", "col2", "col3", "col4", "col5", "col6"),
+            AbstractWriteRel.WriteOp.UPDATE,
+            AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
+            AbstractWriteRel.OutputMode.MODIFIED_RECORDS,
             b.cross(
-                b.namedScan(
-                    List.of("schema1", "table1"),
-                    List.of("col1", "col2", "col3"),
-                    List.of(N.I64, N.FP64, N.STRING)),
-                b.namedScan(
-                    List.of("schema1", "table2"),
-                    List.of("col4", "col5"),
-                    List.of(N.BOOLEAN, N.I32))),
-            b.namedScan(List.of("schema2", "table3"), List.of("col6"), List.of(N.I64)));
+                b.cross(
+                    b.namedScan(
+                        List.of("schema1", "table1"),
+                        List.of("col1", "col2", "col3"),
+                        List.of(N.I64, N.FP64, N.STRING)),
+                    b.namedScan(
+                        List.of("schema1", "table2"),
+                        List.of("col4", "col5"),
+                        List.of(N.BOOLEAN, N.I32))),
+                b.namedScan(List.of("schema2", "table3"), List.of("col6"), List.of(N.I64))));
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
 
     CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
@@ -61,6 +76,57 @@ public class SchemaCollectorTest extends PlanTestBase {
 
     CalciteSchema schema2 = calciteSchema.getSubSchema("schema2", false);
     hasTable(schema2, "table3", "RecordType(BIGINT col6) NOT NULL");
+
+    CalciteSchema schema3 = calciteSchema.getSubSchema("schema3", false);
+    hasTable(
+        schema3,
+        "table4",
+        "RecordType(BIGINT col1, DOUBLE col2, VARCHAR col3, BOOLEAN col4, INTEGER col5, BIGINT col6) NOT NULL");
+  }
+
+  private static Expression.ScalarFunctionInvocation fnAdd(int value) {
+    return DefaultExtensionCatalog.DEFAULT_COLLECTION.scalarFunctions().stream()
+        .filter(s -> s.name().equalsIgnoreCase("add"))
+        .findFirst()
+        .map(
+            declaration ->
+                ExpressionCreator.scalarFunction(
+                    declaration,
+                    TypeCreator.REQUIRED.BOOLEAN,
+                    ImmutableFieldReference.builder()
+                        .addSegments(FieldReference.StructField.of(0))
+                        .type(TypeCreator.REQUIRED.I64)
+                        .build(),
+                    ExpressionCreator.i32(false, value)))
+        .get();
+  }
+
+  @Test
+  void testUpdate() {
+
+    List<NamedUpdate.TransformExpression> transformations =
+        Arrays.asList(
+            NamedUpdate.TransformExpression.builder()
+                .columnTarget(0)
+                .transformation(fnAdd(1))
+                .build());
+    Expression condition = ExpressionCreator.bool(false, true);
+
+    Rel rel =
+        b.namedWrite(
+            List.of("schema1", "table2"),
+            List.of("col1"),
+            AbstractWriteRel.WriteOp.INSERT,
+            AbstractWriteRel.CreateMode.APPEND_IF_EXISTS,
+            AbstractWriteRel.OutputMode.NO_OUTPUT,
+            b.namedUpdate(
+                List.of("schema1", "table1"), List.of("col1"), transformations, condition, true));
+
+    CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
+    CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
+    hasTable(schema1, "table1", "RecordType(BOOLEAN col1)");
+
+    hasTable(schema1, "table2", "RecordType(BOOLEAN col1)");
   }
 
   @Test

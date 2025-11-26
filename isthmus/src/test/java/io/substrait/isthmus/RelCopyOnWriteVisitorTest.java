@@ -25,7 +25,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class RelCopyOnWriteVisitorTest extends PlanTestBase {
+class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
       SimpleExtension.FunctionAnchor.of(
@@ -82,7 +82,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   }
 
   @Test
-  public void hasTableReference() throws IOException, SqlParseException {
+  void hasTableReference() throws IOException, SqlParseException {
     Plan plan =
         buildPlanFromQuery(
             "SELECT p_partkey\n"
@@ -104,13 +104,13 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   }
 
   @Test
-  public void countCountDistincts() throws IOException, SqlParseException {
+  void countCountDistincts() throws IOException, SqlParseException {
     Plan plan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(plan));
   }
 
   @Test
-  public void replaceCountDistincts() throws IOException, SqlParseException {
+  void replaceCountDistincts() throws IOException, SqlParseException {
     Plan oldPlan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
     assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));
@@ -122,7 +122,7 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   }
 
   @Test
-  public void approximateCountDistinct() throws IOException, SqlParseException {
+  void approximateCountDistinct() throws IOException, SqlParseException {
     Plan oldPlan =
         buildPlanFromQuery(
             "select count(distinct l_discount), count(distinct l_tax) from lineitem");
@@ -142,13 +142,13 @@ public class RelCopyOnWriteVisitorTest extends PlanTestBase {
   }
 
   @Test
-  public void countCountDistinctsUnion() throws IOException, SqlParseException {
+  void countCountDistinctsUnion() throws IOException, SqlParseException {
     Plan plan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(plan));
   }
 
   @Test
-  public void replaceCountDistinctsInUnion() throws IOException, SqlParseException {
+  void replaceCountDistinctsInUnion() throws IOException, SqlParseException {
     Plan oldPlan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
     assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));

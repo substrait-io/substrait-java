@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-public class DdlRelRoundtripTest extends TestBase {
+class DdlRelRoundtripTest extends TestBase {
 
   @Test
   void create() {
