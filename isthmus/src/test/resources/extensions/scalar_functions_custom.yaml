@@ -2,7 +2,7 @@
 ---
 urn: extension:substrait:functions_custom
 scalar_functions:
-  - name: "regexp_extract"
+  - name: "regexp_extract_custom"
     impls:
       - args:
           - name: "text"
@@ -33,7 +33,7 @@ scalar_functions:
         return: string?
         nullability: DECLARED_OUTPUT
 
-  - name: "safe_divide"
+  - name: "safe_divide_custom"
     description: "Performs division, returning NULL if the denominator is zero."
     impls:
       - args:

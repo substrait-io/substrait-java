@@ -23,13 +23,13 @@ class UdfSqlSubstraitTest extends PlanTestBase {
             "CREATE TABLE t(x VARCHAR NOT NULL)");
 
     assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT regexp_extract(x, 'ab') from t", catalogReader);
+        "SELECT regexp_extract_custom(x, 'ab') from t", catalogReader);
     assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
         "SELECT format_text('UPPER', x) FROM t", catalogReader);
     assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
         "SELECT system_property_get(x) FROM t", catalogReader);
     assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT safe_divide(10,0) FROM t", catalogReader);
+        "SELECT safe_divide_custom(10,0) FROM t", catalogReader);
   }
 
   private static SimpleExtension.ExtensionCollection loadExtensions(
