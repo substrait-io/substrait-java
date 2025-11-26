@@ -44,15 +44,18 @@ public class CallConverters {
    * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link
    * Expression.UserDefinedLiteral}s within Calcite.
    *
-   * <p>When converting from Substrait to Calcite, the {@link Expression.UserDefinedLiteral#value()}
-   * is stored within a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
-   * org.apache.calcite.rex.RexLiteral} and then re-interpreted to have the correct type.
+   * <p>When converting from Substrait to Calcite, the user-defined literal value is stored either
+   * as a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
+   * org.apache.calcite.rex.RexLiteral} (for ANY-encoded values) or a {@link SqlKind#ROW} (for
+   * struct-encoded values) and then re-interpreted to have the correct user-defined type.
    *
-   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedLiteral,
+   * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedAnyLiteral,
+   * SubstraitRelNodeConverter.Context)} and {@link
+   * ExpressionRexConverter#visit(Expression.UserDefinedStructLiteral,
    * SubstraitRelNodeConverter.Context)} for this conversion.
    *
-   * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
-   * Expression.UserDefinedLiteral} that was stored.
+   * <p>When converting from Calcite to Substrait, this call converter extracts the stored {@link
+   * Expression.UserDefinedLiteral}.
    */
   public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
@@ -70,14 +73,57 @@ public class CallConverters {
               Expression.FixedBinaryLiteral literal = (Expression.FixedBinaryLiteral) operand;
               Type.UserDefined t = (Type.UserDefined) type;
 
-              return Expression.UserDefinedLiteral.builder()
+              // The binary literal contains the serialized protobuf Any - just parse it directly
+              try {
+                com.google.protobuf.Any anyValue =
+                    com.google.protobuf.Any.parseFrom(literal.value().toByteArray());
+
+                return Expression.UserDefinedAnyLiteral.builder()
+                    .nullable(t.nullable())
+                    .urn(t.urn())
+                    .name(t.name())
+                    .addAllTypeParameters(t.typeParameters())
+                    .value(anyValue)
+                    .build();
+              } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+                throw new IllegalStateException("Failed to parse UserDefinedAnyLiteral value", e);
+              }
+            } else if (operand instanceof Expression.StructLiteral
+                && type instanceof Type.UserDefined) {
+              Expression.StructLiteral structLiteral = (Expression.StructLiteral) operand;
+              Type.UserDefined t = (Type.UserDefined) type;
+
+              return Expression.UserDefinedStructLiteral.builder()
+                  .nullable(t.nullable())
                   .urn(t.urn())
                   .name(t.name())
-                  .value(literal.value())
+                  .addAllTypeParameters(t.typeParameters())
+                  .addAllFields(structLiteral.fields())
                   .build();
             }
             return null;
           };
+
+  /** Converts Calcite ROW constructors into Substrait struct literals. */
+  public static SimpleCallConverter ROW =
+      (call, visitor) -> {
+        if (call.getKind() != SqlKind.ROW) {
+          return null;
+        }
+
+        List<Expression> operands =
+            call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
+        if (!operands.stream().allMatch(expr -> expr instanceof Expression.Literal)) {
+          throw new IllegalArgumentException("ROW operands must be literals.");
+        }
+
+        List<Expression.Literal> literals =
+            operands.stream()
+                .map(expr -> (Expression.Literal) expr)
+                .collect(java.util.stream.Collectors.toList());
+
+        return ExpressionCreator.struct(call.getType().isNullable(), literals);
+      };
 
   //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
   //      return (call, visitor) -> {
@@ -139,6 +185,7 @@ public class CallConverters {
     return ImmutableList.of(
         new FieldSelectionConverter(typeConverter),
         CallConverters.CASE,
+        CallConverters.ROW,
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
         new LiteralConstructorConverter(typeConverter));
