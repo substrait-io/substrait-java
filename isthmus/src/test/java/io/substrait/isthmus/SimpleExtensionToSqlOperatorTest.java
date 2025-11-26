@@ -27,10 +27,10 @@ class SimpleExtensionToSqlOperatorTest {
 
     Optional<SqlOperator> function =
         operators.stream()
-            .filter(op -> op.getName().equalsIgnoreCase("REGEXP_EXTRACT"))
+            .filter(op -> op.getName().equalsIgnoreCase("REGEXP_EXTRACT_CUSTOM"))
             .findFirst();
 
-    assertTrue(function.isPresent(), "The REGEXP_EXTRACT function should be present.");
+    assertTrue(function.isPresent(), "The REGEXP_EXTRACT_CUSTOM function should be present.");
 
     SqlOperator op = function.get();
     System.out.println("Successfully found and verified Custom UDF:");
