@@ -235,6 +235,7 @@ public class SimpleExtension {
       INCONSISTENT
     }
 
+    @Value.Default
     default ParameterConsistency parameterConsistency() {
       return ParameterConsistency.CONSISTENT;
     }
