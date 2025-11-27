@@ -20,6 +20,7 @@ import io.substrait.isthmus.expression.FunctionMappings.Sig;
 import io.substrait.isthmus.expression.FunctionMappings.TypeBasedResolver;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -258,7 +260,8 @@ public abstract class FunctionConverter<
      * Checks to see if the given input types satisfy the function arguments given. Checks that
      *
      * <ul>
-     *   <li>Variadic arguments all have the same input type (when parameterConsistency is CONSISTENT)
+     *   <li>Variadic arguments all have the same input type (when parameterConsistency is
+     *       CONSISTENT)
      *   <li>Matched wildcard arguments (i.e.`any`, `any1`, `any2`, etc) all have the same input
      *       type
      * </ul>

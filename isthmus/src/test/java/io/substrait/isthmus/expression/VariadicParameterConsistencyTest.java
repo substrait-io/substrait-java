@@ -97,11 +97,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
   void testConsistentVariadicWithSameTypes() {
     // Function: test_func(i64, i64...) with CONSISTENT parameterConsistency
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -111,27 +107,20 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // All variadic arguments are i64 - should pass
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.I64), args, variadic),
         "Consistent variadic with same types should match");
 
     // All variadic arguments are i64 (with different nullability) - should pass
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, N.I64, R.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, N.I64, R.I64), args, variadic),
         "Consistent variadic with same types but different nullability should match");
-
   }
 
   @Test
   void testConsistentVariadicWithDifferentTypes() {
     // Function: test_func(i64, any...) with CONSISTENT parameterConsistency
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -141,13 +130,11 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // Variadic arguments have different types - should fail
     assertFalse(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.FP64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.FP64), args, variadic),
         "Consistent variadic with different types should not match");
 
     assertFalse(
-        testInputTypesMatch(
-            List.of(R.I64, R.I32, R.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I32, R.I64), args, variadic),
         "Consistent variadic with different types should not match");
   }
 
@@ -161,14 +148,8 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     List<SimpleExtension.Argument> args =
         List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build(),
-            SimpleExtension.ValueArgument.builder()
-                .value(anyType)
-                .name("variadic_arg")
-                .build());
+            SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build(),
+            SimpleExtension.ValueArgument.builder().value(anyType).name("variadic_arg").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -179,13 +160,11 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // Variadic arguments have different types - should pass with INCONSISTENT and wildcard type
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.FP64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.FP64), args, variadic),
         "Inconsistent variadic with different types should match when using wildcard type");
 
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I32, R.FP64, R.STRING), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I32, R.FP64, R.STRING), args, variadic),
         "Inconsistent variadic with different types should match when using wildcard type");
   }
 
@@ -197,11 +176,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
         ParameterizedType.StringLiteral.builder().value("any").nullable(false).build();
 
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(anyType)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(anyType).name("arg1").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -211,14 +186,12 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // All variadic arguments are i64 - should pass
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.I64), args, variadic),
         "Consistent variadic with wildcard type and same concrete types should match");
 
     // Variadic arguments have different types - should fail
     assertFalse(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.FP64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.FP64), args, variadic),
         "Consistent variadic with wildcard type and different concrete types should not match");
   }
 
@@ -226,11 +199,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
   void testConsistentVariadicWithMinGreaterThanOne() {
     // Function: test_func(i64, i64...) with CONSISTENT and min=2
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -240,14 +209,12 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // All variadic arguments are i64 - should pass
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.I64, R.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.I64, R.I64), args, variadic),
         "Consistent variadic with min=2 and same types should match");
 
     // Variadic arguments have different types - should fail
     assertFalse(
-        testInputTypesMatch(
-            List.of(R.I64, R.I64, R.I64, R.FP64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, R.I64, R.I64, R.FP64), args, variadic),
         "Consistent variadic with min=2 and different types should not match");
   }
 
@@ -255,11 +222,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
   void testNoVariadicBehavior() {
     // Function: test_func(i64) with no variadic behavior
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     // No variadic behavior - should pass regardless of consistency
     assertTrue(
@@ -271,11 +234,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
   void testConsistentVariadicWithNullableTypes() {
     // Function: test_func(i64, i64...) with CONSISTENT parameterConsistency
     List<SimpleExtension.Argument> args =
-        List.of(
-            SimpleExtension.ValueArgument.builder()
-                .value(R.I64)
-                .name("arg1")
-                .build());
+        List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     SimpleExtension.VariadicBehavior variadic =
         ImmutableSimpleExtension.VariadicBehavior.builder()
@@ -285,9 +244,7 @@ class VariadicParameterConsistencyTest extends PlanTestBase {
 
     // Mix of nullable and non-nullable i64 - should pass (nullability is ignored)
     assertTrue(
-        testInputTypesMatch(
-            List.of(R.I64, N.I64, R.I64, N.I64), args, variadic),
+        testInputTypesMatch(List.of(R.I64, N.I64, R.I64, N.I64), args, variadic),
         "Consistent variadic with same types but different nullability should match");
   }
 }
-
