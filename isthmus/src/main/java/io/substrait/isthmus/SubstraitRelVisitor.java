@@ -9,7 +9,6 @@ import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
-import io.substrait.isthmus.calcite.rel.Expressions;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.LiteralConverter;
@@ -58,7 +57,9 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -175,39 +176,26 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
-    List<Expression> expressions =
-        project.getProjects().stream()
-            .map(this::toExpression)
-            .collect(java.util.stream.Collectors.toList());
 
-    //    a project stores the expressions that Calcite logicalValues do not support
-    //  put non literal expressions back into the nestedStruct
-    if (project.getInput() instanceof Values) {
-      org.apache.calcite.rel.core.Values values = (Values) project.getInput();
+      NamedStruct type = typeConverter.toNamedStruct(project.getRowType());
 
-      NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
-      if (values.getTuples().isEmpty()) {
-        return Project.builder().input(EmptyScan.builder().initialSchema(type).build()).build();
-      }
-
-      LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-      int expIndex = 0;
-      List<Expression.NestedStruct> structs = new ArrayList<>();
-      for (ImmutableList<RexLiteral> row : values.getTuples()) {
-        List<Expression> fields = new ArrayList<>();
-        for (RexLiteral field : row) {
-          // is null from the non-literal expression conversion in SubstraitRelNodeConverter
-          if (field.getValue() == null) {
-            fields.add(expressions.get(expIndex++));
-          } else {
-            Literal literal = literalConverter.convert(field);
-            fields.add(literal);
-          }
+    if(project.getInput() instanceof Union) {
+        List<Expression.NestedStruct> structs = new ArrayList<>();
+        Union union =  (Union) project.getInput();
+        for(RelNode node: union.getInputs()) { // each node is logicalProject storing all expressions of table row
+           LogicalProject projectRow = (LogicalProject) node;
+            structs.add(Expression.NestedStruct.builder().addAllFields(
+                    projectRow.getProjects().stream()
+                    .map(this::toExpression)
+                    .collect(Collectors.toUnmodifiableList())).build());
         }
-        structs.add(Expression.NestedStruct.builder().addAllFields(fields).build());
-      }
-      return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
+        return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
     }
+
+      List<Expression> expressions =
+              project.getProjects().stream()
+                      .map(this::toExpression)
+                      .collect(java.util.stream.Collectors.toList());
 
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()
@@ -570,25 +558,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .build();
   }
 
-  public Rel handleExpressions(Expressions expressions) {
-    NamedStruct type = typeConverter.toNamedStruct(expressions.getRowType());
-    if (expressions.tuples.isEmpty()) {
-      return EmptyScan.builder().initialSchema(type).build();
-    }
-    List<Expression.NestedStruct> structs =
-        expressions.tuples.stream()
-            .map(
-                list -> {
-                  List<Expression> fields =
-                      list.stream()
-                          .map(l -> l.accept(this.rexExpressionConverter))
-                          .collect(Collectors.toUnmodifiableList());
-                  return ExpressionCreator.nestedStruct(false, fields);
-                })
-            .collect(Collectors.toUnmodifiableList());
-    return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
-  }
-
   @Override
   public Rel visitOther(RelNode other) {
     if (other instanceof CreateTable) {
@@ -596,8 +565,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
-    } else if (other instanceof Expressions) {
-      return handleExpressions((Expressions) other);
     }
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
