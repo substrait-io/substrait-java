@@ -179,6 +179,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             .map(this::toExpression)
             .collect(java.util.stream.Collectors.toList());
 
+    //    if there is no input fields, don’t put a remapping on it
+    if (project.getInput().getRowType().getFieldCount() == 0) {
+      return Project.builder().expressions(expressions).input(apply(project.getInput())).build();
+    }
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()
         .remap(

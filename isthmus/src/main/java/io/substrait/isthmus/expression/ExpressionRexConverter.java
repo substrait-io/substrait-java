@@ -19,6 +19,7 @@ import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.NestedFunctions;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.TypeConverter;
@@ -318,6 +319,13 @@ public class ExpressionRexConverter
     List<RexNode> args =
         expr.values().stream().map(l -> l.accept(this, context)).collect(Collectors.toList());
     return rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
+  public RexNode visit(Expression.NestedList expr, Context context) {
+    List<RexNode> args =
+        expr.values().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
+    return rexBuilder.makeCall(NestedFunctions.NESTED_LIST, args);
   }
 
   @Override
