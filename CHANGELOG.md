@@ -1,6 +1,47 @@
 Release Notes
 ---
 
+## [0.71.0](https://github.com/substrait-io/substrait-java/compare/v0.70.0...v0.71.0) (2025-11-30)
+
+### Features
+
+* add ExchangeRel support to core ([#602](https://github.com/substrait-io/substrait-java/issues/602)) ([194f4e4](https://github.com/substrait-io/substrait-java/commit/194f4e4a31c0c81fdcd88431e6e008e72e3909b3))
+* **isthmus:** mapping of string extract and pad fns ([#619](https://github.com/substrait-io/substrait-java/issues/619)) ([359cc7c](https://github.com/substrait-io/substrait-java/commit/359cc7ccadf92522c6b8cae8d0886e28c228586b))
+
+### Bug Fixes
+
+* add missing serialVersionUIDs ([#621](https://github.com/substrait-io/substrait-java/issues/621)) ([2e3ca32](https://github.com/substrait-io/substrait-java/commit/2e3ca32efc5e770d2ae4d584179353f07e75e0ef))
+
+## [0.70.0](https://github.com/substrait-io/substrait-java/compare/v0.69.0...v0.70.0) (2025-11-23)
+
+### Features
+
+* **isthmus:** mapping of positional scalar fns ([#610](https://github.com/substrait-io/substrait-java/issues/610)) ([96541a9](https://github.com/substrait-io/substrait-java/commit/96541a9f2cc0cc0c38215b0a31473246732347c3))
+* **isthmus:** support bitwise left shift ([#605](https://github.com/substrait-io/substrait-java/issues/605)) ([22448d1](https://github.com/substrait-io/substrait-java/commit/22448d1bd36c5face8675e31b85d5378d40901a0))
+
+## [0.69.0](https://github.com/substrait-io/substrait-java/compare/v0.68.0...v0.69.0) (2025-11-16)
+
+### Features
+
+* enforce row type consistency with schema in virtual tables ([#601](https://github.com/substrait-io/substrait-java/issues/601)) ([a5322ea](https://github.com/substrait-io/substrait-java/commit/a5322eadfab67bfcdd34453fd94c9a559ccc762c))
+* **isthmus:** log2, greatest and least scalar fn mappings added ([#598](https://github.com/substrait-io/substrait-java/issues/598)) ([848bfcf](https://github.com/substrait-io/substrait-java/commit/848bfcf83f4235574a686a4d48407a8f8ba5d99e))
+* **isthmus:** true, false, distinct comparator scalar fn mappings ([#597](https://github.com/substrait-io/substrait-java/issues/597)) ([f59ecc5](https://github.com/substrait-io/substrait-java/commit/f59ecc5ad78eb8f8e79c664fbb4f81c572bb9aa1))
+
+### Bug Fixes
+
+* handle valid YAML extension types ([#595](https://github.com/substrait-io/substrait-java/issues/595)) ([ed25bed](https://github.com/substrait-io/substrait-java/commit/ed25bed9233b1bd393f128c580cf1ab7fbcca0b9)), closes [#594](https://github.com/substrait-io/substrait-java/issues/594)
+* **isthmus:** support TPC-DS queries 1, 30, 81 ([#593](https://github.com/substrait-io/substrait-java/issues/593)) ([442f1f2](https://github.com/substrait-io/substrait-java/commit/442f1f2b171d8eb691f3dcc01c2d6fe03c6add8a))
+
+## [0.68.0](https://github.com/substrait-io/substrait-java/compare/v0.67.0...v0.68.0) (2025-11-02)
+
+### Features
+
+* **isthmus:** mapping of angular scalar functions ([#586](https://github.com/substrait-io/substrait-java/issues/586)) ([9c4db92](https://github.com/substrait-io/substrait-java/commit/9c4db9207cec12a7cf1625ee29343ba402c864d6))
+* **isthmus:** mapping of bitwise functions from substrait ([#582](https://github.com/substrait-io/substrait-java/issues/582)) ([e1e8689](https://github.com/substrait-io/substrait-java/commit/e1e86891369ee69be302a9c2eb3405395acee9f4))
+* **isthmus:** mapping of factorial function from substrait ([#589](https://github.com/substrait-io/substrait-java/issues/589)) ([4b83666](https://github.com/substrait-io/substrait-java/commit/4b8366675108d506fd29f1cd355bd27712cafe73))
+* **isthmus:** mapping of hyperbolic functions from substrait ([#581](https://github.com/substrait-io/substrait-java/issues/581)) ([ac9ad28](https://github.com/substrait-io/substrait-java/commit/ac9ad2839feb77288bee4d910133f89ef0324a16))
+* **isthmus:** support fully qualified table names in SubstraitCreateStatementParser ([#575](https://github.com/substrait-io/substrait-java/issues/575)) ([ab5943e](https://github.com/substrait-io/substrait-java/commit/ab5943e53f73ed73f816f2c3f59502378b3bf15c))
+
 ## [0.67.0](https://github.com/substrait-io/substrait-java/compare/v0.66.0...v0.67.0) (2025-10-28)
 
 ### Features

@@ -14,7 +14,7 @@ import io.substrait.util.EmptyVisitationContext;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-public class IfThenRoundtripTest extends TestBase {
+class IfThenRoundtripTest extends TestBase {
 
   @Test
   void ifThenNotNullable() {

@@ -1,8 +1,13 @@
 package io.substrait.relation;
 
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.util.VisitationContext;
 
 public abstract class AbstractRelVisitor<O, C extends VisitationContext, E extends Exception>
@@ -137,5 +142,30 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   @Override
   public O visit(NamedUpdate update, C context) throws E {
     return visitFallback(update, context);
+  }
+
+  @Override
+  public O visit(ScatterExchange exchange, C context) throws E {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public O visit(SingleBucketExchange exchange, C context) throws E {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public O visit(MultiBucketExchange exchange, C context) throws E {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public O visit(BroadcastExchange exchange, C context) throws E {
+    return visitFallback(exchange, context);
+  }
+
+  @Override
+  public O visit(RoundRobinExchange exchange, C context) throws E {
+    return visitFallback(exchange, context);
   }
 }

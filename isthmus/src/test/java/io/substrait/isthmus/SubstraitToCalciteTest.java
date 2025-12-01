@@ -12,7 +12,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
-public class SubstraitToCalciteTest extends PlanTestBase {
+class SubstraitToCalciteTest extends PlanTestBase {
   final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
 
   @Test

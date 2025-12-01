@@ -2,6 +2,7 @@
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$Collation$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$ColumnOrigin$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$ExpressionLineage$Handler"],
+  ["org.apache.calcite.rel.metadata.BuiltInMetadata$FunctionalDependency$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$TableReferences$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$ColumnUniqueness$Handler"],
   ["org.apache.calcite.rel.metadata.BuiltInMetadata$CumulativeCost$Handler"],

@@ -465,9 +465,10 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
                 var idx = 0
                 val buf = new ArrayBuffer[SExpression](row.numFields)
                 while (idx < row.numFields) {
-                  val dt = schema(idx).dataType
+                  val schemaField = schema(idx)
+                  val dt = schemaField.dataType
                   val l = Literal.apply(row.get(idx, dt), dt)
-                  buf += ToSubstraitLiteral.apply(l)
+                  buf += ToSubstraitLiteral.apply(l, Some(schemaField.nullable))
                   idx += 1
                 }
                 ExpressionCreator.nestedStruct(false, buf.asJava)

@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
+class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
   private static Stream<Arguments> expressionTypeProvider() {
     return Stream.of(
@@ -26,14 +26,14 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsRoundTrip(String sqlExpression)
+  void testExtendedExpressionsRoundTrip(String sqlExpression)
       throws SqlParseException, IOException {
     assertProtoExtendedExpressionRoundtrip(sqlExpression);
   }
 
   @ParameterizedTest
   @MethodSource("expressionTypeProvider")
-  public void testExtendedExpressionsDuplicateColumnIdentifierRoundTrip(String sqlExpression) {
+  void testExtendedExpressionsDuplicateColumnIdentifierRoundTrip(String sqlExpression) {
     IllegalArgumentException illegalArgumentException =
         assertThrows(
             IllegalArgumentException.class,
@@ -45,8 +45,7 @@ public class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
   }
 
   @Test
-  public void testExtendedExpressionsListExpressionRoundTrip()
-      throws SqlParseException, IOException {
+  void testExtendedExpressionsListExpressionRoundTrip() throws SqlParseException, IOException {
     String[] expressions = {
       "2",
       "L_ORDERKEY",

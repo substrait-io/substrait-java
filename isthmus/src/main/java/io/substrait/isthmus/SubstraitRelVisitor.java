@@ -43,6 +43,7 @@ import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,6 +66,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -477,17 +479,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         {
           assert modify.getTable() != null;
 
-          Expression condition;
-          if (modify.getInput() instanceof org.apache.calcite.rel.core.Filter) {
-            org.apache.calcite.rel.core.Filter filter =
-                (org.apache.calcite.rel.core.Filter) modify.getInput();
+          RelNode input = modify.getInput();
+          final Expression condition;
+          if (input instanceof org.apache.calcite.rel.core.Filter) {
+            org.apache.calcite.rel.core.Filter filter = (org.apache.calcite.rel.core.Filter) input;
             condition = toExpression(filter.getCondition());
           } else {
             condition = Expression.BoolLiteral.builder().nullable(false).value(true).build();
           }
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
-          List<RexNode> sourceExpressions = modify.getSourceExpressionList();
+          List<RexNode> sourceExpressions = getSourceExpressions(modify);
           List<String> allTableColumnNames = modify.getTable().getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
@@ -521,6 +523,36 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       default:
         return super.visit(modify);
     }
+  }
+
+  private List<RexNode> getSourceExpressions(TableModify modify) {
+    List<RexNode> results = modify.getSourceExpressionList();
+    if (results == null) {
+      return Collections.emptyList();
+    }
+
+    RelNode input = modify.getInput();
+    if (input instanceof org.apache.calcite.rel.core.Project) {
+      return resolveProjectedRefs(results, (org.apache.calcite.rel.core.Project) input);
+    }
+
+    return results;
+  }
+
+  private List<RexNode> resolveProjectedRefs(
+      List<RexNode> expressions, org.apache.calcite.rel.core.Project project) {
+    List<RexNode> projects = project.getProjects();
+    return expressions.stream()
+        .map(
+            expression -> {
+              if (expression instanceof RexInputRef) {
+                int refIndex = ((RexInputRef) expression).getIndex();
+                return projects.get(refIndex);
+              }
+
+              return expression;
+            })
+        .collect(Collectors.toList());
   }
 
   private NamedStruct getSchema(final RelNode queryRelRoot) {

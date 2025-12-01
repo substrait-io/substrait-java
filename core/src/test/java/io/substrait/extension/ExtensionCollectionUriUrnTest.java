@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-public class ExtensionCollectionUriUrnTest {
+class ExtensionCollectionUriUrnTest {
 
   @Test
-  public void testHasUrnAndHasUri() {
+  void testHasUrnAndHasUri() {
     String yamlContent =
         "%YAML 1.2\n"
             + "---\n"
@@ -28,7 +28,7 @@ public class ExtensionCollectionUriUrnTest {
   }
 
   @Test
-  public void testGetNonexistentMappings() {
+  void testGetNonexistentMappings() {
     String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:minimal\n" + "scalar_functions: []\n";
 
@@ -40,7 +40,7 @@ public class ExtensionCollectionUriUrnTest {
   }
 
   @Test
-  public void testEmptyUriThrowsException() {
+  void testEmptyUriThrowsException() {
     String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:empty\n" + "scalar_functions: []\n";
 
@@ -50,7 +50,7 @@ public class ExtensionCollectionUriUrnTest {
   }
 
   @Test
-  public void testNullUriThrowsException() {
+  void testNullUriThrowsException() {
     String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:null\n" + "scalar_functions: []\n";
 

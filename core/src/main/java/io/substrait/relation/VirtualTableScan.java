@@ -21,6 +21,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    *   <li>non-null field-names
    *   <li>no null rows
    *   <li>row shape must match field-list
+   *   <li>row field types must match schema types
    * </ul>
    */
   @Value.Check
@@ -49,6 +50,37 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         && rows.stream().noneMatch(Objects::isNull)
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
+
+    for (Expression.StructLiteral row : rows) {
+      validateRowConformsToSchema(row);
+    }
+  }
+
+  /**
+   * Validates that a row's field types conform to the table's schema.
+   *
+   * @param row the row to validate
+   * @throws AssertionError if the row does not conform to the schema
+   */
+  private void validateRowConformsToSchema(Expression.StructLiteral row) {
+    Type.Struct schemaStruct = getInitialSchema().struct();
+    List<Type> schemaFieldTypes = schemaStruct.fields();
+    List<Expression.Literal> rowFields = row.fields();
+
+    assert rowFields.size() == schemaFieldTypes.size()
+        : String.format(
+            "Row field count (%d) does not match schema field count (%d)",
+            rowFields.size(), schemaFieldTypes.size());
+
+    for (int i = 0; i < rowFields.size(); i++) {
+      Type rowFieldType = rowFields.get(i).getType();
+      Type schemaFieldType = schemaFieldTypes.get(i);
+
+      assert rowFieldType.equals(schemaFieldType)
+          : String.format(
+              "Row field type (%s) does not match schema field type (%s)",
+              rowFieldType, schemaFieldType);
+    }
   }
 
   @Override

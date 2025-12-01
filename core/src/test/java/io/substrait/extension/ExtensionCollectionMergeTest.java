@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-public class ExtensionCollectionMergeTest {
+class ExtensionCollectionMergeTest {
 
   @Test
-  public void testMergeCollectionsWithDifferentUriUrnMappings() {
+  void testMergeCollectionsWithDifferentUriUrnMappings() {
     String yaml1 =
         "%YAML 1.2\n"
             + "---\n"
@@ -47,7 +47,7 @@ public class ExtensionCollectionMergeTest {
   }
 
   @Test
-  public void testMergeCollectionsWithIdenticalMappings() {
+  void testMergeCollectionsWithIdenticalMappings() {
     String yaml =
         "%YAML 1.2\n"
             + "---\n"
@@ -69,7 +69,7 @@ public class ExtensionCollectionMergeTest {
   }
 
   @Test
-  public void testMergeCollectionsWithConflictingMappings() {
+  void testMergeCollectionsWithConflictingMappings() {
     String yaml1 =
         "%YAML 1.2\n" + "---\n" + "urn: extension:conflict:urn1\n" + "scalar_functions: []\n";
 

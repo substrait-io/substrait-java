@@ -12,6 +12,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 public class FunctionMappings {
   // Static list of signature mapping between Calcite SQL operators and Substrait base function
   // names.
+
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -77,7 +78,26 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.BITAND, "bitwise_and"),
               s(SqlStdOperatorTable.BITXOR, "bitwise_xor"),
               s(SqlStdOperatorTable.RADIANS, "radians"),
-              s(SqlStdOperatorTable.DEGREES, "degrees"))
+              s(SqlStdOperatorTable.DEGREES, "degrees"),
+              s(SqlLibraryOperators.FACTORIAL, "factorial"),
+              s(SqlStdOperatorTable.IS_TRUE, "is_true"),
+              s(SqlStdOperatorTable.IS_FALSE, "is_false"),
+              s(SqlStdOperatorTable.IS_NOT_TRUE, "is_not_true"),
+              s(SqlStdOperatorTable.IS_NOT_FALSE, "is_not_false"),
+              s(SqlStdOperatorTable.IS_DISTINCT_FROM, "is_distinct_from"),
+              s(SqlLibraryOperators.LOG2, "log2"),
+              s(SqlLibraryOperators.LEAST, "least"),
+              s(SqlLibraryOperators.GREATEST, "greatest"),
+              s(SqlStdOperatorTable.BIT_LEFT_SHIFT, "shift_left"),
+              s(SqlStdOperatorTable.LEFTSHIFT, "shift_left"),
+              s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
+              s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
+              s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
+              s(SqlStdOperatorTable.POSITION, "strpos"),
+              s(SqlLibraryOperators.LEFT, "left"),
+              s(SqlLibraryOperators.RIGHT, "right"),
+              s(SqlLibraryOperators.LPAD, "lpad"),
+              s(SqlLibraryOperators.RPAD, "rpad"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
@@ -122,7 +142,9 @@ public class FunctionMappings {
           resolver(
               SqlStdOperatorTable.MINUS, Set.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
           SqlStdOperatorTable.MINUS_DATE,
-          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")));
+          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "timestamp_tz", "timestamp")),
+          SqlStdOperatorTable.BIT_LEFT_SHIFT,
+          resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
 
   public static void main(String[] args) {
     SCALAR_SIGS.forEach(System.out::println);

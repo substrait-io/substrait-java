@@ -16,7 +16,7 @@ import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class SubstraitRelNodeConverterTest extends PlanTestBase {
+class SubstraitRelNodeConverterTest extends PlanTestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
   static final TypeCreator N = TypeCreator.of(true);
@@ -36,7 +36,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Aggregate {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root =
           b.root(
               b.aggregate(
@@ -49,7 +49,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root =
           b.root(
               b.aggregate(
@@ -66,7 +66,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Cross {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.cross(commonTable, commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -74,7 +74,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root = b.root(b.cross(commonTable, commonTable, b.remap(0, 1, 4, 6)));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -85,7 +85,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Fetch {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.fetch(20, 40, commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -93,7 +93,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root = b.root(b.fetch(20, 40, b.remap(0, 2), commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -104,7 +104,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Filter {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.filter(input -> b.bool(true), commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -112,7 +112,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root = b.root(b.filter(input -> b.bool(true), b.remap(0, 2), commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -123,7 +123,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Join {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.innerJoin(input -> b.bool(true), commonTable, commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -131,7 +131,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root =
           b.root(b.innerJoin(input -> b.bool(true), b.remap(0, 6), commonTable, commonTable));
 
@@ -140,7 +140,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void leftJoin() {
+    void leftJoin() {
       final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
       final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
 
@@ -156,7 +156,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void rightJoin() {
+    void rightJoin() {
       final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
       final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
 
@@ -172,7 +172,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void outerJoin() {
+    void outerJoin() {
       final List<Type> joinTableType = List.of(R.STRING, R.FP64, R.BINARY);
       final Rel joinTable = b.namedScan(List.of("join"), List.of("a", "b", "c"), joinTableType);
 
@@ -191,7 +191,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class NamedScan {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root =
           b.root(b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I32, R.FP32)));
 
@@ -200,7 +200,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root =
           b.root(
               b.namedScan(
@@ -214,7 +214,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Project {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.project(input -> b.fieldReferences(input, 1, 0, 2), commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -223,7 +223,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root =
           b.root(
               b.project(
@@ -237,7 +237,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Set {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.set(SetOp.UNION_ALL, commonTable, commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -245,7 +245,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root = b.root(b.set(SetOp.UNION_ALL, b.remap(0, 2), commonTable, commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -256,7 +256,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   @Nested
   class Sort {
     @Test
-    public void direct() {
+    void direct() {
       Plan.Root root = b.root(b.sort(input -> b.sortFields(input, 0, 1, 2), commonTable));
 
       RelNode relNode = converter.convert(root.getInput());
@@ -264,7 +264,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Plan.Root root =
           b.root(b.sort(input -> b.sortFields(input, 0, 1, 2), b.remap(0, 2), commonTable));
 
@@ -277,7 +277,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
   class EmptyScan {
 
     @Test
-    public void direct() {
+    void direct() {
       Rel emptyScan =
           io.substrait.relation.EmptyScan.builder()
               .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct(R.I32, N.STRING)))
@@ -289,7 +289,7 @@ public class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
-    public void emit() {
+    void emit() {
       Rel emptyScanWithRemap =
           io.substrait.relation.EmptyScan.builder()
               .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct(R.I32, N.STRING)))

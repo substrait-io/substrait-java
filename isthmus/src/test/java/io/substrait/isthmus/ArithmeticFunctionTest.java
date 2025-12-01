@@ -4,7 +4,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class ArithmeticFunctionTest extends PlanTestBase {
+class ArithmeticFunctionTest extends PlanTestBase {
 
   static String CREATES =
       "CREATE TABLE numbers (i8 TINYINT, i16 SMALLINT, i32 INT, i64 BIGINT, fp32 REAL, fp64 DOUBLE)";
@@ -197,6 +197,27 @@ public class ArithmeticFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"fp32", "fp64"})
   void degrees(String column) throws Exception {
     String query = String.format("SELECT DEGREES(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i32", "i64"})
+  void factorial(String column) throws Exception {
+    String query = String.format("SELECT FACTORIAL(%s) FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void bit_left_shift(String column) throws Exception {
+    String query = String.format("SELECT %s << 1 FROM numbers", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"i8", "i16", "i32", "i64"})
+  void leftshift(String column) throws Exception {
+    String query = String.format("SELECT LEFTSHIFT(%s, 1) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 }

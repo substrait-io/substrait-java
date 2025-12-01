@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - uses: actions/setup-java@v5
@@ -32,7 +32,7 @@ jobs:
         run: java -version
       - name: Build with Gradle
         run: |
-          # fetch submodule tags since actions/checkout@v5 does not
+          # fetch submodule tags since actions/checkout@v6 does not
           git submodule foreach 'git fetch --unshallow || true'
 
           ./gradlew nativeCompile
@@ -60,7 +60,7 @@ jobs:
           app-id: ${{ secrets.RELEASER_ID }}
           private-key: ${{ secrets.RELEASER_KEY }}
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0

@@ -1,9 +1,12 @@
 package io.substrait.relation;
 
+import static io.substrait.expression.ExpressionCreator.i32;
+import static io.substrait.expression.ExpressionCreator.i64;
 import static io.substrait.expression.ExpressionCreator.list;
 import static io.substrait.expression.ExpressionCreator.map;
 import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
+import static io.substrait.expression.ExpressionCreator.typedNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,6 +17,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Type;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -155,6 +159,110 @@ class VirtualTableScanTest extends TestBase {
                     .nullable(true) // can't have nullable rows
                     .build());
     assertThrows(AssertionError.class, bldr::build);
+  void checkValidRowsWithSimpleTypes() {
+    // Test with simple types and multiple rows
+    VirtualTableScan virtualTableScan =
+        ImmutableVirtualTableScan.builder()
+            .initialSchema(
+                NamedStruct.of(
+                    Arrays.asList("id", "name", "age"), R.struct(R.I64, N.STRING, R.I32)))
+            .addRows(
+                struct(false, i64(false, 1L), string(true, "Alice"), i32(false, 30)),
+                struct(false, i64(false, 2L), typedNull(N.STRING), i32(false, 25)))
+            .build();
+    assertDoesNotThrow(virtualTableScan::check);
+  }
+
+  @Test
+  void checkInvalidRowTypeMismatch() {
+    // Row has I32 where schema expects STRING
+    assertThrows(
+        AssertionError.class,
+        () ->
+            ImmutableVirtualTableScan.builder()
+                .initialSchema(
+                    NamedStruct.of(
+                        Arrays.asList("id", "name", "age"), R.struct(R.I64, R.STRING, R.I32)))
+                .addRows(
+                    struct(
+                        false,
+                        i64(false, 1L),
+                        i32(false, 123), // Wrong type - should be STRING
+                        i32(false, 30)))
+                .build());
+  }
+
+  @Test
+  void checkInvalidRowWrongFieldCount() {
+    // Row has wrong number of fields
+    assertThrows(
+        AssertionError.class,
+        () ->
+            ImmutableVirtualTableScan.builder()
+                .initialSchema(
+                    NamedStruct.of(
+                        Arrays.asList("id", "name", "age"), R.struct(R.I64, R.STRING, R.I32)))
+                .addRows(struct(false, i64(false, 1L), string(false, "Alice"))) // Missing age field
+                .build());
+  }
+
+  @Test
+  void checkInvalidNestedStructTypeMismatch() {
+    // Nested struct has wrong field type
+    assertThrows(
+        AssertionError.class,
+        () ->
+            ImmutableVirtualTableScan.builder()
+                .initialSchema(
+                    NamedStruct.of(
+                        Arrays.asList("id", "details", "field1", "field2"),
+                        R.struct(R.I64, R.struct(R.STRING, R.I32))))
+                .addRows(
+                    struct(
+                        false,
+                        i64(false, 1L),
+                        struct(
+                            false,
+                            string(false, "value"),
+                            string(false, "wrong")))) // Should be I32, not STRING
+                .build());
+  }
+
+  @Test
+  void checkInvalidListElementTypeMismatch() {
+    // List has wrong element type
+    assertThrows(
+        AssertionError.class,
+        () ->
+            ImmutableVirtualTableScan.builder()
+                .initialSchema(
+                    NamedStruct.of(Arrays.asList("id", "tags"), R.struct(R.I64, R.list(R.STRING))))
+                .addRows(
+                    struct(
+                        false,
+                        i64(false, 1L),
+                        list(false, i32(false, 123)))) // Should be STRING, not I32
+                .build());
+  }
+
+  @Test
+  void checkInvalidNullabilityMismatch() {
+    // Nullability must match exactly
+    assertThrows(
+        AssertionError.class,
+        () ->
+            ImmutableVirtualTableScan.builder()
+                .initialSchema(
+                    NamedStruct.of(
+                        Arrays.asList("id", "name"),
+                        TypeCreator.NULLABLE.struct(
+                            TypeCreator.NULLABLE.I64, TypeCreator.NULLABLE.STRING)))
+                .addRows(
+                    struct(
+                        false,
+                        i64(false, 1L), // non-nullable doesn't match nullable schema
+                        string(false, "Alice")))
+                .build());
   }
 
   private Map<Expression.Literal, Expression.Literal> mapOf(

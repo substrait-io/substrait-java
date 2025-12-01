@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-public class ReadRelRoundtripTest extends TestBase {
+class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void namedScan() {

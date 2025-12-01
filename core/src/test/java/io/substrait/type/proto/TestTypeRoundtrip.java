@@ -9,7 +9,7 @@ import io.substrait.type.TypeCreator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class TestTypeRoundtrip {
+class TestTypeRoundtrip {
 
   private ExtensionCollector lookup = new ExtensionCollector();
   private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
@@ -19,7 +19,7 @@ public class TestTypeRoundtrip {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  public void roundtrip(boolean n) {
+  void roundtrip(boolean n) {
     t(creator(n).BOOLEAN);
     t(creator(n).I8);
     t(creator(n).I16);

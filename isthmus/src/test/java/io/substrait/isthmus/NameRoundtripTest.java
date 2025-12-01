@@ -11,7 +11,7 @@ import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.junit.jupiter.api.Test;
 
-public class NameRoundtripTest extends PlanTestBase {
+class NameRoundtripTest extends PlanTestBase {
 
   @Test
   void preserveNamesFromSql() throws Exception {

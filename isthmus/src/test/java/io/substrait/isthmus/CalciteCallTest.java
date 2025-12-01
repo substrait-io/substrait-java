@@ -20,7 +20,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
-public class CalciteCallTest extends CalciteObjs {
+class CalciteCallTest extends CalciteObjs {
 
   private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
@@ -33,7 +33,7 @@ public class CalciteCallTest extends CalciteObjs {
       new ExpressionRexConverter(type, functionConverter, null, TypeConverter.DEFAULT);
 
   @Test
-  public void extract() {
+  void extract() {
     test(
         "extract:req_ts",
         rex.makeCall(
@@ -45,7 +45,7 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   @Test
-  public void coerceNumericOp() {
+  void coerceNumericOp() {
     test(
         "add:i64_i64",
         rex.makeCall(
@@ -63,7 +63,7 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   @Test
-  public void directMatchPlus() {
+  void directMatchPlus() {
     test(
         "add:i64_i64",
         rex.makeCall(SqlStdOperatorTable.PLUS, c(4, SqlTypeName.BIGINT), c(4, SqlTypeName.BIGINT)),
@@ -77,7 +77,7 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   @Test
-  public void directMatchAnd() {
+  void directMatchAnd() {
     test(
         "and:bool",
         rex.makeCall(
@@ -85,7 +85,7 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   @Test
-  public void directMatchOr() {
+  void directMatchOr() {
     test(
         "or:bool",
         rex.makeCall(
@@ -93,7 +93,7 @@ public class CalciteCallTest extends CalciteObjs {
   }
 
   @Test
-  public void not() {
+  void not() {
     test("not:bool", rex.makeCall(SqlStdOperatorTable.NOT, c(false, SqlTypeName.BOOLEAN)));
   }
 

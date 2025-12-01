@@ -13,7 +13,6 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -129,21 +128,9 @@ public class SubstraitSqlToCalcite {
             cluster,
             StandardConvertletTable.INSTANCE,
             SqlToRelConverter.CONFIG);
-    // apply validation
-    boolean needsValidation = true;
-    // query is the root of the tree
-    boolean top = true;
     DdlSqlToRelConverter ddlSqlToRelConverter = new DdlSqlToRelConverter(converter);
     return sqlNodes.stream()
-        .map(
-            sqlNode -> {
-              RelRoot relRoot = sqlNode.accept(ddlSqlToRelConverter);
-              if (relRoot == null) {
-                relRoot =
-                    removeRedundantProjects(converter.convertQuery(sqlNode, needsValidation, top));
-              }
-              return relRoot;
-            })
+        .map(sqlNode -> sqlNode.accept(ddlSqlToRelConverter))
         .collect(Collectors.toList());
   }
 
@@ -153,19 +140,5 @@ public class SubstraitSqlToCalcite {
     HepProgram program = HepProgram.builder().build();
     RelOptPlanner emptyPlanner = new HepPlanner(program);
     return RelOptCluster.create(emptyPlanner, rexBuilder);
-  }
-
-  static RelRoot removeRedundantProjects(RelRoot root) {
-    return root.withRel(removeRedundantProjects(root.rel));
-  }
-
-  static RelNode removeRedundantProjects(RelNode root) {
-    // The Calcite RelBuilder, when constructing Project that does not modify its inputs in any way,
-    // simply elides it. The PROJECT_REMOVE rule can be used to remove such projects from Rel trees.
-    // This facilitates roundtrip testing.
-    HepProgram program = HepProgram.builder().addRuleInstance(CoreRules.PROJECT_REMOVE).build();
-    HepPlanner planner = new HepPlanner(program);
-    planner.setRoot(root);
-    return planner.findBestExp();
   }
 }

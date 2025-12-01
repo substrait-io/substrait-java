@@ -29,7 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class GenericRoundtripTest extends TestBase {
+class GenericRoundtripTest extends TestBase {
 
   static Random rand = new Random(123);
 
@@ -40,7 +40,7 @@ public class GenericRoundtripTest extends TestBase {
    * parameters. If the param generation has failed the {@link UnsupportedTypeGenerationException} e
    * is populated, and the test will be ignored (kept here for tracking).
    */
-  public void roundtripTest(Method m, List<Object> paramInst, UnsupportedTypeGenerationException e)
+  void roundtripTest(Method m, List<Object> paramInst, UnsupportedTypeGenerationException e)
       throws InvocationTargetException, IllegalAccessException {
 
     // If there is an UncoveredTypeGenerationException we  ignore this test
@@ -143,6 +143,9 @@ public class GenericRoundtripTest extends TestBase {
 
   // Class used to propagate type generation errors from param generator to test cases
   private static class UnsupportedTypeGenerationException extends Exception {
+
+    private static final long serialVersionUID = -8627552468610061245L;
+
     public UnsupportedTypeGenerationException(String s) {
       super(s);
     }

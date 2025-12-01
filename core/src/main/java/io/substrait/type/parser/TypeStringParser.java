@@ -65,6 +65,9 @@ public class TypeStringParser {
   }
 
   public static class ParseError extends RuntimeException {
+
+    private static final long serialVersionUID = -6831467523614033666L;
+
     public ParseError(final String message, final Throwable cause) {
       super(message, cause);
     }
