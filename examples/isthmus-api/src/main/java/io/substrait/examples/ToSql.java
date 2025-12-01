@@ -24,7 +24,7 @@ import org.apache.calcite.sql.SqlNode;
  *
  * <p>There are steps in the whole process
  *
- * <p>1) Load the plan into the protobuf object, and creatithe in POJO memory object. 2) Create a
+ * <p>1) Load the plan into the protobuf object, and create in-memory POJO object. 2) Create a
  * Converter to map the Substrait to Calcite relations. This will need the type system to use and
  * the collection of extensions to put into the substrait plan. 3) Given configuration, convert the
  * Calcite relational nodes to SQL statements.
@@ -55,14 +55,14 @@ public class ToSql implements Action {
           new SubstraitToCalcite(
               extensions, new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
 
-      // Determine which SQL Dialect we want the resultnat queries to be in
+      // Determine which SQL Dialect we want the converted queries to be in
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();
 
       // Create the Sql to Calcite Relation Parser
       final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
       final List<String> sqlStrings = new ArrayList<>();
 
-      // and get each root from the calcite plan; Then deployme this plan into the sql creaton step
+      // and get each root from the calcite plan
       for (final Root root : substraitPlan.getRoots()) {
         final RelNode calciteRelNode = converter.convert(root).project(true);
         final SqlNode sqlNode = relToSql.visitRoot(calciteRelNode).asStatement();

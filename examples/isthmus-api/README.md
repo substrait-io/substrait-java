@@ -1,10 +1,10 @@
 # Isthmus API Examples
 
-The Isthmus library converts Substrait plans to and from SQL Plans. There are two examples showing convertion in each direction.
+The Isthmus library converts Substrait plans to and from SQL Plans. There are two examples showing conversion in each direction.
 
 ## How does this work in theory?
 
-In both cases, the Calcite library is used to do parsing and generation of the SQL String. Calcite has it's own relational object model, so there are classes within Ishtmus to convert Substrait to and from Calcites object model.
+In both cases, the Calcite library is used to do parsing and generation of the SQL String. Calcite has it's own relational object model, so there are classes within Isthmus to convert Substrait to and from Calcites object model.
 
 Converting to Substrait from SQL uses Calcite to parse the SQL to an object model, and then it will be converted to Substrait.
 
