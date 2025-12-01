@@ -108,17 +108,15 @@ public class PlanTestBase {
     assertEquals(protoPlan1, protoPlan2);
   }
 
+  /** Use {@link #assertFullRoundTrip(String)} when possible, as it makes stronger assertions */
   protected RelRoot assertSqlSubstraitRelRoundTrip(String query) throws Exception {
     return assertSqlSubstraitRelRoundTrip(query, TPCH_CATALOG);
   }
 
-  protected RelRoot assertSqlSubstraitRelRoundTrip(String query, String createStatements)
-      throws Exception {
-    CalciteCatalogReader catalogReader =
-        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
-    return assertSqlSubstraitRelRoundTrip(query, catalogReader);
-  }
-
+  /**
+   * Use {@link #assertFullRoundTrip(String, Prepare.CatalogReader)} when possible, as it makes
+   * stronger assertions
+   */
   protected RelRoot assertSqlSubstraitRelRoundTrip(
       String query, Prepare.CatalogReader catalogReader) throws Exception {
     // sql <--> substrait round trip test.
