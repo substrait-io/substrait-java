@@ -1,0 +1,103 @@
+package io.substrait.examples;
+
+import io.substrait.examples.IsthmusAppExamples.Action;
+import io.substrait.isthmus.SqlToSubstrait;
+import io.substrait.isthmus.SubstraitTypeSystem;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.plan.Plan;
+import io.substrait.plan.PlanProtoConverter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.config.CalciteConnectionProperty;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.parser.SqlParseException;
+
+/**
+ * Substrait from SQL conversions.
+ *
+ * <p>There are 4 steps in the whole process.
+ *
+ * <p>1) A fully typed schema is required for the 'inputs'. Within a SQL context this is the `CREATE
+ * TABLE` commands; this needs to be converted to a Calcite Schema 2) The SQL query to convert (ion
+ * one type of dialect) 3) Conversion of the SQL query to Calcite Relations 4) Conversion of the
+ * Calcite Relations to Substrait relations
+ *
+ * <p>Note that schema could be created from other means eg Caclcite's refelect based schema.
+ *
+ * <p>The substrait plan can then be used as wished.
+ */
+public class FromSql implements Action {
+
+  @Override
+  public void run(final String[] args) {
+    try {
+      final String createSql =
+          """
+                    CREATE TABLE "vehicles" ("vehicle_id" varchar(15), "make" varchar(40), "model" varchar(40),
+                        "colour" varchar(15), "fuel_type" varchar(15),
+                        "cylinder_capacity" int, "first_use_date" varchar(15));
+
+                    CREATE TABLE "tests" ("test_id" varchar(15), "vehicle_id" varchar(15),
+                             "test_date" varchar(20), "test_class" varchar(20), "test_type" varchar(20),
+                             "test_result" varchar(15),"test_mileage" int, "postcode_area" varchar(15));
+
+                      """;
+
+      // Create the Caclcite Schema from the CREATE TABLES statements
+      // as this is a SQL it could be in a schema, but the Isthmus Helper classes here are assuminmg
+      // a common SQL format
+      final CalciteSchema calciteSchema = CalciteSchema.createRootSchema(false);
+      SubstraitCreateStatementParser.processCreateStatements(createSql)
+          .forEach(t -> calciteSchema.add(t.getName(), t));
+
+      // Type Factory based on Java Types
+      final RelDataTypeFactory typeFactory =
+          new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
+
+      // Default configuration for calcite
+      final CalciteConnectionConfig calciteDefaultConfig =
+          CalciteConnectionConfig.DEFAULT.set(
+              CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
+
+      final CalciteCatalogReader catalogReader =
+          new CalciteCatalogReader(calciteSchema, List.of(), typeFactory, calciteDefaultConfig);
+
+      // Query that needs to be converted; again this could be in a variety of SQL dialects
+      final String query =
+          """
+          SELECT vehicles.colour, count(*) as colourcount FROM vehicles INNER JOIN tests
+              ON vehicles.vehicle_id=tests.vehicle_id WHERE tests.test_result = 'P'
+              GROUP BY vehicles.colour ORDER BY count(*)
+          """;
+      final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
+
+      // choose Apache Derby as an example dialect
+      final SqlDialect dialect = SqlDialect.DatabaseProduct.DERBY.getDialect();
+      final Plan substraitPlan = sqlToSubstrait.convert(query, catalogReader, dialect);
+
+      System.out.println(substraitPlan);
+
+      // write out to file if given a file name
+      // convert to a protobuff byte array and write as binary file
+      if (args.length == 1) {
+        final PlanProtoConverter planToProto = new PlanProtoConverter();
+        final byte[] buffer = planToProto.toProto(substraitPlan).toByteArray();
+
+        final Path outputFile = Paths.get(args[0]);
+        Files.write(outputFile, buffer);
+        System.out.println("File written to " + outputFile);
+      }
+
+    } catch (SqlParseException | IOException e) {
+      e.printStackTrace();
+    }
+  }
+}
