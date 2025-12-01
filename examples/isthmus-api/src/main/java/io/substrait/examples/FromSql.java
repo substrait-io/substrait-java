@@ -30,7 +30,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
  * one type of dialect) 3) Conversion of the SQL query to Calcite Relations 4) Conversion of the
  * Calcite Relations to Substrait relations
  *
- * <p>Note that schema could be created from other means eg Caclcite's refelect based schema.
+ * <p>Note that schema could be created from other means eg Calcite's reflection based schema.
  *
  * <p>The substrait plan can then be used as wished.
  */
@@ -51,8 +51,8 @@ public class FromSql implements Action {
 
                       """;
 
-      // Create the Caclcite Schema from the CREATE TABLES statements
-      // as this is a SQL it could be in a schema, but the Isthmus Helper classes here are assuminmg
+      // Create the Calcite Schema from the CREATE TABLES statements
+      // as this is a SQL it could be in a schema, but the Isthmus Helper classes here are assuming
       // a common SQL format
       final CalciteSchema calciteSchema = CalciteSchema.createRootSchema(false);
       SubstraitCreateStatementParser.processCreateStatements(createSql)
