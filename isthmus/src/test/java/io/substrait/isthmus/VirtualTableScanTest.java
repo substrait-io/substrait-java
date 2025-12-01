@@ -114,4 +114,117 @@ public class VirtualTableScanTest extends PlanTestBase {
     relNode.explain(planWriter);
     return sw.toString();
   }
+
+//    @Test
+//    void testNestedStruct() {
+//        VirtualTableScan virtualTableScan = createVirtualTableScan();
+//        RelNode relNode = substraitToCalcite.convert(virtualTableScan); //    substrait rel to calcite
+//
+//        Rel virtualTableScan2 =
+//                SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+////        io.substrait.proto.Rel proto = relProtoConverter.toProto(virtualTableScan2); // pojo to proto
+////        ReadRel.VirtualTable protoVirtualTable = proto.getRead().getVirtualTable();
+////        Assert.equals(1, protoVirtualTable.getExpressionsList().size());
+////        Assert.equals(2, protoVirtualTable.getExpressionsList().get(0).getFieldsList().size());
+//
+//        Assert.equals(virtualTableScan, virtualTableScan2); // pojo -> calcite -> pojo
+//    }
+////
+//    @Test
+//    void testNestedStructMultiRow() {
+//        VirtualTableScan virtualTableScan = createMultiExpressionVirtualTableScan();
+//        RelNode relNode = substraitToCalcite.convert(virtualTableScan); //    substrait rel to calcite
+//
+//        LogicalValues logicalValues = (LogicalValues) relNode.getInput(0);
+//        Assert.equals(2, logicalValues.tuples.size()); // one row
+//        Assert.equals(2, logicalValues.tuples.get(0).size()); // 2 literal expressions
+//        LogicalProject logicalProject = (LogicalProject) relNode;
+//        Assert.equals(2, logicalProject.getProjects().size()); // two non-literal expression
+//
+//        Rel virtualTableScan2 =
+//                SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+//        io.substrait.proto.Rel proto = relProtoConverter.toProto(virtualTableScan2); // pojo to proto
+//
+//        ReadRel.VirtualTable protoVirtualTable = proto.getRead().getVirtualTable();
+//        Assert.equals(2, protoVirtualTable.getExpressionsList().size());
+//        Assert.equals(2, protoVirtualTable.getExpressionsList().get(0).getFieldsList().size());
+//
+//        Assert.equals(virtualTableScan, virtualTableScan2); // pojo -> calcite -> pojo
+//    }
+
+//    VirtualTableScan createVirtualTableScan() {
+//        Expression.ScalarFunctionInvocation scalarExpr = b.add(b.i32(7), b.i32(42));
+//        Expression literalExpr = b.i32(100);
+//
+//        Expression.NestedStruct structRow =
+//                Expression.NestedStruct.builder().addFields(scalarExpr).addFields(literalExpr).build();
+//
+//        return VirtualTableScan.builder()
+//                .initialSchema(
+//                        io.substrait.type.NamedStruct.of(
+//                                Stream.of("col1", "col2").collect(Collectors.toList()), R.struct(R.I32, R.I32)))
+//                .addRows(structRow)
+//                .build();
+//    }
+//
+//    VirtualTableScan createMultiExpressionVirtualTableScan() {
+//        Expression.ScalarFunctionInvocation scalarExpr = b.add(b.i32(1), b.i32(1));
+//        Expression.ScalarFunctionInvocation scalarExpr2 = b.add(b.i32(2), b.i32(2));
+//        Expression literalExpr = b.i32(6);
+//        Expression literalExpr2 = b.i32(7);
+//
+//        Expression.NestedStruct structRow =
+//                Expression.NestedStruct.builder().addFields(scalarExpr).addFields(literalExpr).build();
+//        Expression.NestedStruct structRow2 =
+//                Expression.NestedStruct.builder().addFields(literalExpr2).addFields(scalarExpr2).build();
+//
+//        return VirtualTableScan.builder()
+//                .initialSchema(
+//                        io.substrait.type.NamedStruct.of(
+//                                Stream.of("col1", "col2").collect(Collectors.toList()), R.struct(R.I32, R.I32)))
+//                .addRows(structRow)
+//                .addRows(structRow2)
+//                .build();
+//    }
+
 }
+
+/*
+// The top level logicalProject defines to number of columns needed in the row
+A row: [1,2] , [1, 2+3] , [3+7,4+4], is union of a logicalproject with a logicalValues(mix),
+or just straight logicalValues, or union of many logicalValues?
+
+can logicalProject be unioned with logicalValues
+
+Calcite seeminlgy, for each row just has an empty logicalValues then has all the columns in the logicalProject
+then unnion all logicalProject rows together
+- for each row just add all expressions into logicalproject,
+- create empty logicalValues to pass as input to logicalProject
+- add new logicalProject to list or rows to later pass as input to logicalUnion
+
+[2+5] => LogicalProject[2+5]
+            LogicalValues[0]
+
+VirtualTable:
+    [1,2,3, 1+1]
+
+    ->
+
+ */
+
+
+/*
+VirtualTable:
+    [1,2,3, 1+1]
+    [1,2+2,3, 1+1]
+ */
+
+/*
+Just use logical Values
+VirtualTable:
+    [1,2,3,4]
+    [1,2,3,6]
+ */
+
+
+
