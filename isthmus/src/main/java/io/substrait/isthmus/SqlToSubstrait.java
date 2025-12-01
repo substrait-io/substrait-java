@@ -6,7 +6,9 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.parser.SqlParser;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
@@ -35,7 +37,8 @@ public class SqlToSubstrait extends SqlConverterBase {
   public io.substrait.proto.Plan execute(String sqlStatements, Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     PlanProtoConverter planToProto = new PlanProtoConverter();
-    return planToProto.toProto(convert(sqlStatements, catalogReader));
+    return planToProto.toProto(
+        convert(sqlStatements, catalogReader, SqlDialect.DatabaseProduct.CALCITE.getDialect()));
   }
 
   /**
@@ -47,13 +50,39 @@ public class SqlToSubstrait extends SqlConverterBase {
    * @return the Substrait {@link Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
-  public Plan convert(String sqlStatements, Prepare.CatalogReader catalogReader)
+  public Plan convert(final String sqlStatements, final Prepare.CatalogReader catalogReader)
       throws SqlParseException {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
-    // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader).stream()
+        .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
+        .forEach(root -> builder.addRoots(root));
+
+    return builder.build();
+  }
+
+  /**
+   * Converts one or more SQL statements into a Substrait {@link Plan}.
+   *
+   * @param sqlStatements a string containing one more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements
+   * @return the Substrait {@link Plan}
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
+  public Plan convert(
+      final String sqlStatements,
+      final Prepare.CatalogReader catalogReader,
+      final SqlDialect sqlDialect)
+      throws SqlParseException {
+    Builder builder = io.substrait.plan.Plan.builder();
+    builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
+
+    final SqlParser.Config sqlParserConfig = sqlDialect.configureParser(SqlParser.config());
+
+    // TODO: consider case in which one sql passes conversion while others don't
+    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, sqlParserConfig).stream()
         .map(root -> SubstraitRelVisitor.convert(root, EXTENSION_COLLECTION, featureBoard))
         .forEach(root -> builder.addRoots(root));
 
