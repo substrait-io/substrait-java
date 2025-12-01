@@ -14,10 +14,6 @@ dependencies {
   implementation(project(":isthmus"))
   implementation(libs.calcite.core)
   implementation(libs.calcite.server)
-  // For a real Spark application, these would not be required since they would be in the Spark
-  // server classpath
-  runtimeOnly(libs.spark.core)
-  runtimeOnly(libs.spark.hive)
 }
 
 application { mainClass = "io.substrait.examples.IsthmusAppExamples" }
