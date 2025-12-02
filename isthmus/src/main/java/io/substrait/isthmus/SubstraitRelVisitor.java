@@ -1,9 +1,7 @@
 package io.substrait.isthmus;
 
-import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
-import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
@@ -61,11 +59,11 @@ import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -176,28 +174,50 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return super.visit(calc);
   }
 
+  /*
+       we represent a logicalValue table that can store non-literal expressions by a LogicalProject
+        with an input of a logicalUnion with inputs of logicalProjects. Each of the unioned logicalProjects
+        store the expressions in row of the table, and each is passed a dummy logicalValues input
+  */
+  boolean isLogicalValues(LogicalProject project) {
+    RelNode node = project.getInput(0);
+    if (node instanceof LogicalUnion && !node.getInputs().isEmpty()) {
+      for (RelNode child : node.getInputs()) {
+        //          each logicalProject has a dummy logicalValues input
+        if (!(child instanceof LogicalProject && child.getInputs().get(0) instanceof Values)) {
+          return false;
+        }
+      }
+    } else {
+      return false;
+    }
+    return true;
+  }
+
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
-
-      NamedStruct type = typeConverter.toNamedStruct(project.getRowType());
-
-    if(project.getInput() instanceof Union) {
-        List<Expression.NestedStruct> structs = new ArrayList<>();
-        Union union =  (Union) project.getInput();
-        for(RelNode node: union.getInputs()) { // each node is logicalProject storing all expressions of table row
-           LogicalProject projectRow = (LogicalProject) node;
-            structs.add(Expression.NestedStruct.builder().addAllFields(
+    NamedStruct type = typeConverter.toNamedStruct(project.getRowType());
+    if (isLogicalValues((LogicalProject) project)) {
+      List<Expression.NestedStruct> structs = new ArrayList<>();
+      Union union = (LogicalUnion) project.getInputs().get(0);
+      // each node is logicalProject storing all expressions of table row
+      for (RelNode node : union.getInputs()) {
+        LogicalProject projectRow = (LogicalProject) node;
+        structs.add(
+            Expression.NestedStruct.builder()
+                .addAllFields(
                     projectRow.getProjects().stream()
-                    .map(this::toExpression)
-                    .collect(Collectors.toUnmodifiableList())).build());
-        }
-        return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
+                        .map(this::toExpression)
+                        .collect(Collectors.toUnmodifiableList()))
+                .build());
+      }
+      return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
     }
 
-      List<Expression> expressions =
-              project.getProjects().stream()
-                      .map(this::toExpression)
-                      .collect(java.util.stream.Collectors.toList());
+    List<Expression> expressions =
+        project.getProjects().stream()
+            .map(this::toExpression)
+            .collect(java.util.stream.Collectors.toList());
 
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()

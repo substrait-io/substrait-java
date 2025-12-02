@@ -51,7 +51,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
 
-    for (Expression.StructLiteral row : rows) {
+    for (Expression.NestedStruct row : rows) {
       validateRowConformsToSchema(row);
     }
   }
@@ -62,10 +62,10 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * @param row the row to validate
    * @throws AssertionError if the row does not conform to the schema
    */
-  private void validateRowConformsToSchema(Expression.StructLiteral row) {
+  private void validateRowConformsToSchema(Expression.NestedStruct row) {
     Type.Struct schemaStruct = getInitialSchema().struct();
     List<Type> schemaFieldTypes = schemaStruct.fields();
-    List<Expression.Literal> rowFields = row.fields();
+    List<Expression> rowFields = row.fields();
 
     assert rowFields.size() == schemaFieldTypes.size()
         : String.format(

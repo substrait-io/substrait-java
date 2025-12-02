@@ -647,73 +647,69 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
-        final RelDataType rowType =
-                typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
+    final RelDataType rowType =
+        typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
 
-        final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
+    final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
 
-        final List<RelDataType> fieldTypes =
-                rowType.getFieldList().stream()
-                        .map(RelDataTypeField::getType)
-                        .collect(Collectors.toList());
+    final List<RelDataType> fieldTypes =
+        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
 
-        final RelDataType rowTypeWithNames =
-                typeFactory.createStructType(fieldTypes, correctFieldNames);
+    final RelDataType rowTypeWithNames =
+        typeFactory.createStructType(fieldTypes, correctFieldNames);
 
-        // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
-        // standard LogicalValues relation.
-        boolean allLiterals =
-                virtualTableScan.getRows().stream()
-                        .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
-        if (allLiterals) {
-            ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
-            for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
-                ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
-                for (Expression expr : rowExpr.fields()) {
-                    final Expression.Literal literal = (Expression.Literal) expr;
-                    final RexLiteral rexNode = (RexLiteral) literal.accept(expressionRexConverter, context);
-                    tupleBuilder.add(rexNode);
-                }
-                tuplesBuilder.add(tupleBuilder.build());
-            }
-            return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
-        } else {
-            List<RelNode> projectRow = new ArrayList<>(); // the virtualTable row is represented by the expressions in the logicalProject
-
-            RelDataType emptyRowType = typeFactory.createStructType(List.of(), List.of());
-            ImmutableList<ImmutableList<RexLiteral>> emptyValues = ImmutableList.of(ImmutableList.copyOf(new ArrayList<>())); // dummy Row
-
-            for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
-                List<RexNode> rexRow = new ArrayList<>();
-                for (Expression field : rowExpr.fields()) {
-                    rexRow.add(field.accept(expressionRexConverter, context));
-                }
-                RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyValues);
-                RelNode project =
-                        LogicalProject.create(
-                                values,
-                                Collections.emptyList(),
-                                rexRow,
-                                rowType,
-                                Collections.emptySet()
-                        );
-                projectRow.add(project);
-            }
-            RelNode union = LogicalUnion.create(projectRow, true); // rows are logicalProjects and the table is union of all rows
-
-            List<RexNode> topProjectExprs = new ArrayList<>();
-            for (int i = 0; i < rowType.getFieldCount(); i++) {
-                topProjectExprs.add(rexBuilder.makeInputRef(rowType.getFieldList().get(i).getType(), i));
-            }
-            return LogicalProject.create(
-                    union,
-                    Collections.emptyList(),
-                    topProjectExprs,
-                    rowTypeWithNames,
-                    Collections.emptySet()
-            );
+    // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
+    // standard LogicalValues relation.
+    boolean allLiterals =
+        virtualTableScan.getRows().stream()
+            .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
+    if (allLiterals) {
+      ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
+        for (Expression expr : rowExpr.fields()) {
+          final Expression.Literal literal = (Expression.Literal) expr;
+          final RexLiteral rexNode = (RexLiteral) literal.accept(expressionRexConverter, context);
+          tupleBuilder.add(rexNode);
         }
+        tuplesBuilder.add(tupleBuilder.build());
+      }
+      return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
+    } else {
+      // the virtualTable row is represented by the expressions in the logicalProject
+      List<RelNode> projectRow = new ArrayList<>();
+
+      RelDataType emptyRowType = typeFactory.createStructType(List.of(), List.of());
+      ImmutableList<ImmutableList<RexLiteral>> emptyValues =
+          ImmutableList.of(ImmutableList.copyOf(new ArrayList<>())); // dummy Row
+
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        List<RexNode> rexRow = new ArrayList<>();
+        for (Expression field : rowExpr.fields()) {
+          rexRow.add(field.accept(expressionRexConverter, context));
+        }
+        RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyValues);
+        RelNode project =
+            LogicalProject.create(
+                values, Collections.emptyList(), rexRow, rowType, Collections.emptySet());
+        projectRow.add(project);
+      }
+      RelNode union =
+          LogicalUnion.create(
+              projectRow, true); // rows are logicalProjects and the table is union of all rows
+
+      List<RexNode> topProjectExprs = new ArrayList<>();
+      for (int i = 0; i < rowType.getFieldCount(); i++) {
+        topProjectExprs.add(rexBuilder.makeInputRef(rowType.getFieldList().get(i).getType(), i));
+      }
+      return LogicalProject.create(
+          union,
+          Collections.emptyList(),
+          topProjectExprs,
+          rowTypeWithNames,
+          Collections.emptySet());
     }
+  }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
     if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
