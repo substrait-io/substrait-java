@@ -7,6 +7,7 @@ import io.substrait.isthmus.SubstraitToCalcite;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Root;
+import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,8 +47,10 @@ public class ToSql implements Action {
       final ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
       final Plan substraitPlan = protoToPlan.from(proto);
 
-      // output the plan for information
-      System.out.println(substraitPlan);
+      // Create the proto plan to display to stdout - as it has a better format
+      final PlanProtoConverter planToProto = new PlanProtoConverter();
+      final io.substrait.proto.Plan protoPlan = planToProto.toProto(substraitPlan);
+      System.out.println(protoPlan);
 
       final SimpleExtension.ExtensionCollection extensions =
           DefaultExtensionCatalog.DEFAULT_COLLECTION;
@@ -62,6 +65,7 @@ public class ToSql implements Action {
       final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
       final List<String> sqlStrings = new ArrayList<>();
 
+      System.out.println("\n");
       // and get each root from the calcite plan
       for (final Root root : substraitPlan.getRoots()) {
         final RelNode calciteRelNode = converter.convert(root).project(true);

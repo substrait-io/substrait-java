@@ -83,14 +83,16 @@ public class FromSql implements Action {
       final SqlDialect dialect = SqlDialect.DatabaseProduct.DERBY.getDialect();
       final Plan substraitPlan = sqlToSubstrait.convert(query, catalogReader, dialect);
 
-      System.out.println(substraitPlan);
+      // Create the proto plan to display to stdout - as it has a better format
+      final PlanProtoConverter planToProto = new PlanProtoConverter();
+      final io.substrait.proto.Plan protoPlan = planToProto.toProto(substraitPlan);
+      System.out.println(protoPlan);
 
       // write out to file if given a file name
       // convert to a protobuff byte array and write as binary file
       if (args.length == 1) {
-        final PlanProtoConverter planToProto = new PlanProtoConverter();
-        final byte[] buffer = planToProto.toProto(substraitPlan).toByteArray();
 
+        final byte[] buffer = protoPlan.toByteArray();
         final Path outputFile = Paths.get(args[0]);
         Files.write(outputFile, buffer);
         System.out.println("File written to " + outputFile);
