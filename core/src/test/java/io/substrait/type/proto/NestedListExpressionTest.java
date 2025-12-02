@@ -35,15 +35,9 @@ class NestedListExpressionTest extends TestBase {
   }
 
   @Test
-  void EmptyListNestedListTest() {
-    ImmutableExpression.NestedList emptyNestedList = Expression.NestedList.builder().build();
-
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(emptyNestedList)
-            .input(b.emptyScan())
-            .build();
-    verifyRoundTrip(project);
+  void EmptyNestedListTest() {
+    ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
+      assertThrows(AssertionError.class, builder::build);
   }
 
   @Test
