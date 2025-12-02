@@ -364,10 +364,11 @@ public class ProtoExpressionConverter {
   }
 
   public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
-    if (nested.getNestedTypeCase() == io.substrait.proto.Expression.Nested.NestedTypeCase.LIST) {
-      List<Expression> list =
-          nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
-      return ExpressionCreator.nestedList(nested.getNullable(), list);
+    switch (nested.getNestedTypeCase()) {
+      case LIST:
+        List<Expression> list =
+            nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
+        return ExpressionCreator.nestedList(nested.getNullable(), list);
     }
     return null;
   }

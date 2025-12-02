@@ -933,8 +933,15 @@ public interface Expression extends FunctionArg {
   abstract class NestedList implements Nested {
     public abstract List<Expression> values();
 
+    @Value.Check
+    protected void check() {
+      assert values().stream().map(Expression::getType).distinct().count() <= 1
+          : "All values in NestedList must have the same type";
+    }
+
     @Override
     public Type getType() {
+      check();
       return Type.withNullability(nullable()).list(values().get(0).getType());
     }
 
