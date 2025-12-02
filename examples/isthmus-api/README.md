@@ -28,12 +28,50 @@ To run these you will need:
 
 ## Creating a Substrait Plan from SQL
 
-To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java) from the root of this repository. `subtrait.plan` is the name of file written.
+To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java) from the root of this repository. `subtrait.plan` is the name of file written. It will output to stdout the text format of the protobuf for information; it's quite length so has been abbreviated here.
 
 ```bash
  ./gradlew examples:isthmus-api:run --args "FromSql substrait.plan"
 > Task :examples:isthmus-api:run
-Plan{version=Version{major=0, minor=77, patch=0, producer=isthmus}, roots=[Root{input=Sort{input=Aggregate{input=Project{remap=Remap{indices=[15]}, input=Filter{input=Join{left=NamedScan{initialSchema=NamedStruct{struct=Struct{nullable=false, fields=[VarChar{nullable=true, length=15}, VarChar{nullable=true, length=40}, VarChar{nullable=true, length=40}, VarChar{nullable=true, length=15}, VarChar{nullable=true, length=15}, I32{nullable=true}, VarChar{nullable=true, length=15}]}, names=[vehicle_id, make, model, colour, fuel_type, cylinder_capacity, first_use_date]}, names=[vehicles]}, right=NamedScan{initialSchema=NamedStruct{struct=Struct{nullable=false, fields=[VarChar{nullable=true, length=15}, VarChar{nullable=true, length=15}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=15}, I32{nullable=true}, VarChar{nullable=true, length=15}]}, names=[test_id, vehicle_id, test_date, test_class, test_type, test_result, test_mileage, postcode_area]}, names=[tests]}, condition=ScalarFunctionInvocation{declaration=equal:any_any, arguments=[FieldReference{segments=[StructField{offset=0}], type=VarChar{nullable=true, length=15}}, FieldReference{segments=[StructField{offset=8}], type=VarChar{nullable=true, length=15}}], options=[], outputType=Bool{nullable=true}}, joinType=INNER}, condition=ScalarFunctionInvocation{declaration=equal:any_any, arguments=[FieldReference{segments=[StructField{offset=12}], type=VarChar{nullable=true, length=15}}, VarCharLiteral{nullable=false, value=P, length=15}], options=[], outputType=Bool{nullable=true}}}, expressions=[FieldReference{segments=[StructField{offset=3}], type=VarChar{nullable=true, length=15}}]}, groupings=[Grouping{expressions=[FieldReference{segments=[StructField{offset=0}], type=VarChar{nullable=true, length=15}}]}], measures=[Measure{function=AggregateFunctionInvocation{declaration=count:, arguments=[], options=[], aggregationPhase=INITIAL_TO_RESULT, sort=[], outputType=I64{nullable=false}, invocation=ALL}}]}, sortFields=[SortField{expr=FieldReference{segments=[StructField{offset=1}], type=Struct{nullable=false, fields=[VarChar{nullable=true, length=15}, I64{nullable=false}]}}, direction=ASC_NULLS_LAST}]}, names=[COLOUR, COLOURCOUNT]}], expectedTypeUrls=[]}
+extension_uris {
+  extension_uri_anchor: 2
+  uri: "/functions_aggregate_generic.yaml"
+}
+extension_uris {
+  extension_uri_anchor: 1
+  uri: "/functions_comparison.yaml"
+}
+extensions {
+  extension_function {
+    extension_uri_reference: 1
+    function_anchor: 1
+    name: "equal:any_any"
+    extension_urn_reference: 1
+  }
+}
+extensions {
+  extension_function {
+    extension_uri_reference: 2
+    function_anchor: 2
+    name: "count:"
+    extension_urn_reference: 2
+  }
+}
+relations {....}
+}
+version {
+  minor_number: 77
+  producer: "isthmus"
+}
+extension_urns {
+  extension_urn_anchor: 1
+  urn: "extension:io.substrait:functions_comparison"
+}
+extension_urns {
+  extension_urn_anchor: 2
+  urn: "extension:io.substrait:functions_aggregate_generic"
+}
+
 File written to substrait.plan
 ```
 
@@ -49,13 +87,43 @@ Please see the code comments for details of how the conversion is done.
 
 To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java) from the root of this repository
 `subtrait.plan` is the name of file to be read - and probably will be the first created with `FromSql`.
-
+Again the text format of the protobuf has been abbreviated.
 ```bash
 ./gradlew examples:isthmus-api:run --args "ToSql substrait.plan"
 
 > Task :examples:isthmus-api:run
 Reading from substrait.plan
-Plan{version=Version{major=0, minor=77, patch=0, producer=isthmus}, roots=[Root{input=Sort{input=Aggregate{input=Project{remap=Remap{indices=[15]}, input=Filter{input=Join{left=NamedScan{initialSchema=NamedStruct{struct=Struct{nullable=false, fields=[VarChar{nullable=true, length=15}, VarChar{nullable=true, length=40}, VarChar{nullable=true, length=40}, VarChar{nullable=true, length=15}, VarChar{nullable=true, length=15}, I32{nullable=true}, VarChar{nullable=true, length=15}]}, names=[vehicle_id, make, model, colour, fuel_type, cylinder_capacity, first_use_date]}, names=[vehicles]}, right=NamedScan{initialSchema=NamedStruct{struct=Struct{nullable=false, fields=[VarChar{nullable=true, length=15}, VarChar{nullable=true, length=15}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=20}, VarChar{nullable=true, length=15}, I32{nullable=true}, VarChar{nullable=true, length=15}]}, names=[test_id, vehicle_id, test_date, test_class, test_type, test_result, test_mileage, postcode_area]}, names=[tests]}, condition=ScalarFunctionInvocation{declaration=equal:any_any, arguments=[FieldReference{segments=[StructField{offset=0}], type=VarChar{nullable=true, length=15}}, FieldReference{segments=[StructField{offset=8}], type=VarChar{nullable=true, length=15}}], options=[], outputType=Bool{nullable=true}}, joinType=INNER}, condition=ScalarFunctionInvocation{declaration=equal:any_any, arguments=[FieldReference{segments=[StructField{offset=12}], type=VarChar{nullable=true, length=15}}, VarCharLiteral{nullable=false, value=P, length=15}], options=[], outputType=Bool{nullable=true}}}, expressions=[FieldReference{segments=[StructField{offset=3}], type=VarChar{nullable=true, length=15}}]}, groupings=[Grouping{expressions=[FieldReference{segments=[StructField{offset=0}], type=VarChar{nullable=true, length=15}}]}], measures=[Measure{function=AggregateFunctionInvocation{declaration=count:, arguments=[], options=[], aggregationPhase=INITIAL_TO_RESULT, sort=[], outputType=I64{nullable=false}, invocation=ALL}}]}, sortFields=[SortField{expr=FieldReference{segments=[StructField{offset=1}], type=I64{nullable=false}}, direction=ASC_NULLS_LAST}]}, names=[COLOUR, COLOURCOUNT]}], expectedTypeUrls=[]}
+extension_uris {
+  extension_uri_anchor: 2
+  uri: "/functions_aggregate_generic.yaml"
+}
+extension_uris {
+  extension_uri_anchor: 1
+  uri: "/functions_comparison.yaml"
+}
+extensions {
+  extension_function {
+    extension_uri_reference: 1
+    function_anchor: 1
+    name: "equal:any_any"
+    extension_urn_reference: 1
+  }
+}
+extensions {....}
+relations {....}
+version {
+  minor_number: 77
+  producer: "isthmus"
+}
+extension_urns {
+  extension_urn_anchor: 1
+  urn: "extension:io.substrait:functions_comparison"
+}
+extension_urns {
+  extension_urn_anchor: 2
+  urn: "extension:io.substrait:functions_aggregate_generic"
+}
+
 
 SELECT `t2`.`colour0` AS `COLOUR`, `t2`.`$f1` AS `COLOURCOUNT`
 FROM (SELECT `vehicles`.`colour` AS `colour0`, COUNT(*) AS `$f1`
