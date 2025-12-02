@@ -37,7 +37,7 @@ class NestedListExpressionTest extends TestBase {
   @Test
   void EmptyNestedListTest() {
     ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
-      assertThrows(AssertionError.class, builder::build);
+    assertThrows(AssertionError.class, builder::build);
   }
 
   @Test

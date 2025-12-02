@@ -935,7 +935,7 @@ public interface Expression extends FunctionArg {
 
     @Value.Check
     protected void check() {
-        assert !values().isEmpty(): "To specify an empty list, use Literal.empty_list";
+      assert !values().isEmpty() : "To specify an empty list, use Literal.empty_list";
 
       assert values().stream().map(Expression::getType).distinct().count() <= 1
           : "All values in NestedList must have the same type";
