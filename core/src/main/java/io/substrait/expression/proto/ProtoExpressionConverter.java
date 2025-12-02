@@ -369,8 +369,9 @@ public class ProtoExpressionConverter {
         List<Expression> list =
             nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
         return ExpressionCreator.nestedList(nested.getNullable(), list);
+      default:
+        throw new IllegalStateException("Unimplemented nested type: " + nested.getNestedTypeCase());
     }
-    return null;
   }
 
   public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {

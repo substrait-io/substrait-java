@@ -929,13 +929,19 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * A nested list expression with one or more elements.
+   *
+   * <p>Note: This class cannot be used to construct an empty list. To create an empty list, use
+   * {@link ExpressionCreator#emptyList(boolean, Type)} which returns an {@link EmptyListLiteral}.
+   */
   @Value.Immutable
   abstract class NestedList implements Nested {
     public abstract List<Expression> values();
 
     @Value.Check
     protected void check() {
-      assert !values().isEmpty() : "To specify an empty list, use Literal.empty_list";
+      assert !values().isEmpty() : "To specify an empty list, use ExpressionCreator.emptyList()";
 
       assert values().stream().map(Expression::getType).distinct().count() <= 1
           : "All values in NestedList must have the same type";
