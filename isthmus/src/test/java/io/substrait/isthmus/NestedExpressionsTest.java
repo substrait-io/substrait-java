@@ -14,7 +14,7 @@ import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
-public class NestedExpressionsTest extends PlanTestBase {
+class NestedExpressionsTest extends PlanTestBase {
 
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
@@ -31,7 +31,7 @@ public class NestedExpressionsTest extends PlanTestBase {
   final Rel emptyTable = b.emptyScan();
 
   @Test
-  public void literalsNestedListTest() {
+  void literalsNestedListTest() {
     List<Expression> expressionList = new ArrayList<>();
     Expression.NestedList literalNestedList =
         Expression.NestedList.builder()
@@ -52,7 +52,7 @@ public class NestedExpressionsTest extends PlanTestBase {
   }
 
   @Test
-  public void nonLiteralsNestedListTest() {
+  void nonLiteralsNestedListTest() {
     List<Expression> expressionList = new ArrayList<>();
 
     Expression.NestedList nonLiteralNestedList =

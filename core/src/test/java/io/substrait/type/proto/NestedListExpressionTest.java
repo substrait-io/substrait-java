@@ -6,13 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class NestedListExpressionTest extends TestBase {
+class NestedListExpressionTest extends TestBase {
   io.substrait.expression.Expression literalExpression =
       Expression.BoolLiteral.builder().value(true).build();
   Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));
 
   @Test
-  public void literalNestedListTest() {
+  void literalNestedListTest() {
     List<Expression> expressionList = new ArrayList<>();
     Expression.NestedList literalNestedList =
         Expression.NestedList.builder()
@@ -31,7 +31,7 @@ public class NestedListExpressionTest extends TestBase {
   }
 
   @Test
-  public void nonLiteralNestedListTest() {
+  void nonLiteralNestedListTest() {
     List<Expression> expressionList = new ArrayList<>();
 
     Expression.NestedList nonLiteralNestedList =
