@@ -17,7 +17,7 @@ import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.junit.jupiter.api.Test;
 
-public class VirtualTableScanTest extends PlanTestBase {
+class VirtualTableScanTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
   final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
@@ -25,7 +25,7 @@ public class VirtualTableScanTest extends PlanTestBase {
   @Test
   void literalOnlyVirtualTable() {
     NamedStruct schema =
-        NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(R.I32, N.FP64, R.STRING));
+        NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(R.I32, R.FP64, R.STRING));
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(
             schema,

@@ -4,6 +4,7 @@ import static io.substrait.expression.ExpressionCreator.i32;
 import static io.substrait.expression.ExpressionCreator.i64;
 import static io.substrait.expression.ExpressionCreator.list;
 import static io.substrait.expression.ExpressionCreator.map;
+import static io.substrait.expression.ExpressionCreator.nestedStruct;
 import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
 import static io.substrait.expression.ExpressionCreator.typedNull;
@@ -35,11 +36,7 @@ class VirtualTableScanTest extends TestBase {
   io.substrait.proto.Expression.Literal literal =
       io.substrait.proto.Expression.Literal.newBuilder().setI32(3).build();
 
-  Type type =
-      Type.newBuilder()
-          .setI32(
-              Type.I32.newBuilder().setNullability(Type.Nullability.NULLABILITY_NULLABLE).build())
-          .build();
+  Type type = Type.newBuilder().setI32(Type.I32.newBuilder().build()).build();
 
   io.substrait.proto.NamedStruct schema =
       io.substrait.proto.NamedStruct.newBuilder()
@@ -159,6 +156,9 @@ class VirtualTableScanTest extends TestBase {
                     .nullable(true) // can't have nullable rows
                     .build());
     assertThrows(AssertionError.class, bldr::build);
+  }
+
+  @Test
   void checkValidRowsWithSimpleTypes() {
     // Test with simple types and multiple rows
     VirtualTableScan virtualTableScan =
@@ -167,8 +167,8 @@ class VirtualTableScanTest extends TestBase {
                 NamedStruct.of(
                     Arrays.asList("id", "name", "age"), R.struct(R.I64, N.STRING, R.I32)))
             .addRows(
-                struct(false, i64(false, 1L), string(true, "Alice"), i32(false, 30)),
-                struct(false, i64(false, 2L), typedNull(N.STRING), i32(false, 25)))
+                nestedStruct(false, i64(false, 1L), string(true, "Alice"), i32(false, 30)),
+                nestedStruct(false, i64(false, 2L), typedNull(N.STRING), i32(false, 25)))
             .build();
     assertDoesNotThrow(virtualTableScan::check);
   }
@@ -184,7 +184,7 @@ class VirtualTableScanTest extends TestBase {
                     NamedStruct.of(
                         Arrays.asList("id", "name", "age"), R.struct(R.I64, R.STRING, R.I32)))
                 .addRows(
-                    struct(
+                    nestedStruct(
                         false,
                         i64(false, 1L),
                         i32(false, 123), // Wrong type - should be STRING
@@ -202,7 +202,9 @@ class VirtualTableScanTest extends TestBase {
                 .initialSchema(
                     NamedStruct.of(
                         Arrays.asList("id", "name", "age"), R.struct(R.I64, R.STRING, R.I32)))
-                .addRows(struct(false, i64(false, 1L), string(false, "Alice"))) // Missing age field
+                .addRows(
+                    nestedStruct(
+                        false, i64(false, 1L), string(false, "Alice"))) // Missing age field
                 .build());
   }
 
@@ -218,10 +220,10 @@ class VirtualTableScanTest extends TestBase {
                         Arrays.asList("id", "details", "field1", "field2"),
                         R.struct(R.I64, R.struct(R.STRING, R.I32))))
                 .addRows(
-                    struct(
+                    nestedStruct(
                         false,
                         i64(false, 1L),
-                        struct(
+                        nestedStruct(
                             false,
                             string(false, "value"),
                             string(false, "wrong")))) // Should be I32, not STRING
@@ -238,7 +240,7 @@ class VirtualTableScanTest extends TestBase {
                 .initialSchema(
                     NamedStruct.of(Arrays.asList("id", "tags"), R.struct(R.I64, R.list(R.STRING))))
                 .addRows(
-                    struct(
+                    nestedStruct(
                         false,
                         i64(false, 1L),
                         list(false, i32(false, 123)))) // Should be STRING, not I32
@@ -258,7 +260,7 @@ class VirtualTableScanTest extends TestBase {
                         TypeCreator.NULLABLE.struct(
                             TypeCreator.NULLABLE.I64, TypeCreator.NULLABLE.STRING)))
                 .addRows(
-                    struct(
+                    nestedStruct(
                         false,
                         i64(false, 1L), // non-nullable doesn't match nullable schema
                         string(false, "Alice")))
