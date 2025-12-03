@@ -107,11 +107,7 @@ public class SubstraitRelNodeConverter
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
-    this(
-        extensions,
-        typeFactory,
-        relBuilder,
-        ImmutableFeatureBoard.builder().build());
+    this(extensions, typeFactory, relBuilder, ImmutableFeatureBoard.builder().build());
   }
 
   public SubstraitRelNodeConverter(
@@ -236,7 +232,8 @@ public class SubstraitRelNodeConverter
                 .build());
 
     return relRoot.accept(
-        new SubstraitRelNodeConverter(extensions, relOptCluster.getTypeFactory(), relBuilder, featureBoard),
+        new SubstraitRelNodeConverter(
+            extensions, relOptCluster.getTypeFactory(), relBuilder, featureBoard),
         Context.newContext());
   }
 

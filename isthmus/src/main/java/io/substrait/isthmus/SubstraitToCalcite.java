@@ -64,7 +64,12 @@ public class SubstraitToCalcite {
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter,
       Prepare.CatalogReader catalogReader) {
-    this(extensions, typeFactory, typeConverter, catalogReader, ImmutableFeatureBoard.builder().build());
+    this(
+        extensions,
+        typeFactory,
+        typeConverter,
+        catalogReader,
+        ImmutableFeatureBoard.builder().build());
   }
 
   public SubstraitToCalcite(
