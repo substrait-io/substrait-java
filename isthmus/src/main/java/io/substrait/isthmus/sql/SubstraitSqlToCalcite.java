@@ -48,7 +48,7 @@ public class SubstraitSqlToCalcite {
    * @param sqlStatement a SQL statement string
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statement
-   * @param operatorTable the {@link SqlOperatorTable} for dynamic operators
+   * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
    * @return a {@link RelRoot} corresponding to the given SQL statement
    * @throws SqlParseException if there is an error while parsing the SQL statement
    */
@@ -97,7 +97,7 @@ public class SubstraitSqlToCalcite {
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
-   * @param operatorTable the {@link SqlOperatorTable} for dynamic operators
+   * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
    * @return a list of {@link RelRoot}s corresponding to the given SQL statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */

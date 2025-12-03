@@ -36,7 +36,13 @@ public final class SimpleExtensionToSqlOperator {
 
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection, RelDataTypeFactory typeFactory) {
-    TypeConverter typeConverter = TypeConverter.DEFAULT;
+    return from(collection, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  public static List<SqlOperator> from(
+      SimpleExtension.ExtensionCollection collection,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
     // TODO: add support for windows functions
     return Stream.concat(
             collection.scalarFunctions().stream(), collection.aggregateFunctions().stream())
