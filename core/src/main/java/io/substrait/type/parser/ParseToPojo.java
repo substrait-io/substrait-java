@@ -21,17 +21,18 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class ParseToPojo {
 
-  public static Type type(String urn, SubstraitTypeParser.StartContext ctx) {
-    Visitor visitor = Visitor.simple(urn);
+  public static Type type(final String urn, final SubstraitTypeParser.StartContext ctx) {
+    final Visitor visitor = Visitor.simple(urn);
     return (Type) ctx.accept(visitor);
   }
 
   public static ParameterizedType parameterizedType(
-      String urn, SubstraitTypeParser.StartContext ctx) {
+      final String urn, final SubstraitTypeParser.StartContext ctx) {
     return (ParameterizedType) ctx.accept(Visitor.parameterized(urn));
   }
 
-  public static TypeExpression typeExpression(String urn, SubstraitTypeParser.StartContext ctx) {
+  public static TypeExpression typeExpression(
+      final String urn, final SubstraitTypeParser.StartContext ctx) {
     return ctx.accept(Visitor.expression(urn));
   }
 
@@ -39,19 +40,19 @@ public class ParseToPojo {
     private final VisitorType expressionType;
     private final String urn;
 
-    public static Visitor simple(String urn) {
+    public static Visitor simple(final String urn) {
       return new Visitor(VisitorType.SIMPLE, urn);
     }
 
-    public static Visitor parameterized(String urn) {
+    public static Visitor parameterized(final String urn) {
       return new Visitor(VisitorType.PARAMETERIZED, urn);
     }
 
-    public static Visitor expression(String urn) {
+    public static Visitor expression(final String urn) {
       return new Visitor(VisitorType.EXPRESSION, urn);
     }
 
-    private Visitor(VisitorType exprType, String urn) {
+    private Visitor(final VisitorType exprType, final String urn) {
       this.expressionType = exprType;
       this.urn = urn;
     }
@@ -159,8 +160,8 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitIntervalDay(final SubstraitTypeParser.IntervalDayContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      Object precision = i(ctx.precision);
+      final boolean nullable = ctx.isnull != null;
+      final Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
         return withNull(nullable).intervalDay((Integer) precision);
       }
@@ -176,8 +177,8 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitIntervalCompound(
         final SubstraitTypeParser.IntervalCompoundContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      Object precision = i(ctx.precision);
+      final boolean nullable = ctx.isnull != null;
+      final Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
         return withNull(nullable).intervalCompound((Integer) precision);
       }
@@ -196,14 +197,14 @@ public class ParseToPojo {
     }
 
     @Override
-    public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
-      String name = ctx.Identifier().getSymbol().getText();
+    public Type visitUserDefined(final SubstraitTypeParser.UserDefinedContext ctx) {
+      final String name = ctx.Identifier().getSymbol().getText();
       return withNull(ctx).userDefined(urn, name);
     }
 
     @Override
     public TypeExpression visitFixedChar(final SubstraitTypeParser.FixedCharContext ctx) {
-      boolean nullable = ctx.isnull != null;
+      final boolean nullable = ctx.isnull != null;
       return of(
           ctx.len,
           withNull(nullable)::fixedChar,
@@ -212,11 +213,11 @@ public class ParseToPojo {
     }
 
     private TypeExpression of(
-        SubstraitTypeParser.NumericParameterContext ctx,
-        IntFunction<TypeExpression> intFunc,
-        Function<String, TypeExpression> strFunc,
-        Function<TypeExpression, TypeExpression> exprFunc) {
-      TypeExpression type = ctx.accept(this);
+        final SubstraitTypeParser.NumericParameterContext ctx,
+        final IntFunction<TypeExpression> intFunc,
+        final Function<String, TypeExpression> strFunc,
+        final Function<TypeExpression, TypeExpression> exprFunc) {
+      final TypeExpression type = ctx.accept(this);
       if (type instanceof TypeExpression.IntegerLiteral) {
         return intFunc.apply(((TypeExpression.IntegerLiteral) type).value());
       }
@@ -230,7 +231,7 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitVarChar(final SubstraitTypeParser.VarCharContext ctx) {
-      boolean nullable = ctx.isnull != null;
+      final boolean nullable = ctx.isnull != null;
       return of(
           ctx.len,
           withNull(nullable)::varChar,
@@ -240,7 +241,7 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitFixedBinary(final SubstraitTypeParser.FixedBinaryContext ctx) {
-      boolean nullable = ctx.isnull != null;
+      final boolean nullable = ctx.isnull != null;
       return of(
           ctx.len,
           withNull(nullable)::fixedBinary,
@@ -250,9 +251,9 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitDecimal(final SubstraitTypeParser.DecimalContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      Object precision = i(ctx.precision);
-      Object scale = i(ctx.scale);
+      final boolean nullable = ctx.isnull != null;
+      final Object precision = i(ctx.precision);
+      final Object scale = i(ctx.scale);
       if (precision instanceof Integer && scale instanceof Integer) {
         return withNull(nullable).decimal((int) precision, (int) scale);
       }
@@ -279,8 +280,8 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitPrecisionTimestamp(
         final SubstraitTypeParser.PrecisionTimestampContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      Object precision = i(ctx.precision);
+      final boolean nullable = ctx.isnull != null;
+      final Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
         return withNull(nullable).precisionTimestamp((Integer) precision);
       }
@@ -296,8 +297,8 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitPrecisionTimestampTZ(
         final SubstraitTypeParser.PrecisionTimestampTZContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      Object precision = i(ctx.precision);
+      final boolean nullable = ctx.isnull != null;
+      final Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
         return withNull(nullable).precisionTimestampTZ((Integer) precision);
       }
@@ -310,8 +311,8 @@ public class ParseToPojo {
       return withNullE(nullable).precisionTimestampTZE(ctx.precision.accept(this));
     }
 
-    private Object i(SubstraitTypeParser.NumericParameterContext ctx) {
-      TypeExpression type = ctx.accept(this);
+    private Object i(final SubstraitTypeParser.NumericParameterContext ctx) {
+      final TypeExpression type = ctx.accept(this);
       if (type instanceof TypeExpression.IntegerLiteral) {
         return ((TypeExpression.IntegerLiteral) type).value();
       } else if (type instanceof ParameterizedType.StringLiteral) {
@@ -325,8 +326,8 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitStruct(final SubstraitTypeParser.StructContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      List<TypeExpression> types =
+      final boolean nullable = ctx.isnull != null;
+      final List<TypeExpression> types =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
@@ -356,8 +357,8 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitList(final SubstraitTypeParser.ListContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      TypeExpression element = ctx.expr().accept(this);
+      final boolean nullable = ctx.isnull != null;
+      final TypeExpression element = ctx.expr().accept(this);
       if (element instanceof Type) {
         return withNull(nullable).list((Type) element);
       }
@@ -373,9 +374,9 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitMap(final SubstraitTypeParser.MapContext ctx) {
-      boolean nullable = ctx.isnull != null;
-      TypeExpression key = ctx.key.accept(this);
-      TypeExpression value = ctx.value.accept(this);
+      final boolean nullable = ctx.isnull != null;
+      final TypeExpression key = ctx.key.accept(this);
+      final TypeExpression value = ctx.value.accept(this);
       if (key instanceof Type && value instanceof Type) {
         return withNull(nullable).map((Type) key, (Type) value);
       }
@@ -388,20 +389,20 @@ public class ParseToPojo {
       return withNullE(nullable).mapE(key, value);
     }
 
-    private TypeCreator withNull(SubstraitTypeParser.ScalarTypeContext required) {
+    private TypeCreator withNull(final SubstraitTypeParser.ScalarTypeContext required) {
       return Type.withNullability(
           ((SubstraitTypeParser.TypeContext) required.parent).isnull != null);
     }
 
-    private TypeCreator withNull(boolean nullable) {
+    private TypeCreator withNull(final boolean nullable) {
       return Type.withNullability(nullable);
     }
 
-    private TypeExpressionCreator withNullE(boolean nullable) {
+    private TypeExpressionCreator withNullE(final boolean nullable) {
       return TypeExpression.withNullability(nullable);
     }
 
-    private ParameterizedTypeCreator withNullP(boolean nullable) {
+    private ParameterizedTypeCreator withNullP(final boolean nullable) {
       return ParameterizedType.withNullability(nullable);
     }
 
@@ -420,7 +421,7 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitTypeParam(final SubstraitTypeParser.TypeParamContext ctx) {
       checkParameterizedOrExpression();
-      boolean nullable = ctx.isnull != null;
+      final boolean nullable = ctx.isnull != null;
       return ParameterizedType.StringLiteral.builder()
           .nullable(nullable)
           .value(ctx.getText())
@@ -457,17 +458,18 @@ public class ParseToPojo {
     public TypeExpression visitMultilineDefinition(
         final SubstraitTypeParser.MultilineDefinitionContext ctx) {
       checkExpression();
-      List<TypeExpression> exprs =
+      final List<TypeExpression> exprs =
           ctx.expr().stream()
               .map(t -> t.accept(this))
               .collect(java.util.stream.Collectors.toList());
-      List<String> identifiers =
+      final List<String> identifiers =
           ctx.Identifier().stream()
               .map(t -> t.getText())
               .collect(java.util.stream.Collectors.toList());
-      TypeExpression finalExpr = ctx.finalType.accept(this);
+      final TypeExpression finalExpr = ctx.finalType.accept(this);
 
-      ImmutableTypeExpression.ReturnProgram.Builder bldr = TypeExpression.ReturnProgram.builder();
+      final ImmutableTypeExpression.ReturnProgram.Builder bldr =
+          TypeExpression.ReturnProgram.builder();
       for (int i = 0; i < exprs.size(); i++) {
         bldr.addAssignments(
             TypeExpression.ReturnProgram.Assignment.builder()
@@ -483,7 +485,7 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitBinaryExpr(final SubstraitTypeParser.BinaryExprContext ctx) {
       checkExpression();
-      TypeExpression.BinaryOperation.OpType type = getBinaryExpressionType(ctx.op);
+      final TypeExpression.BinaryOperation.OpType type = getBinaryExpressionType(ctx.op);
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.left.accept(this))
@@ -491,7 +493,7 @@ public class ParseToPojo {
           .build();
     }
 
-    private TypeExpression.BinaryOperation.OpType getBinaryExpressionType(Token token) {
+    private TypeExpression.BinaryOperation.OpType getBinaryExpressionType(final Token token) {
       switch (token.getText().toUpperCase(Locale.ROOT)) {
         case "+":
           return TypeExpression.BinaryOperation.OpType.ADD;
@@ -537,8 +539,8 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitAnyType(SubstraitTypeParser.AnyTypeContext anyType) {
-      boolean nullable = ((SubstraitTypeParser.TypeContext) anyType.parent).isnull != null;
+    public TypeExpression visitAnyType(final SubstraitTypeParser.AnyTypeContext anyType) {
+      final boolean nullable = ((SubstraitTypeParser.TypeContext) anyType.parent).isnull != null;
       return withNullP(nullable).parameter("any");
     }
 
@@ -548,7 +550,8 @@ public class ParseToPojo {
       if (ctx.expr().size() != 2) {
         throw new IllegalStateException("Only two argument functions exist for type expressions.");
       }
-      TypeExpression.BinaryOperation.OpType type = getFunctionType(ctx.Identifier().getSymbol());
+      final TypeExpression.BinaryOperation.OpType type =
+          getFunctionType(ctx.Identifier().getSymbol());
       return TypeExpression.BinaryOperation.builder()
           .opType(type)
           .left(ctx.expr(0).accept(this))
@@ -556,7 +559,7 @@ public class ParseToPojo {
           .build();
     }
 
-    private TypeExpression.BinaryOperation.OpType getFunctionType(Token token) {
+    private TypeExpression.BinaryOperation.OpType getFunctionType(final Token token) {
       switch (token.getText().toUpperCase(Locale.ROOT)) {
         case "MIN":
           return TypeExpression.BinaryOperation.OpType.MIN;
@@ -578,7 +581,7 @@ public class ParseToPojo {
       return i(Integer.parseInt(ctx.getText()));
     }
 
-    protected TypeExpression i(int val) {
+    protected TypeExpression i(final int val) {
       return TypeExpression.IntegerLiteral.builder().value(val).build();
     }
 

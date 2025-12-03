@@ -10,11 +10,12 @@ public abstract class ExtensionSingle extends SingleInputRel {
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 
-  public static ImmutableExtensionSingle.Builder from(Extension.SingleRelDetail detail, Rel input) {
+  public static ImmutableExtensionSingle.Builder from(
+      final Extension.SingleRelDetail detail, final Rel input) {
     return ImmutableExtensionSingle.builder()
         .input(input)
         .detail(detail)

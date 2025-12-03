@@ -11,16 +11,19 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
 
-  static TypeCreator withNullability(boolean nullable) {
+  static TypeCreator withNullability(final boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
 
   @Override
-  <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
+  <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E;
 
   @Override
   default <R, C extends VisitationContext, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      final SimpleExtension.Function fnDef,
+      final int argIdx,
+      final FuncArgVisitor<R, C, E> fnArgVisitor,
+      final C context)
       throws E {
     return fnArgVisitor.visitType(fnDef, argIdx, this, context);
   }
@@ -398,7 +401,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     }
 
     @Override
-    public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
+    public <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
       return typeVisitor.visit(this);
     }
   }

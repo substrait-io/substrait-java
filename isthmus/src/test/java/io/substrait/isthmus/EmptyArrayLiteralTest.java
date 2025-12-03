@@ -17,9 +17,9 @@ class EmptyArrayLiteralTest extends PlanTestBase {
 
   @Test
   void emptyArrayLiteral() {
-    Type colType = N.I8;
-    EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(false, N.I8);
-    Project rel =
+    final Type colType = N.I8;
+    final EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(false, N.I8);
+    final Project rel =
         b.project(
             input -> List.of(emptyListLiteral),
             Rel.Remap.offset(1, 1),
@@ -29,9 +29,9 @@ class EmptyArrayLiteralTest extends PlanTestBase {
 
   @Test
   void nullableEmptyArrayLiteral() {
-    Type colType = N.I8;
-    EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(true, N.I8);
-    Project rel =
+    final Type colType = N.I8;
+    final EmptyListLiteral emptyListLiteral = ExpressionCreator.emptyList(true, N.I8);
+    final Project rel =
         b.project(
             input -> List.of(emptyListLiteral),
             Rel.Remap.offset(1, 1),

@@ -31,7 +31,8 @@ public interface FileOrFiles {
   }
 
   default ReadRel.LocalFiles.FileOrFiles toProto() {
-    ReadRel.LocalFiles.FileOrFiles.Builder builder = ReadRel.LocalFiles.FileOrFiles.newBuilder();
+    final ReadRel.LocalFiles.FileOrFiles.Builder builder =
+        ReadRel.LocalFiles.FileOrFiles.newBuilder();
 
     getFileFormat()
         .ifPresent(
@@ -48,9 +49,9 @@ public interface FileOrFiles {
                 builder.setDwrf(
                     ReadRel.LocalFiles.FileOrFiles.DwrfReadOptions.newBuilder().build());
               } else if (fileFormat instanceof FileFormat.DelimiterSeparatedTextReadOptions) {
-                FileFormat.DelimiterSeparatedTextReadOptions options =
+                final FileFormat.DelimiterSeparatedTextReadOptions options =
                     (FileFormat.DelimiterSeparatedTextReadOptions) fileFormat;
-                ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions.Builder
+                final ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions.Builder
                     optionsBuilder =
                         ReadRel.LocalFiles.FileOrFiles.DelimiterSeparatedTextReadOptions
                             .newBuilder()
@@ -62,7 +63,7 @@ public interface FileOrFiles {
                 options.getValueTreatedAsNull().ifPresent(optionsBuilder::setValueTreatedAsNull);
                 builder.setText(optionsBuilder.build());
               } else if (fileFormat instanceof FileFormat.Extension) {
-                FileFormat.Extension options = (FileFormat.Extension) fileFormat;
+                final FileFormat.Extension options = (FileFormat.Extension) fileFormat;
                 builder.setExtension(options.getExtension());
               } else {
                 throw new UnsupportedOperationException(

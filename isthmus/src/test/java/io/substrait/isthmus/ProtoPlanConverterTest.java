@@ -20,8 +20,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class ProtoPlanConverterTest extends PlanTestBase {
 
-  private io.substrait.proto.Plan getProtoPlan(String query1) throws SqlParseException {
-    SqlToSubstrait s = new SqlToSubstrait();
+  private io.substrait.proto.Plan getProtoPlan(final String query1) throws SqlParseException {
+    final SqlToSubstrait s = new SqlToSubstrait();
     return toProto(s.convert(query1, TPCH_CATALOG));
   }
 
@@ -35,7 +35,7 @@ class ProtoPlanConverterTest extends PlanTestBase {
     assertProtoPlanRoundrip("select l_orderkey,l_extendedprice from lineitem");
   }
 
-  private static void assertAggregateInvocationDistinct(io.substrait.proto.Plan plan) {
+  private static void assertAggregateInvocationDistinct(final io.substrait.proto.Plan plan) {
     assertEquals(
         AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_DISTINCT,
         plan.getRelations(0)
@@ -50,8 +50,8 @@ class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   void distinctCount() throws IOException, SqlParseException {
-    String distinctQuery = "select count(DISTINCT L_ORDERKEY) from lineitem";
-    io.substrait.proto.Plan protoPlan = getProtoPlan(distinctQuery);
+    final String distinctQuery = "select count(DISTINCT L_ORDERKEY) from lineitem";
+    final io.substrait.proto.Plan protoPlan = getProtoPlan(distinctQuery);
     assertAggregateInvocationDistinct(protoPlan);
     assertAggregateInvocationDistinct(toProto(new ProtoPlanConverter().from(protoPlan)));
   }
@@ -63,40 +63,40 @@ class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   void crossJoin() throws IOException, SqlParseException {
-    int[] counter = new int[1];
-    RelCopyOnWriteVisitor<RuntimeException> crossJoinCountingVisitor =
+    final int[] counter = new int[1];
+    final RelCopyOnWriteVisitor<RuntimeException> crossJoinCountingVisitor =
         new RelCopyOnWriteVisitor<RuntimeException>() {
           @Override
-          public Optional<Rel> visit(Cross cross, EmptyVisitationContext context)
+          public Optional<Rel> visit(final Cross cross, final EmptyVisitationContext context)
               throws RuntimeException {
             counter[0]++;
             return super.visit(cross, context);
           }
         };
-    ImmutableFeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
+    final ImmutableFeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
 
-    String query1 =
+    final String query1 =
         "select\n"
             + "  c.c_custKey,\n"
             + "  o.o_custkey\n"
             + "from\n"
             + "  \"customer\" c cross join\n"
             + "  \"orders\" o";
-    Plan plan1 = assertProtoPlanRoundrip(query1, new SqlToSubstrait(featureBoard));
+    final Plan plan1 = assertProtoPlanRoundrip(query1, new SqlToSubstrait(featureBoard));
     plan1
         .getRoots()
         .forEach(
             t -> t.getInput().accept(crossJoinCountingVisitor, EmptyVisitationContext.INSTANCE));
     assertEquals(1, counter[0]);
 
-    String query2 =
+    final String query2 =
         "select\n"
             + "  c.c_custKey,\n"
             + "  o.o_custkey\n"
             + "from\n"
             + "  \"customer\" c,\n"
             + "  \"orders\" o";
-    Plan plan2 = assertProtoPlanRoundrip(query2, new SqlToSubstrait(featureBoard));
+    final Plan plan2 = assertProtoPlanRoundrip(query2, new SqlToSubstrait(featureBoard));
     plan2
         .getRoots()
         .forEach(
@@ -137,7 +137,7 @@ class ProtoPlanConverterTest extends PlanTestBase {
 
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
-  void setTest(Set.SetOp op, boolean multi) throws Exception {
+  void setTest(final Set.SetOp op, final boolean multi) throws Exception {
     assertProtoPlanRoundrip(SetUtils.getSetQuery(op, multi));
   }
 
@@ -167,7 +167,7 @@ class ProtoPlanConverterTest extends PlanTestBase {
 
   @Test
   void existsNestedCorrelatedSubquery() throws IOException, SqlParseException {
-    String sql =
+    final String sql =
         "SELECT p_partkey\n"
             + "FROM part p\n"
             + "WHERE EXISTS\n"

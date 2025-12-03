@@ -29,8 +29,8 @@ public class SubstraitSqlStatementParser {
    * @return a list of {@link SqlNode}s corresponding to the given statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
-  public static List<SqlNode> parseStatements(String sqlStatements) throws SqlParseException {
-    SqlParser parser = SqlParser.create(sqlStatements, PARSER_CONFIG);
+  public static List<SqlNode> parseStatements(final String sqlStatements) throws SqlParseException {
+    final SqlParser parser = SqlParser.create(sqlStatements, PARSER_CONFIG);
     return parser.parseStmtList();
   }
 }

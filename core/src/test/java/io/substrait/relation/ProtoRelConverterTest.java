@@ -37,16 +37,16 @@ class ProtoRelConverterTest extends TestBase {
     final StringHolder enhanced = new StringHolder("ENHANCED");
     final StringHolder optimized = new StringHolder("OPTIMIZED");
 
-    Rel emptyAdvancedExtension = relWithExtension(AdvancedExtension.builder().build());
-    Rel advancedExtensionWithOptimization =
+    final Rel emptyAdvancedExtension = relWithExtension(AdvancedExtension.builder().build());
+    final Rel advancedExtensionWithOptimization =
         relWithExtension(AdvancedExtension.builder().addOptimizations(optimized).build());
-    Rel advancedExtensionWithEnhancement =
+    final Rel advancedExtensionWithEnhancement =
         relWithExtension(AdvancedExtension.builder().enhancement(enhanced).build());
-    Rel advancedExtensionWithEnhancementAndOptimization =
+    final Rel advancedExtensionWithEnhancementAndOptimization =
         relWithExtension(
             AdvancedExtension.builder().enhancement(enhanced).addOptimizations(optimized).build());
 
-    Rel relWithExtension(AdvancedExtension advancedExtension) {
+    Rel relWithExtension(final AdvancedExtension advancedExtension) {
       return NamedScan.builder()
           .from(commonTable)
           .commonExtension(advancedExtension)
@@ -158,36 +158,37 @@ class ProtoRelConverterTest extends TestBase {
 
     @Test
     void extensionLeaf() {
-      Rel rel = ExtensionLeaf.from(new StringHolder("DETAILS")).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel rel = ExtensionLeaf.from(new StringHolder("DETAILS")).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+      final Rel relReturned = protoRelConverter.from(protoRel);
 
       assertNotEquals(rel, relReturned);
     }
 
     @Test
     void extensionSingle() {
-      Rel rel = ExtensionSingle.from(new StringHolder("DETAILS"), commonTable).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel rel = ExtensionSingle.from(new StringHolder("DETAILS"), commonTable).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+      final Rel relReturned = protoRelConverter.from(protoRel);
 
       assertNotEquals(rel, relReturned);
     }
 
     @Test
     void extensionMulti() {
-      Rel rel = ExtensionMulti.from(new StringHolder("DETAILS"), commonTable, commonTable).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel rel =
+          ExtensionMulti.from(new StringHolder("DETAILS"), commonTable, commonTable).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+      final Rel relReturned = protoRelConverter.from(protoRel);
 
       assertNotEquals(rel, relReturned);
     }
 
     @Test
     void extensionTable() {
-      Rel rel = ExtensionTable.from(new StringHolder("DETAILS")).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel rel = ExtensionTable.from(new StringHolder("DETAILS")).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+      final Rel relReturned = protoRelConverter.from(protoRel);
 
       assertNotEquals(rel, relReturned);
     }
@@ -197,8 +198,8 @@ class ProtoRelConverterTest extends TestBase {
   @Nested
   class HintsTest {
 
-    Stats createStats(boolean includeEmptyOptimization) {
-      ImmutableStats.Builder builder = Stats.builder();
+    Stats createStats(final boolean includeEmptyOptimization) {
+      final ImmutableStats.Builder builder = Stats.builder();
       builder.rowCount(42).recordSize(42);
       if (includeEmptyOptimization) {
         builder.extension(AdvancedExtension.builder().addOptimizations().build());
@@ -220,8 +221,8 @@ class ProtoRelConverterTest extends TestBase {
           .build();
     }
 
-    RuntimeConstraint createRuntimeConstraint(boolean includeEmptyOptimization) {
-      ImmutableRuntimeConstraint.Builder builder = RuntimeConstraint.builder();
+    RuntimeConstraint createRuntimeConstraint(final boolean includeEmptyOptimization) {
+      final ImmutableRuntimeConstraint.Builder builder = RuntimeConstraint.builder();
       if (includeEmptyOptimization) {
         builder.extension(AdvancedExtension.builder().addOptimizations().build());
       }
@@ -230,7 +231,7 @@ class ProtoRelConverterTest extends TestBase {
 
     @Test
     void relWithCompleteHint() {
-      Hint test =
+      final Hint test =
           Hint.builder()
               .alias("TestHint")
               .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
@@ -242,15 +243,15 @@ class ProtoRelConverterTest extends TestBase {
               .runtimeConstraint(createRuntimeConstraint(true))
               .build();
 
-      Rel relWithCompleteHint = NamedScan.builder().from(commonTable).hint(test).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithCompleteHint);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel relWithCompleteHint = NamedScan.builder().from(commonTable).hint(test).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithCompleteHint);
+      final Rel relReturned = protoRelConverter.from(protoRel);
       assertEquals(relWithCompleteHint, relReturned);
     }
 
     @Test
     void relWithLoadedComputationHint() {
-      Hint test =
+      final Hint test =
           Hint.builder()
               .alias("TestHint")
               .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
@@ -260,15 +261,17 @@ class ProtoRelConverterTest extends TestBase {
               .runtimeConstraint(createRuntimeConstraint(false))
               .build();
 
-      Rel relWithLoadedComputationHint = NamedScan.builder().from(commonTable).hint(test).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithLoadedComputationHint);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel relWithLoadedComputationHint =
+          NamedScan.builder().from(commonTable).hint(test).build();
+      final io.substrait.proto.Rel protoRel =
+          relProtoConverter.toProto(relWithLoadedComputationHint);
+      final Rel relReturned = protoRelConverter.from(protoRel);
       assertEquals(relWithLoadedComputationHint, relReturned);
     }
 
     @Test
     void relWithSavedComputationHint() {
-      Hint test =
+      final Hint test =
           Hint.builder()
               .alias("TestHint")
               .addAllOutputNames(Arrays.asList("Hint 1", "Hint 2"))
@@ -278,18 +281,20 @@ class ProtoRelConverterTest extends TestBase {
               .runtimeConstraint(createRuntimeConstraint(false))
               .build();
 
-      Rel relWithSavedComputationHint = NamedScan.builder().from(commonTable).hint(test).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithSavedComputationHint);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Rel relWithSavedComputationHint =
+          NamedScan.builder().from(commonTable).hint(test).build();
+      final io.substrait.proto.Rel protoRel =
+          relProtoConverter.toProto(relWithSavedComputationHint);
+      final Rel relReturned = protoRelConverter.from(protoRel);
       assertEquals(relWithSavedComputationHint, relReturned);
     }
 
     @Test
     void relWithMinimalHint() {
-      Hint test = Hint.builder().build();
-      Rel relWithMinimalHint = NamedScan.builder().from(commonTable).hint(test).build();
-      io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithMinimalHint);
-      Rel relReturned = protoRelConverter.from(protoRel);
+      final Hint test = Hint.builder().build();
+      final Rel relWithMinimalHint = NamedScan.builder().from(commonTable).hint(test).build();
+      final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(relWithMinimalHint);
+      final Rel relReturned = protoRelConverter.from(protoRel);
       assertEquals(relWithMinimalHint, relReturned);
     }
   }

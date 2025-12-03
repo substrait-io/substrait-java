@@ -19,24 +19,24 @@ class SetTest {
 
   @Test
   void deriveRecordTypeNullability() {
-    List<String> names =
+    final List<String> names =
         Arrays.asList("col1", "col2", "col3", "col4", "col5", "col6", "col7", "col8");
 
     // From https://substrait.io/relations/logical_relations/#output-type-derivation-examples
-    EmptyScan input1 =
+    final EmptyScan input1 =
         EmptyScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, R, R, R, N, N, N, N)))
             .build();
-    EmptyScan input2 =
+    final EmptyScan input2 =
         EmptyScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, R, N, N, R, R, N, N)))
             .build();
-    EmptyScan input3 =
+    final EmptyScan input3 =
         EmptyScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, N, R, N, R, N, R, N)))
             .build();
 
-    Map<Set.SetOp, Type.Struct> expecteds = new HashMap<>();
+    final Map<Set.SetOp, Type.Struct> expecteds = new HashMap<>();
     expecteds.put(Set.SetOp.MINUS_PRIMARY, getStruct(R, R, R, R, N, N, N, N));
     expecteds.put(Set.SetOp.MINUS_PRIMARY_ALL, getStruct(R, R, R, R, N, N, N, N));
     expecteds.put(Set.SetOp.MINUS_MULTISET, getStruct(R, R, R, R, N, N, N, N));
@@ -52,7 +52,7 @@ class SetTest {
               if (setOp == Set.SetOp.UNKNOWN) {
                 return;
               }
-              Type.Struct expected = expecteds.get(setOp);
+              final Type.Struct expected = expecteds.get(setOp);
               assertNotNull(expected, "Missing expected record type for " + setOp);
               assertEquals(
                   expected,
@@ -65,7 +65,7 @@ class SetTest {
             });
   }
 
-  private Type.Struct getStruct(Type... types) {
+  private Type.Struct getStruct(final Type... types) {
     return Type.Struct.builder().addFields(types).nullable(false).build();
   }
 }

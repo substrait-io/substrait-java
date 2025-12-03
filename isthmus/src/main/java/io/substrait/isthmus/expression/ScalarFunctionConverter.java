@@ -32,15 +32,16 @@ public class ScalarFunctionConverter
   private final List<ScalarFunctionMapper> mappers;
 
   public ScalarFunctionConverter(
-      List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+      final List<SimpleExtension.ScalarFunctionVariant> functions,
+      final RelDataTypeFactory typeFactory) {
     this(functions, Collections.emptyList(), typeFactory, TypeConverter.DEFAULT);
   }
 
   public ScalarFunctionConverter(
-      List<SimpleExtension.ScalarFunctionVariant> functions,
-      List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter) {
+      final List<SimpleExtension.ScalarFunctionVariant> functions,
+      final List<FunctionMappings.Sig> additionalSignatures,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
 
     mappers = List.of(new TrimFunctionMapper(functions), new SqrtFunctionMapper(functions));
@@ -53,7 +54,7 @@ public class ScalarFunctionConverter
 
   @Override
   public Optional<Expression> convert(
-      RexCall call, Function<RexNode, Expression> topLevelConverter) {
+      final RexCall call, final Function<RexNode, Expression> topLevelConverter) {
     // If a mapping applies to this call, use it; otherwise default behavior.
     return getMappingForCall(call)
         .map(mapping -> mappedConvert(mapping, call, topLevelConverter))
@@ -69,12 +70,12 @@ public class ScalarFunctionConverter
   }
 
   private Optional<Expression> mappedConvert(
-      SubstraitFunctionMapping mapping,
-      RexCall call,
-      Function<RexNode, Expression> topLevelConverter) {
-    FunctionFinder finder =
+      final SubstraitFunctionMapping mapping,
+      final RexCall call,
+      final Function<RexNode, Expression> topLevelConverter) {
+    final FunctionFinder finder =
         new FunctionFinder(mapping.substraitName(), call.op, mapping.functions());
-    WrappedScalarCall wrapped =
+    final WrappedScalarCall wrapped =
         new WrappedScalarCall(call) {
           @Override
           public Stream<RexNode> getOperands() {
@@ -86,17 +87,17 @@ public class ScalarFunctionConverter
   }
 
   private Optional<Expression> defaultConvert(
-      RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    FunctionFinder finder = signatures.get(call.op);
-    WrappedScalarCall wrapped = new WrappedScalarCall(call);
+      final RexCall call, final Function<RexNode, Expression> topLevelConverter) {
+    final FunctionFinder finder = signatures.get(call.op);
+    final WrappedScalarCall wrapped = new WrappedScalarCall(call);
 
     return attemptMatch(finder, wrapped, topLevelConverter);
   }
 
   private Optional<Expression> attemptMatch(
-      FunctionFinder finder,
-      WrappedScalarCall call,
-      Function<RexNode, Expression> topLevelConverter) {
+      final FunctionFinder finder,
+      final WrappedScalarCall call,
+      final Function<RexNode, Expression> topLevelConverter) {
     if (!isPotentialFunctionMatch(finder, call)) {
       return Optional.empty();
     }
@@ -104,16 +105,17 @@ public class ScalarFunctionConverter
     return finder.attemptMatch(call, topLevelConverter);
   }
 
-  private boolean isPotentialFunctionMatch(FunctionFinder finder, WrappedScalarCall call) {
+  private boolean isPotentialFunctionMatch(
+      final FunctionFinder finder, final WrappedScalarCall call) {
     return Objects.nonNull(finder) && finder.allowedArgCount((int) call.getOperands().count());
   }
 
   @Override
   protected Expression generateBinding(
-      WrappedScalarCall call,
-      SimpleExtension.ScalarFunctionVariant function,
-      List<? extends FunctionArg> arguments,
-      Type outputType) {
+      final WrappedScalarCall call,
+      final SimpleExtension.ScalarFunctionVariant function,
+      final List<? extends FunctionArg> arguments,
+      final Type outputType) {
     return Expression.ScalarFunctionInvocation.builder()
         .outputType(outputType)
         .declaration(function)
@@ -121,14 +123,15 @@ public class ScalarFunctionConverter
         .build();
   }
 
-  public List<FunctionArg> getExpressionArguments(Expression.ScalarFunctionInvocation expression) {
+  public List<FunctionArg> getExpressionArguments(
+      final Expression.ScalarFunctionInvocation expression) {
     // If a mapping applies to this expression, use it to get the arguments; otherwise default
     // behavior.
     return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
   }
 
   private Optional<List<FunctionArg>> getMappedExpressionArguments(
-      Expression.ScalarFunctionInvocation expression) {
+      final Expression.ScalarFunctionInvocation expression) {
     return mappers.stream()
         .map(mapper -> mapper.getExpressionArguments(expression))
         .filter(Optional::isPresent)
@@ -140,7 +143,7 @@ public class ScalarFunctionConverter
 
     private final RexCall delegate;
 
-    private WrappedScalarCall(RexCall delegate) {
+    private WrappedScalarCall(final RexCall delegate) {
       this.delegate = delegate;
     }
 

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class SpecVersionTest {
   @Test
   void testSubstraitVersionDefaultValues() {
-    Version version = Version.DEFAULT_VERSION;
+    final Version version = Version.DEFAULT_VERSION;
 
     assertNotNull(version.getMajor());
     assertNotNull(version.getMinor());

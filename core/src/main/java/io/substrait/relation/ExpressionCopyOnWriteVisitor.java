@@ -16,7 +16,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   private final RelCopyOnWriteVisitor<E> relCopyOnWriteVisitor;
 
-  public ExpressionCopyOnWriteVisitor(RelCopyOnWriteVisitor<E> relCopyOnWriteVisitor) {
+  public ExpressionCopyOnWriteVisitor(final RelCopyOnWriteVisitor<E> relCopyOnWriteVisitor) {
     this.relCopyOnWriteVisitor = relCopyOnWriteVisitor;
   }
 
@@ -25,197 +25,200 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   /** Utility method for visiting literals. By default, visits to literal types call this. */
-  public Optional<Expression> visitLiteral(Expression.Literal literal) {
+  public Optional<Expression> visitLiteral(final Expression.Literal literal) {
     return Optional.empty();
   }
 
   @Override
-  public Optional<Expression> visit(Expression.NullLiteral expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.NullLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.BoolLiteral expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.BoolLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.I8Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.I8Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.I16Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.I16Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.I32Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.I32Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.I64Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.I64Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.FP32Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.FP32Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.FP64Literal expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.FP64Literal expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.StrLiteral expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.StrLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.BinaryLiteral expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.BinaryLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.TimeLiteral expr, EmptyVisitationContext context)
-      throws E {
+  public Optional<Expression> visit(
+      final Expression.TimeLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.DateLiteral expr, EmptyVisitationContext context)
+  public Optional<Expression> visit(
+      final Expression.DateLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.TimestampLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.TimestampTZLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.PrecisionTimestampLiteral expr, final EmptyVisitationContext context)
       throws E {
     return visitLiteral(expr);
   }
 
   @Override
   public Optional<Expression> visit(
-      Expression.TimestampLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.TimestampTZLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.PrecisionTimestampLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.PrecisionTimestampTZLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.IntervalYearLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.IntervalDayLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.IntervalCompoundLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.UUIDLiteral expr, EmptyVisitationContext context)
+      final Expression.PrecisionTimestampTZLiteral expr, final EmptyVisitationContext context)
       throws E {
     return visitLiteral(expr);
   }
 
   @Override
   public Optional<Expression> visit(
-      Expression.FixedCharLiteral expr, EmptyVisitationContext context) throws E {
+      final Expression.IntervalYearLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.VarCharLiteral expr, EmptyVisitationContext context)
+  public Optional<Expression> visit(
+      final Expression.IntervalDayLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.IntervalCompoundLiteral expr, final EmptyVisitationContext context)
       throws E {
     return visitLiteral(expr);
   }
 
   @Override
   public Optional<Expression> visit(
-      Expression.FixedBinaryLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.DecimalLiteral expr, EmptyVisitationContext context)
-      throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.MapLiteral expr, EmptyVisitationContext context)
-      throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.EmptyMapLiteral expr, EmptyVisitationContext context)
-      throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.ListLiteral expr, EmptyVisitationContext context)
-      throws E {
+      final Expression.UUIDLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
   public Optional<Expression> visit(
-      Expression.EmptyListLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(Expression.StructLiteral expr, EmptyVisitationContext context)
-      throws E {
+      final Expression.FixedCharLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
   public Optional<Expression> visit(
-      Expression.UserDefinedLiteral expr, EmptyVisitationContext context) throws E {
+      final Expression.VarCharLiteral expr, final EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 
   @Override
-  public Optional<Expression> visit(Expression.Switch expr, EmptyVisitationContext context)
-      throws E {
-    Optional<Expression> match = expr.match().accept(this, context);
-    Optional<List<Expression.SwitchClause>> switchClauses =
+  public Optional<Expression> visit(
+      final Expression.FixedBinaryLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.DecimalLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.MapLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.EmptyMapLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.ListLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.EmptyListLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.StructLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.UserDefinedLiteral expr, final EmptyVisitationContext context) throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      final Expression.Switch expr, final EmptyVisitationContext context) throws E {
+    final Optional<Expression> match = expr.match().accept(this, context);
+    final Optional<List<Expression.SwitchClause>> switchClauses =
         transformList(expr.switchClauses(), context, this::visitSwitchClause);
-    Optional<Expression> defaultClause = expr.defaultClause().accept(this, context);
+    final Optional<Expression> defaultClause = expr.defaultClause().accept(this, context);
 
     if (allEmpty(match, switchClauses, defaultClause)) {
       return Optional.empty();
@@ -230,7 +233,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   protected Optional<Expression.SwitchClause> visitSwitchClause(
-      Expression.SwitchClause switchClause, EmptyVisitationContext context) throws E {
+      final Expression.SwitchClause switchClause, final EmptyVisitationContext context) throws E {
     // This code does not visit the condition on the switch clause as that MUST be a Literal and the
     // visitor does not guarantee a Literal return type. If you wish to update the condition,
     // override this method.
@@ -241,11 +244,11 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
-  public Optional<Expression> visit(Expression.IfThen ifThen, EmptyVisitationContext context)
-      throws E {
-    Optional<List<Expression.IfClause>> ifClauses =
+  public Optional<Expression> visit(
+      final Expression.IfThen ifThen, final EmptyVisitationContext context) throws E {
+    final Optional<List<Expression.IfClause>> ifClauses =
         transformList(ifThen.ifClauses(), context, this::visitIfClause);
-    Optional<Expression> elseClause = ifThen.elseClause().accept(this, context);
+    final Optional<Expression> elseClause = ifThen.elseClause().accept(this, context);
 
     if (allEmpty(ifClauses, elseClause)) {
       return Optional.empty();
@@ -259,9 +262,9 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   protected Optional<Expression.IfClause> visitIfClause(
-      Expression.IfClause ifClause, EmptyVisitationContext context) throws E {
-    Optional<Expression> condition = ifClause.condition().accept(this, context);
-    Optional<Expression> then = ifClause.then().accept(this, context);
+      final Expression.IfClause ifClause, final EmptyVisitationContext context) throws E {
+    final Optional<Expression> condition = ifClause.condition().accept(this, context);
+    final Optional<Expression> then = ifClause.then().accept(this, context);
 
     if (allEmpty(condition, then)) {
       return Optional.empty();
@@ -276,7 +279,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.ScalarFunctionInvocation sfi, EmptyVisitationContext context) throws E {
+      final Expression.ScalarFunctionInvocation sfi, final EmptyVisitationContext context)
+      throws E {
     return visitFunctionArguments(sfi.arguments(), context)
         .map(
             arguments ->
@@ -288,10 +292,11 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.WindowFunctionInvocation wfi, EmptyVisitationContext context) throws E {
-    Optional<List<FunctionArg>> arguments = visitFunctionArguments(wfi.arguments(), context);
-    Optional<List<Expression>> partitionBy = visitExprList(wfi.partitionBy(), context);
-    Optional<List<Expression.SortField>> sort =
+      final Expression.WindowFunctionInvocation wfi, final EmptyVisitationContext context)
+      throws E {
+    final Optional<List<FunctionArg>> arguments = visitFunctionArguments(wfi.arguments(), context);
+    final Optional<List<Expression>> partitionBy = visitExprList(wfi.partitionBy(), context);
+    final Optional<List<Expression.SortField>> sort =
         transformList(wfi.sort(), context, this::visitSortField);
 
     if (allEmpty(arguments, partitionBy, sort)) {
@@ -307,7 +312,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
-  public Optional<Expression> visit(Expression.Cast cast, EmptyVisitationContext context) throws E {
+  public Optional<Expression> visit(
+      final Expression.Cast cast, final EmptyVisitationContext context) throws E {
     return cast.input()
         .accept(this, context)
         .map(input -> Expression.Cast.builder().from(cast).input(input).build());
@@ -315,9 +321,9 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.SingleOrList singleOrList, EmptyVisitationContext context) throws E {
-    Optional<Expression> condition = singleOrList.condition().accept(this, context);
-    Optional<List<Expression>> options = visitExprList(singleOrList.options(), context);
+      final Expression.SingleOrList singleOrList, final EmptyVisitationContext context) throws E {
+    final Optional<Expression> condition = singleOrList.condition().accept(this, context);
+    final Optional<List<Expression>> options = visitExprList(singleOrList.options(), context);
 
     if (allEmpty(condition, options)) {
       return Optional.empty();
@@ -332,9 +338,9 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.MultiOrList multiOrList, EmptyVisitationContext context) throws E {
-    Optional<List<Expression>> conditions = visitExprList(multiOrList.conditions(), context);
-    Optional<List<Expression.MultiOrListRecord>> optionCombinations =
+      final Expression.MultiOrList multiOrList, final EmptyVisitationContext context) throws E {
+    final Optional<List<Expression>> conditions = visitExprList(multiOrList.conditions(), context);
+    final Optional<List<Expression.MultiOrListRecord>> optionCombinations =
         transformList(multiOrList.optionCombinations(), context, this::visitMultiOrListRecord);
 
     if (allEmpty(conditions, optionCombinations)) {
@@ -349,7 +355,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   protected Optional<Expression.MultiOrListRecord> visitMultiOrListRecord(
-      Expression.MultiOrListRecord multiOrListRecord, EmptyVisitationContext context) throws E {
+      final Expression.MultiOrListRecord multiOrListRecord, final EmptyVisitationContext context)
+      throws E {
     return visitExprList(multiOrListRecord.values(), context)
         .map(
             values ->
@@ -360,9 +367,9 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
-  public Optional<Expression> visit(FieldReference fieldReference, EmptyVisitationContext context)
-      throws E {
-    Optional<Expression> inputExpression =
+  public Optional<Expression> visit(
+      final FieldReference fieldReference, final EmptyVisitationContext context) throws E {
+    final Optional<Expression> inputExpression =
         visitOptionalExpression(fieldReference.inputExpression(), context);
 
     if (allEmpty(inputExpression)) {
@@ -373,7 +380,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.SetPredicate setPredicate, EmptyVisitationContext context) throws E {
+      final Expression.SetPredicate setPredicate, final EmptyVisitationContext context) throws E {
     return setPredicate
         .tuples()
         .accept(getRelCopyOnWriteVisitor(), context)
@@ -382,7 +389,8 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.ScalarSubquery scalarSubquery, EmptyVisitationContext context) throws E {
+      final Expression.ScalarSubquery scalarSubquery, final EmptyVisitationContext context)
+      throws E {
     return scalarSubquery
         .input()
         .accept(getRelCopyOnWriteVisitor(), context)
@@ -392,9 +400,10 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(
-      Expression.InPredicate inPredicate, EmptyVisitationContext context) throws E {
-    Optional<Rel> haystack = inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context);
-    Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
+      final Expression.InPredicate inPredicate, final EmptyVisitationContext context) throws E {
+    final Optional<Rel> haystack =
+        inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context);
+    final Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
 
     if (allEmpty(haystack, needles)) {
       return Optional.empty();
@@ -410,12 +419,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   // utilities
 
   protected Optional<List<Expression>> visitExprList(
-      List<Expression> exprs, EmptyVisitationContext context) throws E {
+      final List<Expression> exprs, final EmptyVisitationContext context) throws E {
     return transformList(exprs, context, (e, c) -> e.accept(this, c));
   }
 
   private Optional<Expression> visitOptionalExpression(
-      Optional<Expression> optExpr, EmptyVisitationContext context) throws E {
+      final Optional<Expression> optExpr, final EmptyVisitationContext context) throws E {
     // not using optExpr.map to allow us to propagate the EXCEPTION nicely
     if (optExpr.isPresent()) {
       return optExpr.get().accept(this, context);
@@ -424,7 +433,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   protected Optional<List<FunctionArg>> visitFunctionArguments(
-      List<FunctionArg> funcArgs, EmptyVisitationContext context) throws E {
+      final List<FunctionArg> funcArgs, final EmptyVisitationContext context) throws E {
     return CopyOnWriteUtils.<FunctionArg, EmptyVisitationContext, E>transformList(
         funcArgs,
         context,
@@ -438,7 +447,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   protected Optional<Expression.SortField> visitSortField(
-      Expression.SortField sortField, EmptyVisitationContext context) throws E {
+      final Expression.SortField sortField, final EmptyVisitationContext context) throws E {
     return sortField
         .expr()
         .accept(this, context)

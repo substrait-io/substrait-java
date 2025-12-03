@@ -61,10 +61,10 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
   private Casing unquotedCasing = Casing.TO_UPPER;
 
-  public static void main(String... args) {
-    CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
+  public static void main(final String... args) {
+    final CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
     commandLine.setCaseInsensitiveEnumValuesAllowed(true);
-    CommandLine.ParseResult parseResult = commandLine.parseArgs(args);
+    final CommandLine.ParseResult parseResult = commandLine.parseArgs(args);
     if (parseResult.originalArgs().isEmpty()) { // If no arguments print usage help
       commandLine.usage(System.out);
       System.exit(0);
@@ -77,31 +77,32 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       commandLine.printVersionHelp(System.out);
       System.exit(0);
     }
-    int exitCode = commandLine.execute(args);
+    final int exitCode = commandLine.execute(args);
     System.exit(exitCode);
   }
 
   @Override
   public Integer call() throws Exception {
-    FeatureBoard featureBoard = buildFeatureBoard();
+    final FeatureBoard featureBoard = buildFeatureBoard();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
-      SqlExpressionToSubstrait converter =
+      final SqlExpressionToSubstrait converter =
           new SqlExpressionToSubstrait(featureBoard, DefaultExtensionCatalog.DEFAULT_COLLECTION);
-      ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
+      final ExtendedExpression extendedExpression =
+          converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
-      Prepare.CatalogReader catalog =
+      final SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+      final Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
               createStatements.toArray(String[]::new));
-      Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
+      final Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
       printMessage(plan);
     }
     return 0;
   }
 
-  private void printMessage(Message message) throws IOException {
+  private void printMessage(final Message message) throws IOException {
     if (outputFormat == OutputFormat.PROTOJSON) {
       System.out.println(JsonFormat.printer().includingDefaultValueFields().print(message));
     } else if (outputFormat == OutputFormat.PROTOTEXT) {

@@ -34,16 +34,16 @@ class ExtendedExpressionRoundTripTest extends TestBase {
 
   @ParameterizedTest
   @MethodSource("expressionReferenceProvider")
-  void testRoundTrip(ExtendedExpression.ExpressionReferenceBase expressionReference) {
-    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
+  void testRoundTrip(final ExtendedExpression.ExpressionReferenceBase expressionReference) {
+    final List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
     expressionReferences.add(expressionReference);
-    NamedStruct namedStruct = getImmutableNamedStruct();
+    final NamedStruct namedStruct = getImmutableNamedStruct();
     assertExtendedExpressionOperation(expressionReferences, namedStruct);
   }
 
   @Test
   void getNoExpressionDefined() {
-    IllegalStateException illegalStateException =
+    final IllegalStateException illegalStateException =
         Assertions.assertThrows(
             IllegalStateException.class,
             () -> ImmutableExpressionReference.builder().addOutputNames("new-column").build());
@@ -56,7 +56,7 @@ class ExtendedExpressionRoundTripTest extends TestBase {
 
   @Test
   void getNoAggregateFunctionDefined() {
-    IllegalStateException illegalStateException =
+    final IllegalStateException illegalStateException =
         Assertions.assertThrows(
             IllegalStateException.class,
             () ->
@@ -87,7 +87,7 @@ class ExtendedExpressionRoundTripTest extends TestBase {
   }
 
   private static ImmutableExpressionReference getScalarFunctionExpression() {
-    Expression.ScalarFunctionInvocation scalarFunctionInvocation =
+    final Expression.ScalarFunctionInvocation scalarFunctionInvocation =
         new SubstraitBuilder(defaultExtensionCollection)
             .scalarFn(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
@@ -106,7 +106,7 @@ class ExtendedExpressionRoundTripTest extends TestBase {
   }
 
   private static ImmutableAggregateFunctionReference getAggregateFunctionReference() {
-    Aggregate.Measure measure =
+    final Aggregate.Measure measure =
         Aggregate.Measure.builder()
             .function(
                 AggregateFunctionInvocation.builder()
@@ -140,22 +140,22 @@ class ExtendedExpressionRoundTripTest extends TestBase {
   }
 
   private static void assertExtendedExpressionOperation(
-      List<ExtendedExpression.ExpressionReferenceBase> expressionReferences,
-      NamedStruct namedStruct) {
+      final List<ExtendedExpression.ExpressionReferenceBase> expressionReferences,
+      final NamedStruct namedStruct) {
 
     // initial pojo
-    ExtendedExpression extendedExpressionPojoInitial =
+    final ExtendedExpression extendedExpressionPojoInitial =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct)
             .build();
 
     // proto
-    io.substrait.proto.ExtendedExpression extendedExpressionProto =
+    final io.substrait.proto.ExtendedExpression extendedExpressionProto =
         new ExtendedExpressionProtoConverter().toProto(extendedExpressionPojoInitial);
 
     // get pojo from proto
-    ExtendedExpression extendedExpressionPojoFinal =
+    final ExtendedExpression extendedExpressionPojoFinal =
         new ProtoExtendedExpressionConverter().from(extendedExpressionProto);
 
     Assertions.assertEquals(extendedExpressionPojoInitial, extendedExpressionPojoFinal);

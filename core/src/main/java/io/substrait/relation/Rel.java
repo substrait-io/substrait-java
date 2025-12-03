@@ -29,16 +29,16 @@ public interface Rel {
   abstract class Remap {
     public abstract List<Integer> indices();
 
-    public Type.Struct remap(Type.Struct initial) {
-      List<Type> types = initial.fields();
+    public Type.Struct remap(final Type.Struct initial) {
+      final List<Type> types = initial.fields();
       return TypeCreator.of(initial.nullable()).struct(indices().stream().map(i -> types.get(i)));
     }
 
-    public static Remap of(Iterable<Integer> fields) {
+    public static Remap of(final Iterable<Integer> fields) {
       return ImmutableRemap.builder().addAllIndices(fields).build();
     }
 
-    public static Remap offset(int start, int length) {
+    public static Remap offset(final int start, final int length) {
       return of(
           IntStream.range(start, start + length)
               .mapToObj(i -> i)

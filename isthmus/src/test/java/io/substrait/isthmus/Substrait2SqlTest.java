@@ -16,24 +16,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class Substrait2SqlTest extends PlanTestBase {
-  private void assertSqlRoundTripViaPojoAndProto(String inputSql) {
-    Plan plan =
+  private void assertSqlRoundTripViaPojoAndProto(final String inputSql) {
+    final Plan plan =
         assertDoesNotThrow(() -> toSubstraitPlan(inputSql, TPCH_CATALOG), "SQL to Substrait POJO");
     assertDoesNotThrow(() -> toSql(plan), "Substrait POJO to SQL");
-    io.substrait.proto.Plan proto =
+    final io.substrait.proto.Plan proto =
         assertDoesNotThrow(() -> toProto(plan), "Substrait POJO to Substrait PROTO");
     assertDoesNotThrow(() -> toSql(proto), "Substrait PROTO to SQL");
   }
 
   @Test
   void simpleTest() throws Exception {
-    String query = "select p_size  from part where p_partkey > cast(100 as bigint)";
+    final String query = "select p_size  from part where p_partkey > cast(100 as bigint)";
     assertSqlSubstraitRelRoundTrip(query);
   }
 
   @Test
   void simpleTest2() throws Exception {
-    String query =
+    final String query =
         "select l_partkey, l_discount from lineitem where l_orderkey > cast(100 as bigint)";
     assertSqlSubstraitRelRoundTrip(query);
   }
@@ -136,7 +136,7 @@ class Substrait2SqlTest extends PlanTestBase {
 
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
-  void setTest(Set.SetOp op, boolean multi) throws Exception {
+  void setTest(final Set.SetOp op, final boolean multi) throws Exception {
     assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
   }
 
@@ -166,13 +166,13 @@ class Substrait2SqlTest extends PlanTestBase {
 
   @Test
   void simpleTestApproxCountDistinct() throws Exception {
-    String query = "select approx_count_distinct(l_tax)  from lineitem";
-    RelRoot relRoot = assertSqlSubstraitRelRoundTrip(query);
-    RelNode relNode = relRoot.project();
+    final String query = "select approx_count_distinct(l_tax)  from lineitem";
+    final RelRoot relRoot = assertSqlSubstraitRelRoundTrip(query);
+    final RelNode relNode = relRoot.project();
 
     // Assert converted Calcite RelNode has `approx_count_distinct`
     assertInstanceOf(LogicalAggregate.class, relNode);
-    LogicalAggregate aggregate = (LogicalAggregate) relNode;
+    final LogicalAggregate aggregate = (LogicalAggregate) relNode;
     assertEquals(
         SqlStdOperatorTable.APPROX_COUNT_DISTINCT,
         aggregate.getAggCallList().get(0).getAggregation());

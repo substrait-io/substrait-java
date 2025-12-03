@@ -38,87 +38,87 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
       extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<R, E>
       implements TypeExpressionVisitor<R, E> {
 
-    protected TypeExpressionThrowsVisitor(String unsupportedMessage) {
+    protected TypeExpressionThrowsVisitor(final String unsupportedMessage) {
       super(unsupportedMessage);
     }
 
     @Override
-    public R visit(TypeExpression.FixedChar expr) throws E {
+    public R visit(final TypeExpression.FixedChar expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.VarChar expr) throws E {
+    public R visit(final TypeExpression.VarChar expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.FixedBinary expr) throws E {
+    public R visit(final TypeExpression.FixedBinary expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.Decimal expr) throws E {
+    public R visit(final TypeExpression.Decimal expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.PrecisionTimestamp expr) throws E {
+    public R visit(final TypeExpression.PrecisionTimestamp expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.PrecisionTimestampTZ expr) throws E {
+    public R visit(final TypeExpression.PrecisionTimestampTZ expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.IntervalDay expr) throws E {
+    public R visit(final TypeExpression.IntervalDay expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.IntervalCompound expr) throws E {
+    public R visit(final TypeExpression.IntervalCompound expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.Struct expr) throws E {
+    public R visit(final TypeExpression.Struct expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.ListType expr) throws E {
+    public R visit(final TypeExpression.ListType expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.Map expr) throws E {
+    public R visit(final TypeExpression.Map expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.BinaryOperation expr) throws E {
+    public R visit(final TypeExpression.BinaryOperation expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.NotOperation expr) throws E {
+    public R visit(final TypeExpression.NotOperation expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.IfOperation expr) throws E {
+    public R visit(final TypeExpression.IfOperation expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.IntegerLiteral expr) throws E {
+    public R visit(final TypeExpression.IntegerLiteral expr) throws E {
       throw t();
     }
 
     @Override
-    public R visit(TypeExpression.ReturnProgram expr) throws E {
+    public R visit(final TypeExpression.ReturnProgram expr) throws E {
       throw t();
     }
   }

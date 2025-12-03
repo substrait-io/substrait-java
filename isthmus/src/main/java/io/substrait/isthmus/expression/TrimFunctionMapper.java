@@ -41,7 +41,7 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
     private final String substraitName;
     private final SqlTrimFunction.Flag flag;
 
-    Trim(String substraitName, SqlTrimFunction.Flag flag) {
+    Trim(final String substraitName, final SqlTrimFunction.Flag flag) {
       this.substraitName = substraitName;
       this.flag = flag;
     }
@@ -54,21 +54,21 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
       return flag;
     }
 
-    public static Optional<Trim> fromFlag(SqlTrimFunction.Flag flag) {
+    public static Optional<Trim> fromFlag(final SqlTrimFunction.Flag flag) {
       return Arrays.stream(values()).filter(t -> t.flag == flag).findAny();
     }
 
-    public static Optional<Trim> fromSubstraitName(String name) {
+    public static Optional<Trim> fromSubstraitName(final String name) {
       return Arrays.stream(values()).filter(t -> t.substraitName.equals(name)).findAny();
     }
   }
 
   private final Map<Trim, List<ScalarFunctionVariant>> trimFunctions;
 
-  public TrimFunctionMapper(List<ScalarFunctionVariant> functions) {
-    Map<Trim, List<ScalarFunctionVariant>> trims = new HashMap<>();
-    for (Trim t : Trim.values()) {
-      List<ScalarFunctionVariant> funcs = findFunction(t.substraitName(), functions);
+  public TrimFunctionMapper(final List<ScalarFunctionVariant> functions) {
+    final Map<Trim, List<ScalarFunctionVariant>> trims = new HashMap<>();
+    for (final Trim t : Trim.values()) {
+      final List<ScalarFunctionVariant> funcs = findFunction(t.substraitName(), functions);
       if (!funcs.isEmpty()) {
         trims.put(t, funcs);
       }
@@ -77,7 +77,7 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
   }
 
   private List<ScalarFunctionVariant> findFunction(
-      String name, Collection<ScalarFunctionVariant> functions) {
+      final String name, final Collection<ScalarFunctionVariant> functions) {
     return functions.stream()
         .filter(f -> name.equals(f.name()))
         .collect(Collectors.toUnmodifiableList());
@@ -89,29 +89,29 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
       return Optional.empty();
     }
 
-    Optional<Trim> trimType = getTrimCallType(call);
+    final Optional<Trim> trimType = getTrimCallType(call);
 
     return trimType.map(
         trim -> {
-          List<ScalarFunctionVariant> functions = trimFunctions.getOrDefault(trim, List.of());
+          final List<ScalarFunctionVariant> functions = trimFunctions.getOrDefault(trim, List.of());
           if (functions.isEmpty()) {
             return null;
           }
 
-          String name = trim.substraitName();
-          List<RexNode> operands =
+          final String name = trim.substraitName();
+          final List<RexNode> operands =
               call.getOperands().stream().skip(1).collect(Collectors.toUnmodifiableList());
           return new SubstraitFunctionMapping(name, operands, functions);
         });
   }
 
-  private Optional<Trim> getTrimCallType(RexCall call) {
-    RexNode trimType = call.operands.get(0);
+  private Optional<Trim> getTrimCallType(final RexCall call) {
+    final RexNode trimType = call.operands.get(0);
     if (trimType.getType().getSqlTypeName() != SqlTypeName.SYMBOL) {
       return Optional.empty();
     }
 
-    Comparable value = ((RexLiteral) trimType).getValue();
+    final Comparable value = ((RexLiteral) trimType).getValue();
     if (!(value instanceof SqlTrimFunction.Flag)) {
       return Optional.empty();
     }
@@ -122,14 +122,14 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
   @Override
   public Optional<List<FunctionArg>> getExpressionArguments(
       final Expression.ScalarFunctionInvocation expression) {
-    String name = expression.declaration().name();
+    final String name = expression.declaration().name();
     return Trim.fromSubstraitName(name)
         .map(Trim::flag)
         .map(SqlTrimFunction.Flag::name)
         .map(EnumArg::of)
         .map(
             trimTypeArg -> {
-              LinkedList args = new LinkedList<>(expression.arguments());
+              final LinkedList args = new LinkedList<>(expression.arguments());
               args.addFirst(trimTypeArg);
               return args;
             });

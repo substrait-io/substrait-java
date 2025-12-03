@@ -27,10 +27,10 @@ public final class App {
       if (args.length == 0) {
         args = new String[] {"SparkDataset"};
       }
-      String exampleClass = args[0];
+      final String exampleClass = args[0];
 
-      Class<?> clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
-      Action action = (Action) clz.getDeclaredConstructor().newInstance();
+      final Class<?> clz = Class.forName(App.class.getPackageName() + "." + exampleClass);
+      final Action action = (Action) clz.getDeclaredConstructor().newInstance();
 
       if (args.length == 2) {
         action.run(args[1]);
@@ -38,7 +38,7 @@ public final class App {
         action.run(null);
       }
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       e.printStackTrace();
     }
   }

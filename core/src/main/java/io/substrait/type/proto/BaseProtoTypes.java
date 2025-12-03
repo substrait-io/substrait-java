@@ -22,7 +22,7 @@ abstract class BaseProtoTypes<T, I> {
   public final T INTERVAL_YEAR;
   public final T UUID;
 
-  public BaseProtoTypes(Type.Nullability nullability) {
+  public BaseProtoTypes(final Type.Nullability nullability) {
     this.nullability = nullability;
     BOOLEAN = wrap(Type.Boolean.newBuilder().setNullability(nullability).build());
     I8 = wrap(Type.I8.newBuilder().setNullability(nullability).build());
@@ -43,59 +43,59 @@ abstract class BaseProtoTypes<T, I> {
 
   public abstract T fixedChar(I len);
 
-  public final T fixedChar(int len) {
+  public final T fixedChar(final int len) {
     return fixedChar(i(len));
   }
 
-  public final T fixedChar(String len) {
+  public final T fixedChar(final String len) {
     return fixedChar(integerParam(len));
   }
 
-  public final T varChar(int len) {
+  public final T varChar(final int len) {
     return varChar(i(len));
   }
 
-  public final T varChar(String len) {
+  public final T varChar(final String len) {
     return varChar(integerParam(len));
   }
 
-  public final T fixedBinary(int len) {
+  public final T fixedBinary(final int len) {
     return fixedBinary(i(len));
   }
 
-  public final T fixedBinary(String len) {
+  public final T fixedBinary(final String len) {
     return fixedBinary(integerParam(len));
   }
 
-  public final T decimal(int scale, int precision) {
+  public final T decimal(final int scale, final int precision) {
     return decimal(i(scale), i(precision));
   }
 
-  public final T decimal(I scale, int precision) {
+  public final T decimal(final I scale, final int precision) {
     return decimal(scale, i(precision));
   }
 
-  public final T decimal(int scale, I precision) {
+  public final T decimal(final int scale, final I precision) {
     return decimal(i(scale), precision);
   }
 
-  public final T intervalDay(int precision) {
+  public final T intervalDay(final int precision) {
     return intervalDay(i(precision));
   }
 
-  public final T intervalCompound(int precision) {
+  public final T intervalCompound(final int precision) {
     return intervalCompound(i(precision));
   }
 
-  public final T precisionTime(int precision) {
+  public final T precisionTime(final int precision) {
     return precisionTime(i(precision));
   }
 
-  public final T precisionTimestamp(int precision) {
+  public final T precisionTimestamp(final int precision) {
     return precisionTimestamp(i(precision));
   }
 
-  public final T precisionTimestampTZ(int precision) {
+  public final T precisionTimestampTZ(final int precision) {
     return precisionTimestampTZ(i(precision));
   }
 
@@ -119,7 +119,7 @@ abstract class BaseProtoTypes<T, I> {
 
   public abstract T intervalCompound(I precision);
 
-  public final T struct(T... types) {
+  public final T struct(final T... types) {
     return struct(Arrays.asList(types));
   }
 

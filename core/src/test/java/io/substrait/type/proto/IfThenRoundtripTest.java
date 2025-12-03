@@ -25,8 +25,8 @@ class IfThenRoundtripTest extends TestBase {
             ExpressionCreator.i64(false, 2));
     assertFalse(ifRel.getType().nullable());
 
-    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
-    ProtoExpressionConverter from =
+    final ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
+    final ProtoExpressionConverter from =
         new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
     assertEquals(ifRel, from.from(ifRel.accept(to, EmptyVisitationContext.INSTANCE)));
   }
@@ -40,8 +40,8 @@ class IfThenRoundtripTest extends TestBase {
             ExpressionCreator.i64(false, 2));
     assertTrue(ifRel.getType().nullable());
 
-    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
-    ProtoExpressionConverter from =
+    final ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
+    final ProtoExpressionConverter from =
         new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
     assertEquals(ifRel, from.from(ifRel.accept(to, EmptyVisitationContext.INSTANCE)));
   }

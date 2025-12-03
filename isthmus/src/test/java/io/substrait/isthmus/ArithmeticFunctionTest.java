@@ -11,8 +11,8 @@ class ArithmeticFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void arithmetic(String c) throws Exception {
-    String query =
+  void arithmetic(final String c) throws Exception {
+    final String query =
         String.format(
             "SELECT %s + %s, %s - %s, %s * %s, %s / %s FROM numbers", c, c, c, c, c, c, c, c);
     assertFullRoundTrip(query, CREATES);
@@ -20,204 +20,204 @@ class ArithmeticFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void abs(String column) throws Exception {
-    String query = String.format("SELECT abs(%s) FROM numbers", column);
+  void abs(final String column) throws Exception {
+    final String query = String.format("SELECT abs(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void exponential(String column) throws Exception {
-    String query = String.format("SELECT exp(%s) FROM numbers", column);
+  void exponential(final String column) throws Exception {
+    final String query = String.format("SELECT exp(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64"})
-  void mod(String column) throws Exception {
-    String query = String.format("SELECT mod(%s, %s) FROM numbers", column, column);
+  void mod(final String column) throws Exception {
+    final String query = String.format("SELECT mod(%s, %s) FROM numbers", column, column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void negation(String column) throws Exception {
-    String query = String.format("SELECT -%s FROM numbers", column);
+  void negation(final String column) throws Exception {
+    final String query = String.format("SELECT -%s FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i64", "fp32", "fp64"})
-  void power(String column) throws Exception {
-    String query = String.format("SELECT power(%s, %s) FROM numbers", column, column);
+  void power(final String column) throws Exception {
+    final String query = String.format("SELECT power(%s, %s) FROM numbers", column, column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"sin", "cos", "tan", "asin", "acos", "atan"})
-  void trigonometric(String fname) throws Exception {
-    String query = String.format("SELECT %s(fp32), %s(fp64) FROM numbers", fname, fname);
+  void trigonometric(final String fname) throws Exception {
+    final String query = String.format("SELECT %s(fp32), %s(fp64) FROM numbers", fname, fname);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void atan2(String column) throws Exception {
-    String query = String.format("SELECT atan2(%s, %s) FROM numbers", column, column);
+  void atan2(final String column) throws Exception {
+    final String query = String.format("SELECT atan2(%s, %s) FROM numbers", column, column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void sign(String column) throws Exception {
-    String query = String.format("SELECT sign(%s) FROM numbers", column);
+  void sign(final String column) throws Exception {
+    final String query = String.format("SELECT sign(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void max(String column) throws Exception {
-    String query = String.format("SELECT max(%s) FROM numbers", column);
+  void max(final String column) throws Exception {
+    final String query = String.format("SELECT max(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void min(String column) throws Exception {
-    String query = String.format("SELECT min(%s) FROM numbers", column);
+  void min(final String column) throws Exception {
+    final String query = String.format("SELECT min(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void avg(String column) throws Exception {
-    String query = String.format("SELECT avg(%s) FROM numbers", column);
+  void avg(final String column) throws Exception {
+    final String query = String.format("SELECT avg(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void sum(String column) throws Exception {
-    String query = String.format("SELECT sum(%s) FROM numbers", column);
+  void sum(final String column) throws Exception {
+    final String query = String.format("SELECT sum(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
-  void sum0(String column) throws Exception {
-    String query = String.format("SELECT sum0(%s) FROM numbers", column);
+  void sum0(final String column) throws Exception {
+    final String query = String.format("SELECT sum0(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i64", "fp32", "fp64"})
-  void sqrt(String column) throws Exception {
-    String query = String.format("SELECT sqrt(%s) FROM numbers", column);
+  void sqrt(final String column) throws Exception {
+    final String query = String.format("SELECT sqrt(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void sinh(String column) throws Exception {
-    String query = String.format("SELECT SINH(%s) FROM numbers", column);
+  void sinh(final String column) throws Exception {
+    final String query = String.format("SELECT SINH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void tanh(String column) throws Exception {
-    String query = String.format("SELECT TANH(%s) FROM numbers", column);
+  void tanh(final String column) throws Exception {
+    final String query = String.format("SELECT TANH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void cosh(String column) throws Exception {
-    String query = String.format("SELECT COSH(%s) FROM numbers", column);
+  void cosh(final String column) throws Exception {
+    final String query = String.format("SELECT COSH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void asinh(String column) throws Exception {
-    String query = String.format("SELECT ASINH(%s) FROM numbers", column);
+  void asinh(final String column) throws Exception {
+    final String query = String.format("SELECT ASINH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void atanh(String column) throws Exception {
-    String query = String.format("SELECT ATANH(%s) FROM numbers", column);
+  void atanh(final String column) throws Exception {
+    final String query = String.format("SELECT ATANH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void acosh(String column) throws Exception {
-    String query = String.format("SELECT ACOSH(%s) FROM numbers", column);
+  void acosh(final String column) throws Exception {
+    final String query = String.format("SELECT ACOSH(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64"})
-  void bitwise_not_scalar(String column) throws Exception {
-    String query = String.format("SELECT BITNOT(%s) FROM numbers", column);
+  void bitwise_not_scalar(final String column) throws Exception {
+    final String query = String.format("SELECT BITNOT(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
-  void bitwise_and_scalar(String column, String mask) throws Exception {
-    String query = String.format("SELECT BITAND(%s, %s) FROM numbers", column, mask);
+  void bitwise_and_scalar(final String column, final String mask) throws Exception {
+    final String query = String.format("SELECT BITAND(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
-  void bitwise_xor_scalar(String column, String mask) throws Exception {
-    String query = String.format("SELECT BITXOR(%s, %s) FROM numbers", column, mask);
+  void bitwise_xor_scalar(final String column, final String mask) throws Exception {
+    final String query = String.format("SELECT BITXOR(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @CsvSource({"i8, 8", "i16, 160", "i32, 32000", "i64, CAST(6000000004 AS BIGINT)"})
-  void bitwise_or_scalar(String column, String mask) throws Exception {
-    String query = String.format("SELECT BITOR(%s, %s) FROM numbers", column, mask);
+  void bitwise_or_scalar(final String column, final String mask) throws Exception {
+    final String query = String.format("SELECT BITOR(%s, %s) FROM numbers", column, mask);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void radians(String column) throws Exception {
-    String query = String.format("SELECT RADIANS(%s) FROM numbers", column);
+  void radians(final String column) throws Exception {
+    final String query = String.format("SELECT RADIANS(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void degrees(String column) throws Exception {
-    String query = String.format("SELECT DEGREES(%s) FROM numbers", column);
+  void degrees(final String column) throws Exception {
+    final String query = String.format("SELECT DEGREES(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i32", "i64"})
-  void factorial(String column) throws Exception {
-    String query = String.format("SELECT FACTORIAL(%s) FROM numbers", column);
+  void factorial(final String column) throws Exception {
+    final String query = String.format("SELECT FACTORIAL(%s) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64"})
-  void bit_left_shift(String column) throws Exception {
-    String query = String.format("SELECT %s << 1 FROM numbers", column);
+  void bit_left_shift(final String column) throws Exception {
+    final String query = String.format("SELECT %s << 1 FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64"})
-  void leftshift(String column) throws Exception {
-    String query = String.format("SELECT LEFTSHIFT(%s, 1) FROM numbers", column);
+  void leftshift(final String column) throws Exception {
+    final String query = String.format("SELECT LEFTSHIFT(%s, 1) FROM numbers", column);
     assertFullRoundTrip(query, CREATES);
   }
 }

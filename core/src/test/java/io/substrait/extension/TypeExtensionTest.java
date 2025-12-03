@@ -32,28 +32,29 @@ class TypeExtensionTest {
   final SimpleExtension.ExtensionCollection extensionCollection;
 
   {
-    String path = "/extensions/custom_extensions.yaml";
-    InputStream inputStream = this.getClass().getResourceAsStream(path);
+    final String path = "/extensions/custom_extensions.yaml";
+    final InputStream inputStream = this.getClass().getResourceAsStream(path);
     extensionCollection = SimpleExtension.load(path, inputStream);
   }
 
   final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
-  Type customType1 = b.userDefinedType(URN, "customType1");
-  Type customType2 = b.userDefinedType(URN, "customType2");
+  final Type customType1 = b.userDefinedType(URN, "customType1");
+  final Type customType2 = b.userDefinedType(URN, "customType2");
   final PlanProtoConverter planProtoConverter = new PlanProtoConverter();
   final ProtoPlanConverter protoPlanConverter = new ProtoPlanConverter(extensionCollection);
 
   @Test
   void roundtripCustomType() {
     // CREATE TABLE example (custom_type_column custom_type1, i64_column BIGINT);
-    List<String> tableName = Stream.of("example").collect(Collectors.toList());
-    List<String> columnNames =
+    final List<String> tableName = Stream.of("example").collect(Collectors.toList());
+    final List<String> columnNames =
         Stream.of("custom_type_column", "i64_column").collect(Collectors.toList());
-    List<io.substrait.type.Type> types = Stream.of(customType1, R.I64).collect(Collectors.toList());
+    final List<io.substrait.type.Type> types =
+        Stream.of(customType1, R.I64).collect(Collectors.toList());
 
     // SELECT custom_type_column, scalar1(custom_type_column), scalar2(i64_column)
     // FROM example
-    Plan plan =
+    final Plan plan =
         b.plan(
             b.root(
                 b.project(
@@ -70,20 +71,20 @@ class TypeExtensionTest {
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
 
-    io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
-    Plan planReturned = protoPlanConverter.from(protoPlan);
+    final io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
+    final Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
 
   @Test
   void roundtripNumberedAnyTypes() {
-    List<String> tableName = Stream.of("example").collect(Collectors.toList());
-    List<String> columnNames =
+    final List<String> tableName = Stream.of("example").collect(Collectors.toList());
+    final List<String> columnNames =
         Stream.of("array_i64_type_column", "array_i64_column").collect(Collectors.toList());
-    List<io.substrait.type.Type> types =
+    final List<io.substrait.type.Type> types =
         Stream.of(REQUIRED.list(R.I64)).collect(Collectors.toList());
 
-    Plan plan =
+    final Plan plan =
         b.plan(
             b.root(
                 b.project(
@@ -93,8 +94,8 @@ class TypeExtensionTest {
                                     URN, "array_index:list_i64", R.I64, b.fieldReference(input, 0)))
                             .collect(Collectors.toList()),
                     b.namedScan(tableName, columnNames, types))));
-    io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
-    Plan planReturned = protoPlanConverter.from(protoPlan);
+    final io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
+    final Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
 }

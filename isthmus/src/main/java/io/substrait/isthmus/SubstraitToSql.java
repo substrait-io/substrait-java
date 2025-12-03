@@ -10,7 +10,7 @@ public class SubstraitToSql extends SqlConverterBase {
     super(FEATURES_DEFAULT);
   }
 
-  public RelNode substraitRelToCalciteRel(Rel relRoot, Prepare.CatalogReader catalog) {
+  public RelNode substraitRelToCalciteRel(final Rel relRoot, final Prepare.CatalogReader catalog) {
     return SubstraitRelNodeConverter.convert(relRoot, relOptCluster, catalog, parserConfig);
   }
 }

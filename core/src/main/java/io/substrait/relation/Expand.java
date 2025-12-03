@@ -15,14 +15,14 @@ public abstract class Expand extends SingleInputRel {
 
   @Override
   public Type.Struct deriveRecordType() {
-    Type.Struct initial = getInput().getRecordType();
+    final Type.Struct initial = getInput().getRecordType();
     return TypeCreator.of(initial.nullable())
         .struct(getFields().stream().map(ExpandField::getType));
   }
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 
@@ -54,8 +54,8 @@ public abstract class Expand extends SingleInputRel {
 
     @Override
     public Type getType() {
-      boolean nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
-      Type type = getDuplicates().get(0).getType();
+      final boolean nullable = getDuplicates().stream().anyMatch(d -> d.getType().nullable());
+      final Type type = getDuplicates().get(0).getType();
       return nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
     }
 

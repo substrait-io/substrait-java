@@ -4,7 +4,7 @@ import java.util.function.Supplier;
 
 public class Util {
 
-  public static <T> Supplier<T> memoize(Supplier<T> supplier) {
+  public static <T> Supplier<T> memoize(final Supplier<T> supplier) {
     return new Memoizer<T>(supplier);
   }
 
@@ -12,9 +12,9 @@ public class Util {
 
     private boolean retrieved;
     private T value;
-    private Supplier<T> delegate;
+    private final Supplier<T> delegate;
 
-    public Memoizer(Supplier<T> delegate) {
+    public Memoizer(final Supplier<T> delegate) {
       this.delegate = delegate;
     }
 
@@ -32,11 +32,11 @@ public class Util {
     private final int startInclusive;
     private final int endExclusive;
 
-    public static IntRange of(int startInclusive, int endExclusive) {
+    public static IntRange of(final int startInclusive, final int endExclusive) {
       return new IntRange(startInclusive, endExclusive);
     }
 
-    private IntRange(int startInclusive, int endExclusive) {
+    private IntRange(final int startInclusive, final int endExclusive) {
       this.startInclusive = startInclusive;
       this.endExclusive = endExclusive;
     }
@@ -49,7 +49,7 @@ public class Util {
       return endExclusive;
     }
 
-    public boolean within(int val) {
+    public boolean within(final int val) {
       return val >= startInclusive && val < endExclusive;
     }
   }

@@ -14,37 +14,37 @@ import io.substrait.relation.ProtoRelConverter;
  */
 public class StringHolderHandlingProtoRelConverter extends ProtoRelConverter {
   public StringHolderHandlingProtoRelConverter(
-      ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+      final ExtensionLookup lookup, final SimpleExtension.ExtensionCollection extensions) {
     super(lookup, extensions, new StringHolderHandlingProtoExtensionConverter());
   }
 
   @Override
-  protected Extension.LeafRelDetail detailFromExtensionLeafRel(Any any) {
+  protected Extension.LeafRelDetail detailFromExtensionLeafRel(final Any any) {
     return StringHolder.fromProto(any);
   }
 
   @Override
-  protected Extension.SingleRelDetail detailFromExtensionSingleRel(Any any) {
+  protected Extension.SingleRelDetail detailFromExtensionSingleRel(final Any any) {
     return StringHolder.fromProto(any);
   }
 
   @Override
-  protected Extension.MultiRelDetail detailFromExtensionMultiRel(Any any) {
+  protected Extension.MultiRelDetail detailFromExtensionMultiRel(final Any any) {
     return StringHolder.fromProto(any);
   }
 
   @Override
-  protected Extension.ExtensionTableDetail detailFromExtensionTable(Any any) {
+  protected Extension.ExtensionTableDetail detailFromExtensionTable(final Any any) {
     return StringHolder.fromProto(any);
   }
 
   @Override
-  protected Extension.WriteExtensionObject detailFromWriteExtensionObject(Any any) {
+  protected Extension.WriteExtensionObject detailFromWriteExtensionObject(final Any any) {
     return StringHolder.fromProto(any);
   }
 
   @Override
-  protected Extension.DdlExtensionObject detailFromDdlExtensionObject(Any any) {
+  protected Extension.DdlExtensionObject detailFromDdlExtensionObject(final Any any) {
     return StringHolder.fromProto(any);
   }
 }

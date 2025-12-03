@@ -17,10 +17,10 @@ public class SetUtils {
    * @param multi whether to use more than two relations
    * @return a sql query
    */
-  public static String getSetQuery(Set.SetOp op, boolean multi) {
-    String opString = asString(op);
+  public static String getSetQuery(final Set.SetOp op, final boolean multi) {
+    final String opString = asString(op);
 
-    StringBuilder query = new StringBuilder();
+    final StringBuilder query = new StringBuilder();
     query.append(
         "select p_partkey as partkey, p_name as str, (p_partkey + p_partkey) as expr\n"
             + "from part where p_partkey > cast(100 as bigint)\n");
@@ -39,7 +39,7 @@ public class SetUtils {
     }
   }
 
-  private static String asString(Set.SetOp op) {
+  private static String asString(final Set.SetOp op) {
     switch (op) {
       case MINUS_PRIMARY:
         return "EXCEPT";

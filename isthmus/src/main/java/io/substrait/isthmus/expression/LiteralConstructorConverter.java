@@ -21,14 +21,14 @@ public class LiteralConstructorConverter implements CallConverter {
 
   private final TypeConverter typeConverter;
 
-  public LiteralConstructorConverter(TypeConverter typeConverter) {
+  public LiteralConstructorConverter(final TypeConverter typeConverter) {
     this.typeConverter = typeConverter;
   }
 
   @Override
   public Optional<Expression> convert(
-      RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    SqlOperator operator = call.getOperator();
+      final RexCall call, final Function<RexNode, Expression> topLevelConverter) {
+    final SqlOperator operator = call.getOperator();
     if (operator instanceof SqlArrayValueConstructor) {
       return call.getOperands().isEmpty()
           ? toEmptyListLiteral(call)
@@ -40,12 +40,12 @@ public class LiteralConstructorConverter implements CallConverter {
   }
 
   private Optional<Expression> toMapLiteral(
-      RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    List<Expression.Literal> literals =
+      final RexCall call, final Function<RexNode, Expression> topLevelConverter) {
+    final List<Expression.Literal> literals =
         call.operands.stream()
             .map(t -> ((Expression.Literal) topLevelConverter.apply(t)))
             .collect(java.util.stream.Collectors.toList());
-    Map<Expression.Literal, Expression.Literal> items = new HashMap<>();
+    final Map<Expression.Literal, Expression.Literal> items = new HashMap<>();
     assert literals.size() % 2 == 0;
     for (int i = 0; i < literals.size(); i += 2) {
       items.put(literals.get(i), literals.get(i + 1));
@@ -54,7 +54,7 @@ public class LiteralConstructorConverter implements CallConverter {
   }
 
   private Optional<Expression> toNonEmptyListLiteral(
-      RexCall call, Function<RexNode, Expression> topLevelConverter) {
+      final RexCall call, final Function<RexNode, Expression> topLevelConverter) {
     return Optional.of(
         ExpressionCreator.list(
             call.getType().isNullable(),
@@ -63,9 +63,9 @@ public class LiteralConstructorConverter implements CallConverter {
                 .collect(java.util.stream.Collectors.toList())));
   }
 
-  private Optional<Expression> toEmptyListLiteral(RexCall call) {
-    RelDataType calciteElementType = call.getType().getComponentType();
-    Type substraitElementType = typeConverter.toSubstrait(calciteElementType);
+  private Optional<Expression> toEmptyListLiteral(final RexCall call) {
+    final RelDataType calciteElementType = call.getType().getComponentType();
+    final Type substraitElementType = typeConverter.toSubstrait(calciteElementType);
     return Optional.of(
         ExpressionCreator.emptyList(call.getType().isNullable(), substraitElementType));
   }

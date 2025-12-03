@@ -22,25 +22,26 @@ class AggregationFunctionsTest extends PlanTestBase {
   static final TypeCreator N = TypeCreator.of(true);
 
   // Create a table with that has a column of every numeric type, both NOT NULL and NULL
-  private List<Type> numericTypesR = List.of(R.I8, R.I16, R.I32, R.I64, R.FP32, R.FP64);
-  private List<Type> numericTypesN = List.of(N.I8, N.I16, N.I32, N.I64, N.FP32, N.FP64);
-  private List<Type> numericTypes =
+  private final List<Type> numericTypesR = List.of(R.I8, R.I16, R.I32, R.I64, R.FP32, R.FP64);
+  private final List<Type> numericTypesN = List.of(N.I8, N.I16, N.I32, N.I64, N.FP32, N.FP64);
+  private final List<Type> numericTypes =
       Stream.concat(numericTypesR.stream(), numericTypesN.stream()).collect(Collectors.toList());
 
-  private List<Type> tableTypes =
+  private final List<Type> tableTypes =
       Stream.concat(
               // Column to Group By
               Stream.of(N.I8),
               // Columns with Numeric Types
               numericTypes.stream())
           .collect(Collectors.toList());
-  private List<String> columnNames =
+  private final List<String> columnNames =
       Streams.mapWithIndex(tableTypes.stream(), (t, index) -> String.valueOf(index))
           .collect(Collectors.toList());
-  private NamedScan numericTypesTable = b.namedScan(List.of("example"), columnNames, tableTypes);
+  private final NamedScan numericTypesTable =
+      b.namedScan(List.of("example"), columnNames, tableTypes);
 
   // Create the given function call on the given field of the input
-  private Aggregate.Measure functionPicker(Rel input, int field, String fname) {
+  private Aggregate.Measure functionPicker(final Rel input, final int field, final String fname) {
     switch (fname) {
       case "min":
         return b.min(input, field);
@@ -59,7 +60,7 @@ class AggregationFunctionsTest extends PlanTestBase {
   }
 
   // Create one function call per numeric type column
-  private List<Aggregate.Measure> functions(Rel input, String fname) {
+  private List<Aggregate.Measure> functions(final Rel input, final String fname) {
     // first column is for grouping, skip it
     return IntStream.range(1, tableTypes.size())
         .boxed()
@@ -69,8 +70,8 @@ class AggregationFunctionsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
-  void emptyGrouping(String aggFunction) {
-    Aggregate rel =
+  void emptyGrouping(final String aggFunction) {
+    final Aggregate rel =
         b.aggregate(
             input -> b.grouping(input), input -> functions(input, aggFunction), numericTypesTable);
     assertFullRoundTrip(rel);
@@ -78,8 +79,8 @@ class AggregationFunctionsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
-  void withGrouping(String aggFunction) {
-    Aggregate rel =
+  void withGrouping(final String aggFunction) {
+    final Aggregate rel =
         b.aggregate(
             input -> b.grouping(input, 0),
             input -> functions(input, aggFunction),

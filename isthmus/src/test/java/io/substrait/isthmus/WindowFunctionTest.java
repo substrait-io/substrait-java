@@ -36,8 +36,8 @@ class WindowFunctionTest extends PlanTestBase {
 
     @ParameterizedTest
     @ValueSource(strings = {"rank", "dense_rank", "percent_rank"})
-    void rankFunctions(String rankFunction) throws IOException, SqlParseException {
-      String query =
+    void rankFunctions(final String rankFunction) throws IOException, SqlParseException {
+      final String query =
           String.format(
               "select O_ORDERKEY, %s() over (order by O_SHIPPRIORITY) from ORDERS", rankFunction);
       assertFullRoundTrip(query);
@@ -45,8 +45,9 @@ class WindowFunctionTest extends PlanTestBase {
 
     @ParameterizedTest
     @ValueSource(strings = {"rank", "dense_rank", "percent_rank"})
-    void rankFunctionsWithPartitions(String rankFunction) throws IOException, SqlParseException {
-      String query =
+    void rankFunctionsWithPartitions(final String rankFunction)
+        throws IOException, SqlParseException {
+      final String query =
           String.format(
               "select O_ORDERKEY, %s() over (partition by O_CUSTKEY order by O_SHIPPRIORITY) from ORDERS",
               rankFunction);
@@ -88,7 +89,8 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS UNBOUNDED PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause = "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
+      final String overClause =
+          "partition by O_CUSTKEY order by O_ORDERDATE rows unbounded preceding";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
@@ -99,7 +101,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MAX($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClaus =
+      final String overClaus =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row AND unbounded following";
       assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClaus));
@@ -111,7 +113,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS 1 PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause =
+      final String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between 1 preceding and current row";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -123,7 +125,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MAX($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause =
+      final String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE rows between current row and 2 following";
       assertFullRoundTrip(
           String.format("select max(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -135,7 +137,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $4 ROWS BETWEEN 3 PRECEDING AND 4 FOLLOWING)])
        LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause =
+      final String overClause =
           "partition by O_CUSTKEY order by O_ORDERDATE  rows between 3 preceding and 4 following";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -147,7 +149,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE 10 PRECEDING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause =
+      final String overClause =
           "partition by O_CUSTKEY order by O_TOTALPRICE range between 10 preceding and current row";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -159,7 +161,7 @@ class WindowFunctionTest extends PlanTestBase {
       LogicalProject(EXPR$0=[MIN($7) OVER (PARTITION BY $1 ORDER BY $3 RANGE BETWEEN CURRENT ROW AND 11 FOLLOWING)])
         LogicalTableScan(table=[[ORDERS]])
       */
-      String overClause =
+      final String overClause =
           "partition by O_CUSTKEY order by O_TOTALPRICE range between current row and 11 following";
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
@@ -171,7 +173,8 @@ class WindowFunctionTest extends PlanTestBase {
 
     @ParameterizedTest
     @ValueSource(strings = {"avg", "count", "max", "min", "sum"})
-    void standardAggregateFunctions(String aggFunction) throws SqlParseException, IOException {
+    void standardAggregateFunctions(final String aggFunction)
+        throws SqlParseException, IOException {
       assertFullRoundTrip(
           String.format(
               "select %s(L_LINENUMBER) over (partition BY L_PARTKEY) from lineitem", aggFunction));
@@ -182,14 +185,14 @@ class WindowFunctionTest extends PlanTestBase {
   void rejectQueriesWithIgnoreNulls() {
     // IGNORE NULLS cannot be specified in the Substrait representation.
     // Queries using it should be rejected.
-    String query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
+    final String query = "select last_value(L_LINENUMBER) ignore nulls over () from lineitem";
     assertThrows(IllegalArgumentException.class, () -> assertFullRoundTrip(query));
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"lag", "lead"})
-  void lagLeadFunctions(String function) {
-    Rel rel =
+  void lagLeadFunctions(final String function) {
+    final Rel rel =
         substraitBuilder.project(
             input ->
                 List.of(
@@ -211,8 +214,8 @@ class WindowFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"lag", "lead"})
-  void lagLeadWithOffset(String function) {
-    Rel rel =
+  void lagLeadWithOffset(final String function) {
+    final Rel rel =
         substraitBuilder.project(
             input ->
                 List.of(
@@ -235,8 +238,8 @@ class WindowFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"lag", "lead"})
-  void lagLeadWithOffsetAndDefault(String function) {
-    Rel rel =
+  void lagLeadWithOffsetAndDefault(final String function) {
+    final Rel rel =
         substraitBuilder.project(
             input ->
                 List.of(

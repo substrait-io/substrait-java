@@ -67,17 +67,17 @@ class ExtensionRoundtripTest extends TestBase {
           .build();
 
   @Override
-  protected void verifyRoundTrip(Rel rel) {
-    RelProtoConverter relProtoConverter =
+  protected void verifyRoundTrip(final Rel rel) {
+    final RelProtoConverter relProtoConverter =
         new StringHolderHandlingRelProtoConverter(functionCollector);
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    Rel relReturned = protoRelConverter.from(protoRel);
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+    final Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);
   }
 
   @Test
   void virtualTable() {
-    Rel rel =
+    final Rel rel =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
             .addRows(Expression.StructLiteral.builder().fields(Collections.emptyList()).build())
@@ -89,7 +89,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void localFiles() {
-    Rel rel =
+    final Rel rel =
         LocalFiles.builder()
             .initialSchema(
                 NamedStruct.of(
@@ -102,7 +102,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void namedScan() {
-    Rel rel =
+    final Rel rel =
         NamedScan.builder()
             .from(
                 b.namedScan(
@@ -115,13 +115,13 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void extensionTable() {
-    Rel rel = ExtensionTable.from(detail).build();
+    final Rel rel = ExtensionTable.from(detail).build();
     verifyRoundTrip(rel);
   }
 
   @Test
   void filter() {
-    Rel rel =
+    final Rel rel =
         Filter.builder()
             .from(b.filter(__ -> b.bool(true), commonTable))
             .commonExtension(commonExtension)
@@ -132,7 +132,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void fetch() {
-    Rel rel =
+    final Rel rel =
         Fetch.builder()
             .from(b.fetch(1, 2, commonTable))
             .commonExtension(commonExtension)
@@ -143,7 +143,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void aggregate() {
-    Rel rel =
+    final Rel rel =
         Aggregate.builder()
             .from(b.aggregate(b::grouping, __ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
@@ -154,7 +154,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void sort() {
-    Rel rel =
+    final Rel rel =
         Sort.builder()
             .from(b.sort(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
@@ -165,7 +165,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void join() {
-    Rel rel =
+    final Rel rel =
         Join.builder()
             .from(b.innerJoin(__ -> b.bool(true), commonTable, commonTable))
             .commonExtension(commonExtension)
@@ -177,9 +177,9 @@ class ExtensionRoundtripTest extends TestBase {
   @Test
   void hashJoin() {
     // with empty keys
-    List<Integer> leftEmptyKeys = Collections.emptyList();
-    List<Integer> rightEmptyKeys = Collections.emptyList();
-    Rel relWithoutKeys =
+    final List<Integer> leftEmptyKeys = Collections.emptyList();
+    final List<Integer> rightEmptyKeys = Collections.emptyList();
+    final Rel relWithoutKeys =
         HashJoin.builder()
             .from(
                 b.hashJoin(
@@ -197,9 +197,9 @@ class ExtensionRoundtripTest extends TestBase {
   @Test
   void mergeJoin() {
     // with empty keys
-    List<Integer> leftEmptyKeys = Collections.emptyList();
-    List<Integer> rightEmptyKeys = Collections.emptyList();
-    Rel relWithoutKeys =
+    final List<Integer> leftEmptyKeys = Collections.emptyList();
+    final List<Integer> rightEmptyKeys = Collections.emptyList();
+    final Rel relWithoutKeys =
         MergeJoin.builder()
             .from(
                 b.mergeJoin(
@@ -216,7 +216,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void nestedLoopJoin() {
-    Rel rel =
+    final Rel rel =
         NestedLoopJoin.builder()
             .from(
                 b.nestedLoopJoin(
@@ -229,7 +229,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void project() {
-    Rel rel =
+    final Rel rel =
         Project.builder()
             .from(b.project(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
@@ -240,7 +240,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void expand() {
-    Rel rel =
+    final Rel rel =
         Expand.builder()
             .from(b.expand(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
@@ -250,7 +250,7 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void set() {
-    Rel rel =
+    final Rel rel =
         Set.builder()
             .from(b.set(Set.SetOp.UNION_ALL, commonTable))
             .commonExtension(commonExtension)
@@ -261,13 +261,14 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void extensionSingleRel() {
-    Rel rel = ExtensionSingle.from(detail, commonTable).commonExtension(commonExtension).build();
+    final Rel rel =
+        ExtensionSingle.from(detail, commonTable).commonExtension(commonExtension).build();
     verifyRoundTrip(rel);
   }
 
   @Test
   void extensionMultiRel() {
-    Rel rel =
+    final Rel rel =
         ExtensionMulti.from(detail, commonTable, commonTable)
             .commonExtension(commonExtension)
             .build();
@@ -276,13 +277,13 @@ class ExtensionRoundtripTest extends TestBase {
 
   @Test
   void extensionLeafRel() {
-    Rel rel = ExtensionLeaf.from(detail).commonExtension(commonExtension).build();
+    final Rel rel = ExtensionLeaf.from(detail).commonExtension(commonExtension).build();
     verifyRoundTrip(rel);
   }
 
   @Test
   void cross() {
-    Rel rel =
+    final Rel rel =
         Cross.builder()
             .from(b.cross(commonTable, commonTable))
             .commonExtension(commonExtension)
@@ -310,7 +311,7 @@ class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void scalarSubquery() {
-      Project rel =
+      final Project rel =
           b.project(
               input ->
                   Stream.of(
@@ -326,7 +327,7 @@ class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void inPredicate() {
-      Project rel =
+      final Project rel =
           b.project(
               input ->
                   Stream.of(
@@ -341,7 +342,7 @@ class ExtensionRoundtripTest extends TestBase {
 
     @Test
     void setPredicate() {
-      Project rel =
+      final Project rel =
           b.project(
               input ->
                   Stream.of(

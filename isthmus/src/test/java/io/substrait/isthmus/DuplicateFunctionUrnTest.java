@@ -28,8 +28,8 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
 
   static {
     try {
-      String extensions1 = asString("extensions/functions_duplicate_urn1.yaml");
-      String extensions2 = asString("extensions/functions_duplicate_urn2.yaml");
+      final String extensions1 = asString("extensions/functions_duplicate_urn1.yaml");
+      final String extensions2 = asString("extensions/functions_duplicate_urn2.yaml");
       collection1 =
           SimpleExtension.load("urn:extension:io.substrait:functions_string", extensions1);
       collection2 = SimpleExtension.load("urn:extension:com.domain:string", extensions2);
@@ -37,7 +37,7 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
 
       // Verify that the merged collection contains duplicate concat functions with different URNs
       // This is a precondition for the tests - if this fails, the tests don't make sense
-      List<SimpleExtension.ScalarFunctionVariant> concatFunctions =
+      final List<SimpleExtension.ScalarFunctionVariant> concatFunctions =
           collection.scalarFunctions().stream().filter(f -> f.name().equals("concat")).toList();
 
       if (concatFunctions.size() != 2) {
@@ -46,13 +46,13 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
                 + concatFunctions.size());
       }
 
-      String urn1 = concatFunctions.get(0).getAnchor().urn();
-      String urn2 = concatFunctions.get(1).getAnchor().urn();
+      final String urn1 = concatFunctions.get(0).getAnchor().urn();
+      final String urn2 = concatFunctions.get(1).getAnchor().urn();
       if (urn1.equals(urn2)) {
         throw new IllegalStateException(
             "Expected different URNs for the two concat functions, but both were: " + urn1);
       }
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
   }
@@ -82,14 +82,14 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     // The FunctionConverter uses a "last-wins" strategy: the last function added to the
     // extension collection will be matched when converting from Calcite to Substrait.
 
-    SimpleExtension.ExtensionCollection reverseCollection = collection2.merge(collection1);
-    ScalarFunctionConverter converterA =
+    final SimpleExtension.ExtensionCollection reverseCollection = collection2.merge(collection1);
+    final ScalarFunctionConverter converterA =
         new ScalarFunctionConverter(collection.scalarFunctions(), typeFactory);
-    ScalarFunctionConverter converterB =
+    final ScalarFunctionConverter converterB =
         new ScalarFunctionConverter(reverseCollection.scalarFunctions(), typeFactory);
 
-    RexBuilder rexBuilder = new RexBuilder(typeFactory);
-    RexCall concatCall =
+    final RexBuilder rexBuilder = new RexBuilder(typeFactory);
+    final RexCall concatCall =
         (RexCall)
             rexBuilder.makeCall(
                 SqlStdOperatorTable.CONCAT,
@@ -97,20 +97,22 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
                 rexBuilder.makeLiteral("world"));
 
     // Create a simple topLevelConverter that converts literals to Substrait expressions
-    java.util.function.Function<RexNode, Expression> topLevelConverter =
+    final java.util.function.Function<RexNode, Expression> topLevelConverter =
         rexNode -> {
-          org.apache.calcite.rex.RexLiteral lit = (org.apache.calcite.rex.RexLiteral) rexNode;
+          final org.apache.calcite.rex.RexLiteral lit = (org.apache.calcite.rex.RexLiteral) rexNode;
           return Expression.StrLiteral.builder()
               .value(lit.getValueAs(String.class))
               .nullable(false)
               .build();
         };
 
-    Optional<Expression> exprA = converterA.convert(concatCall, topLevelConverter);
-    Optional<Expression> exprB = converterB.convert(concatCall, topLevelConverter);
+    final Optional<Expression> exprA = converterA.convert(concatCall, topLevelConverter);
+    final Optional<Expression> exprB = converterB.convert(concatCall, topLevelConverter);
 
-    Expression.ScalarFunctionInvocation funcA = (Expression.ScalarFunctionInvocation) exprA.get();
-    Expression.ScalarFunctionInvocation funcB = (Expression.ScalarFunctionInvocation) exprB.get();
+    final Expression.ScalarFunctionInvocation funcA =
+        (Expression.ScalarFunctionInvocation) exprA.get();
+    final Expression.ScalarFunctionInvocation funcB =
+        (Expression.ScalarFunctionInvocation) exprB.get();
 
     assertEquals(
         "extension:com.domain:string",
@@ -131,19 +133,19 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     // The FunctionConverter uses a "last-wins" strategy.
 
     // Merge default extensions with collection2 - collection2's ltrim should be last
-    SimpleExtension.ExtensionCollection defaultWithCustom = extensions.merge(collection2);
+    final SimpleExtension.ExtensionCollection defaultWithCustom = extensions.merge(collection2);
 
     // Merge collection2 with default extensions - default ltrim should be last
-    SimpleExtension.ExtensionCollection customWithDefault = collection2.merge(extensions);
+    final SimpleExtension.ExtensionCollection customWithDefault = collection2.merge(extensions);
 
-    ScalarFunctionConverter converterA =
+    final ScalarFunctionConverter converterA =
         new ScalarFunctionConverter(defaultWithCustom.scalarFunctions(), typeFactory);
-    ScalarFunctionConverter converterB =
+    final ScalarFunctionConverter converterB =
         new ScalarFunctionConverter(customWithDefault.scalarFunctions(), typeFactory);
 
     // Create a TRIM(LEADING ' ' FROM 'test') call which uses TrimFunctionMapper to map to ltrim
-    RexBuilder rexBuilder = new RexBuilder(typeFactory);
-    RexCall trimCall =
+    final RexBuilder rexBuilder = new RexBuilder(typeFactory);
+    final RexCall trimCall =
         (RexCall)
             rexBuilder.makeCall(
                 SqlStdOperatorTable.TRIM,
@@ -151,10 +153,10 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
                 rexBuilder.makeLiteral(" "),
                 rexBuilder.makeLiteral("test"));
 
-    java.util.function.Function<RexNode, Expression> topLevelConverter =
+    final java.util.function.Function<RexNode, Expression> topLevelConverter =
         rexNode -> {
-          org.apache.calcite.rex.RexLiteral lit = (org.apache.calcite.rex.RexLiteral) rexNode;
-          Object value = lit.getValue();
+          final org.apache.calcite.rex.RexLiteral lit = (org.apache.calcite.rex.RexLiteral) rexNode;
+          final Object value = lit.getValue();
           if (value == null) {
             return Expression.StrLiteral.builder().value("").nullable(true).build();
           }
@@ -162,17 +164,19 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
           return Expression.StrLiteral.builder().value(value.toString()).nullable(false).build();
         };
 
-    Optional<Expression> exprA = converterA.convert(trimCall, topLevelConverter);
-    Optional<Expression> exprB = converterB.convert(trimCall, topLevelConverter);
+    final Optional<Expression> exprA = converterA.convert(trimCall, topLevelConverter);
+    final Optional<Expression> exprB = converterB.convert(trimCall, topLevelConverter);
 
-    Expression.ScalarFunctionInvocation funcA = (Expression.ScalarFunctionInvocation) exprA.get();
+    final Expression.ScalarFunctionInvocation funcA =
+        (Expression.ScalarFunctionInvocation) exprA.get();
     // converterA should use collection2's custom ltrim (last)
     assertEquals(
         "extension:com.domain:string",
         funcA.declaration().getAnchor().urn(),
         "converterA should use last ltrim (custom from collection2)");
 
-    Expression.ScalarFunctionInvocation funcB = (Expression.ScalarFunctionInvocation) exprB.get();
+    final Expression.ScalarFunctionInvocation funcB =
+        (Expression.ScalarFunctionInvocation) exprB.get();
     // converterB should use default extensions' ltrim (last)
     assertEquals(
         "extension:io.substrait:functions_string",

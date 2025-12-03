@@ -27,18 +27,18 @@ import org.junit.jupiter.api.Test;
 class UriUrnMigrationEndToEndTest {
 
   /** Load a proto Plan from a JSON resource file using JsonFormat */
-  private Plan loadPlanFromJson(String resourcePath) throws IOException {
+  private Plan loadPlanFromJson(final String resourcePath) throws IOException {
     try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
       if (inputStream == null) {
         throw new IOException("Resource not found: " + resourcePath);
       }
 
-      String jsonContent =
+      final String jsonContent =
           new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
               .lines()
               .collect(Collectors.joining("\n"));
 
-      Plan.Builder planBuilder = Plan.newBuilder();
+      final Plan.Builder planBuilder = Plan.newBuilder();
       JsonFormat.parser().merge(jsonContent, planBuilder);
       return planBuilder.build();
     }
@@ -48,7 +48,7 @@ class UriUrnMigrationEndToEndTest {
   void testUriUrnMigrationEndToEnd() throws IOException {
 
     // List of (inputPath, expectedPath, extensionCollection) tuples
-    List<String[]> testCases =
+    final List<String[]> testCases =
         Arrays.asList(
             new String[] {
               "uri-urn-migration/uri-only-input-plan.json",
@@ -71,20 +71,20 @@ class UriUrnMigrationEndToEndTest {
               "uri-urn-migration/zero-urn-resolution-expected-plan.json"
             });
 
-    for (String[] testCase : testCases) {
-      String inputPath = testCase[0];
-      String expectedPath = testCase[1];
+    for (final String[] testCase : testCases) {
+      final String inputPath = testCase[0];
+      final String expectedPath = testCase[1];
 
-      Plan inputPlan = loadPlanFromJson(inputPath);
-      Plan expectedPlan = loadPlanFromJson(expectedPath);
+      final Plan inputPlan = loadPlanFromJson(inputPath);
+      final Plan expectedPlan = loadPlanFromJson(expectedPath);
 
-      ProtoPlanConverter protoToPojo =
+      final ProtoPlanConverter protoToPojo =
           new ProtoPlanConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
-      io.substrait.plan.Plan pojoPlan = protoToPojo.from(inputPlan);
+      final io.substrait.plan.Plan pojoPlan = protoToPojo.from(inputPlan);
 
-      PlanProtoConverter pojoToProto =
+      final PlanProtoConverter pojoToProto =
           new PlanProtoConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
-      Plan actualPlan = pojoToProto.toProto(pojoPlan);
+      final Plan actualPlan = pojoToProto.toProto(pojoPlan);
 
       assertEquals(expectedPlan, actualPlan);
     }
@@ -92,12 +92,12 @@ class UriUrnMigrationEndToEndTest {
 
   @Test
   void testUnresolvableUriThrowsException() throws IOException {
-    Plan inputPlan = loadPlanFromJson("uri-urn-migration/unresolvable-uri-plan.json");
+    final Plan inputPlan = loadPlanFromJson("uri-urn-migration/unresolvable-uri-plan.json");
 
-    ProtoPlanConverter protoToPojo =
+    final ProtoPlanConverter protoToPojo =
         new ProtoPlanConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
 
-    IllegalStateException exception =
+    final IllegalStateException exception =
         assertThrows(
             IllegalStateException.class,
             () -> {

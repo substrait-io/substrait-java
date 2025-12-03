@@ -25,7 +25,7 @@ public class SchemaCollector {
   private final RelDataTypeFactory typeFactory;
   private final TypeConverter typeConverter;
 
-  public SchemaCollector(RelDataTypeFactory typeFactory, TypeConverter typeConverter) {
+  public SchemaCollector(final RelDataTypeFactory typeFactory, final TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
   }
@@ -39,22 +39,23 @@ public class SchemaCollector {
    */
   public CalciteSchema toSchema(@NonNull final Rel rel) {
     // Create the root schema under which all tables and schemas will be nested.
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false, false);
+    final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false, false);
 
-    for (Map.Entry<List<String>, NamedStruct> entry : TableGatherer.gatherTables(rel).entrySet()) {
-      List<String> names = entry.getKey();
-      NamedStruct namedStruct = entry.getValue();
+    for (final Map.Entry<List<String>, NamedStruct> entry :
+        TableGatherer.gatherTables(rel).entrySet()) {
+      final List<String> names = entry.getKey();
+      final NamedStruct namedStruct = entry.getValue();
 
       // The last name in names is the table name. All others are schema names.
-      String tableName = names.get(names.size() - 1);
+      final String tableName = names.get(names.size() - 1);
 
-      CalciteSchema schema =
+      final CalciteSchema schema =
           Utils.createCalciteSchemaFromNames(rootSchema, names.subList(0, names.size() - 1));
 
       // Create the table if it is not present
-      CalciteSchema.TableEntry table = schema.getTable(tableName, CASE_SENSITIVE);
+      final CalciteSchema.TableEntry table = schema.getTable(tableName, CASE_SENSITIVE);
       if (table == null) {
-        RelDataType rowType =
+        final RelDataType rowType =
             typeConverter.toCalcite(typeFactory, namedStruct.struct(), namedStruct.names());
         schema.add(tableName, new SubstraitTable(tableName, rowType));
       }
@@ -78,19 +79,19 @@ public class SchemaCollector {
      * @param rootRel under which to search for {@link NamedScan}s
      * @return a map of qualified table names to their associated Substrait schemas
      */
-    public static Map<List<String>, NamedStruct> gatherTables(Rel rootRel) {
-      TableGatherer visitor = new TableGatherer();
+    public static Map<List<String>, NamedStruct> gatherTables(final Rel rootRel) {
+      final TableGatherer visitor = new TableGatherer();
       rootRel.accept(visitor, EmptyVisitationContext.INSTANCE);
       return visitor.tableMap;
     }
 
     @Override
-    public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
+    public Optional<Rel> visit(final NamedScan namedScan, final EmptyVisitationContext context) {
       super.visit(namedScan, context);
 
-      List<String> tableName = namedScan.getNames();
+      final List<String> tableName = namedScan.getNames();
       if (tableMap.containsKey(tableName)) {
-        NamedStruct existingSchema = tableMap.get(tableName);
+        final NamedStruct existingSchema = tableMap.get(tableName);
         if (!existingSchema.equals(namedScan.getInitialSchema())) {
           throw new IllegalArgumentException(
               String.format(
@@ -103,12 +104,12 @@ public class SchemaCollector {
     }
 
     @Override
-    public Optional<Rel> visit(NamedWrite namedWrite, EmptyVisitationContext context) {
+    public Optional<Rel> visit(final NamedWrite namedWrite, final EmptyVisitationContext context) {
       super.visit(namedWrite, context);
-      List<String> tableName = namedWrite.getNames();
+      final List<String> tableName = namedWrite.getNames();
 
       if (tableMap.containsKey(tableName)) {
-        NamedStruct existingSchema = tableMap.get(tableName);
+        final NamedStruct existingSchema = tableMap.get(tableName);
         if (!existingSchema.equals(namedWrite.getTableSchema())) {
           throw new IllegalArgumentException(
               String.format(
@@ -121,12 +122,13 @@ public class SchemaCollector {
     }
 
     @Override
-    public Optional<Rel> visit(NamedUpdate namedUpdate, EmptyVisitationContext context) {
+    public Optional<Rel> visit(
+        final NamedUpdate namedUpdate, final EmptyVisitationContext context) {
       super.visit(namedUpdate, context);
-      List<String> tableName = namedUpdate.getNames();
+      final List<String> tableName = namedUpdate.getNames();
 
       if (tableMap.containsKey(tableName)) {
-        NamedStruct existingSchema = tableMap.get(tableName);
+        final NamedStruct existingSchema = tableMap.get(tableName);
         if (!existingSchema.equals(namedUpdate.getTableSchema())) {
           throw new IllegalArgumentException(
               String.format(

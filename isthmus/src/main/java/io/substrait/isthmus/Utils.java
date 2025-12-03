@@ -27,10 +27,10 @@ public class Utils {
      * @param element 1
      * @return [a, b, 1]
      */
-    BiFunction<List<T>, T, List<T>> appendElementToList =
+    final BiFunction<List<T>, T, List<T>> appendElementToList =
         (list, element) -> {
-          int capacity = list.size() + 1;
-          ArrayList<T> newList = new ArrayList<>(capacity);
+          final int capacity = list.size() + 1;
+          final ArrayList<T> newList = new ArrayList<>(capacity);
           newList.addAll(list);
           newList.add(element);
           return unmodifiableList(newList);
@@ -39,12 +39,12 @@ public class Utils {
     /*
      * ([a, b], [1, 2]) -> [a, b, 1], [a, b, 2]
      */
-    BiFunction<List<T>, List<T>, Stream<List<T>>> appendAndGen =
+    final BiFunction<List<T>, List<T>, Stream<List<T>>> appendAndGen =
         (list, elemsToAppend) ->
             elemsToAppend.stream().map(element -> appendElementToList.apply(list, element));
 
     /** ([[a, b], [c, d]], [1, 2]) -> [a, b, 1], [a, b, 2], [c, d, 1], [c, d, 2] */
-    BiFunction<Stream<List<T>>, List<T>, Stream<List<T>>> appendAndGenLists =
+    final BiFunction<Stream<List<T>>, List<T>, Stream<List<T>>> appendAndGenLists =
         (products, toJoin) -> products.flatMap(product -> appendAndGen.apply(product, toJoin));
 
     if (lists.isEmpty()) {
@@ -52,8 +52,8 @@ public class Utils {
     }
 
     lists = new ArrayList<>(lists);
-    List<T> firstListToJoin = lists.remove(0);
-    Stream<List<T>> startProduct = appendAndGen.apply(new ArrayList<T>(), firstListToJoin);
+    final List<T> firstListToJoin = lists.remove(0);
+    final Stream<List<T>> startProduct = appendAndGen.apply(new ArrayList<T>(), firstListToJoin);
 
     return lists.stream() //
         .filter(Objects::nonNull) //

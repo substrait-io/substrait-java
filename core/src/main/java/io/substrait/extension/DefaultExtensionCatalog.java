@@ -27,7 +27,7 @@ public class DefaultExtensionCatalog {
       loadDefaultCollection();
 
   private static SimpleExtension.ExtensionCollection loadDefaultCollection() {
-    List<String> defaultFiles =
+    final List<String> defaultFiles =
         Arrays.asList(
                 "boolean",
                 "aggregate_generic",

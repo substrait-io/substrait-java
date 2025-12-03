@@ -27,7 +27,7 @@ class CalciteTypeTest extends CalciteObjs {
           new UserTypeMapper() {
             @Nullable
             @Override
-            public Type toSubstrait(RelDataType relDataType) {
+            public Type toSubstrait(final RelDataType relDataType) {
               if (uTypeFactory.isTypeFromFactory(relDataType)) {
                 return uTypeFactory.createSubstrait(relDataType.isNullable());
               }
@@ -36,7 +36,7 @@ class CalciteTypeTest extends CalciteObjs {
 
             @Nullable
             @Override
-            public RelDataType toCalcite(Type.UserDefined type) {
+            public RelDataType toCalcite(final Type.UserDefined type) {
               if (type.urn().equals(uTypeURI) && type.name().equals(uTypeName)) {
                 return uTypeFactory.createCalcite(type.nullable());
               }
@@ -46,49 +46,49 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void bool(boolean nullable) {
+  void bool(final boolean nullable) {
     testType(Type.withNullability(nullable).BOOLEAN, SqlTypeName.BOOLEAN, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void i8(boolean nullable) {
+  void i8(final boolean nullable) {
     testType(Type.withNullability(nullable).I8, SqlTypeName.TINYINT, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void i16(boolean nullable) {
+  void i16(final boolean nullable) {
     testType(Type.withNullability(nullable).I16, SqlTypeName.SMALLINT, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void i32(boolean nullable) {
+  void i32(final boolean nullable) {
     testType(Type.withNullability(nullable).I32, SqlTypeName.INTEGER, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void i64(boolean nullable) {
+  void i64(final boolean nullable) {
     testType(Type.withNullability(nullable).I64, SqlTypeName.BIGINT, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void fp32(boolean nullable) {
+  void fp32(final boolean nullable) {
     testType(Type.withNullability(nullable).FP32, SqlTypeName.REAL, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void fp64(boolean nullable) {
+  void fp64(final boolean nullable) {
     testType(Type.withNullability(nullable).FP64, SqlTypeName.DOUBLE, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void calciteFloatToFp64(boolean nullable) {
+  void calciteFloatToFp64(final boolean nullable) {
     assertEquals(
         Type.withNullability(nullable).FP64,
         TypeConverter.DEFAULT.toSubstrait(
@@ -97,20 +97,20 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void date(boolean nullable) {
+  void date(final boolean nullable) {
     testType(Type.withNullability(nullable).DATE, SqlTypeName.DATE, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void time(boolean nullable) {
+  void time(final boolean nullable) {
     testType(Type.withNullability(nullable).TIME, SqlTypeName.TIME, nullable, 6);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void precisionTimeStamp(boolean nullable) {
-    for (int precision : new int[] {0, 3, 6}) {
+  void precisionTimeStamp(final boolean nullable) {
+    for (final int precision : new int[] {0, 3, 6}) {
       testType(
           Type.withNullability(nullable).precisionTimestamp(precision),
           SqlTypeName.TIMESTAMP,
@@ -121,8 +121,8 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void precisionTimestamptz(boolean nullable) {
-    for (int precision : new int[] {0, 3, 6}) {
+  void precisionTimestamptz(final boolean nullable) {
+    for (final int precision : new int[] {0, 3, 6}) {
       testType(
           Type.withNullability(nullable).precisionTimestampTZ(precision),
           SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
@@ -133,7 +133,7 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void intervalYear(boolean nullable) {
+  void intervalYear(final boolean nullable) {
     testType(
         Type.withNullability(nullable).INTERVAL_YEAR,
         type.createSqlIntervalType(SubstraitTypeSystem.YEAR_MONTH_INTERVAL),
@@ -142,7 +142,7 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void intervalDay(boolean nullable) {
+  void intervalDay(final boolean nullable) {
     testType(
         Type.withNullability(nullable).intervalDay(6),
         type.createSqlIntervalType(SubstraitTypeSystem.DAY_SECOND_INTERVAL),
@@ -151,43 +151,43 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void string(boolean nullable) {
+  void string(final boolean nullable) {
     testType(Type.withNullability(nullable).STRING, SqlTypeName.VARCHAR, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void binary(boolean nullable) {
+  void binary(final boolean nullable) {
     testType(Type.withNullability(nullable).BINARY, SqlTypeName.VARBINARY, nullable);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void fixedBinary(boolean nullable) {
+  void fixedBinary(final boolean nullable) {
     testType(Type.withNullability(nullable).fixedBinary(74), SqlTypeName.BINARY, nullable, 74);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void fixedChar(boolean nullable) {
+  void fixedChar(final boolean nullable) {
     testType(Type.withNullability(nullable).fixedChar(74), SqlTypeName.CHAR, nullable, 74);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void varchar(boolean nullable) {
+  void varchar(final boolean nullable) {
     testType(Type.withNullability(nullable).varChar(74), SqlTypeName.VARCHAR, nullable, 74);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void decimal(boolean nullable) {
+  void decimal(final boolean nullable) {
     testType(Type.withNullability(nullable).decimal(38, 13), SqlTypeName.DECIMAL, nullable, 38, 13);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void list(boolean nullable) {
+  void list(final boolean nullable) {
     testType(
         Type.withNullability(nullable).list(TypeCreator.REQUIRED.I16),
         type.createArrayType(type.createSqlType(SqlTypeName.SMALLINT), -1),
@@ -196,7 +196,7 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void map(boolean nullable) {
+  void map(final boolean nullable) {
     testType(
         Type.withNullability(nullable).map(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I8),
         type.createMapType(
@@ -242,46 +242,57 @@ class CalciteTypeTest extends CalciteObjs {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void userDefinedType(boolean nullable) {
-    Type type = uTypeFactory.createSubstrait(nullable);
+  void userDefinedType(final boolean nullable) {
+    final Type type = uTypeFactory.createSubstrait(nullable);
     testType(typeConverter, type, uTypeFactory.createCalcite(nullable), null);
   }
 
-  private void testType(TypeExpression expression, SqlTypeName typeName, boolean nullable) {
+  private void testType(
+      final TypeExpression expression, final SqlTypeName typeName, final boolean nullable) {
     testType(expression, type.createTypeWithNullability(type.createSqlType(typeName), nullable));
   }
 
   private void testType(
-      TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec) {
+      final TypeExpression expression,
+      final SqlTypeName typeName,
+      final boolean nullable,
+      final int prec) {
     testType(
         expression, type.createTypeWithNullability(type.createSqlType(typeName, prec), nullable));
   }
 
   private void testType(
-      TypeExpression expression, SqlTypeName typeName, boolean nullable, int prec, int scale) {
+      final TypeExpression expression,
+      final SqlTypeName typeName,
+      final boolean nullable,
+      final int prec,
+      final int scale) {
     testType(
         expression,
         type.createTypeWithNullability(type.createSqlType(typeName, prec, scale), nullable));
   }
 
-  private void testType(TypeExpression expression, RelDataType calciteType) {
+  private void testType(final TypeExpression expression, final RelDataType calciteType) {
     testType(expression, calciteType, null);
   }
 
-  private void testType(TypeExpression expression, RelDataType calciteType, boolean nullable) {
+  private void testType(
+      final TypeExpression expression, final RelDataType calciteType, final boolean nullable) {
     testType(expression, type.createTypeWithNullability(calciteType, nullable));
   }
 
   private void testType(
-      TypeExpression expression, RelDataType calciteType, List<String> dfsFieldNames) {
+      final TypeExpression expression,
+      final RelDataType calciteType,
+      final List<String> dfsFieldNames) {
     testType(TypeConverter.DEFAULT, expression, calciteType, dfsFieldNames);
   }
 
   private void testType(
-      TypeConverter converter,
-      TypeExpression expression,
-      RelDataType calciteType,
-      List<String> dfsFieldNames) {
+      final TypeConverter converter,
+      final TypeExpression expression,
+      final RelDataType calciteType,
+      final List<String> dfsFieldNames) {
     assertEquals(expression, converter.toSubstrait(calciteType));
     assertEquals(calciteType, converter.toCalcite(type, expression, dfsFieldNames));
   }

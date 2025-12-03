@@ -41,7 +41,7 @@ public class ProtoExtensionConverter {
    * @return the converted {@link AdvancedExtension.Optimization}
    */
   protected AdvancedExtension.Optimization optimizationFromAdvancedExtension(
-      com.google.protobuf.@NonNull Any any) {
+      final com.google.protobuf.@NonNull Any any) {
     throw new UnsupportedOperationException(
         "missing deserialization logic for AdvancedExtension.Optimization");
   }
@@ -57,7 +57,7 @@ public class ProtoExtensionConverter {
    * @return the converted {@link AdvancedExtension.Enhancement}
    */
   protected AdvancedExtension.Enhancement enhancementFromAdvancedExtension(
-      com.google.protobuf.@NonNull Any any) {
+      final com.google.protobuf.@NonNull Any any) {
     throw new UnsupportedOperationException(
         "missing deserialization logic for AdvancedExtension.Enhancement");
   }

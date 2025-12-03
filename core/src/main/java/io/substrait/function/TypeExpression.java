@@ -10,9 +10,9 @@ public interface TypeExpression {
     private static final long serialVersionUID = 8381558691397737963L;
   }
 
-  <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
+  <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E;
 
-  static TypeExpressionCreator withNullability(boolean nullable) {
+  static TypeExpressionCreator withNullability(final boolean nullable) {
     return nullable ? TypeExpressionCreator.NULLABLE : TypeExpressionCreator.REQUIRED;
   }
 
@@ -26,7 +26,7 @@ public interface TypeExpression {
     }
 
     abstract <R, E extends Throwable> R acceptE(
-        final TypeExpressionVisitor<R, E> parameterizedTypeVisitor) throws E;
+        TypeExpressionVisitor<R, E> parameterizedTypeVisitor) throws E;
   }
 
   @Value.Immutable

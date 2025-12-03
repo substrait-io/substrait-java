@@ -27,37 +27,38 @@ public class ProtoExtendedExpressionConverter {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public ProtoExtendedExpressionConverter(SimpleExtension.ExtensionCollection extensionCollection) {
+  public ProtoExtendedExpressionConverter(
+      final SimpleExtension.ExtensionCollection extensionCollection) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
     this.extensionCollection = extensionCollection;
   }
 
-  public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpression) {
+  public ExtendedExpression from(final io.substrait.proto.ExtendedExpression extendedExpression) {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
-    ExtensionLookup functionLookup =
+    final ExtensionLookup functionLookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(extendedExpression).build();
 
-    NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
+    final NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 
-    io.substrait.type.NamedStruct namedStruct =
+    final io.substrait.type.NamedStruct namedStruct =
         io.substrait.type.NamedStruct.fromProto(baseSchemaProto, protoTypeConverter);
 
-    ProtoExpressionConverter protoExpressionConverter =
+    final ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
             functionLookup, this.extensionCollection, namedStruct.struct(), null);
 
-    List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
+    final List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
 
-    for (ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
+    for (final ExpressionReference expressionReference : extendedExpression.getReferredExprList()) {
 
       switch (expressionReference.getExprTypeCase()) {
         case EXPRESSION:
-          Expression expressionPojo =
+          final Expression expressionPojo =
               protoExpressionConverter.from(expressionReference.getExpression());
-          ImmutableExpressionReference buildExpression =
+          final ImmutableExpressionReference buildExpression =
               ImmutableExpressionReference.builder()
                   .expression(expressionPojo)
                   .addAllOutputNames(expressionReference.getOutputNamesList())
@@ -65,14 +66,14 @@ public class ProtoExtendedExpressionConverter {
           expressionReferences.add(buildExpression);
           break;
         case MEASURE:
-          io.substrait.relation.Aggregate.Measure measure =
+          final io.substrait.relation.Aggregate.Measure measure =
               io.substrait.relation.Aggregate.Measure.builder()
                   .function(
                       new ProtoAggregateFunctionConverter(
                               functionLookup, extensionCollection, protoExpressionConverter)
                           .from(expressionReference.getMeasure()))
                   .build();
-          ImmutableAggregateFunctionReference buildMeasure =
+          final ImmutableAggregateFunctionReference buildMeasure =
               ImmutableAggregateFunctionReference.builder()
                   .measure(measure)
                   .addAllOutputNames(expressionReference.getOutputNamesList())
@@ -88,7 +89,7 @@ public class ProtoExtendedExpressionConverter {
       }
     }
 
-    ImmutableExtendedExpression.Builder builder =
+    final ImmutableExtendedExpression.Builder builder =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .advancedExtension(

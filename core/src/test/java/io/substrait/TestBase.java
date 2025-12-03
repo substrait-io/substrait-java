@@ -25,9 +25,9 @@ public abstract class TestBase {
   protected ProtoRelConverter protoRelConverter =
       new ProtoRelConverter(functionCollector, defaultExtensionCollection);
 
-  protected void verifyRoundTrip(Rel rel) {
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    Rel relReturned = protoRelConverter.from(protoRel);
+  protected void verifyRoundTrip(final Rel rel) {
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+    final Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(rel, relReturned);
   }
 }

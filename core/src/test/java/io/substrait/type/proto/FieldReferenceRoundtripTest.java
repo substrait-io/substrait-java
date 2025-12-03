@@ -29,7 +29,7 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void simpleStructFieldReference() {
     // Test simple root struct field reference via projection
-    Rel projection =
+    final Rel projection =
         Project.builder().input(baseTable).addExpressions(b.fieldReference(baseTable, 0)).build();
 
     verifyRoundTrip(projection);
@@ -38,7 +38,7 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void multipleFieldReferences() {
     // Test multiple field references in same projection
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -53,9 +53,10 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceInFilter() {
     // Test field reference in filter condition
-    Expression condition = b.equal(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
+    final Expression condition =
+        b.equal(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
 
-    Rel filter = Filter.builder().input(baseTable).condition(condition).build();
+    final Rel filter = Filter.builder().input(baseTable).condition(condition).build();
 
     verifyRoundTrip(filter);
   }
@@ -63,9 +64,9 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceInComplexExpression() {
     // Test field reference as part of arithmetic expression
-    Expression add = b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
+    final Expression add = b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
 
-    Rel projection = Project.builder().input(baseTable).addExpressions(add).build();
+    final Rel projection = Project.builder().input(baseTable).addExpressions(add).build();
 
     verifyRoundTrip(projection);
   }
@@ -73,13 +74,13 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceInNestedProjection() {
     // Test field reference through nested projections
-    Rel firstProjection =
+    final Rel firstProjection =
         Project.builder()
             .input(baseTable)
             .addExpressions(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 2))
             .build();
 
-    Rel secondProjection =
+    final Rel secondProjection =
         Project.builder()
             .input(firstProjection)
             .addExpressions(b.fieldReference(firstProjection, 1))
@@ -91,7 +92,7 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceAllFields() {
     // Test referencing all fields
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -107,12 +108,12 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceWithBooleanLogic() {
     // Test field references in boolean expressions
-    Expression condition =
+    final Expression condition =
         b.and(
             b.equal(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0)),
             b.equal(b.fieldReference(baseTable, 2), b.str("test")));
 
-    Rel filter = Filter.builder().input(baseTable).condition(condition).build();
+    final Rel filter = Filter.builder().input(baseTable).condition(condition).build();
 
     verifyRoundTrip(filter);
   }
@@ -120,10 +121,10 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceInMultipleArithmetic() {
     // Test multiple field references in arithmetic
-    Expression add = b.add(b.fieldReference(baseTable, 1), b.fieldReference(baseTable, 1));
-    Expression multiply = b.multiply(add, b.fieldReference(baseTable, 1));
+    final Expression add = b.add(b.fieldReference(baseTable, 1), b.fieldReference(baseTable, 1));
+    final Expression multiply = b.multiply(add, b.fieldReference(baseTable, 1));
 
-    Rel projection = Project.builder().input(baseTable).addExpressions(multiply).build();
+    final Rel projection = Project.builder().input(baseTable).addExpressions(multiply).build();
 
     verifyRoundTrip(projection);
   }
@@ -131,7 +132,7 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void fieldReferenceReordering() {
     // Test field reordering through projection (accessing fields out of order)
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -146,7 +147,7 @@ class FieldReferenceRoundtripTest extends TestBase {
   @Test
   void sameFieldReferencedMultipleTimes() {
     // Test same field referenced multiple times
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(

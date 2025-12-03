@@ -17,9 +17,9 @@ public class SubstraitSqlDialect extends SqlDialect {
 
   public static SqlDialect DEFAULT = new SubstraitSqlDialect(DEFAULT_CONTEXT);
 
-  public static SqlString toSql(RelNode relNode) {
-    RelToSqlConverter relToSql = new RelToSqlConverter(DEFAULT);
-    SqlNode sqlNode = relToSql.visitRoot(relNode).asStatement();
+  public static SqlString toSql(final RelNode relNode) {
+    final RelToSqlConverter relToSql = new RelToSqlConverter(DEFAULT);
+    final SqlNode sqlNode = relToSql.visitRoot(relNode).asStatement();
     return sqlNode.toSqlString(
         c ->
             c.withAlwaysUseParentheses(false)
@@ -28,7 +28,7 @@ public class SubstraitSqlDialect extends SqlDialect {
                 .withIndentation(0));
   }
 
-  public SubstraitSqlDialect(Context context) {
+  public SubstraitSqlDialect(final Context context) {
     super(context);
   }
 

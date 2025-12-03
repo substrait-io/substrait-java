@@ -15,10 +15,10 @@ class LiteralRoundtripTest extends TestBase {
 
   @Test
   void decimal() {
-    io.substrait.expression.Expression.DecimalLiteral val =
+    final io.substrait.expression.Expression.DecimalLiteral val =
         ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
-    ProtoExpressionConverter from =
+    final ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
+    final ProtoExpressionConverter from =
         new ProtoExpressionConverter(null, null, EMPTY_TYPE, protoRelConverter);
     assertEquals(val, from.from(val.accept(to, EmptyVisitationContext.INSTANCE)));
   }

@@ -97,23 +97,24 @@ class CalciteCallTest extends CalciteObjs {
     test("not:bool", rex.makeCall(SqlStdOperatorTable.NOT, c(false, SqlTypeName.BOOLEAN)));
   }
 
-  private void test(String expectedName, RexNode call) {
+  private void test(final String expectedName, final RexNode call) {
     test(expectedName, call, c -> {}, true);
   }
 
   private void test(
-      String expectedName,
-      RexNode call,
-      Consumer<Expression.ScalarFunctionInvocation> consumer,
-      boolean bidirectional) {
-    Expression expression = call.accept(rexExpressionConverter);
+      final String expectedName,
+      final RexNode call,
+      final Consumer<Expression.ScalarFunctionInvocation> consumer,
+      final boolean bidirectional) {
+    final Expression expression = call.accept(rexExpressionConverter);
     assertTrue(expression instanceof Expression.ScalarFunctionInvocation);
-    Expression.ScalarFunctionInvocation func = (Expression.ScalarFunctionInvocation) expression;
+    final Expression.ScalarFunctionInvocation func =
+        (Expression.ScalarFunctionInvocation) expression;
     assertEquals(expectedName, func.declaration().key());
     consumer.accept(func);
 
     if (bidirectional) {
-      RexNode convertedCall = expression.accept(expressionRexConverter, Context.newContext());
+      final RexNode convertedCall = expression.accept(expressionRexConverter, Context.newContext());
       assertEquals(call, convertedCall);
     }
   }

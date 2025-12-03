@@ -21,7 +21,7 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
   private static final String sqrtFunctionName = "sqrt";
   private final List<ScalarFunctionVariant> sqrtFunctions;
 
-  public SqrtFunctionMapper(List<ScalarFunctionVariant> functions) {
+  public SqrtFunctionMapper(final List<ScalarFunctionVariant> functions) {
     this.sqrtFunctions =
         functions.stream()
             .filter(f -> sqrtFunctionName.equalsIgnoreCase(f.name()))
@@ -29,13 +29,13 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
   }
 
   @Override
-  public Optional<SubstraitFunctionMapping> toSubstrait(RexCall call) {
+  public Optional<SubstraitFunctionMapping> toSubstrait(final RexCall call) {
     if (sqrtFunctions.isEmpty()) {
       return Optional.empty();
     }
 
     if (isPowerOfHalf(call)) {
-      List<RexNode> operands = call.getOperands().subList(0, 1);
+      final List<RexNode> operands = call.getOperands().subList(0, 1);
       return Optional.of(new SubstraitFunctionMapping(sqrtFunctionName, operands, sqrtFunctions));
     }
 
@@ -55,7 +55,7 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
     if (!(exponent instanceof RexLiteral)) {
       return false;
     }
-    RexLiteral literal = (RexLiteral) exponent;
+    final RexLiteral literal = (RexLiteral) exponent;
 
     switch (literal.getType().getSqlTypeName()) {
       case DOUBLE:

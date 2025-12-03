@@ -112,31 +112,32 @@ public class RelProtoConverter
     return this.typeProtoConverter;
   }
 
-  public io.substrait.proto.RelRoot toProto(Plan.Root relRoot) {
+  public io.substrait.proto.RelRoot toProto(final Plan.Root relRoot) {
     return RelRoot.newBuilder()
         .setInput(toProto(relRoot.getInput()))
         .addAllNames(relRoot.getNames())
         .build();
   }
 
-  public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
+  public io.substrait.proto.Rel toProto(final io.substrait.relation.Rel rel) {
     return rel.accept(this, EmptyVisitationContext.INSTANCE);
   }
 
-  protected io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
+  protected io.substrait.proto.Expression toProto(
+      final io.substrait.expression.Expression expression) {
     return exprProtoConverter.toProto(expression);
   }
 
   protected List<io.substrait.proto.Expression> toProto(
-      List<io.substrait.expression.Expression> expression) {
+      final List<io.substrait.expression.Expression> expression) {
     return exprProtoConverter.toProto(expression);
   }
 
-  protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+  protected io.substrait.proto.Type toProto(final io.substrait.type.Type type) {
     return typeProtoConverter.toProto(type);
   }
 
-  private List<io.substrait.proto.SortField> toProtoS(List<Expression.SortField> sorts) {
+  private List<io.substrait.proto.SortField> toProtoS(final List<Expression.SortField> sorts) {
     return sorts.stream()
         .map(
             s -> {
@@ -148,13 +149,15 @@ public class RelProtoConverter
         .collect(Collectors.toList());
   }
 
-  private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
+  private io.substrait.proto.Expression.FieldReference toProto(
+      final FieldReference fieldReference) {
     return toProto((Expression) fieldReference).getSelection();
   }
 
   @Override
-  public Rel visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
-    AggregateRel.Builder builder =
+  public Rel visit(final Aggregate aggregate, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final AggregateRel.Builder builder =
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
@@ -169,14 +172,14 @@ public class RelProtoConverter
     return Rel.newBuilder().setAggregate(builder).build();
   }
 
-  private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    FunctionArg.FuncArgVisitor<
+  private AggregateRel.Measure toProto(final Aggregate.Measure measure) {
+    final FunctionArg.FuncArgVisitor<
             io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
         argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-    List<FunctionArg> args = measure.getFunction().arguments();
-    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
+    final List<FunctionArg> args = measure.getFunction().arguments();
+    final SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
 
-    AggregateFunction.Builder func =
+    final AggregateFunction.Builder func =
         AggregateFunction.newBuilder()
             .setPhase(measure.getFunction().aggregationPhase().toProto())
             .setInvocation(measure.getFunction().invocation().toProto())
@@ -196,20 +199,20 @@ public class RelProtoConverter
                     .map(ExpressionProtoConverter::from)
                     .collect(Collectors.toList()));
 
-    AggregateRel.Measure.Builder builder = AggregateRel.Measure.newBuilder().setMeasure(func);
+    final AggregateRel.Measure.Builder builder = AggregateRel.Measure.newBuilder().setMeasure(func);
 
     measure.getPreMeasureFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     return builder.build();
   }
 
-  private AggregateRel.Grouping toProto(Aggregate.Grouping grouping) {
+  private AggregateRel.Grouping toProto(final Aggregate.Grouping grouping) {
     return AggregateRel.Grouping.newBuilder()
         .addAllGroupingExpressions(toProto(grouping.getExpressions()))
         .build();
   }
 
   @Override
-  public Rel visit(final EmptyScan emptyScan, EmptyVisitationContext context)
+  public Rel visit(final EmptyScan emptyScan, final EmptyVisitationContext context)
       throws RuntimeException {
     final ReadRel.Builder builder =
         ReadRel.newBuilder()
@@ -223,8 +226,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
-    FetchRel.Builder builder =
+  public Rel visit(final Fetch fetch, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final FetchRel.Builder builder =
         FetchRel.newBuilder()
             .setCommon(common(fetch))
             .setInput(toProto(fetch.getInput()))
@@ -239,8 +243,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Filter filter, EmptyVisitationContext context) throws RuntimeException {
-    FilterRel.Builder builder =
+  public Rel visit(final Filter filter, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final FilterRel.Builder builder =
         FilterRel.newBuilder()
             .setCommon(common(filter))
             .setInput(toProto(filter.getInput()))
@@ -253,8 +258,8 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Join join, EmptyVisitationContext context) throws RuntimeException {
-    JoinRel.Builder builder =
+  public Rel visit(final Join join, final EmptyVisitationContext context) throws RuntimeException {
+    final JoinRel.Builder builder =
         JoinRel.newBuilder()
             .setCommon(common(join))
             .setLeft(toProto(join.getLeft()))
@@ -271,8 +276,8 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Set set, EmptyVisitationContext context) throws RuntimeException {
-    SetRel.Builder builder =
+  public Rel visit(final Set set, final EmptyVisitationContext context) throws RuntimeException {
+    final SetRel.Builder builder =
         SetRel.newBuilder().setCommon(common(set)).setOp(set.getSetOp().toProto());
     set.getInputs()
         .forEach(
@@ -286,8 +291,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(NamedScan namedScan, EmptyVisitationContext context) throws RuntimeException {
-    ReadRel.Builder builder =
+  public Rel visit(final NamedScan namedScan, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(namedScan))
             .setNamedTable(ReadRel.NamedTable.newBuilder().addAllNames(namedScan.getNames()))
@@ -303,8 +309,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(LocalFiles localFiles, EmptyVisitationContext context) throws RuntimeException {
-    ReadRel.Builder builder =
+  public Rel visit(final LocalFiles localFiles, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(localFiles))
             .setLocalFiles(
@@ -325,11 +332,11 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionTable extensionTable, EmptyVisitationContext context)
+  public Rel visit(final ExtensionTable extensionTable, final EmptyVisitationContext context)
       throws RuntimeException {
-    ReadRel.ExtensionTable.Builder extensionTableBuilder =
+    final ReadRel.ExtensionTable.Builder extensionTableBuilder =
         ReadRel.ExtensionTable.newBuilder().setDetail(extensionTable.getDetail().toProto(this));
-    ReadRel.Builder builder =
+    final ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(extensionTable))
             .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
@@ -342,16 +349,17 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
-    HashJoinRel.Builder builder =
+  public Rel visit(final HashJoin hashJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final HashJoinRel.Builder builder =
         HashJoinRel.newBuilder()
             .setCommon(common(hashJoin))
             .setLeft(toProto(hashJoin.getLeft()))
             .setRight(toProto(hashJoin.getRight()))
             .setType(hashJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = hashJoin.getLeftKeys();
-    List<FieldReference> rightKeys = hashJoin.getRightKeys();
+    final List<FieldReference> leftKeys = hashJoin.getLeftKeys();
+    final List<FieldReference> rightKeys = hashJoin.getRightKeys();
 
     if (leftKeys.size() != rightKeys.size()) {
       throw new IllegalArgumentException("Number of left and right keys must be equal.");
@@ -369,16 +377,17 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws RuntimeException {
-    MergeJoinRel.Builder builder =
+  public Rel visit(final MergeJoin mergeJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final MergeJoinRel.Builder builder =
         MergeJoinRel.newBuilder()
             .setCommon(common(mergeJoin))
             .setLeft(toProto(mergeJoin.getLeft()))
             .setRight(toProto(mergeJoin.getRight()))
             .setType(mergeJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = mergeJoin.getLeftKeys();
-    List<FieldReference> rightKeys = mergeJoin.getRightKeys();
+    final List<FieldReference> leftKeys = mergeJoin.getLeftKeys();
+    final List<FieldReference> rightKeys = mergeJoin.getRightKeys();
 
     if (leftKeys.size() != rightKeys.size()) {
       throw new IllegalArgumentException("Number of left and right keys must be equal.");
@@ -396,9 +405,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(NestedLoopJoin nestedLoopJoin, EmptyVisitationContext context)
+  public Rel visit(final NestedLoopJoin nestedLoopJoin, final EmptyVisitationContext context)
       throws RuntimeException {
-    NestedLoopJoinRel.Builder builder =
+    final NestedLoopJoinRel.Builder builder =
         NestedLoopJoinRel.newBuilder()
             .setCommon(common(nestedLoopJoin))
             .setLeft(toProto(nestedLoopJoin.getLeft()))
@@ -414,9 +423,10 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(
-      ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
+      final ConsistentPartitionWindow consistentPartitionWindow,
+      final EmptyVisitationContext context)
       throws RuntimeException {
-    ConsistentPartitionWindowRel.Builder builder =
+    final ConsistentPartitionWindowRel.Builder builder =
         ConsistentPartitionWindowRel.newBuilder()
             .setCommon(common(consistentPartitionWindow))
             .setInput(toProto(consistentPartitionWindow.getInput()))
@@ -434,8 +444,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(NamedWrite write, EmptyVisitationContext context) throws RuntimeException {
-    WriteRel.Builder builder =
+  public Rel visit(final NamedWrite write, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final WriteRel.Builder builder =
         WriteRel.newBuilder()
             .setCommon(common(write))
             .setInput(toProto(write.getInput()))
@@ -453,8 +464,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionWrite write, EmptyVisitationContext context) throws RuntimeException {
-    WriteRel.Builder builder =
+  public Rel visit(final ExtensionWrite write, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final WriteRel.Builder builder =
         WriteRel.newBuilder()
             .setCommon(common(write))
             .setInput(toProto(write.getInput()))
@@ -473,8 +485,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(NamedDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    DdlRel.Builder builder =
+  public Rel visit(final NamedDdl ddl, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final DdlRel.Builder builder =
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
@@ -493,8 +506,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    DdlRel.Builder builder =
+  public Rel visit(final ExtensionDdl ddl, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final DdlRel.Builder builder =
         DdlRel.newBuilder()
             .setCommon(common(ddl))
             .setTableSchema(ddl.getTableSchema().toProto(typeProtoConverter))
@@ -514,8 +528,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
-    UpdateRel.Builder builder =
+  public Rel visit(final NamedUpdate update, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final UpdateRel.Builder builder =
         UpdateRel.newBuilder()
             .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
             .setTableSchema(update.getTableSchema().toProto(typeProtoConverter))
@@ -531,9 +546,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ScatterExchange exchange, EmptyVisitationContext context)
+  public Rel visit(final ScatterExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExchangeRel.Builder builder =
+    final ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setScatterByFields(
                 ExchangeRel.ScatterFields.newBuilder()
@@ -551,9 +566,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+  public Rel visit(final SingleBucketExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExchangeRel.Builder builder =
+    final ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setSingleTarget(
                 ExchangeRel.SingleBucketExpression.newBuilder()
@@ -568,9 +583,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+  public Rel visit(final MultiBucketExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExchangeRel.Builder builder =
+    final ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setMultiTarget(
                 ExchangeRel.MultiBucketExpression.newBuilder()
@@ -586,9 +601,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+  public Rel visit(final RoundRobinExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExchangeRel.Builder builder =
+    final ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setRoundRobin(
                 ExchangeRel.RoundRobin.newBuilder().setExact(exchange.getExact()).build())
@@ -601,9 +616,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(BroadcastExchange exchange, EmptyVisitationContext context)
+  public Rel visit(final BroadcastExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExchangeRel.Builder builder =
+    final ExchangeRel.Builder builder =
         ExchangeRel.newBuilder()
             .setBroadcast(ExchangeRel.Broadcast.newBuilder().build())
             .setPartitionCount(exchange.getPartitionCount())
@@ -614,8 +629,8 @@ public class RelProtoConverter
     return Rel.newBuilder().setExchange(builder).build();
   }
 
-  private ExchangeRel.ExchangeTarget toProto(AbstractExchangeRel.ExchangeTarget target) {
-    ExchangeRel.ExchangeTarget.Builder builder =
+  private ExchangeRel.ExchangeTarget toProto(final AbstractExchangeRel.ExchangeTarget target) {
+    final ExchangeRel.ExchangeTarget.Builder builder =
         ExchangeRel.ExchangeTarget.newBuilder().addAllPartitionId(target.getPartitionIds());
     if (target.getType() instanceof TargetType.Uri) {
       builder.setUri(((TargetType.Uri) target.getType()).getUri());
@@ -625,7 +640,7 @@ public class RelProtoConverter
     return builder.build();
   }
 
-  UpdateRel.TransformExpression toProto(AbstractUpdate.TransformExpression transformation) {
+  UpdateRel.TransformExpression toProto(final AbstractUpdate.TransformExpression transformation) {
     return UpdateRel.TransformExpression.newBuilder()
         .setTransformation(toProto(transformation.getTransformation()))
         .setColumnTarget(transformation.getColumnTarget())
@@ -633,19 +648,19 @@ public class RelProtoConverter
   }
 
   private List<ConsistentPartitionWindowRel.WindowRelFunction> toProtoWindowRelFunctions(
-      Collection<ConsistentPartitionWindow.WindowRelFunctionInvocation>
+      final Collection<ConsistentPartitionWindow.WindowRelFunctionInvocation>
           windowRelFunctionInvocations) {
 
     return windowRelFunctionInvocations.stream()
         .map(
             f -> {
-              FunctionArg.FuncArgVisitor<
+              final FunctionArg.FuncArgVisitor<
                       io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
                   argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-              List<FunctionArg> args = f.arguments();
-              SimpleExtension.WindowFunctionVariant aggFuncDef = f.declaration();
+              final List<FunctionArg> args = f.arguments();
+              final SimpleExtension.WindowFunctionVariant aggFuncDef = f.declaration();
 
-              List<io.substrait.proto.FunctionArgument> arguments =
+              final List<io.substrait.proto.FunctionArgument> arguments =
                   IntStream.range(0, args.size())
                       .mapToObj(
                           i ->
@@ -653,7 +668,7 @@ public class RelProtoConverter
                                   .accept(
                                       aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                       .collect(Collectors.toList());
-              List<io.substrait.proto.FunctionOption> options =
+              final List<io.substrait.proto.FunctionOption> options =
                   f.options().stream()
                       .map(ExpressionProtoConverter::from)
                       .collect(Collectors.toList());
@@ -674,8 +689,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Project project, EmptyVisitationContext context) throws RuntimeException {
-    ProjectRel.Builder builder =
+  public Rel visit(final Project project, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final ProjectRel.Builder builder =
         ProjectRel.newBuilder()
             .setCommon(common(project))
             .setInput(toProto(project.getInput()))
@@ -688,8 +704,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Expand expand, EmptyVisitationContext context) throws RuntimeException {
-    ExpandRel.Builder builder =
+  public Rel visit(final Expand expand, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final ExpandRel.Builder builder =
         ExpandRel.newBuilder().setCommon(common(expand)).setInput(toProto(expand.getInput()));
 
     expand
@@ -697,14 +714,14 @@ public class RelProtoConverter
         .forEach(
             expandField -> {
               if (expandField instanceof Expand.ConsistentField) {
-                Expand.ConsistentField cf = (Expand.ConsistentField) expandField;
+                final Expand.ConsistentField cf = (Expand.ConsistentField) expandField;
                 builder.addFields(
                     ExpandRel.ExpandField.newBuilder()
                         .setConsistentField(toProto(cf.getExpression()))
                         .build());
 
               } else if (expandField instanceof Expand.SwitchingField) {
-                Expand.SwitchingField sf = (Expand.SwitchingField) expandField;
+                final Expand.SwitchingField sf = (Expand.SwitchingField) expandField;
                 builder.addFields(
                     ExpandRel.ExpandField.newBuilder()
                         .setSwitchingField(
@@ -720,8 +737,8 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Sort sort, EmptyVisitationContext context) throws RuntimeException {
-    SortRel.Builder builder =
+  public Rel visit(final Sort sort, final EmptyVisitationContext context) throws RuntimeException {
+    final SortRel.Builder builder =
         SortRel.newBuilder()
             .setCommon(common(sort))
             .setInput(toProto(sort.getInput()))
@@ -733,8 +750,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(Cross cross, EmptyVisitationContext context) throws RuntimeException {
-    CrossRel.Builder builder =
+  public Rel visit(final Cross cross, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final CrossRel.Builder builder =
         CrossRel.newBuilder()
             .setCommon(common(cross))
             .setLeft(toProto(cross.getLeft()))
@@ -747,9 +765,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
+  public Rel visit(final VirtualTableScan virtualTableScan, final EmptyVisitationContext context)
       throws RuntimeException {
-    ReadRel.Builder builder =
+    final ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(virtualTableScan))
             .setVirtualTable(
@@ -772,9 +790,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionLeaf extensionLeaf, EmptyVisitationContext context)
+  public Rel visit(final ExtensionLeaf extensionLeaf, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExtensionLeafRel.Builder builder =
+    final ExtensionLeafRel.Builder builder =
         ExtensionLeafRel.newBuilder()
             .setCommon(common(extensionLeaf))
             .setDetail(extensionLeaf.getDetail().toProto(this));
@@ -782,9 +800,9 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionSingle extensionSingle, EmptyVisitationContext context)
+  public Rel visit(final ExtensionSingle extensionSingle, final EmptyVisitationContext context)
       throws RuntimeException {
-    ExtensionSingleRel.Builder builder =
+    final ExtensionSingleRel.Builder builder =
         ExtensionSingleRel.newBuilder()
             .setCommon(common(extensionSingle))
             .setInput(toProto(extensionSingle.getInput()))
@@ -793,11 +811,11 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(ExtensionMulti extensionMulti, EmptyVisitationContext context)
+  public Rel visit(final ExtensionMulti extensionMulti, final EmptyVisitationContext context)
       throws RuntimeException {
-    List<Rel> inputs =
+    final List<Rel> inputs =
         extensionMulti.getInputs().stream().map(this::toProto).collect(Collectors.toList());
-    ExtensionMultiRel.Builder builder =
+    final ExtensionMultiRel.Builder builder =
         ExtensionMultiRel.newBuilder()
             .setCommon(common(extensionMulti))
             .addAllInputs(inputs)
@@ -805,13 +823,13 @@ public class RelProtoConverter
     return Rel.newBuilder().setExtensionMulti(builder).build();
   }
 
-  private RelCommon common(io.substrait.relation.Rel rel) {
-    RelCommon.Builder builder = RelCommon.newBuilder();
+  private RelCommon common(final io.substrait.relation.Rel rel) {
+    final RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getCommonExtension()
         .ifPresent(
             extension -> builder.setAdvancedExtension(extensionProtoConverter.toProto(extension)));
 
-    io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
+    final io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
     if (remap != null) {
       builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(remap.indices()));
     } else {
@@ -819,15 +837,15 @@ public class RelProtoConverter
     }
 
     if (rel.getHint().isPresent()) {
-      io.substrait.hint.Hint hint = rel.getHint().get();
-      Hint.Builder hintBuilder = Hint.newBuilder();
+      final io.substrait.hint.Hint hint = rel.getHint().get();
+      final Hint.Builder hintBuilder = Hint.newBuilder();
 
       hint.getAlias().ifPresent(hintBuilder::setAlias);
       hintBuilder.addAllOutputNames(hint.getOutputNames());
 
       if (hint.getStats().isPresent()) {
-        io.substrait.hint.Hint.Stats stats = hint.getStats().get();
-        Stats.Builder statsBuilder = Stats.newBuilder();
+        final io.substrait.hint.Hint.Stats stats = hint.getStats().get();
+        final Stats.Builder statsBuilder = Stats.newBuilder();
 
         stats
             .getExtension()
@@ -838,8 +856,8 @@ public class RelProtoConverter
       }
 
       if (hint.getRuntimeConstraint().isPresent()) {
-        io.substrait.hint.Hint.RuntimeConstraint rc = hint.getRuntimeConstraint().get();
-        RuntimeConstraint.Builder rcBuilder = RuntimeConstraint.newBuilder();
+        final io.substrait.hint.Hint.RuntimeConstraint rc = hint.getRuntimeConstraint().get();
+        final RuntimeConstraint.Builder rcBuilder = RuntimeConstraint.newBuilder();
 
         rc.getExtension()
             .ifPresent(ae -> rcBuilder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));

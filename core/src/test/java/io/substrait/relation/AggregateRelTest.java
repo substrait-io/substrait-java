@@ -22,13 +22,13 @@ class AggregateRelTest extends TestBase {
 
   public static io.substrait.proto.NamedStruct createSchema() {
 
-    io.substrait.proto.Type i32Type =
+    final io.substrait.proto.Type i32Type =
         io.substrait.proto.Type.newBuilder()
             .setI32(io.substrait.proto.Type.I32.getDefaultInstance())
             .build();
 
     // Build a NamedStruct schema with two fields: col1, col2
-    io.substrait.proto.Type.Struct structType =
+    final io.substrait.proto.Type.Struct structType =
         io.substrait.proto.Type.Struct.newBuilder().addTypes(i32Type).addTypes(i32Type).build();
 
     return io.substrait.proto.NamedStruct.newBuilder()
@@ -38,16 +38,16 @@ class AggregateRelTest extends TestBase {
         .build();
   }
 
-  public static io.substrait.proto.Expression createFieldReference(int col) {
+  public static io.substrait.proto.Expression createFieldReference(final int col) {
     // Build a ReferenceSegment that refers to struct field col
-    Expression.ReferenceSegment seg1 =
+    final Expression.ReferenceSegment seg1 =
         Expression.ReferenceSegment.newBuilder()
             .setStructField(
                 Expression.ReferenceSegment.StructField.newBuilder().setField(col).build())
             .build();
 
     // Build a FieldReference that uses the directReference and a rootReference
-    Expression.FieldReference fieldRef1 =
+    final Expression.FieldReference fieldRef1 =
         Expression.FieldReference.newBuilder()
             .setDirectReference(seg1)
             .setRootReference(Expression.FieldReference.RootReference.getDefaultInstance())
@@ -59,51 +59,51 @@ class AggregateRelTest extends TestBase {
 
   @Test
   void testDeprecatedGroupingExpressionConversion() {
-    Expression col1Ref = createFieldReference(0);
-    Expression col2Ref = createFieldReference(1);
+    final Expression col1Ref = createFieldReference(0);
+    final Expression col2Ref = createFieldReference(1);
 
-    AggregateRel.Grouping grouping =
+    final AggregateRel.Grouping grouping =
         AggregateRel.Grouping.newBuilder()
             .addGroupingExpressions(col1Ref) // deprecated proto form
             .addGroupingExpressions(col2Ref)
             .build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    final ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
 
     // Build the AggregateRel with the new grouping_expressions field
-    AggregateRel aggrProto =
+    final AggregateRel aggrProto =
         AggregateRel.newBuilder()
             .setInput(Rel.newBuilder().setRead(readProto))
             .addGroupings(grouping)
             .build();
 
-    Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
-    ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
-    io.substrait.relation.Rel resultRel = converter.from(relProto);
+    final Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
+    final ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
+    final io.substrait.relation.Rel resultRel = converter.from(relProto);
 
     assertTrue(resultRel instanceof Aggregate);
-    Aggregate agg = (Aggregate) resultRel;
+    final Aggregate agg = (Aggregate) resultRel;
     assertEquals(1, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
   }
 
   @Test
   void testAggregateWithSingleGrouping() {
-    Expression col1Ref = createFieldReference(0);
-    Expression col2Ref = createFieldReference(1);
+    final Expression col1Ref = createFieldReference(0);
+    final Expression col2Ref = createFieldReference(1);
 
-    AggregateRel.Grouping grouping =
+    final AggregateRel.Grouping grouping =
         AggregateRel.Grouping.newBuilder()
             .addExpressionReferences(0)
             .addExpressionReferences(1)
             .build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    final ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
 
     // Build the AggregateRel with the new grouping_expressions field
-    AggregateRel aggrProto =
+    final AggregateRel aggrProto =
         AggregateRel.newBuilder()
             .setInput(Rel.newBuilder().setRead(readProto))
             .addGroupingExpressions(col1Ref)
@@ -111,35 +111,35 @@ class AggregateRelTest extends TestBase {
             .addGroupings(grouping)
             .build();
 
-    Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
-    ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
-    io.substrait.relation.Rel resultRel = converter.from(relProto);
+    final Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
+    final ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
+    final io.substrait.relation.Rel resultRel = converter.from(relProto);
 
     assertTrue(resultRel instanceof Aggregate);
-    Aggregate agg = (Aggregate) resultRel;
+    final Aggregate agg = (Aggregate) resultRel;
     assertEquals(1, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
   }
 
   @Test
   void testAggregateWithMultipleGroupings() {
-    Expression col1Ref = createFieldReference(0);
-    Expression col2Ref = createFieldReference(1);
+    final Expression col1Ref = createFieldReference(0);
+    final Expression col2Ref = createFieldReference(1);
 
-    AggregateRel.Grouping grouping1 =
+    final AggregateRel.Grouping grouping1 =
         AggregateRel.Grouping.newBuilder()
             .addExpressionReferences(0) // new proto form
             .addExpressionReferences(1)
             .build();
 
-    AggregateRel.Grouping grouping2 =
+    final AggregateRel.Grouping grouping2 =
         AggregateRel.Grouping.newBuilder().addExpressionReferences(1).build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    final ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
 
     // Build the AggregateRel with the new grouping_expressions field
-    AggregateRel aggrProto =
+    final AggregateRel aggrProto =
         AggregateRel.newBuilder()
             .setInput(Rel.newBuilder().setRead(readProto))
             .addGroupingExpressions(col1Ref)
@@ -148,12 +148,12 @@ class AggregateRelTest extends TestBase {
             .addGroupings(grouping2)
             .build();
 
-    Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
-    ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
-    io.substrait.relation.Rel resultRel = converter.from(relProto);
+    final Rel relProto = Rel.newBuilder().setAggregate(aggrProto).build();
+    final ProtoRelConverter converter = new ProtoRelConverter(functionLookup);
+    final io.substrait.relation.Rel resultRel = converter.from(relProto);
 
     assertTrue(resultRel instanceof Aggregate);
-    Aggregate agg = (Aggregate) resultRel;
+    final Aggregate agg = (Aggregate) resultRel;
     assertEquals(2, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
     assertEquals(1, agg.getGroupings().get(1).getExpressions().size());

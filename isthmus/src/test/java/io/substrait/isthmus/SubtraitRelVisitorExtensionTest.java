@@ -35,7 +35,7 @@ class SubtraitRelVisitorExtensionTest {
     public final int DEPT_ID;
     public final String NAME;
 
-    public Employee(int deptId, String name) {
+    public Employee(final int deptId, final String name) {
       this.DEPT_ID = deptId;
       this.NAME = name;
     }
@@ -157,7 +157,7 @@ class SubtraitRelVisitorExtensionTest {
       super(context, cluster, relOptSchema);
     }
 
-    public static CustomRelBuilder create(FrameworkConfig config) {
+    public static CustomRelBuilder create(final FrameworkConfig config) {
       return Frameworks.withPrepare(
           config,
           (cluster, relOptSchema, rootSchema, statement) ->
@@ -165,8 +165,8 @@ class SubtraitRelVisitorExtensionTest {
     }
 
     public CustomRelBuilder repeat(final int repeatCount) {
-      RelNode input = this.peek();
-      RelNode repeatNode = RepeatRel.create(input, repeatCount);
+      final RelNode input = this.peek();
+      final RelNode repeatNode = RepeatRel.create(input, repeatCount);
       this.push(repeatNode);
       return this;
     }

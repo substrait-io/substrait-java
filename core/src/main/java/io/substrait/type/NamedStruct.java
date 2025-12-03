@@ -15,12 +15,12 @@ public interface NamedStruct {
     return ImmutableNamedStruct.builder();
   }
 
-  static NamedStruct of(Iterable<String> names, Type.Struct type) {
+  static NamedStruct of(final Iterable<String> names, final Type.Struct type) {
     return ImmutableNamedStruct.builder().addAllNames(names).struct(type).build();
   }
 
-  default io.substrait.proto.NamedStruct toProto(TypeProtoConverter typeProtoConverter) {
-    io.substrait.proto.Type type = struct().accept(typeProtoConverter);
+  default io.substrait.proto.NamedStruct toProto(final TypeProtoConverter typeProtoConverter) {
+    final io.substrait.proto.Type type = struct().accept(typeProtoConverter);
     return io.substrait.proto.NamedStruct.newBuilder()
         .setStruct(type.getStruct())
         .addAllNames(names())
@@ -28,8 +28,9 @@ public interface NamedStruct {
   }
 
   static io.substrait.type.NamedStruct fromProto(
-      io.substrait.proto.NamedStruct namedStruct, ProtoTypeConverter protoTypeConverter) {
-    io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
+      final io.substrait.proto.NamedStruct namedStruct,
+      final ProtoTypeConverter protoTypeConverter) {
+    final io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
     return ImmutableNamedStruct.builder()
         .names(namedStruct.getNamesList())
         .struct(

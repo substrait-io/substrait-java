@@ -16,8 +16,8 @@ import java.util.Map;
 public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
   private ImmutableExtensionLookup(
-      Map<Integer, SimpleExtension.FunctionAnchor> functionMap,
-      Map<Integer, SimpleExtension.TypeAnchor> typeMap) {
+      final Map<Integer, SimpleExtension.FunctionAnchor> functionMap,
+      final Map<Integer, SimpleExtension.TypeAnchor> typeMap) {
     super(functionMap, typeMap);
   }
 
@@ -25,7 +25,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     return builder(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public static Builder builder(SimpleExtension.ExtensionCollection extensionCollection) {
+  public static Builder builder(final SimpleExtension.ExtensionCollection extensionCollection) {
     return new Builder(extensionCollection);
   }
 
@@ -34,7 +34,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
     private final SimpleExtension.ExtensionCollection extensionCollection;
 
-    public Builder(SimpleExtension.ExtensionCollection extensionCollection) {
+    public Builder(final SimpleExtension.ExtensionCollection extensionCollection) {
       if (extensionCollection == null) {
         throw new IllegalArgumentException("ExtensionCollection is required");
       }
@@ -47,18 +47,18 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
      * @param uri The URI to resolve
      * @return The corresponding URN, or null if no mapping exists
      */
-    private String resolveUrnFromUri(String uri) {
+    private String resolveUrnFromUri(final String uri) {
       return extensionCollection.getUrnFromUri(uri);
     }
 
     private SimpleExtension.FunctionAnchor resolveFunctionAnchor(
-        SimpleExtensionDeclaration.ExtensionFunction func,
-        Map<Integer, String> urnMap,
-        Map<Integer, String> uriMap) {
+        final SimpleExtensionDeclaration.ExtensionFunction func,
+        final Map<Integer, String> urnMap,
+        final Map<Integer, String> uriMap) {
 
       // 1. Try non-zero URN reference
       if (func.getExtensionUrnReference() != 0) {
-        String urnFromUrnRef = urnMap.get(func.getExtensionUrnReference());
+        final String urnFromUrnRef = urnMap.get(func.getExtensionUrnReference());
         if (urnFromUrnRef == null) {
           throw new IllegalStateException(
               String.format(
@@ -70,14 +70,14 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
       // 2. Try non-zero URI reference
       if (func.getExtensionUriReference() != 0) {
-        String uriFromUriRef = uriMap.get(func.getExtensionUriReference());
+        final String uriFromUriRef = uriMap.get(func.getExtensionUriReference());
         if (uriFromUriRef == null) {
           throw new IllegalStateException(
               String.format(
                   "Function '%s' references URI anchor %d, but no URI is registered at that anchor",
                   func.getName(), func.getExtensionUriReference()));
         }
-        String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
+        final String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
         if (urnFromUriRef == null) {
           throw new IllegalStateException(
               String.format(
@@ -94,12 +94,12 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
        * We perform some additional checks to below to handle this.
        */
 
-      String urn = urnMap.get(func.getExtensionUrnReference());
-      String uri = uriMap.get(func.getExtensionUriReference());
+      final String urn = urnMap.get(func.getExtensionUrnReference());
+      final String uri = uriMap.get(func.getExtensionUriReference());
 
       // 3. Try both 0 URI and 0 URN if both resolve
       if (uri != null && urn != null) {
-        String resolvedUrn = resolveUrnFromUri(uri);
+        final String resolvedUrn = resolveUrnFromUri(uri);
         if (urn.equals(resolvedUrn)) {
           return SimpleExtension.FunctionAnchor.of(urn, func.getName());
         }
@@ -125,13 +125,13 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     }
 
     private SimpleExtension.TypeAnchor resolveTypeAnchor(
-        SimpleExtensionDeclaration.ExtensionType type,
-        Map<Integer, String> urnMap,
-        Map<Integer, String> uriMap) {
+        final SimpleExtensionDeclaration.ExtensionType type,
+        final Map<Integer, String> urnMap,
+        final Map<Integer, String> uriMap) {
 
       // 1. Try non-zero URN reference
       if (type.getExtensionUrnReference() != 0) {
-        String urnFromUrnRef = urnMap.get(type.getExtensionUrnReference());
+        final String urnFromUrnRef = urnMap.get(type.getExtensionUrnReference());
         if (urnFromUrnRef == null) {
           throw new IllegalStateException(
               String.format(
@@ -143,14 +143,14 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
 
       // 2. Try non-zero URI reference
       if (type.getExtensionUriReference() != 0) {
-        String uriFromUriRef = uriMap.get(type.getExtensionUriReference());
+        final String uriFromUriRef = uriMap.get(type.getExtensionUriReference());
         if (uriFromUriRef == null) {
           throw new IllegalStateException(
               String.format(
                   "Type '%s' references URI anchor %d, but no URI is registered at that anchor",
                   type.getName(), type.getExtensionUriReference()));
         }
-        String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
+        final String urnFromUriRef = resolveUrnFromUri(uriFromUriRef);
         if (urnFromUriRef == null) {
           throw new IllegalStateException(
               String.format(
@@ -167,12 +167,12 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
        * We perform some additional checks to below to handle this.
        */
 
-      String urn = urnMap.get(type.getExtensionUrnReference());
-      String uri = uriMap.get(type.getExtensionUriReference());
+      final String urn = urnMap.get(type.getExtensionUrnReference());
+      final String uri = uriMap.get(type.getExtensionUriReference());
 
       // 3. Try both 0 URI and 0 URN if both resolve
       if (uri != null && urn != null) {
-        String resolvedUrn = resolveUrnFromUri(uri);
+        final String resolvedUrn = resolveUrnFromUri(uri);
         if (urn.equals(resolvedUrn)) {
           return SimpleExtension.TypeAnchor.of(urn, type.getName());
         }
@@ -197,12 +197,12 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
               uri, urn));
     }
 
-    public Builder from(Plan plan) {
+    public Builder from(final Plan plan) {
       return from(
           plan.getExtensionUrnsList(), plan.getExtensionUrisList(), plan.getExtensionsList());
     }
 
-    public Builder from(ExtendedExpression extendedExpression) {
+    public Builder from(final ExtendedExpression extendedExpression) {
       return from(
           extendedExpression.getExtensionUrnsList(),
           extendedExpression.getExtensionUrisList(),
@@ -210,41 +210,41 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     }
 
     private Builder from(
-        List<SimpleExtensionURN> simpleExtensionURNs,
-        List<io.substrait.proto.SimpleExtensionURI> simpleExtensionURIs,
-        List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
-      Map<Integer, String> urnMap = new HashMap<>();
-      Map<Integer, String> uriMap = new HashMap<>();
+        final List<SimpleExtensionURN> simpleExtensionURNs,
+        final List<io.substrait.proto.SimpleExtensionURI> simpleExtensionURIs,
+        final List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
+      final Map<Integer, String> urnMap = new HashMap<>();
+      final Map<Integer, String> uriMap = new HashMap<>();
 
       // Handle URN format
-      for (SimpleExtensionURN extension : simpleExtensionURNs) {
+      for (final SimpleExtensionURN extension : simpleExtensionURNs) {
         urnMap.put(extension.getExtensionUrnAnchor(), extension.getUrn());
       }
 
       // Handle deprecated URI format
-      for (io.substrait.proto.SimpleExtensionURI extension : simpleExtensionURIs) {
+      for (final io.substrait.proto.SimpleExtensionURI extension : simpleExtensionURIs) {
         uriMap.put(extension.getExtensionUriAnchor(), extension.getUri());
       }
 
       // Add all functions used in plan to the functionMap
-      for (SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
+      for (final SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionFunction()) {
           continue;
         }
-        SimpleExtensionDeclaration.ExtensionFunction func = extension.getExtensionFunction();
-        int reference = func.getFunctionAnchor();
-        SimpleExtension.FunctionAnchor anchor = resolveFunctionAnchor(func, urnMap, uriMap);
+        final SimpleExtensionDeclaration.ExtensionFunction func = extension.getExtensionFunction();
+        final int reference = func.getFunctionAnchor();
+        final SimpleExtension.FunctionAnchor anchor = resolveFunctionAnchor(func, urnMap, uriMap);
         functionMap.put(reference, anchor);
       }
 
       // Add all types used in plan to the typeMap
-      for (SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
+      for (final SimpleExtensionDeclaration extension : simpleExtensionDeclarations) {
         if (!extension.hasExtensionType()) {
           continue;
         }
-        SimpleExtensionDeclaration.ExtensionType type = extension.getExtensionType();
-        int reference = type.getTypeAnchor();
-        SimpleExtension.TypeAnchor anchor = resolveTypeAnchor(type, urnMap, uriMap);
+        final SimpleExtensionDeclaration.ExtensionType type = extension.getExtensionType();
+        final int reference = type.getTypeAnchor();
+        final SimpleExtension.TypeAnchor anchor = resolveTypeAnchor(type, urnMap, uriMap);
         typeMap.put(reference, anchor);
       }
 

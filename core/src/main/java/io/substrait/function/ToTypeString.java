@@ -7,7 +7,7 @@ public class ToTypeString
 
   public static final ToTypeString INSTANCE = new ToTypeString();
 
-  public static String apply(Type type) {
+  public static String apply(final Type type) {
     return type.accept(INSTANCE);
   }
 
@@ -156,62 +156,62 @@ public class ToTypeString
   }
 
   @Override
-  public String visit(ParameterizedType.FixedChar expr) throws RuntimeException {
+  public String visit(final ParameterizedType.FixedChar expr) throws RuntimeException {
     return "fchar";
   }
 
   @Override
-  public String visit(ParameterizedType.VarChar expr) throws RuntimeException {
+  public String visit(final ParameterizedType.VarChar expr) throws RuntimeException {
     return "vchar";
   }
 
   @Override
-  public String visit(ParameterizedType.FixedBinary expr) throws RuntimeException {
+  public String visit(final ParameterizedType.FixedBinary expr) throws RuntimeException {
     return "fbinary";
   }
 
   @Override
-  public String visit(ParameterizedType.Decimal expr) throws RuntimeException {
+  public String visit(final ParameterizedType.Decimal expr) throws RuntimeException {
     return "dec";
   }
 
   @Override
-  public String visit(ParameterizedType.IntervalDay expr) throws RuntimeException {
+  public String visit(final ParameterizedType.IntervalDay expr) throws RuntimeException {
     return "iday";
   }
 
   @Override
-  public String visit(ParameterizedType.IntervalCompound expr) throws RuntimeException {
+  public String visit(final ParameterizedType.IntervalCompound expr) throws RuntimeException {
     return "icompound";
   }
 
   @Override
-  public String visit(ParameterizedType.PrecisionTimestamp expr) throws RuntimeException {
+  public String visit(final ParameterizedType.PrecisionTimestamp expr) throws RuntimeException {
     return "pts";
   }
 
   @Override
-  public String visit(ParameterizedType.PrecisionTimestampTZ expr) throws RuntimeException {
+  public String visit(final ParameterizedType.PrecisionTimestampTZ expr) throws RuntimeException {
     return "ptstz";
   }
 
   @Override
-  public String visit(ParameterizedType.Struct expr) throws RuntimeException {
+  public String visit(final ParameterizedType.Struct expr) throws RuntimeException {
     return "struct";
   }
 
   @Override
-  public String visit(ParameterizedType.ListType expr) throws RuntimeException {
+  public String visit(final ParameterizedType.ListType expr) throws RuntimeException {
     return "list";
   }
 
   @Override
-  public String visit(ParameterizedType.Map expr) throws RuntimeException {
+  public String visit(final ParameterizedType.Map expr) throws RuntimeException {
     return "map";
   }
 
   @Override
-  public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
+  public String visit(final ParameterizedType.StringLiteral expr) throws RuntimeException {
     if (expr.value().toLowerCase().startsWith("any")) {
       return "any";
     } else {
@@ -233,7 +233,7 @@ public class ToTypeString
     private ToTypeLiteralStringLossless() {}
 
     @Override
-    public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
+    public String visit(final ParameterizedType.StringLiteral expr) throws RuntimeException {
       return expr.value().toLowerCase();
     }
   }

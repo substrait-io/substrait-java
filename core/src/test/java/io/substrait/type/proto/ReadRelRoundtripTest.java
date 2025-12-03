@@ -15,9 +15,9 @@ class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void namedScan() {
-    List<String> tableName = Stream.of("a_table").collect(Collectors.toList());
-    List<String> columnNames = Stream.of("column1", "column2").collect(Collectors.toList());
-    List<Type> columnTypes = Stream.of(R.I64, R.I64).collect(Collectors.toList());
+    final List<String> tableName = Stream.of("a_table").collect(Collectors.toList());
+    final List<String> columnNames = Stream.of("column1", "column2").collect(Collectors.toList());
+    final List<Type> columnTypes = Stream.of(R.I64, R.I64).collect(Collectors.toList());
 
     NamedScan namedScan = b.namedScan(tableName, columnNames, columnTypes);
     namedScan =
@@ -33,7 +33,7 @@ class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void emptyScan() {
-    io.substrait.relation.EmptyScan emptyScan = b.emptyScan();
+    final io.substrait.relation.EmptyScan emptyScan = b.emptyScan();
     verifyRoundTrip(emptyScan);
   }
 

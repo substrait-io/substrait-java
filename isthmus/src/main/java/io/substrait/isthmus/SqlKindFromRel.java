@@ -46,36 +46,40 @@ public class SqlKindFromRel
   private static final SqlKind QUERY_KIND = SqlKind.SELECT;
 
   @Override
-  public SqlKind visit(Aggregate aggregate, EmptyVisitationContext context)
+  public SqlKind visit(final Aggregate aggregate, final EmptyVisitationContext context)
       throws RuntimeException {
 
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(EmptyScan emptyScan, EmptyVisitationContext context)
+  public SqlKind visit(final EmptyScan emptyScan, final EmptyVisitationContext context)
       throws RuntimeException {
     // An empty scan is typically the result of a query that returns no rows.
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Fetch fetch, final EmptyVisitationContext context)
+      throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Filter filter, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Filter filter, final EmptyVisitationContext context)
+      throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Join join, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Join join, final EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.JOIN;
   }
 
   @Override
-  public SqlKind visit(Set set, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Set set, final EmptyVisitationContext context)
+      throws RuntimeException {
     switch (set.getSetOp()) {
       case UNION_ALL:
       case UNION_DISTINCT:
@@ -95,94 +99,102 @@ public class SqlKindFromRel
   }
 
   @Override
-  public SqlKind visit(NamedScan namedScan, EmptyVisitationContext context)
+  public SqlKind visit(final NamedScan namedScan, final EmptyVisitationContext context)
       throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(LocalFiles localFiles, EmptyVisitationContext context)
+  public SqlKind visit(final LocalFiles localFiles, final EmptyVisitationContext context)
       throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Project project, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Project project, final EmptyVisitationContext context)
+      throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Expand expand, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Expand expand, final EmptyVisitationContext context)
+      throws RuntimeException {
     return QUERY_KIND;
   }
 
   @Override
-  public SqlKind visit(Sort sort, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final Sort sort, final EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.ORDER_BY;
   }
 
   @Override
-  public SqlKind visit(Cross cross, EmptyVisitationContext context) throws RuntimeException {
-    return SqlKind.JOIN;
-  }
-
-  @Override
-  public SqlKind visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
-      throws RuntimeException {
-    // A virtual table scan corresponds to a VALUES clause.
-    return SqlKind.VALUES;
-  }
-
-  @Override
-  public SqlKind visit(ExtensionLeaf extensionLeaf, EmptyVisitationContext context)
-      throws RuntimeException {
-    return SqlKind.OTHER;
-  }
-
-  @Override
-  public SqlKind visit(ExtensionSingle extensionSingle, EmptyVisitationContext context)
-      throws RuntimeException {
-    return SqlKind.OTHER;
-  }
-
-  @Override
-  public SqlKind visit(ExtensionMulti extensionMulti, EmptyVisitationContext context)
-      throws RuntimeException {
-    return SqlKind.OTHER;
-  }
-
-  @Override
-  public SqlKind visit(ExtensionTable extensionTable, EmptyVisitationContext context)
-      throws RuntimeException {
-    return SqlKind.OTHER;
-  }
-
-  @Override
-  public SqlKind visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
-    return SqlKind.JOIN;
-  }
-
-  @Override
-  public SqlKind visit(MergeJoin mergeJoin, EmptyVisitationContext context)
-      throws RuntimeException {
-    return SqlKind.JOIN;
-  }
-
-  @Override
-  public SqlKind visit(NestedLoopJoin nestedLoopJoin, EmptyVisitationContext context)
+  public SqlKind visit(final Cross cross, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.JOIN;
   }
 
   @Override
   public SqlKind visit(
-      ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
+      final VirtualTableScan virtualTableScan, final EmptyVisitationContext context)
+      throws RuntimeException {
+    // A virtual table scan corresponds to a VALUES clause.
+    return SqlKind.VALUES;
+  }
+
+  @Override
+  public SqlKind visit(final ExtensionLeaf extensionLeaf, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER;
+  }
+
+  @Override
+  public SqlKind visit(final ExtensionSingle extensionSingle, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER;
+  }
+
+  @Override
+  public SqlKind visit(final ExtensionMulti extensionMulti, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER;
+  }
+
+  @Override
+  public SqlKind visit(final ExtensionTable extensionTable, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.OTHER;
+  }
+
+  @Override
+  public SqlKind visit(final HashJoin hashJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.JOIN;
+  }
+
+  @Override
+  public SqlKind visit(final MergeJoin mergeJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.JOIN;
+  }
+
+  @Override
+  public SqlKind visit(final NestedLoopJoin nestedLoopJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    return SqlKind.JOIN;
+  }
+
+  @Override
+  public SqlKind visit(
+      final ConsistentPartitionWindow consistentPartitionWindow,
+      final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OVER;
   }
 
   @Override
-  public SqlKind visit(NamedWrite write, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final NamedWrite write, final EmptyVisitationContext context)
+      throws RuntimeException {
     switch (write.getOperation()) {
       case INSERT:
         return SqlKind.INSERT;
@@ -198,13 +210,14 @@ public class SqlKindFromRel
   }
 
   @Override
-  public SqlKind visit(ExtensionWrite write, EmptyVisitationContext context)
+  public SqlKind visit(final ExtensionWrite write, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(NamedDdl ddl, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final NamedDdl ddl, final EmptyVisitationContext context)
+      throws RuntimeException {
     switch (ddl.getOperation()) {
       case CREATE:
       case CREATE_OR_REPLACE:
@@ -234,41 +247,43 @@ public class SqlKindFromRel
   }
 
   @Override
-  public SqlKind visit(ExtensionDdl ddl, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final ExtensionDdl ddl, final EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
+  public SqlKind visit(final NamedUpdate update, final EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.UPDATE;
   }
 
   @Override
-  public SqlKind visit(ScatterExchange exchange, EmptyVisitationContext context)
+  public SqlKind visit(final ScatterExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+  public SqlKind visit(final SingleBucketExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+  public SqlKind visit(final MultiBucketExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+  public SqlKind visit(final RoundRobinExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }
 
   @Override
-  public SqlKind visit(BroadcastExchange exchange, EmptyVisitationContext context)
+  public SqlKind visit(final BroadcastExchange exchange, final EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
   }

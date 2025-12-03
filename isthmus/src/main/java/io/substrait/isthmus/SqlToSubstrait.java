@@ -15,7 +15,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     this(null);
   }
 
-  public SqlToSubstrait(FeatureBoard features) {
+  public SqlToSubstrait(final FeatureBoard features) {
     super(features);
   }
 
@@ -32,9 +32,10 @@ public class SqlToSubstrait extends SqlConverterBase {
    *     {@link PlanProtoConverter#toProto(Plan)}
    */
   @Deprecated
-  public io.substrait.proto.Plan execute(String sqlStatements, Prepare.CatalogReader catalogReader)
+  public io.substrait.proto.Plan execute(
+      final String sqlStatements, final Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    PlanProtoConverter planToProto = new PlanProtoConverter();
+    final PlanProtoConverter planToProto = new PlanProtoConverter();
     return planToProto.toProto(convert(sqlStatements, catalogReader));
   }
 
@@ -47,9 +48,9 @@ public class SqlToSubstrait extends SqlConverterBase {
    * @return the Substrait {@link Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
-  public Plan convert(String sqlStatements, Prepare.CatalogReader catalogReader)
+  public Plan convert(final String sqlStatements, final Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    Builder builder = io.substrait.plan.Plan.builder();
+    final Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
     // TODO: consider case in which one sql passes conversion while others don't

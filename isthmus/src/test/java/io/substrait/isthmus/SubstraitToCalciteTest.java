@@ -17,28 +17,28 @@ class SubstraitToCalciteTest extends PlanTestBase {
 
   @Test
   void testConvertRootSingleColumn() {
-    Iterable<Type> types = List.of(TypeCreator.REQUIRED.STRING);
-    Root root =
+    final Iterable<Type> types = List.of(TypeCreator.REQUIRED.STRING);
+    final Root root =
         Root.builder()
             .input(substraitBuilder.namedScan(List.of("stores"), List.of("s"), types))
             .addNames("store")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = converter.convert(root);
 
     assertEquals(root.getNames(), relRoot.fields.rightList());
   }
 
   @Test
   void testConvertRootMultipleColumns() {
-    Iterable<Type> types = List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
-    Root root =
+    final Iterable<Type> types = List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
+    final Root root =
         Root.builder()
             .input(substraitBuilder.namedScan(List.of("stores"), List.of("s_store_id", "s"), types))
             .addNames("s_store_id", "store")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = converter.convert(root);
 
     assertEquals(root.getNames(), relRoot.fields.rightList());
   }
@@ -47,8 +47,8 @@ class SubstraitToCalciteTest extends PlanTestBase {
   void testConvertRootStructField() {
     final Type structType =
         TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
-    Iterable<Type> types = List.of(structType);
-    Root root =
+    final Iterable<Type> types = List.of(structType);
+    final Root root =
         Root.builder()
             .input(
                 substraitBuilder.namedScan(
@@ -58,7 +58,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
 
     assertEquals(List.of("store", "store_id", "store_name"), root.getNames());
 
-    RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = converter.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -66,7 +66,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     // the sub field names are stored within RelRoot.validatedRowType
     assertEquals(List.of("store"), relRoot.validatedRowType.getFieldNames());
 
-    RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
+    final RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
     assertEquals(List.of("store_id", "store_name"), storeFieldDataType.getFieldNames());
   }
 
@@ -75,8 +75,8 @@ class SubstraitToCalciteTest extends PlanTestBase {
     final Type structType =
         TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     final Type arrayType = TypeCreator.REQUIRED.list(structType);
-    Set<Type> types = Set.of(arrayType);
-    Root root =
+    final Set<Type> types = Set.of(arrayType);
+    final Root root =
         Root.builder()
             .input(
                 substraitBuilder.namedScan(
@@ -84,7 +84,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store", "store_id", "store_name")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = converter.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -92,7 +92,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     // the hierarchical structure is stored within RelRoot.validatedRowType
     assertEquals(List.of("store"), relRoot.validatedRowType.getFieldNames());
 
-    RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
+    final RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
     assertEquals(SqlTypeName.ARRAY, storeFieldDataType.getSqlTypeName());
 
     final RelDataType arrayElementType = storeFieldDataType.getComponentType();
@@ -105,8 +105,8 @@ class SubstraitToCalciteTest extends PlanTestBase {
     final Type structType =
         TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     final Type mapValueType = TypeCreator.REQUIRED.map(TypeCreator.REQUIRED.I64, structType);
-    Set<Type> types = Set.of(mapValueType);
-    Root root =
+    final Set<Type> types = Set.of(mapValueType);
+    final Root root =
         Root.builder()
             .input(
                 substraitBuilder.namedScan(
@@ -135,8 +135,8 @@ class SubstraitToCalciteTest extends PlanTestBase {
     final Type structType =
         TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     final Type mapKeyType = TypeCreator.REQUIRED.map(structType, TypeCreator.REQUIRED.I64);
-    Set<Type> types = Set.of(mapKeyType);
-    Root root =
+    final Set<Type> types = Set.of(mapKeyType);
+    final Root root =
         Root.builder()
             .input(
                 substraitBuilder.namedScan(
@@ -144,7 +144,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store", "store_id", "store_name")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = converter.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -152,7 +152,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     // the hierarchical structure is stored within RelRoot.validatedRowType
     assertEquals(List.of("store"), relRoot.validatedRowType.getFieldNames());
 
-    RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
+    final RelDataType storeFieldDataType = relRoot.validatedRowType.getFieldList().get(0).getType();
     assertEquals(SqlTypeName.MAP, storeFieldDataType.getSqlTypeName());
 
     final RelDataType mapKeyDataType = storeFieldDataType.getKeyType();

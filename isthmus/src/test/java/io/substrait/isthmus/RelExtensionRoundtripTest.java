@@ -44,46 +44,46 @@ import org.junit.jupiter.api.Test;
 class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionLeafRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(1));
-    ImmutableExtensionLeaf rel = ExtensionLeaf.from(detail).build();
+    final ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(1));
+    final ImmutableExtensionLeaf rel = ExtensionLeaf.from(detail).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionSingleRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(2));
-    ImmutableExtensionSingle rel =
+    final ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(2));
+    final ImmutableExtensionSingle rel =
         ExtensionSingle.from(detail, substraitBuilder.emptyScan()).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionMultiRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(3));
-    ImmutableExtensionMulti rel =
+    final ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(3));
+    final ImmutableExtensionMulti rel =
         ExtensionMulti.from(detail, substraitBuilder.emptyScan(), substraitBuilder.emptyScan())
             .build();
     roundtrip(rel);
   }
 
-  void roundtrip(Rel pojo1) {
+  void roundtrip(final Rel pojo1) {
     // Substrait POJO 1 -> Substrait Proto
-    io.substrait.proto.Rel proto =
+    final io.substrait.proto.Rel proto =
         pojo1.accept(
             new RelProtoConverter(new ExtensionCollector()), EmptyVisitationContext.INSTANCE);
 
     // Substrait Proto -> Substrait POJO 2
-    Rel pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
+    final Rel pojo2 = (new CustomProtoRelConverter(new ExtensionCollector())).from(proto);
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
-    RelNode calcite =
+    final RelNode calcite =
         pojo2.accept(
             new CustomSubstraitRelNodeConverter(extensions, typeFactory, builder),
             Context.newContext());
 
     // Calcite -> Substrait POJO 3
-    Rel pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
+    final Rel pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
     assertEquals(pojo1, pojo3);
   }
 
@@ -91,7 +91,7 @@ class RelExtensionRoundtripTest extends PlanTestBase {
       implements Extension.LeafRelDetail, Extension.SingleRelDetail, Extension.MultiRelDetail {
     Expression.Literal literal;
 
-    ColumnAppendDetail(Expression.Literal literal) {
+    ColumnAppendDetail(final Expression.Literal literal) {
       this.literal = literal;
     }
 
@@ -103,7 +103,7 @@ class RelExtensionRoundtripTest extends PlanTestBase {
 
     @Override
     // SingleRelDetail
-    public Type.Struct deriveRecordType(Rel input) {
+    public Type.Struct deriveRecordType(final Rel input) {
       return Type.Struct.builder()
           .nullable(false)
           .addAllFields(input.getRecordType().fields())
@@ -113,20 +113,20 @@ class RelExtensionRoundtripTest extends PlanTestBase {
 
     @Override
     // MultiRelDetail
-    public Type.Struct deriveRecordType(List<Rel> inputs) {
-      ImmutableType.Struct.Builder builder = Type.Struct.builder().nullable(false);
-      for (Rel input : inputs) {
+    public Type.Struct deriveRecordType(final List<Rel> inputs) {
+      final ImmutableType.Struct.Builder builder = Type.Struct.builder().nullable(false);
+      for (final Rel input : inputs) {
         builder.addAllFields(input.getRecordType().fields());
       }
       return builder.addFields(literal.getType()).build();
     }
 
     @Override
-    public Any toProto(RelProtoConverter converter) {
+    public Any toProto(final RelProtoConverter converter) {
       // the conversion of the literal in the detail requires the presence of the RelProtoConverter
-      io.substrait.proto.Expression lit =
+      final io.substrait.proto.Expression lit =
           converter.getExpressionProtoConverter().toProto(this.literal);
-      io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail inner =
+      final io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail inner =
           io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.newBuilder()
               .setLiteral(lit.getLiteral())
               .build();
@@ -134,9 +134,9 @@ class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
       if (o == null || getClass() != o.getClass()) return false;
-      ColumnAppendDetail that = (ColumnAppendDetail) o;
+      final ColumnAppendDetail that = (ColumnAppendDetail) o;
       return Objects.equals(literal, that.literal);
     }
 
@@ -157,15 +157,15 @@ class RelExtensionRoundtripTest extends PlanTestBase {
    */
   static class CustomProtoRelConverter extends ProtoRelConverter {
 
-    public CustomProtoRelConverter(ExtensionLookup lookup) {
+    public CustomProtoRelConverter(final ExtensionLookup lookup) {
       super(lookup);
     }
 
-    ColumnAppendDetail unpack(Any any) {
+    ColumnAppendDetail unpack(final Any any) {
       try {
-        io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail proto =
+        final io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail proto =
             any.unpack(io.substrait.isthmus.extensions.test.protobuf.ColumnAppendDetail.class);
-        Literal literal =
+        final Literal literal =
             (new ProtoExpressionConverter(
                     lookup, extensions, Type.Struct.builder().nullable(false).build(), this)
                 .from(proto.getLiteral()));
@@ -176,17 +176,17 @@ class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    protected Extension.LeafRelDetail detailFromExtensionLeafRel(Any any) {
+    protected Extension.LeafRelDetail detailFromExtensionLeafRel(final Any any) {
       return unpack(any);
     }
 
     @Override
-    protected Extension.SingleRelDetail detailFromExtensionSingleRel(Any any) {
+    protected Extension.SingleRelDetail detailFromExtensionSingleRel(final Any any) {
       return unpack(any);
     }
 
     @Override
-    protected Extension.MultiRelDetail detailFromExtensionMultiRel(Any any) {
+    protected Extension.MultiRelDetail detailFromExtensionMultiRel(final Any any) {
       return unpack(any);
     }
   }
@@ -198,19 +198,20 @@ class RelExtensionRoundtripTest extends PlanTestBase {
   static class CustomSubstraitRelNodeConverter extends SubstraitRelNodeConverter {
 
     public CustomSubstraitRelNodeConverter(
-        SimpleExtension.ExtensionCollection extensions,
-        RelDataTypeFactory typeFactory,
-        RelBuilder relBuilder) {
+        final SimpleExtension.ExtensionCollection extensions,
+        final RelDataTypeFactory typeFactory,
+        final RelBuilder relBuilder) {
       super(extensions, typeFactory, relBuilder);
     }
 
     @Override
-    public RelNode visit(ExtensionLeaf extensionLeaf, Context context) {
+    public RelNode visit(final ExtensionLeaf extensionLeaf, final Context context) {
       if (extensionLeaf.getDetail() instanceof ColumnAppendDetail) {
-        ColumnAppendDetail cad = (ColumnAppendDetail) extensionLeaf.getDetail();
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
-        RelOptCluster cluster = relBuilder.getCluster();
-        RelTraitSet traits = cluster.traitSet();
+        final ColumnAppendDetail cad = (ColumnAppendDetail) extensionLeaf.getDetail();
+        final RexLiteral literal =
+            (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
+        final RelOptCluster cluster = relBuilder.getCluster();
+        final RelTraitSet traits = cluster.traitSet();
         return new ColumnAppenderRel(
             relBuilder.getCluster(), traits, literal, Collections.emptyList());
       }
@@ -218,11 +219,13 @@ class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionSingle extensionSingle, Context context) throws RuntimeException {
+    public RelNode visit(final ExtensionSingle extensionSingle, final Context context)
+        throws RuntimeException {
       if (extensionSingle.getDetail() instanceof ColumnAppendDetail) {
-        ColumnAppendDetail cad = (ColumnAppendDetail) extensionSingle.getDetail();
-        RelNode input = extensionSingle.getInput().accept(this, context);
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
+        final ColumnAppendDetail cad = (ColumnAppendDetail) extensionSingle.getDetail();
+        final RelNode input = extensionSingle.getInput().accept(this, context);
+        final RexLiteral literal =
+            (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         return new ColumnAppenderRel(
             input.getCluster(), input.getTraitSet(), literal, List.of(input));
       }
@@ -230,14 +233,16 @@ class RelExtensionRoundtripTest extends PlanTestBase {
     }
 
     @Override
-    public RelNode visit(ExtensionMulti extensionMulti, Context context) throws RuntimeException {
+    public RelNode visit(final ExtensionMulti extensionMulti, final Context context)
+        throws RuntimeException {
       if (extensionMulti.getDetail() instanceof ColumnAppendDetail) {
-        ColumnAppendDetail cad = (ColumnAppendDetail) extensionMulti.getDetail();
-        List<RelNode> inputs =
+        final ColumnAppendDetail cad = (ColumnAppendDetail) extensionMulti.getDetail();
+        final List<RelNode> inputs =
             extensionMulti.getInputs().stream()
                 .map(input -> input.accept(this, context))
                 .collect(Collectors.toList());
-        RexLiteral literal = (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
+        final RexLiteral literal =
+            (RexLiteral) cad.literal.accept(this.expressionRexConverter, context);
         return new ColumnAppenderRel(
             inputs.get(0).getCluster(), inputs.get(0).getTraitSet(), literal, inputs);
       }
@@ -249,17 +254,18 @@ class RelExtensionRoundtripTest extends PlanTestBase {
   static class CustomSubstraitRelVisitor extends SubstraitRelVisitor {
 
     public CustomSubstraitRelVisitor(
-        RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
+        final RelDataTypeFactory typeFactory,
+        final SimpleExtension.ExtensionCollection extensions) {
       super(typeFactory, extensions);
     }
 
     @Override
-    public Rel visitOther(RelNode other) {
+    public Rel visitOther(final RelNode other) {
       if (other instanceof ColumnAppenderRel) {
-        ColumnAppenderRel car = (ColumnAppenderRel) other;
-        Expression.Literal literal = (Expression.Literal) toExpression(car.literal);
-        ColumnAppendDetail detail = new ColumnAppendDetail(literal);
-        List<Rel> inputs = apply(car.getInputs());
+        final ColumnAppenderRel car = (ColumnAppenderRel) other;
+        final Expression.Literal literal = (Expression.Literal) toExpression(car.literal);
+        final ColumnAppendDetail detail = new ColumnAppendDetail(literal);
+        final List<Rel> inputs = apply(car.getInputs());
 
         if (inputs.isEmpty()) {
           return ExtensionLeaf.from(detail).build();
@@ -280,7 +286,10 @@ class RelExtensionRoundtripTest extends PlanTestBase {
     final List<RelNode> inputs;
 
     public ColumnAppenderRel(
-        RelOptCluster cluster, RelTraitSet traitSet, RexLiteral literal, List<RelNode> inputs) {
+        final RelOptCluster cluster,
+        final RelTraitSet traitSet,
+        final RexLiteral literal,
+        final List<RelNode> inputs) {
       super(cluster, traitSet);
       this.literal = literal;
       this.inputs = inputs;
@@ -293,11 +302,11 @@ class RelExtensionRoundtripTest extends PlanTestBase {
 
     @Override
     protected RelDataType deriveRowType() {
-      List<RelDataTypeField> fields = new ArrayList<>();
-      for (RelNode input : getInputs()) {
+      final List<RelDataTypeField> fields = new ArrayList<>();
+      for (final RelNode input : getInputs()) {
         fields.addAll(input.getRowType().getFieldList());
       }
-      RelDataTypeFieldImpl appendedField =
+      final RelDataTypeFieldImpl appendedField =
           new RelDataTypeFieldImpl("appended_column", fields.size(), literal.getType());
       fields.add(appendedField);
       return getCluster()

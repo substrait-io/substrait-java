@@ -24,12 +24,12 @@ public interface WindowBound {
   abstract class Preceding implements WindowBound {
     public abstract long offset();
 
-    public static Preceding of(long offset) {
+    public static Preceding of(final long offset) {
       return ImmutableWindowBound.Preceding.builder().offset(offset).build();
     }
 
     @Override
-    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+    public <R, E extends Throwable> R accept(final WindowBoundVisitor<R, E> visitor) {
       return visitor.visit(this);
     }
   }
@@ -38,12 +38,12 @@ public interface WindowBound {
   abstract class Following implements WindowBound {
     public abstract long offset();
 
-    public static Following of(long offset) {
+    public static Following of(final long offset) {
       return ImmutableWindowBound.Following.builder().offset(offset).build();
     }
 
     @Override
-    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+    public <R, E extends Throwable> R accept(final WindowBoundVisitor<R, E> visitor) {
       return visitor.visit(this);
     }
   }
@@ -51,7 +51,7 @@ public interface WindowBound {
   @Value.Immutable
   abstract class CurrentRow implements WindowBound {
     @Override
-    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+    public <R, E extends Throwable> R accept(final WindowBoundVisitor<R, E> visitor) {
       return visitor.visit(this);
     }
   }
@@ -59,7 +59,7 @@ public interface WindowBound {
   @Value.Immutable
   abstract class Unbounded implements WindowBound {
     @Override
-    public <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor) {
+    public <R, E extends Throwable> R accept(final WindowBoundVisitor<R, E> visitor) {
       return visitor.visit(this);
     }
   }

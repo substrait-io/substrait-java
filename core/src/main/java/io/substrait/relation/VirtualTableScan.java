@@ -25,11 +25,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    */
   @Value.Check
   protected void check() {
-    List<String> names = getInitialSchema().names();
+    final List<String> names = getInitialSchema().names();
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    List<Expression.StructLiteral> rows = getRows();
+    final List<Expression.StructLiteral> rows = getRows();
 
     assert rows.size() > 0
         && names.stream().noneMatch(s -> s == null)
@@ -37,7 +37,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
 
-    for (Expression.StructLiteral row : rows) {
+    for (final Expression.StructLiteral row : rows) {
       validateRowConformsToSchema(row);
     }
   }
@@ -48,10 +48,10 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * @param row the row to validate
    * @throws AssertionError if the row does not conform to the schema
    */
-  private void validateRowConformsToSchema(Expression.StructLiteral row) {
-    Type.Struct schemaStruct = getInitialSchema().struct();
-    List<Type> schemaFieldTypes = schemaStruct.fields();
-    List<Expression.Literal> rowFields = row.fields();
+  private void validateRowConformsToSchema(final Expression.StructLiteral row) {
+    final Type.Struct schemaStruct = getInitialSchema().struct();
+    final List<Type> schemaFieldTypes = schemaStruct.fields();
+    final List<Expression.Literal> rowFields = row.fields();
 
     assert rowFields.size() == schemaFieldTypes.size()
         : String.format(
@@ -59,8 +59,8 @@ public abstract class VirtualTableScan extends AbstractReadRel {
             rowFields.size(), schemaFieldTypes.size());
 
     for (int i = 0; i < rowFields.size(); i++) {
-      Type rowFieldType = rowFields.get(i).getType();
-      Type schemaFieldType = schemaFieldTypes.get(i);
+      final Type rowFieldType = rowFields.get(i).getType();
+      final Type schemaFieldType = schemaFieldTypes.get(i);
 
       assert rowFieldType.equals(schemaFieldType)
           : String.format(
@@ -71,7 +71,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 
@@ -85,7 +85,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     private static final NamedFieldCountingTypeVisitor VISITOR =
         new NamedFieldCountingTypeVisitor();
 
-    private static Integer countNames(Type type) {
+    private static Integer countNames(final Type type) {
       return type.accept(VISITOR);
     }
 
@@ -210,24 +210,24 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     }
 
     @Override
-    public Integer visit(Type.Struct type) throws RuntimeException {
+    public Integer visit(final Type.Struct type) throws RuntimeException {
       // Only struct fields have names - the top level column names are also
       // captured by this since the whole schema is wrapped in a Struct type
       return type.fields().stream().mapToInt(field -> 1 + field.accept(this)).sum();
     }
 
     @Override
-    public Integer visit(Type.ListType type) throws RuntimeException {
+    public Integer visit(final Type.ListType type) throws RuntimeException {
       return type.elementType().accept(this);
     }
 
     @Override
-    public Integer visit(Type.Map type) throws RuntimeException {
+    public Integer visit(final Type.Map type) throws RuntimeException {
       return type.key().accept(this) + type.value().accept(this);
     }
 
     @Override
-    public Integer visit(Type.UserDefined type) throws RuntimeException {
+    public Integer visit(final Type.UserDefined type) throws RuntimeException {
       return 0;
     }
   }

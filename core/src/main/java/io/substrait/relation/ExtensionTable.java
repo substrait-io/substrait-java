@@ -10,11 +10,11 @@ public abstract class ExtensionTable extends AbstractReadRel {
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 
-  public static ImmutableExtensionTable.Builder from(Extension.ExtensionTableDetail detail) {
+  public static ImmutableExtensionTable.Builder from(final Extension.ExtensionTableDetail detail) {
     return ImmutableExtensionTable.builder().initialSchema(detail.deriveSchema()).detail(detail);
   }
 

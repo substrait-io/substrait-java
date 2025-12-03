@@ -38,12 +38,12 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
     private MergeJoinRel.JoinType proto;
 
-    JoinType(MergeJoinRel.JoinType proto) {
+    JoinType(final MergeJoinRel.JoinType proto) {
       this.proto = proto;
     }
 
-    public static JoinType fromProto(MergeJoinRel.JoinType proto) {
-      for (JoinType v : values()) {
+    public static JoinType fromProto(final MergeJoinRel.JoinType proto) {
+      for (final JoinType v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -58,8 +58,8 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    Stream<Type> leftTypes = getLeftTypes();
-    Stream<Type> rightTypes = getRightTypes();
+    final Stream<Type> leftTypes = getLeftTypes();
+    final Stream<Type> rightTypes = getRightTypes();
     return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
   }
 
@@ -91,7 +91,7 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 

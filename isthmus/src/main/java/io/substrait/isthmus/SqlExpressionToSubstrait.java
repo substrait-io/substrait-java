@@ -38,9 +38,9 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   public SqlExpressionToSubstrait(
-      FeatureBoard features, SimpleExtension.ExtensionCollection extensions) {
+      final FeatureBoard features, final SimpleExtension.ExtensionCollection extensions) {
     super(features);
-    ScalarFunctionConverter scalarFunctionConverter =
+    final ScalarFunctionConverter scalarFunctionConverter =
         new ScalarFunctionConverter(extensions.scalarFunctions(), factory);
     this.rexConverter = new RexExpressionConverter(scalarFunctionConverter);
   }
@@ -52,10 +52,10 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     final Map<String, RexNode> nameToNodeMap;
 
     Result(
-        SqlValidator validator,
-        CalciteCatalogReader catalogReader,
-        Map<String, RelDataType> nameToTypeMap,
-        Map<String, RexNode> nameToNodeMap) {
+        final SqlValidator validator,
+        final CalciteCatalogReader catalogReader,
+        final Map<String, RelDataType> nameToTypeMap,
+        final Map<String, RexNode> nameToNodeMap) {
       this.validator = validator;
       this.catalogReader = catalogReader;
       this.nameToTypeMap = nameToTypeMap;
@@ -72,7 +72,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    * @throws SqlParseException
    */
   public io.substrait.proto.ExtendedExpression convert(
-      String sqlExpression, List<String> createStatements) throws SqlParseException {
+      final String sqlExpression, final List<String> createStatements) throws SqlParseException {
     return convert(new String[] {sqlExpression}, createStatements);
   }
 
@@ -85,8 +85,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    * @throws SqlParseException
    */
   public io.substrait.proto.ExtendedExpression convert(
-      String[] sqlExpressions, List<String> createStatements) throws SqlParseException {
-    Result result = registerCreateTablesForExtendedExpression(createStatements);
+      final String[] sqlExpressions, final List<String> createStatements) throws SqlParseException {
+    final Result result = registerCreateTablesForExtendedExpression(createStatements);
     return executeInnerSQLExpressions(
         sqlExpressions,
         result.validator,
@@ -96,28 +96,28 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   private io.substrait.proto.ExtendedExpression executeInnerSQLExpressions(
-      String[] sqlExpressions,
-      SqlValidator validator,
-      CalciteCatalogReader catalogReader,
-      Map<String, RelDataType> nameToTypeMap,
-      Map<String, RexNode> nameToNodeMap)
+      final String[] sqlExpressions,
+      final SqlValidator validator,
+      final CalciteCatalogReader catalogReader,
+      final Map<String, RelDataType> nameToTypeMap,
+      final Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
     int columnIndex = 1;
-    List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
+    final List<ExtendedExpression.ExpressionReference> expressionReferences = new ArrayList<>();
     RexNode rexNode;
-    for (String sqlExpression : sqlExpressions) {
+    for (final String sqlExpression : sqlExpressions) {
       rexNode =
           sqlToRexNode(
               sqlExpression.trim(), validator, catalogReader, nameToTypeMap, nameToNodeMap);
-      ExtendedExpression.ExpressionReference expressionReference =
+      final ExtendedExpression.ExpressionReference expressionReference =
           ExtendedExpression.ExpressionReference.builder()
               .expression(rexNode.accept(this.rexConverter))
               .addOutputNames("column-" + columnIndex++)
               .build();
       expressionReferences.add(expressionReference);
     }
-    NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
-    Builder extendedExpression =
+    final NamedStruct namedStruct = toNamedStruct(nameToTypeMap);
+    final Builder extendedExpression =
         ExtendedExpression.builder()
             .referredExpressions(expressionReferences)
             .baseSchema(namedStruct);
@@ -126,16 +126,16 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   private RexNode sqlToRexNode(
-      String sql,
-      SqlValidator validator,
-      CalciteCatalogReader catalogReader,
-      Map<String, RelDataType> nameToTypeMap,
-      Map<String, RexNode> nameToNodeMap)
+      final String sql,
+      final SqlValidator validator,
+      final CalciteCatalogReader catalogReader,
+      final Map<String, RelDataType> nameToTypeMap,
+      final Map<String, RexNode> nameToNodeMap)
       throws SqlParseException {
-    SqlParser parser = SqlParser.create(sql, parserConfig);
-    SqlNode sqlNode = parser.parseExpression();
-    SqlNode validSqlNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
-    SqlToRelConverter converter =
+    final SqlParser parser = SqlParser.create(sql, parserConfig);
+    final SqlNode sqlNode = parser.parseExpression();
+    final SqlNode validSqlNode = validator.validateParameterizedExpression(sqlNode, nameToTypeMap);
+    final SqlToRelConverter converter =
         new SqlToRelConverter(
             null,
             validator,
@@ -146,20 +146,20 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     return converter.convertExpression(validSqlNode, nameToNodeMap);
   }
 
-  private Result registerCreateTablesForExtendedExpression(List<String> tables)
+  private Result registerCreateTablesForExtendedExpression(final List<String> tables)
       throws SqlParseException {
-    Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
-    Map<String, RexNode> nameToNodeMap = new HashMap<>();
-    CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
-    CalciteCatalogReader catalogReader =
+    final Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
+    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
+    final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
+    final CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema, List.of(), factory, config);
     if (tables != null) {
-      for (String tableDef : tables) {
-        List<SubstraitTable> tList =
+      for (final String tableDef : tables) {
+        final List<SubstraitTable> tList =
             SubstraitCreateStatementParser.processCreateStatements(tableDef);
-        for (SubstraitTable t : tList) {
+        for (final SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
-          for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
+          for (final RelDataTypeField field : t.getRowType(factory).getFieldList()) {
             nameToTypeMap.merge( // to validate the sql expression tree
                 field.getName(),
                 field.getType(),
@@ -178,16 +178,16 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         }
       }
     }
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    final SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
 
-  private NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
-    ArrayList<String> names = new ArrayList<String>();
-    ArrayList<Type> types = new ArrayList<Type>();
-    for (Map.Entry<String, RelDataType> entry : nameToTypeMap.entrySet()) {
-      String k = entry.getKey();
-      RelDataType v = entry.getValue();
+  private NamedStruct toNamedStruct(final Map<String, RelDataType> nameToTypeMap) {
+    final ArrayList<String> names = new ArrayList<String>();
+    final ArrayList<Type> types = new ArrayList<Type>();
+    for (final Map.Entry<String, RelDataType> entry : nameToTypeMap.entrySet()) {
+      final String k = entry.getKey();
+      final RelDataType v = entry.getValue();
       names.add(k);
       types.add(TypeConverter.DEFAULT.toSubstrait(v));
     }

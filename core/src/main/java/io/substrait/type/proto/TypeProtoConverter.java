@@ -10,11 +10,11 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
   private static final BaseProtoTypes<Type, Integer> REQUIRED =
       new Types(Type.Nullability.NULLABILITY_REQUIRED);
 
-  public TypeProtoConverter(ExtensionCollector extensionCollector) {
+  public TypeProtoConverter(final ExtensionCollector extensionCollector) {
     super(extensionCollector, "Type literals cannot contain parameters or expressions.");
   }
 
-  public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
+  public io.substrait.proto.Type toProto(final io.substrait.type.Type type) {
     return type.accept(this);
   }
 
@@ -30,7 +30,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type fixedChar(Integer len) {
+    public Type fixedChar(final Integer len) {
       return wrap(Type.FixedChar.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
@@ -47,17 +47,17 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type varChar(Integer len) {
+    public Type varChar(final Integer len) {
       return wrap(Type.VarChar.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
     @Override
-    public Type fixedBinary(Integer len) {
+    public Type fixedBinary(final Integer len) {
       return wrap(Type.FixedBinary.newBuilder().setLength(len).setNullability(nullability).build());
     }
 
     @Override
-    public Type decimal(Integer scale, Integer precision) {
+    public Type decimal(final Integer scale, final Integer precision) {
       return wrap(
           Type.Decimal.newBuilder()
               .setScale(scale)
@@ -67,7 +67,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type intervalDay(Integer precision) {
+    public Type intervalDay(final Integer precision) {
       return wrap(
           Type.IntervalDay.newBuilder()
               .setPrecision(precision)
@@ -76,7 +76,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type intervalCompound(Integer precision) {
+    public Type intervalCompound(final Integer precision) {
       return wrap(
           Type.IntervalCompound.newBuilder()
               .setPrecision(precision)
@@ -85,7 +85,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type precisionTime(Integer precision) {
+    public Type precisionTime(final Integer precision) {
       return wrap(
           Type.PrecisionTime.newBuilder()
               .setPrecision(precision)
@@ -94,7 +94,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type precisionTimestamp(Integer precision) {
+    public Type precisionTimestamp(final Integer precision) {
       return wrap(
           Type.PrecisionTimestamp.newBuilder()
               .setPrecision(precision)
@@ -103,7 +103,7 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type precisionTimestampTZ(Integer precision) {
+    public Type precisionTimestampTZ(final Integer precision) {
       return wrap(
           Type.PrecisionTimestampTZ.newBuilder()
               .setPrecision(precision)
@@ -112,30 +112,30 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type struct(Iterable<Type> types) {
+    public Type struct(final Iterable<Type> types) {
       return wrap(Type.Struct.newBuilder().addAllTypes(types).setNullability(nullability).build());
     }
 
     @Override
-    public Type list(Type type) {
+    public Type list(final Type type) {
       return wrap(Type.List.newBuilder().setType(type).setNullability(nullability).build());
     }
 
     @Override
-    public Type map(Type key, Type value) {
+    public Type map(final Type key, final Type value) {
       return wrap(
           Type.Map.newBuilder().setKey(key).setValue(value).setNullability(nullability).build());
     }
 
     @Override
-    public Type userDefined(int ref) {
+    public Type userDefined(final int ref) {
       return wrap(
           Type.UserDefined.newBuilder().setTypeReference(ref).setNullability(nullability).build());
     }
 
     @Override
     protected Type wrap(final Object o) {
-      Type.Builder bldr = Type.newBuilder();
+      final Type.Builder bldr = Type.newBuilder();
       if (o instanceof Type.Boolean) {
         return bldr.setBool((Type.Boolean) o).build();
       } else if (o instanceof Type.I8) {
