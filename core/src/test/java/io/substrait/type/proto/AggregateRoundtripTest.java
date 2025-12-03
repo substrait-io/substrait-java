@@ -21,22 +21,23 @@ import org.junit.jupiter.api.Test;
 
 class AggregateRoundtripTest extends TestBase {
 
-  private void assertAggregateRoundtrip(Expression.AggregationInvocation invocation) {
-    Expression.DecimalLiteral expression = ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
-    Expression.StructLiteral literal =
+  private void assertAggregateRoundtrip(final Expression.AggregationInvocation invocation) {
+    final Expression.DecimalLiteral expression =
+        ExpressionCreator.decimal(false, BigDecimal.TEN, 10, 2);
+    final Expression.StructLiteral literal =
         Expression.StructLiteral.builder().addFields(expression).build();
-    io.substrait.relation.ImmutableVirtualTableScan input =
+    final io.substrait.relation.ImmutableVirtualTableScan input =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Arrays.asList("decimal"), R.struct(R.decimal(10, 2))))
             .addRows(literal)
             .build();
-    ExtensionCollector functionCollector = new ExtensionCollector();
-    RelProtoConverter to = new RelProtoConverter(functionCollector);
-    io.substrait.extension.SimpleExtension.ExtensionCollection extensions =
+    final ExtensionCollector functionCollector = new ExtensionCollector();
+    final RelProtoConverter to = new RelProtoConverter(functionCollector);
+    final io.substrait.extension.SimpleExtension.ExtensionCollection extensions =
         defaultExtensionCollection;
-    ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
+    final ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 
-    io.substrait.relation.ImmutableMeasure measure =
+    final io.substrait.relation.ImmutableMeasure measure =
         Aggregate.Measure.builder()
             .function(
                 AggregateFunctionInvocation.builder()
@@ -61,9 +62,9 @@ class AggregateRoundtripTest extends TestBase {
                     .build())
             .build();
 
-    io.substrait.relation.ImmutableAggregate aggRel =
+    final io.substrait.relation.ImmutableAggregate aggRel =
         Aggregate.builder().input(input).measures(Arrays.asList(measure)).build();
-    io.substrait.proto.Rel protoAggRel = to.toProto(aggRel);
+    final io.substrait.proto.Rel protoAggRel = to.toProto(aggRel);
     assertEquals(
         protoAggRel.getAggregate().getMeasuresList().get(0).getMeasure().getInvocation(),
         invocation.toProto());
@@ -72,7 +73,8 @@ class AggregateRoundtripTest extends TestBase {
 
   @Test
   void aggregateInvocationRoundtrip() {
-    for (Expression.AggregationInvocation invocation : Expression.AggregationInvocation.values()) {
+    for (final Expression.AggregationInvocation invocation :
+        Expression.AggregationInvocation.values()) {
       assertAggregateRoundtrip(invocation);
     }
   }

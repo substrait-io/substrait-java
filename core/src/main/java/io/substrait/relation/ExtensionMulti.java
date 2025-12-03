@@ -13,17 +13,17 @@ public abstract class ExtensionMulti extends AbstractRel {
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 
   public static ImmutableExtensionMulti.Builder from(
-      Extension.MultiRelDetail detail, Rel... inputs) {
+      final Extension.MultiRelDetail detail, final Rel... inputs) {
     return from(detail, Arrays.stream(inputs).collect(Collectors.toList()));
   }
 
   public static ImmutableExtensionMulti.Builder from(
-      Extension.MultiRelDetail detail, List<Rel> inputs) {
+      final Extension.MultiRelDetail detail, final List<Rel> inputs) {
     return ImmutableExtensionMulti.builder()
         .addAllInputs(inputs)
         .detail(detail)

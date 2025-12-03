@@ -10,7 +10,7 @@ public class CreateView extends AbstractRelNode {
   private final List<String> viewName;
   private final RelNode input;
 
-  public CreateView(List<String> viewName, RelNode input) {
+  public CreateView(final List<String> viewName, final RelNode input) {
     super(input.getCluster(), input.getTraitSet());
     this.viewName = viewName;
     this.input = input;
@@ -22,7 +22,7 @@ public class CreateView extends AbstractRelNode {
   }
 
   @Override
-  public RelWriter explainTerms(RelWriter pw) {
+  public RelWriter explainTerms(final RelWriter pw) {
     return super.explainTerms(pw).input("input", getInput()).item("viewName", getViewName());
   }
 

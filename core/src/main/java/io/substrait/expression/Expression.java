@@ -20,7 +20,10 @@ public interface Expression extends FunctionArg {
 
   @Override
   default <R, C extends VisitationContext, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      final SimpleExtension.Function fnDef,
+      final int argIdx,
+      final FuncArgVisitor<R, C, E> fnArgVisitor,
+      final C context)
       throws E {
     return fnArgVisitor.visitExpr(fnDef, argIdx, this, context);
   }
@@ -50,7 +53,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -70,7 +73,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -90,7 +93,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -110,7 +113,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -130,7 +133,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -150,7 +153,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -170,7 +173,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -190,7 +193,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -210,7 +213,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -230,7 +233,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -250,7 +253,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -270,7 +273,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -290,7 +293,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -310,7 +313,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -332,7 +335,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -354,7 +357,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -376,7 +379,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -402,7 +405,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -434,7 +437,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -454,12 +457,12 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
 
     public ByteString toBytes() {
-      ByteBuffer bb = ByteBuffer.allocate(16);
+      final ByteBuffer bb = ByteBuffer.allocate(16);
       bb.putLong(value().getMostSignificantBits());
       bb.putLong(value().getLeastSignificantBits());
       bb.flip();
@@ -482,7 +485,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -504,7 +507,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -524,7 +527,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -548,7 +551,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -571,7 +574,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -593,7 +596,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -613,7 +616,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -633,7 +636,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -657,7 +660,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -681,7 +684,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -705,7 +708,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -729,7 +732,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public Type getType() {
-      Type elseType = elseClause().getType();
+      final Type elseType = elseClause().getType();
 
       // If any of the clauses are nullable, the whole expression is also nullable.
       if (ifClauses().stream().anyMatch(clause -> clause.then().getType().nullable())) {
@@ -744,7 +747,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -779,7 +782,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -805,7 +808,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -846,7 +849,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -858,7 +861,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.Expression.WindowFunction.BoundsType proto;
 
-    WindowBoundsType(io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
+    WindowBoundsType(final io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
       this.proto = proto;
     }
 
@@ -867,8 +870,8 @@ public interface Expression extends FunctionArg {
     }
 
     public static WindowBoundsType fromProto(
-        io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
-      for (WindowBoundsType v : values()) {
+        final io.substrait.proto.Expression.WindowFunction.BoundsType proto) {
+      for (final WindowBoundsType v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -895,7 +898,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -917,7 +920,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -961,7 +964,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -976,7 +979,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -998,7 +1001,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+        final ExpressionVisitor<R, C, E> visitor, final C context) throws E {
       return visitor.visit(this, context);
     }
   }
@@ -1013,7 +1016,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto;
 
-    PredicateOp(io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
+    PredicateOp(final io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
       this.proto = proto;
     }
 
@@ -1022,8 +1025,8 @@ public interface Expression extends FunctionArg {
     }
 
     public static PredicateOp fromProto(
-        io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
-      for (PredicateOp v : values()) {
+        final io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp proto) {
+      for (final PredicateOp v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1040,7 +1043,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.AggregateFunction.AggregationInvocation proto;
 
-    AggregationInvocation(io.substrait.proto.AggregateFunction.AggregationInvocation proto) {
+    AggregationInvocation(final io.substrait.proto.AggregateFunction.AggregationInvocation proto) {
       this.proto = proto;
     }
 
@@ -1048,8 +1051,9 @@ public interface Expression extends FunctionArg {
       return proto;
     }
 
-    public static AggregationInvocation fromProto(AggregateFunction.AggregationInvocation proto) {
-      for (AggregationInvocation v : values()) {
+    public static AggregationInvocation fromProto(
+        final AggregateFunction.AggregationInvocation proto) {
+      for (final AggregationInvocation v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1071,7 +1075,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.AggregationPhase proto;
 
-    AggregationPhase(io.substrait.proto.AggregationPhase proto) {
+    AggregationPhase(final io.substrait.proto.AggregationPhase proto) {
       this.proto = proto;
     }
 
@@ -1079,8 +1083,8 @@ public interface Expression extends FunctionArg {
       return proto;
     }
 
-    public static AggregationPhase fromProto(io.substrait.proto.AggregationPhase proto) {
-      for (AggregationPhase v : values()) {
+    public static AggregationPhase fromProto(final io.substrait.proto.AggregationPhase proto) {
+      for (final AggregationPhase v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1099,7 +1103,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.SortField.SortDirection proto;
 
-    SortDirection(io.substrait.proto.SortField.SortDirection proto) {
+    SortDirection(final io.substrait.proto.SortField.SortDirection proto) {
       this.proto = proto;
     }
 
@@ -1107,8 +1111,8 @@ public interface Expression extends FunctionArg {
       return proto;
     }
 
-    public static SortDirection fromProto(io.substrait.proto.SortField.SortDirection proto) {
-      for (SortDirection v : values()) {
+    public static SortDirection fromProto(final io.substrait.proto.SortField.SortDirection proto) {
+      for (final SortDirection v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -1126,7 +1130,7 @@ public interface Expression extends FunctionArg {
 
     private final io.substrait.proto.Expression.Cast.FailureBehavior proto;
 
-    FailureBehavior(io.substrait.proto.Expression.Cast.FailureBehavior proto) {
+    FailureBehavior(final io.substrait.proto.Expression.Cast.FailureBehavior proto) {
       this.proto = proto;
     }
 
@@ -1135,8 +1139,8 @@ public interface Expression extends FunctionArg {
     }
 
     public static FailureBehavior fromProto(
-        io.substrait.proto.Expression.Cast.FailureBehavior proto) {
-      for (FailureBehavior v : values()) {
+        final io.substrait.proto.Expression.Cast.FailureBehavior proto) {
+      for (final FailureBehavior v : values()) {
         if (v.proto == proto) {
           return v;
         }

@@ -16,35 +16,37 @@ public class TypeStringParser {
 
   private TypeStringParser() {}
 
-  public static Type parseSimple(String str, String urn) {
+  public static Type parseSimple(final String str, final String urn) {
     return parse(str, urn, ParseToPojo::type);
   }
 
-  public static ParameterizedType parseParameterized(String str, String urn) {
+  public static ParameterizedType parseParameterized(final String str, final String urn) {
     return parse(str, urn, ParseToPojo::parameterizedType);
   }
 
-  public static TypeExpression parseExpression(String str, String urn) {
+  public static TypeExpression parseExpression(final String str, final String urn) {
     return parse(str, urn, ParseToPojo::typeExpression);
   }
 
-  private static SubstraitTypeParser.StartContext parse(String str) {
-    SubstraitTypeLexer lexer = new SubstraitTypeLexer(CharStreams.fromString(str));
+  private static SubstraitTypeParser.StartContext parse(final String str) {
+    final SubstraitTypeLexer lexer = new SubstraitTypeLexer(CharStreams.fromString(str));
     lexer.removeErrorListeners();
     lexer.addErrorListener(TypeErrorListener.INSTANCE);
-    CommonTokenStream tokenStream = new CommonTokenStream(lexer);
-    SubstraitTypeParser parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
+    final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+    final SubstraitTypeParser parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
     parser.removeErrorListeners();
     parser.addErrorListener(TypeErrorListener.INSTANCE);
     return parser.start();
   }
 
   public static <T> T parse(
-      String str, String urn, BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
+      final String str,
+      final String urn,
+      final BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
     return func.apply(urn, parse(str));
   }
 
-  public static TypeExpression parse(String str, ParseToPojo.Visitor visitor) {
+  public static TypeExpression parse(final String str, final ParseToPojo.Visitor visitor) {
     return parse(str).accept(visitor);
   }
 

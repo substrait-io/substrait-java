@@ -18,11 +18,11 @@ class UpdateRelRoundtripTest extends TestBase {
 
   @Test
   void update() {
-    NamedStruct schema =
+    final NamedStruct schema =
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    List<NamedUpdate.TransformExpression> transformations =
+    final List<NamedUpdate.TransformExpression> transformations =
         Arrays.asList(
             NamedUpdate.TransformExpression.builder()
                 .columnTarget(0)
@@ -33,9 +33,9 @@ class UpdateRelRoundtripTest extends TestBase {
                 .transformation(fnAdd(2))
                 .build());
 
-    Expression condition = ExpressionCreator.bool(false, true);
+    final Expression condition = ExpressionCreator.bool(false, true);
 
-    NamedUpdate command =
+    final NamedUpdate command =
         NamedUpdate.builder()
             .tableSchema(schema)
             .names(Stream.of("table").collect(Collectors.toList()))
@@ -46,7 +46,7 @@ class UpdateRelRoundtripTest extends TestBase {
     verifyRoundTrip(command);
   }
 
-  private Expression.ScalarFunctionInvocation fnAdd(int value) {
+  private Expression.ScalarFunctionInvocation fnAdd(final int value) {
     return defaultExtensionCollection.scalarFunctions().stream()
         .filter(s -> s.name().equalsIgnoreCase("add"))
         .findFirst()

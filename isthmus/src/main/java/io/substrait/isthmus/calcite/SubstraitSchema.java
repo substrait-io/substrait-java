@@ -20,7 +20,7 @@ public class SubstraitSchema extends AbstractSchema {
     this.schemaMap = new HashMap<>();
   }
 
-  public SubstraitSchema(Map<String, Table> tableMap) {
+  public SubstraitSchema(final Map<String, Table> tableMap) {
     this.tableMap = tableMap;
     this.schemaMap = new HashMap<>();
   }

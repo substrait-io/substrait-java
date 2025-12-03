@@ -12,7 +12,7 @@ public abstract class CalciteObjs {
   final RelDataTypeFactory type = SubstraitTypeSystem.TYPE_FACTORY;
   final RexBuilder rex = new RexBuilder(type);
 
-  RelDataType t(SqlTypeName typeName, int... vals) {
+  RelDataType t(final SqlTypeName typeName, final int... vals) {
     switch (vals.length) {
       case 0:
         return type.createSqlType(typeName);
@@ -25,20 +25,20 @@ public abstract class CalciteObjs {
     }
   }
 
-  RelDataType tN(SqlTypeName typeName, int... vals) {
+  RelDataType tN(final SqlTypeName typeName, final int... vals) {
     return type.createTypeWithNullability(t(typeName, vals), true);
   }
 
   public RexNode makeCalciteLiteral(
-      boolean nullable, SqlTypeName typeName, Object value, int... vals) {
+      final boolean nullable, final SqlTypeName typeName, final Object value, final int... vals) {
     return rex.makeLiteral(value, nullable ? tN(typeName, vals) : t(typeName, vals), true, false);
   }
 
-  public RexNode c(Object value, SqlTypeName typeName, int... vals) {
+  public RexNode c(final Object value, final SqlTypeName typeName, final int... vals) {
     return makeCalciteLiteral(false, typeName, value, vals);
   }
 
-  public RexNode cN(Object value, SqlTypeName typeName, int... vals) {
+  public RexNode cN(final Object value, final SqlTypeName typeName, final int... vals) {
     return makeCalciteLiteral(true, typeName, value, vals);
   }
 }

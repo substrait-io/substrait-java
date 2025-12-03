@@ -9,15 +9,16 @@ public class SortFieldConverter {
 
   /** Converts a {@link RexFieldCollation} to a {@link Expression.SortField}. */
   public static Expression.SortField toSortField(
-      RexFieldCollation rexFieldCollation, RexExpressionConverter rexExpressionConverter) {
-    Expression expr = rexFieldCollation.left.accept(rexExpressionConverter);
-    Expression.SortDirection direction = asSortDirection(rexFieldCollation);
+      final RexFieldCollation rexFieldCollation,
+      final RexExpressionConverter rexExpressionConverter) {
+    final Expression expr = rexFieldCollation.left.accept(rexExpressionConverter);
+    final Expression.SortDirection direction = asSortDirection(rexFieldCollation);
 
     return Expression.SortField.builder().expr(expr).direction(direction).build();
   }
 
-  private static Expression.SortDirection asSortDirection(RexFieldCollation collation) {
-    RelFieldCollation.Direction direction = collation.getDirection();
+  private static Expression.SortDirection asSortDirection(final RexFieldCollation collation) {
+    final RelFieldCollation.Direction direction = collation.getDirection();
 
     if (direction == Direction.ASCENDING) {
       return collation.getNullDirection() == RelFieldCollation.NullDirection.LAST

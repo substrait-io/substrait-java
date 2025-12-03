@@ -33,125 +33,125 @@ import io.substrait.type.TypeVisitor;
 public class TypeStringify extends ParentStringify
     implements TypeVisitor<String, RuntimeException> {
 
-  protected TypeStringify(int indent) {
+  protected TypeStringify(final int indent) {
     super(indent);
   }
 
   @Override
-  public String visit(I64 type) throws RuntimeException {
+  public String visit(final I64 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Bool type) throws RuntimeException {
+  public String visit(final Bool type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(I8 type) throws RuntimeException {
+  public String visit(final I8 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(I16 type) throws RuntimeException {
+  public String visit(final I16 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(I32 type) throws RuntimeException {
+  public String visit(final I32 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(FP32 type) throws RuntimeException {
+  public String visit(final FP32 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(FP64 type) throws RuntimeException {
+  public String visit(final FP64 type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Str type) throws RuntimeException {
+  public String visit(final Str type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Binary type) throws RuntimeException {
+  public String visit(final Binary type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Date type) throws RuntimeException {
+  public String visit(final Date type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Time type) throws RuntimeException {
-    return type.getClass().getSimpleName();
-  }
-
-  @Override
-  @Deprecated
-  public String visit(TimestampTZ type) throws RuntimeException {
+  public String visit(final Time type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
   @Deprecated
-  public String visit(Timestamp type) throws RuntimeException {
+  public String visit(final TimestampTZ type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Type.PrecisionTimestamp type) throws RuntimeException {
+  @Deprecated
+  public String visit(final Timestamp type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Type.PrecisionTimestampTZ type) throws RuntimeException {
+  public String visit(final Type.PrecisionTimestamp type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(IntervalYear type) throws RuntimeException {
+  public String visit(final Type.PrecisionTimestampTZ type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(IntervalDay type) throws RuntimeException {
+  public String visit(final IntervalYear type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(UUID type) throws RuntimeException {
+  public String visit(final IntervalDay type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(FixedChar type) throws RuntimeException {
+  public String visit(final UUID type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(VarChar type) throws RuntimeException {
+  public String visit(final FixedChar type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(FixedBinary type) throws RuntimeException {
+  public String visit(final VarChar type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Decimal type) throws RuntimeException {
+  public String visit(final FixedBinary type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Struct type) throws RuntimeException {
-    StringBuffer sb = new StringBuffer(type.getClass().getSimpleName());
+  public String visit(final Decimal type) throws RuntimeException {
+    return type.getClass().getSimpleName();
+  }
+
+  @Override
+  public String visit(final Struct type) throws RuntimeException {
+    final StringBuffer sb = new StringBuffer(type.getClass().getSimpleName());
     type.fields()
         .forEach(
             f -> {
@@ -161,27 +161,27 @@ public class TypeStringify extends ParentStringify
   }
 
   @Override
-  public String visit(ListType type) throws RuntimeException {
+  public String visit(final ListType type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(Map type) throws RuntimeException {
+  public String visit(final Map type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(UserDefined type) throws RuntimeException {
+  public String visit(final UserDefined type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(PrecisionTime type) throws RuntimeException {
+  public String visit(final PrecisionTime type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 
   @Override
-  public String visit(IntervalCompound type) throws RuntimeException {
+  public String visit(final IntervalCompound type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 }

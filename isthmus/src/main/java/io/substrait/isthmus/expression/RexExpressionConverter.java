@@ -37,21 +37,22 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   private final List<CallConverter> callConverters;
   private final SubstraitRelVisitor relVisitor;
   private final TypeConverter typeConverter;
-  private WindowFunctionConverter windowFunctionConverter;
+  private final WindowFunctionConverter windowFunctionConverter;
 
-  public RexExpressionConverter(SubstraitRelVisitor relVisitor, CallConverter... callConverters) {
+  public RexExpressionConverter(
+      final SubstraitRelVisitor relVisitor, final CallConverter... callConverters) {
     this(relVisitor, Arrays.asList(callConverters), null, TypeConverter.DEFAULT);
   }
 
-  public RexExpressionConverter(CallConverter... callConverters) {
+  public RexExpressionConverter(final CallConverter... callConverters) {
     this(null, Arrays.asList(callConverters), null, TypeConverter.DEFAULT);
   }
 
   public RexExpressionConverter(
-      SubstraitRelVisitor relVisitor,
-      List<CallConverter> callConverters,
-      WindowFunctionConverter windowFunctionConverter,
-      TypeConverter typeConverter) {
+      final SubstraitRelVisitor relVisitor,
+      final List<CallConverter> callConverters,
+      final WindowFunctionConverter windowFunctionConverter,
+      final TypeConverter typeConverter) {
     this.callConverters = callConverters;
     this.relVisitor = relVisitor;
     this.windowFunctionConverter = windowFunctionConverter;
@@ -67,15 +68,15 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   @Override
-  public Expression visitInputRef(RexInputRef inputRef) {
+  public Expression visitInputRef(final RexInputRef inputRef) {
     return FieldReference.newRootStructReference(
         inputRef.getIndex(), typeConverter.toSubstrait(inputRef.getType()));
   }
 
   @Override
-  public Expression visitCall(RexCall call) {
-    for (CallConverter c : callConverters) {
-      Optional<Expression> out = c.convert(call, rexNode -> rexNode.accept(this));
+  public Expression visitCall(final RexCall call) {
+    for (final CallConverter c : callConverters) {
+      final Optional<Expression> out = c.convert(call, rexNode -> rexNode.accept(this));
       if (out.isPresent()) {
         return out.get();
       }
@@ -84,7 +85,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     throw new IllegalArgumentException(callConversionFailureMessage(call));
   }
 
-  private String callConversionFailureMessage(RexCall call) {
+  private String callConversionFailureMessage(final RexCall call) {
     return String.format(
         "Unable to convert call %s(%s).",
         call.getOperator().getName(),
@@ -94,12 +95,12 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   @Override
-  public Expression visitLiteral(RexLiteral literal) {
+  public Expression visitLiteral(final RexLiteral literal) {
     return (new LiteralConverter(typeConverter)).convert(literal);
   }
 
   @Override
-  public Expression visitOver(RexOver over) {
+  public Expression visitOver(final RexOver over) {
     if (over.ignoreNulls()) {
       throw new IllegalArgumentException("IGNORE NULLS cannot be expressed in Substrait");
     }
@@ -110,27 +111,27 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   @Override
-  public Expression visitCorrelVariable(RexCorrelVariable correlVariable) {
+  public Expression visitCorrelVariable(final RexCorrelVariable correlVariable) {
     throw new UnsupportedOperationException("RexCorrelVariable not supported");
   }
 
   @Override
-  public Expression visitDynamicParam(RexDynamicParam dynamicParam) {
+  public Expression visitDynamicParam(final RexDynamicParam dynamicParam) {
     throw new UnsupportedOperationException("RexDynamicParam not supported");
   }
 
   @Override
-  public Expression visitRangeRef(RexRangeRef rangeRef) {
+  public Expression visitRangeRef(final RexRangeRef rangeRef) {
     throw new UnsupportedOperationException("RexRangeRef not supported");
   }
 
   @Override
-  public Expression visitFieldAccess(RexFieldAccess fieldAccess) {
-    SqlKind kind = fieldAccess.getReferenceExpr().getKind();
+  public Expression visitFieldAccess(final RexFieldAccess fieldAccess) {
+    final SqlKind kind = fieldAccess.getReferenceExpr().getKind();
     switch (kind) {
       case CORREL_VARIABLE:
         {
-          int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
+          final int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
 
           return FieldReference.newRootStructOuterReference(
               fieldAccess.getField().getIndex(),
@@ -141,9 +142,9 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
       case INPUT_REF:
       case FIELD_ACCESS:
         {
-          Expression expression = fieldAccess.getReferenceExpr().accept(this);
+          final Expression expression = fieldAccess.getReferenceExpr().accept(this);
           if (expression instanceof FieldReference) {
-            FieldReference nestedReference = (FieldReference) expression;
+            final FieldReference nestedReference = (FieldReference) expression;
             return nestedReference.dereferenceStruct(fieldAccess.getField().getIndex());
           } else {
             return FieldReference.newStructReference(fieldAccess.getField().getIndex(), expression);
@@ -156,8 +157,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   @Override
-  public Expression visitSubQuery(RexSubQuery subQuery) {
-    Rel rel = relVisitor.apply(subQuery.rel);
+  public Expression visitSubQuery(final RexSubQuery subQuery) {
+    final Rel rel = relVisitor.apply(subQuery.rel);
 
     if (subQuery.getOperator() == SqlStdOperatorTable.EXISTS) {
       return Expression.SetPredicate.builder()
@@ -175,8 +176,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
           .type(typeConverter.toSubstrait(subQuery.getType()))
           .build();
     } else if (subQuery.getOperator() == SqlStdOperatorTable.IN) {
-      List<Expression> needles = new ArrayList<>();
-      for (RexNode inOperand : subQuery.getOperands()) {
+      final List<Expression> needles = new ArrayList<>();
+      for (final RexNode inOperand : subQuery.getOperands()) {
         needles.add(inOperand.accept(this));
       }
       return Expression.InPredicate.builder().needles(needles).haystack(rel).build();
@@ -186,32 +187,32 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   @Override
-  public Expression visitTableInputRef(RexTableInputRef fieldRef) {
+  public Expression visitTableInputRef(final RexTableInputRef fieldRef) {
     throw new UnsupportedOperationException("RexTableInputRef not supported");
   }
 
   @Override
-  public Expression visitLocalRef(RexLocalRef localRef) {
+  public Expression visitLocalRef(final RexLocalRef localRef) {
     throw new UnsupportedOperationException("RexLocalRef not supported");
   }
 
   @Override
-  public Expression visitPatternFieldRef(RexPatternFieldRef fieldRef) {
+  public Expression visitPatternFieldRef(final RexPatternFieldRef fieldRef) {
     throw new UnsupportedOperationException("RexPatternFieldRef not supported");
   }
 
   @Override
-  public Expression visitLambda(RexLambda rexLambda) {
+  public Expression visitLambda(final RexLambda rexLambda) {
     throw new UnsupportedOperationException("RexLambda not supported");
   }
 
   @Override
-  public Expression visitLambdaRef(RexLambdaRef rexLambdaRef) {
+  public Expression visitLambdaRef(final RexLambdaRef rexLambdaRef) {
     throw new UnsupportedOperationException("RexLambdaRef not supported");
   }
 
   @Override
-  public Expression visitNodeAndFieldIndex(RexNodeAndFieldIndex nodeAndFieldIndex) {
+  public Expression visitNodeAndFieldIndex(final RexNodeAndFieldIndex nodeAndFieldIndex) {
     throw new UnsupportedOperationException("RexNodeAndFieldIndex not supported");
   }
 }

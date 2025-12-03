@@ -15,13 +15,13 @@ public class ParentStringify {
    *
    * @param indent number of indentes
    */
-  public ParentStringify(int indent) {
+  public ParentStringify(final int indent) {
     this.indent = indent;
   }
 
   StringBuilder getIndent() {
 
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     if (indent != 0) {
       sb.append("\n");
     }
@@ -33,7 +33,7 @@ public class ParentStringify {
 
   StringBuilder getIndentString() {
 
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     sb.append(indentChar.repeat(this.indent * this.indentSize));
     sb.append("+- ");
     return sb;
@@ -41,7 +41,7 @@ public class ParentStringify {
 
   StringBuilder getContinuationIndentString() {
 
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     if (indent != 0) {
       sb.append("\n");
     }
@@ -50,7 +50,7 @@ public class ParentStringify {
     return sb;
   }
 
-  protected String getOutdent(StringBuilder sb) {
+  protected String getOutdent(final StringBuilder sb) {
     indent--;
     return (sb).toString();
   }

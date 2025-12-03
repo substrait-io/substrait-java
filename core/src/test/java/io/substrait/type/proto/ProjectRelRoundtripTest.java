@@ -19,7 +19,7 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void simpleProjection() {
     // Project single field
-    Rel projection =
+    final Rel projection =
         Project.builder().input(baseTable).addExpressions(b.fieldReference(baseTable, 0)).build();
 
     verifyRoundTrip(projection);
@@ -28,7 +28,7 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void multipleFieldProjection() {
     // Project multiple fields
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -43,9 +43,10 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithComputedExpression() {
     // Project with computed expression: col_a + 3 (both I64)
-    Expression addExpr = b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
+    final Expression addExpr =
+        b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
 
-    Rel projection = Project.builder().input(baseTable).addExpressions(addExpr).build();
+    final Rel projection = Project.builder().input(baseTable).addExpressions(addExpr).build();
 
     verifyRoundTrip(projection);
   }
@@ -53,11 +54,11 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithMultipleComputedExpressions() {
     // Project with multiple computed expressions
-    Expression add = b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
-    Expression multiply =
+    final Expression add = b.add(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 0));
+    final Expression multiply =
         b.multiply(b.fieldReference(baseTable, 1), b.fieldReference(baseTable, 1));
 
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -72,7 +73,7 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithLiterals() {
     // Project with literal values
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(b.fieldReference(baseTable, 0), b.i32(100), b.str("constant_string"))
@@ -84,7 +85,7 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithAllFields() {
     // Project all fields (identity projection)
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(
@@ -100,13 +101,13 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void nestedProjection() {
     // Project on top of another projection
-    Rel firstProjection =
+    final Rel firstProjection =
         Project.builder()
             .input(baseTable)
             .addExpressions(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 2))
             .build();
 
-    Rel secondProjection =
+    final Rel secondProjection =
         Project.builder()
             .input(firstProjection)
             .addExpressions(b.fieldReference(firstProjection, 1))
@@ -118,9 +119,10 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithComparison() {
     // Project with comparison expression: col_a = col_d
-    Expression comparison = b.equal(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 3));
+    final Expression comparison =
+        b.equal(b.fieldReference(baseTable, 0), b.fieldReference(baseTable, 3));
 
-    Rel projection =
+    final Rel projection =
         Project.builder()
             .input(baseTable)
             .addExpressions(b.fieldReference(baseTable, 0), comparison)
@@ -132,9 +134,9 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void projectionWithCast() {
     // Project with type cast: CAST(col_d AS BIGINT)
-    Expression cast = b.cast(b.fieldReference(baseTable, 3), R.I64);
+    final Expression cast = b.cast(b.fieldReference(baseTable, 3), R.I64);
 
-    Rel projection = Project.builder().input(baseTable).addExpressions(cast).build();
+    final Rel projection = Project.builder().input(baseTable).addExpressions(cast).build();
 
     verifyRoundTrip(projection);
   }
@@ -142,7 +144,7 @@ class ProjectRelRoundtripTest extends TestBase {
   @Test
   void emptyProjection() {
     // Project with no expressions (edge case - may produce empty output schema)
-    Rel projection = Project.builder().input(baseTable).build();
+    final Rel projection = Project.builder().input(baseTable).build();
 
     verifyRoundTrip(projection);
   }

@@ -9,10 +9,10 @@ class KeyConstraintsTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(ints = {7})
-  void tpcds(int query) throws Exception {
-    SqlToSubstrait s = new SqlToSubstrait();
-    String values = asString("keyconstraints_schema.sql");
-    Prepare.CatalogReader catalog =
+  void tpcds(final int query) throws Exception {
+    final SqlToSubstrait s = new SqlToSubstrait();
+    final String values = asString("keyconstraints_schema.sql");
+    final Prepare.CatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(values);
     s.convert(asString(String.format("tpcds/queries/%02d.sql", query)), catalog);
   }

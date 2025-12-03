@@ -10,12 +10,13 @@ import java.util.function.Supplier;
 /** Provides common utilities for copy-on-write visitations */
 public class CopyOnWriteUtils {
 
-  public static boolean allEmpty(Optional<?>... optionals) {
+  public static boolean allEmpty(final Optional<?>... optionals) {
     return Arrays.stream(optionals).noneMatch(Optional::isPresent);
   }
 
   /** The `or` method on Optional instances is a Java 9+ feature */
-  public static <T> Optional<T> or(Optional<T> left, Supplier<? extends Optional<T>> right) {
+  public static <T> Optional<T> or(
+      final Optional<T> left, final Supplier<? extends Optional<T>> right) {
     if (left.isPresent()) {
       return left;
     } else {
@@ -44,11 +45,12 @@ public class CopyOnWriteUtils {
    */
   public static <I, C extends VisitationContext, E extends Exception>
       Optional<List<I>> transformList(
-          List<I> items, C context, TransformFunction<I, C, E> transform) throws E {
-    List<I> newItems = new ArrayList<>();
+          final List<I> items, final C context, final TransformFunction<I, C, E> transform)
+          throws E {
+    final List<I> newItems = new ArrayList<>();
     boolean listUpdated = false;
-    for (I item : items) {
-      Optional<I> newItem = transform.apply(item, context);
+    for (final I item : items) {
+      final Optional<I> newItem = transform.apply(item, context);
       if (newItem.isPresent()) {
         newItems.add(newItem.get());
         listUpdated = true;

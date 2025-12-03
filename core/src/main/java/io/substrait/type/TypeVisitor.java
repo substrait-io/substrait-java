@@ -63,7 +63,7 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     private final String unsupportedMessage;
 
-    protected TypeThrowsVisitor(String unsupportedMessage) {
+    protected TypeThrowsVisitor(final String unsupportedMessage) {
       this.unsupportedMessage = unsupportedMessage;
     }
 

@@ -53,7 +53,7 @@ public class SimpleExtension {
   // `\A` means beginning of input. Using it as a delimiter in a scanner reads in the whole file.
   private static Pattern READ_WHOLE_FILE = Pattern.compile("\\A");
 
-  private static void validateUrn(String urn) {
+  private static void validateUrn(final String urn) {
     if (urn == null || urn.trim().isEmpty()) {
       throw new IllegalArgumentException("URN cannot be null or empty");
     }
@@ -63,8 +63,8 @@ public class SimpleExtension {
     }
   }
 
-  private static ObjectMapper objectMapper(String urn) {
-    InjectableValues.Std iv = new InjectableValues.Std();
+  private static ObjectMapper objectMapper(final String urn) {
+    final InjectableValues.Std iv = new InjectableValues.Std();
     iv.addValue(URN_LOCATOR_KEY, urn);
 
     return new ObjectMapper(new YAMLFactory())
@@ -210,14 +210,14 @@ public class SimpleExtension {
 
   @Value.Immutable
   public interface FunctionAnchor extends Anchor {
-    static FunctionAnchor of(String urn, String key) {
+    static FunctionAnchor of(final String urn, final String key) {
       return ImmutableSimpleExtension.FunctionAnchor.builder().urn(urn).key(key).build();
     }
   }
 
   @Value.Immutable
   public interface TypeAnchor extends Anchor {
-    static TypeAnchor of(String urn, String name) {
+    static TypeAnchor of(final String urn, final String name) {
       return ImmutableSimpleExtension.TypeAnchor.builder().urn(urn).key(name).build();
     }
   }
@@ -300,7 +300,7 @@ public class SimpleExtension {
     public abstract TypeExpression returnType();
 
     public static String constructKeyFromTypes(
-        String name, List<io.substrait.type.Type> arguments) {
+        final String name, final List<io.substrait.type.Type> arguments) {
       try {
         return name
             + ":"
@@ -313,7 +313,7 @@ public class SimpleExtension {
       }
     }
 
-    public static String constructKey(String name, List<Argument> arguments) {
+    public static String constructKey(final String name, final List<Argument> arguments) {
       try {
         return name
             + ":"
@@ -326,12 +326,12 @@ public class SimpleExtension {
 
     public Util.IntRange getRange() {
       // end range is exclusive so add one to size.
-      int max =
+      final int max =
           variadic()
               .map(
                   t -> {
-                    OptionalInt optionalMax = t.getMax();
-                    IntStream stream =
+                    final OptionalInt optionalMax = t.getMax();
+                    final IntStream stream =
                         optionalMax.isPresent()
                             ? IntStream.of(optionalMax.getAsInt())
                             : IntStream.empty();
@@ -341,13 +341,13 @@ public class SimpleExtension {
                         .orElse(Integer.MAX_VALUE);
                   })
               .orElse(args().size() + 1);
-      int min =
+      final int min =
           variadic().map(t -> args().size() - 1 + t.getMin()).orElse(requiredArguments().size());
       return Util.IntRange.of(min, max);
     }
 
     public void validateOutputType(
-        List<Expression> argumentExpressions, io.substrait.type.Type outputType) {
+        final List<Expression> argumentExpressions, final io.substrait.type.Type outputType) {
       // TODO: support advanced output type validation using return expressions, parameters, etc.
       // The code below was too restrictive in the case of nullability conversion.
       return;
@@ -366,7 +366,7 @@ public class SimpleExtension {
       return keySupplier.get();
     }
 
-    public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
+    public io.substrait.type.Type resolveType(final List<io.substrait.type.Type> argumentTypes) {
       return TypeExpressionEvaluator.evaluateExpression(returnType(), args(), argumentTypes);
     }
   }
@@ -382,7 +382,7 @@ public class SimpleExtension {
 
     public abstract List<ScalarFunctionVariant> impls();
 
-    public Stream<ScalarFunctionVariant> resolve(String urn) {
+    public Stream<ScalarFunctionVariant> resolve(final String urn) {
       return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
   }
@@ -391,7 +391,8 @@ public class SimpleExtension {
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @Value.Immutable
   public abstract static class ScalarFunctionVariant extends Function {
-    public ScalarFunctionVariant resolve(String urn, String name, String description) {
+    public ScalarFunctionVariant resolve(
+        final String urn, final String name, final String description) {
       return ImmutableSimpleExtension.ScalarFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -418,7 +419,7 @@ public class SimpleExtension {
 
     public abstract List<AggregateFunctionVariant> impls();
 
-    public Stream<AggregateFunctionVariant> resolve(String urn) {
+    public Stream<AggregateFunctionVariant> resolve(final String urn) {
       return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
   }
@@ -435,7 +436,7 @@ public class SimpleExtension {
 
     public abstract List<WindowFunctionVariant> impls();
 
-    public Stream<WindowFunctionVariant> resolve(String urn) {
+    public Stream<WindowFunctionVariant> resolve(final String urn) {
       return impls().stream().map(f -> f.resolve(urn, name(), description()));
     }
 
@@ -462,7 +463,8 @@ public class SimpleExtension {
     @Nullable
     public abstract TypeExpression intermediate();
 
-    AggregateFunctionVariant resolve(String urn, String name, String description) {
+    AggregateFunctionVariant resolve(
+        final String urn, final String name, final String description) {
       return ImmutableSimpleExtension.AggregateFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -504,7 +506,7 @@ public class SimpleExtension {
       return super.toString();
     }
 
-    WindowFunctionVariant resolve(String urn, String name, String description) {
+    WindowFunctionVariant resolve(final String urn, final String name, final String description) {
       return ImmutableSimpleExtension.WindowFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -580,7 +582,7 @@ public class SimpleExtension {
           + (windows() == null ? 0 : windows().size());
     }
 
-    public Stream<SimpleExtension.Function> resolve(String urn) {
+    public Stream<SimpleExtension.Function> resolve(final String urn) {
       return Stream.concat(
           Stream.concat(
               scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(urn)),
@@ -654,8 +656,8 @@ public class SimpleExtension {
       return ImmutableSimpleExtension.ExtensionCollection.builder();
     }
 
-    public Type getType(TypeAnchor anchor) {
-      Type type = typeLookup.get().get(anchor);
+    public Type getType(final TypeAnchor anchor) {
+      final Type type = typeLookup.get().get(anchor);
       if (type != null) {
         return type;
       }
@@ -666,8 +668,8 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
-    public ScalarFunctionVariant getScalarFunction(FunctionAnchor anchor) {
-      ScalarFunctionVariant variant = scalarFunctionsLookup.get().get(anchor);
+    public ScalarFunctionVariant getScalarFunction(final FunctionAnchor anchor) {
+      final ScalarFunctionVariant variant = scalarFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -679,7 +681,7 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
-    private void checkUrn(String name) {
+    private void checkUrn(final String name) {
       if (urnSupplier.get().contains(name)) {
         return;
       }
@@ -691,8 +693,8 @@ public class SimpleExtension {
               name));
     }
 
-    public AggregateFunctionVariant getAggregateFunction(FunctionAnchor anchor) {
-      AggregateFunctionVariant variant = aggregateFunctionsLookup.get().get(anchor);
+    public AggregateFunctionVariant getAggregateFunction(final FunctionAnchor anchor) {
+      final AggregateFunctionVariant variant = aggregateFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -705,8 +707,8 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
-    public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
-      WindowFunctionVariant variant = windowFunctionsLookup.get().get(anchor);
+    public WindowFunctionVariant getWindowFunction(final FunctionAnchor anchor) {
+      final WindowFunctionVariant variant = windowFunctionsLookup.get().get(anchor);
       if (variant != null) {
         return variant;
       }
@@ -724,7 +726,7 @@ public class SimpleExtension {
      * @param urn The URN to look up
      * @return The corresponding URI, or null if not found
      */
-    String getUriFromUrn(String urn) {
+    String getUriFromUrn(final String urn) {
       return uriUrnMap().reverseGet(urn);
     }
 
@@ -734,12 +736,12 @@ public class SimpleExtension {
      * @param uri The URI to look up
      * @return The corresponding URN, or null if not found
      */
-    String getUrnFromUri(String uri) {
+    String getUrnFromUri(final String uri) {
       return uriUrnMap().get(uri);
     }
 
-    public ExtensionCollection merge(ExtensionCollection extensionCollection) {
-      BidiMap<String, String> mergedUriUrnMap = new BidiMap<>();
+    public ExtensionCollection merge(final ExtensionCollection extensionCollection) {
+      final BidiMap<String, String> mergedUriUrnMap = new BidiMap<>();
       mergedUriUrnMap.merge(uriUrnMap());
       mergedUriUrnMap.merge(extensionCollection.uriUrnMap());
 
@@ -757,12 +759,12 @@ public class SimpleExtension {
     }
   }
 
-  public static ExtensionCollection load(List<String> resourcePaths) {
+  public static ExtensionCollection load(final List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {
       throw new IllegalArgumentException("Require at least one resource path.");
     }
 
-    List<ExtensionCollection> extensions =
+    final List<ExtensionCollection> extensions =
         resourcePaths.stream()
             .map(
                 path -> {
@@ -780,26 +782,26 @@ public class SimpleExtension {
     return complete;
   }
 
-  public static ExtensionCollection load(String uri, String content) {
+  public static ExtensionCollection load(final String uri, final String content) {
     try {
       if (uri == null || uri.isEmpty()) {
         throw new IllegalArgumentException("URI cannot be null or empty");
       }
 
       // Parse with basic YAML mapper first to extract URN
-      ObjectMapper basicYamlMapper = new ObjectMapper(new YAMLFactory());
-      com.fasterxml.jackson.databind.JsonNode rootNode = basicYamlMapper.readTree(content);
-      com.fasterxml.jackson.databind.JsonNode urnNode = rootNode.get("urn");
+      final ObjectMapper basicYamlMapper = new ObjectMapper(new YAMLFactory());
+      final com.fasterxml.jackson.databind.JsonNode rootNode = basicYamlMapper.readTree(content);
+      final com.fasterxml.jackson.databind.JsonNode urnNode = rootNode.get("urn");
       if (urnNode == null) {
         throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
       }
-      String urn = urnNode.asText();
+      final String urn = urnNode.asText();
       validateUrn(urn);
 
-      ExtensionSignatures docWithoutUri =
+      final ExtensionSignatures docWithoutUri =
           objectMapper(urn).readValue(content, ExtensionSignatures.class);
 
-      ExtensionSignatures doc =
+      final ExtensionSignatures doc =
           ImmutableSimpleExtension.ExtensionSignatures.builder().from(docWithoutUri).build();
 
       return buildExtensionCollection(uri, doc);
@@ -808,36 +810,36 @@ public class SimpleExtension {
     }
   }
 
-  public static ExtensionCollection load(String uri, InputStream stream) {
+  public static ExtensionCollection load(final String uri, final InputStream stream) {
     try (Scanner scanner = new Scanner(stream)) {
       scanner.useDelimiter(READ_WHOLE_FILE);
-      String content = scanner.next();
+      final String content = scanner.next();
       return load(uri, content);
     }
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String uri, ExtensionSignatures extensionSignatures) {
-    String urn = extensionSignatures.urn();
+      final String uri, final ExtensionSignatures extensionSignatures) {
+    final String urn = extensionSignatures.urn();
     validateUrn(urn);
     if (uri == null || uri == "") {
       throw new IllegalArgumentException("URI cannot be null or empty");
     }
-    List<ScalarFunctionVariant> scalarFunctionVariants =
+    final List<ScalarFunctionVariant> scalarFunctionVariants =
         extensionSignatures.scalars().stream()
             .flatMap(t -> t.resolve(urn))
             .collect(Collectors.toList());
 
-    List<AggregateFunctionVariant> aggregateFunctionVariants =
+    final List<AggregateFunctionVariant> aggregateFunctionVariants =
         extensionSignatures.aggregates().stream()
             .flatMap(t -> t.resolve(urn))
             .collect(Collectors.toList());
 
-    Stream<WindowFunctionVariant> windowFunctionVariants =
+    final Stream<WindowFunctionVariant> windowFunctionVariants =
         extensionSignatures.windows().stream().flatMap(t -> t.resolve(urn));
 
     // Aggregate functions can be used as Window Functions
-    Stream<WindowFunctionVariant> windowAggFunctionVariants =
+    final Stream<WindowFunctionVariant> windowAggFunctionVariants =
         aggregateFunctionVariants.stream()
             .map(
                 afi ->
@@ -851,14 +853,14 @@ public class SimpleExtension {
                         .windowType(SimpleExtension.WindowType.STREAMING)
                         .build());
 
-    List<WindowFunctionVariant> allWindowFunctionVariants =
+    final List<WindowFunctionVariant> allWindowFunctionVariants =
         Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
             .collect(Collectors.toList());
 
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put(uri, urn);
 
-    ImmutableSimpleExtension.ExtensionCollection collection =
+    final ImmutableSimpleExtension.ExtensionCollection collection =
         ImmutableSimpleExtension.ExtensionCollection.builder()
             .scalarFunctions(scalarFunctionVariants)
             .aggregateFunctions(aggregateFunctionVariants)

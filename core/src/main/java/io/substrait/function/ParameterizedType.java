@@ -21,9 +21,9 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   @Override
-  <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E;
+  <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E;
 
-  static ParameterizedTypeCreator withNullability(boolean nullable) {
+  static ParameterizedTypeCreator withNullability(final boolean nullable) {
     return nullable ? ParameterizedTypeCreator.NULLABLE : ParameterizedTypeCreator.REQUIRED;
   }
 
@@ -45,7 +45,7 @@ public interface ParameterizedType extends TypeExpression {
     }
 
     abstract <R, E extends Throwable> R accept(
-        final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor) throws E;
+        ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor) throws E;
   }
 
   @Value.Immutable

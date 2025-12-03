@@ -24,14 +24,14 @@ public class ProtoAggregateFunctionConverter {
   private final ProtoExpressionConverter protoExpressionConverter;
 
   public ProtoAggregateFunctionConverter(
-      ExtensionLookup lookup, ProtoExpressionConverter protoExpressionConverter) {
+      final ExtensionLookup lookup, final ProtoExpressionConverter protoExpressionConverter) {
     this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExpressionConverter);
   }
 
   public ProtoAggregateFunctionConverter(
-      ExtensionLookup lookup,
-      SimpleExtension.ExtensionCollection extensions,
-      ProtoExpressionConverter protoExpressionConverter) {
+      final ExtensionLookup lookup,
+      final SimpleExtension.ExtensionCollection extensions,
+      final ProtoExpressionConverter protoExpressionConverter) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
@@ -39,20 +39,20 @@ public class ProtoAggregateFunctionConverter {
   }
 
   public io.substrait.expression.AggregateFunctionInvocation from(
-      io.substrait.proto.AggregateFunction measure) {
-    FunctionArg.ProtoFrom protoFrom =
+      final io.substrait.proto.AggregateFunction measure) {
+    final FunctionArg.ProtoFrom protoFrom =
         new FunctionArg.ProtoFrom(protoExpressionConverter, protoTypeConverter);
-    SimpleExtension.AggregateFunctionVariant aggregateFunction =
+    final SimpleExtension.AggregateFunctionVariant aggregateFunction =
         lookup.getAggregateFunction(measure.getFunctionReference(), extensions);
-    List<FunctionArg> functionArgs =
+    final List<FunctionArg> functionArgs =
         IntStream.range(0, measure.getArgumentsCount())
             .mapToObj(i -> protoFrom.convert(aggregateFunction, i, measure.getArguments(i)))
             .collect(java.util.stream.Collectors.toList());
-    List<FunctionOption> options =
+    final List<FunctionOption> options =
         measure.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
-    List<Expression.SortField> sorts =
+    final List<Expression.SortField> sorts =
         measure.getSortsList().stream()
             .map(protoExpressionConverter::fromSortField)
             .collect(Collectors.toList());

@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 
 class LocalFilesRoundtripTest extends TestBase {
 
-  private void assertLocalFilesRoundtrip(FileOrFiles file) {
-    io.substrait.relation.ImmutableLocalFiles.Builder builder =
+  private void assertLocalFilesRoundtrip(final FileOrFiles file) {
+    final io.substrait.relation.ImmutableLocalFiles.Builder builder =
         LocalFiles.builder()
             .initialSchema(
                 NamedStruct.builder()
@@ -48,15 +48,15 @@ class LocalFilesRoundtripTest extends TestBase {
                     ExpressionCreator.i32(false, 1)))
         .ifPresent(builder::filter);
 
-    io.substrait.relation.ImmutableLocalFiles localFiles = builder.build();
-    io.substrait.proto.Rel protoFileRel = relProtoConverter.toProto(localFiles);
+    final io.substrait.relation.ImmutableLocalFiles localFiles = builder.build();
+    final io.substrait.proto.Rel protoFileRel = relProtoConverter.toProto(localFiles);
     assertTrue(protoFileRel.getRead().hasFilter());
     assertEquals(protoFileRel, relProtoConverter.toProto(protoRelConverter.from(protoFileRel)));
   }
 
   private ImmutableFileOrFiles.Builder setPath(
-      ImmutableFileOrFiles.Builder builder,
-      ReadRel.LocalFiles.FileOrFiles.PathTypeCase pathTypeCase) {
+      final ImmutableFileOrFiles.Builder builder,
+      final ReadRel.LocalFiles.FileOrFiles.PathTypeCase pathTypeCase) {
     switch (pathTypeCase) {
       case URI_PATH:
         return builder.pathType(FileOrFiles.PathType.URI_PATH).path("path");
@@ -74,8 +74,8 @@ class LocalFilesRoundtripTest extends TestBase {
   }
 
   private ImmutableFileOrFiles.Builder setFileFormat(
-      ImmutableFileOrFiles.Builder builder,
-      ReadRel.LocalFiles.FileOrFiles.FileFormatCase fileFormatCase) {
+      final ImmutableFileOrFiles.Builder builder,
+      final ReadRel.LocalFiles.FileOrFiles.FileFormatCase fileFormatCase) {
     switch (fileFormatCase) {
       case PARQUET:
         return builder.fileFormat(FileFormat.ParquetReadOptions.builder().build());

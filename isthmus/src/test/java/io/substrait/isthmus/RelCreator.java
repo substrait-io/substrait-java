@@ -27,16 +27,16 @@ import org.apache.calcite.tools.RelBuilder;
 
 public class RelCreator {
 
-  private RelOptCluster cluster;
+  private final RelOptCluster cluster;
   private CatalogReader catalog;
 
   public RelCreator() {
     this(null);
   }
 
-  public RelCreator(CatalogReader catalogReader) {
+  public RelCreator(final CatalogReader catalogReader) {
     if (catalogReader == null) {
-      CalciteSchema schema = CalciteSchema.createRootSchema(false);
+      final CalciteSchema schema = CalciteSchema.createRootSchema(false);
       catalog =
           new CalciteCatalogReader(
               schema,
@@ -47,30 +47,31 @@ public class RelCreator {
       catalog = catalogReader;
     }
 
-    VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.EMPTY_CONTEXT);
+    final VolcanoPlanner planner =
+        new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.EMPTY_CONTEXT);
     cluster = RelOptCluster.create(planner, new RexBuilder(SubstraitTypeSystem.TYPE_FACTORY));
   }
 
-  public RelRoot parse(String sql) {
+  public RelRoot parse(final String sql) {
 
     try {
-      SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
-      SqlNode parsed = parser.parseQuery();
+      final SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
+      final SqlNode parsed = parser.parseQuery();
       cluster.setMetadataQuerySupplier(
           () ->
               new RelMetadataQuery(
                   new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE)));
-      SqlValidator validator =
+      final SqlValidator validator =
           new Validator(catalog, cluster.getTypeFactory(), SqlValidator.Config.DEFAULT);
 
-      SqlToRelConverter.Config converterConfig =
+      final SqlToRelConverter.Config converterConfig =
           SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
-      SqlToRelConverter converter =
+      final SqlToRelConverter converter =
           new SqlToRelConverter(
               null, validator, catalog, cluster, StandardConvertletTable.INSTANCE, converterConfig);
-      RelRoot root = converter.convertQuery(parsed, true, true);
+      final RelRoot root = converter.convertQuery(parsed, true, true);
       return root;
-    } catch (SqlParseException e) {
+    } catch (final SqlParseException e) {
       throw new IllegalArgumentException(e);
     }
   }
@@ -90,7 +91,9 @@ public class RelCreator {
   private static final class Validator extends SqlValidatorImpl {
 
     public Validator(
-        SqlValidatorCatalogReader catalogReader, RelDataTypeFactory typeFactory, Config config) {
+        final SqlValidatorCatalogReader catalogReader,
+        final RelDataTypeFactory typeFactory,
+        final Config config) {
       super(SqlStdOperatorTable.instance(), catalogReader, typeFactory, config);
     }
   }

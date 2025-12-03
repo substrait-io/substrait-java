@@ -7,9 +7,9 @@ import java.util.List;
 public class TypeExpressionEvaluator {
 
   public static Type evaluateExpression(
-      TypeExpression returnExpression,
-      List<SimpleExtension.Argument> parameterizedTypeList,
-      List<Type> actualTypes) {
+      final TypeExpression returnExpression,
+      final List<SimpleExtension.Argument> parameterizedTypeList,
+      final List<Type> actualTypes) {
 
     if (returnExpression instanceof Type) {
       return (Type) returnExpression;

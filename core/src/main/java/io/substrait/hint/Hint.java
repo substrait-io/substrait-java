@@ -28,7 +28,7 @@ public abstract class Hint implements HasExtension {
 
     private final RelCommon.Hint.ComputationType proto;
 
-    ComputationType(RelCommon.Hint.ComputationType compType) {
+    ComputationType(final RelCommon.Hint.ComputationType compType) {
       this.proto = compType;
     }
 
@@ -36,7 +36,7 @@ public abstract class Hint implements HasExtension {
       return this.proto;
     }
 
-    public static ComputationType fromProto(RelCommon.Hint.ComputationType proto) {
+    public static ComputationType fromProto(final RelCommon.Hint.ComputationType proto) {
       for (final ComputationType compTypePojo : values()) {
         if (compTypePojo.proto == proto) {
           return compTypePojo;

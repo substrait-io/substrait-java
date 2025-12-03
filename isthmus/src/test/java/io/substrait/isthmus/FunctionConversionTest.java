@@ -52,7 +52,7 @@ class FunctionConversionTest extends PlanTestBase {
     // mapped to the wrong
     // Calcite function.
     // TODO: https://github.com/substrait-io/substrait-java/issues/377
-    Expression.ScalarFunctionInvocation expr =
+    final Expression.ScalarFunctionInvocation expr =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "subtract:date_iday",
@@ -60,7 +60,7 @@ class FunctionConversionTest extends PlanTestBase {
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
     assertEquals(
         TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
         calciteExpr.getType());
@@ -71,7 +71,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void extractTimestampTzScalarFunction() {
-    ScalarFunctionInvocation reqTstzFn =
+    final ScalarFunctionInvocation reqTstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_tstz_str",
@@ -80,11 +80,11 @@ class FunctionConversionTest extends PlanTestBase {
             Expression.TimestampTZLiteral.builder().value(0).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
-    RexNode calciteExpr = reqTstzFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqTstzFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals(
         "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(6), 'GMT':VARCHAR)",
         extract.toString());
@@ -92,7 +92,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void extractPrecisionTimestampTzScalarFunction() {
-    ScalarFunctionInvocation reqPtstzFn =
+    final ScalarFunctionInvocation reqPtstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ptstz_str",
@@ -101,11 +101,11 @@ class FunctionConversionTest extends PlanTestBase {
             Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(6).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
-    RexNode calciteExpr = reqPtstzFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqPtstzFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals(
         "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(6), 'GMT':VARCHAR)",
         extract.toString());
@@ -113,7 +113,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void extractTimestampScalarFunction() {
-    ScalarFunctionInvocation reqTsFn =
+    final ScalarFunctionInvocation reqTsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ts",
@@ -121,17 +121,17 @@ class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.TimestampLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqTsFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqTsFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals("EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP(6))", extract.toString());
   }
 
   @Test
   void extractPrecisionTimestampScalarFunction() {
-    ScalarFunctionInvocation reqPtsFn =
+    final ScalarFunctionInvocation reqPtsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_pts",
@@ -139,17 +139,17 @@ class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.PrecisionTimestampLiteral.builder().value(0).precision(6).build());
 
-    RexNode calciteExpr = reqPtsFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqPtsFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals("EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP(6))", extract.toString());
   }
 
   @Test
   void extractDateScalarFunction() {
-    ScalarFunctionInvocation reqDateFn =
+    final ScalarFunctionInvocation reqDateFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_date",
@@ -157,17 +157,17 @@ class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MONTH").build(),
             Expression.DateLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqDateFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqDateFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals("EXTRACT(FLAG(MONTH), 1970-01-01)", extract.toString());
   }
 
   @Test
   void extractTimeScalarFunction() {
-    ScalarFunctionInvocation reqTimeFn =
+    final ScalarFunctionInvocation reqTimeFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_time",
@@ -175,17 +175,17 @@ class FunctionConversionTest extends PlanTestBase {
             EnumArg.builder().value("MINUTE").build(),
             Expression.TimeLiteral.builder().value(0).build());
 
-    RexNode calciteExpr = reqTimeFn.accept(expressionRexConverter, Context.newContext());
+    final RexNode calciteExpr = reqTimeFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
+    final RexCall extract = (RexCall) calciteExpr;
     assertEquals("EXTRACT(FLAG(MINUTE), 00:00:00:TIME(6))", extract.toString());
   }
 
   @Test
   void unsupportedExtractTimestampTzWithIndexing() {
-    ScalarFunctionInvocation reqReqTstzFn =
+    final ScalarFunctionInvocation reqReqTstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_tstz_str",
@@ -202,7 +202,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void unsupportedExtractPrecisionTimestampTzWithIndexing() {
-    ScalarFunctionInvocation reqReqPtstzFn =
+    final ScalarFunctionInvocation reqReqPtstzFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ptstz_str",
@@ -219,7 +219,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void unsupportedExtractTimestampWithIndexing() {
-    ScalarFunctionInvocation reqReqTsFn =
+    final ScalarFunctionInvocation reqReqTsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ts",
@@ -235,7 +235,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void unsupportedExtractPrecisionTimestampWithIndexing() {
-    ScalarFunctionInvocation reqReqPtsFn =
+    final ScalarFunctionInvocation reqReqPtsFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_pts",
@@ -251,7 +251,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void unsupportedExtractDateWithIndexing() {
-    ScalarFunctionInvocation reqReqDateFn =
+    final ScalarFunctionInvocation reqReqDateFn =
         b.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_date",

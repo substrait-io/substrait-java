@@ -22,17 +22,17 @@ public class AggregateFunctionProtoConverter {
   private final TypeProtoConverter typeProtoConverter;
   private final ExtensionCollector functionCollector;
 
-  public AggregateFunctionProtoConverter(ExtensionCollector functionCollector) {
+  public AggregateFunctionProtoConverter(final ExtensionCollector functionCollector) {
     this.functionCollector = functionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, null);
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);
   }
 
-  public AggregateFunction toProto(Aggregate.Measure measure) {
-    FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
+  public AggregateFunction toProto(final Aggregate.Measure measure) {
+    final FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
         argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-    List<FunctionArg> args = measure.getFunction().arguments();
-    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
+    final List<FunctionArg> args = measure.getFunction().arguments();
+    final SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
 
     return AggregateFunction.newBuilder()
         .setPhase(measure.getFunction().aggregationPhase().toProto())

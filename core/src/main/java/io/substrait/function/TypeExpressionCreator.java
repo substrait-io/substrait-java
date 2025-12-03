@@ -9,27 +9,27 @@ public class TypeExpressionCreator extends TypeCreator
   public static final TypeExpressionCreator REQUIRED = new TypeExpressionCreator(false);
   public static final TypeExpressionCreator NULLABLE = new TypeExpressionCreator(true);
 
-  protected TypeExpressionCreator(boolean nullable) {
+  protected TypeExpressionCreator(final boolean nullable) {
     super(nullable);
   }
 
   @Override
-  public TypeExpression fixedCharE(TypeExpression len) {
+  public TypeExpression fixedCharE(final TypeExpression len) {
     return TypeExpression.FixedChar.builder().nullable(nullable).length(len).build();
   }
 
   @Override
-  public TypeExpression varCharE(TypeExpression len) {
+  public TypeExpression varCharE(final TypeExpression len) {
     return TypeExpression.VarChar.builder().nullable(nullable).length(len).build();
   }
 
   @Override
-  public TypeExpression fixedBinaryE(TypeExpression len) {
+  public TypeExpression fixedBinaryE(final TypeExpression len) {
     return TypeExpression.FixedBinary.builder().nullable(nullable).length(len).build();
   }
 
   @Override
-  public TypeExpression decimalE(TypeExpression precision, TypeExpression scale) {
+  public TypeExpression decimalE(final TypeExpression precision, final TypeExpression scale) {
     return TypeExpression.Decimal.builder()
         .nullable(nullable)
         .scale(scale)
@@ -37,25 +37,25 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
-  public TypeExpression intervalDayE(TypeExpression precision) {
+  public TypeExpression intervalDayE(final TypeExpression precision) {
     return TypeExpression.IntervalDay.builder().nullable(nullable).precision(precision).build();
   }
 
-  public TypeExpression intervalCompoundE(TypeExpression precision) {
+  public TypeExpression intervalCompoundE(final TypeExpression precision) {
     return TypeExpression.IntervalCompound.builder()
         .nullable(nullable)
         .precision(precision)
         .build();
   }
 
-  public TypeExpression precisionTimestampE(TypeExpression precision) {
+  public TypeExpression precisionTimestampE(final TypeExpression precision) {
     return TypeExpression.PrecisionTimestamp.builder()
         .nullable(nullable)
         .precision(precision)
         .build();
   }
 
-  public TypeExpression precisionTimestampTZE(TypeExpression precision) {
+  public TypeExpression precisionTimestampTZE(final TypeExpression precision) {
     return TypeExpression.PrecisionTimestampTZ.builder()
         .nullable(nullable)
         .precision(precision)
@@ -63,22 +63,22 @@ public class TypeExpressionCreator extends TypeCreator
   }
 
   @Override
-  public TypeExpression structE(TypeExpression... types) {
+  public TypeExpression structE(final TypeExpression... types) {
     return TypeExpression.Struct.builder().nullable(nullable).addFields(types).build();
   }
 
   @Override
-  public TypeExpression structE(Iterable<? extends TypeExpression> types) {
+  public TypeExpression structE(final Iterable<? extends TypeExpression> types) {
     return TypeExpression.Struct.builder().nullable(nullable).addAllFields(types).build();
   }
 
   @Override
-  public TypeExpression listE(TypeExpression type) {
+  public TypeExpression listE(final TypeExpression type) {
     return TypeExpression.ListType.builder().nullable(nullable).elementType(type).build();
   }
 
   @Override
-  public TypeExpression mapE(TypeExpression key, TypeExpression value) {
+  public TypeExpression mapE(final TypeExpression key, final TypeExpression value) {
     return TypeExpression.Map.builder().nullable(nullable).key(key).value(value).build();
   }
 
@@ -103,7 +103,8 @@ public class TypeExpressionCreator extends TypeCreator
   }
   ;
 
-  public static TypeExpression program(TypeExpression finalExpr, Assign... assignments) {
+  public static TypeExpression program(
+      final TypeExpression finalExpr, final Assign... assignments) {
     return TypeExpression.ReturnProgram.builder()
         .finalExpression(finalExpr)
         .addAllAssignments(
@@ -118,20 +119,22 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
-  public static TypeExpression plus(TypeExpression left, TypeExpression right) {
+  public static TypeExpression plus(final TypeExpression left, final TypeExpression right) {
     return binary(TypeExpression.BinaryOperation.OpType.ADD, left, right);
   }
 
-  public static TypeExpression minus(TypeExpression left, TypeExpression right) {
+  public static TypeExpression minus(final TypeExpression left, final TypeExpression right) {
     return binary(TypeExpression.BinaryOperation.OpType.SUBTRACT, left, right);
   }
 
   public static TypeExpression binary(
-      TypeExpression.BinaryOperation.OpType op, TypeExpression left, TypeExpression right) {
+      final TypeExpression.BinaryOperation.OpType op,
+      final TypeExpression left,
+      final TypeExpression right) {
     return TypeExpression.BinaryOperation.builder().opType(op).left(left).right(right).build();
   }
 
-  public static TypeExpression.IntegerLiteral i(int i) {
+  public static TypeExpression.IntegerLiteral i(final int i) {
     return TypeExpression.IntegerLiteral.builder().value(i).build();
   }
 }

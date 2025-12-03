@@ -29,11 +29,11 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     fieldAccessDepthMap = new IdentityHashMap<>();
   }
 
-  public int getStepsOut(RexFieldAccess fieldAccess) {
+  public int getStepsOut(final RexFieldAccess fieldAccess) {
     return fieldAccessDepthMap.get(fieldAccess);
   }
 
-  public RelNode apply(RelNode r) {
+  public RelNode apply(final RelNode r) {
     return reverseAccept(r);
   }
 
@@ -42,8 +42,8 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visit(Filter filter) throws RuntimeException {
-    for (CorrelationId id : filter.getVariablesSet()) {
+  public RelNode visit(final Filter filter) throws RuntimeException {
+    for (final CorrelationId id : filter.getVariablesSet()) {
       nestedDepth.putIfAbsent(id, 0);
     }
     filter.getCondition().accept(rexVisitor);
@@ -51,8 +51,8 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visit(Correlate correlate) throws RuntimeException {
-    for (CorrelationId id : correlate.getVariablesSet()) {
+  public RelNode visit(final Correlate correlate) throws RuntimeException {
+    for (final CorrelationId id : correlate.getVariablesSet()) {
       nestedDepth.putIfAbsent(id, 0);
     }
 
@@ -71,20 +71,20 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   @Override
-  public RelNode visitOther(RelNode other) throws RuntimeException {
-    for (RelNode child : other.getInputs()) {
+  public RelNode visitOther(final RelNode other) throws RuntimeException {
+    for (final RelNode child : other.getInputs()) {
       apply(child);
     }
     return other;
   }
 
   @Override
-  public RelNode visit(Project project) throws RuntimeException {
-    for (CorrelationId id : project.getVariablesSet()) {
+  public RelNode visit(final Project project) throws RuntimeException {
+    for (final CorrelationId id : project.getVariablesSet()) {
       nestedDepth.putIfAbsent(id, 0);
     }
 
-    for (RexSubQuery subQuery : SubQueryCollector.collect(project)) {
+    for (final RexSubQuery subQuery : SubQueryCollector.collect(project)) {
       subQuery.accept(rexVisitor);
     }
 
@@ -94,12 +94,12 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   private static class RexVisitor extends RexShuttle {
     final OuterReferenceResolver referenceResolver;
 
-    RexVisitor(OuterReferenceResolver referenceResolver) {
+    RexVisitor(final OuterReferenceResolver referenceResolver) {
       this.referenceResolver = referenceResolver;
     }
 
     @Override
-    public RexNode visitSubQuery(RexSubQuery subQuery) {
+    public RexNode visitSubQuery(final RexSubQuery subQuery) {
       referenceResolver.nestedDepth.replaceAll((k, v) -> v + 1);
 
       referenceResolver.apply(subQuery.rel); // look inside sub-queries
@@ -109,9 +109,9 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     }
 
     @Override
-    public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
+    public RexNode visitFieldAccess(final RexFieldAccess fieldAccess) {
       if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
-        CorrelationId id = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
+        final CorrelationId id = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
         if (referenceResolver.nestedDepth.containsKey(id)) {
           referenceResolver.fieldAccessDepthMap.put(
               fieldAccess, referenceResolver.nestedDepth.get(id));

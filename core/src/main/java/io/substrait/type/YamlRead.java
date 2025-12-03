@@ -29,14 +29,14 @@ public class YamlRead {
               "datetime",
               "string"));
 
-  public static void main(String[] args) throws Exception {
+  public static void main(final String[] args) throws Exception {
     try {
       System.out.println(
           "Read: " + YamlRead.class.getResource(DefaultExtensionCatalog.FUNCTIONS_BOOLEAN));
-      List<SimpleExtension.Function> signatures = loadFunctions();
+      final List<SimpleExtension.Function> signatures = loadFunctions();
 
       signatures.forEach(f -> System.out.println(f.key()));
-    } catch (Exception ex) {
+    } catch (final Exception ex) {
       throw ex;
     }
   }
@@ -48,18 +48,18 @@ public class YamlRead {
             .collect(java.util.stream.Collectors.toList()));
   }
 
-  public static List<SimpleExtension.Function> loadFunctions(List<String> files) {
+  public static List<SimpleExtension.Function> loadFunctions(final List<String> files) {
     return files.stream().flatMap(YamlRead::parse).collect(Collectors.toList());
   }
 
-  private static Stream<SimpleExtension.Function> parse(String name) {
+  private static Stream<SimpleExtension.Function> parse(final String name) {
 
     try {
-      ObjectMapper mapper =
+      final ObjectMapper mapper =
           new ObjectMapper(new YAMLFactory())
               .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
               .registerModule(Deserializers.MODULE);
-      SimpleExtension.ExtensionSignatures doc =
+      final SimpleExtension.ExtensionSignatures doc =
           mapper.readValue(new File(name), SimpleExtension.ExtensionSignatures.class);
 
       LOGGER.atDebug().log(
@@ -69,9 +69,9 @@ public class YamlRead {
           name);
 
       return doc.resolve(name);
-    } catch (RuntimeException ex) {
+    } catch (final RuntimeException ex) {
       throw ex;
-    } catch (Exception ex) {
+    } catch (final Exception ex) {
       throw new IllegalStateException("Failure while parsing file " + name, ex);
     }
   }

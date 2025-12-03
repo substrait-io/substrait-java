@@ -10,22 +10,22 @@ class LogarithmicFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void ln(String column) throws Exception {
-    String query = String.format("SELECT ln(%s) FROM numbers", column);
+  void ln(final String column) throws Exception {
+    final String query = String.format("SELECT ln(%s) FROM numbers", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
-  void log10(String column) throws Exception {
-    String query = String.format("SELECT log10(%s) FROM numbers", column);
+  void log10(final String column) throws Exception {
+    final String query = String.format("SELECT log10(%s) FROM numbers", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i64", "fp32", "fp64"})
-  void log2(String column) throws Exception {
-    String query = String.format("SELECT log2(%s) FROM numbers", column);
+  void log2(final String column) throws Exception {
+    final String query = String.format("SELECT log2(%s) FROM numbers", column);
     assertSqlSubstraitRelRoundTrip(query, CREATES);
   }
 }

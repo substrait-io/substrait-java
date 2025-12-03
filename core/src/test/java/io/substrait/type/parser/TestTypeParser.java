@@ -71,7 +71,7 @@ class TestTypeParser {
         "L1=1\nFIXEDCHAR<L1>");
   }
 
-  private <T> void simpleTests(ParseToPojo.Visitor v) {
+  private <T> void simpleTests(final ParseToPojo.Visitor v) {
     test(v, r.I8, "I8");
     test(v, r.I16, "I16");
     test(v, r.I32, "I32");
@@ -90,7 +90,7 @@ class TestTypeParser {
     test(v, n.userDefined(URN, "foo"), "u!foo?");
   }
 
-  private void compoundTests(ParseToPojo.Visitor v) {
+  private void compoundTests(final ParseToPojo.Visitor v) {
     test(v, r.fixedChar(1), "FIXEDCHAR<1>");
     test(v, r.varChar(2), "VARCHAR<2>");
     test(v, r.fixedBinary(3), "FIXEDBINARY<3>");
@@ -109,7 +109,7 @@ class TestTypeParser {
     test(v, n.map(r.I16, n.I8), "MAP?<i16, i8?>");
   }
 
-  private <T> void parameterizedTests(ParseToPojo.Visitor v) {
+  private <T> void parameterizedTests(final ParseToPojo.Visitor v) {
     test(v, pn.listE(pr.parameter("K")), "List?<K>");
     test(v, pr.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT<i8, i16, i8?, K>");
     test(v, pr.parameter("any"), "any");
@@ -122,7 +122,8 @@ class TestTypeParser {
     test(v, pr.decimalE("14", "S"), "DECIMAL<14, S>");
   }
 
-  private static void test(ParseToPojo.Visitor visitor, TypeExpression expected, String toParse) {
+  private static void test(
+      final ParseToPojo.Visitor visitor, final TypeExpression expected, final String toParse) {
     assertEquals(expected, TypeStringParser.parse(toParse, visitor));
   }
 }

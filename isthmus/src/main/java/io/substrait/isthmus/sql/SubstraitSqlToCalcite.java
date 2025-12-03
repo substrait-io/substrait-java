@@ -35,9 +35,10 @@ public class SubstraitSqlToCalcite {
    * @return a {@link RelRoot} corresponding to the given SQL statement
    * @throws SqlParseException if there is an error while parsing the SQL statement
    */
-  public static RelRoot convertQuery(String sqlStatement, Prepare.CatalogReader catalogReader)
+  public static RelRoot convertQuery(
+      final String sqlStatement, final Prepare.CatalogReader catalogReader)
       throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    final SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return convertQuery(sqlStatement, catalogReader, validator, createDefaultRelOptCluster());
   }
 
@@ -57,17 +58,17 @@ public class SubstraitSqlToCalcite {
    * @throws SqlParseException if there is an error while parsing the SQL statement string
    */
   public static RelRoot convertQuery(
-      String sqlStatement,
-      Prepare.CatalogReader catalogReader,
-      SqlValidator validator,
-      RelOptCluster cluster)
+      final String sqlStatement,
+      final Prepare.CatalogReader catalogReader,
+      final SqlValidator validator,
+      final RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatement);
+    final List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatement);
     if (sqlNodes.size() != 1) {
       throw new IllegalArgumentException(
           String.format("Expected one statement, found: %d", sqlNodes.size()));
     }
-    List<RelRoot> relRoots = convert(sqlNodes, catalogReader, validator, cluster);
+    final List<RelRoot> relRoots = convert(sqlNodes, catalogReader, validator, cluster);
     // as there was only 1 statement, there should only be 1 root
     return relRoots.get(0);
   }
@@ -83,8 +84,9 @@ public class SubstraitSqlToCalcite {
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
   public static List<RelRoot> convertQueries(
-      String sqlStatements, Prepare.CatalogReader catalogReader) throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+      final String sqlStatements, final Prepare.CatalogReader catalogReader)
+      throws SqlParseException {
+    final SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return convertQueries(sqlStatements, catalogReader, validator, createDefaultRelOptCluster());
   }
 
@@ -105,22 +107,22 @@ public class SubstraitSqlToCalcite {
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
   public static List<RelRoot> convertQueries(
-      String sqlStatements,
-      Prepare.CatalogReader catalogReader,
-      SqlValidator validator,
-      RelOptCluster cluster)
+      final String sqlStatements,
+      final Prepare.CatalogReader catalogReader,
+      final SqlValidator validator,
+      final RelOptCluster cluster)
       throws SqlParseException {
-    List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatements);
+    final List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatements);
     return convert(sqlNodes, catalogReader, validator, cluster);
   }
 
   static List<RelRoot> convert(
-      List<SqlNode> sqlNodes,
-      Prepare.CatalogReader catalogReader,
-      SqlValidator validator,
-      RelOptCluster cluster) {
-    RelOptTable.ViewExpander viewExpander = null;
-    SqlToRelConverter converter =
+      final List<SqlNode> sqlNodes,
+      final Prepare.CatalogReader catalogReader,
+      final SqlValidator validator,
+      final RelOptCluster cluster) {
+    final RelOptTable.ViewExpander viewExpander = null;
+    final SqlToRelConverter converter =
         new SqlToRelConverter(
             viewExpander,
             validator,
@@ -128,17 +130,17 @@ public class SubstraitSqlToCalcite {
             cluster,
             StandardConvertletTable.INSTANCE,
             SqlToRelConverter.CONFIG);
-    DdlSqlToRelConverter ddlSqlToRelConverter = new DdlSqlToRelConverter(converter);
+    final DdlSqlToRelConverter ddlSqlToRelConverter = new DdlSqlToRelConverter(converter);
     return sqlNodes.stream()
         .map(sqlNode -> sqlNode.accept(ddlSqlToRelConverter))
         .collect(Collectors.toList());
   }
 
   static RelOptCluster createDefaultRelOptCluster() {
-    RexBuilder rexBuilder =
+    final RexBuilder rexBuilder =
         new RexBuilder(new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
-    HepProgram program = HepProgram.builder().build();
-    RelOptPlanner emptyPlanner = new HepPlanner(program);
+    final HepProgram program = HepProgram.builder().build();
+    final RelOptPlanner emptyPlanner = new HepPlanner(program);
     return RelOptCluster.create(emptyPlanner, rexBuilder);
   }
 }

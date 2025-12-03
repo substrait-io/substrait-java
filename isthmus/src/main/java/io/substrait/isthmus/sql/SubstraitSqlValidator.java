@@ -9,7 +9,7 @@ public class SubstraitSqlValidator extends SqlValidatorImpl {
 
   static SqlValidator.Config CONFIG = Config.DEFAULT.withIdentifierExpansion(true);
 
-  public SubstraitSqlValidator(Prepare.CatalogReader catalogReader) {
+  public SubstraitSqlValidator(final Prepare.CatalogReader catalogReader) {
     super(SubstraitOperatorTable.INSTANCE, catalogReader, catalogReader.getTypeFactory(), CONFIG);
   }
 }

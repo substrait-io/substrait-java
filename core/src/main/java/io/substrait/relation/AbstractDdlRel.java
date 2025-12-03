@@ -24,7 +24,7 @@ public abstract class AbstractDdlRel extends ZeroInputRel implements HasExtensio
 
     private final DdlRel.DdlObject proto;
 
-    DdlObject(DdlRel.DdlObject proto) {
+    DdlObject(final DdlRel.DdlObject proto) {
       this.proto = proto;
     }
 
@@ -32,8 +32,8 @@ public abstract class AbstractDdlRel extends ZeroInputRel implements HasExtensio
       return proto;
     }
 
-    public static DdlObject fromProto(DdlRel.DdlObject proto) {
-      for (DdlObject v : values()) {
+    public static DdlObject fromProto(final DdlRel.DdlObject proto) {
+      for (final DdlObject v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -52,7 +52,7 @@ public abstract class AbstractDdlRel extends ZeroInputRel implements HasExtensio
 
     private final DdlRel.DdlOp proto;
 
-    DdlOp(DdlRel.DdlOp proto) {
+    DdlOp(final DdlRel.DdlOp proto) {
       this.proto = proto;
     }
 
@@ -60,8 +60,8 @@ public abstract class AbstractDdlRel extends ZeroInputRel implements HasExtensio
       return proto;
     }
 
-    public static DdlOp fromProto(DdlRel.DdlOp proto) {
-      for (DdlOp v : values()) {
+    public static DdlOp fromProto(final DdlRel.DdlOp proto) {
+      for (final DdlOp v : values()) {
         if (v.proto == proto) {
           return v;
         }

@@ -24,14 +24,14 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void broadcastExchange() {
-    Rel exchange = BroadcastExchange.builder().input(baseTable).partitionCount(1).build();
+    final Rel exchange = BroadcastExchange.builder().input(baseTable).partitionCount(1).build();
 
     verifyRoundTrip(exchange);
   }
 
   @Test
   void roundRobinExchange() {
-    Rel exchange =
+    final Rel exchange =
         RoundRobinExchange.builder().input(baseTable).exact(true).partitionCount(1).build();
 
     verifyRoundTrip(exchange);
@@ -39,7 +39,7 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void scatterExchange() {
-    Rel exchange =
+    final Rel exchange =
         ScatterExchange.builder()
             .input(baseTable)
             .addFields(b.fieldReference(baseTable, 0))
@@ -51,7 +51,7 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void singleBucketExchange() {
-    Rel exchange =
+    final Rel exchange =
         SingleBucketExchange.builder()
             .input(baseTable)
             .partitionCount(1)
@@ -63,7 +63,7 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void multiBucketExchange() {
-    Rel exchange =
+    final Rel exchange =
         MultiBucketExchange.builder()
             .input(baseTable)
             .expression(b.fieldReference(baseTable, 0))
@@ -76,21 +76,21 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void exchangeWithTargets() {
-    AbstractExchangeRel.ExchangeTarget target1 =
+    final AbstractExchangeRel.ExchangeTarget target1 =
         AbstractExchangeRel.ExchangeTarget.builder()
             .partitionIds(Arrays.asList(0, 1))
             .type(TargetType.Uri.builder().uri("hdfs://example.com/data1").build())
             .build();
 
-    AbstractExchangeRel.ExchangeTarget target2 =
+    final AbstractExchangeRel.ExchangeTarget target2 =
         AbstractExchangeRel.ExchangeTarget.builder()
             .partitionIds(Arrays.asList(2, 3))
             .type(TargetType.Uri.builder().uri("hdfs://example.com/data2").build())
             .build();
 
-    List<AbstractExchangeRel.ExchangeTarget> targets = Arrays.asList(target1, target2);
+    final List<AbstractExchangeRel.ExchangeTarget> targets = Arrays.asList(target1, target2);
 
-    Rel exchange =
+    final Rel exchange =
         BroadcastExchange.builder().input(baseTable).targets(targets).partitionCount(1).build();
 
     verifyRoundTrip(exchange);
@@ -98,9 +98,10 @@ class ExchangeRelRoundtripTest extends TestBase {
 
   @Test
   void nestedExchangeRelations() {
-    Rel innerExchange = BroadcastExchange.builder().input(baseTable).partitionCount(1).build();
+    final Rel innerExchange =
+        BroadcastExchange.builder().input(baseTable).partitionCount(1).build();
 
-    Rel outerExchange =
+    final Rel outerExchange =
         RoundRobinExchange.builder().input(innerExchange).exact(false).partitionCount(1).build();
 
     verifyRoundTrip(outerExchange);

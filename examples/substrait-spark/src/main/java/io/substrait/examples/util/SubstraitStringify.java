@@ -65,7 +65,7 @@ import java.util.stream.Collectors;
 public class SubstraitStringify extends ParentStringify
     implements RelVisitor<String, EmptyVisitationContext, RuntimeException> {
 
-  private boolean showRemap = false;
+  private final boolean showRemap = false;
 
   public SubstraitStringify() {
     super(0);
@@ -77,14 +77,14 @@ public class SubstraitStringify extends ParentStringify
    * @param plan Subsrait plan
    * @return List of strings; typically these would then be logged or sent to stdout
    */
-  public static List<String> explain(io.substrait.plan.Plan plan) {
-    ArrayList<String> explanations = new ArrayList<String>();
+  public static List<String> explain(final io.substrait.plan.Plan plan) {
+    final ArrayList<String> explanations = new ArrayList<String>();
     explanations.add("<Substrait Plan>");
 
     plan.getRoots()
         .forEach(
             root -> {
-              Rel rel = root.getInput();
+              final Rel rel = root.getInput();
 
               explanations.add("Root::  " + rel.getClass().getSimpleName() + " " + root.getNames());
               explanations.addAll(explain(rel));
@@ -99,26 +99,26 @@ public class SubstraitStringify extends ParentStringify
    * @param plan Subsrait relation
    * @return List of strings; typically these would then be logged or sent to stdout
    */
-  public static List<String> explain(io.substrait.relation.Rel rel) {
-    SubstraitStringify s = new SubstraitStringify();
+  public static List<String> explain(final io.substrait.relation.Rel rel) {
+    final SubstraitStringify s = new SubstraitStringify();
 
-    List<String> explanation = new ArrayList<String>();
+    final List<String> explanation = new ArrayList<String>();
     explanation.add("<Substrait Relation>");
     explanation.addAll(Arrays.asList(rel.accept(s, EmptyVisitationContext.INSTANCE).split("\n")));
     return explanation;
   }
 
-  private List<String> fieldList(List<io.substrait.type.Type> fields) {
+  private List<String> fieldList(final List<io.substrait.type.Type> fields) {
     return fields.stream().map(t -> t.accept(new TypeStringify(0))).collect(Collectors.toList());
   }
 
-  private String getRemap(Rel rel) {
+  private String getRemap(final Rel rel) {
     if (!showRemap) {
       return "";
     }
-    int fieldCount = rel.getRecordType().fields().size();
-    Optional<Remap> remap = rel.getRemap();
-    List<String> recordType = fieldList(rel.getRecordType().fields());
+    final int fieldCount = rel.getRecordType().fields().size();
+    final Optional<Remap> remap = rel.getRemap();
+    final List<String> recordType = fieldList(rel.getRecordType().fields());
 
     if (remap.isPresent()) {
       return "/Remapping fields ("
@@ -134,8 +134,9 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Aggregate:: ").append(getRemap(aggregate));
+  public String visit(final Aggregate aggregate, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("Aggregate:: ").append(getRemap(aggregate));
     aggregate
         .getGroupings()
         .forEach(
@@ -158,22 +159,25 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(EmptyScan emptyScan, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("EmptyScan:: ").append(getRemap(emptyScan));
+  public String visit(final EmptyScan emptyScan, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("EmptyScan:: ").append(getRemap(emptyScan));
     // sb.append(emptyScan.accept(this));
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("Fetch:: ");
+  public String visit(final Fetch fetch, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("Fetch:: ");
     // sb.append(fetch.accept(this));
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(Filter filter, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Filter:: ").append(getRemap(filter));
+  public String visit(final Filter filter, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("Filter:: ").append(getRemap(filter));
     // .append("{ ");
     sb.append(
         filter.getCondition().accept(new ExpressionStringify(indent), context)) /* .append(")") */;
@@ -188,9 +192,10 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Join join, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final Join join, final EmptyVisitationContext context)
+      throws RuntimeException {
 
-    StringBuilder sb =
+    final StringBuilder sb =
         getIndent().append("Join:: ").append(join.getJoinType()).append(" ").append(getRemap(join));
 
     if (join.getCondition().isPresent()) {
@@ -204,15 +209,16 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Set set, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Set:: ");
+  public String visit(final Set set, final EmptyVisitationContext context) throws RuntimeException {
+    final StringBuilder sb = getIndent().append("Set:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(NamedScan namedScan, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final NamedScan namedScan, final EmptyVisitationContext context)
+      throws RuntimeException {
 
-    StringBuilder sb = getIndent().append("NamedScan:: ").append(getRemap(namedScan));
+    final StringBuilder sb = getIndent().append("NamedScan:: ").append(getRemap(namedScan));
     namedScan
         .getInputs()
         .forEach(
@@ -226,11 +232,11 @@ public class SubstraitStringify extends ParentStringify
     return getOutdent(sb);
   }
 
-  private String namedStruct(NamedStruct struct) {
-    StringBuilder sb = new StringBuilder();
+  private String namedStruct(final NamedStruct struct) {
+    final StringBuilder sb = new StringBuilder();
 
-    List<String> names = struct.names();
-    List<String> types = fieldList(struct.struct().fields());
+    final List<String> names = struct.names();
+    final List<String> types = fieldList(struct.struct().fields());
 
     for (int x = 0; x < names.size(); x++) {
       if (x != 0) {
@@ -243,11 +249,11 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(LocalFiles localFiles, EmptyVisitationContext context)
+  public String visit(final LocalFiles localFiles, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("LocalFiles:: ");
+    final StringBuilder sb = getIndent().append("LocalFiles:: ");
 
-    for (FileOrFiles i : localFiles.getItems()) {
+    for (final FileOrFiles i : localFiles.getItems()) {
       sb.append(getContinuationIndentString());
       String fileFormat = "";
       if (i.getFileFormat().isPresent()) {
@@ -264,12 +270,13 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Project project, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Project:: ").append(getRemap(project));
+  public String visit(final Project project, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("Project:: ").append(getRemap(project));
 
     sb.append(fieldList(project.deriveRecordType().fields()));
 
-    List<Rel> inputs = project.getInputs();
+    final List<Rel> inputs = project.getInputs();
     inputs.forEach(
         i -> {
           sb.append(i.accept(this, context));
@@ -278,15 +285,16 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Sort sort, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Sort:: ").append(getRemap(sort));
+  public String visit(final Sort sort, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("Sort:: ").append(getRemap(sort));
     sort.getSortFields()
         .forEach(
             sf -> {
-              ExpressionStringify expr = new ExpressionStringify(indent);
+              final ExpressionStringify expr = new ExpressionStringify(indent);
               sb.append(sf.expr().accept(expr, context)).append(" ").append(sf.direction());
             });
-    List<Rel> inputs = sort.getInputs();
+    final List<Rel> inputs = sort.getInputs();
     inputs.forEach(
         i -> {
           sb.append(i.accept(this, context));
@@ -295,142 +303,151 @@ public class SubstraitStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Cross cross, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("Cross:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
+  public String visit(final Cross cross, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("VirtualTableScan:: ");
+    final StringBuilder sb = getIndent().append("Cross:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(ExtensionLeaf extensionLeaf, EmptyVisitationContext context)
+  public String visit(final VirtualTableScan virtualTableScan, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionLeaf:: ");
+    final StringBuilder sb = getIndent().append("VirtualTableScan:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(ExtensionSingle extensionSingle, EmptyVisitationContext context)
+  public String visit(final ExtensionLeaf extensionLeaf, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionSingle:: ");
+    final StringBuilder sb = getIndent().append("extensionLeaf:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(ExtensionMulti extensionMulti, EmptyVisitationContext context)
+  public String visit(final ExtensionSingle extensionSingle, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionMulti:: ");
+    final StringBuilder sb = getIndent().append("extensionSingle:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(ExtensionTable extensionTable, EmptyVisitationContext context)
+  public String visit(final ExtensionMulti extensionMulti, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionTable:: ");
+    final StringBuilder sb = getIndent().append("extensionMulti:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("hashJoin:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("mergeJoin:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(NestedLoopJoin nestedLoopJoin, EmptyVisitationContext context)
+  public String visit(final ExtensionTable extensionTable, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("nestedLoopJoin:: ");
+    final StringBuilder sb = getIndent().append("extensionTable:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final HashJoin hashJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("hashJoin:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final MergeJoin mergeJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("mergeJoin:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final NestedLoopJoin nestedLoopJoin, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("nestedLoopJoin:: ");
     return getOutdent(sb);
   }
 
   @Override
   public String visit(
-      ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
+      final ConsistentPartitionWindow consistentPartitionWindow,
+      final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("consistentPartitionWindow:: ");
+    final StringBuilder sb = getIndent().append("consistentPartitionWindow:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(Expand expand, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("expand:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(NamedWrite write, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("namedWrite:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(ExtensionWrite write, EmptyVisitationContext context)
+  public String visit(final Expand expand, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionWrite:: ");
+    final StringBuilder sb = getIndent().append("expand:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(NamedDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("namedDdl:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(ExtensionDdl ddl, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("extensionDdl:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = getIndent().append("namedUpdate:: ");
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(ScatterExchange exchange, EmptyVisitationContext context)
+  public String visit(final NamedWrite write, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("scatterExchange:: ");
+    final StringBuilder sb = getIndent().append("namedWrite:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(SingleBucketExchange exchange, EmptyVisitationContext context)
+  public String visit(final ExtensionWrite write, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("singleBucketExchange:: ");
+    final StringBuilder sb = getIndent().append("extensionWrite:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(MultiBucketExchange exchange, EmptyVisitationContext context)
+  public String visit(final NamedDdl ddl, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("multiBucketExchange:: ");
+    final StringBuilder sb = getIndent().append("namedDdl:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(RoundRobinExchange exchange, EmptyVisitationContext context)
+  public String visit(final ExtensionDdl ddl, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("roundRobinExchange:: ");
+    final StringBuilder sb = getIndent().append("extensionDdl:: ");
     return getOutdent(sb);
   }
 
   @Override
-  public String visit(BroadcastExchange exchange, EmptyVisitationContext context)
+  public String visit(final NamedUpdate update, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = getIndent().append("broadcastExchange:: ");
+    final StringBuilder sb = getIndent().append("namedUpdate:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final ScatterExchange exchange, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("scatterExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final SingleBucketExchange exchange, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("singleBucketExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final MultiBucketExchange exchange, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("multiBucketExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final RoundRobinExchange exchange, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("roundRobinExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(final BroadcastExchange exchange, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = getIndent().append("broadcastExchange:: ");
     return getOutdent(sb);
   }
 }

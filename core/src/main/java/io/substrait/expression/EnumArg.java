@@ -20,17 +20,20 @@ public interface EnumArg extends FunctionArg {
 
   @Override
   default <R, C extends VisitationContext, E extends Throwable> R accept(
-      SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
+      final SimpleExtension.Function fnDef,
+      final int argIdx,
+      final FuncArgVisitor<R, C, E> fnArgVisitor,
+      final C context)
       throws E {
     return fnArgVisitor.visitEnumArg(fnDef, argIdx, this, context);
   }
 
-  static EnumArg of(SimpleExtension.EnumArgument enumArg, String option) {
+  static EnumArg of(final SimpleExtension.EnumArgument enumArg, final String option) {
     assert (enumArg.options().contains(option));
     return builder().value(Optional.of(option)).build();
   }
 
-  static EnumArg of(String value) {
+  static EnumArg of(final String value) {
     return builder().value(Optional.of(value)).build();
   }
 

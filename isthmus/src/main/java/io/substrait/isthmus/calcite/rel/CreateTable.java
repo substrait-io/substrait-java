@@ -11,7 +11,7 @@ public class CreateTable extends AbstractRelNode {
   private final List<String> tableName;
   private final RelNode input;
 
-  public CreateTable(List<String> tableName, RelNode input) {
+  public CreateTable(final List<String> tableName, final RelNode input) {
     super(input.getCluster(), input.getTraitSet());
 
     this.tableName = tableName;
@@ -24,7 +24,7 @@ public class CreateTable extends AbstractRelNode {
   }
 
   @Override
-  public RelWriter explainTerms(RelWriter pw) {
+  public RelWriter explainTerms(final RelWriter pw) {
     return super.explainTerms(pw).input("input", getInput()).item("tableName", getTableName());
   }
 

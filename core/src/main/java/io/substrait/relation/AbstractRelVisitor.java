@@ -15,157 +15,158 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   public abstract O visitFallback(Rel rel, C context);
 
   @Override
-  public O visit(Aggregate aggregate, C context) throws E {
+  public O visit(final Aggregate aggregate, final C context) throws E {
     return visitFallback(aggregate, context);
   }
 
   @Override
-  public O visit(EmptyScan emptyScan, C context) throws E {
+  public O visit(final EmptyScan emptyScan, final C context) throws E {
     return visitFallback(emptyScan, context);
   }
 
   @Override
-  public O visit(Fetch fetch, C context) throws E {
+  public O visit(final Fetch fetch, final C context) throws E {
     return visitFallback(fetch, context);
   }
 
   @Override
-  public O visit(Filter filter, C context) throws E {
+  public O visit(final Filter filter, final C context) throws E {
     return visitFallback(filter, context);
   }
 
   @Override
-  public O visit(Join join, C context) throws E {
+  public O visit(final Join join, final C context) throws E {
     return visitFallback(join, context);
   }
 
   @Override
-  public O visit(Set set, C context) throws E {
+  public O visit(final Set set, final C context) throws E {
     return visitFallback(set, context);
   }
 
   @Override
-  public O visit(NamedScan namedScan, C context) throws E {
+  public O visit(final NamedScan namedScan, final C context) throws E {
     return visitFallback(namedScan, context);
   }
 
   @Override
-  public O visit(LocalFiles localFiles, C context) throws E {
+  public O visit(final LocalFiles localFiles, final C context) throws E {
     return visitFallback(localFiles, context);
   }
 
   @Override
-  public O visit(Project project, C context) throws E {
+  public O visit(final Project project, final C context) throws E {
     return visitFallback(project, context);
   }
 
   @Override
-  public O visit(Expand expand, C context) throws E {
+  public O visit(final Expand expand, final C context) throws E {
     return visitFallback(expand, context);
   }
 
   @Override
-  public O visit(Sort sort, C context) throws E {
+  public O visit(final Sort sort, final C context) throws E {
     return visitFallback(sort, context);
   }
 
   @Override
-  public O visit(Cross cross, C context) throws E {
+  public O visit(final Cross cross, final C context) throws E {
     return visitFallback(cross, context);
   }
 
   @Override
-  public O visit(VirtualTableScan virtualTableScan, C context) throws E {
+  public O visit(final VirtualTableScan virtualTableScan, final C context) throws E {
     return visitFallback(virtualTableScan, context);
   }
 
   @Override
-  public O visit(ExtensionLeaf extensionLeaf, C context) throws E {
+  public O visit(final ExtensionLeaf extensionLeaf, final C context) throws E {
     return visitFallback(extensionLeaf, context);
   }
 
   @Override
-  public O visit(ExtensionSingle extensionSingle, C context) throws E {
+  public O visit(final ExtensionSingle extensionSingle, final C context) throws E {
     return visitFallback(extensionSingle, context);
   }
 
   @Override
-  public O visit(ExtensionMulti extensionMulti, C context) throws E {
+  public O visit(final ExtensionMulti extensionMulti, final C context) throws E {
     return visitFallback(extensionMulti, context);
   }
 
   @Override
-  public O visit(ExtensionTable extensionTable, C context) throws E {
+  public O visit(final ExtensionTable extensionTable, final C context) throws E {
     return visitFallback(extensionTable, context);
   }
 
   @Override
-  public O visit(HashJoin hashJoin, C context) throws E {
+  public O visit(final HashJoin hashJoin, final C context) throws E {
     return visitFallback(hashJoin, context);
   }
 
   @Override
-  public O visit(MergeJoin mergeJoin, C context) throws E {
+  public O visit(final MergeJoin mergeJoin, final C context) throws E {
     return visitFallback(mergeJoin, context);
   }
 
   @Override
-  public O visit(NestedLoopJoin nestedLoopJoin, C context) throws E {
+  public O visit(final NestedLoopJoin nestedLoopJoin, final C context) throws E {
     return visitFallback(nestedLoopJoin, context);
   }
 
   @Override
-  public O visit(ConsistentPartitionWindow consistentPartitionWindow, C context) throws E {
+  public O visit(final ConsistentPartitionWindow consistentPartitionWindow, final C context)
+      throws E {
     return visitFallback(consistentPartitionWindow, context);
   }
 
   @Override
-  public O visit(NamedWrite write, C context) throws E {
+  public O visit(final NamedWrite write, final C context) throws E {
     return visitFallback(write, context);
   }
 
   @Override
-  public O visit(ExtensionWrite write, C context) throws E {
+  public O visit(final ExtensionWrite write, final C context) throws E {
     return visitFallback(write, context);
   }
 
   @Override
-  public O visit(NamedDdl ddl, C context) throws E {
+  public O visit(final NamedDdl ddl, final C context) throws E {
     return visitFallback(ddl, context);
   }
 
   @Override
-  public O visit(ExtensionDdl ddl, C context) throws E {
+  public O visit(final ExtensionDdl ddl, final C context) throws E {
     return visitFallback(ddl, context);
   }
 
   @Override
-  public O visit(NamedUpdate update, C context) throws E {
+  public O visit(final NamedUpdate update, final C context) throws E {
     return visitFallback(update, context);
   }
 
   @Override
-  public O visit(ScatterExchange exchange, C context) throws E {
+  public O visit(final ScatterExchange exchange, final C context) throws E {
     return visitFallback(exchange, context);
   }
 
   @Override
-  public O visit(SingleBucketExchange exchange, C context) throws E {
+  public O visit(final SingleBucketExchange exchange, final C context) throws E {
     return visitFallback(exchange, context);
   }
 
   @Override
-  public O visit(MultiBucketExchange exchange, C context) throws E {
+  public O visit(final MultiBucketExchange exchange, final C context) throws E {
     return visitFallback(exchange, context);
   }
 
   @Override
-  public O visit(BroadcastExchange exchange, C context) throws E {
+  public O visit(final BroadcastExchange exchange, final C context) throws E {
     return visitFallback(exchange, context);
   }
 
   @Override
-  public O visit(RoundRobinExchange exchange, C context) throws E {
+  public O visit(final RoundRobinExchange exchange, final C context) throws E {
     return visitFallback(exchange, context);
   }
 }

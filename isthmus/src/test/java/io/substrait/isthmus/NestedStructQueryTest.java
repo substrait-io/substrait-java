@@ -25,15 +25,19 @@ class NestedStructQueryTest extends PlanTestBase {
   private class TypeHelper {
     private final RelDataTypeFactory factory;
 
-    public TypeHelper(RelDataTypeFactory factory) {
+    public TypeHelper(final RelDataTypeFactory factory) {
       this.factory = factory;
     }
 
-    RelDataType struct(String field, RelDataType value) {
+    RelDataType struct(final String field, final RelDataType value) {
       return factory.createStructType(Arrays.asList(Pair.of(field, value)));
     }
 
-    RelDataType struct2(String field1, RelDataType value1, String field2, RelDataType value2) {
+    RelDataType struct2(
+        final String field1,
+        final RelDataType value1,
+        final String field2,
+        final RelDataType value2) {
       return factory.createStructType(
           Arrays.asList(Pair.of(field1, value1), Pair.of(field2, value2)));
     }
@@ -46,28 +50,29 @@ class NestedStructQueryTest extends PlanTestBase {
       return factory.createSqlType(SqlTypeName.VARCHAR);
     }
 
-    RelDataType list(RelDataType elementType) {
+    RelDataType list(final RelDataType elementType) {
       return factory.createArrayType(elementType, -1);
     }
 
-    RelDataType map(RelDataType key, RelDataType value) {
+    RelDataType map(final RelDataType key, final RelDataType value) {
       return factory.createMapType(key, value);
     }
   }
 
-  private void test(Table table, String query, String expectedExpressionText)
+  private void test(final Table table, final String query, final String expectedExpressionText)
       throws SqlParseException, IOException {
     final Schema schema = new SubstraitSchema(Map.of("my_table", table));
     final CalciteCatalogReader catalog = schemaToCatalog("nested", schema);
     final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
-    Plan plan = toProto(sqlToSubstrait.convert(query, catalog));
-    Expression obtainedExpression =
+    final Plan plan = toProto(sqlToSubstrait.convert(query, catalog));
+    final Expression obtainedExpression =
         plan.getRelations(0).getRoot().getInput().getProject().getExpressions(0);
-    Expression expectedExpression = TextFormat.parse(expectedExpressionText, Expression.class);
+    final Expression expectedExpression =
+        TextFormat.parse(expectedExpressionText, Expression.class);
     assertEquals(expectedExpression, obtainedExpression);
 
-    ProtoPlanConverter converter = new ProtoPlanConverter();
-    io.substrait.plan.Plan plan2 = converter.from(plan);
+    final ProtoPlanConverter converter = new ProtoPlanConverter();
+    final io.substrait.plan.Plan plan2 = converter.from(plan);
     assertPlanRoundtrip(plan2);
   }
 
@@ -76,18 +81,18 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
-            TypeHelper helper = new TypeHelper(factory);
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
+            final TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "x", helper.i32(),
                 "a", helper.i32());
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n" + "  \"nested\".\"my_table\".\"a\"\n" + "FROM\n" + "  \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"
@@ -105,21 +110,21 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
-            TypeHelper helper = new TypeHelper(factory);
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
+            final TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "x", helper.i32(),
                 "a", helper.struct("b", helper.i32()));
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n"
             + "   \"nested\".\"my_table\".\"a\".\"b\"\n"
             + "FROM\n"
             + "  \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"
@@ -142,21 +147,21 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
-            TypeHelper helper = new TypeHelper(factory);
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
+            final TypeHelper helper = new TypeHelper(factory);
             return helper.struct2(
                 "aa", helper.i32(),
                 "a", helper.struct("b", helper.struct("c", helper.i32())));
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n"
             + "  \"nested\".\"my_table\".\"a\".\"b\".\"c\"\n"
             + "FROM\n"
             + "   \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"
@@ -184,20 +189,20 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
-            TypeHelper helper = new TypeHelper(factory);
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
+            final TypeHelper helper = new TypeHelper(factory);
 
             return helper.struct2("x", helper.i32(), "a", helper.list(helper.i32()));
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n"
             + "  \"nested\".\"my_table\".\"a\"[1]\n"
             + "FROM\n"
             + "  \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"
@@ -220,8 +225,8 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
-            TypeHelper helper = new TypeHelper(factory);
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
+            final TypeHelper helper = new TypeHelper(factory);
 
             return helper.struct2(
                 "x",
@@ -231,13 +236,13 @@ class NestedStructQueryTest extends PlanTestBase {
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n"
             + "  \"nested\".\"my_table\".\"a\"[1][2][3]\n"
             + "FROM\n"
             + "  \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"
@@ -271,9 +276,9 @@ class NestedStructQueryTest extends PlanTestBase {
     final Table table =
         new AbstractTable() {
           @Override
-          public RelDataType getRowType(RelDataTypeFactory factory) {
+          public RelDataType getRowType(final RelDataTypeFactory factory) {
 
-            TypeHelper helper = new TypeHelper(factory);
+            final TypeHelper helper = new TypeHelper(factory);
             return helper.struct(
                 "a",
                 helper.struct(
@@ -284,13 +289,13 @@ class NestedStructQueryTest extends PlanTestBase {
           }
         };
 
-    String query =
+    final String query =
         "SELECT\n"
             + "  \"nested\".\"my_table\".a.b[2].c['my_map_key'].x\n"
             + "FROM\n"
             + "  \"nested\".\"my_table\";";
 
-    String expectedExpressionText =
+    final String expectedExpressionText =
         "  selection {\n"
             + "  direct_reference {\n"
             + "    struct_field {\n"

@@ -14,7 +14,7 @@ public class ParameterizedProtoConverter
   private static final BaseProtoTypes<ParameterizedType, ParameterizedType.IntegerOption>
       PARAMETERIZED_REQUIRED = new ParameterizedTypes(Type.Nullability.NULLABILITY_REQUIRED);
 
-  public ParameterizedProtoConverter(ExtensionCollector extensionCollector) {
+  public ParameterizedProtoConverter(final ExtensionCollector extensionCollector) {
     super(extensionCollector, "Parameterized types cannot include return type expressions.");
   }
 
@@ -29,43 +29,45 @@ public class ParameterizedProtoConverter
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.FixedChar expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.FixedChar expr)
       throws RuntimeException {
     return typeContainer(expr).fixedChar(expr.length().value());
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.VarChar expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.VarChar expr)
       throws RuntimeException {
     return typeContainer(expr).varChar(expr.length().value());
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.FixedBinary expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.FixedBinary expr)
       throws RuntimeException {
     return typeContainer(expr).fixedBinary(expr.length().value());
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.Decimal expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.Decimal expr)
       throws RuntimeException {
     return typeContainer(expr).decimal(i(expr.precision()), i(expr.scale()));
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.PrecisionTimestamp expr)
+  public ParameterizedType visit(
+      final io.substrait.function.ParameterizedType.PrecisionTimestamp expr)
       throws RuntimeException {
     return typeContainer(expr).precisionTimestamp(i(expr.precision()));
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.PrecisionTimestampTZ expr)
+  public ParameterizedType visit(
+      final io.substrait.function.ParameterizedType.PrecisionTimestampTZ expr)
       throws RuntimeException {
     return typeContainer(expr).precisionTimestampTZ(i(expr.precision()));
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.Struct expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.Struct expr)
       throws RuntimeException {
     return typeContainer(expr)
         .struct(
@@ -75,20 +77,21 @@ public class ParameterizedProtoConverter
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.ListType expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.ListType expr)
       throws RuntimeException {
     return typeContainer(expr).list(expr.name().accept(this));
   }
 
   @Override
-  public ParameterizedType visit(io.substrait.function.ParameterizedType.Map expr)
+  public ParameterizedType visit(final io.substrait.function.ParameterizedType.Map expr)
       throws RuntimeException {
     return typeContainer(expr).map(expr.key().accept(this), expr.value().accept(this));
   }
 
   @Override
   public ParameterizedType visit(
-      io.substrait.function.ParameterizedType.StringLiteral stringLiteral) throws RuntimeException {
+      final io.substrait.function.ParameterizedType.StringLiteral stringLiteral)
+      throws RuntimeException {
     return ParameterizedType.newBuilder()
         .setTypeParameter(
             ParameterizedType.TypeParameter.newBuilder().setName(stringLiteral.value()))
@@ -110,7 +113,7 @@ public class ParameterizedProtoConverter
 
     @Override
     public ParameterizedType.IntegerOption visit(
-        io.substrait.function.ParameterizedType.StringLiteral stringLiteral)
+        final io.substrait.function.ParameterizedType.StringLiteral stringLiteral)
         throws RuntimeException {
       return ParameterizedType.IntegerOption.newBuilder()
           .setParameter(
@@ -127,7 +130,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType fixedChar(ParameterizedType.IntegerOption len) {
+    public ParameterizedType fixedChar(final ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedFixedChar.newBuilder()
               .setLength(len)
@@ -150,12 +153,12 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    protected ParameterizedType.IntegerOption i(int len) {
+    protected ParameterizedType.IntegerOption i(final int len) {
       return ParameterizedType.IntegerOption.newBuilder().setLiteral(len).build();
     }
 
     @Override
-    public ParameterizedType varChar(ParameterizedType.IntegerOption len) {
+    public ParameterizedType varChar(final ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedVarChar.newBuilder()
               .setLength(len)
@@ -164,7 +167,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType fixedBinary(ParameterizedType.IntegerOption len) {
+    public ParameterizedType fixedBinary(final ParameterizedType.IntegerOption len) {
       return wrap(
           ParameterizedType.ParameterizedFixedBinary.newBuilder()
               .setLength(len)
@@ -174,7 +177,8 @@ public class ParameterizedProtoConverter
 
     @Override
     public ParameterizedType decimal(
-        ParameterizedType.IntegerOption scale, ParameterizedType.IntegerOption precision) {
+        final ParameterizedType.IntegerOption scale,
+        final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedDecimal.newBuilder()
               .setScale(scale)
@@ -184,7 +188,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType intervalDay(ParameterizedType.IntegerOption precision) {
+    public ParameterizedType intervalDay(final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedIntervalDay.newBuilder()
               .setPrecision(precision)
@@ -193,7 +197,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType intervalCompound(ParameterizedType.IntegerOption precision) {
+    public ParameterizedType intervalCompound(final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedIntervalCompound.newBuilder()
               .setPrecision(precision)
@@ -202,7 +206,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType precisionTime(ParameterizedType.IntegerOption precision) {
+    public ParameterizedType precisionTime(final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedPrecisionTime.newBuilder()
               .setPrecision(precision)
@@ -211,7 +215,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType precisionTimestamp(ParameterizedType.IntegerOption precision) {
+    public ParameterizedType precisionTimestamp(final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedPrecisionTimestamp.newBuilder()
               .setPrecision(precision)
@@ -220,7 +224,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType precisionTimestampTZ(ParameterizedType.IntegerOption precision) {
+    public ParameterizedType precisionTimestampTZ(final ParameterizedType.IntegerOption precision) {
       return wrap(
           ParameterizedType.ParameterizedPrecisionTimestampTZ.newBuilder()
               .setPrecision(precision)
@@ -229,7 +233,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType struct(Iterable<ParameterizedType> types) {
+    public ParameterizedType struct(final Iterable<ParameterizedType> types) {
       return wrap(
           ParameterizedType.ParameterizedStruct.newBuilder()
               .addAllTypes(types)
@@ -238,7 +242,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType list(ParameterizedType type) {
+    public ParameterizedType list(final ParameterizedType type) {
       return wrap(
           ParameterizedType.ParameterizedList.newBuilder()
               .setType(type)
@@ -247,7 +251,7 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType map(ParameterizedType key, ParameterizedType value) {
+    public ParameterizedType map(final ParameterizedType key, final ParameterizedType value) {
       return wrap(
           ParameterizedType.ParameterizedMap.newBuilder()
               .setKey(key)
@@ -257,14 +261,14 @@ public class ParameterizedProtoConverter
     }
 
     @Override
-    public ParameterizedType userDefined(int ref) {
+    public ParameterizedType userDefined(final int ref) {
       throw new UnsupportedOperationException(
           "User defined types are not supported in Parameterized Types for now");
     }
 
     @Override
     protected ParameterizedType wrap(final Object o) {
-      ParameterizedType.Builder bldr = ParameterizedType.newBuilder();
+      final ParameterizedType.Builder bldr = ParameterizedType.newBuilder();
       if (o instanceof Type.Boolean) {
         return bldr.setBool((Type.Boolean) o).build();
       } else if (o instanceof Type.I8) {

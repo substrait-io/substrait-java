@@ -17,16 +17,16 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
 
   @Test
   void consistentPartitionWindowRoundtripSingle() {
-    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+    final SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    Rel input =
+    final Rel input =
         b.namedScan(
             Arrays.asList("test"),
             Arrays.asList("a", "b", "c"),
             Arrays.asList(R.I64, R.I16, R.I32));
-    Rel rel1 =
+    final Rel rel1 =
         ConsistentPartitionWindow.builder()
             .input(input)
             .windowFunctions(
@@ -59,8 +59,8 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .build()))
             .build();
 
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel1);
-    io.substrait.relation.Rel rel2 = protoRelConverter.from(protoRel);
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel1);
+    final io.substrait.relation.Rel rel2 = protoRelConverter.from(protoRel);
     assertEquals(rel1, rel2);
 
     // Make sure that the record types match I64, I16, I32 and then the I64 from the window
@@ -70,20 +70,20 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
 
   @Test
   void consistentPartitionWindowRoundtripMulti() {
-    SimpleExtension.WindowFunctionVariant windowFunctionLeadDeclaration =
+    final SimpleExtension.WindowFunctionVariant windowFunctionLeadDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    SimpleExtension.WindowFunctionVariant windowFunctionLagDeclaration =
+    final SimpleExtension.WindowFunctionVariant windowFunctionLagDeclaration =
         defaultExtensionCollection.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    Rel input =
+    final Rel input =
         b.namedScan(
             Arrays.asList("test"),
             Arrays.asList("a", "b", "c"),
             Arrays.asList(R.I64, R.I16, R.I32));
-    Rel rel1 =
+    final Rel rel1 =
         ConsistentPartitionWindow.builder()
             .input(input)
             .windowFunctions(
@@ -133,8 +133,8 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .build()))
             .build();
 
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel1);
-    io.substrait.relation.Rel rel2 = protoRelConverter.from(protoRel);
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel1);
+    final io.substrait.relation.Rel rel2 = protoRelConverter.from(protoRel);
     assertEquals(rel1, rel2);
 
     // Make sure that the record types match I64, I16, I32 and then the I64 and I64 from the window

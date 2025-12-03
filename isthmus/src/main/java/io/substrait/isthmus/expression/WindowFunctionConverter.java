@@ -36,48 +36,49 @@ public class WindowFunctionConverter
   }
 
   public WindowFunctionConverter(
-      List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+      final List<SimpleExtension.WindowFunctionVariant> functions,
+      final RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
   public WindowFunctionConverter(
-      List<SimpleExtension.WindowFunctionVariant> functions,
-      List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter) {
+      final List<SimpleExtension.WindowFunctionVariant> functions,
+      final List<FunctionMappings.Sig> additionalSignatures,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override
   protected Expression.WindowFunctionInvocation generateBinding(
-      WrappedWindowCall call,
-      SimpleExtension.WindowFunctionVariant function,
-      List<? extends FunctionArg> arguments,
-      Type outputType) {
-    RexOver over = call.over;
-    RexWindow window = over.getWindow();
+      final WrappedWindowCall call,
+      final SimpleExtension.WindowFunctionVariant function,
+      final List<? extends FunctionArg> arguments,
+      final Type outputType) {
+    final RexOver over = call.over;
+    final RexWindow window = over.getWindow();
 
-    List<Expression> partitionExprs =
+    final List<Expression> partitionExprs =
         window.partitionKeys.stream()
             .map(r -> r.accept(call.rexExpressionConverter))
             .collect(java.util.stream.Collectors.toList());
 
-    List<Expression.SortField> sorts =
+    final List<Expression.SortField> sorts =
         window.orderKeys != null
             ? window.orderKeys.stream()
                 .map(rfc -> toSortField(rfc, call.rexExpressionConverter))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
-    Expression.AggregationInvocation invocation =
+    final Expression.AggregationInvocation invocation =
         over.isDistinct()
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
 
     // Calcite only supports ROW or RANGE mode
-    Expression.WindowBoundsType boundsType =
+    final Expression.WindowBoundsType boundsType =
         window.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
-    WindowBound lowerBound = toWindowBound(window.getLowerBound());
-    WindowBound upperBound = toWindowBound(window.getUpperBound());
+    final WindowBound lowerBound = toWindowBound(window.getLowerBound());
+    final WindowBound upperBound = toWindowBound(window.getUpperBound());
 
     return ExpressionCreator.windowFunction(
         function,
@@ -93,14 +94,14 @@ public class WindowFunctionConverter
   }
 
   public Optional<Expression.WindowFunctionInvocation> convert(
-      RexOver over,
-      Function<RexNode, Expression> topLevelConverter,
-      RexExpressionConverter rexExpressionConverter) {
-    SqlAggFunction aggFunction = over.getAggOperator();
+      final RexOver over,
+      final Function<RexNode, Expression> topLevelConverter,
+      final RexExpressionConverter rexExpressionConverter) {
+    final SqlAggFunction aggFunction = over.getAggOperator();
 
-    SqlAggFunction lookupFunction =
+    final SqlAggFunction lookupFunction =
         AggregateFunctions.toSubstraitAggVariant(aggFunction).orElse(aggFunction);
-    FunctionFinder m = signatures.get(lookupFunction);
+    final FunctionFinder m = signatures.get(lookupFunction);
     if (m == null) {
       return Optional.empty();
     }
@@ -108,7 +109,7 @@ public class WindowFunctionConverter
       return Optional.empty();
     }
 
-    WrappedWindowCall wrapped = new WrappedWindowCall(over, rexExpressionConverter);
+    final WrappedWindowCall wrapped = new WrappedWindowCall(over, rexExpressionConverter);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
@@ -116,7 +117,8 @@ public class WindowFunctionConverter
     private final RexOver over;
     private final RexExpressionConverter rexExpressionConverter;
 
-    private WrappedWindowCall(RexOver over, RexExpressionConverter rexExpressionConverter) {
+    private WrappedWindowCall(
+        final RexOver over, final RexExpressionConverter rexExpressionConverter) {
       this.over = over;
       this.rexExpressionConverter = rexExpressionConverter;
     }

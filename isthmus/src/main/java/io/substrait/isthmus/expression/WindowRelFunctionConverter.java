@@ -35,36 +35,37 @@ public class WindowRelFunctionConverter
   }
 
   public WindowRelFunctionConverter(
-      List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+      final List<SimpleExtension.WindowFunctionVariant> functions,
+      final RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
   public WindowRelFunctionConverter(
-      List<SimpleExtension.WindowFunctionVariant> functions,
-      List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter) {
+      final List<SimpleExtension.WindowFunctionVariant> functions,
+      final List<FunctionMappings.Sig> additionalSignatures,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override
   protected ConsistentPartitionWindow.WindowRelFunctionInvocation generateBinding(
-      WrappedWindowRelCall call,
-      SimpleExtension.WindowFunctionVariant function,
-      List<? extends FunctionArg> arguments,
-      Type outputType) {
-    Window.RexWinAggCall over = call.getWinAggCall();
+      final WrappedWindowRelCall call,
+      final SimpleExtension.WindowFunctionVariant function,
+      final List<? extends FunctionArg> arguments,
+      final Type outputType) {
+    final Window.RexWinAggCall over = call.getWinAggCall();
 
-    Expression.AggregationInvocation invocation =
+    final Expression.AggregationInvocation invocation =
         over.distinct
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
 
     // Calcite only supports ROW or RANGE mode
-    Expression.WindowBoundsType boundsType =
+    final Expression.WindowBoundsType boundsType =
         call.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
-    WindowBound lowerBound = toWindowBound(call.getLowerBound());
-    WindowBound upperBound = toWindowBound(call.getUpperBound());
+    final WindowBound lowerBound = toWindowBound(call.getLowerBound());
+    final WindowBound upperBound = toWindowBound(call.getUpperBound());
 
     return ExpressionCreator.windowRelFunction(
         function,
@@ -78,16 +79,16 @@ public class WindowRelFunctionConverter
   }
 
   public Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> convert(
-      Window.RexWinAggCall winAggCall,
-      RexWindowBound lowerBound,
-      RexWindowBound upperBound,
-      boolean isRows,
-      Function<RexNode, Expression> topLevelConverter) {
-    SqlAggFunction aggFunction = (SqlAggFunction) winAggCall.getOperator();
+      final Window.RexWinAggCall winAggCall,
+      final RexWindowBound lowerBound,
+      final RexWindowBound upperBound,
+      final boolean isRows,
+      final Function<RexNode, Expression> topLevelConverter) {
+    final SqlAggFunction aggFunction = (SqlAggFunction) winAggCall.getOperator();
 
-    SqlAggFunction lookupFunction =
+    final SqlAggFunction lookupFunction =
         AggregateFunctions.toSubstraitAggVariant(aggFunction).orElse(aggFunction);
-    FunctionFinder m = signatures.get(lookupFunction);
+    final FunctionFinder m = signatures.get(lookupFunction);
     if (m == null) {
       return Optional.empty();
     }
@@ -95,7 +96,7 @@ public class WindowRelFunctionConverter
       return Optional.empty();
     }
 
-    WrappedWindowRelCall wrapped =
+    final WrappedWindowRelCall wrapped =
         new WrappedWindowRelCall(winAggCall, lowerBound, upperBound, isRows);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
@@ -107,10 +108,10 @@ public class WindowRelFunctionConverter
     private final boolean isRows;
 
     private WrappedWindowRelCall(
-        Window.RexWinAggCall winAggCall,
-        RexWindowBound lowerBound,
-        RexWindowBound upperBound,
-        boolean isRows) {
+        final Window.RexWinAggCall winAggCall,
+        final RexWindowBound lowerBound,
+        final RexWindowBound upperBound,
+        final boolean isRows) {
       this.winAggCall = winAggCall;
       this.lowerBound = lowerBound;
       this.upperBound = upperBound;

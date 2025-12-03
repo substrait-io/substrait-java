@@ -72,9 +72,10 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void singleOrList() {
-    Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
-    RexNode rexNode = singleOrList.accept(converter, Context.newContext());
-    Expression substraitExpression =
+    final Expression singleOrList =
+        b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
+    final RexNode rexNode = singleOrList.accept(converter, Context.newContext());
+    final Expression substraitExpression =
         rexNode.accept(
             new RexExpressionConverter(
                 CREATE_SEARCH_CONV.apply(rexBuilder),
@@ -90,13 +91,13 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void switchExpression() {
-    Expression switchExpression =
+    final Expression switchExpression =
         b.switchExpression(
             b.fieldReference(commonTable, 0),
             List.of(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
             b.i32(3));
-    RexNode rexNode = switchExpression.accept(converter, Context.newContext());
-    Expression expression =
+    final RexNode rexNode = switchExpression.accept(converter, Context.newContext());
+    final Expression expression =
         rexNode.accept(
             new RexExpressionConverter(
                 CASE, new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)));
@@ -113,7 +114,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void castFailureCondition() {
-    Rel rel =
+    final Rel rel =
         b.project(
             input ->
                 List.of(
@@ -129,7 +130,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertFullRoundTrip(rel);
   }
 
-  void assertExpressionEquality(Expression expected, Expression actual) {
+  void assertExpressionEquality(final Expression expected, final Expression actual) {
     // go the extra mile and convert both inputs to protobuf
     // helps verify that the protobuf conversion is not broken
     assertEquals(
@@ -144,8 +145,8 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertPrecisionTimestampLiteral(6);
   }
 
-  void assertPrecisionTimestampLiteral(int precision) {
-    RexNode calciteExpr =
+  void assertPrecisionTimestampLiteral(final int precision) {
+    final RexNode calciteExpr =
         Expression.PrecisionTimestampLiteral.builder()
             .value(0)
             .precision(precision)
@@ -161,8 +162,8 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertPrecisionTimestampTZLiteral(6);
   }
 
-  void assertPrecisionTimestampTZLiteral(int precision) {
-    RexNode calciteExpr =
+  void assertPrecisionTimestampTZLiteral(final int precision) {
+    final RexNode calciteExpr =
         Expression.PrecisionTimestampTZLiteral.builder()
             .value(0)
             .precision(precision)
@@ -197,7 +198,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(13);
   }
 
-  void assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(int precision) {
+  void assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(final int precision) {
     assertThrowsExpressionLiteral(
         Expression.PrecisionTimestampLiteral.builder().value(0).precision(precision).build());
   }
@@ -228,12 +229,12 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(13);
   }
 
-  void assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(int precision) {
+  void assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(final int precision) {
     assertThrowsExpressionLiteral(
         Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(precision).build());
   }
 
-  void assertThrowsExpressionLiteral(Expression.Literal expr) {
+  void assertThrowsExpressionLiteral(final Expression.Literal expr) {
     assertThrows(
         UnsupportedOperationException.class, () -> expr.accept(converter, Context.newContext()));
   }

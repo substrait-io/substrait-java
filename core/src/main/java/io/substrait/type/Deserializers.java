@@ -35,7 +35,8 @@ public class Deserializers {
     private final BiFunction<String, SubstraitTypeParser.StartContext, T> converter;
 
     public ParseDeserializer(
-        Class<T> clazz, BiFunction<String, SubstraitTypeParser.StartContext, T> converter) {
+        final Class<T> clazz,
+        final BiFunction<String, SubstraitTypeParser.StartContext, T> converter) {
       super(clazz);
       this.converter = converter;
     }
@@ -43,11 +44,12 @@ public class Deserializers {
     @Override
     public T deserialize(final JsonParser p, final DeserializationContext ctxt)
         throws IOException, JsonProcessingException {
-      String typeString = p.getValueAsString();
+      final String typeString = p.getValueAsString();
       try {
-        String urn = (String) ctxt.findInjectableValue(SimpleExtension.URN_LOCATOR_KEY, null, null);
+        final String urn =
+            (String) ctxt.findInjectableValue(SimpleExtension.URN_LOCATOR_KEY, null, null);
         return TypeStringParser.parse(typeString, urn, converter);
-      } catch (Exception ex) {
+      } catch (final Exception ex) {
         throw JsonMappingException.from(
             p, "Unable to parse string " + typeString.replace("\n", " \\n"), ex);
       }

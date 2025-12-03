@@ -23,7 +23,7 @@ public class EmptyDetail
         Extension.DdlExtensionObject {
 
   @Override
-  public Any toProto(RelProtoConverter converter) {
+  public Any toProto(final RelProtoConverter converter) {
     return com.google.protobuf.Any.pack(com.google.protobuf.Empty.getDefaultInstance());
   }
 
@@ -33,12 +33,12 @@ public class EmptyDetail
   }
 
   @Override
-  public Type.Struct deriveRecordType(Rel input) {
+  public Type.Struct deriveRecordType(final Rel input) {
     return TypeCreator.NULLABLE.struct();
   }
 
   @Override
-  public Type.Struct deriveRecordType(List<Rel> inputs) {
+  public Type.Struct deriveRecordType(final List<Rel> inputs) {
     return TypeCreator.NULLABLE.struct();
   }
 
@@ -48,7 +48,7 @@ public class EmptyDetail
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     return o instanceof EmptyDetail;
   }
 

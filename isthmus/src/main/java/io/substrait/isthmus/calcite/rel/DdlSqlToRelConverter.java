@@ -30,7 +30,7 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
     return null;
   }
 
-  public DdlSqlToRelConverter(SqlToRelConverter converter) {
+  public DdlSqlToRelConverter(final SqlToRelConverter converter) {
     this.converter = converter;
 
     ddlHandlers.put(SqlCreateTable.class, sqlCall -> handleCreateTable((SqlCreateTable) sqlCall));
@@ -38,8 +38,8 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
   }
 
   @Override
-  public RelRoot visit(SqlCall sqlCall) {
-    Function<SqlCall, RelRoot> ddlHandler = findDdlHandler(sqlCall);
+  public RelRoot visit(final SqlCall sqlCall) {
+    final Function<SqlCall, RelRoot> ddlHandler = findDdlHandler(sqlCall);
     if (ddlHandler != null) {
       return ddlHandler.apply(sqlCall);
     }

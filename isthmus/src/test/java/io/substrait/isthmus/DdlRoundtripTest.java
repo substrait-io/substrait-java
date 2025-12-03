@@ -17,13 +17,13 @@ class DdlRoundtripTest extends PlanTestBase {
 
   @Test
   void testCreateTable() throws Exception {
-    String sql = "create table dst1 as select * from src1";
+    final String sql = "create table dst1 as select * from src1";
     assertFullRoundTripWithIdentityProjectionWorkaround(sql, catalogReader);
   }
 
   @Test
   void testCreateView() throws Exception {
-    String sql = "create view dst1 as select * from src1";
+    final String sql = "create view dst1 as select * from src1";
     assertFullRoundTripWithIdentityProjectionWorkaround(sql, catalogReader);
   }
 }

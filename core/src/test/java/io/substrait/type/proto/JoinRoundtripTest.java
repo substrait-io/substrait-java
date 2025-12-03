@@ -25,9 +25,9 @@ class JoinRoundtripTest extends TestBase {
 
   @Test
   void hashJoin() {
-    List<Integer> leftKeys = Arrays.asList(0, 1);
-    List<Integer> rightKeys = Arrays.asList(2, 0);
-    Rel relWithoutKeys =
+    final List<Integer> leftKeys = Arrays.asList(0, 1);
+    final List<Integer> rightKeys = Arrays.asList(2, 0);
+    final Rel relWithoutKeys =
         HashJoin.builder()
             .from(b.hashJoin(leftKeys, rightKeys, HashJoin.JoinType.INNER, leftTable, rightTable))
             .build();
@@ -36,9 +36,9 @@ class JoinRoundtripTest extends TestBase {
 
   @Test
   void mergeJoin() {
-    List<Integer> leftKeys = Arrays.asList(0, 1);
-    List<Integer> rightKeys = Arrays.asList(2, 0);
-    Rel relWithoutKeys =
+    final List<Integer> leftKeys = Arrays.asList(0, 1);
+    final List<Integer> rightKeys = Arrays.asList(2, 0);
+    final Rel relWithoutKeys =
         MergeJoin.builder()
             .from(b.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
             .build();
@@ -47,8 +47,8 @@ class JoinRoundtripTest extends TestBase {
 
   @Test
   void nestedLoopJoin() {
-    List<Rel> inputRels = Arrays.asList(leftTable, rightTable);
-    Rel rel =
+    final List<Rel> inputRels = Arrays.asList(leftTable, rightTable);
+    final Rel rel =
         NestedLoopJoin.builder()
             .from(
                 b.nestedLoopJoin(

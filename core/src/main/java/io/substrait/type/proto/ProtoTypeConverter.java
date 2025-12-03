@@ -12,12 +12,12 @@ public class ProtoTypeConverter {
   private final SimpleExtension.ExtensionCollection extensions;
 
   public ProtoTypeConverter(
-      ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
+      final ExtensionLookup lookup, final SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
   }
 
-  public Type from(io.substrait.proto.Type type) {
+  public Type from(final io.substrait.proto.Type type) {
     switch (type.getKindCase()) {
       case BOOL:
         return n(type.getBool().getNullability()).BOOLEAN;
@@ -88,8 +88,8 @@ public class ProtoTypeConverter {
         return fromMap(type.getMap());
       case USER_DEFINED:
         {
-          io.substrait.proto.Type.UserDefined userDefined = type.getUserDefined();
-          SimpleExtension.Type t = lookup.getType(userDefined.getTypeReference(), extensions);
+          final io.substrait.proto.Type.UserDefined userDefined = type.getUserDefined();
+          final SimpleExtension.Type t = lookup.getType(userDefined.getTypeReference(), extensions);
           return n(userDefined.getNullability()).userDefined(t.urn(), t.name());
         }
       case USER_DEFINED_TYPE_REFERENCE:
@@ -101,19 +101,19 @@ public class ProtoTypeConverter {
     }
   }
 
-  public Type.ListType fromList(io.substrait.proto.Type.List list) {
+  public Type.ListType fromList(final io.substrait.proto.Type.List list) {
     return n(list.getNullability()).list(from(list.getType()));
   }
 
-  public Type.Map fromMap(io.substrait.proto.Type.Map map) {
+  public Type.Map fromMap(final io.substrait.proto.Type.Map map) {
     return n(map.getNullability()).map(from(map.getKey()), from(map.getValue()));
   }
 
-  public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {
+  public static boolean isNullable(final io.substrait.proto.Type.Nullability nullability) {
     return io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE == nullability;
   }
 
-  private static TypeCreator n(io.substrait.proto.Type.Nullability n) {
+  private static TypeCreator n(final io.substrait.proto.Type.Nullability n) {
     return n == io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE
         ? TypeCreator.NULLABLE
         : TypeCreator.REQUIRED;

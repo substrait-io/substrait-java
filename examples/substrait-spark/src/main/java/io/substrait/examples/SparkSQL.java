@@ -28,8 +28,8 @@ public class SparkSQL implements App.Action {
       spark.catalog().listDatabases().show();
 
       // load from CSV files
-      String vehiclesFile = Paths.get(ROOT_DIR, VEHICLES_CSV).toString();
-      String testsFile = Paths.get(ROOT_DIR, TESTS_CSV).toString();
+      final String vehiclesFile = Paths.get(ROOT_DIR, VEHICLES_CSV).toString();
+      final String testsFile = Paths.get(ROOT_DIR, TESTS_CSV).toString();
 
       System.out.println("Reading " + vehiclesFile);
       System.out.println("Reading " + testsFile);
@@ -47,7 +47,7 @@ public class SparkSQL implements App.Action {
           .csv(testsFile)
           .createOrReplaceTempView(TESTS_TABLE);
 
-      String sqlQuery =
+      final String sqlQuery =
           "SELECT vehicles.colour, count(*) as colourcount"
               + " FROM vehicles"
               + " INNER JOIN tests ON vehicles.vehicle_id=tests.vehicle_id"
@@ -55,13 +55,13 @@ public class SparkSQL implements App.Action {
               + " GROUP BY vehicles.colour"
               + " ORDER BY count(*)";
 
-      Dataset<Row> result = spark.sql(sqlQuery);
+      final Dataset<Row> result = spark.sql(sqlQuery);
       result.show();
 
-      LogicalPlan logical = result.logicalPlan();
+      final LogicalPlan logical = result.logicalPlan();
       System.out.println(logical);
 
-      LogicalPlan optimised = result.queryExecution().optimizedPlan();
+      final LogicalPlan optimised = result.queryExecution().optimizedPlan();
       System.out.println(optimised);
 
       createSubstrait(optimised);
@@ -76,14 +76,14 @@ public class SparkSQL implements App.Action {
    *
    * @param enginePlan Spark Local PLan
    */
-  public void createSubstrait(LogicalPlan enginePlan) {
-    ToSubstraitRel toSubstrait = new ToSubstraitRel();
-    io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
+  public void createSubstrait(final LogicalPlan enginePlan) {
+    final ToSubstraitRel toSubstrait = new ToSubstraitRel();
+    final io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
 
     SubstraitStringify.explain(plan).forEach(System.out::println);
 
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    byte[] buffer = planToProto.toProto(plan).toByteArray();
+    final PlanProtoConverter planToProto = new PlanProtoConverter();
+    final byte[] buffer = planToProto.toProto(plan).toByteArray();
     try {
       Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"), buffer);
       System.out.println("File written to " + Paths.get(ROOT_DIR, "spark_sql_substrait.plan"));

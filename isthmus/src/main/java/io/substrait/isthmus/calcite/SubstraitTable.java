@@ -10,7 +10,7 @@ public class SubstraitTable extends AbstractTable {
   private final RelDataType rowType;
   private final String tableName;
 
-  public SubstraitTable(String tableName, RelDataType rowType) {
+  public SubstraitTable(final String tableName, final RelDataType rowType) {
     this.tableName = tableName;
     this.rowType = rowType;
   }
@@ -20,7 +20,7 @@ public class SubstraitTable extends AbstractTable {
   }
 
   @Override
-  public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+  public RelDataType getRowType(final RelDataTypeFactory typeFactory) {
     return rowType;
   }
 }

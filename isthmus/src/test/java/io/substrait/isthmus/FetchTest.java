@@ -16,19 +16,19 @@ class FetchTest extends PlanTestBase {
 
   @Test
   void limitOnly() {
-    Rel rel = b.limit(50, TABLE);
+    final Rel rel = b.limit(50, TABLE);
     assertFullRoundTrip(rel);
   }
 
   @Test
   void offsetOnly() {
-    Rel rel = b.offset(50, TABLE);
+    final Rel rel = b.offset(50, TABLE);
     assertFullRoundTrip(rel);
   }
 
   @Test
   void offsetAndLimit() {
-    Rel rel = b.fetch(50, 10, TABLE);
+    final Rel rel = b.fetch(50, 10, TABLE);
     assertFullRoundTrip(rel);
   }
 }

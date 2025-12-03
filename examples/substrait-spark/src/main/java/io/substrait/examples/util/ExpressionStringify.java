@@ -51,171 +51,191 @@ import java.util.List;
 public class ExpressionStringify extends ParentStringify
     implements ExpressionVisitor<String, EmptyVisitationContext, RuntimeException> {
 
-  public ExpressionStringify(int indent) {
+  public ExpressionStringify(final int indent) {
     super(indent);
   }
 
   @Override
-  public String visit(NullLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final NullLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<NullLiteral>";
   }
 
   @Override
-  public String visit(BoolLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final BoolLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<BoolLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(I8Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final I8Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<I8Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(I16Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final I16Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<I16Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(I32Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final I32Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<I32Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(I64Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final I64Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<I64Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(FP32Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final FP32Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<FP32Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(FP64Literal expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final FP64Literal expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<FP64Literal " + expr.value() + ">";
   }
 
   @Override
-  public String visit(StrLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final StrLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<StrLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(BinaryLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final BinaryLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<BinaryLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(TimeLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final TimeLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<TimeLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(DateLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final DateLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<DateLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(TimestampLiteral expr, EmptyVisitationContext context)
+  public String visit(final TimestampLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<TimestampLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(TimestampTZLiteral expr, EmptyVisitationContext context)
+  public String visit(final TimestampTZLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<TimestampTZLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(IntervalYearLiteral expr, EmptyVisitationContext context)
+  public String visit(final IntervalYearLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<IntervalYearLiteral " + expr.months() + " " + expr.years() + ">";
   }
 
   @Override
-  public String visit(IntervalDayLiteral expr, EmptyVisitationContext context)
+  public String visit(final IntervalDayLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<IntervalYearLiteral " + expr.seconds() + " " + expr.days() + ">";
   }
 
   @Override
-  public String visit(UUIDLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final UUIDLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<UUIDLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(FixedCharLiteral expr, EmptyVisitationContext context)
+  public String visit(final FixedCharLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<FixedCharLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(VarCharLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final VarCharLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<VarCharLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(FixedBinaryLiteral expr, EmptyVisitationContext context)
+  public String visit(final FixedBinaryLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<FixedBinaryLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(DecimalLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final DecimalLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<FixedBinaryLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(MapLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final MapLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<MapLiteral >";
   }
 
   @Override
-  public String visit(ListLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final ListLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<ListLiteral >";
   }
 
   @Override
-  public String visit(EmptyListLiteral expr, EmptyVisitationContext context)
+  public String visit(final EmptyListLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<EmptyListLiteral >";
   }
 
   @Override
-  public String visit(StructLiteral expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final StructLiteral expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<StructLiteral >";
   }
 
   @Override
-  public String visit(UserDefinedLiteral expr, EmptyVisitationContext context)
+  public String visit(final UserDefinedLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<UserDefinedLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(Switch expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final Switch expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<Switch " + expr.switchClauses() + ">";
   }
 
   @Override
-  public String visit(IfThen expr, EmptyVisitationContext context) throws RuntimeException {
+  public String visit(final IfThen expr, final EmptyVisitationContext context)
+      throws RuntimeException {
     return "<IfThen " + expr.ifClauses() + ">";
   }
 
   @Override
-  public String visit(ScalarFunctionInvocation expr, EmptyVisitationContext context)
+  public String visit(final ScalarFunctionInvocation expr, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = new StringBuilder("<ScalarFn>");
+    final StringBuilder sb = new StringBuilder("<ScalarFn>");
 
     sb.append(expr.declaration());
     // sb.append(" (");
-    List<FunctionArg> args = expr.arguments();
+    final List<FunctionArg> args = expr.arguments();
     for (int i = 0; i < args.size(); i++) {
-      FunctionArg arg = args.get(i);
+      final FunctionArg arg = args.get(i);
       sb.append(getContinuationIndentString());
       sb.append("arg" + i + " = ");
-      FunctionArgStringify funcArgVisitor = new FunctionArgStringify(indent);
+      final FunctionArgStringify funcArgVisitor = new FunctionArgStringify(indent);
 
       sb.append(arg.accept(expr.declaration(), i, funcArgVisitor, context));
       sb.append(" ");
@@ -224,16 +244,17 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(WindowFunctionInvocation expr, EmptyVisitationContext context)
+  public String visit(final WindowFunctionInvocation expr, final EmptyVisitationContext context)
       throws RuntimeException {
-    StringBuilder sb = new StringBuilder("WindowFunctionInvocation#");
+    final StringBuilder sb = new StringBuilder("WindowFunctionInvocation#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(Cast expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("<Cast#");
+  public String visit(final Cast expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("<Cast#");
 
     sb.append(expr.getType().accept(new TypeStringify(this.indent))).append(" ");
     sb.append(expr.input().accept(this, context)).append(" ");
@@ -243,23 +264,26 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(SingleOrList expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("SingleOrList#");
+  public String visit(final SingleOrList expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("SingleOrList#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(MultiOrList expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("Cast#");
+  public String visit(final MultiOrList expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("Cast#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(FieldReference expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("FieldRef#");
-    Type type = expr.getType();
+  public String visit(final FieldReference expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("FieldRef#");
+    final Type type = expr.getType();
     // sb.append(expr.inputExpression());
     sb.append("/").append(type.accept(new TypeStringify(indent))).append("/");
     expr.segments()
@@ -272,40 +296,43 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(SetPredicate expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("SetPredicate#");
+  public String visit(final SetPredicate expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("SetPredicate#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(ScalarSubquery expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("ScalarSubquery#");
+  public String visit(final ScalarSubquery expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("ScalarSubquery#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(InPredicate expr, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("InPredicate#");
+  public String visit(final InPredicate expr, final EmptyVisitationContext context)
+      throws RuntimeException {
+    final StringBuilder sb = new StringBuilder("InPredicate#");
 
     return sb.toString();
   }
 
   @Override
-  public String visit(PrecisionTimestampLiteral expr, EmptyVisitationContext context)
+  public String visit(final PrecisionTimestampLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<PrecisionTimestampLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(PrecisionTimestampTZLiteral expr, EmptyVisitationContext context)
+  public String visit(final PrecisionTimestampTZLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<PrecisionTimestampTZLiteral " + expr.value() + ">";
   }
 
   @Override
-  public String visit(IntervalCompoundLiteral expr, EmptyVisitationContext context)
+  public String visit(final IntervalCompoundLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<IntervalCompoundLiteral "
         + expr.subseconds()
@@ -321,7 +348,7 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(EmptyMapLiteral expr, EmptyVisitationContext context)
+  public String visit(final EmptyMapLiteral expr, final EmptyVisitationContext context)
       throws RuntimeException {
     return "<EmptyMapLiteral>";
   }

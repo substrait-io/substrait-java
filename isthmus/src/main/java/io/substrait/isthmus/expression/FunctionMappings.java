@@ -146,15 +146,15 @@ public class FunctionMappings {
           SqlStdOperatorTable.BIT_LEFT_SHIFT,
           resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     SCALAR_SIGS.forEach(System.out::println);
   }
 
-  public static Sig s(SqlOperator operator, String substraitName) {
+  public static Sig s(final SqlOperator operator, final String substraitName) {
     return new Sig(operator, substraitName.toLowerCase(Locale.ROOT));
   }
 
-  public static Sig s(SqlOperator operator) {
+  public static Sig s(final SqlOperator operator) {
     return s(operator, operator.getName().toLowerCase(Locale.ROOT));
   }
 
@@ -176,7 +176,7 @@ public class FunctionMappings {
     }
   }
 
-  public static TypeBasedResolver resolver(SqlOperator operator, Set<String> outTypes) {
+  public static TypeBasedResolver resolver(final SqlOperator operator, final Set<String> outTypes) {
     return new TypeBasedResolver(operator, outTypes);
   }
 

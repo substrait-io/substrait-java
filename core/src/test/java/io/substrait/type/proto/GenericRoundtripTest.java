@@ -40,7 +40,8 @@ class GenericRoundtripTest extends TestBase {
    * parameters. If the param generation has failed the {@link UnsupportedTypeGenerationException} e
    * is populated, and the test will be ignored (kept here for tracking).
    */
-  void roundtripTest(Method m, List<Object> paramInst, UnsupportedTypeGenerationException e)
+  void roundtripTest(
+      final Method m, final List<Object> paramInst, final UnsupportedTypeGenerationException e)
       throws InvocationTargetException, IllegalAccessException {
 
     // If there is an UncoveredTypeGenerationException we  ignore this test
@@ -49,10 +50,10 @@ class GenericRoundtripTest extends TestBase {
     }
 
     // roundtrip to protobuff and back and check equality
-    Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
+    final Expression val = (Expression) m.invoke(null, paramInst.toArray(new Object[0]));
 
-    ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
-    ProtoExpressionConverter from =
+    final ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
+    final ProtoExpressionConverter from =
         new ProtoExpressionConverter(
             null,
             null,
@@ -64,27 +65,27 @@ class GenericRoundtripTest extends TestBase {
   // Parametrized case generator
   private static Collection generateInvocations() {
 
-    ArrayList<Arguments> invocations = new ArrayList<>();
+    final ArrayList<Arguments> invocations = new ArrayList<>();
 
     // We list all public and static methods of ExpressionCreator
-    List<Method> methodsToTest = getMethods(ExpressionCreator.class, true, true);
+    final List<Method> methodsToTest = getMethods(ExpressionCreator.class, true, true);
 
     // We generate synthetic input params (for a subset of types we support)
-    for (Method m : methodsToTest) {
+    for (final Method m : methodsToTest) {
       try {
         invocations.add(arguments(m, instantiateParams(m), null));
-      } catch (UnsupportedTypeGenerationException e) {
+      } catch (final UnsupportedTypeGenerationException e) {
         invocations.add(arguments(m, null, e));
       }
     }
     return invocations;
   }
 
-  private static List<Object> instantiateParams(Method m)
+  private static List<Object> instantiateParams(final Method m)
       throws UnsupportedTypeGenerationException {
-    List<Object> l = new ArrayList<>();
-    for (Class param : m.getParameterTypes()) {
-      Object val = valGenerator(param);
+    final List<Object> l = new ArrayList<>();
+    for (final Class param : m.getParameterTypes()) {
+      final Object val = valGenerator(param);
       if (val == null) {
         throw new UnsupportedTypeGenerationException(
             "We can't yet handle generation for type: " + param.getName());
@@ -95,10 +96,10 @@ class GenericRoundtripTest extends TestBase {
   }
 
   private static List<Method> getMethods(
-      Class c, boolean filterPublicOnly, boolean filterStaticOnly) {
-    Method[] allMethods = c.getMethods();
-    List<Method> selectedMethods = new ArrayList<>();
-    for (Method m : allMethods) {
+      final Class c, final boolean filterPublicOnly, final boolean filterStaticOnly) {
+    final Method[] allMethods = c.getMethods();
+    final List<Method> selectedMethods = new ArrayList<>();
+    for (final Method m : allMethods) {
       if ((filterPublicOnly && !Modifier.isPublic(m.getModifiers()))
           || (filterStaticOnly && !Modifier.isStatic(m.getModifiers()))) {
         continue;
@@ -108,7 +109,7 @@ class GenericRoundtripTest extends TestBase {
     return selectedMethods;
   }
 
-  private static Object valGenerator(Class<?> type) {
+  private static Object valGenerator(final Class<?> type) {
     // For each "type" generate some random value
 
     if (type.equals(Boolean.TYPE) || type.equals(Boolean.class)) {
@@ -146,7 +147,7 @@ class GenericRoundtripTest extends TestBase {
 
     private static final long serialVersionUID = -8627552468610061245L;
 
-    public UnsupportedTypeGenerationException(String s) {
+    public UnsupportedTypeGenerationException(final String s) {
       super(s);
     }
   }

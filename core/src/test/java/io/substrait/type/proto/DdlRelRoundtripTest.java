@@ -21,15 +21,15 @@ class DdlRelRoundtripTest extends TestBase {
 
   @Test
   void create() {
-    NamedStruct schema =
+    final NamedStruct schema =
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    Expression.StructLiteral defaults =
+    final Expression.StructLiteral defaults =
         ExpressionCreator.struct(
             false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
 
-    NamedDdl command =
+    final NamedDdl command =
         NamedDdl.builder()
             .tableSchema(schema)
             .tableDefaults(defaults)
@@ -43,23 +43,23 @@ class DdlRelRoundtripTest extends TestBase {
 
   @Test
   void alter() {
-    ProtoRelConverter protoRelConverter =
+    final ProtoRelConverter protoRelConverter =
         new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
 
-    StringHolder detail = new StringHolder("DETAIL");
+    final StringHolder detail = new StringHolder("DETAIL");
 
-    NamedStruct schema =
+    final NamedStruct schema =
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    Expression.StructLiteral defaults =
+    final Expression.StructLiteral defaults =
         ExpressionCreator.struct(
             false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
 
-    VirtualTableScan virtTable =
+    final VirtualTableScan virtTable =
         VirtualTableScan.builder().initialSchema(schema).addRows(defaults).build();
 
-    ExtensionDdl command =
+    final ExtensionDdl command =
         ExtensionDdl.builder()
             .viewDefinition(virtTable)
             .tableSchema(schema)
@@ -69,8 +69,8 @@ class DdlRelRoundtripTest extends TestBase {
             .object(ExtensionDdl.DdlObject.VIEW)
             .build();
 
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(command);
-    Rel relReturned = protoRelConverter.from(protoRel);
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(command);
+    final Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(command, relReturned);
   }
 }

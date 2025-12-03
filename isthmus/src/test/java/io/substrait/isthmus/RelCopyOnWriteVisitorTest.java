@@ -76,14 +76,14 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
           + "from\n"
           + "  \"orders\" o\n";
 
-  private Plan buildPlanFromQuery(String query) throws IOException, SqlParseException {
-    SqlToSubstrait s = new SqlToSubstrait();
+  private Plan buildPlanFromQuery(final String query) throws IOException, SqlParseException {
+    final SqlToSubstrait s = new SqlToSubstrait();
     return s.convert(query, TPCH_CATALOG);
   }
 
   @Test
   void hasTableReference() throws IOException, SqlParseException {
-    Plan plan =
+    final Plan plan =
         buildPlanFromQuery(
             "SELECT p_partkey\n"
                 + "FROM part p\n"
@@ -96,7 +96,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
                 + "          FROM partsupp ps\n"
                 + "          WHERE ps.ps_partkey = p.p_partkey\n"
                 + "          AND   PS.ps_suppkey = l.l_suppkey))");
-    HasTableReference action = new HasTableReference();
+    final HasTableReference action = new HasTableReference();
     assertTrue(action.hasTableReference(plan, "PARTSUPP"));
     assertTrue(action.hasTableReference(plan, "LINEITEM"));
     assertTrue(action.hasTableReference(plan, "PART"));
@@ -105,17 +105,17 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   @Test
   void countCountDistincts() throws IOException, SqlParseException {
-    Plan plan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
+    final Plan plan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(plan));
   }
 
   @Test
   void replaceCountDistincts() throws IOException, SqlParseException {
-    Plan oldPlan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
+    final Plan oldPlan = buildPlanFromQuery(COUNT_DISTINCT_SUBBQUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
     assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));
-    ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
-    Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
+    final ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
+    final Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
     assertPlanRoundtrip(newPlan);
@@ -123,45 +123,46 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   @Test
   void approximateCountDistinct() throws IOException, SqlParseException {
-    Plan oldPlan =
+    final Plan oldPlan =
         buildPlanFromQuery(
             "select count(distinct l_discount), count(distinct l_tax) from lineitem");
     assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
     assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));
-    ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
-    Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
+    final ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
+    final Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
     assertPlanRoundtrip(newPlan);
 
     // convert newPlan back to sql
-    Rel pojoRel = newPlan.getRoots().get(0).getInput();
-    RelNode relnodeRoot = new SubstraitToSql().substraitRelToCalciteRel(pojoRel, TPCH_CATALOG);
-    String newSql = SubstraitSqlDialect.toSql(relnodeRoot).getSql();
+    final Rel pojoRel = newPlan.getRoots().get(0).getInput();
+    final RelNode relnodeRoot =
+        new SubstraitToSql().substraitRelToCalciteRel(pojoRel, TPCH_CATALOG);
+    final String newSql = SubstraitSqlDialect.toSql(relnodeRoot).getSql();
     assertTrue(newSql.toUpperCase().contains("APPROX_COUNT_DISTINCT"));
   }
 
   @Test
   void countCountDistinctsUnion() throws IOException, SqlParseException {
-    Plan plan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
+    final Plan plan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(plan));
   }
 
   @Test
   void replaceCountDistinctsInUnion() throws IOException, SqlParseException {
-    Plan oldPlan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
+    final Plan oldPlan = buildPlanFromQuery(UNION_DISTINCT_COUNT_QUERY);
     assertEquals(2, new CountCountDistinct().getCountDistincts(oldPlan));
     assertEquals(0, new CountApproxCountDistinct().getApproxCountDistincts(oldPlan));
-    ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
-    Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
+    final ReplaceCountDistinctWithApprox action = new ReplaceCountDistinctWithApprox();
+    final Plan newPlan = action.modify(oldPlan).orElse(oldPlan);
     assertEquals(2, new CountApproxCountDistinct().getApproxCountDistincts(newPlan));
     assertEquals(0, new CountCountDistinct().getCountDistincts(newPlan));
     assertPlanRoundtrip(newPlan);
   }
 
   private static class HasTableReference {
-    public boolean hasTableReference(Plan plan, String name) {
-      HasTableReferenceVisitor visitor = new HasTableReferenceVisitor(Arrays.asList(name));
+    public boolean hasTableReference(final Plan plan, final String name) {
+      final HasTableReferenceVisitor visitor = new HasTableReferenceVisitor(Arrays.asList(name));
       plan.getRoots().stream()
           .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return (visitor.hasTableReference());
@@ -171,7 +172,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
       private boolean hasTableReference;
       private final List<String> tableName;
 
-      public HasTableReferenceVisitor(List<String> tableName) {
+      public HasTableReferenceVisitor(final List<String> tableName) {
         this.tableName = tableName;
       }
 
@@ -180,7 +181,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
+      public Optional<Rel> visit(final NamedScan namedScan, final EmptyVisitationContext context) {
         this.hasTableReference |= namedScan.getNames().equals(tableName);
         return super.visit(namedScan, context);
       }
@@ -189,8 +190,8 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   private static class CountCountDistinct {
 
-    public int getCountDistincts(Plan plan) {
-      CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
+    public int getCountDistincts(final Plan plan) {
+      final CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
       plan.getRoots().stream()
           .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return visitor.getCountDistincts();
@@ -204,7 +205,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate, EmptyVisitationContext context) {
+      public Optional<Rel> visit(final Aggregate aggregate, final EmptyVisitationContext context) {
         countDistincts +=
             aggregate.getMeasures().stream()
                 .filter(
@@ -221,8 +222,8 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
   private static class CountApproxCountDistinct {
 
-    public int getApproxCountDistincts(Plan plan) {
-      CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
+    public int getApproxCountDistincts(final Plan plan) {
+      final CountCountDistinctVisitor visitor = new CountCountDistinctVisitor();
       plan.getRoots().stream()
           .forEach(r -> r.getInput().accept(visitor, EmptyVisitationContext.INSTANCE));
       return visitor.getApproxCountDistincts();
@@ -236,7 +237,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate, EmptyVisitationContext context) {
+      public Optional<Rel> visit(final Aggregate aggregate, final EmptyVisitationContext context) {
         aproxCountDistincts +=
             aggregate.getMeasures().stream()
                 .filter(
@@ -255,7 +256,7 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
           new ReplaceCountDistinctWithApproxVisitor(DefaultExtensionCatalog.DEFAULT_COLLECTION);
     }
 
-    public Optional<Plan> modify(Plan plan) {
+    public Optional<Plan> modify(final Plan plan) {
       return CopyOnWriteUtils.<Plan.Root, EmptyVisitationContext, RuntimeException>transformList(
               plan.getRoots(),
               null,
@@ -272,13 +273,13 @@ class RelCopyOnWriteVisitorTest extends PlanTestBase {
       private final SimpleExtension.AggregateFunctionVariant approxFunc;
 
       public ReplaceCountDistinctWithApproxVisitor(
-          SimpleExtension.ExtensionCollection extensionCollection) {
+          final SimpleExtension.ExtensionCollection extensionCollection) {
         this.approxFunc =
             Objects.requireNonNull(extensionCollection.getAggregateFunction(APPROX_COUNT_DISTINCT));
       }
 
       @Override
-      public Optional<Rel> visit(Aggregate aggregate, EmptyVisitationContext context) {
+      public Optional<Rel> visit(final Aggregate aggregate, final EmptyVisitationContext context) {
         return CopyOnWriteUtils
             .<Aggregate.Measure, EmptyVisitationContext, RuntimeException>transformList(
                 aggregate.getMeasures(),

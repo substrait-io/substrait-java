@@ -41,12 +41,13 @@ public class DecimalUtil {
    * @param byteWidth
    * @return
    */
-  public static BigDecimal getBigDecimalFromBytes(byte[] value, int scale, int byteWidth) {
-    byte[] reversed = new byte[value.length];
+  public static BigDecimal getBigDecimalFromBytes(
+      final byte[] value, final int scale, final int byteWidth) {
+    final byte[] reversed = new byte[value.length];
     for (int i = 0; i < byteWidth; i++) {
       reversed[byteWidth - 1 - i] = value[i];
     }
-    BigInteger unscaledValue = new BigInteger(reversed);
+    final BigInteger unscaledValue = new BigInteger(reversed);
     return new BigDecimal(unscaledValue, scale);
   }
 
@@ -59,17 +60,18 @@ public class DecimalUtil {
    * @param byteWidth
    * @return
    */
-  public static byte[] encodeDecimalIntoBytes(BigDecimal decimal, int scale, int byteWidth) {
-    BigDecimal scaledDecimal = decimal.multiply(powerOfTen(scale));
-    byte[] bytes = scaledDecimal.toBigInteger().toByteArray();
+  public static byte[] encodeDecimalIntoBytes(
+      final BigDecimal decimal, final int scale, final int byteWidth) {
+    final BigDecimal scaledDecimal = decimal.multiply(powerOfTen(scale));
+    final byte[] bytes = scaledDecimal.toBigInteger().toByteArray();
     if (bytes.length > byteWidth) {
       throw new UnsupportedOperationException(
           "Decimal size greater than " + byteWidth + " bytes: " + bytes.length);
     }
-    byte[] encodedBytes = new byte[byteWidth];
-    byte padByte = bytes[0] < 0 ? minus_one : zero;
+    final byte[] encodedBytes = new byte[byteWidth];
+    final byte padByte = bytes[0] < 0 ? minus_one : zero;
     // Decimal stored as native-endian, need to swap data bytes if LE
-    byte[] bytesLE = new byte[bytes.length];
+    final byte[] bytesLE = new byte[bytes.length];
     for (int i = 0; i < bytes.length; i++) {
       bytesLE[i] = bytes[bytes.length - 1 - i];
     }
@@ -85,11 +87,11 @@ public class DecimalUtil {
     return encodedBytes;
   }
 
-  private static BigDecimal powerOfTen(int scale) {
+  private static BigDecimal powerOfTen(final int scale) {
     if (scale < POWER_OF_10.length) {
       return new BigDecimal(POWER_OF_10[scale]);
     } else {
-      int length = POWER_OF_10.length;
+      final int length = POWER_OF_10.length;
       BigDecimal bd = new BigDecimal(POWER_OF_10[length - 1]);
 
       for (int i = length - 1; i < scale; i++) {

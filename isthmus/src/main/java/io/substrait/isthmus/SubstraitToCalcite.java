@@ -40,29 +40,29 @@ public class SubstraitToCalcite {
   protected final Prepare.CatalogReader catalogReader;
 
   public SubstraitToCalcite(
-      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+      final SimpleExtension.ExtensionCollection extensions, final RelDataTypeFactory typeFactory) {
     this(extensions, typeFactory, TypeConverter.DEFAULT, null);
   }
 
   public SubstraitToCalcite(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      Prepare.CatalogReader catalogReader) {
+      final SimpleExtension.ExtensionCollection extensions,
+      final RelDataTypeFactory typeFactory,
+      final Prepare.CatalogReader catalogReader) {
     this(extensions, typeFactory, TypeConverter.DEFAULT, catalogReader);
   }
 
   public SubstraitToCalcite(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter) {
+      final SimpleExtension.ExtensionCollection extensions,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter) {
     this(extensions, typeFactory, typeConverter, null);
   }
 
   public SubstraitToCalcite(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter,
-      Prepare.CatalogReader catalogReader) {
+      final SimpleExtension.ExtensionCollection extensions,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter,
+      final Prepare.CatalogReader catalogReader) {
     this.extensions = extensions;
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
@@ -74,8 +74,8 @@ public class SubstraitToCalcite {
    *
    * <p>Override this method to customize schema extraction.
    */
-  protected CalciteSchema toSchema(Rel rel) {
-    SchemaCollector schemaCollector = new SchemaCollector(typeFactory, typeConverter);
+  protected CalciteSchema toSchema(final Rel rel) {
+    final SchemaCollector schemaCollector = new SchemaCollector(typeFactory, typeConverter);
     return schemaCollector.toSchema(rel);
   }
 
@@ -84,7 +84,7 @@ public class SubstraitToCalcite {
    *
    * <p>Override this method to customize the {@link RelBuilder}.
    */
-  protected RelBuilder createRelBuilder(CalciteSchema schema) {
+  protected RelBuilder createRelBuilder(final CalciteSchema schema) {
     return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
   }
 
@@ -93,7 +93,7 @@ public class SubstraitToCalcite {
    *
    * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
    */
-  protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
+  protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(final RelBuilder relBuilder) {
     return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder);
   }
 
@@ -107,15 +107,15 @@ public class SubstraitToCalcite {
    * @param rel {@link Rel} to convert
    * @return {@link RelNode}
    */
-  public RelNode convert(Rel rel) {
-    RelBuilder relBuilder;
+  public RelNode convert(final Rel rel) {
+    final RelBuilder relBuilder;
     if (catalogReader != null) {
       relBuilder = createRelBuilder(catalogReader.getRootSchema());
     } else {
-      CalciteSchema rootSchema = toSchema(rel);
+      final CalciteSchema rootSchema = toSchema(rel);
       relBuilder = createRelBuilder(rootSchema);
     }
-    SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
+    final SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
 
     return rel.accept(converter, Context.newContext());
   }
@@ -134,8 +134,8 @@ public class SubstraitToCalcite {
    * @param root {@link Plan.Root} to convert
    * @return {@link RelRoot}
    */
-  public RelRoot convert(Plan.Root root) {
-    RelNode convertedNode = convert(root.getInput());
+  public RelRoot convert(final Plan.Root root) {
+    final RelNode convertedNode = convert(root.getInput());
 
     if (convertedNode instanceof TableModify) {
       final TableModify tableModify = (TableModify) convertedNode;
@@ -158,10 +158,10 @@ public class SubstraitToCalcite {
       }
       return RelRoot.of(tableModify, tableRowType, kind);
     }
-    SqlKindFromRel sqlKindFromRel = new SqlKindFromRel();
-    SqlKind kind = root.getInput().accept(sqlKindFromRel, EmptyVisitationContext.INSTANCE);
-    RelDataType inputRowType = convertedNode.getRowType();
-    RelDataType newRowType = renameFields(inputRowType, root.getNames(), 0).right;
+    final SqlKindFromRel sqlKindFromRel = new SqlKindFromRel();
+    final SqlKind kind = root.getInput().accept(sqlKindFromRel, EmptyVisitationContext.INSTANCE);
+    final RelDataType inputRowType = convertedNode.getRowType();
+    final RelDataType newRowType = renameFields(inputRowType, root.getNames(), 0).right;
     return RelRoot.of(convertedNode, newRowType, kind);
   }
 
@@ -175,7 +175,7 @@ public class SubstraitToCalcite {
    * @return the renamed {@link RelDataType}
    */
   private Pair<Integer, RelDataType> renameFields(
-      RelDataType type, List<String> names, Integer currentIndex) {
+      final RelDataType type, final List<String> names, final Integer currentIndex) {
     Integer nextIndex = currentIndex;
 
     switch (type.getSqlTypeName()) {
@@ -183,9 +183,10 @@ public class SubstraitToCalcite {
       case STRUCTURED:
         final List<String> newFieldNames = new ArrayList<>();
         final List<RelDataType> renamedFields = new ArrayList<>();
-        for (RelDataTypeField field : type.getFieldList()) {
+        for (final RelDataTypeField field : type.getFieldList()) {
           newFieldNames.add(names.get(nextIndex));
-          Pair<Integer, RelDataType> p = renameFields(field.getType(), names, (nextIndex + 1));
+          final Pair<Integer, RelDataType> p =
+              renameFields(field.getType(), names, (nextIndex + 1));
           renamedFields.add(p.right);
           nextIndex = p.left;
         }
@@ -195,15 +196,15 @@ public class SubstraitToCalcite {
             typeFactory.createStructType(type.getStructKind(), renamedFields, newFieldNames));
       case ARRAY:
       case MULTISET:
-        Pair<Integer, RelDataType> renamedElementType =
+        final Pair<Integer, RelDataType> renamedElementType =
             renameFields(type.getComponentType(), names, nextIndex);
 
         return Pair.of(
             renamedElementType.left, typeFactory.createArrayType(renamedElementType.right, -1L));
       case MAP:
-        Pair<Integer, RelDataType> renamedKeyType =
+        final Pair<Integer, RelDataType> renamedKeyType =
             renameFields(type.getKeyType(), names, nextIndex);
-        Pair<Integer, RelDataType> renamedValueType =
+        final Pair<Integer, RelDataType> renamedValueType =
             renameFields(type.getValueType(), names, renamedKeyType.left);
 
         return Pair.of(
@@ -222,17 +223,17 @@ public class SubstraitToCalcite {
       this.tableMap = new HashMap<>();
     }
 
-    public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
-      NamedStructGatherer visitor = new NamedStructGatherer();
+    public static Map<List<String>, NamedStruct> gatherTables(final Rel rel) {
+      final NamedStructGatherer visitor = new NamedStructGatherer();
       rel.accept(visitor, EmptyVisitationContext.INSTANCE);
       return visitor.tableMap;
     }
 
     @Override
-    public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
-      Optional<Rel> result = super.visit(namedScan, context);
+    public Optional<Rel> visit(final NamedScan namedScan, final EmptyVisitationContext context) {
+      final Optional<Rel> result = super.visit(namedScan, context);
 
-      List<String> tableName = namedScan.getNames();
+      final List<String> tableName = namedScan.getNames();
       tableMap.put(tableName, namedScan.getInitialSchema());
 
       return result;

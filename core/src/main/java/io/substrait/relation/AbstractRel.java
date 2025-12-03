@@ -9,7 +9,7 @@ public abstract class AbstractRel implements Rel {
   private Supplier<Type.Struct> recordType =
       Util.memoize(
           () -> {
-            Type.Struct s = deriveRecordType();
+            final Type.Struct s = deriveRecordType();
             return getRemap().map(r -> r.remap(s)).orElse(s);
           });
 

@@ -15,26 +15,26 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testUrnResolutionWorks() {
     // Create URN-only plan (normal case)
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(1)
             .setUrn("extension:test:urn")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("test_func")
             .setExtensionUrnReference(1)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
 
     // Test with no ExtensionCollection (no URI/URN mapping available)
-    ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
+    final ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
     assertEquals("extension:test:urn", lookup.functionAnchorMap.get(1).urn());
     assertEquals("test_func", lookup.functionAnchorMap.get(1).key());
@@ -43,33 +43,33 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testUriToUrnFallbackWorks() {
     // Create an ExtensionCollection with URI/URN mapping
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/extensions/test", "extension:test:mapped");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
     // Create URI-only plan (legacy case)
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(1)
             .setUri("http://example.com/extensions/test")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("legacy_func")
             .setExtensionUriReference(1) // References the URI anchor (deprecated field)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
     // Test with URI/URN mapping - should resolve URI to URN
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:mapped", lookup.functionAnchorMap.get(1).urn());
@@ -79,26 +79,26 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testUriWithoutMappingThrowsError() {
     // Create URI-only plan without mapping
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(1)
             .setUri("http://example.com/unmapped")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("unmapped_func")
             .setExtensionUriReference(1) // References the URI anchor
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
     // Should throw error - URI present but no mapping available
-    IllegalStateException exception =
+    final IllegalStateException exception =
         assertThrows(
             IllegalStateException.class,
             () -> {
@@ -113,20 +113,20 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testMissingUrnAndUriThrowsError() {
     // Create plan with missing URN/URI reference
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("missing_func")
             .setExtensionUrnReference(999) // Non-existent reference
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensions(decl).build();
 
     // Should throw error - neither URN nor URI found
-    IllegalStateException exception =
+    final IllegalStateException exception =
         assertThrows(
             IllegalStateException.class,
             () -> {
@@ -144,25 +144,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase1_NonZeroUrnReference() {
     // Case 1: Non-zero URN reference resolves
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(1)
             .setUrn("extension:test:case1")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("case1_func")
             .setExtensionUrnReference(1)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
+    final ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
     assertEquals("extension:test:case1", lookup.functionAnchorMap.get(1).urn());
     assertEquals("case1_func", lookup.functionAnchorMap.get(1).key());
@@ -171,31 +171,31 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase2_NonZeroUriReference() {
     // Case 2: Non-zero URI reference resolves via mapping
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case2", "extension:test:case2");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(1)
             .setUri("http://example.com/case2")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("case2_func")
             .setExtensionUriReference(1)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case2", lookup.functionAnchorMap.get(1).urn());
@@ -205,25 +205,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase3_ZeroBothResolveConsistent() {
     // Case 3: Both 0 references resolve to consistent URN
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case3", "extension:test:case3");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:case3")
             .build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/case3")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("case3_func")
@@ -231,17 +231,17 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan =
+    final Plan plan =
         Plan.newBuilder()
             .addExtensionUrns(urnProto)
             .addExtensionUris(uriProto)
             .addExtensions(decl)
             .build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case3", lookup.functionAnchorMap.get(1).urn());
@@ -251,25 +251,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase3_ZeroBothResolveConflict() {
     // Case 3: Both 0 references resolve but to different URNs - should throw
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/conflict", "extension:test:different");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:original")
             .build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/conflict")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("conflict_func")
@@ -277,17 +277,17 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan =
+    final Plan plan =
         Plan.newBuilder()
             .addExtensionUrns(urnProto)
             .addExtensionUris(uriProto)
             .addExtensions(decl)
             .build();
 
-    IllegalStateException exception =
+    final IllegalStateException exception =
         assertThrows(
             IllegalStateException.class,
             () -> {
@@ -301,13 +301,13 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase4_ZeroUrnOnly() {
     // Case 4: Only 0 URN reference resolves
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:case4")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("case4_func")
@@ -315,12 +315,12 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
+    final ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
     assertEquals("extension:test:case4", lookup.functionAnchorMap.get(1).urn());
     assertEquals("case4_func", lookup.functionAnchorMap.get(1).key());
@@ -329,19 +329,19 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testFunctionCase5_ZeroUriOnly() {
     // Case 5: Only 0 URI reference resolves
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case5", "extension:test:case5");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/case5")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionFunction func =
+    final SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
             .setFunctionAnchor(1)
             .setName("case5_func")
@@ -349,12 +349,12 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionFunction(func).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case5", lookup.functionAnchorMap.get(1).urn());
@@ -368,25 +368,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase1_NonZeroUrnReference() {
     // Case 1: Non-zero URN reference resolves
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(1)
             .setUrn("extension:test:case1")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("case1_type")
             .setExtensionUrnReference(1)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
+    final ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
     assertEquals("extension:test:case1", lookup.typeAnchorMap.get(1).urn());
     assertEquals("case1_type", lookup.typeAnchorMap.get(1).key());
@@ -395,31 +395,31 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase2_NonZeroUriReference() {
     // Case 2: Non-zero URI reference resolves via mapping
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case2", "extension:test:case2");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(1)
             .setUri("http://example.com/case2")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("case2_type")
             .setExtensionUriReference(1)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case2", lookup.typeAnchorMap.get(1).urn());
@@ -429,25 +429,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase3_ZeroBothResolveConsistent() {
     // Case 3: Both 0 references resolve to consistent URN
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case3", "extension:test:case3");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:case3")
             .build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/case3")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("case3_type")
@@ -455,17 +455,17 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan =
+    final Plan plan =
         Plan.newBuilder()
             .addExtensionUrns(urnProto)
             .addExtensionUris(uriProto)
             .addExtensions(decl)
             .build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case3", lookup.typeAnchorMap.get(1).urn());
@@ -475,25 +475,25 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase3_ZeroBothResolveConflict() {
     // Case 3: Both 0 references resolve but to different URNs - should throw
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/conflict", "extension:test:different");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:original")
             .build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/conflict")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("conflict_type")
@@ -501,17 +501,17 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan =
+    final Plan plan =
         Plan.newBuilder()
             .addExtensionUrns(urnProto)
             .addExtensionUris(uriProto)
             .addExtensions(decl)
             .build();
 
-    IllegalStateException exception =
+    final IllegalStateException exception =
         assertThrows(
             IllegalStateException.class,
             () -> {
@@ -525,13 +525,13 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase4_ZeroUrnOnly() {
     // Case 4: Only 0 URN reference resolves
-    SimpleExtensionURN urnProto =
+    final SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
             .setExtensionUrnAnchor(0)
             .setUrn("extension:test:case4")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("case4_type")
@@ -539,12 +539,12 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUrns(urnProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
+    final ImmutableExtensionLookup lookup = ImmutableExtensionLookup.builder().from(plan).build();
 
     assertEquals("extension:test:case4", lookup.typeAnchorMap.get(1).urn());
     assertEquals("case4_type", lookup.typeAnchorMap.get(1).key());
@@ -553,19 +553,19 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeCase5_ZeroUriOnly() {
     // Case 5: Only 0 URI reference resolves
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case5", "extension:test:case5");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(0)
             .setUri("http://example.com/case5")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("case5_type")
@@ -573,12 +573,12 @@ class ImmutableExtensionLookupUriUrnTest {
             .setExtensionUriReference(0)
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:test:case5", lookup.typeAnchorMap.get(1).urn());
@@ -588,31 +588,31 @@ class ImmutableExtensionLookupUriUrnTest {
   @Test
   void testTypeUriToUrnFallbackWorks() {
     // Test the same logic but for types instead of functions
-    BidiMap<String, String> uriUrnMap = new BidiMap<>();
+    final BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/types/test", "extension:types:mapped");
 
-    SimpleExtension.ExtensionCollection extensionCollection =
+    final SimpleExtension.ExtensionCollection extensionCollection =
         SimpleExtension.ExtensionCollection.builder().uriUrnMap(uriUrnMap).build();
 
-    SimpleExtensionURI uriProto =
+    final SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
             .setExtensionUriAnchor(1)
             .setUri("http://example.com/types/test")
             .build();
 
-    SimpleExtensionDeclaration.ExtensionType type =
+    final SimpleExtensionDeclaration.ExtensionType type =
         SimpleExtensionDeclaration.ExtensionType.newBuilder()
             .setTypeAnchor(1)
             .setName("legacy_type")
             .setExtensionUriReference(1) // References the URI anchor
             .build();
 
-    SimpleExtensionDeclaration decl =
+    final SimpleExtensionDeclaration decl =
         SimpleExtensionDeclaration.newBuilder().setExtensionType(type).build();
 
-    Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
+    final Plan plan = Plan.newBuilder().addExtensionUris(uriProto).addExtensions(decl).build();
 
-    ImmutableExtensionLookup lookup =
+    final ImmutableExtensionLookup lookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
 
     assertEquals("extension:types:mapped", lookup.typeAnchorMap.get(1).urn());

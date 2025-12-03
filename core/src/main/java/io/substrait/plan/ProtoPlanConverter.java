@@ -66,18 +66,18 @@ public class ProtoPlanConverter {
     return new ProtoRelConverter(functionLookup, this.extensionCollection, protoExtensionConverter);
   }
 
-  public Plan from(io.substrait.proto.Plan plan) {
-    ExtensionLookup functionLookup =
+  public Plan from(final io.substrait.proto.Plan plan) {
+    final ExtensionLookup functionLookup =
         ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
-    ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
-    List<Plan.Root> roots = new ArrayList<>();
-    for (PlanRel planRel : plan.getRelationsList()) {
-      io.substrait.proto.RelRoot root = planRel.getRoot();
-      Rel rel = relConverter.from(root.getInput());
+    final ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
+    final List<Plan.Root> roots = new ArrayList<>();
+    for (final PlanRel planRel : plan.getRelationsList()) {
+      final io.substrait.proto.RelRoot root = planRel.getRoot();
+      final Rel rel = relConverter.from(root.getInput());
       roots.add(Plan.Root.builder().input(rel).names(root.getNamesList()).build());
     }
 
-    ImmutableVersion.Builder versionBuilder =
+    final ImmutableVersion.Builder versionBuilder =
         ImmutableVersion.builder()
             .major(plan.getVersion().getMajorNumber())
             .minor(plan.getVersion().getMinorNumber())

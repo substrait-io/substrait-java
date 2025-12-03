@@ -93,7 +93,7 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tBinary() {
-    byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
+    final byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
         ExpressionCreator.binary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.VARBINARY));
@@ -108,9 +108,9 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimeWithMicroSecond() {
-    long microSec = (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456;
-    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
-    int fracSecondsInNano =
+    final long microSec = (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456;
+    final long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
+    final int fracSecondsInNano =
         (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
     assertEquals(
         TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
@@ -138,17 +138,17 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimestamp() {
-    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
-    int nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
-    TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
+    final TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
+    final int nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
+    final TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
   @Test
   void tTimestampWithMilliMacroSeconds() {
-    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
-    int nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
-    TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
+    final TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
+    final int nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
+    final TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
@@ -162,16 +162,16 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tIntervalYearMonth() {
-    BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
-    RexLiteral intervalYearMonth = rex.makeIntervalLiteral(bd, YEAR_MONTH_INTERVAL);
-    IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 3, 5);
+    final BigDecimal bd = new BigDecimal(3 * 12 + 5); // '3-5' year to month
+    final RexLiteral intervalYearMonth = rex.makeIntervalLiteral(bd, YEAR_MONTH_INTERVAL);
+    final IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 3, 5);
     bitest(intervalYearMonthExpr, intervalYearMonth);
   }
 
   @Test
   void tIntervalYearMonthWithPrecision() {
-    BigDecimal bd = new BigDecimal(123 * 12 + 5); // '123-5' year to month
-    RexLiteral intervalYearMonth =
+    final BigDecimal bd = new BigDecimal(123 * 12 + 5); // '123-5' year to month
+    final RexLiteral intervalYearMonth =
         rex.makeIntervalLiteral(
             bd,
             new SqlIntervalQualifier(
@@ -180,13 +180,13 @@ class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.MONTH,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 123, 5);
+    final IntervalYearLiteral intervalYearMonthExpr = ExpressionCreator.intervalYear(false, 123, 5);
 
     // rex --> expression
     assertEquals(intervalYearMonthExpr, intervalYearMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex =
+    final RexLiteral convertedRex =
         (RexLiteral) intervalYearMonthExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier (which is used to parse
@@ -199,14 +199,14 @@ class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tIntervalMillisecond() {
     // Calcite stores milliseconds since Epoch, so test only millisecond precision
-    BigDecimal bd =
+    final BigDecimal bd =
         new BigDecimal(
             TimeUnit.DAYS.toMillis(3)
                 + TimeUnit.HOURS.toMillis(5)
                 + TimeUnit.MINUTES.toMillis(7)
                 + TimeUnit.SECONDS.toMillis(9)
                 + 500); // '3-5:7:9.500' day to second (6)
-    RexLiteral intervalDaySecond =
+    final RexLiteral intervalDaySecond =
         rex.makeIntervalLiteral(
             bd,
             new SqlIntervalQualifier(
@@ -215,7 +215,7 @@ class CalciteLiteralTest extends CalciteObjs {
                 org.apache.calcite.avatica.util.TimeUnit.SECOND,
                 3,
                 SqlParserPos.ZERO));
-    IntervalDayLiteral intervalDaySecondExpr =
+    final IntervalDayLiteral intervalDaySecondExpr =
         ExpressionCreator.intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
     bitest(intervalDaySecondExpr, intervalDaySecond);
   }
@@ -223,20 +223,20 @@ class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tIntervalDay() {
     // Calcite always uses milliseconds
-    BigDecimal bd = new BigDecimal(TimeUnit.DAYS.toMillis(5));
-    RexLiteral intervalDayLiteral =
+    final BigDecimal bd = new BigDecimal(TimeUnit.DAYS.toMillis(5));
+    final RexLiteral intervalDayLiteral =
         rex.makeIntervalLiteral(
             bd,
             new SqlIntervalQualifier(
                 org.apache.calcite.avatica.util.TimeUnit.DAY, -1, null, -1, SqlParserPos.ZERO));
-    IntervalDayLiteral intervalDayExpr = ExpressionCreator.intervalDay(false, 5, 0, 0, 6);
+    final IntervalDayLiteral intervalDayExpr = ExpressionCreator.intervalDay(false, 5, 0, 0, 6);
 
     // rex --> expression
-    Expression convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
+    final Expression convertedExpr = intervalDayLiteral.accept(rexExpressionConverter);
     assertEquals(intervalDayExpr, convertedExpr);
 
     // expression -> rex
-    RexLiteral convertedRex =
+    final RexLiteral convertedRex =
         (RexLiteral) intervalDayExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
@@ -246,8 +246,8 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tIntervalYear() {
-    BigDecimal bd = new BigDecimal(123 * 12); // '123' year(3)
-    RexLiteral intervalYear =
+    final BigDecimal bd = new BigDecimal(123 * 12); // '123' year(3)
+    final RexLiteral intervalYear =
         rex.makeIntervalLiteral(
             bd,
             new SqlIntervalQualifier(
@@ -256,12 +256,12 @@ class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    IntervalYearLiteral intervalYearExpr = ExpressionCreator.intervalYear(false, 123, 0);
+    final IntervalYearLiteral intervalYearExpr = ExpressionCreator.intervalYear(false, 123, 0);
     // rex --> expression
     assertEquals(intervalYearExpr, intervalYear.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex =
+    final RexLiteral convertedRex =
         (RexLiteral) intervalYearExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
@@ -272,8 +272,8 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tIntervalMonth() {
-    BigDecimal bd = new BigDecimal(123); // '123' month(3)
-    RexLiteral intervalMonth =
+    final BigDecimal bd = new BigDecimal(123); // '123' month(3)
+    final RexLiteral intervalMonth =
         rex.makeIntervalLiteral(
             bd,
             new SqlIntervalQualifier(
@@ -282,13 +282,13 @@ class CalciteLiteralTest extends CalciteObjs {
                 null,
                 -1,
                 SqlParserPos.QUOTED_ZERO));
-    IntervalYearLiteral intervalMonthExpr =
+    final IntervalYearLiteral intervalMonthExpr =
         ExpressionCreator.intervalYear(false, 123 / 12, 123 % 12);
     // rex --> expression
     assertEquals(intervalMonthExpr, intervalMonth.accept(rexExpressionConverter));
 
     // expression -> rex
-    RexLiteral convertedRex =
+    final RexLiteral convertedRex =
         (RexLiteral) intervalMonthExpr.accept(expressionRexConverter, Context.newContext());
 
     // Compare value only. Ignore the precision in SqlIntervalQualifier in comparison.
@@ -309,37 +309,37 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tDecimalLiteral() {
-    List<BigDecimal> decimalList =
+    final List<BigDecimal> decimalList =
         List.of(
             new BigDecimal("-123.457890"),
             new BigDecimal("123.457890"),
             new BigDecimal("123.450000"),
             new BigDecimal("-123.450000"));
-    for (BigDecimal bd : decimalList) {
+    for (final BigDecimal bd : decimalList) {
       bitest(ExpressionCreator.decimal(false, bd, 32, 6), c(bd, SqlTypeName.DECIMAL, 32, 6));
     }
   }
 
   @Test
   void tDecimalLiteral2() {
-    List<BigDecimal> decimalList =
+    final List<BigDecimal> decimalList =
         List.of(
             new BigDecimal("-99.123456789123456789123456789123456789"), // scale = 36, precision =38
             new BigDecimal("99.123456789123456789123456789123456789") // scale = 36, precision = 38
             );
-    for (BigDecimal bd : decimalList) {
+    for (final BigDecimal bd : decimalList) {
       bitest(ExpressionCreator.decimal(false, bd, 38, 36), c(bd, SqlTypeName.DECIMAL, 38, 36));
     }
   }
 
   @Test
   void tDecimalUtil() {
-    long[] values =
+    final long[] values =
         new long[] {Long.MIN_VALUE, Integer.MIN_VALUE, 0, Integer.MAX_VALUE, Long.MAX_VALUE};
-    for (long value : values) {
-      BigDecimal bd = BigDecimal.valueOf(value);
-      byte[] encoded = DecimalUtil.encodeDecimalIntoBytes(bd, 0, 16);
-      BigDecimal bd2 = DecimalUtil.getBigDecimalFromBytes(encoded, 0, 16);
+    for (final long value : values) {
+      final BigDecimal bd = BigDecimal.valueOf(value);
+      final byte[] encoded = DecimalUtil.encodeDecimalIntoBytes(bd, 0, 16);
+      final BigDecimal bd2 = DecimalUtil.getBigDecimalFromBytes(encoded, 0, 16);
       System.out.println(bd2);
       assertEquals(bd, bd2);
     }
@@ -347,13 +347,13 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tMap() {
-    ImmutableMap<Literal, Literal> ss =
+    final ImmutableMap<Literal, Literal> ss =
         ImmutableMap.of(
             ExpressionCreator.string(false, "foo"),
             ExpressionCreator.i32(false, 4),
             ExpressionCreator.string(false, "bar"),
             ExpressionCreator.i32(false, -1));
-    RexNode calcite =
+    final RexNode calcite =
         rex.makeLiteral(
             ImmutableMap.of("foo", 4, "bar", -1),
             type.createMapType(t(SqlTypeName.VARCHAR), t(SqlTypeName.INTEGER)),
@@ -387,20 +387,20 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tFixedBinary() {
-    byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
+    final byte[] val = "my test".getBytes(StandardCharsets.UTF_8);
     bitest(
         ExpressionCreator.fixedBinary(false, val),
         c(new org.apache.calcite.avatica.util.ByteString(val), SqlTypeName.BINARY));
   }
 
-  public void test(Expression expression, RexNode rex) {
+  public void test(final Expression expression, final RexNode rex) {
     assertEquals(expression, rex.accept(new RexExpressionConverter()));
   }
 
   // bi-directional test : 1) rex -> substrait,  substrait -> rex2.  Compare rex == rex2
-  public void bitest(Expression expression, RexNode rex) {
+  public void bitest(final Expression expression, final RexNode rex) {
     assertEquals(expression, rex.accept(rexExpressionConverter));
-    RexNode convertedRex = expression.accept(expressionRexConverter, Context.newContext());
+    final RexNode convertedRex = expression.accept(expressionRexConverter, Context.newContext());
     assertEquals(rex, convertedRex);
   }
 }

@@ -25,7 +25,7 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
 
   @Override
   protected Type.Struct deriveRecordType() {
-    Type.Struct initial = getInput().getRecordType();
+    final Type.Struct initial = getInput().getRecordType();
     return TypeCreator.of(initial.nullable())
         .struct(
             Stream.concat(
@@ -35,7 +35,7 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
 
   @Override
   public <O, C extends VisitationContext, E extends Exception> O accept(
-      RelVisitor<O, C, E> visitor, C context) throws E {
+      final RelVisitor<O, C, E> visitor, final C context) throws E {
     return visitor.visit(this, context);
   }
 

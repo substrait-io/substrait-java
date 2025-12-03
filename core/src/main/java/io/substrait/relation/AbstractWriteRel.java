@@ -23,7 +23,7 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
 
     private final WriteRel.WriteOp proto;
 
-    WriteOp(WriteRel.WriteOp proto) {
+    WriteOp(final WriteRel.WriteOp proto) {
       this.proto = proto;
     }
 
@@ -31,8 +31,8 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
       return proto;
     }
 
-    public static WriteOp fromProto(WriteRel.WriteOp proto) {
-      for (WriteOp v : values()) {
+    public static WriteOp fromProto(final WriteRel.WriteOp proto) {
+      for (final WriteOp v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -50,7 +50,7 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
 
     private final WriteRel.CreateMode proto;
 
-    CreateMode(WriteRel.CreateMode proto) {
+    CreateMode(final WriteRel.CreateMode proto) {
       this.proto = proto;
     }
 
@@ -58,8 +58,8 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
       return proto;
     }
 
-    public static CreateMode fromProto(WriteRel.CreateMode proto) {
-      for (CreateMode v : values()) {
+    public static CreateMode fromProto(final WriteRel.CreateMode proto) {
+      for (final CreateMode v : values()) {
         if (v.proto == proto) {
           return v;
         }
@@ -75,7 +75,7 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
 
     private final WriteRel.OutputMode proto;
 
-    OutputMode(WriteRel.OutputMode proto) {
+    OutputMode(final WriteRel.OutputMode proto) {
       this.proto = proto;
     }
 
@@ -83,8 +83,8 @@ public abstract class AbstractWriteRel extends SingleInputRel implements HasExte
       return proto;
     }
 
-    public static OutputMode fromProto(WriteRel.OutputMode proto) {
-      for (OutputMode v : values()) {
+    public static OutputMode fromProto(final WriteRel.OutputMode proto) {
+      for (final OutputMode v : values()) {
         if (v.proto == proto) {
           return v;
         }

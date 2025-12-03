@@ -10,19 +10,19 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class WindowBoundConverter {
 
   /** Converts a {@link RexWindowBound} to a {@link WindowBound}. */
-  public static WindowBound toWindowBound(RexWindowBound rexWindowBound) {
+  public static WindowBound toWindowBound(final RexWindowBound rexWindowBound) {
     if (rexWindowBound.isCurrentRow()) {
       return WindowBound.CURRENT_ROW;
     }
     if (rexWindowBound.isUnbounded()) {
       return WindowBound.UNBOUNDED;
     } else {
-      RexNode node = rexWindowBound.getOffset();
+      final RexNode node = rexWindowBound.getOffset();
 
       if (node instanceof RexLiteral) {
-        RexLiteral literal = (RexLiteral) node;
+        final RexLiteral literal = (RexLiteral) node;
         if (SqlTypeName.EXACT_TYPES.contains(literal.getTypeName())) {
-          BigDecimal offset = (BigDecimal) literal.getValue4();
+          final BigDecimal offset = (BigDecimal) literal.getValue4();
 
           if (rexWindowBound.isPreceding()) {
             return WindowBound.Preceding.of(offset.longValue());

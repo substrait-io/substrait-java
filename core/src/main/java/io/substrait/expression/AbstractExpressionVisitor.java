@@ -7,202 +7,202 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   public abstract O visitFallback(Expression expr, C context);
 
   @Override
-  public O visit(Expression.NullLiteral expr, C context) throws E {
+  public O visit(final Expression.NullLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.BoolLiteral expr, C context) throws E {
+  public O visit(final Expression.BoolLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.I8Literal expr, C context) throws E {
+  public O visit(final Expression.I8Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.I16Literal expr, C context) throws E {
+  public O visit(final Expression.I16Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.I32Literal expr, C context) throws E {
+  public O visit(final Expression.I32Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.I64Literal expr, C context) throws E {
+  public O visit(final Expression.I64Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.FP32Literal expr, C context) throws E {
+  public O visit(final Expression.FP32Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.FP64Literal expr, C context) throws E {
+  public O visit(final Expression.FP64Literal expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.StrLiteral expr, C context) throws E {
+  public O visit(final Expression.StrLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.BinaryLiteral expr, C context) throws E {
+  public O visit(final Expression.BinaryLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.TimeLiteral expr, C context) throws E {
+  public O visit(final Expression.TimeLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.DateLiteral expr, C context) throws E {
+  public O visit(final Expression.DateLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.TimestampLiteral expr, C context) throws E {
+  public O visit(final Expression.TimestampLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.TimestampTZLiteral expr, C context) throws E {
+  public O visit(final Expression.TimestampTZLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.PrecisionTimestampLiteral expr, C context) throws E {
+  public O visit(final Expression.PrecisionTimestampLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.PrecisionTimestampTZLiteral expr, C context) throws E {
+  public O visit(final Expression.PrecisionTimestampTZLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.IntervalYearLiteral expr, C context) throws E {
+  public O visit(final Expression.IntervalYearLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.IntervalDayLiteral expr, C context) throws E {
+  public O visit(final Expression.IntervalDayLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.IntervalCompoundLiteral expr, C context) throws E {
+  public O visit(final Expression.IntervalCompoundLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.UUIDLiteral expr, C context) throws E {
+  public O visit(final Expression.UUIDLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.FixedCharLiteral expr, C context) throws E {
+  public O visit(final Expression.FixedCharLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.VarCharLiteral expr, C context) throws E {
+  public O visit(final Expression.VarCharLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.FixedBinaryLiteral expr, C context) throws E {
+  public O visit(final Expression.FixedBinaryLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.DecimalLiteral expr, C context) throws E {
+  public O visit(final Expression.DecimalLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.MapLiteral expr, C context) throws E {
+  public O visit(final Expression.MapLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.EmptyMapLiteral expr, C context) throws E {
+  public O visit(final Expression.EmptyMapLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.ListLiteral expr, C context) throws E {
+  public O visit(final Expression.ListLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.EmptyListLiteral expr, C context) throws E {
+  public O visit(final Expression.EmptyListLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.StructLiteral expr, C context) throws E {
+  public O visit(final Expression.StructLiteral expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.Switch expr, C context) throws E {
+  public O visit(final Expression.Switch expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.IfThen expr, C context) throws E {
+  public O visit(final Expression.IfThen expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.ScalarFunctionInvocation expr, C context) throws E {
+  public O visit(final Expression.ScalarFunctionInvocation expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.WindowFunctionInvocation expr, C context) throws E {
+  public O visit(final Expression.WindowFunctionInvocation expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.Cast expr, C context) throws E {
+  public O visit(final Expression.Cast expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.SingleOrList expr, C context) throws E {
+  public O visit(final Expression.SingleOrList expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.MultiOrList expr, C context) throws E {
+  public O visit(final Expression.MultiOrList expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(FieldReference expr, C context) throws E {
+  public O visit(final FieldReference expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.SetPredicate expr, C context) throws E {
+  public O visit(final Expression.SetPredicate expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.ScalarSubquery expr, C context) throws E {
+  public O visit(final Expression.ScalarSubquery expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 
   @Override
-  public O visit(Expression.InPredicate expr, C context) throws E {
+  public O visit(final Expression.InPredicate expr, final C context) throws E {
     return visitFallback(expr, context);
   }
 }

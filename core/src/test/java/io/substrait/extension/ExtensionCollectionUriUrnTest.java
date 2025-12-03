@@ -11,14 +11,14 @@ class ExtensionCollectionUriUrnTest {
 
   @Test
   void testHasUrnAndHasUri() {
-    String yamlContent =
+    final String yamlContent =
         "%YAML 1.2\n"
             + "---\n"
             + "urn: extension:test:exists\n"
             + "scalar_functions:\n"
             + "  - name: test_function\n";
 
-    SimpleExtension.ExtensionCollection collection =
+    final SimpleExtension.ExtensionCollection collection =
         SimpleExtension.load("file:///tmp/test.yaml", yamlContent);
 
     assertTrue(collection.getUrnFromUri("file:///tmp/test.yaml") != null);
@@ -29,10 +29,10 @@ class ExtensionCollectionUriUrnTest {
 
   @Test
   void testGetNonexistentMappings() {
-    String yamlContent =
+    final String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:minimal\n" + "scalar_functions: []\n";
 
-    SimpleExtension.ExtensionCollection collection =
+    final SimpleExtension.ExtensionCollection collection =
         SimpleExtension.load("minimal://extension", yamlContent);
 
     assertNull(collection.getUrnFromUri("nonexistent://uri"));
@@ -41,17 +41,17 @@ class ExtensionCollectionUriUrnTest {
 
   @Test
   void testEmptyUriThrowsException() {
-    String yamlContent =
+    final String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:empty\n" + "scalar_functions: []\n";
 
-    IllegalArgumentException exception =
+    final IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> SimpleExtension.load("", yamlContent));
     assertTrue(exception.getMessage().contains("URI cannot be null or empty"));
   }
 
   @Test
   void testNullUriThrowsException() {
-    String yamlContent =
+    final String yamlContent =
         "%YAML 1.2\n" + "---\n" + "urn: extension:test:null\n" + "scalar_functions: []\n";
 
     // The system throws NPE when null is passed, which is expected behavior

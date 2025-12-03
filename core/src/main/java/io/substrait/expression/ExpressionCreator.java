@@ -21,58 +21,58 @@ public class ExpressionCreator {
 
   private ExpressionCreator() {}
 
-  public static Expression.NullLiteral typedNull(Type t) {
+  public static Expression.NullLiteral typedNull(final Type t) {
     return Expression.NullLiteral.builder().type(t).build();
   }
 
-  public static Expression.BoolLiteral bool(boolean nullable, boolean value) {
+  public static Expression.BoolLiteral bool(final boolean nullable, final boolean value) {
     return Expression.BoolLiteral.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.I8Literal i8(boolean nullable, int value) {
+  public static Expression.I8Literal i8(final boolean nullable, final int value) {
     return Expression.I8Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.I16Literal i16(boolean nullable, int value) {
+  public static Expression.I16Literal i16(final boolean nullable, final int value) {
     return Expression.I16Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.I32Literal i32(boolean nullable, int value) {
+  public static Expression.I32Literal i32(final boolean nullable, final int value) {
     return Expression.I32Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.I64Literal i64(boolean nullable, long value) {
+  public static Expression.I64Literal i64(final boolean nullable, final long value) {
     return Expression.I64Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.FP32Literal fp32(boolean nullable, float value) {
+  public static Expression.FP32Literal fp32(final boolean nullable, final float value) {
     return Expression.FP32Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.FP64Literal fp64(boolean nullable, double value) {
+  public static Expression.FP64Literal fp64(final boolean nullable, final double value) {
     return Expression.FP64Literal.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.StrLiteral string(boolean nullable, String value) {
+  public static Expression.StrLiteral string(final boolean nullable, final String value) {
     return Expression.StrLiteral.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.BinaryLiteral binary(boolean nullable, ByteString value) {
+  public static Expression.BinaryLiteral binary(final boolean nullable, final ByteString value) {
     return Expression.BinaryLiteral.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.BinaryLiteral binary(boolean nullable, byte[] value) {
+  public static Expression.BinaryLiteral binary(final boolean nullable, final byte[] value) {
     return Expression.BinaryLiteral.builder()
         .nullable(nullable)
         .value(ByteString.copyFrom(value))
         .build();
   }
 
-  public static Expression.DateLiteral date(boolean nullable, int value) {
+  public static Expression.DateLiteral date(final boolean nullable, final int value) {
     return Expression.DateLiteral.builder().nullable(nullable).value(value).build();
   }
 
-  public static Expression.TimeLiteral time(boolean nullable, long value) {
+  public static Expression.TimeLiteral time(final boolean nullable, final long value) {
     return Expression.TimeLiteral.builder().nullable(nullable).value(value).build();
   }
 
@@ -80,7 +80,7 @@ public class ExpressionCreator {
    * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
    */
   @Deprecated
-  public static Expression.TimestampLiteral timestamp(boolean nullable, long value) {
+  public static Expression.TimestampLiteral timestamp(final boolean nullable, final long value) {
     return Expression.TimestampLiteral.builder().nullable(nullable).value(value).build();
   }
 
@@ -88,8 +88,9 @@ public class ExpressionCreator {
    * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
    */
   @Deprecated
-  public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
-    long epochMicro =
+  public static Expression.TimestampLiteral timestamp(
+      final boolean nullable, final LocalDateTime value) {
+    final long epochMicro =
         TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
             + TimeUnit.NANOSECONDS.toMicros(value.toLocalTime().getNano());
     return timestamp(nullable, epochMicro);
@@ -100,14 +101,14 @@ public class ExpressionCreator {
    */
   @Deprecated
   public static Expression.TimestampLiteral timestamp(
-      boolean nullable,
-      int year,
-      int month,
-      int dayOfMonth,
-      int hour,
-      int minute,
-      int second,
-      int micros) {
+      final boolean nullable,
+      final int year,
+      final int month,
+      final int dayOfMonth,
+      final int hour,
+      final int minute,
+      final int second,
+      final int micros) {
     return timestamp(
         nullable,
         LocalDateTime.of(year, month, dayOfMonth, hour, minute, second)
@@ -118,7 +119,8 @@ public class ExpressionCreator {
    * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
    */
   @Deprecated
-  public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, long value) {
+  public static Expression.TimestampTZLiteral timestampTZ(
+      final boolean nullable, final long value) {
     return Expression.TimestampTZLiteral.builder().nullable(nullable).value(value).build();
   }
 
@@ -126,15 +128,16 @@ public class ExpressionCreator {
    * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
    */
   @Deprecated
-  public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, Instant value) {
-    long epochMicro =
+  public static Expression.TimestampTZLiteral timestampTZ(
+      final boolean nullable, final Instant value) {
+    final long epochMicro =
         TimeUnit.SECONDS.toMicros(value.getEpochSecond())
             + TimeUnit.NANOSECONDS.toMicros(value.getNano());
     return timestampTZ(nullable, epochMicro);
   }
 
   public static Expression.PrecisionTimestampLiteral precisionTimestamp(
-      boolean nullable, long value, int precision) {
+      final boolean nullable, final long value, final int precision) {
     return Expression.PrecisionTimestampLiteral.builder()
         .nullable(nullable)
         .value(value)
@@ -143,7 +146,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(
-      boolean nullable, long value, int precision) {
+      final boolean nullable, final long value, final int precision) {
     return Expression.PrecisionTimestampTZLiteral.builder()
         .nullable(nullable)
         .value(value)
@@ -152,7 +155,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.IntervalYearLiteral intervalYear(
-      boolean nullable, int years, int months) {
+      final boolean nullable, final int years, final int months) {
     return Expression.IntervalYearLiteral.builder()
         .nullable(nullable)
         .years(years)
@@ -160,12 +163,17 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static Expression.IntervalDayLiteral intervalDay(boolean nullable, int days, int seconds) {
+  public static Expression.IntervalDayLiteral intervalDay(
+      final boolean nullable, final int days, final int seconds) {
     return intervalDay(nullable, days, seconds, 0, 0);
   }
 
   public static Expression.IntervalDayLiteral intervalDay(
-      boolean nullable, int days, int seconds, long subseconds, int precision) {
+      final boolean nullable,
+      final int days,
+      final int seconds,
+      final long subseconds,
+      final int precision) {
     return Expression.IntervalDayLiteral.builder()
         .nullable(nullable)
         .days(days)
@@ -176,13 +184,13 @@ public class ExpressionCreator {
   }
 
   public static Expression.IntervalCompoundLiteral intervalCompound(
-      boolean nullable,
-      int years,
-      int months,
-      int days,
-      int seconds,
-      long subseconds,
-      int precision) {
+      final boolean nullable,
+      final int years,
+      final int months,
+      final int days,
+      final int seconds,
+      final long subseconds,
+      final int precision) {
     return Expression.IntervalCompoundLiteral.builder()
         .nullable(nullable)
         .years(years)
@@ -194,31 +202,34 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static Expression.UUIDLiteral uuid(boolean nullable, ByteString uuid) {
-    ByteBuffer bb = uuid.asReadOnlyByteBuffer();
+  public static Expression.UUIDLiteral uuid(final boolean nullable, final ByteString uuid) {
+    final ByteBuffer bb = uuid.asReadOnlyByteBuffer();
     return Expression.UUIDLiteral.builder()
         .nullable(nullable)
         .value(new UUID(bb.getLong(), bb.getLong()))
         .build();
   }
 
-  public static Expression.UUIDLiteral uuid(boolean nullable, UUID uuid) {
+  public static Expression.UUIDLiteral uuid(final boolean nullable, final UUID uuid) {
     return Expression.UUIDLiteral.builder().nullable(nullable).value(uuid).build();
   }
 
-  public static Expression.FixedCharLiteral fixedChar(boolean nullable, String str) {
+  public static Expression.FixedCharLiteral fixedChar(final boolean nullable, final String str) {
     return Expression.FixedCharLiteral.builder().nullable(nullable).value(str).build();
   }
 
-  public static Expression.VarCharLiteral varChar(boolean nullable, String str, int len) {
+  public static Expression.VarCharLiteral varChar(
+      final boolean nullable, final String str, final int len) {
     return Expression.VarCharLiteral.builder().nullable(nullable).value(str).length(len).build();
   }
 
-  public static Expression.FixedBinaryLiteral fixedBinary(boolean nullable, ByteString bytes) {
+  public static Expression.FixedBinaryLiteral fixedBinary(
+      final boolean nullable, final ByteString bytes) {
     return Expression.FixedBinaryLiteral.builder().nullable(nullable).value(bytes).build();
   }
 
-  public static Expression.FixedBinaryLiteral fixedBinary(boolean nullable, byte[] bytes) {
+  public static Expression.FixedBinaryLiteral fixedBinary(
+      final boolean nullable, final byte[] bytes) {
     return Expression.FixedBinaryLiteral.builder()
         .nullable(nullable)
         .value(ByteString.copyFrom(bytes))
@@ -226,7 +237,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.DecimalLiteral decimal(
-      boolean nullable, ByteString value, int precision, int scale) {
+      final boolean nullable, final ByteString value, final int precision, final int scale) {
     return Expression.DecimalLiteral.builder()
         .nullable(nullable)
         .value(value)
@@ -236,8 +247,8 @@ public class ExpressionCreator {
   }
 
   public static Expression.DecimalLiteral decimal(
-      boolean nullable, BigDecimal value, int precision, int scale) {
-    byte[] twosComplement = DecimalUtil.encodeDecimalIntoBytes(value, scale, 16);
+      final boolean nullable, final BigDecimal value, final int precision, final int scale) {
+    final byte[] twosComplement = DecimalUtil.encodeDecimalIntoBytes(value, scale, 16);
 
     return Expression.DecimalLiteral.builder()
         .nullable(nullable)
@@ -248,12 +259,12 @@ public class ExpressionCreator {
   }
 
   public static Expression.MapLiteral map(
-      boolean nullable, Map<Expression.Literal, Expression.Literal> values) {
+      final boolean nullable, final Map<Expression.Literal, Expression.Literal> values) {
     return Expression.MapLiteral.builder().nullable(nullable).putAllValues(values).build();
   }
 
   public static Expression.EmptyMapLiteral emptyMap(
-      boolean nullable, Type keyType, Type valueType) {
+      final boolean nullable, final Type keyType, final Type valueType) {
     return Expression.EmptyMapLiteral.builder()
         .keyType(keyType)
         .valueType(valueType)
@@ -261,33 +272,36 @@ public class ExpressionCreator {
         .build();
   }
 
-  public static Expression.ListLiteral list(boolean nullable, Expression.Literal... values) {
+  public static Expression.ListLiteral list(
+      final boolean nullable, final Expression.Literal... values) {
     return Expression.ListLiteral.builder().nullable(nullable).addValues(values).build();
   }
 
   public static Expression.ListLiteral list(
-      boolean nullable, Iterable<? extends Expression.Literal> values) {
+      final boolean nullable, final Iterable<? extends Expression.Literal> values) {
     return Expression.ListLiteral.builder().nullable(nullable).addAllValues(values).build();
   }
 
-  public static Expression.EmptyListLiteral emptyList(boolean listNullable, Type elementType) {
+  public static Expression.EmptyListLiteral emptyList(
+      final boolean listNullable, final Type elementType) {
     return Expression.EmptyListLiteral.builder()
         .elementType(elementType)
         .nullable(listNullable)
         .build();
   }
 
-  public static Expression.StructLiteral struct(boolean nullable, Expression.Literal... values) {
+  public static Expression.StructLiteral struct(
+      final boolean nullable, final Expression.Literal... values) {
     return Expression.StructLiteral.builder().nullable(nullable).addFields(values).build();
   }
 
   public static Expression.StructLiteral struct(
-      boolean nullable, Iterable<? extends Expression.Literal> values) {
+      final boolean nullable, final Iterable<? extends Expression.Literal> values) {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
   }
 
   public static Expression.UserDefinedLiteral userDefinedLiteral(
-      boolean nullable, String urn, String name, Any value) {
+      final boolean nullable, final String urn, final String name, final Any value) {
     return Expression.UserDefinedLiteral.builder()
         .nullable(nullable)
         .urn(urn)
@@ -297,7 +311,9 @@ public class ExpressionCreator {
   }
 
   public static Expression.Switch switchStatement(
-      Expression match, Expression defaultExpression, Expression.SwitchClause... conditionClauses) {
+      final Expression match,
+      final Expression defaultExpression,
+      final Expression.SwitchClause... conditionClauses) {
     return Expression.Switch.builder()
         .match(match)
         .defaultClause(defaultExpression)
@@ -306,9 +322,9 @@ public class ExpressionCreator {
   }
 
   public static Expression.Switch switchStatement(
-      Expression match,
-      Expression defaultExpression,
-      Iterable<? extends Expression.SwitchClause> conditionClauses) {
+      final Expression match,
+      final Expression defaultExpression,
+      final Iterable<? extends Expression.SwitchClause> conditionClauses) {
     return Expression.Switch.builder()
         .match(match)
         .defaultClause(defaultExpression)
@@ -317,7 +333,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.SwitchClause switchClause(
-      Expression.Literal expectedValue, Expression resultExpression) {
+      final Expression.Literal expectedValue, final Expression resultExpression) {
     return Expression.SwitchClause.builder()
         .condition(expectedValue)
         .then(resultExpression)
@@ -325,7 +341,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.IfThen ifThenStatement(
-      Expression elseExpression, Expression.IfClause... conditionClauses) {
+      final Expression elseExpression, final Expression.IfClause... conditionClauses) {
     return Expression.IfThen.builder()
         .elseClause(elseExpression)
         .addIfClauses(conditionClauses)
@@ -333,7 +349,8 @@ public class ExpressionCreator {
   }
 
   public static Expression.IfThen ifThenStatement(
-      Expression elseExpression, Iterable<? extends Expression.IfClause> conditionClauses) {
+      final Expression elseExpression,
+      final Iterable<? extends Expression.IfClause> conditionClauses) {
     return Expression.IfThen.builder()
         .elseClause(elseExpression)
         .addAllIfClauses(conditionClauses)
@@ -341,7 +358,7 @@ public class ExpressionCreator {
   }
 
   public static Expression.IfClause ifThenClause(
-      Expression conditionExpression, Expression resultExpression) {
+      final Expression conditionExpression, final Expression resultExpression) {
     return Expression.IfClause.builder()
         .condition(conditionExpression)
         .then(resultExpression)
@@ -349,9 +366,9 @@ public class ExpressionCreator {
   }
 
   public static Expression.ScalarFunctionInvocation scalarFunction(
-      SimpleExtension.ScalarFunctionVariant declaration,
-      Type outputType,
-      FunctionArg... arguments) {
+      final SimpleExtension.ScalarFunctionVariant declaration,
+      final Type outputType,
+      final FunctionArg... arguments) {
     return scalarFunction(declaration, outputType, Arrays.asList(arguments));
   }
 
@@ -360,9 +377,9 @@ public class ExpressionCreator {
    * e.g. options
    */
   public static Expression.ScalarFunctionInvocation scalarFunction(
-      SimpleExtension.ScalarFunctionVariant declaration,
-      Type outputType,
-      Iterable<? extends FunctionArg> arguments) {
+      final SimpleExtension.ScalarFunctionVariant declaration,
+      final Type outputType,
+      final Iterable<? extends FunctionArg> arguments) {
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -375,12 +392,12 @@ public class ExpressionCreator {
    * options
    */
   public static AggregateFunctionInvocation aggregateFunction(
-      SimpleExtension.AggregateFunctionVariant declaration,
-      Type outputType,
-      Expression.AggregationPhase phase,
-      List<Expression.SortField> sort,
-      Expression.AggregationInvocation invocation,
-      Iterable<? extends FunctionArg> arguments) {
+      final SimpleExtension.AggregateFunctionVariant declaration,
+      final Type outputType,
+      final Expression.AggregationPhase phase,
+      final List<Expression.SortField> sort,
+      final Expression.AggregationInvocation invocation,
+      final Iterable<? extends FunctionArg> arguments) {
     return AggregateFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -392,12 +409,12 @@ public class ExpressionCreator {
   }
 
   public static AggregateFunctionInvocation aggregateFunction(
-      SimpleExtension.AggregateFunctionVariant declaration,
-      Type outputType,
-      Expression.AggregationPhase phase,
-      List<Expression.SortField> sort,
-      Expression.AggregationInvocation invocation,
-      FunctionArg... arguments) {
+      final SimpleExtension.AggregateFunctionVariant declaration,
+      final Type outputType,
+      final Expression.AggregationPhase phase,
+      final List<Expression.SortField> sort,
+      final Expression.AggregationInvocation invocation,
+      final FunctionArg... arguments) {
     return aggregateFunction(
         declaration, outputType, phase, sort, invocation, Arrays.asList(arguments));
   }
@@ -407,16 +424,16 @@ public class ExpressionCreator {
    * e.g. options
    */
   public static Expression.WindowFunctionInvocation windowFunction(
-      SimpleExtension.WindowFunctionVariant declaration,
-      Type outputType,
-      Expression.AggregationPhase phase,
-      List<Expression.SortField> sort,
-      Expression.AggregationInvocation invocation,
-      List<Expression> partitionBy,
-      Expression.WindowBoundsType boundsType,
-      WindowBound lowerBound,
-      WindowBound upperBound,
-      Iterable<? extends FunctionArg> arguments) {
+      final SimpleExtension.WindowFunctionVariant declaration,
+      final Type outputType,
+      final Expression.AggregationPhase phase,
+      final List<Expression.SortField> sort,
+      final Expression.AggregationInvocation invocation,
+      final List<Expression> partitionBy,
+      final Expression.WindowBoundsType boundsType,
+      final WindowBound lowerBound,
+      final WindowBound upperBound,
+      final Iterable<? extends FunctionArg> arguments) {
     return Expression.WindowFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -436,14 +453,14 @@ public class ExpressionCreator {
    * other parameters, e.g. options
    */
   public static ConsistentPartitionWindow.WindowRelFunctionInvocation windowRelFunction(
-      SimpleExtension.WindowFunctionVariant declaration,
-      Type outputType,
-      Expression.AggregationPhase phase,
-      Expression.AggregationInvocation invocation,
-      Expression.WindowBoundsType boundsType,
-      WindowBound lowerBound,
-      WindowBound upperBound,
-      Iterable<? extends FunctionArg> arguments) {
+      final SimpleExtension.WindowFunctionVariant declaration,
+      final Type outputType,
+      final Expression.AggregationPhase phase,
+      final Expression.AggregationInvocation invocation,
+      final Expression.WindowBoundsType boundsType,
+      final WindowBound lowerBound,
+      final WindowBound upperBound,
+      final Iterable<? extends FunctionArg> arguments) {
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .declaration(declaration)
         .outputType(outputType)
@@ -457,16 +474,16 @@ public class ExpressionCreator {
   }
 
   public static Expression.WindowFunctionInvocation windowFunction(
-      SimpleExtension.WindowFunctionVariant declaration,
-      Type outputType,
-      Expression.AggregationPhase phase,
-      List<Expression.SortField> sort,
-      Expression.AggregationInvocation invocation,
-      List<Expression> partitionBy,
-      Expression.WindowBoundsType boundsType,
-      WindowBound lowerBound,
-      WindowBound upperBound,
-      FunctionArg... arguments) {
+      final SimpleExtension.WindowFunctionVariant declaration,
+      final Type outputType,
+      final Expression.AggregationPhase phase,
+      final List<Expression.SortField> sort,
+      final Expression.AggregationInvocation invocation,
+      final List<Expression> partitionBy,
+      final Expression.WindowBoundsType boundsType,
+      final WindowBound lowerBound,
+      final WindowBound upperBound,
+      final FunctionArg... arguments) {
     return windowFunction(
         declaration,
         outputType,
@@ -481,7 +498,9 @@ public class ExpressionCreator {
   }
 
   public static Expression cast(
-      Type type, Expression expression, Expression.FailureBehavior failureBehavior) {
+      final Type type,
+      final Expression expression,
+      final Expression.FailureBehavior failureBehavior) {
     return Expression.Cast.builder()
         .type(type)
         .input(expression)

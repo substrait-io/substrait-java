@@ -24,12 +24,12 @@ public class SparkDataset implements App.Action {
     // Connect to a local in-process Spark instance
     try (SparkSession spark = SparkHelper.connectLocalSpark()) {
 
-      Dataset<Row> dsVehicles;
-      Dataset<Row> dsTests;
+      final Dataset<Row> dsVehicles;
+      final Dataset<Row> dsTests;
 
       // load from CSV files
-      String vehiclesFile = Paths.get(ROOT_DIR, VEHICLES_CSV).toString();
-      String testsFile = Paths.get(ROOT_DIR, TESTS_CSV).toString();
+      final String vehiclesFile = Paths.get(ROOT_DIR, VEHICLES_CSV).toString();
+      final String testsFile = Paths.get(ROOT_DIR, TESTS_CSV).toString();
 
       System.out.println("Reading " + vehiclesFile);
       System.out.println("Reading " + testsFile);
@@ -51,7 +51,7 @@ public class SparkDataset implements App.Action {
       joinedDs = joinedDs.orderBy(joinedDs.col("count"));
       joinedDs.show();
 
-      LogicalPlan plan = joinedDs.queryExecution().optimizedPlan();
+      final LogicalPlan plan = joinedDs.queryExecution().optimizedPlan();
 
       System.out.println(plan);
       createSubstrait(plan);
@@ -67,14 +67,14 @@ public class SparkDataset implements App.Action {
    *
    * @param enginePlan logical plan
    */
-  public void createSubstrait(LogicalPlan enginePlan) {
-    ToSubstraitRel toSubstrait = new ToSubstraitRel();
-    io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
+  public void createSubstrait(final LogicalPlan enginePlan) {
+    final ToSubstraitRel toSubstrait = new ToSubstraitRel();
+    final io.substrait.plan.Plan plan = toSubstrait.convert(enginePlan);
 
     SubstraitStringify.explain(plan).forEach(System.out::println);
 
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    byte[] buffer = planToProto.toProto(plan).toByteArray();
+    final PlanProtoConverter planToProto = new PlanProtoConverter();
+    final byte[] buffer = planToProto.toProto(plan).toByteArray();
     try {
       Files.write(Paths.get(ROOT_DIR, "spark_dataset_substrait.plan"), buffer);
       System.out.println("File written to " + Paths.get(ROOT_DIR, "spark_sql_substrait.plan"));

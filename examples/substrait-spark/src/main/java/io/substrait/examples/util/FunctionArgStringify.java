@@ -11,24 +11,30 @@ import io.substrait.util.EmptyVisitationContext;
 public class FunctionArgStringify extends ParentStringify
     implements FuncArgVisitor<String, EmptyVisitationContext, RuntimeException> {
 
-  public FunctionArgStringify(int indent) {
+  public FunctionArgStringify(final int indent) {
     super(indent);
   }
 
   @Override
-  public String visitExpr(Function fnDef, int argIdx, Expression e, EmptyVisitationContext context)
+  public String visitExpr(
+      final Function fnDef,
+      final int argIdx,
+      final Expression e,
+      final EmptyVisitationContext context)
       throws RuntimeException {
     return e.accept(new ExpressionStringify(indent + 1), context);
   }
 
   @Override
-  public String visitType(Function fnDef, int argIdx, Type t, EmptyVisitationContext context)
+  public String visitType(
+      final Function fnDef, final int argIdx, final Type t, final EmptyVisitationContext context)
       throws RuntimeException {
     return t.accept(new TypeStringify(indent));
   }
 
   @Override
-  public String visitEnumArg(Function fnDef, int argIdx, EnumArg e, EmptyVisitationContext context)
+  public String visitEnumArg(
+      final Function fnDef, final int argIdx, final EnumArg e, final EmptyVisitationContext context)
       throws RuntimeException {
     return e.toString();
   }

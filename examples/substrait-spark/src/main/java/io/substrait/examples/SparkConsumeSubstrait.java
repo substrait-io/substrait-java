@@ -17,22 +17,22 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 public class SparkConsumeSubstrait implements App.Action {
 
   @Override
-  public void run(String arg) {
+  public void run(final String arg) {
 
     // Connect to a local in-process Spark instance
     try (SparkSession spark = SparkHelper.connectLocalSpark()) {
 
       System.out.println("Reading from " + arg);
-      byte[] buffer = Files.readAllBytes(Paths.get(ROOT_DIR, arg));
+      final byte[] buffer = Files.readAllBytes(Paths.get(ROOT_DIR, arg));
 
-      io.substrait.proto.Plan proto = io.substrait.proto.Plan.parseFrom(buffer);
-      ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
-      Plan plan = protoToPlan.from(proto);
+      final io.substrait.proto.Plan proto = io.substrait.proto.Plan.parseFrom(buffer);
+      final ProtoPlanConverter protoToPlan = new ProtoPlanConverter();
+      final Plan plan = protoToPlan.from(proto);
 
       SubstraitStringify.explain(plan).forEach(System.out::println);
 
-      ToLogicalPlan substraitConverter = new ToLogicalPlan(spark);
-      LogicalPlan sparkPlan = substraitConverter.convert(plan);
+      final ToLogicalPlan substraitConverter = new ToLogicalPlan(spark);
+      final LogicalPlan sparkPlan = substraitConverter.convert(plan);
 
       System.out.println(sparkPlan);
 

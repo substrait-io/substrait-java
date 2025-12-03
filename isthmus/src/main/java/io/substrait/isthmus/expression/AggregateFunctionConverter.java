@@ -36,33 +36,34 @@ public class AggregateFunctionConverter
   }
 
   public AggregateFunctionConverter(
-      List<SimpleExtension.AggregateFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+      final List<SimpleExtension.AggregateFunctionVariant> functions,
+      final RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
   public AggregateFunctionConverter(
-      List<SimpleExtension.AggregateFunctionVariant> functions,
-      List<FunctionMappings.Sig> additionalSignatures,
-      RelDataTypeFactory typeFactory,
-      TypeConverter typeConverter) {
+      final List<SimpleExtension.AggregateFunctionVariant> functions,
+      final List<FunctionMappings.Sig> additionalSignatures,
+      final RelDataTypeFactory typeFactory,
+      final TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
   @Override
   protected AggregateFunctionInvocation generateBinding(
-      WrappedAggregateCall call,
-      SimpleExtension.AggregateFunctionVariant function,
-      List<? extends FunctionArg> arguments,
-      Type outputType) {
-    AggregateCall agg = call.getUnderlying();
+      final WrappedAggregateCall call,
+      final SimpleExtension.AggregateFunctionVariant function,
+      final List<? extends FunctionArg> arguments,
+      final Type outputType) {
+    final AggregateCall agg = call.getUnderlying();
 
-    List<Expression.SortField> sorts =
+    final List<Expression.SortField> sorts =
         agg.getCollation() != null
             ? agg.getCollation().getFieldCollations().stream()
                 .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
                 .collect(java.util.stream.Collectors.toList())
             : Collections.emptyList();
-    Expression.AggregationInvocation invocation =
+    final Expression.AggregationInvocation invocation =
         agg.isDistinct()
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
@@ -76,12 +77,12 @@ public class AggregateFunctionConverter
   }
 
   public Optional<AggregateFunctionInvocation> convert(
-      RelNode input,
-      Type.Struct inputType,
-      AggregateCall call,
-      Function<RexNode, Expression> topLevelConverter) {
+      final RelNode input,
+      final Type.Struct inputType,
+      final AggregateCall call,
+      final Function<RexNode, Expression> topLevelConverter) {
 
-    FunctionFinder m = getFunctionFinder(call);
+    final FunctionFinder m = getFunctionFinder(call);
     if (m == null) {
       return Optional.empty();
     }
@@ -89,11 +90,12 @@ public class AggregateFunctionConverter
       return Optional.empty();
     }
 
-    WrappedAggregateCall wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
+    final WrappedAggregateCall wrapped =
+        new WrappedAggregateCall(call, input, rexBuilder, inputType);
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
-  protected FunctionFinder getFunctionFinder(AggregateCall call) {
+  protected FunctionFinder getFunctionFinder(final AggregateCall call) {
     // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
     // before converting into substrait function
     SqlAggFunction aggFunction = call.getAggregation();
@@ -101,7 +103,7 @@ public class AggregateFunctionConverter
       aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
     }
 
-    SqlAggFunction lookupFunction =
+    final SqlAggFunction lookupFunction =
         // Replace default Calcite aggregate calls with Substrait specific variants.
         // See toSubstraitAggVariant for more details.
         AggregateFunctions.toSubstraitAggVariant(aggFunction).orElse(aggFunction);
@@ -115,7 +117,10 @@ public class AggregateFunctionConverter
     private final Type.Struct inputType;
 
     private WrappedAggregateCall(
-        AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
+        final AggregateCall call,
+        final RelNode input,
+        final RexBuilder rexBuilder,
+        final Type.Struct inputType) {
       this.call = call;
       this.input = input;
       this.rexBuilder = rexBuilder;

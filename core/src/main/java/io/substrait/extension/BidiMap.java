@@ -9,10 +9,10 @@ public class BidiMap<T1, T2> {
   private final Map<T1, T2> forwardMap;
   private final Map<T2, T1> reverseMap;
 
-  BidiMap(Map<T1, T2> forwardMap) {
+  BidiMap(final Map<T1, T2> forwardMap) {
     this.forwardMap = forwardMap;
     this.reverseMap = new HashMap<>();
-    for (Map.Entry<T1, T2> entry : forwardMap.entrySet()) {
+    for (final Map.Entry<T1, T2> entry : forwardMap.entrySet()) {
       reverseMap.put(entry.getValue(), entry.getKey());
     }
   }
@@ -22,11 +22,11 @@ public class BidiMap<T1, T2> {
     this.reverseMap = new HashMap<>();
   }
 
-  T2 get(T1 t1) {
+  T2 get(final T1 t1) {
     return forwardMap.get(t1);
   }
 
-  T1 reverseGet(T2 t2) {
+  T1 reverseGet(final T2 t2) {
     return reverseMap.get(t2);
   }
 
@@ -34,9 +34,9 @@ public class BidiMap<T1, T2> {
    * Associates the specified values in both directions. Throws if either value is already mapped to
    * a different value.
    */
-  void put(T1 t1, T2 t2) {
-    T2 existingForward = forwardMap.get(t1);
-    T1 existingReverse = reverseMap.get(t2);
+  void put(final T1 t1, final T2 t2) {
+    final T2 existingForward = forwardMap.get(t1);
+    final T1 existingReverse = reverseMap.get(t2);
 
     if (existingForward != null && !existingForward.equals(t2)) {
       throw new IllegalArgumentException("Key already exists in map with different value");
@@ -49,8 +49,8 @@ public class BidiMap<T1, T2> {
     reverseMap.put(t2, t1);
   }
 
-  void merge(BidiMap<T1, T2> other) {
-    for (Map.Entry<T1, T2> entry : other.forwardEntrySet()) {
+  void merge(final BidiMap<T1, T2> other) {
+    for (final Map.Entry<T1, T2> entry : other.forwardEntrySet()) {
       put(entry.getKey(), entry.getValue());
     }
   }

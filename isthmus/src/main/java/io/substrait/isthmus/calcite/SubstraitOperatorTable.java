@@ -71,11 +71,11 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
 
   @Override
   public void lookupOperatorOverloads(
-      SqlIdentifier opName,
-      @Nullable SqlFunctionCategory category,
-      SqlSyntax syntax,
-      List<SqlOperator> operatorList,
-      SqlNameMatcher nameMatcher) {
+      final SqlIdentifier opName,
+      @Nullable final SqlFunctionCategory category,
+      final SqlSyntax syntax,
+      final List<SqlOperator> operatorList,
+      final SqlNameMatcher nameMatcher) {
     SUBSTRAIT_OPERATOR_TABLE.lookupOperatorOverloads(
         opName, category, syntax, operatorList, nameMatcher);
     if (!operatorList.isEmpty()) {

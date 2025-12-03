@@ -39,10 +39,10 @@ public class ProtoExpressionConverter {
   private final ProtoRelConverter protoRelConverter;
 
   public ProtoExpressionConverter(
-      ExtensionLookup lookup,
-      SimpleExtension.ExtensionCollection extensions,
-      Type.Struct rootType,
-      ProtoRelConverter relConverter) {
+      final ExtensionLookup lookup,
+      final SimpleExtension.ExtensionCollection extensions,
+      final Type.Struct rootType,
+      final ProtoRelConverter relConverter) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
@@ -50,8 +50,8 @@ public class ProtoExpressionConverter {
     this.protoRelConverter = relConverter;
   }
 
-  public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
-    io.substrait.proto.Expression.FieldReference.ReferenceTypeCase refTypeCase =
+  public FieldReference from(final io.substrait.proto.Expression.FieldReference reference) {
+    final io.substrait.proto.Expression.FieldReference.ReferenceTypeCase refTypeCase =
         reference.getReferenceTypeCase();
 
     if (refTypeCase == ReferenceTypeCase.MASKED_REFERENCE) {
@@ -83,24 +83,24 @@ public class ProtoExpressionConverter {
 
   private List<ReferenceSegment> getDirectReferenceSegments(
       io.substrait.proto.Expression.ReferenceSegment segment) {
-    List<ReferenceSegment> results = new ArrayList<>();
+    final List<ReferenceSegment> results = new ArrayList<>();
 
     while (segment != io.substrait.proto.Expression.ReferenceSegment.getDefaultInstance()) {
       final ReferenceSegment mappedSegment;
       switch (segment.getReferenceTypeCase()) {
         case MAP_KEY:
-          io.substrait.proto.Expression.ReferenceSegment.MapKey mapKey = segment.getMapKey();
+          final io.substrait.proto.Expression.ReferenceSegment.MapKey mapKey = segment.getMapKey();
           segment = mapKey.getChild();
           mappedSegment = FieldReference.MapKey.of(from(mapKey.getMapKey()));
           break;
         case STRUCT_FIELD:
-          io.substrait.proto.Expression.ReferenceSegment.StructField structField =
+          final io.substrait.proto.Expression.ReferenceSegment.StructField structField =
               segment.getStructField();
           segment = structField.getChild();
           mappedSegment = FieldReference.StructField.of(structField.getField());
           break;
         case LIST_ELEMENT:
-          io.substrait.proto.Expression.ReferenceSegment.ListElement listElement =
+          final io.substrait.proto.Expression.ReferenceSegment.ListElement listElement =
               segment.getListElement();
           segment = listElement.getChild();
           mappedSegment = FieldReference.ListElement.of(listElement.getOffset());
@@ -118,7 +118,7 @@ public class ProtoExpressionConverter {
     return results;
   }
 
-  public Expression from(io.substrait.proto.Expression expr) {
+  public Expression from(final io.substrait.proto.Expression expr) {
     switch (expr.getRexTypeCase()) {
       case LITERAL:
         return from(expr.getLiteral());
@@ -126,16 +126,17 @@ public class ProtoExpressionConverter {
         return from(expr.getSelection());
       case SCALAR_FUNCTION:
         {
-          io.substrait.proto.Expression.ScalarFunction scalarFunction = expr.getScalarFunction();
-          int functionReference = scalarFunction.getFunctionReference();
-          SimpleExtension.ScalarFunctionVariant declaration =
+          final io.substrait.proto.Expression.ScalarFunction scalarFunction =
+              expr.getScalarFunction();
+          final int functionReference = scalarFunction.getFunctionReference();
+          final SimpleExtension.ScalarFunctionVariant declaration =
               lookup.getScalarFunction(functionReference, extensions);
-          FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
-          List<FunctionArg> args =
+          final FunctionArg.ProtoFrom pF = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+          final List<FunctionArg> args =
               IntStream.range(0, scalarFunction.getArgumentsCount())
                   .mapToObj(i -> pF.convert(declaration, i, scalarFunction.getArguments(i)))
                   .collect(Collectors.toList());
-          List<FunctionOption> options =
+          final List<FunctionOption> options =
               scalarFunction.getOptionsList().stream()
                   .map(ProtoExpressionConverter::fromFunctionOption)
                   .collect(Collectors.toList());
@@ -150,8 +151,8 @@ public class ProtoExpressionConverter {
         return fromWindowFunction(expr.getWindowFunction());
       case IF_THEN:
         {
-          io.substrait.proto.Expression.IfThen ifThen = expr.getIfThen();
-          List<Expression.IfClause> clauses =
+          final io.substrait.proto.Expression.IfThen ifThen = expr.getIfThen();
+          final List<Expression.IfClause> clauses =
               ifThen.getIfsList().stream()
                   .map(t -> ExpressionCreator.ifThenClause(from(t.getIf()), from(t.getThen())))
                   .collect(Collectors.toList());
@@ -159,8 +160,9 @@ public class ProtoExpressionConverter {
         }
       case SWITCH_EXPRESSION:
         {
-          io.substrait.proto.Expression.SwitchExpression switchExpr = expr.getSwitchExpression();
-          List<Expression.SwitchClause> clauses =
+          final io.substrait.proto.Expression.SwitchExpression switchExpr =
+              expr.getSwitchExpression();
+          final List<Expression.SwitchClause> clauses =
               switchExpr.getIfsList().stream()
                   .map(t -> ExpressionCreator.switchClause(from(t.getIf()), from(t.getThen())))
                   .collect(Collectors.toList());
@@ -169,8 +171,8 @@ public class ProtoExpressionConverter {
         }
       case SINGULAR_OR_LIST:
         {
-          io.substrait.proto.Expression.SingularOrList orList = expr.getSingularOrList();
-          List<Expression> values =
+          final io.substrait.proto.Expression.SingularOrList orList = expr.getSingularOrList();
+          final List<Expression> values =
               orList.getOptionsList().stream().map(this::from).collect(Collectors.toList());
           return Expression.SingleOrList.builder()
               .condition(from(orList.getValue()))
@@ -179,8 +181,8 @@ public class ProtoExpressionConverter {
         }
       case MULTI_OR_LIST:
         {
-          io.substrait.proto.Expression.MultiOrList multiOrList = expr.getMultiOrList();
-          List<Expression.MultiOrListRecord> values =
+          final io.substrait.proto.Expression.MultiOrList multiOrList = expr.getMultiOrList();
+          final List<Expression.MultiOrListRecord> values =
               multiOrList.getOptionsList().stream()
                   .map(
                       t ->
@@ -207,7 +209,7 @@ public class ProtoExpressionConverter {
           switch (expr.getSubquery().getSubqueryTypeCase()) {
             case SET_PREDICATE:
               {
-                io.substrait.relation.Rel rel =
+                final io.substrait.relation.Rel rel =
                     protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
                 return Expression.SetPredicate.builder()
                     .tuples(rel)
@@ -218,7 +220,7 @@ public class ProtoExpressionConverter {
               }
             case SCALAR:
               {
-                io.substrait.relation.Rel rel =
+                final io.substrait.relation.Rel rel =
                     protoRelConverter.from(expr.getSubquery().getScalar().getInput());
                 return Expression.ScalarSubquery.builder()
                     .input(rel)
@@ -228,7 +230,8 @@ public class ProtoExpressionConverter {
                                 new TypeVisitor.TypeThrowsVisitor<Type, RuntimeException>(
                                     "Expected struct field") {
                                   @Override
-                                  public Type visit(Type.Struct type) throws RuntimeException {
+                                  public Type visit(final Type.Struct type)
+                                      throws RuntimeException {
                                     if (type.fields().size() != 1) {
                                       throw new UnsupportedOperationException(
                                           "Scalar subquery must have exactly one field");
@@ -241,9 +244,9 @@ public class ProtoExpressionConverter {
               }
             case IN_PREDICATE:
               {
-                io.substrait.relation.Rel rel =
+                final io.substrait.relation.Rel rel =
                     protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
-                List<Expression> needles =
+                final List<Expression> needles =
                     expr.getSubquery().getInPredicate().getNeedlesList().stream()
                         .map(e -> this.from(e))
                         .collect(Collectors.toList());
@@ -267,31 +270,31 @@ public class ProtoExpressionConverter {
   }
 
   public Expression.WindowFunctionInvocation fromWindowFunction(
-      io.substrait.proto.Expression.WindowFunction windowFunction) {
-    int functionReference = windowFunction.getFunctionReference();
-    SimpleExtension.WindowFunctionVariant declaration =
+      final io.substrait.proto.Expression.WindowFunction windowFunction) {
+    final int functionReference = windowFunction.getFunctionReference();
+    final SimpleExtension.WindowFunctionVariant declaration =
         lookup.getWindowFunction(functionReference, extensions);
-    FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+    final FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
 
-    List<FunctionArg> args =
+    final List<FunctionArg> args =
         fromFunctionArgumentList(
             windowFunction.getArgumentsCount(),
             argVisitor,
             declaration,
             windowFunction::getArguments);
-    List<Expression> partitionExprs =
+    final List<Expression> partitionExprs =
         windowFunction.getPartitionsList().stream().map(this::from).collect(Collectors.toList());
-    List<Expression.SortField> sortFields =
+    final List<Expression.SortField> sortFields =
         windowFunction.getSortsList().stream()
             .map(this::fromSortField)
             .collect(Collectors.toList());
-    List<FunctionOption> options =
+    final List<FunctionOption> options =
         windowFunction.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
 
-    WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
-    WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
+    final WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
+    final WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
 
     return Expression.WindowFunctionInvocation.builder()
         .arguments(args)
@@ -309,25 +312,25 @@ public class ProtoExpressionConverter {
   }
 
   public ConsistentPartitionWindow.WindowRelFunctionInvocation fromWindowRelFunction(
-      ConsistentPartitionWindowRel.WindowRelFunction windowRelFunction) {
-    int functionReference = windowRelFunction.getFunctionReference();
-    SimpleExtension.WindowFunctionVariant declaration =
+      final ConsistentPartitionWindowRel.WindowRelFunction windowRelFunction) {
+    final int functionReference = windowRelFunction.getFunctionReference();
+    final SimpleExtension.WindowFunctionVariant declaration =
         lookup.getWindowFunction(functionReference, extensions);
-    FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+    final FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
 
-    List<FunctionArg> args =
+    final List<FunctionArg> args =
         fromFunctionArgumentList(
             windowRelFunction.getArgumentsCount(),
             argVisitor,
             declaration,
             windowRelFunction::getArguments);
-    List<FunctionOption> options =
+    final List<FunctionOption> options =
         windowRelFunction.getOptionsList().stream()
             .map(ProtoExpressionConverter::fromFunctionOption)
             .collect(Collectors.toList());
 
-    WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
-    WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
+    final WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
+    final WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
 
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .arguments(args)
@@ -342,7 +345,8 @@ public class ProtoExpressionConverter {
         .build();
   }
 
-  private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
+  private WindowBound toWindowBound(
+      final io.substrait.proto.Expression.WindowFunction.Bound bound) {
     switch (bound.getKindCase()) {
       case PRECEDING:
         return WindowBound.Preceding.of(bound.getPreceding().getOffset());
@@ -361,7 +365,7 @@ public class ProtoExpressionConverter {
     }
   }
 
-  public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
+  public Expression.Literal from(final io.substrait.proto.Expression.Literal literal) {
     switch (literal.getLiteralTypeCase()) {
       case BOOLEAN:
         return ExpressionCreator.bool(literal.getNullable(), literal.getBoolean());
@@ -408,11 +412,11 @@ public class ProtoExpressionConverter {
         {
           // Handle deprecated version that doesn't provide precision and that uses microseconds
           // instead of subseconds, for backwards compatibility
-          int precision =
+          final int precision =
               literal.getIntervalDayToSecond().hasPrecision()
                   ? literal.getIntervalDayToSecond().getPrecision()
                   : 6; // microseconds
-          long subseconds =
+          final long subseconds =
               literal.getIntervalDayToSecond().hasPrecision()
                   ? literal.getIntervalDayToSecond().getSubseconds()
                   : literal.getIntervalDayToSecond().getMicroseconds();
@@ -468,7 +472,7 @@ public class ProtoExpressionConverter {
         {
           // literal.getNullable() is intentionally ignored in favor of the nullability
           // specified in the literal.getEmptyMap() type.
-          Type.Map mapType = protoTypeConverter.fromMap(literal.getEmptyMap());
+          final Type.Map mapType = protoTypeConverter.fromMap(literal.getEmptyMap());
           return ExpressionCreator.emptyMap(mapType.nullable(), mapType.key(), mapType.value());
         }
       case UUID:
@@ -485,14 +489,14 @@ public class ProtoExpressionConverter {
         {
           // literal.getNullable() is intentionally ignored in favor of the nullability
           // specified in the literal.getEmptyList() type.
-          Type.ListType listType = protoTypeConverter.fromList(literal.getEmptyList());
+          final Type.ListType listType = protoTypeConverter.fromList(literal.getEmptyList());
           return ExpressionCreator.emptyList(listType.nullable(), listType.elementType());
         }
       case USER_DEFINED:
         {
-          io.substrait.proto.Expression.Literal.UserDefined userDefinedLiteral =
+          final io.substrait.proto.Expression.Literal.UserDefined userDefinedLiteral =
               literal.getUserDefined();
-          SimpleExtension.Type type =
+          final SimpleExtension.Type type =
               lookup.getType(userDefinedLiteral.getTypeReference(), extensions);
           return ExpressionCreator.userDefinedLiteral(
               literal.getNullable(), type.urn(), type.name(), userDefinedLiteral.getValue());
@@ -503,23 +507,23 @@ public class ProtoExpressionConverter {
   }
 
   private static List<FunctionArg> fromFunctionArgumentList(
-      int argumentsCount,
-      FunctionArg.ProtoFrom argVisitor,
-      SimpleExtension.Function declaration,
-      Function<Integer, FunctionArgument> argFunction) {
+      final int argumentsCount,
+      final FunctionArg.ProtoFrom argVisitor,
+      final SimpleExtension.Function declaration,
+      final Function<Integer, FunctionArgument> argFunction) {
     return IntStream.range(0, argumentsCount)
         .mapToObj(i -> argVisitor.convert(declaration, i, argFunction.apply(i)))
         .collect(Collectors.toList());
   }
 
-  public Expression.SortField fromSortField(SortField s) {
+  public Expression.SortField fromSortField(final SortField s) {
     return Expression.SortField.builder()
         .direction(Expression.SortDirection.fromProto(s.getDirection()))
         .expr(from(s.getExpr()))
         .build();
   }
 
-  public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
+  public static FunctionOption fromFunctionOption(final io.substrait.proto.FunctionOption o) {
     return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
   }
 }

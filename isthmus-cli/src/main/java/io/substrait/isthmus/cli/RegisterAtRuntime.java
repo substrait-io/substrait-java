@@ -121,7 +121,7 @@ public final class RegisterAtRuntime implements Feature {
     }
   }
 
-  private static void register(Class<?> c) {
+  private static void register(final Class<?> c) {
     RuntimeReflection.register(c);
     RuntimeReflection.register(c.getDeclaredConstructors());
     RuntimeReflection.register(c.getDeclaredFields());
@@ -134,7 +134,7 @@ public final class RegisterAtRuntime implements Feature {
   private static final class PackageScanner implements AutoCloseable {
     private final ScanResult scan;
 
-    PackageScanner(String... packageNames) {
+    PackageScanner(final String... packageNames) {
       scan =
           new ClassGraph()
               .enableAllInfo()
@@ -144,16 +144,16 @@ public final class RegisterAtRuntime implements Feature {
               .scan();
     }
 
-    void registerByAnnotation(Class<? extends Annotation> annotation) {
+    void registerByAnnotation(final Class<? extends Annotation> annotation) {
       scan.getClassesWithAnnotation(annotation).loadClasses().forEach(this::registerByParent);
     }
 
-    void registerByParent(Class<?> c) {
+    void registerByParent(final Class<?> c) {
       register(c);
       getSubTypes(c).loadClasses().forEach(RegisterAtRuntime::register);
     }
 
-    private ClassInfoList getSubTypes(Class<?> c) {
+    private ClassInfoList getSubTypes(final Class<?> c) {
       if (c.isInterface()) {
         return scan.getClassesImplementing(c);
       }

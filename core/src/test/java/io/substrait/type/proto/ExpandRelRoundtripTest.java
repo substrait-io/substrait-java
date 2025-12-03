@@ -18,11 +18,11 @@ class ExpandRelRoundtripTest extends TestBase {
           Stream.of("column1", "column2").collect(Collectors.toList()),
           Stream.of(R.I64, R.I64).collect(Collectors.toList()));
 
-  private Expand.ExpandField getConsistentField(int index) {
+  private Expand.ExpandField getConsistentField(final int index) {
     return Expand.ConsistentField.builder().expression(b.fieldReference(input, index)).build();
   }
 
-  private Expand.ExpandField getSwitchingField(List<Integer> indexes) {
+  private Expand.ExpandField getSwitchingField(final List<Integer> indexes) {
     return Expand.SwitchingField.builder()
         .addAllDuplicates(
             indexes.stream()
@@ -33,7 +33,7 @@ class ExpandRelRoundtripTest extends TestBase {
 
   @Test
   void expandConsistent() {
-    Rel rel =
+    final Rel rel =
         Expand.builder()
             .from(b.expand(__ -> Collections.emptyList(), input))
             .hint(
@@ -50,7 +50,7 @@ class ExpandRelRoundtripTest extends TestBase {
 
   @Test
   void expandSwitching() {
-    Rel rel =
+    final Rel rel =
         Expand.builder()
             .from(b.expand(__ -> Collections.emptyList(), input))
             .hint(Hint.builder().addAllOutputNames(Arrays.asList("name1", "name2")).build())

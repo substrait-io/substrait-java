@@ -20,7 +20,7 @@ class WriteRelRoundtripTest extends TestBase {
 
   @Test
   void insert() {
-    NamedStruct schema =
+    final NamedStruct schema =
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
@@ -37,7 +37,7 @@ class WriteRelRoundtripTest extends TestBase {
             .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
             .build();
 
-    NamedWrite command =
+    final NamedWrite command =
         NamedWrite.builder()
             .input(virtTable)
             .tableSchema(schema)
@@ -52,16 +52,16 @@ class WriteRelRoundtripTest extends TestBase {
 
   @Test
   void append() {
-    ProtoRelConverter protoRelConverter =
+    final ProtoRelConverter protoRelConverter =
         new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
 
-    StringHolder detail = new StringHolder("DETAIL");
+    final StringHolder detail = new StringHolder("DETAIL");
 
-    NamedStruct schema =
+    final NamedStruct schema =
         NamedStruct.of(
             Stream.of("column1", "column2").collect(Collectors.toList()), R.struct(R.I64, R.I64));
 
-    VirtualTableScan virtTable =
+    final VirtualTableScan virtTable =
         VirtualTableScan.builder()
             .initialSchema(schema)
             .addRows(
@@ -69,7 +69,7 @@ class WriteRelRoundtripTest extends TestBase {
                     false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2)))
             .build();
 
-    ExtensionWrite command =
+    final ExtensionWrite command =
         ExtensionWrite.builder()
             .input(virtTable)
             .tableSchema(schema)
@@ -79,8 +79,8 @@ class WriteRelRoundtripTest extends TestBase {
             .outputMode(ExtensionWrite.OutputMode.NO_OUTPUT)
             .build();
 
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(command);
-    Rel relReturned = protoRelConverter.from(protoRel);
+    final io.substrait.proto.Rel protoRel = relProtoConverter.toProto(command);
+    final Rel relReturned = protoRelConverter.from(protoRel);
     assertEquals(command, relReturned);
   }
 }

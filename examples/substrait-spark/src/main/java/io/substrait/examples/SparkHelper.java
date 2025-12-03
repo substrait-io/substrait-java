@@ -29,7 +29,7 @@ public final class SparkHelper {
    */
   public static SparkSession connectLocalSpark() {
 
-    SparkSession spark = SparkSession.builder().enableHiveSupport().getOrCreate();
+    final SparkSession spark = SparkSession.builder().enableHiveSupport().getOrCreate();
 
     spark.sparkContext().setLogLevel("ERROR");
 

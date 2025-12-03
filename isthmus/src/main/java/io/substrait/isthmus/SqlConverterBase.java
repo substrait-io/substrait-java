@@ -36,16 +36,16 @@ public class SqlConverterBase {
   protected static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   final FeatureBoard featureBoard;
 
-  protected SqlConverterBase(FeatureBoard features) {
+  protected SqlConverterBase(final FeatureBoard features) {
     this.factory = SubstraitTypeSystem.TYPE_FACTORY;
     this.config =
         CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
     this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
-    VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
+    final VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
     this.relOptCluster = RelOptCluster.create(planner, new RexBuilder(factory));
     relOptCluster.setMetadataQuerySupplier(
         () -> {
-          ProxyingMetadataHandlerProvider handler =
+          final ProxyingMetadataHandlerProvider handler =
               new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
           return new RelMetadataQuery(handler);
         });
