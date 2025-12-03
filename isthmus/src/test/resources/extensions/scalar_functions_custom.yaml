@@ -16,10 +16,8 @@ scalar_functions:
     impls:
       - args:
           - name: "mode"
-#            options: ["UPPER", "LOWER"]
             value: string
           - name: "input_text"
-#            options: ["UPPER", "LOWER"]
             value: string
         return: string
         nullability: MIRROR

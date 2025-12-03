@@ -37,6 +37,7 @@ public final class SimpleExtensionToSqlOperator {
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection, RelDataTypeFactory typeFactory) {
     TypeConverter typeConverter = TypeConverter.DEFAULT;
+    // TODO: add support for windows functions
     return Stream.concat(
             collection.scalarFunctions().stream(), collection.aggregateFunctions().stream())
         .map(function -> toSqlFunction(function, typeFactory, typeConverter))
@@ -108,9 +109,6 @@ public final class SimpleExtensionToSqlOperator {
               opBinding.collectOperandTypes().stream().anyMatch(RelDataType::isNullable);
           break;
         case DISCRETE:
-          // The function can return null even if inputs are not null.
-          finalIsNullable = true;
-          break;
         case DECLARED_OUTPUT:
         default:
           // Use the nullability declared on the resolved Substrait type.
@@ -209,7 +207,7 @@ public final class SimpleExtensionToSqlOperator {
 
     @Override
     public SqlTypeName visit(Type.UUID expr) {
-      return SqlTypeName.VARCHAR;
+      return SqlTypeName.UUID;
     }
 
     @Override
@@ -283,12 +281,6 @@ public final class SimpleExtensionToSqlOperator {
     }
 
     @Override
-    public SqlTypeName visit(ParameterizedType.IntervalCompound expr) {
-      // TODO: double check
-      return SqlTypeName.INTERVAL_DAY_HOUR;
-    }
-
-    @Override
     public SqlTypeName visit(ParameterizedType.StringLiteral expr) {
       String type = expr.value().toUpperCase();
 
@@ -324,7 +316,7 @@ public final class SimpleExtensionToSqlOperator {
         case "TIME":
           return SqlTypeName.TIME;
         case "UUID":
-          return SqlTypeName.VARCHAR;
+          return SqlTypeName.UUID;
         default:
           if (type.startsWith("DECIMAL")) {
             return SqlTypeName.DECIMAL;
