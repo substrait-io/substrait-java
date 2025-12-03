@@ -30,14 +30,20 @@ public class SqlToSubstrait extends SqlConverterBase {
   public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     super(features, extensions);
 
-    SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-        ExtensionUtils.getDynamicExtensions(extensions);
-    List<SqlOperator> generatedDynamicOperators =
-        SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, this.factory);
-
-    this.operatorTable =
-        SqlOperatorTables.chain(
-            SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
+    if (featureBoard.allowDynamicUdfs()) {
+      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+          ExtensionUtils.getDynamicExtensions(extensions);
+      if (!dynamicExtensionCollection.scalarFunctions().isEmpty()
+          || !dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
+        List<SqlOperator> generatedDynamicOperators =
+            SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, this.factory);
+        this.operatorTable =
+            SqlOperatorTables.chain(
+                SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
+        return;
+      }
+    }
+    this.operatorTable = SubstraitOperatorTable.INSTANCE;
   }
 
   /**

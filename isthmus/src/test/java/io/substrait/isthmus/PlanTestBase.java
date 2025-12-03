@@ -154,37 +154,72 @@ public class PlanTestBase {
     return relRoot2;
   }
 
-  protected RelRoot assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-      String query, Prepare.CatalogReader catalogReader) throws Exception {
-    // sql <--> substrait round trip test.
-    // Assert (sql -> calcite -> substrait) and (sql -> substrait -> calcite -> substrait) are same.
-    // Return list of sql -> Substrait rel -> Calcite rel.
-
+  /**
+   * Verifies that the given query can be converted through multiple round trips, with loose POJO
+   * comparison.
+   *
+   * <p>"Loose" here means not comparing the initial POJO (from SQL→Substrait conversion) to the
+   * first POJO after the round trip (from Substrait→Calcite→Substrait conversion), due to optimizer
+   * differences between:
+   *
+   * <ul>
+   *   <li>SqlNode→RelRoot conversion (SQL→Substrait path)
+   *   <li>RelBuilder/RexBuilder optimization (Substrait→Calcite path)
+   * </ul>
+   *
+   * <p>Instead, this method compares the second and third round-trip POJOs, ensuring that
+   * subsequent round trips produce stable results.
+   *
+   * @param query the SQL query to test
+   * @param catalogReader the Calcite catalog with table definitions
+   * @param featureBoard optional FeatureBoard to control conversion behavior (e.g., dynamic UDFs).
+   *     If null, a default FeatureBoard is used.
+   */
+  protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
+      String query, Prepare.CatalogReader catalogReader, FeatureBoard featureBoard)
+      throws Exception {
     SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
-    SqlToSubstrait s = new SqlToSubstrait(extensions, null);
+    // Use provided FeatureBoard, or create default if null
+    FeatureBoard features =
+        featureBoard != null ? featureBoard : ImmutableFeatureBoard.builder().build();
+    SqlToSubstrait s = new SqlToSubstrait(extensions, features);
 
-    // 1. SQL -> Calcite RelRoot
+    // 1. SQL -> Substrait Plan
     Plan plan1 = s.convert(query, catalogReader);
 
-    // 2. Calcite RelRoot  -> Substrait Rel
+    // 2. Substrait Plan -> Substrait Root (POJO 1)
     Plan.Root pojo1 = plan1.getRoots().get(0);
 
-    // 3. Substrait Rel -> Calcite RelNode
+    // 3. Substrait Root -> Calcite RelNode
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
 
-    // 4. Calcite RelNode -> Substrait Rel
+    // 4. Calcite RelNode -> Substrait Root (POJO 2)
     Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions);
 
-    // Here pojo1 and pojo2 can be different because of different default optimization
-    // rules between SqlNode->RelRoot conversion (Sql->Substrait) and
-    // RelBuilder/RexBuilder (Substrait->Sql).
-    // Therefore, substrait plans passed through conversion to calcite should be compared
+    // Note: pojo1 and pojo2 may differ due to different optimization strategies applied by:
+    // - SqlNode->RelRoot conversion during SQL->Substrait conversion
+    // - RelBuilder/RexBuilder optimization during Substrait->Calcite conversion
+    // This is expected, so we don't compare pojo1 and pojo2.
+
+    // 5. Substrait Root 2 -> Calcite RelNode
     RelRoot relRoot3 = substraitToCalcite.convert(pojo2);
+
+    // 6. Calcite RelNode -> Substrait Root (POJO 3)
     Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, extensions);
 
+    // Verify that subsequent round trips are stable (pojo2 and pojo3 should be identical)
     assertEquals(pojo2, pojo3);
     return relRoot2;
+  }
+
+  /**
+   * Convenience overload of {@link #assertSqlSubstraitRelRoundTripLoosePojoComparison(String,
+   * Prepare.CatalogReader, FeatureBoard)} with default FeatureBoard behavior (no dynamic UDFs).
+   */
+  protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
+      String query, Prepare.CatalogReader catalogReader) throws Exception {
+    return assertSqlSubstraitRelRoundTripLoosePojoComparison(query, catalogReader, null);
   }
 
   @Beta

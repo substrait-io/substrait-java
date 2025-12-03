@@ -22,14 +22,16 @@ class UdfSqlSubstraitTest extends PlanTestBase {
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "CREATE TABLE t(x VARCHAR NOT NULL)");
 
-    assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT regexp_extract_custom(x, 'ab') from t", catalogReader);
-    assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT format_text('UPPER', x) FROM t", catalogReader);
-    assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT system_property_get(x) FROM t", catalogReader);
-    assertSqlSubstraitRelRoundTripWorkaroundOptimizer(
-        "SELECT safe_divide_custom(10,0) FROM t", catalogReader);
+    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().allowDynamicUdfs(true).build();
+
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        "SELECT regexp_extract_custom(x, 'ab') from t", catalogReader, featureBoard);
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        "SELECT format_text('UPPER', x) FROM t", catalogReader, featureBoard);
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        "SELECT system_property_get(x) FROM t", catalogReader, featureBoard);
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        "SELECT safe_divide_custom(10,0) FROM t", catalogReader, featureBoard);
   }
 
   private static SimpleExtension.ExtensionCollection loadExtensions(
