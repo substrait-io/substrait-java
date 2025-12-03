@@ -108,9 +108,21 @@ public class SubstraitRelNodeConverter
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
     this(
+        extensions,
         typeFactory,
         relBuilder,
-        createScalarFunctionConverter(extensions, typeFactory),
+        ImmutableFeatureBoard.builder().build());
+  }
+
+  public SubstraitRelNodeConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      RelBuilder relBuilder,
+      FeatureBoard featureBoard) {
+    this(
+        typeFactory,
+        relBuilder,
+        createScalarFunctionConverter(extensions, typeFactory, featureBoard.allowDynamicUdfs()),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT);
@@ -153,32 +165,39 @@ public class SubstraitRelNodeConverter
   }
 
   private static ScalarFunctionConverter createScalarFunctionConverter(
-      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-
-    java.util.Set<String> knownFunctionNames =
-        FunctionMappings.SCALAR_SIGS.stream()
-            .map(FunctionMappings.Sig::name)
-            .collect(Collectors.toSet());
-
-    List<SimpleExtension.ScalarFunctionVariant> dynamicFunctions =
-        extensions.scalarFunctions().stream()
-            .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
-            .collect(Collectors.toList());
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      boolean allowDynamicUdfs) {
 
     List<FunctionMappings.Sig> additionalSignatures;
-    if (dynamicFunctions.isEmpty()) {
-      additionalSignatures = Collections.emptyList();
-    } else {
-      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-          SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
 
-      List<SqlOperator> dynamicOperators =
-          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+    if (allowDynamicUdfs) {
+      java.util.Set<String> knownFunctionNames =
+          FunctionMappings.SCALAR_SIGS.stream()
+              .map(FunctionMappings.Sig::name)
+              .collect(Collectors.toSet());
 
-      additionalSignatures =
-          dynamicOperators.stream()
-              .map(op -> FunctionMappings.s(op, op.getName()))
+      List<SimpleExtension.ScalarFunctionVariant> dynamicFunctions =
+          extensions.scalarFunctions().stream()
+              .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
               .collect(Collectors.toList());
+
+      if (dynamicFunctions.isEmpty()) {
+        additionalSignatures = Collections.emptyList();
+      } else {
+        SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+            SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
+
+        List<SqlOperator> dynamicOperators =
+            SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+        additionalSignatures =
+            dynamicOperators.stream()
+                .map(op -> FunctionMappings.s(op, op.getName()))
+                .collect(Collectors.toList());
+      }
+    } else {
+      additionalSignatures = Collections.emptyList();
     }
 
     return new ScalarFunctionConverter(
@@ -191,6 +210,22 @@ public class SubstraitRelNodeConverter
       Prepare.CatalogReader catalogReader,
       SqlParser.Config parserConfig,
       SimpleExtension.ExtensionCollection extensions) {
+    return convert(
+        relRoot,
+        relOptCluster,
+        catalogReader,
+        parserConfig,
+        extensions,
+        ImmutableFeatureBoard.builder().build());
+  }
+
+  public static RelNode convert(
+      Rel relRoot,
+      RelOptCluster relOptCluster,
+      Prepare.CatalogReader catalogReader,
+      SqlParser.Config parserConfig,
+      SimpleExtension.ExtensionCollection extensions,
+      FeatureBoard featureBoard) {
     RelBuilder relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
@@ -201,7 +236,7 @@ public class SubstraitRelNodeConverter
                 .build());
 
     return relRoot.accept(
-        new SubstraitRelNodeConverter(extensions, relOptCluster.getTypeFactory(), relBuilder),
+        new SubstraitRelNodeConverter(extensions, relOptCluster.getTypeFactory(), relBuilder, featureBoard),
         Context.newContext());
   }
 

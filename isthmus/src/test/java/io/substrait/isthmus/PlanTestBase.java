@@ -178,11 +178,12 @@ public class PlanTestBase {
   protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
       String query, Prepare.CatalogReader catalogReader, FeatureBoard featureBoard)
       throws Exception {
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
-
     // Use provided FeatureBoard, or create default if null
     FeatureBoard features =
         featureBoard != null ? featureBoard : ImmutableFeatureBoard.builder().build();
+
+    SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(extensions, typeFactory, TypeConverter.DEFAULT, null, features);
     SqlToSubstrait s = new SqlToSubstrait(extensions, features);
 
     // 1. SQL -> Substrait Plan
