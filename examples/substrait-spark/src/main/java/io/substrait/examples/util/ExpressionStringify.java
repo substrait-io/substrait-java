@@ -37,7 +37,8 @@ import io.substrait.expression.Expression.TimeLiteral;
 import io.substrait.expression.Expression.TimestampLiteral;
 import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.Expression.UUIDLiteral;
-import io.substrait.expression.Expression.UserDefinedLiteral;
+import io.substrait.expression.Expression.UserDefinedAny;
+import io.substrait.expression.Expression.UserDefinedStruct;
 import io.substrait.expression.Expression.VarCharLiteral;
 import io.substrait.expression.Expression.WindowFunctionInvocation;
 import io.substrait.expression.ExpressionVisitor;
@@ -188,9 +189,14 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(UserDefinedLiteral expr, EmptyVisitationContext context)
+  public String visit(UserDefinedAny expr, EmptyVisitationContext context) throws RuntimeException {
+    return "<UserDefinedAny " + expr.value() + ">";
+  }
+
+  @Override
+  public String visit(UserDefinedStruct expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<UserDefinedLiteral " + expr.value() + ">";
+    return "<UserDefinedStruct " + expr.fields() + ">";
   }
 
   @Override
