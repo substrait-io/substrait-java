@@ -367,14 +367,11 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       virtualTableScan: relation.VirtualTableScan,
       context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map {
-      case nestedStruct: NestedStruct =>
+      nestedStruct =>
         InternalRow.fromSeq(
           nestedStruct.fields.asScala
             .map(expr => expr.accept(expressionConverter, context).asInstanceOf[Literal].value)
         )
-      case other =>
-        throw new UnsupportedOperationException(
-          s"Unsupported row type in VirtualTableScan: ${other.getClass}")
     }
     virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>

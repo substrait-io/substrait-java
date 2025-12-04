@@ -56,10 +56,6 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
-import org.apache.calcite.rel.core.Union;
-import org.apache.calcite.rel.core.Values;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -174,46 +170,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return super.visit(calc);
   }
 
-  /*
-       we represent a logicalValue table that can store non-literal expressions by a LogicalProject
-        with an input of a logicalUnion with inputs of logicalProjects. Each of the unioned logicalProjects
-        store the expressions in row of the table, and each is passed a dummy logicalValues input
-  */
-  boolean isLogicalValues(LogicalProject project) {
-    RelNode node = project.getInput(0);
-    if (node instanceof LogicalUnion && !node.getInputs().isEmpty()) {
-      for (RelNode child : node.getInputs()) {
-        //          each logicalProject has a dummy logicalValues input
-        if (!(child instanceof LogicalProject && child.getInputs().get(0) instanceof Values)) {
-          return false;
-        }
-      }
-    } else {
-      return false;
-    }
-    return true;
-  }
-
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
-    NamedStruct type = typeConverter.toNamedStruct(project.getRowType());
-    if (isLogicalValues((LogicalProject) project)) {
-      List<Expression.NestedStruct> structs = new ArrayList<>();
-      Union union = (LogicalUnion) project.getInputs().get(0);
-      // each node is logicalProject storing all expressions of table row
-      for (RelNode node : union.getInputs()) {
-        LogicalProject projectRow = (LogicalProject) node;
-        structs.add(
-            Expression.NestedStruct.builder()
-                .addAllFields(
-                    projectRow.getProjects().stream()
-                        .map(this::toExpression)
-                        .collect(Collectors.toUnmodifiableList()))
-                .build());
-      }
-      return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
-    }
-
     List<Expression> expressions =
         project.getProjects().stream()
             .map(this::toExpression)
