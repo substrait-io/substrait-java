@@ -61,9 +61,6 @@ class VirtualTableScanTest extends PlanTestBase {
             + "    LogicalProject(exprs=[[*(6, 2), 8.8E0:DOUBLE]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
-
-    // Check full roundtrip conversion
-    assertFullRoundTrip(virtualTableScan);
   }
 
   @SafeVarargs

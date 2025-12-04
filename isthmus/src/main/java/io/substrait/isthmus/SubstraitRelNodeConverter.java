@@ -676,31 +676,44 @@ public class SubstraitRelNodeConverter
       }
       return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
     } else {
-      // the virtualTable row is represented by the expressions in the logicalProject
-      List<RelNode> projectRow = new ArrayList<>();
+      // When a VirtualTable contains non-literal expressions, they cannot be put directly into a
+      // LogicalValues relation. Instead, we create a LogicalProject for each row to compute its
+      // values, and combine them together using a LogicalUnion. For example the following:
+      //
+      //   VirtualTable
+      //     (e1, e2)
+      //     (e3, e4)
+      //
+      //  Becomes:
+      //
+      //   LogicalUnion(all=[true])
+      //     LogicalProject(exprs=[e1, e2])
+      //       <Empty Row>
+      //     LogicalProject(exprs=[e3, e4])
+      //       <Empty Row>
+      //
 
       RelDataType emptyRowType = typeFactory.createStructType(List.of(), List.of());
-      ImmutableList<ImmutableList<RexLiteral>> emptyValues =
-          ImmutableList.of(ImmutableList.copyOf(new ArrayList<>())); // dummy Row
+      ImmutableList<ImmutableList<RexLiteral>> emptyRowValue = ImmutableList.of(ImmutableList.of());
 
+      List<RelNode> projects = new ArrayList<>();
       for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
         List<RexNode> rexRow = new ArrayList<>();
         for (Expression field : rowExpr.fields()) {
           rexRow.add(field.accept(expressionRexConverter, context));
         }
-        RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyValues);
+        RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyRowValue);
         RelNode project =
             LogicalProject.create(
                 values, Collections.emptyList(), rexRow, rowType, Collections.emptySet());
-        projectRow.add(project);
+        projects.add(project);
       }
-      RelNode union =
-          LogicalUnion.create(
-              projectRow, true); // rows are logicalProjects and the table is union of all rows
+      RelNode union = LogicalUnion.create(projects, true);
 
+      // Apply a final LogicalProject on top to capture the field names from the VirtualTable
       List<RexNode> topProjectExprs = new ArrayList<>();
       for (int i = 0; i < rowType.getFieldCount(); i++) {
-        topProjectExprs.add(rexBuilder.makeInputRef(rowType.getFieldList().get(i).getType(), i));
+        topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
       return LogicalProject.create(
           union,

@@ -605,7 +605,7 @@ public class ProtoRelConverter {
    * @param structs the StructLiteral instances to convert
    * @return a list of NestedStruct instances with the same field structure
    */
-  public static List<Expression.NestedStruct> nestedStruct(
+  private static List<Expression.NestedStruct> nestedStruct(
       boolean nullable, Expression.StructLiteral... structs) {
     List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
     for (Expression.StructLiteral struct : structs) {
