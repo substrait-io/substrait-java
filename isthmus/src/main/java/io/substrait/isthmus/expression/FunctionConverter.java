@@ -20,7 +20,6 @@ import io.substrait.isthmus.expression.FunctionMappings.Sig;
 import io.substrait.isthmus.expression.FunctionMappings.TypeBasedResolver;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,14 +37,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -247,8 +244,7 @@ public abstract class FunctionConverter<
         // Make sure that arguments & return are within bounds and match the types
         if (function.returnType() instanceof ParameterizedType
             && isMatch(outputType, (ParameterizedType) function.returnType())
-            && inputTypesMatchDefinedArguments(
-                inputTypes, args, function.variadic().orElse(null))) {
+            && inputTypesMatchDefinedArguments(inputTypes, args)) {
           return Optional.of(function);
         }
       }
@@ -260,21 +256,17 @@ public abstract class FunctionConverter<
      * Checks to see if the given input types satisfy the function arguments given. Checks that
      *
      * <ul>
-     *   <li>Variadic arguments all have the same input type (when parameterConsistency is
-     *       CONSISTENT)
+     *   <li>Variadic arguments all have the same input type
      *   <li>Matched wildcard arguments (i.e.`any`, `any1`, `any2`, etc) all have the same input
      *       type
      * </ul>
      *
      * @param inputTypes input types to check against arguments
      * @param args expected arguments as defined in a {@link SimpleExtension.Function}
-     * @param variadic the variadic behavior to check for consistency, or null if not variadic
      * @return true if the {@code inputTypes} satisfy the {@code args}, false otherwise
      */
-    boolean inputTypesMatchDefinedArguments(
-        List<Type> inputTypes,
-        List<SimpleExtension.Argument> args,
-        SimpleExtension.@Nullable VariadicBehavior variadic) {
+    private boolean inputTypesMatchDefinedArguments(
+        List<Type> inputTypes, List<SimpleExtension.Argument> args) {
 
       Map<String, Set<Type>> wildcardToType = new HashMap<>();
       for (int i = 0; i < inputTypes.size(); i++) {
@@ -300,39 +292,9 @@ public abstract class FunctionConverter<
       }
 
       // If all the types match, check if the wildcard types are compatible.
-      // When parameterConsistency is INCONSISTENT, wildcard types can differ.
-      // When parameterConsistency is CONSISTENT (or not variadic), wildcard types must be the same.
-      boolean allowInconsistentWildcards =
-          variadic != null
-              && variadic.parameterConsistency()
-                  == SimpleExtension.VariadicBehavior.ParameterConsistency.INCONSISTENT;
-      if (!allowInconsistentWildcards
-          && !wildcardToType.values().stream().allMatch(s -> s.size() == 1)) {
-        return false;
-      }
-
-      // Validate variadic argument consistency
-      if (variadic != null
-          && variadic.parameterConsistency()
-              == SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT
-          && inputTypes.size() > args.size()) {
-        // Check that all variadic arguments have the same type (ignoring nullability)
-        int firstVariadicArgIdx = Math.max(variadic.getMin() - 1, 0);
-        // Compare consecutive arguments starting from firstVariadicArgIdx
-        for (int i = firstVariadicArgIdx; i < inputTypes.size() - 1; i++) {
-          Type currentType = inputTypes.get(i);
-          Type nextType = inputTypes.get(i + 1);
-          // Compare types ignoring nullability - check both directions to ensure types match
-          boolean typesMatch =
-              currentType.accept(new IgnoreNullableAndParameters(nextType))
-                  || nextType.accept(new IgnoreNullableAndParameters(currentType));
-          if (!typesMatch) {
-            return false;
-          }
-        }
-      }
-
-      return true;
+      // TODO: Determine if non-enumerated wildcard types (i.e. `any` as opposed to `any1`) need to
+      //   have the same type.
+      return wildcardToType.values().stream().allMatch(s -> s.size() == 1);
     }
 
     /**
