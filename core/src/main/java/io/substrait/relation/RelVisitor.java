@@ -1,8 +1,13 @@
 package io.substrait.relation;
 
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.util.VisitationContext;
 
 public interface RelVisitor<O, C extends VisitationContext, E extends Exception> {
@@ -57,4 +62,14 @@ public interface RelVisitor<O, C extends VisitationContext, E extends Exception>
   O visit(ExtensionDdl ddl, C context) throws E;
 
   O visit(NamedUpdate update, C context) throws E;
+
+  O visit(ScatterExchange exchange, C context) throws E;
+
+  O visit(SingleBucketExchange exchange, C context) throws E;
+
+  O visit(MultiBucketExchange exchange, C context) throws E;
+
+  O visit(RoundRobinExchange exchange, C context) throws E;
+
+  O visit(BroadcastExchange exchange, C context) throws E;
 }

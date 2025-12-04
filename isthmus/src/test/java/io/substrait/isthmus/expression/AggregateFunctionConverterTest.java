@@ -13,7 +13,7 @@ import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
-public class AggregateFunctionConverterTest extends PlanTestBase {
+class AggregateFunctionConverterTest extends PlanTestBase {
 
   @Test
   void testFunctionFinderMatch() {

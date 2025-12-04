@@ -286,6 +286,15 @@ public class ExpressionCreator {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
   }
 
+  public static Expression.NestedStruct nestedStruct(
+      boolean nullable, Iterable<Expression> fields) {
+    return Expression.NestedStruct.builder().nullable(nullable).addAllFields(fields).build();
+  }
+
+  public static Expression.NestedStruct nestedStruct(boolean nullable, Expression... fields) {
+    return Expression.NestedStruct.builder().nullable(nullable).addFields(fields).build();
+  }
+
   /**
    * Create a UserDefinedAnyLiteral with google.protobuf.Any representation.
    *

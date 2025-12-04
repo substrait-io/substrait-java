@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
  * Tests field reference roundtrip behavior through relations. Field references are tested as part
  * of the relation context since they require schema information for proper deserialization.
  */
-public class FieldReferenceRoundtripTest extends TestBase {
+class FieldReferenceRoundtripTest extends TestBase {
 
   final Rel baseTable =
       b.namedScan(

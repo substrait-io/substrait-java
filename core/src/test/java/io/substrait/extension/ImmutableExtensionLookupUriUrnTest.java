@@ -10,10 +10,10 @@ import io.substrait.proto.SimpleExtensionURI;
 import io.substrait.proto.SimpleExtensionURN;
 import org.junit.jupiter.api.Test;
 
-public class ImmutableExtensionLookupUriUrnTest {
+class ImmutableExtensionLookupUriUrnTest {
 
   @Test
-  public void testUrnResolutionWorks() {
+  void testUrnResolutionWorks() {
     // Create URN-only plan (normal case)
     SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
@@ -41,7 +41,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testUriToUrnFallbackWorks() {
+  void testUriToUrnFallbackWorks() {
     // Create an ExtensionCollection with URI/URN mapping
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/extensions/test", "extension:test:mapped");
@@ -77,7 +77,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testUriWithoutMappingThrowsError() {
+  void testUriWithoutMappingThrowsError() {
     // Create URI-only plan without mapping
     SimpleExtensionURI uriProto =
         SimpleExtensionURI.newBuilder()
@@ -111,7 +111,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testMissingUrnAndUriThrowsError() {
+  void testMissingUrnAndUriThrowsError() {
     // Create plan with missing URN/URI reference
     SimpleExtensionDeclaration.ExtensionFunction func =
         SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
@@ -142,7 +142,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   // ==========================================================================
 
   @Test
-  public void testFunctionCase1_NonZeroUrnReference() {
+  void testFunctionCase1_NonZeroUrnReference() {
     // Case 1: Non-zero URN reference resolves
     SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
@@ -169,7 +169,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testFunctionCase2_NonZeroUriReference() {
+  void testFunctionCase2_NonZeroUriReference() {
     // Case 2: Non-zero URI reference resolves via mapping
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case2", "extension:test:case2");
@@ -203,7 +203,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testFunctionCase3_ZeroBothResolveConsistent() {
+  void testFunctionCase3_ZeroBothResolveConsistent() {
     // Case 3: Both 0 references resolve to consistent URN
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case3", "extension:test:case3");
@@ -249,7 +249,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testFunctionCase3_ZeroBothResolveConflict() {
+  void testFunctionCase3_ZeroBothResolveConflict() {
     // Case 3: Both 0 references resolve but to different URNs - should throw
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/conflict", "extension:test:different");
@@ -299,7 +299,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testFunctionCase4_ZeroUrnOnly() {
+  void testFunctionCase4_ZeroUrnOnly() {
     // Case 4: Only 0 URN reference resolves
     SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
@@ -327,7 +327,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testFunctionCase5_ZeroUriOnly() {
+  void testFunctionCase5_ZeroUriOnly() {
     // Case 5: Only 0 URI reference resolves
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case5", "extension:test:case5");
@@ -366,7 +366,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   // ==========================================================================
 
   @Test
-  public void testTypeCase1_NonZeroUrnReference() {
+  void testTypeCase1_NonZeroUrnReference() {
     // Case 1: Non-zero URN reference resolves
     SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
@@ -393,7 +393,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeCase2_NonZeroUriReference() {
+  void testTypeCase2_NonZeroUriReference() {
     // Case 2: Non-zero URI reference resolves via mapping
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case2", "extension:test:case2");
@@ -427,7 +427,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeCase3_ZeroBothResolveConsistent() {
+  void testTypeCase3_ZeroBothResolveConsistent() {
     // Case 3: Both 0 references resolve to consistent URN
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case3", "extension:test:case3");
@@ -473,7 +473,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeCase3_ZeroBothResolveConflict() {
+  void testTypeCase3_ZeroBothResolveConflict() {
     // Case 3: Both 0 references resolve but to different URNs - should throw
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/conflict", "extension:test:different");
@@ -523,7 +523,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeCase4_ZeroUrnOnly() {
+  void testTypeCase4_ZeroUrnOnly() {
     // Case 4: Only 0 URN reference resolves
     SimpleExtensionURN urnProto =
         SimpleExtensionURN.newBuilder()
@@ -551,7 +551,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeCase5_ZeroUriOnly() {
+  void testTypeCase5_ZeroUriOnly() {
     // Case 5: Only 0 URI reference resolves
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/case5", "extension:test:case5");
@@ -586,7 +586,7 @@ public class ImmutableExtensionLookupUriUrnTest {
   }
 
   @Test
-  public void testTypeUriToUrnFallbackWorks() {
+  void testTypeUriToUrnFallbackWorks() {
     // Test the same logic but for types instead of functions
     BidiMap<String, String> uriUrnMap = new BidiMap<>();
     uriUrnMap.put("http://example.com/types/test", "extension:types:mapped");

@@ -41,6 +41,7 @@ import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructTyp
 import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
+import io.substrait.expression.Expression.NestedStruct
 import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
@@ -49,6 +50,7 @@ import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
+import io.substrait.relation.physical.{BroadcastExchange, MultiBucketExchange, RoundRobinExchange, ScatterExchange, SingleBucketExchange}
 import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
@@ -364,13 +366,13 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   override def visit(
       virtualTableScan: relation.VirtualTableScan,
       context: EmptyVisitationContext): LogicalPlan = {
-    val rows = virtualTableScan.getRows.asScala.map(
-      row =>
+    val rows = virtualTableScan.getRows.asScala.map {
+      nestedStruct =>
         InternalRow.fromSeq(
-          row
-            .fields()
-            .asScala
-            .map(field => field.accept(expressionConverter, context).asInstanceOf[Literal].value)))
+          nestedStruct.fields.asScala
+            .map(expr => expr.accept(expressionConverter, context).asInstanceOf[Literal].value)
+        )
+    }
     virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
         OneRowRelation()
@@ -660,5 +662,29 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
 
     require(renamedLogicalPlan.resolved)
     renamedLogicalPlan
+  }
+
+  override def visit(exchange: ScatterExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(
+      exchange: SingleBucketExchange,
+      context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(
+      exchange: MultiBucketExchange,
+      context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(exchange: RoundRobinExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
+  }
+
+  override def visit(exchange: BroadcastExchange, context: EmptyVisitationContext): LogicalPlan = {
+    visitFallback(exchange, context)
   }
 }

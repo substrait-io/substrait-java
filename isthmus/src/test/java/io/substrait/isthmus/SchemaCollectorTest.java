@@ -19,7 +19,7 @@ import java.util.List;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.junit.jupiter.api.Test;
 
-public class SchemaCollectorTest extends PlanTestBase {
+class SchemaCollectorTest extends PlanTestBase {
 
   SubstraitBuilder b = substraitBuilder;
   SchemaCollector schemaCollector = new SchemaCollector(typeFactory, TypeConverter.DEFAULT);

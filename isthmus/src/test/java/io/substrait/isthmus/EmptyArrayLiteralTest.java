@@ -10,7 +10,7 @@ import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class EmptyArrayLiteralTest extends PlanTestBase {
+class EmptyArrayLiteralTest extends PlanTestBase {
   private static final TypeCreator N = TypeCreator.of(true);
 
   private final SubstraitBuilder b = new SubstraitBuilder(extensions);

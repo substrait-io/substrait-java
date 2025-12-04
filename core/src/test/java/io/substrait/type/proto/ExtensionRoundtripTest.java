@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
  * Verify that the various extension types in {@link io.substrait.relation.Extension} roundtrip
  * correctly.
  */
-public class ExtensionRoundtripTest extends TestBase {
+class ExtensionRoundtripTest extends TestBase {
 
   final ProtoRelConverter protoRelConverter =
       new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
@@ -80,7 +80,7 @@ public class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
-            .addRows(Expression.StructLiteral.builder().fields(Collections.emptyList()).build())
+            .addRows(Expression.NestedStruct.builder().fields(Collections.emptyList()).build())
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();

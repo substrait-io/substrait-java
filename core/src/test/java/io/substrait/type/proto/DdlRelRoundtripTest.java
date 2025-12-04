@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-public class DdlRelRoundtripTest extends TestBase {
+class DdlRelRoundtripTest extends TestBase {
 
   @Test
   void create() {
@@ -56,8 +56,14 @@ public class DdlRelRoundtripTest extends TestBase {
         ExpressionCreator.struct(
             false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
 
+    Expression.NestedStruct nested =
+        Expression.NestedStruct.builder()
+            .addFields(ExpressionCreator.i64(false, 1))
+            .addFields(ExpressionCreator.i64(false, 2))
+            .build();
+
     VirtualTableScan virtTable =
-        VirtualTableScan.builder().initialSchema(schema).addRows(defaults).build();
+        VirtualTableScan.builder().initialSchema(schema).addRows(nested).build();
 
     ExtensionDdl command =
         ExtensionDdl.builder()

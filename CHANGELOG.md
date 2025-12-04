@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.71.0](https://github.com/substrait-io/substrait-java/compare/v0.70.0...v0.71.0) (2025-11-30)
+
+### Features
+
+* add ExchangeRel support to core ([#602](https://github.com/substrait-io/substrait-java/issues/602)) ([194f4e4](https://github.com/substrait-io/substrait-java/commit/194f4e4a31c0c81fdcd88431e6e008e72e3909b3))
+* **isthmus:** mapping of string extract and pad fns ([#619](https://github.com/substrait-io/substrait-java/issues/619)) ([359cc7c](https://github.com/substrait-io/substrait-java/commit/359cc7ccadf92522c6b8cae8d0886e28c228586b))
+
+### Bug Fixes
+
+* add missing serialVersionUIDs ([#621](https://github.com/substrait-io/substrait-java/issues/621)) ([2e3ca32](https://github.com/substrait-io/substrait-java/commit/2e3ca32efc5e770d2ae4d584179353f07e75e0ef))
+
 ## [0.70.0](https://github.com/substrait-io/substrait-java/compare/v0.69.0...v0.70.0) (2025-11-23)
 
 ### Features

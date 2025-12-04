@@ -8,11 +8,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public final class StringFunctionTest extends PlanTestBase {
+final class StringFunctionTest extends PlanTestBase {
 
   static String CREATES = "CREATE TABLE strings (c16 CHAR(16), vc32 VARCHAR(32), vc VARCHAR)";
   static String REPLACE_CREATES =
       "CREATE TABLE replace_strings (c16 CHAR(16), vc32 VARCHAR(32), replace_from VARCHAR(16), replace_to VARCHAR(16))";
+  static String CHAR_INT_CREATES =
+      "CREATE TABLE int_num_strings (vc32 VARCHAR(32), vc VARCHAR, i32 INT)";
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
@@ -269,5 +271,43 @@ public final class StringFunctionTest extends PlanTestBase {
     String query = String.format("SELECT STRPOS(%s, %s) > 0 FROM strings", left, right);
 
     assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"vc32, i32", "vc, i32"})
+  void testLeft(String left, String right) throws Exception {
+
+    String query = String.format("SELECT LEFT(%s, %s) FROM int_num_strings", left, right);
+
+    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"vc32, i32", "vc, i32"})
+  void testRight(String left, String right) throws Exception {
+
+    String query = String.format("SELECT RIGHT(%s, %s) FROM int_num_strings", left, right);
+
+    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"vc32, i32, vc32", "vc, i32, vc"})
+  void testRpad(String left, String center, String right) throws Exception {
+
+    String query =
+        String.format("SELECT RPAD(%s, %s, %s) FROM int_num_strings", left, center, right);
+
+    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"vc32, i32, vc32", "vc, i32, vc"})
+  void testLpad(String left, String center, String right) throws Exception {
+
+    String query =
+        String.format("SELECT LPAD(%s, %s, %s) FROM int_num_strings", left, center, right);
+
+    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
   }
 }

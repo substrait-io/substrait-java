@@ -204,6 +204,15 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
+  public Optional<Expression> visit(Expression.NestedStruct expr, EmptyVisitationContext context)
+      throws E {
+    Optional<List<Expression>> expressions = visitExprList(expr.fields(), context);
+    return expressions.map(
+        expressionList ->
+            Expression.NestedStruct.builder().from(expr).fields(expressionList).build());
+  }
+
+  @Override
   public Optional<Expression> visit(
       Expression.UserDefinedAnyLiteral expr, EmptyVisitationContext context) throws E {
     return visitLiteral(expr);

@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
-public class LiteralRoundtripTest extends TestBase {
+class LiteralRoundtripTest extends TestBase {
 
   private static final String NESTED_TYPES_URN = "extension:io.substrait:test_nested_types";
 

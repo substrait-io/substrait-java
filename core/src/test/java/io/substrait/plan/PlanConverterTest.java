@@ -301,7 +301,7 @@ class PlanConverterTest {
                     Arrays.asList("nullable_point_col", "point_col", "vector_col"),
                     TypeCreator.REQUIRED.struct(nullablePointType, pointType, vectorOfPointType)))
             .addRows(
-                ExpressionCreator.struct(
+                ExpressionCreator.nestedStruct(
                     false, nullablePointLiteral, pointLiteral, vectorOfPointLiteral))
             .build();
 

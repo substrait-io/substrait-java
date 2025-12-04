@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -18,6 +19,7 @@ import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
 import io.substrait.proto.DdlRel;
+import io.substrait.proto.ExchangeRel;
 import io.substrait.proto.ExpandRel;
 import io.substrait.proto.ExtensionLeafRel;
 import io.substrait.proto.ExtensionMultiRel;
@@ -37,9 +39,22 @@ import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
 import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
+import io.substrait.relation.physical.AbstractExchangeRel;
+import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.ImmutableBroadcastExchange;
+import io.substrait.relation.physical.ImmutableExchangeTarget;
+import io.substrait.relation.physical.ImmutableMultiBucketExchange;
+import io.substrait.relation.physical.ImmutableRoundRobinExchange;
+import io.substrait.relation.physical.ImmutableScatterExchange;
+import io.substrait.relation.physical.ImmutableSingleBucketExchange;
 import io.substrait.relation.physical.MergeJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TargetType;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
@@ -163,6 +178,8 @@ public class ProtoRelConverter {
         return newDdl(rel.getDdl());
       case UPDATE:
         return newUpdate(rel.getUpdate());
+      case EXCHANGE:
+        return newExchange(rel.getExchange());
       default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
     }
@@ -171,7 +188,7 @@ public class ProtoRelConverter {
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0) {
+      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
         return newEmptyScan(rel);
       } else {
         return newVirtualTable(rel);
@@ -579,20 +596,50 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
+   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
+   * NestedStruct-based API.
+   *
+   * @param nullable whether the resulting NestedStruct instances should be nullable
+   * @param structs the StructLiteral instances to convert
+   * @return a list of NestedStruct instances with the same field structure
+   */
+  private static List<Expression.NestedStruct> nestedStruct(
+      boolean nullable, Expression.StructLiteral... structs) {
+    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
+    for (Expression.StructLiteral struct : structs) {
+      nestedStructs.add(
+          Expression.NestedStruct.builder()
+              .nullable(nullable)
+              .addAllFields(struct.fields())
+              .build());
+    }
+    return nestedStructs;
+  }
+
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
+    // If both values and expressions are set, raise an error
+    if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
+      throw new IllegalArgumentException(
+          "VirtualTable cannot have both values and expressions set");
+    }
     NamedStruct virtualTableSchema = newNamedStruct(rel);
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
-    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
+
+    List<Expression.NestedStruct> expressions =
+        new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
+
+    // We cannot have a null row in VirtualTable, therefore we set the nullability to false
+    // nullability is also not supported at the Expression.Nested.Struct level
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      structLiterals.add(
-          Expression.StructLiteral.builder()
-              .fields(
-                  struct.getFieldsList().stream()
-                      .map(converter::from)
-                      .collect(java.util.stream.Collectors.toList()))
-              .build());
+      expressions.addAll(nestedStruct(false, converter.from(struct)));
+    }
+
+    for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
+      expressions.add(converter.from(expr));
     }
 
     ImmutableVirtualTableScan.Builder builder =
@@ -602,7 +649,7 @@ public class ProtoRelConverter {
                     rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
-            .rows(structLiterals);
+            .rows(expressions);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -973,6 +1020,163 @@ public class ProtoRelConverter {
         .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected AbstractExchangeRel newExchange(ExchangeRel rel) {
+    ExchangeRel.ExchangeKindCase exchangeKind = rel.getExchangeKindCase();
+    switch (exchangeKind) {
+      case SCATTER_BY_FIELDS:
+        return newScatterExchange(rel);
+      case SINGLE_TARGET:
+        return newSingleBucketExchange(rel);
+      case MULTI_TARGET:
+        return newMultiBucketExchange(rel);
+      case BROADCAST:
+        return newBroadcastExchange(rel);
+      case ROUND_ROBIN:
+        return newRoundRobinExchange(rel);
+      default:
+        throw new UnsupportedOperationException("Unsupported ExchangeKindCase of " + exchangeKind);
+    }
+  }
+
+  protected ScatterExchange newScatterExchange(ExchangeRel rel) {
+    Rel input = from(rel.getInput());
+    List<AbstractExchangeRel.ExchangeTarget> targets =
+        rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
+
+    ProtoExpressionConverter protoExprConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    List<FieldReference> fieldReferences =
+        rel.getScatterByFields().getFieldsList().stream()
+            .map(protoExprConverter::from)
+            .collect(Collectors.toList());
+
+    ImmutableScatterExchange.Builder builder =
+        ScatterExchange.builder()
+            .input(input)
+            .addAllFields(fieldReferences)
+            .partitionCount(rel.getPartitionCount())
+            .targets(targets);
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected SingleBucketExchange newSingleBucketExchange(ExchangeRel rel) {
+    Rel input = from(rel.getInput());
+    List<AbstractExchangeRel.ExchangeTarget> targets =
+        rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
+    ProtoExpressionConverter protoExprConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+
+    ImmutableSingleBucketExchange.Builder builder =
+        SingleBucketExchange.builder()
+            .input(input)
+            .partitionCount(rel.getPartitionCount())
+            .targets(targets)
+            .expression(protoExprConverter.from(rel.getSingleTarget().getExpression()));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected MultiBucketExchange newMultiBucketExchange(ExchangeRel rel) {
+    Rel input = from(rel.getInput());
+    List<AbstractExchangeRel.ExchangeTarget> targets =
+        rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
+    ProtoExpressionConverter protoExprConverter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+
+    ImmutableMultiBucketExchange.Builder builder =
+        MultiBucketExchange.builder()
+            .input(input)
+            .partitionCount(rel.getPartitionCount())
+            .targets(targets)
+            .expression(protoExprConverter.from(rel.getMultiTarget().getExpression()))
+            .constrainedToCount(rel.getMultiTarget().getConstrainedToCount());
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected RoundRobinExchange newRoundRobinExchange(ExchangeRel rel) {
+    Rel input = from(rel.getInput());
+    List<AbstractExchangeRel.ExchangeTarget> targets =
+        rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
+
+    ImmutableRoundRobinExchange.Builder builder =
+        RoundRobinExchange.builder()
+            .input(input)
+            .partitionCount(rel.getPartitionCount())
+            .targets(targets)
+            .exact(rel.getRoundRobin().getExact());
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected BroadcastExchange newBroadcastExchange(ExchangeRel rel) {
+    Rel input = from(rel.getInput());
+    List<AbstractExchangeRel.ExchangeTarget> targets =
+        rel.getTargetsList().stream().map(this::newExchangeTarget).collect(Collectors.toList());
+
+    ImmutableBroadcastExchange.Builder builder =
+        BroadcastExchange.builder()
+            .input(input)
+            .partitionCount(rel.getPartitionCount())
+            .targets(targets);
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  protected AbstractExchangeRel.ExchangeTarget newExchangeTarget(
+      ExchangeRel.ExchangeTarget target) {
+    ImmutableExchangeTarget.Builder builder = AbstractExchangeRel.ExchangeTarget.builder();
+    builder.addAllPartitionIds(target.getPartitionIdList());
+    switch (target.getTargetTypeCase()) {
+      case URI:
+        builder.type(TargetType.Uri.builder().uri(target.getUri()).build());
+        break;
+      case EXTENDED:
+        builder.type(TargetType.Extended.builder().extended(target.getExtended()).build());
+        break;
+      default:
+        throw new UnsupportedOperationException(
+            "Unsupported TargetTypeCase of " + target.getTargetTypeCase());
     }
     return builder.build();
   }

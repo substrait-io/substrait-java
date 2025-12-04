@@ -30,6 +30,8 @@ public class Deserializers {
 
   public static class ParseDeserializer<T> extends StdDeserializer<T> {
 
+    private static final long serialVersionUID = 2105956703553161270L;
+
     private final BiFunction<String, SubstraitTypeParser.StartContext, T> converter;
 
     public ParseDeserializer(

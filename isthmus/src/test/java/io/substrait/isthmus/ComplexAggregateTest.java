@@ -16,7 +16,7 @@ import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
-public class ComplexAggregateTest extends PlanTestBase {
+class ComplexAggregateTest extends PlanTestBase {
 
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);

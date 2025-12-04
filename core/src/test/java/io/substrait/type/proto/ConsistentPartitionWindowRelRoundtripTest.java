@@ -13,7 +13,7 @@ import io.substrait.relation.Rel;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-public class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
+class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
 
   @Test
   void consistentPartitionWindowRoundtripSingle() {

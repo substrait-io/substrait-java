@@ -18,7 +18,7 @@ import org.apache.calcite.util.Pair;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-public class ComplexSortTest extends PlanTestBase {
+class ComplexSortTest extends PlanTestBase {
 
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);

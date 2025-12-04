@@ -37,7 +37,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /** Verify that custom functions can convert from Substrait to Calcite and back. */
-public class CustomFunctionTest extends PlanTestBase {
+class CustomFunctionTest extends PlanTestBase {
 
   // Define custom functions in a "functions_custom.yaml" extension
   static final String URN = "extension:substrait:functions_custom";
