@@ -2,6 +2,9 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
+import io.substrait.isthmus.expression.AggregateFunctionConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -94,7 +97,27 @@ public class SubstraitToCalcite {
    * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
    */
   protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-    return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder);
+    ScalarFunctionConverter scalarFunctionConverter =
+        new ScalarFunctionConverter(
+            extensions.scalarFunctions(),
+            java.util.Collections.emptyList(),
+            typeFactory,
+            typeConverter);
+    AggregateFunctionConverter aggregateFunctionConverter =
+        new AggregateFunctionConverter(
+            extensions.aggregateFunctions(),
+            java.util.Collections.emptyList(),
+            typeFactory,
+            typeConverter);
+    WindowFunctionConverter windowFunctionConverter =
+        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+    return new SubstraitRelNodeConverter(
+        typeFactory,
+        relBuilder,
+        scalarFunctionConverter,
+        aggregateFunctionConverter,
+        windowFunctionConverter,
+        typeConverter);
   }
 
   /**

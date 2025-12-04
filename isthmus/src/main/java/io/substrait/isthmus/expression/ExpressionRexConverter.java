@@ -109,12 +109,25 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
+  public RexNode visit(Expression.UserDefinedAnyLiteral expr, Context context)
       throws RuntimeException {
     RexLiteral binaryLiteral =
         rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
     RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
+  }
+
+  @Override
+  public RexNode visit(Expression.UserDefinedStructLiteral expr, Context context)
+      throws RuntimeException {
+    RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
+    RexNode structValue = toStruct(expr.fields(), expr.nullable(), context);
+    return rexBuilder.makeReinterpretCast(type, structValue, rexBuilder.makeLiteral(false));
+  }
+
+  @Override
+  public RexNode visit(Expression.StructLiteral expr, Context context) throws RuntimeException {
+    return toStruct(expr.fields(), expr.nullable(), context);
   }
 
   @Override
@@ -247,6 +260,26 @@ public class ExpressionRexConverter
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
         typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  private RexNode toStruct(
+      List<? extends Expression.Literal> fields, boolean nullable, Context context) {
+    List<RexNode> fieldNodes =
+        fields.stream().map(f -> f.accept(this, context)).collect(Collectors.toList());
+
+    RelDataTypeFactory.Builder rowBuilder = typeFactory.builder();
+    IntStream.range(0, fields.size())
+        .forEach(
+            i ->
+                rowBuilder.add(
+                    "field" + i, typeConverter.toCalcite(typeFactory, fields.get(i).getType())));
+
+    RelDataType rowType = rowBuilder.build();
+    if (nullable) {
+      rowType = typeFactory.createTypeWithNullability(rowType, true);
+    }
+
+    return rexBuilder.makeCall(rowType, SqlStdOperatorTable.ROW, fieldNodes);
   }
 
   private TimestampString getTimestampString(long microSec) {
