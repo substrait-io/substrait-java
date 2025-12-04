@@ -7,9 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeExpressionEvaluator;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -17,6 +22,7 @@ import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,40 +31,43 @@ import org.junit.jupiter.params.provider.MethodSource;
 class SimpleExtensionToSqlOperatorTest {
 
   private static final String CUSTOM_FUNCTION_PATH = "/extensions/scalar_functions_custom.yaml";
+  private static final RelDataTypeFactory TYPE_FACTORY = SubstraitTypeSystem.TYPE_FACTORY;
 
-  private static final SimpleExtension.ExtensionCollection EXTENSIONS =
-      SimpleExtension.load(
-          CUSTOM_FUNCTION_PATH,
-          SimpleExtensionToSqlOperatorTest.class.getResourceAsStream(CUSTOM_FUNCTION_PATH));
+  private static final Map<String, SimpleExtension.Function> FUNCTION_DEFS;
+  private static final Map<String, SqlOperator> OPERATORS;
 
-  private static final List<SqlOperator> OPERATORS = SimpleExtensionToSqlOperator.from(EXTENSIONS);
+  static {
+    final var extensions =
+        SimpleExtension.load(
+            CUSTOM_FUNCTION_PATH,
+            SimpleExtensionToSqlOperatorTest.class.getResourceAsStream(CUSTOM_FUNCTION_PATH));
 
-  /** Data carrier for test cases. */
+    FUNCTION_DEFS =
+        extensions.scalarFunctions().stream()
+            .collect(
+                Collectors.toUnmodifiableMap(f -> f.name().toLowerCase(), Function.identity()));
+
+    OPERATORS =
+        SimpleExtensionToSqlOperator.from(extensions).stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    op -> op.getName().toLowerCase(), Function.identity()));
+  }
+
+  /** Test Specification. */
   record TestSpec(
       String name,
       int minArgs,
       int maxArgs,
       SimpleExtension.Nullability nullability,
-      String expectedReturnType,
-      Consumer<SqlOperator> customValidator) {
-
-    TestSpec(
-        final String name,
-        final int min,
-        final int max,
-        final SimpleExtension.Nullability nullability,
-        final String returnType) {
-      this(name, min, max, nullability, returnType, op -> {});
-    }
-  }
+      List<String> expectedArgTypes) {}
 
   @ParameterizedTest
   @MethodSource("provideTestSpecs")
   void testCustomUdfConversion(final TestSpec spec) {
-    final SqlOperator operator = findOperator(spec.name);
-    final SimpleExtension.Function funcDef = findFunctionDef(spec.name);
+    final SqlOperator operator = getOperator(spec.name);
+    final SimpleExtension.Function funcDef = getFunctionDef(spec.name);
 
-    // 1. Verify Argument Counts
     assertEquals(
         spec.minArgs,
         operator.getOperandCountRange().getMin(),
@@ -67,109 +76,151 @@ class SimpleExtensionToSqlOperatorTest {
         spec.maxArgs,
         operator.getOperandCountRange().getMax(),
         () -> spec.name + ": Incorrect max args");
-    assertNotNull(operator.getOperandTypeChecker(), () -> spec.name + ": Type checker missing");
 
-    // 2. Verify Nullability (if specified)
     if (spec.nullability != null) {
       assertEquals(
           spec.nullability, funcDef.nullability(), () -> spec.name + ": Incorrect nullability");
     }
 
-    // 3. Verify Return Type
-    verifyReturnType(operator, funcDef, spec.expectedReturnType);
+    if (!spec.expectedArgTypes.isEmpty()) {
+      verifyAllowedSignatures(operator, spec.expectedArgTypes);
+    }
 
-    // 4. Custom Validation
-    spec.customValidator.accept(operator);
+    verifyReturnTypeConsistency(operator, funcDef);
   }
 
   private static Stream<TestSpec> provideTestSpecs() {
     return Stream.of(
+        new TestSpec("REGEXP_EXTRACT_CUSTOM", 2, 2, null, List.of("VARCHAR", "VARCHAR")),
         new TestSpec(
-            "REGEXP_EXTRACT_CUSTOM",
+            "FORMAT_TEXT", 2, 2, SimpleExtension.Nullability.MIRROR, List.of("VARCHAR", "VARCHAR")),
+        new TestSpec(
+            "SYSTEM_PROPERTY_GET",
+            1,
+            1,
+            SimpleExtension.Nullability.DECLARED_OUTPUT,
+            List.of("VARCHAR")),
+        new TestSpec(
+            "SAFE_DIVIDE_CUSTOM",
             2,
             2,
-            null,
-            "VARCHAR",
-            op -> {
-              final String sigs =
-                  op.getOperandTypeChecker().getAllowedSignatures(op, op.getName()).toLowerCase();
-              // Calcite represents string families as <character>
-              assertTrue(
-                  sigs.contains("varchar") || sigs.contains("string") || sigs.contains("character"),
-                  () -> "Signatures should contain string types. Actual: " + sigs);
-            }),
-        new TestSpec("FORMAT_TEXT", 2, 2, SimpleExtension.Nullability.MIRROR, "VARCHAR"),
-        new TestSpec(
-            "SYSTEM_PROPERTY_GET", 1, 1, SimpleExtension.Nullability.DECLARED_OUTPUT, "VARCHAR"),
-        new TestSpec("SAFE_DIVIDE_CUSTOM", 2, 2, SimpleExtension.Nullability.DISCRETE, "REAL"));
+            SimpleExtension.Nullability.DISCRETE,
+            List.of("INTEGER", "INTEGER")));
   }
 
-  private void verifyReturnType(
-      final SqlOperator operator,
-      final SimpleExtension.Function funcDef,
-      final String expectedTypeName) {
-    assertNotNull(funcDef.returnType(), "Return type missing in YAML");
-    assertNotNull(operator.getReturnTypeInference(), "SQL Operator missing return type inference");
+  /**
+   * Parses the operator's signature string and checks that the types match the expected list
+   * index-by-index.
+   */
+  private void verifyAllowedSignatures(
+      final SqlOperator operator, final List<String> expectedArgTypes) {
+    assertNotNull(operator.getOperandTypeChecker(), "Operand type checker is null");
 
-    // 1. Evaluate expected type from YAML
-    final Type expectedType =
+    // e.g., "SAFE_DIVIDE_CUSTOM(<NUMERIC>, <NUMERIC>)"
+    final String signature =
+        operator
+            .getOperandTypeChecker()
+            .getAllowedSignatures(operator, operator.getName())
+            .toUpperCase();
+
+    // Regex to capture arguments inside parentheses: NAME(ARG1, ARG2)
+    final Pattern pattern = Pattern.compile(".*?\\((.*)\\).*");
+    final Matcher matcher = pattern.matcher(signature);
+
+    assertTrue(matcher.matches(), () -> "Signature format not recognized: " + signature);
+
+    // Split args by comma (assuming simple types for this test suite)
+    final String argsPart = matcher.group(1);
+    final List<String> actualArgTypes =
+        Arrays.stream(argsPart.split(",")).map(String::trim).toList();
+
+    assertEquals(
+        expectedArgTypes.size(),
+        actualArgTypes.size(),
+        () -> "Signature argument count mismatch. Signature: " + signature);
+
+    // Positional Check
+    for (int i = 0; i < expectedArgTypes.size(); i++) {
+      final String expected = expectedArgTypes.get(i);
+      final String actual = actualArgTypes.get(i);
+
+      final SqlTypeName sqlTypeName = SqlTypeName.valueOf(expected);
+      final String familyName = sqlTypeName.getFamily().toString();
+
+      // Check if the actual slot matches the specific type OR the generic family
+      // e.g. Expected "INTEGER" matches actual "<NUMERIC>" or "INTEGER"
+      final boolean match = actual.contains(expected) || actual.contains(familyName);
+
+      final int index = i;
+      assertTrue(
+          match,
+          () ->
+              "Argument mismatch at index "
+                  + index
+                  + ".\n"
+                  + "Expected: "
+                  + expected
+                  + " (Family: "
+                  + familyName
+                  + ")\n"
+                  + "Actual: "
+                  + actual
+                  + "\n"
+                  + "Full Signature: "
+                  + signature);
+    }
+  }
+
+  private void verifyReturnTypeConsistency(
+      final SqlOperator operator, final SimpleExtension.Function funcDef) {
+    assertNotNull(operator.getReturnTypeInference(), "Return type inference is null");
+
+    // A. Expected: Evaluate YAML return type -> Convert to Calcite
+    final Type yamlReturnType =
         TypeExpressionEvaluator.evaluateExpression(
             funcDef.returnType(), funcDef.args(), Collections.emptyList());
+    final RelDataType expectedType = TypeConverter.DEFAULT.toCalcite(TYPE_FACTORY, yamlReturnType);
 
-    // 2. Convert expected Substrait type to Calcite type
-    final RelDataType expectedCalciteType =
-        TypeConverter.DEFAULT.toCalcite(SubstraitTypeSystem.TYPE_FACTORY, expectedType);
+    // B. Actual: Infer from Operator (using empty binding, sufficient for static types)
+    final RelDataType actualType =
+        operator
+            .getReturnTypeInference()
+            .inferReturnType(createMockBinding(operator, Collections.emptyList()));
 
-    // 3. Validate consistency: Ensure YAML derived type matches the TestSpec expectation string
-    // This utilizes the previously unused 'expectedTypeName'
+    // C. Compare
     assertEquals(
-        expectedTypeName,
-        expectedCalciteType.getSqlTypeName().toString(),
-        () ->
-            "YAML definition derived type does not match TestSpec expectation for "
-                + funcDef.name());
-
-    // 4. Infer actual type from the Calcite Operator using a minimal binding
-    final RelDataType actualReturnType =
-        operator.getReturnTypeInference().inferReturnType(createMockBinding(operator));
-
-    // 5. Compare Derived Expectation vs Actual Operator Inference
-    assertEquals(
-        expectedCalciteType.getSqlTypeName(),
-        actualReturnType.getSqlTypeName(),
+        expectedType.getSqlTypeName(),
+        actualType.getSqlTypeName(),
         () -> "Return type mismatch for " + funcDef.name());
     assertEquals(
-        expectedCalciteType.isNullable(),
-        actualReturnType.isNullable(),
+        expectedType.isNullable(),
+        actualType.isNullable(),
         () -> "Nullability mismatch for " + funcDef.name());
   }
 
-  private SqlOperator findOperator(final String name) {
-    return OPERATORS.stream()
-        .filter(o -> o.getName().equalsIgnoreCase(name))
-        .findFirst()
-        .orElseThrow(() -> new AssertionError("Operator not found: " + name));
+  private static SqlOperator getOperator(final String name) {
+    final SqlOperator op = OPERATORS.get(name.toLowerCase());
+    assertNotNull(op, "Operator not found: " + name);
+    return op;
   }
 
-  private SimpleExtension.Function findFunctionDef(final String name) {
-    return EXTENSIONS.scalarFunctions().stream()
-        .filter(f -> f.name().equalsIgnoreCase(name))
-        .findFirst()
-        .orElseThrow(() -> new AssertionError("YAML Definition not found: " + name));
+  private static SimpleExtension.Function getFunctionDef(final String name) {
+    final SimpleExtension.Function func = FUNCTION_DEFS.get(name.toLowerCase());
+    assertNotNull(func, "YAML Def not found: " + name);
+    return func;
   }
 
-  /** Minimal anonymous implementation of SqlOperatorBinding to support return type inference. */
-  private SqlOperatorBinding createMockBinding(final SqlOperator operator) {
-    final RelDataTypeFactory typeFactory = SubstraitTypeSystem.TYPE_FACTORY;
-    return new SqlOperatorBinding(typeFactory, operator) {
+  private SqlOperatorBinding createMockBinding(
+      final SqlOperator operator, final List<RelDataType> argumentTypes) {
+    return new SqlOperatorBinding(TYPE_FACTORY, operator) {
       @Override
       public int getOperandCount() {
-        return 0;
+        return argumentTypes.size();
       }
 
       @Override
       public RelDataType getOperandType(final int ordinal) {
-        throw new IndexOutOfBoundsException();
+        return argumentTypes.get(ordinal);
       }
 
       @Override
