@@ -56,6 +56,7 @@ import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.relation.physical.TargetType;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -749,17 +750,21 @@ public class RelProtoConverter
   @Override
   public Rel visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws RuntimeException {
+    List<io.substrait.proto.Expression.Nested.Struct> structs = new ArrayList<>();
+    for (Expression.NestedStruct row : virtualTableScan.getRows()) {
+      structs.add(
+          io.substrait.proto.Expression.Nested.Struct.newBuilder()
+              .addAllFields(
+                  row.fields().stream()
+                      .map(this::toProto)
+                      .collect(java.util.stream.Collectors.toList()))
+              .build());
+    }
+
     ReadRel.Builder builder =
         ReadRel.newBuilder()
             .setCommon(common(virtualTableScan))
-            .setVirtualTable(
-                ReadRel.VirtualTable.newBuilder()
-                    .addAllValues(
-                        virtualTableScan.getRows().stream()
-                            .map(this::toProto)
-                            .map(t -> t.getLiteral().getStruct())
-                            .collect(Collectors.toList()))
-                    .build())
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().addAllExpressions(structs).build())
             .setBaseSchema(virtualTableScan.getInitialSchema().toProto(typeProtoConverter));
 
     virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));

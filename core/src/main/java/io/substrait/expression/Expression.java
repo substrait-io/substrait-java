@@ -32,6 +32,13 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  interface Nested extends Expression {
+    @Value.Default
+    default boolean nullable() {
+      return false;
+    }
+  }
+
   <R, C extends VisitationContext, E extends Throwable> R accept(
       ExpressionVisitor<R, C, E> visitor, C context) throws E;
 
@@ -653,6 +660,30 @@ public interface Expression extends FunctionArg {
 
     public static ImmutableExpression.StructLiteral.Builder builder() {
       return ImmutableExpression.StructLiteral.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  @Value.Immutable
+  abstract class NestedStruct implements Nested {
+    public abstract List<Expression> fields();
+
+    @Override
+    public Type getType() {
+      return Type.withNullability(nullable())
+          .struct(
+              fields().stream()
+                  .map(Expression::getType)
+                  .collect(java.util.stream.Collectors.toList()));
+    }
+
+    public static ImmutableExpression.NestedStruct.Builder builder() {
+      return ImmutableExpression.NestedStruct.builder();
     }
 
     @Override

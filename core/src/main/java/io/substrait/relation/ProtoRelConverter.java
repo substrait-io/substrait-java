@@ -188,7 +188,7 @@ public class ProtoRelConverter {
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0) {
+      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
         return newEmptyScan(rel);
       } else {
         return newVirtualTable(rel);
@@ -596,20 +596,50 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
+   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
+   * NestedStruct-based API.
+   *
+   * @param nullable whether the resulting NestedStruct instances should be nullable
+   * @param structs the StructLiteral instances to convert
+   * @return a list of NestedStruct instances with the same field structure
+   */
+  private static List<Expression.NestedStruct> nestedStruct(
+      boolean nullable, Expression.StructLiteral... structs) {
+    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
+    for (Expression.StructLiteral struct : structs) {
+      nestedStructs.add(
+          Expression.NestedStruct.builder()
+              .nullable(nullable)
+              .addAllFields(struct.fields())
+              .build());
+    }
+    return nestedStructs;
+  }
+
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
+    // If both values and expressions are set, raise an error
+    if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
+      throw new IllegalArgumentException(
+          "VirtualTable cannot have both values and expressions set");
+    }
     NamedStruct virtualTableSchema = newNamedStruct(rel);
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
-    List<Expression.StructLiteral> structLiterals = new ArrayList<>(virtualTable.getValuesCount());
+
+    List<Expression.NestedStruct> expressions =
+        new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
+
+    // We cannot have a null row in VirtualTable, therefore we set the nullability to false
+    // nullability is also not supported at the Expression.Nested.Struct level
     for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      structLiterals.add(
-          Expression.StructLiteral.builder()
-              .fields(
-                  struct.getFieldsList().stream()
-                      .map(converter::from)
-                      .collect(java.util.stream.Collectors.toList()))
-              .build());
+      expressions.addAll(nestedStruct(false, converter.from(struct)));
+    }
+
+    for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
+      expressions.add(converter.from(expr));
     }
 
     ImmutableVirtualTableScan.Builder builder =
@@ -619,7 +649,7 @@ public class ProtoRelConverter {
                     rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
-            .rows(structLiterals);
+            .rows(expressions);
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
