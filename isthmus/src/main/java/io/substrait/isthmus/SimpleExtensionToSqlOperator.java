@@ -28,6 +28,8 @@ public final class SimpleExtensionToSqlOperator {
   private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
       new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
 
+  private static final CalciteTypeVisitor CALCITE_TYPE_VISITOR = new CalciteTypeVisitor();
+
   private SimpleExtensionToSqlOperator() {}
 
   public static List<SqlOperator> from(SimpleExtension.ExtensionCollection collection) {
@@ -60,7 +62,7 @@ public final class SimpleExtensionToSqlOperator {
     for (SimpleExtension.Argument arg : function.requiredArguments()) {
       if (arg instanceof SimpleExtension.ValueArgument) {
         SimpleExtension.ValueArgument valueArg = (SimpleExtension.ValueArgument) arg;
-        SqlTypeName typeName = valueArg.value().accept(new CalciteTypeVisitor());
+        SqlTypeName typeName = valueArg.value().accept(CALCITE_TYPE_VISITOR);
         argFamilies.add(typeName.getFamily());
       } else if (arg instanceof SimpleExtension.EnumArgument) {
         // Treat an EnumArgument as a required string literal.

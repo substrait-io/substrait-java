@@ -37,7 +37,7 @@ class SimpleExtensionToSqlOperatorTest {
   private static final Map<String, SqlOperator> OPERATORS;
 
   static {
-    final var extensions =
+    final SimpleExtension.ExtensionCollection extensions =
         SimpleExtension.load(
             CUSTOM_FUNCTION_PATH,
             SimpleExtensionToSqlOperatorTest.class.getResourceAsStream(CUSTOM_FUNCTION_PATH));
