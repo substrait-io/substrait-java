@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -129,8 +128,7 @@ public abstract class FunctionConverter<
             .collect(
                 Multimaps.toMultimap(
                     FunctionMappings.Sig::name, Function.identity(), ArrayListMultimap::create));
-    IdentityHashMap<SqlOperator, FunctionFinder> matcherMap =
-        new IdentityHashMap<SqlOperator, FunctionFinder>();
+    Map<SqlOperator, FunctionFinder> matcherMap = new HashMap<>();
     for (String key : nameToFn.keySet()) {
       Collection<Sig> sigs = calciteOperators.get(key);
       if (sigs.isEmpty()) {
