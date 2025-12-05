@@ -36,7 +36,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
  *
  * <p>Note that the schema could be created from other means, such as Calcite's reflection-based
  * schema.
- *
  */
 public class FromSql implements Action {
 
@@ -74,7 +73,7 @@ public class FromSql implements Action {
           new CalciteCatalogReader(calciteSchema, List.of(), typeFactory, calciteDefaultConfig);
 
       // Query that needs to be converted; again this could be in a variety of SQL dialects
-      final String apacheDerbeQuery =
+      final String apacheDerbyQuery =
           """
           SELECT vehicles.colour, count(*) as colourcount FROM vehicles INNER JOIN tests
               ON vehicles.vehicle_id=tests.vehicle_id WHERE tests.test_result = 'P'
@@ -84,7 +83,7 @@ public class FromSql implements Action {
 
       // choose Apache Derby as an example dialect
       final SqlDialect dialect = SqlDialect.DatabaseProduct.DERBY.getDialect();
-      final Plan substraitPlan = sqlToSubstrait.convert(query, catalogReader, dialect);
+      final Plan substraitPlan = sqlToSubstrait.convert(apacheDerbyQuery, catalogReader, dialect);
 
       // Create the proto plan to display to stdout - as it has a better format
       final PlanProtoConverter planToProto = new PlanProtoConverter();
