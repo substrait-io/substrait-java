@@ -69,7 +69,7 @@ public class ToSql implements Action {
       final List<String> sqlStrings = new ArrayList<>();
 
       System.out.println("\n");
-      // and get each root from the calcite plan
+      // and get each root from the Substrait plan
       for (final Root root : substraitPlan.getRoots()) {
         // Substrait -> Calcite
         final RelNode calciteRelNode = converter.convert(root).project(true);

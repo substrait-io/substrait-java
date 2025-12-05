@@ -5,9 +5,7 @@ plugins {
   id("substrait.java-conventions")
 }
 
-repositories {
-  mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
   implementation(project(":isthmus"))
@@ -17,9 +15,7 @@ dependencies {
 
 application { mainClass = "io.substrait.examples.IsthmusAppExamples" }
 
-tasks.named<Test>("test") {
-  useJUnitPlatform()
-}
+tasks.named<Test>("test") { useJUnitPlatform() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
 

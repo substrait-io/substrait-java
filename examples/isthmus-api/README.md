@@ -24,10 +24,7 @@ There are 2 example classes:
 
 ### Requirements
 
-To run these you will need:
-
-- Java 17 or greater
-- [Two datafiles](./app/src/main/resources/) are provided for the sample data
+To run these you will need Java 17 or greater, and this repository cloned to you local system.
 
 
 ## Creating a Substrait Plan from SQL
