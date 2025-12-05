@@ -6,9 +6,13 @@ The Isthmus library converts Substrait plans to and from SQL Plans. There are tw
 
 The [Calcite](https://calcite.apache.org/) library is used to do parsing and generation of the SQL String. Calcite has it's own relational object model, distinct from substrait's. There are classes within Isthmus to convert Substrait to and from Calcite's object model.
 
-Converting to Substrait from SQL uses Calcite to parse the SQL to an object model, and then it will be converted to Substrait.
+The conversion flows work as follows:
 
-Converting from Substrait to SQL involves converting Substrait to Calcite's object model, then asking Calcite to generate SQL strings.
+**SQL to Substrait:**
+`SQL ---[Calcite parsing]---> Calcite Object Model ---[Isthmus conversion]---> Substrait`
+
+**Substrait to SQL:**
+`Substrait ---[Isthmus conversion]---> Calcite Object Model ---[Calcite SQL generation]---> SQL`
 
 ## Running the examples
 
