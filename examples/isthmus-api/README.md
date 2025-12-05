@@ -79,11 +79,6 @@ extension_urns {
 File written to substrait.plan
 ```
 
-It is a binary file, so to check the file written out
-```bash
-ls -l examples/isthmus-api/substrait.plan
--rw-r--r-- 1 matthew matthew 808 Dec  1 12:05 examples/isthmus-api/substrait.plan
-```
 
 Please see the code comments for details of how the conversion is done.
 
