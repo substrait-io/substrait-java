@@ -463,7 +463,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             .map(
               row => {
                 var idx = 0
-                val buf = new ArrayBuffer[SExpression.Literal](row.numFields)
+                val buf = new ArrayBuffer[SExpression](row.numFields)
                 while (idx < row.numFields) {
                   val schemaField = schema(idx)
                   val dt = schemaField.dataType
@@ -471,7 +471,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
                   buf += ToSubstraitLiteral.apply(l, Some(schemaField.nullable))
                   idx += 1
                 }
-                ExpressionCreator.struct(false, buf.asJava)
+                ExpressionCreator.nestedStruct(false, buf.asJava)
               })
             .asJava)
         .build()
@@ -561,7 +561,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .initialSchema(NamedStruct
             .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
-          .addRows(ExpressionCreator.struct(false))
+          .addRows(ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression].asJava))
           .build()
       case _ =>
         throw new UnsupportedOperationException(

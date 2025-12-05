@@ -20,28 +20,28 @@ final class StringFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"c16", "vc32"})
   void charLength(String column) throws Exception {
     String query = String.format("SELECT char_length(%s) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"vc32"})
   void concat(String column) throws Exception {
     String query = String.format("SELECT %s || %s FROM strings", column, column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void lower(String column) throws Exception {
     String query = String.format("SELECT lower(%s) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void upper(String column) throws Exception {
     String query = String.format("SELECT upper(%s) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
@@ -49,35 +49,35 @@ final class StringFunctionTest extends PlanTestBase {
   void replace(String column) throws Exception {
     String query =
         String.format("SELECT replace(%s, replace_from, replace_to) FROM replace_strings", column);
-    assertSqlSubstraitRelRoundTrip(query, REPLACE_CREATES);
+    assertFullRoundTrip(query, REPLACE_CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void substringWith1Param(String column) throws Exception {
     String query = String.format("SELECT substring(%s, 42) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void substringWith2Params(String column) throws Exception {
     String query = String.format("SELECT substring(%s, 42, 5) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void substringFrom(String column) throws Exception {
     String query = String.format("SELECT substring(%s FROM 42) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
   void substringFromFor(String column) throws Exception {
     String query = String.format("SELECT substring(%s FROM 42 FOR 5) FROM strings", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
@@ -279,7 +279,7 @@ final class StringFunctionTest extends PlanTestBase {
 
     String query = String.format("SELECT LEFT(%s, %s) FROM int_num_strings", left, right);
 
-    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+    assertFullRoundTrip(query, CHAR_INT_CREATES);
   }
 
   @ParameterizedTest
@@ -288,7 +288,7 @@ final class StringFunctionTest extends PlanTestBase {
 
     String query = String.format("SELECT RIGHT(%s, %s) FROM int_num_strings", left, right);
 
-    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+    assertFullRoundTrip(query, CHAR_INT_CREATES);
   }
 
   @ParameterizedTest
@@ -298,7 +298,7 @@ final class StringFunctionTest extends PlanTestBase {
     String query =
         String.format("SELECT RPAD(%s, %s, %s) FROM int_num_strings", left, center, right);
 
-    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+    assertFullRoundTrip(query, CHAR_INT_CREATES);
   }
 
   @ParameterizedTest
@@ -308,6 +308,6 @@ final class StringFunctionTest extends PlanTestBase {
     String query =
         String.format("SELECT LPAD(%s, %s, %s) FROM int_num_strings", left, center, right);
 
-    assertSqlSubstraitRelRoundTrip(query, CHAR_INT_CREATES);
+    assertFullRoundTrip(query, CHAR_INT_CREATES);
   }
 }

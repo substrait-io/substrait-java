@@ -1,5 +1,6 @@
 package io.substrait.examples.util;
 
+import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.BinaryLiteral;
 import io.substrait.expression.Expression.BoolLiteral;
 import io.substrait.expression.Expression.Cast;
@@ -185,6 +186,12 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(StructLiteral expr, EmptyVisitationContext context) throws RuntimeException {
     return "<StructLiteral >";
+  }
+
+  @Override
+  public String visit(Expression.NestedStruct expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<NestedStruct >";
   }
 
   @Override

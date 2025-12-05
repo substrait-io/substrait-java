@@ -5,15 +5,16 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeVisitor;
 import io.substrait.util.VisitationContext;
 import java.util.List;
+import java.util.Objects;
 import org.immutables.value.Value;
 
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
-  public abstract List<Expression.StructLiteral> getRows();
+  public abstract List<Expression.NestedStruct> getRows();
 
   /**
-   *
+   * Checks the following invariants when construction a VirtualTableScan
    *
    * <ul>
    *   <li>non-empty rowset
@@ -29,15 +30,28 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
     assert names.size()
         == NamedFieldCountingTypeVisitor.countNames(this.getInitialSchema().struct());
-    List<Expression.StructLiteral> rows = getRows();
+    List<Expression.NestedStruct> rows = getRows();
 
-    assert rows.size() > 0
-        && names.stream().noneMatch(s -> s == null)
-        && rows.stream().noneMatch(r -> r == null)
+    // At the PROTOBUF layer, the Nested.Struct message does not carry nullability information.
+    // Nullability is attached to the Nested message, which can contain a Nested.Struct.
+    // The NestedStruct POJO flattens the Nested and Nested.Struct messages together, allowing the
+    // nullability of a NestedStruct to be set directly.
+    //
+    // HOWEVER, the VirtualTable message contains a list of Nested.Struct messages, and as such
+    // the nullability cannot be set at the protobuf layer. To avoid users attaching meaningless
+    // nullability information in the POJOs, we restrict the nullability of NestedStructs to false
+    // when used in VirtualTableScans.
+    for (Expression.NestedStruct row : rows) {
+      assert !row.nullable();
+    }
+
+    assert !rows.isEmpty()
+        && names.stream().noneMatch(Objects::isNull)
+        && rows.stream().noneMatch(Objects::isNull)
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());
 
-    for (Expression.StructLiteral row : rows) {
+    for (Expression.NestedStruct row : rows) {
       validateRowConformsToSchema(row);
     }
   }
@@ -48,10 +62,10 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * @param row the row to validate
    * @throws AssertionError if the row does not conform to the schema
    */
-  private void validateRowConformsToSchema(Expression.StructLiteral row) {
+  private void validateRowConformsToSchema(Expression.NestedStruct row) {
     Type.Struct schemaStruct = getInitialSchema().struct();
     List<Type> schemaFieldTypes = schemaStruct.fields();
-    List<Expression.Literal> rowFields = row.fields();
+    List<Expression> rowFields = row.fields();
 
     assert rowFields.size() == schemaFieldTypes.size()
         : String.format(

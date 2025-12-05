@@ -56,8 +56,14 @@ class DdlRelRoundtripTest extends TestBase {
         ExpressionCreator.struct(
             false, ExpressionCreator.i64(false, 1), ExpressionCreator.i64(false, 2));
 
+    Expression.NestedStruct nested =
+        Expression.NestedStruct.builder()
+            .addFields(ExpressionCreator.i64(false, 1))
+            .addFields(ExpressionCreator.i64(false, 2))
+            .build();
+
     VirtualTableScan virtTable =
-        VirtualTableScan.builder().initialSchema(schema).addRows(defaults).build();
+        VirtualTableScan.builder().initialSchema(schema).addRows(nested).build();
 
     ExtensionDdl command =
         ExtensionDdl.builder()

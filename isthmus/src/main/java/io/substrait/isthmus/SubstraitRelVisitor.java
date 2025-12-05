@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
-import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
@@ -168,17 +167,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
     }
-
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Expression.StructLiteral> structs =
+    List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  List<Literal> fields =
+                  List<Expression> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
-                  return ExpressionCreator.struct(false, fields);
+                  return ExpressionCreator.nestedStruct(false, fields);
                 })
             .collect(Collectors.toUnmodifiableList());
     return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
@@ -601,7 +599,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
     }
-
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 
