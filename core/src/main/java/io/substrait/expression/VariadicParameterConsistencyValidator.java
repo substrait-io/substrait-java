@@ -55,18 +55,18 @@ public class VariadicParameterConsistencyValidator {
     }
 
     // For CONSISTENT, all variadic arguments must have the same type (ignoring nullability)
-    int firstVariadicArgIdx = Math.max(variadicBehavior.getMin() - 1, 0);
-    for (int i = firstVariadicArgIdx; i < argumentTypes.size() - 1; i++) {
+    // Compare all variadic arguments to the first one for more informative error messages
+    // Variadic arguments start after the fixed arguments
+    int firstVariadicArgIdx = fixedArgCount + Math.max(variadicBehavior.getMin() - 1, 0);
+    Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
+    for (int i = firstVariadicArgIdx + 1; i < argumentTypes.size(); i++) {
       Type currentType = argumentTypes.get(i);
-      Type nextType = argumentTypes.get(i + 1);
-      // Normalize both types to nullable for comparison (ignoring nullability)
-      if (!io.substrait.type.TypeCreator.asNullable(currentType)
-          .equals(io.substrait.type.TypeCreator.asNullable(nextType))) {
+      if (!firstVariadicType.equalsIgnoringNullability(currentType)) {
         throw new AssertionError(
             String.format(
                 "Variadic arguments must have consistent types when parameterConsistency is CONSISTENT. "
                     + "Argument at index %d has type %s but argument at index %d has type %s",
-                i, currentType, i + 1, nextType));
+                firstVariadicArgIdx, firstVariadicType, i, currentType));
       }
     }
   }
