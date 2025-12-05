@@ -6,7 +6,6 @@ plugins {
 }
 
 repositories {
-  // Use Maven Central for resolving dependencies.
   mavenCentral()
 }
 
@@ -19,7 +18,6 @@ dependencies {
 application { mainClass = "io.substrait.examples.IsthmusAppExamples" }
 
 tasks.named<Test>("test") {
-  // Use JUnit Platform for unit tests.
   useJUnitPlatform()
 }
 

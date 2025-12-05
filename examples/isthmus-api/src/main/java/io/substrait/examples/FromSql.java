@@ -23,16 +23,20 @@ import org.apache.calcite.sql.parser.SqlParseException;
 /**
  * Substrait from SQL conversions.
  *
- * <p>There are 4 steps in the whole process.
+ * <p>The conversion process involves four steps:
  *
- * <p>1) A fully typed schema is required for the 'inputs'. Within a SQL context this is the `CREATE
- * TABLE` commands; this needs to be converted to a Calcite Schema 2) The SQL query to convert (ion
- * one type of dialect) 3) Conversion of the SQL query to Calcite Relations 4) Conversion of the
- * Calcite Relations to Substrait relations
+ * <p>1. Create a fully typed schema for the inputs. Within a SQL context this represents the CREATE
+ * TABLE commands, which need to be converted to a Calcite Schema.
  *
- * <p>Note that schema could be created from other means eg Calcite's reflection based schema.
+ * <p>2. Parse the SQL query to convert (in the source SQL dialect).
  *
- * <p>The substrait plan can then be used as wished.
+ * <p>3. Convert the SQL query to Calcite Relations.
+ *
+ * <p>4. Convert the Calcite Relations to Substrait relations.
+ *
+ * <p>Note that the schema could be created from other means, such as Calcite's reflection-based
+ * schema.
+ *
  */
 public class FromSql implements Action {
 
@@ -51,9 +55,8 @@ public class FromSql implements Action {
 
                       """;
 
-      // Create the Calcite Schema from the CREATE TABLES statements
-      // as this is a SQL it could be in a schema, but the Isthmus Helper classes here are assuming
-      // a common SQL format
+      // Create the Calcite Schema from the CREATE TABLE statements.
+      // The Isthmus helper classes assume a standard SQL format for parsing.
       final CalciteSchema calciteSchema = CalciteSchema.createRootSchema(false);
       SubstraitCreateStatementParser.processCreateStatements(createSql)
           .forEach(t -> calciteSchema.add(t.getName(), t));
@@ -71,7 +74,7 @@ public class FromSql implements Action {
           new CalciteCatalogReader(calciteSchema, List.of(), typeFactory, calciteDefaultConfig);
 
       // Query that needs to be converted; again this could be in a variety of SQL dialects
-      final String query =
+      final String apacheDerbeQuery =
           """
           SELECT vehicles.colour, count(*) as colourcount FROM vehicles INNER JOIN tests
               ON vehicles.vehicle_id=tests.vehicle_id WHERE tests.test_result = 'P'
