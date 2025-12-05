@@ -84,9 +84,7 @@ Please see the code comments for details of how the conversion is done.
 
 ## Creating SQL from a Substrait Plan
 
-To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java) from the root of this repository
-`subtrait.plan` is the name of file to be read - and probably will be the first created with `FromSql`.
-Again the text format of the protobuf has been abbreviated.
+To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java), execute the command below from the root of this repository. The example reads from `substrait.plan` (likely the file created by `FromSql`) and outputs SQL. The text format of the protobuf has been abbreviated.
 ```bash
 ./gradlew examples:isthmus-api:run --args "ToSql substrait.plan"
 

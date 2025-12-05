@@ -23,12 +23,15 @@ import org.apache.calcite.sql.SqlNode;
 /**
  * Substrait to SQL conversions.
  *
- * <p>There are steps in the whole process
+ * <p>The conversion process involves three steps:
  *
- * <p>1) Load the plan into the protobuf object, and create in-memory POJO object. 2) Create a
- * Converter to map the Substrait to Calcite relations. This will need the type system to use and
- * the collection of extensions to put into the substrait plan. 3) Given configuration, convert the
- * Calcite relational nodes to SQL statements.
+ * <p>1. Load the plan into the protobuf object and create an in-memory POJO representation.
+ *
+ * <p>2. Create a Converter to map the Substrait plan to Calcite relations. This requires the type
+ * system to use and the collection of extensions from the substrait plan.
+ *
+ * <p>3. Convert the Calcite relational nodes to SQL statements using the specified SQL dialect
+ * configuration.
  *
  * <p>It is possible to get multiple SQL statements from a single Substrait plan.
  */
@@ -68,7 +71,9 @@ public class ToSql implements Action {
       System.out.println("\n");
       // and get each root from the calcite plan
       for (final Root root : substraitPlan.getRoots()) {
+        // Substrait -> Calcite
         final RelNode calciteRelNode = converter.convert(root).project(true);
+        // Calcite -> SQL
         final SqlNode sqlNode = relToSql.visitRoot(calciteRelNode).asStatement();
 
         final String sqlString = sqlNode.toSqlString(sqlDialect).getSql();
