@@ -92,24 +92,30 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
 
-    SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-        ExtensionUtils.getDynamicExtensions(extensions);
-    List<SqlOperator> dynamicOperators =
-        SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
-
-    List<FunctionMappings.Sig> additionalSignatures =
-        dynamicOperators.stream()
-            .map(op -> FunctionMappings.s(op, op.getName()))
-            .collect(Collectors.toList());
     this.typeConverter = TypeConverter.DEFAULT;
     ArrayList<CallConverter> converters = new ArrayList<>();
     converters.addAll(CallConverters.defaults(typeConverter));
-    converters.add(
-        new ScalarFunctionConverter(
-            extensions.scalarFunctions(),
-            additionalSignatures,
-            typeFactory,
-            TypeConverter.DEFAULT));
+
+    if (features.allowDynamicUdfs()) {
+      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+          ExtensionUtils.getDynamicExtensions(extensions);
+      List<SqlOperator> dynamicOperators =
+          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+      List<FunctionMappings.Sig> additionalSignatures =
+          dynamicOperators.stream()
+              .map(op -> FunctionMappings.s(op, op.getName()))
+              .collect(Collectors.toList());
+      converters.add(
+          new ScalarFunctionConverter(
+              extensions.scalarFunctions(),
+              additionalSignatures,
+              typeFactory,
+              TypeConverter.DEFAULT));
+    } else {
+      converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+    }
+
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);

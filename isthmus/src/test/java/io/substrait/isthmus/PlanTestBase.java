@@ -220,7 +220,8 @@ public class PlanTestBase {
    */
   protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
       String query, Prepare.CatalogReader catalogReader) throws Exception {
-    return assertSqlSubstraitRelRoundTripLoosePojoComparison(query, catalogReader, null);
+    return assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        query, catalogReader, ImmutableFeatureBoard.builder().build());
   }
 
   @Beta
