@@ -55,7 +55,6 @@ class VariadicParameterConsistencyTest {
             .parameterConsistency(SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT)
             .build();
 
-    // All variadic arguments are i64 - should pass
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -67,7 +66,6 @@ class VariadicParameterConsistencyTest {
                     Expression.I64Literal.builder().value(3).build())),
         "Consistent variadic with same types should pass");
 
-    // All variadic arguments are i64 (with different nullability) - should pass
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -93,7 +91,6 @@ class VariadicParameterConsistencyTest {
             .parameterConsistency(SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT)
             .build();
 
-    // Variadic arguments have different types - should fail
     assertThrows(
         AssertionError.class,
         () ->
@@ -139,7 +136,6 @@ class VariadicParameterConsistencyTest {
                 SimpleExtension.VariadicBehavior.ParameterConsistency.INCONSISTENT)
             .build();
 
-    // Variadic arguments have different types - should pass with INCONSISTENT
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -180,7 +176,6 @@ class VariadicParameterConsistencyTest {
             .parameterConsistency(SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT)
             .build();
 
-    // All variadic arguments are i64 - should pass
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -192,7 +187,6 @@ class VariadicParameterConsistencyTest {
                     Expression.I64Literal.builder().value(3).build())),
         "Consistent variadic with wildcard type and same concrete types should pass");
 
-    // Variadic arguments have different types - should fail
     assertThrows(
         AssertionError.class,
         () ->
@@ -218,7 +212,6 @@ class VariadicParameterConsistencyTest {
             .parameterConsistency(SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT)
             .build();
 
-    // All variadic arguments are i64 - should pass
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -231,7 +224,6 @@ class VariadicParameterConsistencyTest {
                     Expression.I64Literal.builder().value(4).build())),
         "Consistent variadic with min=2 and same types should pass");
 
-    // Variadic arguments have different types - should fail
     assertThrows(
         AssertionError.class,
         () ->
@@ -252,7 +244,6 @@ class VariadicParameterConsistencyTest {
     List<SimpleExtension.Argument> args =
         List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
-    // No variadic behavior - should pass regardless of consistency
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
@@ -272,7 +263,6 @@ class VariadicParameterConsistencyTest {
             .parameterConsistency(SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT)
             .build();
 
-    // Mix of nullable and non-nullable i64 - should pass (nullability is ignored)
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
