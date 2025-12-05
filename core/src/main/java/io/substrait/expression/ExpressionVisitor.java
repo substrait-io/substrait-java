@@ -80,6 +80,8 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
 
   R visit(Expression.MultiOrList expr, C context) throws E;
 
+  R visit(Expression.NestedList expr, C context) throws E;
+
   R visit(FieldReference expr, C context) throws E;
 
   R visit(Expression.SetPredicate expr, C context) throws E;

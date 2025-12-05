@@ -1,6 +1,7 @@
 package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
+import io.substrait.isthmus.NestedFunctions;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,8 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               AggregateFunctions.MIN,
               AggregateFunctions.AVG,
               AggregateFunctions.SUM,
-              AggregateFunctions.SUM0));
+              AggregateFunctions.SUM0,
+              NestedFunctions.NESTED_LIST));
 
   // SQL Kinds for which Substrait specific operators are provided
   private static final Set<SqlKind> OVERRIDE_KINDS =

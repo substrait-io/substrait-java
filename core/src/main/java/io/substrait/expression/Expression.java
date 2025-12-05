@@ -953,6 +953,40 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * A nested list expression with one or more elements.
+   *
+   * <p>Note: This class cannot be used to construct an empty list. To create an empty list, use
+   * {@link ExpressionCreator#emptyList(boolean, Type)} which returns an {@link EmptyListLiteral}.
+   */
+  @Value.Immutable
+  abstract class NestedList implements Nested {
+    public abstract List<Expression> values();
+
+    @Value.Check
+    protected void check() {
+      assert !values().isEmpty() : "To specify an empty list, use ExpressionCreator.emptyList()";
+
+      assert values().stream().map(Expression::getType).distinct().count() <= 1
+          : "All values in NestedList must have the same type";
+    }
+
+    @Override
+    public Type getType() {
+      return Type.withNullability(nullable()).list(values().get(0).getType());
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+
+    public static ImmutableExpression.NestedList.Builder builder() {
+      return ImmutableExpression.NestedList.builder();
+    }
+  }
+
   @Value.Immutable
   abstract class MultiOrListRecord {
     public abstract List<Expression> values();
