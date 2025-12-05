@@ -194,7 +194,7 @@ public class PlanTestBase {
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
 
     // 4. Calcite RelNode -> Substrait Root (POJO 2)
-    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions);
+    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions, features);
 
     // Note: pojo1 and pojo2 may differ due to different optimization strategies applied by:
     // - SqlNode->RelRoot conversion during SQL->Substrait conversion
@@ -205,7 +205,7 @@ public class PlanTestBase {
     RelRoot relRoot3 = substraitToCalcite.convert(pojo2);
 
     // 6. Calcite RelNode -> Substrait Root (POJO 3)
-    Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, extensions);
+    Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, extensions, features);
 
     // Verify that subsequent round trips are stable (pojo2 and pojo3 should be identical)
     assertEquals(pojo2, pojo3);
