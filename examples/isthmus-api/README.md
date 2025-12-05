@@ -32,7 +32,7 @@ To run these you will need:
 
 ## Creating a Substrait Plan from SQL
 
-To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java) from the root of this repository. `subtrait.plan` is the name of file written. It will output to stdout the text format of the protobuf for information; it's quite length so has been abbreviated here.
+To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java), execute the command below from the root of this repository. The example writes a binary plan to `substrait.plan` and outputs the text format of the protobuf to stdout. The output is quite lengthy, so it has been abbreviated here.
 
 ```bash
  ./gradlew examples:isthmus-api:run --args "FromSql substrait.plan"
