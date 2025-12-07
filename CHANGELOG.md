@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.72.0](https://github.com/substrait-io/substrait-java/compare/v0.71.0...v0.72.0) (2025-12-07)
+
+### Features
+
+* support Nested Structs ([#579](https://github.com/substrait-io/substrait-java/issues/579)) ([8845bbf](https://github.com/substrait-io/substrait-java/commit/8845bbff6954c2ba5105469401a94bf54c686f49))
+
 ## [0.71.0](https://github.com/substrait-io/substrait-java/compare/v0.70.0...v0.71.0) (2025-11-30)
 
 ### Features
