@@ -19,10 +19,10 @@ import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.NestedFunctions;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
@@ -325,7 +325,7 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.NestedList expr, Context context) {
     List<RexNode> args =
         expr.values().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
-    return rexBuilder.makeCall(NestedFunctions.NESTED_LIST, args);
+    return rexBuilder.makeCall(SubstraitOperatorTable.NESTED_LIST_CONSTRUCTOR, args);
   }
 
   @Override

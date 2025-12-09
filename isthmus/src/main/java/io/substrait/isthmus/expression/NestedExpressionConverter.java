@@ -17,7 +17,7 @@ public class NestedExpressionConverter implements CallConverter {
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
 
-    if (!call.getOperator().getName().equals("nested_list")) {
+    if (!call.getOperator().getName().equals("NESTEDLIST")) {
       return Optional.empty();
     }
 

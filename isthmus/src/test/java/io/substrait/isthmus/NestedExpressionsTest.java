@@ -31,7 +31,7 @@ class NestedExpressionsTest extends PlanTestBase {
   final Rel emptyTable = b.emptyScan();
 
   @Test
-  void literalsNestedListTest() {
+  void NestedListWithJustLiteralsTest() {
     List<Expression> expressionList = new ArrayList<>();
     Expression.NestedList literalNestedList =
         Expression.NestedList.builder()
@@ -52,7 +52,7 @@ class NestedExpressionsTest extends PlanTestBase {
   }
 
   @Test
-  void nonLiteralsNestedListTest() {
+  void NestedListWithNonLiteralsTest() {
     List<Expression> expressionList = new ArrayList<>();
 
     Expression.NestedList nonLiteralNestedList =
