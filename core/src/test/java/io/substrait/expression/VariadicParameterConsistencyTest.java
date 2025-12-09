@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 class VariadicParameterConsistencyTest {
 
   private static final TypeCreator R = TypeCreator.of(false);
-  private static final TypeCreator N = TypeCreator.of(true);
 
   /**
    * Helper method to create a ScalarFunctionInvocation and test if it validates correctly. The
@@ -276,4 +275,3 @@ class VariadicParameterConsistencyTest {
         "Consistent variadic with same types but different nullability should pass");
   }
 }
-

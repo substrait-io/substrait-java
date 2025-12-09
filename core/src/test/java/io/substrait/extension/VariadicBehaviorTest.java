@@ -30,4 +30,3 @@ class VariadicBehaviorTest {
         collection.scalarFunctions().get(0).variadic().get().parameterConsistency());
   }
 }
-

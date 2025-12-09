@@ -97,5 +97,4 @@ class TypeExtensionTest {
     Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }
-
 }

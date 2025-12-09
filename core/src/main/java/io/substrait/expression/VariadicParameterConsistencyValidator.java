@@ -3,10 +3,12 @@ package io.substrait.expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * Helper class for validating variadic parameter consistency in function invocations. Validates that
- * when parameterConsistency is CONSISTENT, all variadic arguments have the same type (ignoring
+ * Helper class for validating variadic parameter consistency in function invocations. Validates
+ * that when parameterConsistency is CONSISTENT, all variadic arguments have the same type (ignoring
  * nullability).
  */
 public class VariadicParameterConsistencyValidator {
@@ -20,9 +22,8 @@ public class VariadicParameterConsistencyValidator {
    * @param arguments the function arguments to validate
    * @throws AssertionError if validation fails
    */
-  public static void validate(
-      SimpleExtension.Function func, List<FunctionArg> arguments) {
-    java.util.Optional<SimpleExtension.VariadicBehavior> variadic = func.variadic();
+  public static void validate(SimpleExtension.Function func, List<FunctionArg> arguments) {
+    Optional<SimpleExtension.VariadicBehavior> variadic = func.variadic();
     if (!variadic.isPresent()) {
       return;
     }
@@ -31,6 +32,17 @@ public class VariadicParameterConsistencyValidator {
     if (variadicBehavior.parameterConsistency()
         != SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT) {
       // INCONSISTENT allows different types, so validation passes
+      // TODO: Even when parameterConsistency is INCONSISTENT, there can be implicit constraints
+      // across variadic parameters due to type parameters. For example, consider a function with:
+      //   args: [value: "decimal<P,S>", variadic: {min: 1, parameterConsistency: INCONSISTENT}]
+      //   return: "decimal<38,S>"
+      // In this case, while the precision P can vary across variadic arguments, the scale S must
+      // be consistent across all variadic arguments (since it's used in the return type). The
+      // current implementation doesn't validate these type parameter constraints. According to
+      // the spec: "Each argument can be any possible concrete type afforded by the bounds of any
+      // parameter defined in the arguments specification." This means we need to check that type
+      // parameters that appear in the return type (or are otherwise constrained) are consistent
+      // across variadic arguments, even when parameterConsistency is INCONSISTENT.
       return;
     }
 
@@ -46,18 +58,32 @@ public class VariadicParameterConsistencyValidator {
                     return (Type) arg;
                   }
                 })
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 
-    int fixedArgCount = func.args().size();
-    if (argumentTypes.size() <= fixedArgCount) {
+    // Count how many Expression/Type arguments are in the fixed arguments (before variadic)
+    // Note: func.args() includes all argument types (Expression, Type, EnumArg), but we only
+    // care about Expression/Type arguments for type consistency checking
+    int fixedTypeArgCount = 0;
+    for (int i = 0; i < func.args().size() && i < arguments.size(); i++) {
+      FunctionArg arg = arguments.get(i);
+      if (arg instanceof Expression || arg instanceof Type) {
+        fixedTypeArgCount++;
+      }
+    }
+
+    if (argumentTypes.size() <= fixedTypeArgCount) {
       // No variadic arguments, validation passes
       return;
     }
 
     // For CONSISTENT, all variadic arguments must have the same type (ignoring nullability)
     // Compare all variadic arguments to the first one for more informative error messages
-    // Variadic arguments start after the fixed arguments
-    int firstVariadicArgIdx = fixedArgCount + Math.max(variadicBehavior.getMin() - 1, 0);
+    // Variadic arguments start immediately after the fixed arguments
+    int firstVariadicArgIdx = fixedTypeArgCount;
+    if (firstVariadicArgIdx >= argumentTypes.size()) {
+      // Not enough variadic arguments provided, validation passes
+      return;
+    }
     Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
     for (int i = firstVariadicArgIdx + 1; i < argumentTypes.size(); i++) {
       Type currentType = argumentTypes.get(i);
@@ -71,4 +97,3 @@ public class VariadicParameterConsistencyValidator {
     }
   }
 }
-
