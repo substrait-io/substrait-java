@@ -1,8 +1,9 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import java.io.IOException;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -15,6 +16,9 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
 class OptimizerIntegrationTest extends PlanTestBase {
+
+  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   @Test
   void conversionHandlesBuiltInSum0CallAddedByRule() throws SqlParseException, IOException {
