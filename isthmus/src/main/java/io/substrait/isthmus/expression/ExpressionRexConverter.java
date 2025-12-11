@@ -53,6 +53,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
@@ -325,7 +326,19 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.NestedList expr, Context context) {
     List<RexNode> args =
         expr.values().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
-    return rexBuilder.makeCall(SubstraitOperatorTable.NESTED_LIST_CONSTRUCTOR, args);
+
+    // to preserve NestedList nullability
+    RelDataType elementType;
+    if (args.isEmpty()) {
+      elementType = typeFactory.createSqlType(SqlTypeName.ANY);
+    } else {
+      elementType = args.get(0).getType();
+    }
+    RelDataType nestedListType = typeFactory.createArrayType(elementType, -1);
+    nestedListType = typeFactory.createTypeWithNullability(nestedListType, expr.nullable());
+
+    return rexBuilder.makeCall(
+        nestedListType, SubstraitOperatorTable.NESTED_LIST_CONSTRUCTOR, args);
   }
 
   @Override

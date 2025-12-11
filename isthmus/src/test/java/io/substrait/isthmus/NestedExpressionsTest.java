@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.protobuf.ByteString;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -84,6 +85,75 @@ class NestedExpressionsTest extends PlanTestBase {
             .expressions(expressionList)
             .input(commonTable)
             .remap(Rel.Remap.of(Collections.singleton(5)))
+            .build();
+
+    assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedListWithStringLiteralsTest() {
+    Expression.NestedList nestedList =
+        Expression.NestedList.builder().addValues(b.str("xzy")).addValues(b.str("abc")).build();
+
+    Rel project =
+        io.substrait.relation.Project.builder()
+            .expressions(List.of(nestedList))
+            .input(emptyTable)
+            .build();
+
+    assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedListWithBinaryLiteralTest() {
+    Expression binaryLiteral =
+        Expression.BinaryLiteral.builder()
+            .value(ByteString.copyFrom(new byte[] {0x01, 0x02}))
+            .build();
+
+    Expression.NestedList nestedList =
+        Expression.NestedList.builder().addValues(binaryLiteral).addValues(binaryLiteral).build();
+
+    Rel project =
+        io.substrait.relation.Project.builder()
+            .expressions(List.of(nestedList))
+            .input(emptyTable)
+            .build();
+
+    assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedListWithSingleLiteralTest() {
+    List<Expression> expressionList = new ArrayList<>();
+    Expression.NestedList literalNestedList =
+        Expression.NestedList.builder().addValues(literalExpression).build();
+    expressionList.add(literalNestedList);
+
+    io.substrait.relation.Project project =
+        io.substrait.relation.Project.builder()
+            .expressions(expressionList)
+            .input(emptyTable)
+            .build();
+
+    assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nullableNestedListTest() {
+    List<Expression> expressionList = new ArrayList<>();
+    Expression.NestedList literalNestedList =
+        Expression.NestedList.builder()
+            .addValues(literalExpression)
+            .addValues(literalExpression)
+            .nullable(true)
+            .build();
+    expressionList.add(literalNestedList);
+
+    io.substrait.relation.Project project =
+        io.substrait.relation.Project.builder()
+            .expressions(expressionList)
+            .input(emptyTable)
             .build();
 
     assertFullRoundTrip(project);
