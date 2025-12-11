@@ -282,7 +282,7 @@ public class ExpressionCreator {
   }
 
   /**
-   * Creator a nested list expression with one or more elements.
+   * Creates a nested list expression with one or more elements.
    *
    * <p>Note: This class cannot be used to construct an empty list. To create an empty list, use
    * {@link ExpressionCreator#emptyList(boolean, Type)} which returns an {@link

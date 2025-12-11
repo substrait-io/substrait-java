@@ -11,8 +11,8 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 /**
  * Substrait-specific constructor to map back to the Expression NestedList type in Substrait. This
- * constructor creates a special type of SqlKind.ARRAY_VALUE_CONSTRUCTOR for lists that store
- * non-literal expressions.
+ * constructor creates a special type of SqlKind.ARRAY_VALUE_CONSTRUCTOR for lists that can contain
+ * both literal and non-literal expressions.
  */
 public class NestedListConstructor extends SqlMultisetValueConstructor {
 

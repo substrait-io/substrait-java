@@ -370,7 +370,8 @@ public class ProtoExpressionConverter {
             nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
         return ExpressionCreator.nestedList(nested.getNullable(), list);
       default:
-        throw new IllegalStateException("Unimplemented nested type: " + nested.getNestedTypeCase());
+        throw new UnsupportedOperationException(
+            "Unimplemented nested type: " + nested.getNestedTypeCase());
     }
   }
 

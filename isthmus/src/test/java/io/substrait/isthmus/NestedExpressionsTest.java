@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -11,7 +9,6 @@ import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class NestedExpressionsTest extends PlanTestBase {
@@ -19,19 +16,22 @@ class NestedExpressionsTest extends PlanTestBase {
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
   protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
-  SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
   io.substrait.expression.Expression literalExpression =
       Expression.BoolLiteral.builder().value(true).build();
   Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));
   Expression.ScalarFunctionInvocation nonLiteralExpression2 = b.add(b.i32(3), b.i32(4));
 
-  final List<Type> tableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
-  final Rel commonTable = b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), tableType);
+  final List<Type> tableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN, N.STRING);
+  final Rel commonTable =
+      b.namedScan(List.of("example"), List.of("a", "b", "c", "d", "e"), tableType);
   final Rel emptyTable = b.emptyScan();
 
+  Expression fieldRef1 = b.fieldReference(commonTable, 2);
+  Expression fieldRef2 = b.fieldReference(commonTable, 4);
+
   @Test
-  void NestedListWithJustLiteralsTest() {
+  void nestedListWithLiteralsTest() {
     List<Expression> expressionList = new ArrayList<>();
     Expression.NestedList literalNestedList =
         Expression.NestedList.builder()
@@ -46,13 +46,11 @@ class NestedExpressionsTest extends PlanTestBase {
             .input(emptyTable)
             .build();
 
-    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
-    Rel project2 = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
-    assertEquals(project, project2); // pojo -> calcite -> pojo
+    assertFullRoundTrip(project);
   }
 
   @Test
-  void NestedListWithNonLiteralsTest() {
+  void nestedListWithNonLiteralsTest() {
     List<Expression> expressionList = new ArrayList<>();
 
     Expression.NestedList nonLiteralNestedList =
@@ -66,11 +64,28 @@ class NestedExpressionsTest extends PlanTestBase {
         io.substrait.relation.Project.builder()
             .expressions(expressionList)
             .input(commonTable)
-            .remap(Rel.Remap.of(Collections.singleton(4)))
+            // project only the nestedList expression and exclude the 5 input columns
+            .remap(Rel.Remap.of(Collections.singleton(5)))
             .build();
 
-    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
-    Rel project2 = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
-    assertEquals(project, project2); // pojo -> calcite -> pojo
+    assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedListWithFieldReferenceTest() {
+    Expression.NestedList nestedListWithField =
+        Expression.NestedList.builder().addValues(fieldRef1).addValues(fieldRef2).build();
+
+    List<Expression> expressionList = new ArrayList<>();
+    expressionList.add(nestedListWithField);
+
+    io.substrait.relation.Project project =
+        io.substrait.relation.Project.builder()
+            .expressions(expressionList)
+            .input(commonTable)
+            .remap(Rel.Remap.of(Collections.singleton(5)))
+            .build();
+
+    assertFullRoundTrip(project);
   }
 }

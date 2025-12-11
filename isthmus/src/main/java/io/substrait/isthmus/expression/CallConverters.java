@@ -142,7 +142,7 @@ public class CallConverters {
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
         new LiteralConstructorConverter(typeConverter),
-        new NestedExpressionConverter());
+        new NestedExpressionCallConverter());
   }
 
   public interface SimpleCallConverter extends CallConverter {

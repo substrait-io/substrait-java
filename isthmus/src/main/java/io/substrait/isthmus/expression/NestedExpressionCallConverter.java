@@ -2,6 +2,7 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.NestedListConstructor;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -9,15 +10,15 @@ import java.util.stream.Collectors;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 
-public class NestedExpressionConverter implements CallConverter {
+public class NestedExpressionCallConverter implements CallConverter {
 
-  public NestedExpressionConverter() {}
+  public NestedExpressionCallConverter() {}
 
   @Override
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
 
-    if (!call.getOperator().getName().equals("NESTEDLIST")) {
+    if (!(call.getOperator() instanceof NestedListConstructor)) {
       return Optional.empty();
     }
 

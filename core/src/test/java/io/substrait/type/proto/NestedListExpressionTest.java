@@ -14,14 +14,14 @@ class NestedListExpressionTest extends TestBase {
   Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));
 
   @Test
-  void DifferentTypedLiteralsNestedListTest() {
+  void rejectNestedListWithElementsOfDifferentTypes() {
     ImmutableExpression.NestedList.Builder builder =
         Expression.NestedList.builder().addValues(literalExpression).addValues(b.i32(12));
     assertThrows(AssertionError.class, builder::build);
   }
 
   @Test
-  void SameTypedLiteralsNestedListTest() {
+  void acceptNestedListWithElementsOfSameType() {
     ImmutableExpression.NestedList.Builder builder =
         Expression.NestedList.builder().addValues(nonLiteralExpression).addValues(b.i32(12));
     assertDoesNotThrow(builder::build);
@@ -35,7 +35,7 @@ class NestedListExpressionTest extends TestBase {
   }
 
   @Test
-  void EmptyNestedListTest() {
+  void rejectEmptyNestedListTest() {
     ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
     assertThrows(AssertionError.class, builder::build);
   }

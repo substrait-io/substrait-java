@@ -16,6 +16,8 @@ public class ProjectRelRoundtripTest extends TestBase {
           Arrays.asList("col_a", "col_b", "col_c", "col_d"),
           Arrays.asList(R.I64, R.FP64, R.STRING, R.I32));
 
+  final Rel emptyTable = b.emptyScan();
+
   @Test
   void simpleProjection() {
     // Project single field
@@ -144,6 +146,13 @@ public class ProjectRelRoundtripTest extends TestBase {
     // Project with no expressions (edge case - may produce empty output schema)
     Rel projection = Project.builder().input(baseTable).build();
 
+    verifyRoundTrip(projection);
+  }
+
+  @Test
+  void avoidProjectRemapOnEmptyInput() {
+    Rel projection =
+        Project.builder().input(emptyTable).addExpressions(b.add(b.i32(1), b.i32(2))).build();
     verifyRoundTrip(projection);
   }
 }
