@@ -25,6 +25,16 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     return fnArgVisitor.visitType(fnDef, argIdx, this, context);
   }
 
+  /**
+   * Compares this type with another type, ignoring nullability differences.
+   *
+   * @param other the type to compare with
+   * @return true if the types are equal when both are treated as nullable
+   */
+  default boolean equalsIgnoringNullability(Type other) {
+    return TypeCreator.asNullable(this).equals(TypeCreator.asNullable(other));
+  }
+
   @Value.Immutable
   abstract class Bool implements Type {
     public static ImmutableType.Bool.Builder builder() {

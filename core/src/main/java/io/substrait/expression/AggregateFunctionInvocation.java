@@ -25,6 +25,16 @@ public abstract class AggregateFunctionInvocation {
 
   public abstract Expression.AggregationInvocation invocation();
 
+  /**
+   * Validates that variadic arguments satisfy the parameter consistency requirement. When
+   * CONSISTENT, all variadic arguments must have the same type (ignoring nullability). When
+   * INCONSISTENT, arguments can have different types.
+   */
+  @Value.Check
+  protected void check() {
+    VariadicParameterConsistencyValidator.validate(declaration(), arguments());
+  }
+
   public static ImmutableAggregateFunctionInvocation.Builder builder() {
     return ImmutableAggregateFunctionInvocation.builder();
   }
