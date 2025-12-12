@@ -5,7 +5,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import org.junit.jupiter.api.Test;
 
-public class ProjectTest extends PlanTestBase {
+class ProjectTest extends PlanTestBase {
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
   final Rel emptyTable = b.emptyScan();
 
