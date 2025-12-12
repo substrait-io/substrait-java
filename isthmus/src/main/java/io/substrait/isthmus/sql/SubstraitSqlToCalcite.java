@@ -17,6 +17,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
@@ -131,6 +132,27 @@ public class SubstraitSqlToCalcite {
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
+   * @param parserConfig Calcite Parser config to use with the given SQL Statements
+   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
+  public static List<RelRoot> convertQueries(
+      String sqlStatements,
+      Prepare.CatalogReader catalogReader,
+      final SqlParser.Config parserConfig)
+      throws SqlParseException {
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    return convertQueries(
+        sqlStatements, catalogReader, validator, createDefaultRelOptCluster(), parserConfig);
+  }
+
+  /**
+   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * statement.
+   *
+   * @param sqlStatements a string containing one or more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements
    * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
    *     additional control of SQL functions and operators via {@link
    *     SqlValidator#getOperatorTable()}
@@ -147,6 +169,35 @@ public class SubstraitSqlToCalcite {
       RelOptCluster cluster)
       throws SqlParseException {
     List<SqlNode> sqlNodes = SubstraitSqlStatementParser.parseStatements(sqlStatements);
+    return convert(sqlNodes, catalogReader, validator, cluster);
+  }
+
+  /**
+   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * statement.
+   *
+   * @param sqlStatements a string containing one or more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements
+   * @param validator the {@link SqlValidator} used to validate SQL statements. Allows for
+   *     additional control of SQL functions and operators via {@link
+   *     SqlValidator#getOperatorTable()}
+   * @param cluster the {@link RelOptCluster} used when creating {@link RelNode}s during statement
+   *     processing. Calcite expects that the {@link RelOptCluster} used during statement processing
+   *     is the same as that used during query optimization.
+   * @param parserConfig Calcite Parser config to use with the given SQL Statements
+   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
+  public static List<RelRoot> convertQueries(
+      String sqlStatements,
+      Prepare.CatalogReader catalogReader,
+      SqlValidator validator,
+      RelOptCluster cluster,
+      SqlParser.Config parserConfig)
+      throws SqlParseException {
+    List<SqlNode> sqlNodes =
+        SubstraitSqlStatementParser.parseStatements(sqlStatements, parserConfig);
     return convert(sqlNodes, catalogReader, validator, cluster);
   }
 
