@@ -16,8 +16,6 @@ public class ProjectRelRoundtripTest extends TestBase {
           Arrays.asList("col_a", "col_b", "col_c", "col_d"),
           Arrays.asList(R.I64, R.FP64, R.STRING, R.I32));
 
-  final Rel emptyTable = b.emptyScan();
-
   @Test
   void simpleProjection() {
     // Project single field
