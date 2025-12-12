@@ -1,15 +1,20 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.google.protobuf.ByteString;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class NestedExpressionsTest extends PlanTestBase {
@@ -17,9 +22,9 @@ class NestedExpressionsTest extends PlanTestBase {
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
   protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
+  SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
-  io.substrait.expression.Expression literalExpression =
-      Expression.BoolLiteral.builder().value(true).build();
+  Expression literalExpression = Expression.BoolLiteral.builder().value(true).build();
   Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));
   Expression.ScalarFunctionInvocation nonLiteralExpression2 = b.add(b.i32(3), b.i32(4));
 
@@ -41,13 +46,14 @@ class NestedExpressionsTest extends PlanTestBase {
             .build();
     expressionList.add(literalNestedList);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .expressions(expressionList)
-            .input(emptyTable)
-            .build();
+    Project project = Project.builder().expressions(expressionList).input(emptyTable).build();
 
-    assertFullRoundTrip(project);
+    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+    Expression project2 = ((Project) substraitRel).getExpressions().get(0);
+    assertEquals(ImmutableExpression.ListLiteral.class, project2.getClass());
+    Expression.ListLiteral listLiteral = (Expression.ListLiteral) project2;
+    assertEquals(literalNestedList.values(), listLiteral.values());
   }
 
   @Test
@@ -61,8 +67,8 @@ class NestedExpressionsTest extends PlanTestBase {
             .build();
     expressionList.add(nonLiteralNestedList);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
+    Project project =
+        Project.builder()
             .expressions(expressionList)
             .input(commonTable)
             // project only the nestedList expression and exclude the 5 input columns
@@ -80,8 +86,8 @@ class NestedExpressionsTest extends PlanTestBase {
     List<Expression> expressionList = new ArrayList<>();
     expressionList.add(nestedListWithField);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
+    Project project =
+        Project.builder()
             .expressions(expressionList)
             .input(commonTable)
             .remap(Rel.Remap.of(Collections.singleton(5)))
@@ -95,13 +101,14 @@ class NestedExpressionsTest extends PlanTestBase {
     Expression.NestedList nestedList =
         Expression.NestedList.builder().addValues(b.str("xzy")).addValues(b.str("abc")).build();
 
-    Rel project =
-        io.substrait.relation.Project.builder()
-            .expressions(List.of(nestedList))
-            .input(emptyTable)
-            .build();
+    Rel project = Project.builder().expressions(List.of(nestedList)).input(emptyTable).build();
 
-    assertFullRoundTrip(project);
+    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+    Expression project2 = ((Project) substraitRel).getExpressions().get(0);
+    assertEquals(ImmutableExpression.ListLiteral.class, project2.getClass());
+    Expression.ListLiteral listLiteral = (Expression.ListLiteral) project2;
+    assertEquals(nestedList.values(), listLiteral.values());
   }
 
   @Test
@@ -114,13 +121,14 @@ class NestedExpressionsTest extends PlanTestBase {
     Expression.NestedList nestedList =
         Expression.NestedList.builder().addValues(binaryLiteral).addValues(binaryLiteral).build();
 
-    Rel project =
-        io.substrait.relation.Project.builder()
-            .expressions(List.of(nestedList))
-            .input(emptyTable)
-            .build();
+    Rel project = Project.builder().expressions(List.of(nestedList)).input(emptyTable).build();
 
-    assertFullRoundTrip(project);
+    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+    Expression project2 = ((Project) substraitRel).getExpressions().get(0);
+    assertEquals(ImmutableExpression.ListLiteral.class, project2.getClass());
+    Expression.ListLiteral listLiteral = (Expression.ListLiteral) project2;
+    assertEquals(nestedList.values(), listLiteral.values());
   }
 
   @Test
@@ -130,13 +138,14 @@ class NestedExpressionsTest extends PlanTestBase {
         Expression.NestedList.builder().addValues(literalExpression).build();
     expressionList.add(literalNestedList);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .expressions(expressionList)
-            .input(emptyTable)
-            .build();
+    Project project = Project.builder().expressions(expressionList).input(emptyTable).build();
 
-    assertFullRoundTrip(project);
+    RelNode relNode = substraitToCalcite.convert(project); //    substrait rel to calcite
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions); // calcite to substrait
+    Expression project2 = ((Project) substraitRel).getExpressions().get(0);
+    assertEquals(ImmutableExpression.ListLiteral.class, project2.getClass());
+    Expression.ListLiteral listLiteral = (Expression.ListLiteral) project2;
+    assertEquals(literalNestedList.values(), listLiteral.values());
   }
 
   @Test
@@ -144,17 +153,13 @@ class NestedExpressionsTest extends PlanTestBase {
     List<Expression> expressionList = new ArrayList<>();
     Expression.NestedList literalNestedList =
         Expression.NestedList.builder()
-            .addValues(literalExpression)
-            .addValues(literalExpression)
+            .addValues(nonLiteralExpression)
+            .addValues(nonLiteralExpression2)
             .nullable(true)
             .build();
     expressionList.add(literalNestedList);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .expressions(expressionList)
-            .input(emptyTable)
-            .build();
+    Project project = Project.builder().expressions(expressionList).input(emptyTable).build();
 
     assertFullRoundTrip(project);
   }

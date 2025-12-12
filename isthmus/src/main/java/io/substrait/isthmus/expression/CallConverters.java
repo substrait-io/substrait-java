@@ -141,8 +141,7 @@ public class CallConverters {
         CallConverters.CASE,
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
-        new LiteralConstructorConverter(typeConverter),
-        new NestedExpressionCallConverter());
+        new SqlArrayValueConstructorCallConverter(typeConverter));
   }
 
   public interface SimpleCallConverter extends CallConverter {

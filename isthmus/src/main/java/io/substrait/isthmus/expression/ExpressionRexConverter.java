@@ -22,7 +22,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
@@ -337,8 +336,7 @@ public class ExpressionRexConverter
     RelDataType nestedListType = typeFactory.createArrayType(elementType, -1);
     nestedListType = typeFactory.createTypeWithNullability(nestedListType, expr.nullable());
 
-    return rexBuilder.makeCall(
-        nestedListType, SubstraitOperatorTable.NESTED_LIST_CONSTRUCTOR, args);
+    return rexBuilder.makeCall(nestedListType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
   }
 
   @Override
