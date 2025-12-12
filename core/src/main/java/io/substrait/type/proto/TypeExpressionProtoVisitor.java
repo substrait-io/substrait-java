@@ -356,6 +356,13 @@ public class TypeExpressionProtoVisitor
     }
 
     @Override
+    public DerivationExpression userDefined(
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
+      throw new UnsupportedOperationException(
+          "User defined types are not supported in Derivation Expressions for now");
+    }
+
+    @Override
     protected DerivationExpression wrap(final Object o) {
       DerivationExpression.Builder bldr = DerivationExpression.newBuilder();
       if (o instanceof Type.Boolean) {

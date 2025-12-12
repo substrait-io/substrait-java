@@ -263,6 +263,13 @@ public class ParameterizedProtoConverter
     }
 
     @Override
+    public ParameterizedType userDefined(
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
+      throw new UnsupportedOperationException(
+          "User defined types are not supported in Parameterized Types for now");
+    }
+
+    @Override
     protected ParameterizedType wrap(final Object o) {
       ParameterizedType.Builder bldr = ParameterizedType.newBuilder();
       if (o instanceof Type.Boolean) {

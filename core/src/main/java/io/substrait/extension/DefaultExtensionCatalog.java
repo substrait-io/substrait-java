@@ -22,6 +22,7 @@ public class DefaultExtensionCatalog {
       "extension:io.substrait:functions_rounding_decimal";
   public static final String FUNCTIONS_SET = "extension:io.substrait:functions_set";
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
+  public static final String EXTENSION_TYPES = "extension:io.substrait:extension_types";
 
   public static final SimpleExtension.ExtensionCollection DEFAULT_COLLECTION =
       loadDefaultCollection();
@@ -43,6 +44,8 @@ public class DefaultExtensionCatalog {
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
             .collect(Collectors.toList());
+
+    defaultFiles.add("/extension_types.yaml");
 
     return SimpleExtension.load(defaultFiles);
   }
