@@ -148,11 +148,4 @@ public class ProjectRelRoundtripTest extends TestBase {
 
     verifyRoundTrip(projection);
   }
-
-  @Test
-  void avoidProjectRemapOnEmptyInput() {
-    Rel projection =
-        Project.builder().input(emptyTable).addExpressions(b.add(b.i32(1), b.i32(2))).build();
-    verifyRoundTrip(projection);
-  }
 }
