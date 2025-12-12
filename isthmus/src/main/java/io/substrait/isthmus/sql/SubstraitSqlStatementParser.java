@@ -43,7 +43,7 @@ public class SubstraitSqlStatementParser {
    */
   public static List<SqlNode> parseStatements(String sqlStatements, SqlParser.Config parserConfig)
       throws SqlParseException {
-    SqlParser parser = SqlParser.create(sqlStatements, PARSER_CONFIG);
+    SqlParser parser = SqlParser.create(sqlStatements, parserConfig);
     return parser.parseStmtList();
   }
 }

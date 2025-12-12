@@ -29,10 +29,15 @@ To run these you will need Java 17 or greater, and this repository cloned to you
 
 ## Creating a Substrait Plan from SQL
 
-To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java), execute the command below from the root of this repository. The example writes a binary plan to `substrait.plan` and outputs the text format of the protobuf to stdout. The output is quite lengthy, so it has been abbreviated here.
+To run [`FromSql.java`](./src/main/java/io/substrait/examples/FromSql.java), execute the command below from the root of this repository.
 
 ```bash
- ./gradlew examples:isthmus-api:run --args "FromSql substrait.plan"
+./gradlew examples:isthmus-api:run --args "FromSql substrait.plan"
+```
+
+The example writes a binary plan to `substrait.plan` and outputs the text format of the protobuf to stdout. The output is quite lengthy, so it has been abbreviated here.
+
+```bash
 > Task :examples:isthmus-api:run
 extension_uris {
   extension_uri_anchor: 2
@@ -76,15 +81,17 @@ extension_urns {
 File written to substrait.plan
 ```
 
-
 Please see the code comments for details of how the conversion is done.
 
 ## Creating SQL from a Substrait Plan
 
-To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java), execute the command below from the root of this repository. The example reads from `substrait.plan` (likely the file created by `FromSql`) and outputs SQL. The text format of the protobuf has been abbreviated.
+To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java), execute the command below from the root of this repository.
 ```bash
 ./gradlew examples:isthmus-api:run --args "ToSql substrait.plan"
+```
 
+The example reads from `substrait.plan` (likely the file created by `FromSql`) and outputs SQL. The text format of the protobuf has been abbreviated
+```bash
 > Task :examples:isthmus-api:run
 Reading from substrait.plan
 extension_uris {

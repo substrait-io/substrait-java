@@ -132,17 +132,18 @@ public class SubstraitSqlToCalcite {
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
+   * @param parserConfig Calcite Parser config to use with the given SQL Statements
    * @return a list of {@link RelRoot}s corresponding to the given SQL statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
   public static List<RelRoot> convertQueries(
       String sqlStatements,
       Prepare.CatalogReader catalogReader,
-      final SqlParser.Config sqlParserConfig)
+      final SqlParser.Config parserConfig)
       throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader);
     return convertQueries(
-        sqlStatements, catalogReader, validator, createDefaultRelOptCluster(), sqlParserConfig);
+        sqlStatements, catalogReader, validator, createDefaultRelOptCluster(), parserConfig);
   }
 
   /**

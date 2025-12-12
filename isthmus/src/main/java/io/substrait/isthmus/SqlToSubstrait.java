@@ -1,15 +1,5 @@
 package io.substrait.isthmus;
 
-import java.util.List;
-
-import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.util.SqlOperatorTables;
-
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitOperatorTable;
@@ -18,6 +8,14 @@ import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import io.substrait.plan.PlanProtoConverter;
+import java.util.List;
+import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.util.SqlOperatorTables;
 
 /** Take a SQL statement and a set of table definitions and return a substrait plan. */
 public class SqlToSubstrait extends SqlConverterBase {
@@ -98,6 +96,7 @@ public class SqlToSubstrait extends SqlConverterBase {
    * @param sqlStatements a string containing one more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
+   * @param sqlDialect The sql dialect to use for parsing.
    * @return the Substrait {@link Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */

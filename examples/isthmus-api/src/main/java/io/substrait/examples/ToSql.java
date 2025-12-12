@@ -6,19 +6,14 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitToCalcite;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.plan.Plan;
-import io.substrait.plan.Plan.Root;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlNode;
 
 /**
  * Substrait to SQL conversions.
@@ -66,20 +61,18 @@ public class ToSql implements Action {
 
       // Create the Sql to Calcite Relation Parser
       final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
-      final List<String> sqlStrings = new ArrayList<>();
 
       System.out.println("\n");
-      // and get each root from the Substrait plan
-      for (final Root root : substraitPlan.getRoots()) {
-        // Substrait -> Calcite
-        final RelNode calciteRelNode = converter.convert(root).project(true);
-        // Calcite -> SQL
-        final SqlNode sqlNode = relToSql.visitRoot(calciteRelNode).asStatement();
 
-        final String sqlString = sqlNode.toSqlString(sqlDialect).getSql();
-        sqlStrings.add(sqlString);
-      }
-      sqlStrings.forEach(System.out::println);
+      // Convert each of the Substrait plan roots to SQL
+      substraitPlan.getRoots().stream()
+          // Substrait -> Calcite Rel
+          .map(root -> converter.convert(root).project(true))
+          // Calcite Rel -> Calcite SQL
+          .map(calciteRelNode -> relToSql.visitRoot(calciteRelNode).asStatement())
+          // Calcite SQL -> SQL String
+          .map(sqlNode -> sqlNode.toSqlString(sqlDialect).getSql())
+          .forEachOrdered(System.out::println);
 
     } catch (IOException e) {
       e.printStackTrace();
