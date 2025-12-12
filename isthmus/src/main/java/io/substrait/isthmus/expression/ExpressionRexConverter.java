@@ -321,6 +321,24 @@ public class ExpressionRexConverter
   }
 
   @Override
+  public RexNode visit(Expression.NestedList expr, Context context) {
+    List<RexNode> args =
+        expr.values().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
+
+    // to preserve NestedList nullability
+    RelDataType elementType;
+    if (args.isEmpty()) {
+      throw new IllegalStateException("NestedList must have at least 1 element");
+    } else {
+      elementType = args.get(0).getType();
+    }
+    RelDataType nestedListType = typeFactory.createArrayType(elementType, -1);
+    nestedListType = typeFactory.createTypeWithNullability(nestedListType, expr.nullable());
+
+    return rexBuilder.makeCall(nestedListType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
   public RexNode visit(Expression.EmptyListLiteral expr, Context context) throws RuntimeException {
     RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeCall(
