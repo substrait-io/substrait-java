@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
  * that when parameterConsistency is CONSISTENT, all variadic arguments have the same type (ignoring
  * nullability).
  */
-public class VariadicParameterConsistencyValidator {
+class VariadicParameterConsistencyValidator {
 
   /**
    * Validates that variadic arguments satisfy the parameter consistency requirement. When
    * CONSISTENT, all variadic arguments must have the same type (ignoring nullability). When
-   * INCONSISTENT, arguments can have different types.
+   * INCONSISTENT, arguments can have any type satisfying the type constraints
    *
    * @param func the function declaration
    * @param arguments the function arguments to validate
@@ -32,7 +32,7 @@ public class VariadicParameterConsistencyValidator {
     if (variadicBehavior.parameterConsistency()
         != SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT) {
       // INCONSISTENT allows different types, so validation passes
-      // TODO: Even when parameterConsistency is INCONSISTENT, there can be implicit constraints
+      // TODO (#633): Even when parameterConsistency is INCONSISTENT, there can be implicit constraints
       // across variadic parameters due to type parameters. For example, consider a function with:
       //   args: [value: "decimal<P,S>", variadic: {min: 1, parameterConsistency: INCONSISTENT}]
       //   return: "decimal<38,S>"
@@ -63,15 +63,15 @@ public class VariadicParameterConsistencyValidator {
     // Count how many Expression/Type arguments are in the fixed arguments (before variadic)
     // Note: func.args() includes all argument types (Expression, Type, EnumArg), but we only
     // care about Expression/Type arguments for type consistency checking
-    int fixedTypeArgCount = 0;
+    int nonVariadicArgCount = 0;
     for (int i = 0; i < func.args().size() && i < arguments.size(); i++) {
       FunctionArg arg = arguments.get(i);
       if (arg instanceof Expression || arg instanceof Type) {
-        fixedTypeArgCount++;
+        nonVariadicArgCount++;
       }
     }
 
-    if (argumentTypes.size() <= fixedTypeArgCount) {
+    if (argumentTypes.size() <= nonVariadicArgCount) {
       // No variadic arguments, validation passes
       return;
     }
@@ -79,12 +79,8 @@ public class VariadicParameterConsistencyValidator {
     // For CONSISTENT, all variadic arguments must have the same type (ignoring nullability)
     // Compare all variadic arguments to the first one for more informative error messages
     // Variadic arguments start immediately after the fixed arguments
-    int firstVariadicArgIdx = fixedTypeArgCount;
-    if (firstVariadicArgIdx >= argumentTypes.size()) {
-      // Not enough variadic arguments provided, validation passes
-      return;
-    }
-    Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
+    int firstVariadicArgIdx = nonVariadicArgCount;
+      Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
     for (int i = firstVariadicArgIdx + 1; i < argumentTypes.size(); i++) {
       Type currentType = argumentTypes.get(i);
       if (!firstVariadicType.equalsIgnoringNullability(currentType)) {

@@ -7,7 +7,9 @@ import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
 import io.substrait.type.TypeCreator;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** Tests for variadic parameter consistency validation in Expression. */
@@ -28,18 +30,12 @@ class VariadicParameterConsistencyTest {
             .urn("extension:test:variadic")
             .name("test_func")
             .args(args)
-            .variadic(
-                variadic != null ? java.util.Optional.of(variadic) : java.util.Optional.empty())
+            .variadic(variadic != null ? Optional.of(variadic) : Optional.empty())
             .returnType(R.I64)
-            .options(java.util.Collections.emptyMap())
+            .options(Collections.emptyMap())
             .build();
 
-    return Expression.ScalarFunctionInvocation.builder()
-        .declaration(declaration)
-        .arguments(arguments)
-        .outputType(R.I64)
-        .options(java.util.Collections.emptyList())
-        .build();
+    return ExpressionCreator.scalarFunction(declaration, R.I64, arguments);
   }
 
   @Test
@@ -60,9 +56,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.I64Literal.builder().value(3).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.i64(false, 3))),
         "Consistent variadic with same types should pass");
 
     assertDoesNotThrow(
@@ -71,10 +67,10 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).nullable(true).build(),
-                    Expression.I64Literal.builder().value(3).nullable(true).build(),
-                    Expression.I64Literal.builder().value(4).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(true, 2),
+                    ExpressionCreator.i64(true, 3),
+                    ExpressionCreator.i64(false, 4))),
         "Consistent variadic with same types but different nullability should pass");
   }
 
@@ -97,9 +93,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.FP64Literal.builder().value(3.0).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.fp64(false, 3.0))),
         "Consistent variadic with different types should fail");
 
     assertThrows(
@@ -109,9 +105,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I32Literal.builder().value(2).build(),
-                    Expression.I64Literal.builder().value(3).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i32(false, 2),
+                    ExpressionCreator.i64(false, 3))),
         "Consistent variadic with different types should fail");
   }
 
@@ -141,9 +137,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.FP64Literal.builder().value(3.0).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.fp64(false, 3.0))),
         "Inconsistent variadic with different types should pass");
 
     assertDoesNotThrow(
@@ -152,10 +148,10 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I32Literal.builder().value(2).build(),
-                    Expression.FP64Literal.builder().value(3.0).build(),
-                    Expression.StrLiteral.builder().value("test").build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i32(false, 2),
+                    ExpressionCreator.fp64(false, 3.0),
+                    ExpressionCreator.string(false, "test"))),
         "Inconsistent variadic with different types should pass");
   }
 
@@ -181,9 +177,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.I64Literal.builder().value(3).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.i64(false, 3))),
         "Consistent variadic with wildcard type and same concrete types should pass");
 
     assertThrows(
@@ -193,9 +189,9 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.FP64Literal.builder().value(3.0).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.fp64(false, 3.0))),
         "Consistent variadic with wildcard type and different concrete types should fail");
   }
 
@@ -217,10 +213,10 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.I64Literal.builder().value(3).build(),
-                    Expression.I64Literal.builder().value(4).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.i64(false, 3),
+                    ExpressionCreator.i64(false, 4))),
         "Consistent variadic with min=2 and same types should pass");
 
     assertThrows(
@@ -230,10 +226,10 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).build(),
-                    Expression.I64Literal.builder().value(3).build(),
-                    Expression.FP64Literal.builder().value(4.0).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(false, 2),
+                    ExpressionCreator.i64(false, 3),
+                    ExpressionCreator.fp64(false, 4.0))),
         "Consistent variadic with min=2 and different types should fail");
   }
 
@@ -246,7 +242,7 @@ class VariadicParameterConsistencyTest {
     assertDoesNotThrow(
         () ->
             createScalarFunctionInvocation(
-                args, null, List.of(Expression.I64Literal.builder().value(1).build())),
+                args, null, List.of(ExpressionCreator.i64(false, 1))),
         "No variadic behavior should always pass");
   }
 
@@ -268,10 +264,10 @@ class VariadicParameterConsistencyTest {
                 args,
                 variadic,
                 List.of(
-                    Expression.I64Literal.builder().value(1).build(),
-                    Expression.I64Literal.builder().value(2).nullable(true).build(),
-                    Expression.I64Literal.builder().value(3).build(),
-                    Expression.I64Literal.builder().value(4).nullable(true).build())),
+                    ExpressionCreator.i64(false, 1),
+                    ExpressionCreator.i64(true, 2),
+                    ExpressionCreator.i64(false, 3),
+                    ExpressionCreator.i64(true, 4))),
         "Consistent variadic with same types but different nullability should pass");
   }
 }
