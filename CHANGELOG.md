@@ -1,6 +1,13 @@
 Release Notes
 ---
 
+## [0.73.0](https://github.com/substrait-io/substrait-java/compare/v0.72.0...v0.73.0) (2025-12-14)
+
+### Features
+
+* **isthmus:** add dynamic function conversion capabilities ([#457](https://github.com/substrait-io/substrait-java/issues/457)) ([c5b1536](https://github.com/substrait-io/substrait-java/commit/c5b1536cc346706afa3dd36e568455f2ef843e5d))
+* support Nested Lists ([#627](https://github.com/substrait-io/substrait-java/issues/627)) ([717242a](https://github.com/substrait-io/substrait-java/commit/717242a53dc63221ac34d6b190a6786a0736d038))
+
 ## [0.72.0](https://github.com/substrait-io/substrait-java/compare/v0.71.0...v0.72.0) (2025-12-07)
 
 ### Features
