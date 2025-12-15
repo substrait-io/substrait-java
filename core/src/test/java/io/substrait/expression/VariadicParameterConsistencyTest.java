@@ -240,9 +240,7 @@ class VariadicParameterConsistencyTest {
         List.of(SimpleExtension.ValueArgument.builder().value(R.I64).name("arg1").build());
 
     assertDoesNotThrow(
-        () ->
-            createScalarFunctionInvocation(
-                args, null, List.of(ExpressionCreator.i64(false, 1))),
+        () -> createScalarFunctionInvocation(args, null, List.of(ExpressionCreator.i64(false, 1))),
         "No variadic behavior should always pass");
   }
 

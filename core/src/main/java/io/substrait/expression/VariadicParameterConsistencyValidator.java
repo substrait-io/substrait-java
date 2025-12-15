@@ -32,7 +32,8 @@ class VariadicParameterConsistencyValidator {
     if (variadicBehavior.parameterConsistency()
         != SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT) {
       // INCONSISTENT allows different types, so validation passes
-      // TODO (#633): Even when parameterConsistency is INCONSISTENT, there can be implicit constraints
+      // TODO (#633): Even when parameterConsistency is INCONSISTENT, there can be implicit
+      // constraints
       // across variadic parameters due to type parameters. For example, consider a function with:
       //   args: [value: "decimal<P,S>", variadic: {min: 1, parameterConsistency: INCONSISTENT}]
       //   return: "decimal<38,S>"
@@ -80,7 +81,7 @@ class VariadicParameterConsistencyValidator {
     // Compare all variadic arguments to the first one for more informative error messages
     // Variadic arguments start immediately after the fixed arguments
     int firstVariadicArgIdx = nonVariadicArgCount;
-      Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
+    Type firstVariadicType = argumentTypes.get(firstVariadicArgIdx);
     for (int i = firstVariadicArgIdx + 1; i < argumentTypes.size(); i++) {
       Type currentType = argumentTypes.get(i);
       if (!firstVariadicType.equalsIgnoringNullability(currentType)) {
