@@ -2,3 +2,4 @@ _apps
 _data
 **/*/bin
 build
+substrait.plan

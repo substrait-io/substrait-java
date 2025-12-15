@@ -4,6 +4,8 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.util.VisitationContext;
 import java.util.Optional;
 import org.immutables.value.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Captures the {@link SimpleExtension.EnumArgument} option value in a {@link
@@ -14,6 +16,9 @@ import org.immutables.value.Value;
  */
 @Value.Immutable
 public interface EnumArg extends FunctionArg {
+
+  Logger LOGGER = LoggerFactory.getLogger(EnumArg.class);
+
   EnumArg UNSPECIFIED_ENUM_ARG = builder().value(Optional.empty()).build();
 
   Optional<String> value();
@@ -26,7 +31,12 @@ public interface EnumArg extends FunctionArg {
   }
 
   static EnumArg of(SimpleExtension.EnumArgument enumArg, String option) {
-    assert (enumArg.options().contains(option));
+    if (!enumArg.options().contains(option)) {
+      LOGGER.warn(
+          String.format(
+              "Function does not accept those arguments %s %s", option, enumArg.options()));
+      return null;
+    }
     return builder().value(Optional.of(option)).build();
   }
 

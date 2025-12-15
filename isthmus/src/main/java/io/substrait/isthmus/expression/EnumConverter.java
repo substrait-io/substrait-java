@@ -4,6 +4,7 @@ import io.substrait.expression.EnumArg;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
+import io.substrait.isthmus.expression.ScalarFunctionConverter.INDEXING;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,12 @@ public class EnumConverter {
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0),
         SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 0),
+        TimeUnitRange.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 1),
+        INDEXING.class);
   }
 
   private static Optional<Enum<?>> constructValue(
@@ -82,6 +89,10 @@ public class EnumConverter {
 
     if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
       return option.get().map(SqlTrimFunction.Flag::valueOf);
+    }
+
+    if (cls.isAssignableFrom(INDEXING.class)) {
+      return option.get().map(INDEXING::valueOf);
     }
 
     return Optional.empty();

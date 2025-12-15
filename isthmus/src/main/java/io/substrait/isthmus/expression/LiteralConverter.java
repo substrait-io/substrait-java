@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.isthmus.expression.ScalarFunctionConverter.INDEXING;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -132,6 +133,10 @@ public class LiteralConverter {
             return ExpressionCreator.string(n, ((NlsString) value).getValue());
           } else if (value instanceof Enum) {
             Enum<?> v = (Enum<?>) value;
+            if (value instanceof INDEXING) {
+              return ExpressionCreator.string(n, v.name());
+            }
+
             Optional<Expression.Literal> r =
                 EnumConverter.canConvert(v)
                     ? Optional.of(ExpressionCreator.string(n, v.name()))
