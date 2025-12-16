@@ -144,5 +144,6 @@ tasks {
       "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
       "--add-opens=java.base/java.net=ALL-UNNAMED",
     )
+    environment("SPARK_LOCAL_IP", "127.0.0.1")
   }
 }
