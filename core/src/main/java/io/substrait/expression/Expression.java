@@ -830,6 +830,16 @@ public interface Expression extends FunctionArg {
       return outputType();
     }
 
+    /**
+     * Validates that variadic arguments satisfy the parameter consistency requirement. When
+     * CONSISTENT, all variadic arguments must have the same type (ignoring nullability). When
+     * INCONSISTENT, arguments can have different types.
+     */
+    @Value.Check
+    protected void check() {
+      VariadicParameterConsistencyValidator.validate(declaration(), arguments());
+    }
+
     public static ImmutableExpression.ScalarFunctionInvocation.Builder builder() {
       return ImmutableExpression.ScalarFunctionInvocation.builder();
     }
@@ -870,6 +880,16 @@ public interface Expression extends FunctionArg {
     }
 
     public abstract AggregationInvocation invocation();
+
+    /**
+     * Validates that variadic arguments satisfy the parameter consistency requirement. When
+     * CONSISTENT, all variadic arguments must have the same type (ignoring nullability). When
+     * INCONSISTENT, arguments can have different types.
+     */
+    @Value.Check
+    protected void check() {
+      VariadicParameterConsistencyValidator.validate(declaration(), arguments());
+    }
 
     public static ImmutableExpression.WindowFunctionInvocation.Builder builder() {
       return ImmutableExpression.WindowFunctionInvocation.builder();
