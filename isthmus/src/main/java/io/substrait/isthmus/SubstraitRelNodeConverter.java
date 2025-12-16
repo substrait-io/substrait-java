@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
@@ -14,6 +12,7 @@ import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractDdlRel;
@@ -70,7 +69,9 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -108,10 +109,18 @@ public class SubstraitRelNodeConverter
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
+    this(extensions, typeFactory, relBuilder, ImmutableFeatureBoard.builder().build());
+  }
+
+  public SubstraitRelNodeConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      RelBuilder relBuilder,
+      FeatureBoard featureBoard) {
     this(
         typeFactory,
         relBuilder,
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+        createScalarFunctionConverter(extensions, typeFactory, featureBoard.allowDynamicUdfs()),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT);
@@ -153,11 +162,68 @@ public class SubstraitRelNodeConverter
     this.expressionRexConverter.setRelNodeConverter(this);
   }
 
+  private static ScalarFunctionConverter createScalarFunctionConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      boolean allowDynamicUdfs) {
+
+    List<FunctionMappings.Sig> additionalSignatures;
+
+    if (allowDynamicUdfs) {
+      java.util.Set<String> knownFunctionNames =
+          FunctionMappings.SCALAR_SIGS.stream()
+              .map(FunctionMappings.Sig::name)
+              .collect(Collectors.toSet());
+
+      List<SimpleExtension.ScalarFunctionVariant> dynamicFunctions =
+          extensions.scalarFunctions().stream()
+              .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
+              .collect(Collectors.toList());
+
+      if (dynamicFunctions.isEmpty()) {
+        additionalSignatures = Collections.emptyList();
+      } else {
+        SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+            SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
+
+        List<SqlOperator> dynamicOperators =
+            SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+        additionalSignatures =
+            dynamicOperators.stream()
+                .map(op -> FunctionMappings.s(op, op.getName()))
+                .collect(Collectors.toList());
+      }
+    } else {
+      additionalSignatures = Collections.emptyList();
+    }
+
+    return new ScalarFunctionConverter(
+        extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+  }
+
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
       Prepare.CatalogReader catalogReader,
-      SqlParser.Config parserConfig) {
+      SqlParser.Config parserConfig,
+      SimpleExtension.ExtensionCollection extensions) {
+    return convert(
+        relRoot,
+        relOptCluster,
+        catalogReader,
+        parserConfig,
+        extensions,
+        ImmutableFeatureBoard.builder().build());
+  }
+
+  public static RelNode convert(
+      Rel relRoot,
+      RelOptCluster relOptCluster,
+      Prepare.CatalogReader catalogReader,
+      SqlParser.Config parserConfig,
+      SimpleExtension.ExtensionCollection extensions,
+      FeatureBoard featureBoard) {
     RelBuilder relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
@@ -169,7 +235,7 @@ public class SubstraitRelNodeConverter
 
     return relRoot.accept(
         new SubstraitRelNodeConverter(
-            EXTENSION_COLLECTION, relOptCluster.getTypeFactory(), relBuilder),
+            extensions, relOptCluster.getTypeFactory(), relBuilder, featureBoard),
         Context.newContext());
   }
 
@@ -645,38 +711,81 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
-    final RelDataType typeInfoOnly =
+    final RelDataType rowType =
         typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
 
     final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
 
     final List<RelDataType> fieldTypes =
-        typeInfoOnly.getFieldList().stream()
-            .map(RelDataTypeField::getType)
-            .collect(Collectors.toList());
+        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
 
     final RelDataType rowTypeWithNames =
         typeFactory.createStructType(fieldTypes, correctFieldNames);
 
-    final List<ImmutableList<RexLiteral>> tuples = new ArrayList<>();
-    for (final Expression.StructLiteral row : virtualTableScan.getRows()) {
-      final List<RexLiteral> rexRow = new ArrayList<>();
-      for (final Expression.Literal literal : row.fields()) {
-        final RexNode rexNode = literal.accept(expressionRexConverter, context);
-        if (rexNode instanceof RexLiteral) {
-          final RexLiteral rexLiteral = (RexLiteral) rexNode;
-          rexRow.add(rexLiteral);
-        } else {
-          throw new UnsupportedOperationException(
-              "VirtualTableScan only supports literal values, found: "
-                  + rexNode.getClass().getName());
+    // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
+    // standard LogicalValues relation.
+    boolean allLiterals =
+        virtualTableScan.getRows().stream()
+            .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
+    if (allLiterals) {
+      ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
+        for (Expression expr : rowExpr.fields()) {
+          final Expression.Literal literal = (Expression.Literal) expr;
+          final RexLiteral rexNode = (RexLiteral) literal.accept(expressionRexConverter, context);
+          tupleBuilder.add(rexNode);
         }
+        tuplesBuilder.add(tupleBuilder.build());
       }
-      tuples.add(ImmutableList.copyOf(rexRow));
-    }
+      return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
+    } else {
+      // When a VirtualTable contains non-literal expressions, they cannot be put directly into a
+      // LogicalValues relation. Instead, we create a LogicalProject for each row to compute its
+      // values, and combine them together using a LogicalUnion. For example the following:
+      //
+      //   VirtualTable
+      //     (e1, e2)
+      //     (e3, e4)
+      //
+      //  Becomes:
+      //
+      //   LogicalUnion(all=[true])
+      //     LogicalProject(exprs=[e1, e2])
+      //       <Empty Row>
+      //     LogicalProject(exprs=[e3, e4])
+      //       <Empty Row>
+      //
 
-    return LogicalValues.create(
-        relBuilder.getCluster(), rowTypeWithNames, ImmutableList.copyOf(tuples));
+      RelDataType emptyRowType = typeFactory.createStructType(List.of(), List.of());
+      ImmutableList<ImmutableList<RexLiteral>> emptyRowValue = ImmutableList.of(ImmutableList.of());
+
+      List<RelNode> projects = new ArrayList<>();
+      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+        List<RexNode> rexRow = new ArrayList<>();
+        for (Expression field : rowExpr.fields()) {
+          rexRow.add(field.accept(expressionRexConverter, context));
+        }
+        RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyRowValue);
+        RelNode project =
+            LogicalProject.create(
+                values, Collections.emptyList(), rexRow, rowType, Collections.emptySet());
+        projects.add(project);
+      }
+      RelNode union = LogicalUnion.create(projects, true);
+
+      // Apply a final LogicalProject on top to capture the field names from the VirtualTable
+      List<RexNode> topProjectExprs = new ArrayList<>();
+      for (int i = 0; i < rowType.getFieldCount(); i++) {
+        topProjectExprs.add(rexBuilder.makeInputRef(union, i));
+      }
+      return LogicalProject.create(
+          union,
+          Collections.emptyList(),
+          topProjectExprs,
+          rowTypeWithNames,
+          Collections.emptySet());
+    }
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {

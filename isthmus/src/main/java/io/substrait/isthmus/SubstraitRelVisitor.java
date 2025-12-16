@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
-import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
@@ -10,6 +9,7 @@ import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -63,6 +63,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
@@ -89,10 +90,31 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
       FeatureBoard features) {
+
     this.typeConverter = TypeConverter.DEFAULT;
-    ArrayList<CallConverter> converters = new ArrayList<CallConverter>();
+    ArrayList<CallConverter> converters = new ArrayList<>();
     converters.addAll(CallConverters.defaults(typeConverter));
-    converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+
+    if (features.allowDynamicUdfs()) {
+      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+          ExtensionUtils.getDynamicExtensions(extensions);
+      List<SqlOperator> dynamicOperators =
+          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+
+      List<FunctionMappings.Sig> additionalSignatures =
+          dynamicOperators.stream()
+              .map(op -> FunctionMappings.s(op, op.getName()))
+              .collect(Collectors.toList());
+      converters.add(
+          new ScalarFunctionConverter(
+              extensions.scalarFunctions(),
+              additionalSignatures,
+              typeFactory,
+              TypeConverter.DEFAULT));
+    } else {
+      converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+    }
+
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     this.aggregateFunctionConverter =
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
@@ -145,17 +167,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (values.getTuples().isEmpty()) {
       return EmptyScan.builder().initialSchema(type).build();
     }
-
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Expression.StructLiteral> structs =
+    List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  List<Literal> fields =
+                  List<Expression> fields =
                       list.stream()
                           .map(l -> literalConverter.convert(l))
                           .collect(Collectors.toUnmodifiableList());
-                  return ExpressionCreator.struct(false, fields);
+                  return ExpressionCreator.nestedStruct(false, fields);
                 })
             .collect(Collectors.toUnmodifiableList());
     return VirtualTableScan.builder().initialSchema(type).addAllRows(structs).build();
@@ -178,6 +199,11 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         project.getProjects().stream()
             .map(this::toExpression)
             .collect(java.util.stream.Collectors.toList());
+
+    // if there are no input fields, no remap is necessary
+    if (project.getInput().getRowType().getFieldCount() == 0) {
+      return Project.builder().expressions(expressions).input(apply(project.getInput())).build();
+    }
 
     // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
     return Project.builder()
@@ -578,7 +604,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
     }
-
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
 

@@ -75,6 +75,12 @@ public class ExpressionProtoConverter
     return Expression.newBuilder().setLiteral(builder).build();
   }
 
+  private Expression nested(Consumer<Expression.Nested.Builder> consumer) {
+    Expression.Nested.Builder builder = Expression.Nested.newBuilder();
+    consumer.accept(builder);
+    return Expression.newBuilder().setNested(builder).build();
+  }
+
   @Override
   public Expression visit(
       io.substrait.expression.Expression.BoolLiteral expr, EmptyVisitationContext context) {
@@ -359,6 +365,18 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
+      io.substrait.expression.Expression.NestedStruct expr, EmptyVisitationContext context) {
+    return nested(
+        bldr -> {
+          List<Expression> values =
+              expr.fields().stream().map(this::toProto).collect(Collectors.toList());
+          bldr.setStruct(Expression.Nested.Struct.newBuilder().addAllFields(values))
+              .setNullable(expr.nullable());
+        });
+  }
+
+  @Override
+  public Expression visit(
       io.substrait.expression.Expression.UserDefinedLiteral expr, EmptyVisitationContext context) {
     int typeReference =
         extensionCollector.getTypeReference(SimpleExtension.TypeAnchor.of(expr.urn(), expr.name()));
@@ -493,6 +511,22 @@ public class ExpressionProtoConverter
                                     .addAllFields(toProto(r.values()))
                                     .build())
                         .collect(java.util.stream.Collectors.toList())))
+        .build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.NestedList expr, EmptyVisitationContext context)
+      throws RuntimeException {
+
+    List<Expression> values =
+        expr.values().stream().map(this::toProto).collect(Collectors.toList());
+
+    return Expression.newBuilder()
+        .setNested(
+            Expression.Nested.newBuilder()
+                .setList(Expression.Nested.List.newBuilder().addAllValues(values))
+                .setNullable(expr.nullable()))
         .build();
   }
 

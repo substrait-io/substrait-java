@@ -197,6 +197,8 @@ public class ProtoExpressionConverter {
                   multiOrList.getValueList().stream().map(this::from).collect(Collectors.toList()))
               .build();
         }
+      case NESTED:
+        return from(expr.getNested());
       case CAST:
         return ExpressionCreator.cast(
             protoTypeConverter.from(expr.getCast().getType()),
@@ -361,6 +363,18 @@ public class ProtoExpressionConverter {
     }
   }
 
+  public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
+    switch (nested.getNestedTypeCase()) {
+      case LIST:
+        List<Expression> list =
+            nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
+        return ExpressionCreator.nestedList(nested.getNullable(), list);
+      default:
+        throw new UnsupportedOperationException(
+            "Unimplemented nested type: " + nested.getNestedTypeCase());
+    }
+  }
+
   public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
     switch (literal.getLiteralTypeCase()) {
       case BOOLEAN:
@@ -500,6 +514,18 @@ public class ProtoExpressionConverter {
       default:
         throw new IllegalStateException("Unexpected value: " + literal.getLiteralTypeCase());
     }
+  }
+
+  public Expression.StructLiteral from(io.substrait.proto.Expression.Literal.Struct struct) {
+    return Expression.StructLiteral.builder()
+        .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
+        .build();
+  }
+
+  public Expression.NestedStruct from(io.substrait.proto.Expression.Nested.Struct struct) {
+    return Expression.NestedStruct.builder()
+        .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
+        .build();
   }
 
   private static List<FunctionArg> fromFunctionArgumentList(

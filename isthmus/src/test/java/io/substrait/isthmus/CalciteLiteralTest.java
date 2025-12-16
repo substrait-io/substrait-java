@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SqlConverterBase.EXTENSION_COLLECTION;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -11,6 +10,8 @@ import io.substrait.expression.Expression.IntervalYearLiteral;
 import io.substrait.expression.Expression.Literal;
 import io.substrait.expression.Expression.TimestampLiteral;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -35,6 +36,8 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class CalciteLiteralTest extends CalciteObjs {
+  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   private final ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(EXTENSION_COLLECTION.scalarFunctions(), type);

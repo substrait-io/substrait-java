@@ -281,9 +281,29 @@ public class ExpressionCreator {
     return Expression.StructLiteral.builder().nullable(nullable).addFields(values).build();
   }
 
+  /**
+   * Creates a nested list expression with one or more elements.
+   *
+   * <p>Note: This class cannot be used to construct an empty list. To create an empty list, use
+   * {@link ExpressionCreator#emptyList(boolean, Type)} which returns an {@link
+   * Expression.EmptyListLiteral}.
+   */
+  public static Expression.NestedList nestedList(boolean nullable, List<Expression> values) {
+    return Expression.NestedList.builder().nullable(nullable).addAllValues(values).build();
+  }
+
   public static Expression.StructLiteral struct(
       boolean nullable, Iterable<? extends Expression.Literal> values) {
     return Expression.StructLiteral.builder().nullable(nullable).addAllFields(values).build();
+  }
+
+  public static Expression.NestedStruct nestedStruct(
+      boolean nullable, Iterable<Expression> fields) {
+    return Expression.NestedStruct.builder().nullable(nullable).addAllFields(fields).build();
+  }
+
+  public static Expression.NestedStruct nestedStruct(boolean nullable, Expression... fields) {
+    return Expression.NestedStruct.builder().nullable(nullable).addFields(fields).build();
   }
 
   public static Expression.UserDefinedLiteral userDefinedLiteral(

@@ -1,5 +1,6 @@
 package io.substrait.examples.util;
 
+import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.BinaryLiteral;
 import io.substrait.expression.Expression.BoolLiteral;
 import io.substrait.expression.Expression.Cast;
@@ -188,6 +189,12 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Expression.NestedStruct expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<NestedStruct >";
+  }
+
+  @Override
   public String visit(UserDefinedLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
     return "<UserDefinedLiteral " + expr.value() + ">";
@@ -254,6 +261,12 @@ public class ExpressionStringify extends ParentStringify
     StringBuilder sb = new StringBuilder("Cast#");
 
     return sb.toString();
+  }
+
+  @Override
+  public String visit(Expression.NestedList expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<NestedList>";
   }
 
   @Override
