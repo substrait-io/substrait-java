@@ -38,6 +38,7 @@ public class SubstraitToCalcite {
   protected final RelDataTypeFactory typeFactory;
   protected final TypeConverter typeConverter;
   protected final Prepare.CatalogReader catalogReader;
+  protected final FeatureBoard featureBoard;
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
@@ -63,10 +64,25 @@ public class SubstraitToCalcite {
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter,
       Prepare.CatalogReader catalogReader) {
+    this(
+        extensions,
+        typeFactory,
+        typeConverter,
+        catalogReader,
+        ImmutableFeatureBoard.builder().build());
+  }
+
+  public SubstraitToCalcite(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter,
+      Prepare.CatalogReader catalogReader,
+      FeatureBoard featureBoard) {
     this.extensions = extensions;
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
     this.catalogReader = catalogReader;
+    this.featureBoard = featureBoard;
   }
 
   /**
@@ -94,7 +110,7 @@ public class SubstraitToCalcite {
    * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
    */
   protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-    return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder);
+    return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder, featureBoard);
   }
 
   /**

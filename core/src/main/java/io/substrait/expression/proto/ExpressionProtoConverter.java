@@ -543,6 +543,22 @@ public class ExpressionProtoConverter
   }
 
   @Override
+  public Expression visit(
+      io.substrait.expression.Expression.NestedList expr, EmptyVisitationContext context)
+      throws RuntimeException {
+
+    List<Expression> values =
+        expr.values().stream().map(this::toProto).collect(Collectors.toList());
+
+    return Expression.newBuilder()
+        .setNested(
+            Expression.Nested.newBuilder()
+                .setList(Expression.Nested.List.newBuilder().addAllValues(values))
+                .setNullable(expr.nullable()))
+        .build();
+  }
+
+  @Override
   public Expression visit(FieldReference expr, EmptyVisitationContext context) {
 
     Expression.ReferenceSegment seg = null;

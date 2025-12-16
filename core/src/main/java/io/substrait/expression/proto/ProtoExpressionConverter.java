@@ -197,6 +197,8 @@ public class ProtoExpressionConverter {
                   multiOrList.getValueList().stream().map(this::from).collect(Collectors.toList()))
               .build();
         }
+      case NESTED:
+        return from(expr.getNested());
       case CAST:
         return ExpressionCreator.cast(
             protoTypeConverter.from(expr.getCast().getType()),
@@ -358,6 +360,18 @@ public class ProtoExpressionConverter {
         return WindowBound.UNBOUNDED;
       default:
         throw new IllegalArgumentException("Unsupported bound kind: " + bound.getKindCase());
+    }
+  }
+
+  public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
+    switch (nested.getNestedTypeCase()) {
+      case LIST:
+        List<Expression> list =
+            nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
+        return ExpressionCreator.nestedList(nested.getNullable(), list);
+      default:
+        throw new UnsupportedOperationException(
+            "Unimplemented nested type: " + nested.getNestedTypeCase());
     }
   }
 

@@ -17,4 +17,19 @@ public abstract class FeatureBoard {
   public Casing unquotedCasing() {
     return Casing.TO_UPPER;
   }
+
+  /**
+   * Controls whether to support dynamic user-defined functions (UDFs) during SQL to Substrait plan
+   * conversion.
+   *
+   * <p>When enabled, custom functions defined in extension YAML files are available for use in SQL
+   * queries. These functions will be dynamically converted to SQL operators during plan conversion.
+   * This feature must be explicitly enabled by users and is disabled by default.
+   *
+   * @return true if dynamic UDFs should be supported; false otherwise (default)
+   */
+  @Value.Default
+  public boolean allowDynamicUdfs() {
+    return false;
+  }
 }

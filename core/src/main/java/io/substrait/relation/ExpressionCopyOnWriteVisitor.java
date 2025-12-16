@@ -363,6 +363,16 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Expression> visit(Expression.NestedList expr, EmptyVisitationContext context)
+      throws E {
+    Optional<List<Expression>> expressions = visitExprList(expr.values(), context);
+
+    return expressions.map(
+        expressionList ->
+            Expression.NestedList.builder().from(expr).values(expressionList).build());
+  }
+
   protected Optional<Expression.MultiOrListRecord> visitMultiOrListRecord(
       Expression.MultiOrListRecord multiOrListRecord, EmptyVisitationContext context) throws E {
     return visitExprList(multiOrListRecord.values(), context)

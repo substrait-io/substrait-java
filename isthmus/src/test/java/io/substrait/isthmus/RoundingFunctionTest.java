@@ -12,20 +12,20 @@ class RoundingFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"fp32", "fp64"})
   void ceil(String column) throws Exception {
     String query = String.format("SELECT ceil(%s) FROM numbers", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"fp32", "fp64"})
   void floor(String column) throws Exception {
     String query = String.format("SELECT floor(%s) FROM numbers", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"i8", "i16", "i32", "i64", "fp32", "fp64"})
   void round(String column) throws Exception {
     String query = String.format("SELECT round(%s, 2) FROM numbers", column);
-    assertSqlSubstraitRelRoundTrip(query, CREATES);
+    assertFullRoundTrip(query, CREATES);
   }
 }

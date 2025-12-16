@@ -28,77 +28,77 @@ class Substrait2SqlTest extends PlanTestBase {
   @Test
   void simpleTest() throws Exception {
     String query = "select p_size  from part where p_partkey > cast(100 as bigint)";
-    assertSqlSubstraitRelRoundTrip(query);
+    assertFullRoundTrip(query);
   }
 
   @Test
   void simpleTest2() throws Exception {
     String query =
         "select l_partkey, l_discount from lineitem where l_orderkey > cast(100 as bigint)";
-    assertSqlSubstraitRelRoundTrip(query);
+    assertFullRoundTrip(query);
   }
 
   @Test
   void simpleTestDateInterval() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' ");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '3' month ");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '1' year");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_shipdate from lineitem where l_shipdate < date '1998-01-01' + interval '1-3' year to month");
   }
 
   @Test
   void simpleTestDecimal() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0 from lineitem where l_shipdate < date '1998-01-01' ");
   }
 
   @Test
   void simpleJoin() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0, o_orderkey from lineitem join orders on l_orderkey = o_orderkey where l_shipdate < date '1998-01-01' ");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0, o_orderkey from lineitem left join orders on l_orderkey = o_orderkey where l_shipdate < date '1998-01-01' ");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0, o_orderkey from lineitem right join orders on l_orderkey = o_orderkey where l_shipdate < date '1998-01-01' ");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey + l_orderkey, l_extendedprice * 0.1 + 100.0, o_orderkey from lineitem full join orders on l_orderkey = o_orderkey where l_shipdate < date '1998-01-01' ");
   }
 
   @Test
   void simpleTestAgg() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey, count(l_tax), COUNT(distinct l_discount) from lineitem group by l_partkey");
 
     // group by an expression
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select count(l_tax), COUNT(distinct l_discount) from lineitem group by l_partkey + l_orderkey");
   }
 
   @Test
   void simpleTestGroupingSets() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate), l_linestatus");
 
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate, ())");
 
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate, ()), l_linestatus");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), (l_orderkey, L_COMMITDATE, l_linestatus), l_shipdate, ())");
 
     // GROUP_ID()
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select group_id(), sum(l_discount) from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select group_id(), sum(l_discount), group_id() from lineitem group by grouping sets ((l_orderkey, L_COMMITDATE), l_shipdate)");
   }
 
@@ -119,31 +119,31 @@ class Substrait2SqlTest extends PlanTestBase {
 
   @Test
   void simpleTestAggNoGB() throws Exception {
-    assertSqlSubstraitRelRoundTrip("select count(l_tax), count(distinct l_discount) from lineitem");
+    assertFullRoundTrip("select count(l_tax), count(distinct l_discount) from lineitem");
   }
 
   @Test
   void simpleTestAgg2() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey, sum(l_tax), sum(distinct l_tax), avg(l_discount), avg(distinct l_discount) from lineitem group by l_partkey");
   }
 
   @Test
   void simpleTestAgg3() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select l_partkey, sum(l_extendedprice * (1.0 - l_discount)) from lineitem group by l_partkey");
   }
 
   @ParameterizedTest
   @MethodSource("io.substrait.isthmus.utils.SetUtils#setTestConfig")
   void setTest(Set.SetOp op, boolean multi) throws Exception {
-    assertSqlSubstraitRelRoundTrip(SetUtils.getSetQuery(op, multi));
+    assertFullRoundTrip(SetUtils.getSetQuery(op, multi));
   }
 
   @Test
   void tpch_q1_variant() throws Exception {
     // difference from tpch_q1 : 1) remove order by clause; 2) remove interval date literal
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select\n"
             + "  l_returnflag,\n"
             + "  l_linestatus,\n"
@@ -198,20 +198,18 @@ class Substrait2SqlTest extends PlanTestBase {
 
   @Test
   void simpleStringOpTest() throws Exception {
-    assertSqlSubstraitRelRoundTrip("select substring(l_comment, 1, 5) from lineitem");
+    assertFullRoundTrip("select substring(l_comment, 1, 5) from lineitem");
 
-    assertSqlSubstraitRelRoundTrip("select lower(l_comment) from lineitem");
-    assertSqlSubstraitRelRoundTrip(
-        "select l_comment from lineitem where lower(l_comment) <> l_comment");
+    assertFullRoundTrip("select lower(l_comment) from lineitem");
+    assertFullRoundTrip("select l_comment from lineitem where lower(l_comment) <> l_comment");
 
-    assertSqlSubstraitRelRoundTrip("select upper(l_comment) from lineitem");
-    assertSqlSubstraitRelRoundTrip(
-        "select l_comment from lineitem where upper(l_comment) <> l_comment");
+    assertFullRoundTrip("select upper(l_comment) from lineitem");
+    assertFullRoundTrip("select l_comment from lineitem where upper(l_comment) <> l_comment");
   }
 
   @Test
   void caseWhenTest() throws Exception {
-    assertSqlSubstraitRelRoundTrip(
+    assertFullRoundTrip(
         "select case when p_size > 100 then 'large' when p_size > 50 then 'medium' else 'small' end from part");
   }
 }

@@ -271,6 +271,12 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Expression.NestedList expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<NestedList>";
+  }
+
+  @Override
   public String visit(FieldReference expr, EmptyVisitationContext context) throws RuntimeException {
     StringBuilder sb = new StringBuilder("FieldRef#");
     Type type = expr.getType();
