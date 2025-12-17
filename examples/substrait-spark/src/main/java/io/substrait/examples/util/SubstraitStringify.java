@@ -73,7 +73,6 @@ public class SubstraitStringify extends ParentStringify
   /**
    * Explains the Sustrait plan
    *
-   * @param plan Subsrait plan
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.plan.Plan plan) {
