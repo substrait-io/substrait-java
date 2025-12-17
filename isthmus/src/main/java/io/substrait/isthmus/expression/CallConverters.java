@@ -17,8 +17,24 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Collection of small, composable {@link CallConverter}s for common Calcite {@link RexCall}s (e.g.,
+ * CAST, CASE, REINTERPRET, SEARCH). Each converter returns a Substrait {@link Expression} or {@code
+ * null} when the call is not handled.
+ *
+ * <p>Use {@link #defaults(TypeConverter)} to get a standard set.
+ */
 public class CallConverters {
 
+  /**
+   * Converter for {@link SqlKind#CAST} and {@link SqlKind#SAFE_CAST} to Substrait {@link
+   * Expression.Cast}.
+   *
+   * <p>On SAFE_CAST, sets {@link Expression.FailureBehavior#RETURN_NULL}; otherwise
+   * THROW_EXCEPTION.
+   *
+   * @see ExpressionCreator#cast(Type, Expression, Expression.FailureBehavior)
+   */
   public static Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->
           (call, visitor) -> {
@@ -53,7 +69,9 @@ public class CallConverters {
    * SubstraitRelNodeConverter.Context)} for this conversion.
    *
    * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
-   * Expression.UserDefinedAnyLiteral} that was stored.
+   * Expression.UserDefinedLiteral} that was stored.
+   *
+   * @see Expression.UserDefinedLiteral
    */
   public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
@@ -100,7 +118,7 @@ public class CallConverters {
   //        return null;
   //      };
   //  }
-  /** */
+  /** Converter for {@link SqlKind#CASE} to Substrait {@link Expression.IfThen}. */
   public static SimpleCallConverter CASE =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.CASE) {
@@ -133,6 +151,9 @@ public class CallConverters {
    * Expand {@link org.apache.calcite.util.Sarg} values in a calcite `SqlSearchOperator` into
    * simpler expressions. The expansion logic is encoded in {@link RexUtil#expandSearch(RexBuilder,
    * RexProgram, RexNode)}
+   *
+   * <p>Returns a factory of {@link SimpleCallConverter} that expands SEARCH calls using the
+   * provided {@link RexBuilder}
    */
   public static Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
       (RexBuilder rexBuilder) ->
@@ -146,6 +167,12 @@ public class CallConverters {
             }
           };
 
+  /**
+   * Returns the default set of converters for common calls.
+   *
+   * @param typeConverter type mapper between Substrait and Calcite types
+   * @return list of default {@link CallConverter}s
+   */
   public static List<CallConverter> defaults(TypeConverter typeConverter) {
     return ImmutableList.of(
         new FieldSelectionConverter(typeConverter),
@@ -156,10 +183,27 @@ public class CallConverters {
         new SqlMapValueConstructorCallConverter());
   }
 
+  /** Minimal interface for single-call converters used by {@link CallConverter}. */
   public interface SimpleCallConverter extends CallConverter {
 
+    /**
+     * Converts a given {@link RexCall} to a Substrait {@link Expression}, or returns {@code null}
+     * if not handled.
+     *
+     * @param call the Calcite call to convert
+     * @param topLevelConverter converter for nested {@link RexNode} operands
+     * @return converted expression, or {@code null} if not applicable
+     */
     @Nullable Expression apply(RexCall call, Function<RexNode, Expression> topLevelConverter);
 
+    /**
+     * Default adapter to {@link CallConverter#convert(RexCall, Function)} returning {@link
+     * Optional#empty()} when {@link #apply(RexCall, Function)} returns {@code null}.
+     *
+     * @param call the Calcite call to convert
+     * @param topLevelConverter converter for nested {@link RexNode} operands
+     * @return optional converted expression
+     */
     @Override
     default Optional<Expression> convert(
         RexCall call, Function<RexNode, Expression> topLevelConverter) {

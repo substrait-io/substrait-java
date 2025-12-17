@@ -24,22 +24,47 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
+/**
+ * Converts Calcite {@link AggregateCall} instances into Substrait aggregate {@link
+ * AggregateFunctionInvocation}s using configured function variants and signatures.
+ *
+ * <p>Handles special cases (e.g., approximate distinct count) and collation/sort fields.
+ */
 public class AggregateFunctionConverter
     extends FunctionConverter<
         SimpleExtension.AggregateFunctionVariant,
         AggregateFunctionInvocation,
         AggregateFunctionConverter.WrappedAggregateCall> {
 
+  /**
+   * Returns the supported aggregate signatures used for matching functions.
+   *
+   * @return immutable list of aggregate signatures
+   */
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.AGGREGATE_SIGS;
   }
 
+  /**
+   * Creates a converter with the given function variants and type factory.
+   *
+   * @param functions available aggregate function variants
+   * @param typeFactory Calcite type factory
+   */
   public AggregateFunctionConverter(
       List<SimpleExtension.AggregateFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
+  /**
+   * Creates a converter with additional signatures and a type converter.
+   *
+   * @param functions available aggregate function variants
+   * @param additionalSignatures extra signatures to consider
+   * @param typeFactory Calcite type factory
+   * @param typeConverter Substrait type converter
+   */
   public AggregateFunctionConverter(
       List<SimpleExtension.AggregateFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
@@ -48,6 +73,15 @@ public class AggregateFunctionConverter
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
+  /**
+   * Builds a Substrait aggregate invocation from the matched call and arguments.
+   *
+   * @param call wrapped aggregate call
+   * @param function matched Substrait function variant
+   * @param arguments converted arguments
+   * @param outputType result type of the invocation
+   * @return aggregate function invocation
+   */
   @Override
   protected AggregateFunctionInvocation generateBinding(
       WrappedAggregateCall call,
@@ -75,6 +109,15 @@ public class AggregateFunctionConverter
         arguments);
   }
 
+  /**
+   * Attempts to convert a Calcite aggregate call to a Substrait invocation.
+   *
+   * @param input input relational node
+   * @param inputType Substrait input struct type
+   * @param call Calcite aggregate call
+   * @param topLevelConverter converter for RexNodes to Expressions
+   * @return optional Substrait aggregate invocation
+   */
   public Optional<AggregateFunctionInvocation> convert(
       RelNode input,
       Type.Struct inputType,
@@ -93,6 +136,12 @@ public class AggregateFunctionConverter
     return m.attemptMatch(wrapped, topLevelConverter);
   }
 
+  /**
+   * Resolves the appropriate function finder, applying Substrait-specific variants when needed.
+   *
+   * @param call Calcite aggregate call
+   * @return function finder for the resolved aggregate function, or {@code null} if none
+   */
   protected FunctionFinder getFunctionFinder(AggregateCall call) {
     // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
     // before converting into substrait function
@@ -108,12 +157,21 @@ public class AggregateFunctionConverter
     return signatures.get(lookupFunction);
   }
 
+  /** Lightweight wrapper around {@link AggregateCall} providing operands and type access. */
   static class WrappedAggregateCall implements FunctionConverter.GenericCall {
     private final AggregateCall call;
     private final RelNode input;
     private final RexBuilder rexBuilder;
     private final Type.Struct inputType;
 
+    /**
+     * Creates a new wrapped aggregate call.
+     *
+     * @param call underlying Calcite aggregate call
+     * @param input input relational node
+     * @param rexBuilder Rex builder for operand construction
+     * @param inputType Substrait input struct type
+     */
     private WrappedAggregateCall(
         AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
       this.call = call;
@@ -122,15 +180,30 @@ public class AggregateFunctionConverter
       this.inputType = inputType;
     }
 
+    /**
+     * Returns operands as input references over the argument list.
+     *
+     * @return stream of RexNode operands
+     */
     @Override
     public Stream<RexNode> getOperands() {
       return call.getArgList().stream().map(r -> rexBuilder.makeInputRef(input, r));
     }
 
+    /**
+     * Exposes the underlying Calcite aggregate call.
+     *
+     * @return the aggregate call
+     */
     public AggregateCall getUnderlying() {
       return call;
     }
 
+    /**
+     * Returns the type of the aggregate call result.
+     *
+     * @return Calcite result type
+     */
     @Override
     public RelDataType getType() {
       return call.getType();

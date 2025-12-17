@@ -24,22 +24,47 @@ import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.sql.SqlAggFunction;
 
+/**
+ * Converts Calcite window function calls ({@link RexOver}) into Substrait {@link
+ * Expression.WindowFunctionInvocation}s using configured Substrait window function variants.
+ *
+ * <p>Handles partitioning, ordering, bounds (ROWS/RANGE, lower/upper), and DISTINCT/ALL invocation.
+ */
 public class WindowFunctionConverter
     extends FunctionConverter<
         SimpleExtension.WindowFunctionVariant,
         Expression.WindowFunctionInvocation,
         WindowFunctionConverter.WrappedWindowCall> {
 
+  /**
+   * Returns the supported window function signatures used for matching.
+   *
+   * @return immutable list of supported signatures.
+   */
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.WINDOW_SIGS;
   }
 
+  /**
+   * Creates a converter with the provided window function variants.
+   *
+   * @param functions Supported Substrait window function variants.
+   * @param typeFactory Calcite type factory for type handling.
+   */
   public WindowFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
+  /**
+   * Creates a converter with provided function variants and additional signatures.
+   *
+   * @param functions Supported Substrait window function variants.
+   * @param additionalSignatures Extra signatures to consider during matching.
+   * @param typeFactory Calcite type factory for type handling.
+   * @param typeConverter Converter for Calcite/Substrait types.
+   */
   public WindowFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
@@ -48,6 +73,15 @@ public class WindowFunctionConverter
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
+  /**
+   * Generates a bound Substrait window function invocation for a matched call.
+   *
+   * @param call Wrapped window call, including {@link RexOver} and expression converter.
+   * @param function Selected Substrait function variant.
+   * @param arguments Converted Substrait function arguments.
+   * @param outputType Result type for the invocation.
+   * @return Built {@link Expression.WindowFunctionInvocation}.
+   */
   @Override
   protected Expression.WindowFunctionInvocation generateBinding(
       WrappedWindowCall call,
@@ -92,6 +126,19 @@ public class WindowFunctionConverter
         arguments);
   }
 
+  /**
+   * Attempts to convert a Calcite {@link RexOver} call into a Substrait window function invocation.
+   *
+   * <p>Resolves the corresponding Substrait aggregate function variant, checks arity using
+   * signatures, and builds the invocation if match succeeds.
+   *
+   * @param over Calcite windowed aggregate call.
+   * @param topLevelConverter Function converting top-level {@link RexNode}s to Substrait {@link
+   *     Expression}s.
+   * @param rexExpressionConverter Converter for nested {@link RexNode} expressions.
+   * @return {@link Optional} containing the {@link Expression.WindowFunctionInvocation} if matched;
+   *     otherwise empty.
+   */
   public Optional<Expression.WindowFunctionInvocation> convert(
       RexOver over,
       Function<RexNode, Expression> topLevelConverter,

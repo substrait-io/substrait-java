@@ -18,23 +18,49 @@ import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
+/**
+ * Base class for Substrait SQL conversion pipelines.
+ *
+ * <p>Configures Calcite parser, connection, planner, and cluster. Holds the Substrait extensions
+ * and feature flags. Subclasses can build conversions from SQL to Calcite/Substrait using this
+ * shared setup.
+ */
 public class SqlConverterBase {
+  /** Substrait extension collection used for function/operator mappings. */
   protected final SimpleExtension.ExtensionCollection extensionCollection;
 
+  /** Default Calcite connection config (case-insensitive). */
   public static final CalciteConnectionConfig CONNECTION_CONFIG =
       CalciteConnectionConfig.DEFAULT.set(
           CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
 
+  /** Calcite type factory using the Substrait type system. */
   final RelDataTypeFactory factory;
+
+  /** Calcite optimization cluster with planner, type factory, and RexBuilder. */
   final RelOptCluster relOptCluster;
+
+  /** Connection configuration used for SQL parsing and validation. */
   final CalciteConnectionConfig config;
+
+  /** Configuration for SQL-to-Rel conversion. */
   final SqlToRelConverter.Config converterConfig;
 
+  /** Parser configuration, including casing and DDL parser factory. */
   final SqlParser.Config parserConfig;
 
+  /** Default feature board if none is provided. */
   protected static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
+
+  /** Feature flags controlling conversion behavior. */
   final FeatureBoard featureBoard;
 
+  /**
+   * Creates a converter base with explicit features and extensions.
+   *
+   * @param features Feature flags controlling behavior; if {@code null}, defaults are used.
+   * @param extensionCollection Substrait extension collection for mapping functions/operators.
+   */
   protected SqlConverterBase(
       FeatureBoard features, SimpleExtension.ExtensionCollection extensionCollection) {
     this.factory = SubstraitTypeSystem.TYPE_FACTORY;
@@ -59,6 +85,11 @@ public class SqlConverterBase {
     this.extensionCollection = extensionCollection;
   }
 
+  /**
+   * Creates a converter base with explicit features and the default Substrait extension catalog.
+   *
+   * @param features Feature flags controlling behavior; if {@code null}, defaults are used.
+   */
   protected SqlConverterBase(FeatureBoard features) {
     this(features, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }

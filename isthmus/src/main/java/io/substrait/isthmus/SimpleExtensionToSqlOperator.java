@@ -23,6 +23,21 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+/**
+ * Utility class for converting Substrait {@link SimpleExtension} function definitions (scalar and
+ * aggregate) into Calcite {@link SqlOperator}s.
+ *
+ * <p>This enables Calcite to recognize and use Substrait-defined functions during query planning
+ * and execution. Conversion includes:
+ *
+ * <ul>
+ *   <li>Mapping Substrait types to Calcite {@link SqlTypeName}
+ *   <li>Building {@link SqlFunction} instances with proper argument families
+ *   <li>Inferring return types based on Substrait type expressions and nullability rules
+ * </ul>
+ *
+ * <p>Currently supports scalar and aggregate functions; window functions are not yet implemented.
+ */
 public final class SimpleExtensionToSqlOperator {
 
   private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
@@ -32,15 +47,40 @@ public final class SimpleExtensionToSqlOperator {
 
   private SimpleExtensionToSqlOperator() {}
 
+  /**
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
+   * aggregate) into Calcite {@link SqlOperator}s using the default type factory.
+   *
+   * @param collection The Substrait extension collection containing function definitions.
+   * @return A list of Calcite {@link SqlOperator}s corresponding to the Substrait functions.
+   */
   public static List<SqlOperator> from(SimpleExtension.ExtensionCollection collection) {
     return from(collection, DEFAULT_TYPE_FACTORY);
   }
 
+  /**
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
+   * aggregate) into Calcite {@link SqlOperator}s using a provided type factory.
+   *
+   * @param collection The Substrait extension collection containing function definitions.
+   * @param typeFactory Calcite {@link RelDataTypeFactory} for type creation and inference.
+   * @return A list of Calcite {@link SqlOperator}s corresponding to the Substrait functions.
+   */
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection, RelDataTypeFactory typeFactory) {
     return from(collection, typeFactory, TypeConverter.DEFAULT);
   }
 
+  /**
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
+   * aggregate) into Calcite {@link SqlOperator}s with a custom type factory and {@link
+   * TypeConverter}.
+   *
+   * @param collection The Substrait extension collection containing function definitions.
+   * @param typeFactory Calcite {@link RelDataTypeFactory} for type creation and inference.
+   * @param typeConverter Converter for Substrait/Calcite type mappings.
+   * @return A list of Calcite {@link SqlOperator}s corresponding to the Substrait functions.
+   */
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection,
       RelDataTypeFactory typeFactory,

@@ -17,7 +17,6 @@ import io.substrait.function.ToTypeString;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.expression.FunctionMappings.Sig;
-import io.substrait.isthmus.expression.FunctionMappings.TypeBasedResolver;
 import io.substrait.type.Type;
 import io.substrait.util.Util;
 import java.util.ArrayList;
@@ -49,60 +48,63 @@ import org.slf4j.LoggerFactory;
  * Abstract base class for converting between Calcite {@link SqlOperator}s and Substrait function
  * invocations.
  *
- * <p>This class handles bidirectional conversion:
+ * <p>Supports Calcite → Substrait conversion via signature matching/coercion and Substrait →
+ * Calcite lookup via function keys.
  *
- * <ul>
- *   <li><b>Calcite → Substrait:</b> Subclasses implement {@code convert()} methods to convert
- *       Calcite calls to Substrait function invocations
- *   <li><b>Substrait → Calcite:</b> {@link #getSqlOperatorFromSubstraitFunc} converts Substrait
- *       function keys to Calcite {@link SqlOperator}s
- * </ul>
- *
- * <p>When multiple functions with the same name and signature are passed into the constructor, a
- * <b>last-wins precedence strategy</b> is used for resolution. The last function in the input list
- * takes precedence during Calcite to Substrait conversion.
- *
- * @param <F> the function type (ScalarFunctionVariant, AggregateFunctionVariant, etc.)
- * @param <T> the return type for Calcite→Substrait conversion
- * @param <C> the call type being converted
+ * @param <F> function variant type (e.g., ScalarFunctionVariant, AggregateFunctionVariant)
+ * @param <T> return type produced when binding Substrait invocations
+ * @param <C> generic call wrapper exposing operands and type
  */
 public abstract class FunctionConverter<
     F extends SimpleExtension.Function, T, C extends FunctionConverter.GenericCall> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FunctionConverter.class);
 
+  /**
+   * Maps Calcite {@link SqlOperator}s to {@link FunctionFinder}s for signature-based matching. Used
+   * to locate Substrait functions based on Calcite calls and operand shapes.
+   */
   protected final Map<SqlOperator, FunctionFinder> signatures;
+
+  /** Calcite {@link RelDataTypeFactory} used for creating and inspecting relational types. */
   protected final RelDataTypeFactory typeFactory;
+
+  /** Converter handling Substrait ↔ Calcite type mappings and nullability rules. */
   protected final TypeConverter typeConverter;
+
+  /**
+   * Calcite {@link org.apache.calcite.rex.RexBuilder} for constructing {@link
+   * org.apache.calcite.rex.RexNode}s.
+   */
   protected final RexBuilder rexBuilder;
 
+  /**
+   * Multimap from Substrait function key (e.g., canonical name) to Calcite {@link SqlOperator}s.
+   * Enables reverse lookup when converting Substrait function invocations to Calcite operators.
+   */
   protected final Multimap<String, SqlOperator> substraitFuncKeyToSqlOperatorMap;
 
   /**
-   * Creates a FunctionConverter with the given functions.
+   * Creates a converter with the given functions.
    *
-   * <p>If there are multiple functions provided with the same name and signature (e.g., from
-   * different extension URNs), the last one in the list will be given precedence during Calcite to
-   * Substrait conversion.
+   * <p>Last-wins precedence applies when multiple variants share the same name/signature.
    *
-   * @param functions the list of function variants to register
-   * @param typeFactory the Calcite type factory
+   * @param functions function variants to register
+   * @param typeFactory Calcite type factory
    */
   public FunctionConverter(List<F> functions, RelDataTypeFactory typeFactory) {
     this(functions, Collections.EMPTY_LIST, typeFactory, TypeConverter.DEFAULT);
   }
 
   /**
-   * Creates a FunctionConverter with the given functions and additional signatures.
+   * Creates a converter with functions and additional operator signatures.
    *
-   * <p>If there are multiple functions provided with the same name and signature (e.g., from
-   * different extension URNs), the last one in the list will be given precedence during Calcite to
-   * Substrait conversion.
+   * <p>Last-wins precedence applies when multiple variants share the same name/signature.
    *
-   * @param functions the list of function variants to register
-   * @param additionalSignatures additional Calcite operator signatures to map
-   * @param typeFactory the Calcite type factory
-   * @param typeConverter the type converter to use
+   * @param functions function variants to register
+   * @param additionalSignatures extra Calcite operator signatures to map
+   * @param typeFactory Calcite type factory
+   * @param typeConverter type converter to Substrait
    */
   public FunctionConverter(
       List<F> functions,
@@ -155,18 +157,14 @@ public abstract class FunctionConverter<
   }
 
   /**
-   * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
+   * Resolves a Calcite {@link SqlOperator} from a Substrait function key (Substrait → Calcite).
    *
-   * <p>Given a Substrait function key (e.g., "concat:str_str") and output type, this method finds
-   * the corresponding Calcite {@link SqlOperator}. When multiple operators match, the output type
-   * is used to disambiguate.
-   *
-   * @param key the Substrait function key (function name with type signature)
-   * @param outputType the expected output type
-   * @return the matching {@link SqlOperator}, or empty if no match found
+   * @param key Substrait function key (e.g., {@code concat:str_str})
+   * @param outputType expected Substrait output type used for disambiguation
+   * @return matching {@link SqlOperator}, or empty if none
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
-    Map<SqlOperator, TypeBasedResolver> resolver = getTypeBasedResolver();
+    Map<SqlOperator, FunctionMappings.TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
     if (operators.isEmpty()) {
       return Optional.empty();
@@ -198,12 +196,30 @@ public abstract class FunctionConverter<
     return Optional.empty();
   }
 
+  /**
+   * Returns the resolver used to disambiguate Calcite operators by output type.
+   *
+   * @return map from {@link SqlOperator} to type-based resolver
+   */
   private Map<SqlOperator, FunctionMappings.TypeBasedResolver> getTypeBasedResolver() {
     return FunctionMappings.OPERATOR_RESOLVER;
   }
 
+  /**
+   * Provides the set of Calcite operator signatures supported by this converter.
+   *
+   * @return immutable list of supported signatures
+   */
   protected abstract ImmutableList<FunctionMappings.Sig> getSigs();
 
+  /**
+   * Helper class for locating and matching Calcite {@link org.apache.calcite.sql.SqlOperator}
+   * signatures to Substrait functions.
+   *
+   * <p>Used during expression conversion to determine if a given {@link
+   * org.apache.calcite.rex.RexCall} corresponds to a known Substrait function and to validate
+   * argument counts.
+   */
   protected class FunctionFinder {
     private final String substraitName;
     private final SqlOperator operator;
@@ -212,6 +228,13 @@ public abstract class FunctionConverter<
     private final Optional<SingularArgumentMatcher<F>> singularInputType;
     private final Util.IntRange argRange;
 
+    /**
+     * Creates a function finder for a Substrait name/operator over given variants.
+     *
+     * @param substraitName canonical Substrait function name
+     * @param operator Calcite operator being matched
+     * @param functions registered function variants for this name
+     */
     public FunctionFinder(String substraitName, SqlOperator operator, List<F> functions) {
       this.substraitName = substraitName;
       this.operator = operator;
@@ -232,10 +255,23 @@ public abstract class FunctionConverter<
       this.directMap = directMap.build();
     }
 
+    /**
+     * Returns whether the given argument count is within this operator's allowed range.
+     *
+     * @param count number of operands
+     * @return {@code true} if allowed; otherwise {@code false}
+     */
     public boolean allowedArgCount(int count) {
       return argRange.within(count);
     }
 
+    /**
+     * Attempts an exact signature match against required arguments and return type.
+     *
+     * @param inputTypes operand types (Substrait)
+     * @param outputType expected output type (Substrait)
+     * @return matching function variant if found; otherwise empty
+     */
     private Optional<F> signatureMatch(List<Type> inputTypes, Type outputType) {
       for (F function : functions) {
         List<SimpleExtension.Argument> args = function.requiredArguments();
@@ -251,17 +287,13 @@ public abstract class FunctionConverter<
     }
 
     /**
-     * Checks to see if the given input types satisfy the function arguments given. Checks that
+     * Checks that input types satisfy the function's required arguments.
      *
-     * <ul>
-     *   <li>Variadic arguments all have the same input type
-     *   <li>Matched wildcard arguments (i.e.`any`, `any1`, `any2`, etc) all have the same input
-     *       type
-     * </ul>
+     * <p>Ensures variadic arguments share a type and matched wildcards (anyN) are consistent.
      *
-     * @param inputTypes input types to check against arguments
+     * @param inputTypes operand types to verify
      * @param args expected arguments as defined in a {@link SimpleExtension.Function}
-     * @return true if the {@code inputTypes} satisfy the {@code args}, false otherwise
+     * @return {@code true} if compatible; otherwise {@code false}
      */
     private boolean inputTypesMatchDefinedArguments(
         List<Type> inputTypes, List<SimpleExtension.Argument> args) {
@@ -296,11 +328,10 @@ public abstract class FunctionConverter<
     }
 
     /**
-     * If some of the function variants for this function name have single, repeated argument type,
-     * we will attempt to find matches using these patterns and least-restrictive casting.
+     * Derives singular-argument matchers for variants whose required arguments share one type.
      *
-     * <p>If this exists, the function finder will attempt to find a least-restrictive match using
-     * these.
+     * @param functions variants to inspect
+     * @return optional matcher chain; empty if none
      */
     private Optional<SingularArgumentMatcher<F>> getSingularInputType(List<F> functions) {
       List<SingularArgumentMatcher<F>> matchers = new ArrayList<>();
@@ -343,6 +374,13 @@ public abstract class FunctionConverter<
       }
     }
 
+    /**
+     * Creates a matcher for a single repeated parameter type.
+     *
+     * @param function function variant
+     * @param type repeated parameter type
+     * @return matcher accepting input/output types
+     */
     private SingularArgumentMatcher<F> singular(F function, ParameterizedType type) {
       return (inputType, outputType) -> {
         boolean check = isMatch(inputType, type);
@@ -353,6 +391,12 @@ public abstract class FunctionConverter<
       };
     }
 
+    /**
+     * Chains multiple singular matchers, returning the first successful match.
+     *
+     * @param matchers matchers to try in order
+     * @return composite matcher
+     */
     private SingularArgumentMatcher<F> chained(List<SingularArgumentMatcher<F>> matchers) {
       return (inputType, outputType) -> {
         for (SingularArgumentMatcher<F> s : matchers) {
@@ -369,6 +413,13 @@ public abstract class FunctionConverter<
     /*
      * In case of a `RexLiteral` of an Enum value try both `req` and `op` signatures
      * for that argument position.
+     */
+    /**
+     * Produces candidate signature keys considering enum literals as required/optional.
+     *
+     * @param rexOperands operand RexNodes
+     * @param opTypes operand type strings (Substrait)
+     * @return stream of candidate key suffixes to test
      */
     private Stream<String> matchKeys(List<RexNode> rexOperands, List<String> opTypes) {
 
@@ -396,17 +447,13 @@ public abstract class FunctionConverter<
     }
 
     /**
-     * Converts a Calcite call to a Substrait function invocation (Calcite → Substrait direction).
+     * Converts a Calcite call to a Substrait function invocation (Calcite → Substrait).
      *
-     * <p>This method tries to find a matching Substrait function for the given Calcite call using
-     * direct signature matching, type coercion, and least-restrictive type resolution.
+     * <p>Tries direct signature match, then coercion, then least-restrictive type resolution.
      *
-     * <p>If multiple registered function extensions have the same name and signature, the last one
-     * in the list passed into the constructor will be matched.
-     *
-     * @param call the Calcite call to match
-     * @param topLevelConverter function to convert RexNode operands to Substrait Expressions
-     * @return the matched Substrait function binding, or empty if no match found
+     * @param call generic call wrapper (operands and type)
+     * @param topLevelConverter converter from {@link RexNode} to Substrait {@link Expression}
+     * @return matched binding, or empty if none
      */
     public Optional<T> attemptMatch(C call, Function<RexNode, Expression> topLevelConverter) {
 
@@ -480,6 +527,14 @@ public abstract class FunctionConverter<
       return Optional.empty();
     }
 
+    /**
+     * Tries matching using Calcite's least-restrictive type for operands.
+     *
+     * @param call generic call wrapper
+     * @param outputType expected output type (Substrait)
+     * @param operands converted operand expressions
+     * @return binding if a singular-type variant matches; otherwise empty
+     */
     private Optional<T> matchByLeastRestrictive(
         C call, Type outputType, List<Expression> operands) {
       RelDataType leastRestrictive =
@@ -499,6 +554,14 @@ public abstract class FunctionConverter<
           });
     }
 
+    /**
+     * Tries matching by coercing each operand to its Substrait type and checking signatures.
+     *
+     * @param call generic call wrapper
+     * @param outputType expected output type (Substrait)
+     * @param expressions operand expressions
+     * @return binding if a signature match is found; otherwise empty
+     */
     private Optional<T> matchCoerced(C call, Type outputType, List<Expression> expressions) {
       // Convert the operands to the proper Substrait type
       List<Type> operandTypes =
@@ -520,29 +583,64 @@ public abstract class FunctionConverter<
       return Optional.of(generateBinding(call, matchFunction.get(), coercedArgs, outputType));
     }
 
+    /**
+     * Returns the canonical Substrait name this finder resolves.
+     *
+     * @return Substrait function name
+     */
     protected String getSubstraitName() {
       return substraitName;
     }
 
+    /**
+     * Returns the Calcite operator associated with this finder.
+     *
+     * @return Calcite operator
+     */
     public SqlOperator getOperator() {
       return operator;
     }
   }
 
+  /**
+   * Represents a generic function or operator call abstraction used during expression conversion.
+   *
+   * <p>Provides access to the operands and the resulting Calcite type of the call.
+   */
   public interface GenericCall {
+    /**
+     * Returns the operand stream for this call.
+     *
+     * @return stream of {@link RexNode} operands
+     */
     Stream<RexNode> getOperands();
 
+    /**
+     * Returns the Calcite result type of the call.
+     *
+     * @return {@link RelDataType} for the call
+     */
     RelDataType getType();
   }
 
   /**
-   * Coerced types according to an expected output type. Coercion is only done for type mismatches,
-   * not for nullability or parameter mismatches.
+   * Coerces arguments to the target type when mismatched (ignores nullability/parameters).
+   *
+   * @param arguments input expressions
+   * @param targetType target Substrait type
+   * @return list of coerced expressions (casts applied as needed)
    */
   private static List<Expression> coerceArguments(List<Expression> arguments, Type targetType) {
     return arguments.stream().map(a -> coerceArgument(a, targetType)).collect(Collectors.toList());
   }
 
+  /**
+   * Coerces a single expression to the target type, if needed.
+   *
+   * @param argument expression to coerce
+   * @param type target Substrait type
+   * @return original expression or casted expression
+   */
   private static Expression coerceArgument(Expression argument, Type type) {
     if (isMatch(type, argument.getType())) {
       return argument;
@@ -551,14 +649,43 @@ public abstract class FunctionConverter<
     return ExpressionCreator.cast(type, argument, Expression.FailureBehavior.THROW_EXCEPTION);
   }
 
+  /**
+   * Creates the Substrait binding for a matched function variant.
+   *
+   * @param call generic call wrapper (operands and type)
+   * @param function matched extension function variant
+   * @param arguments converted function arguments
+   * @param outputType expected Substrait output type
+   * @return binding to return to the caller
+   */
   protected abstract T generateBinding(
       C call, F function, List<? extends FunctionArg> arguments, Type outputType);
 
+  /**
+   * Matcher for functions whose required arguments share a single repeated type.
+   *
+   * @param <F> function variant type
+   */
   @FunctionalInterface
   private interface SingularArgumentMatcher<F> {
+    /**
+     * Attempts a match for the provided input/output types.
+     *
+     * @param type singular input type
+     * @param outputType expected output type
+     * @return matching function if successful; otherwise empty
+     */
     Optional<F> tryMatch(Type type, Type outputType);
   }
 
+  /**
+   * Compares parameterized types, allowing wildcards and ignoring nullability/parameters when
+   * appropriate.
+   *
+   * @param actualType actual parameterized type
+   * @param targetType target parameterized type
+   * @return {@code true} if compatible; otherwise {@code false}
+   */
   private static boolean isMatch(ParameterizedType actualType, ParameterizedType targetType) {
     if (targetType.isWildcard()) {
       return true;

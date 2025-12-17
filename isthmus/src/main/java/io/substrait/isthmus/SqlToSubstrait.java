@@ -21,14 +21,31 @@ import org.apache.calcite.sql.util.SqlOperatorTables;
 public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
 
+  /**
+   * Creates a SQL-to-Substrait converter using the default extension catalog and no feature
+   * overrides.
+   */
   public SqlToSubstrait() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, null);
   }
 
+  /**
+   * Creates a SQL-to-Substrait converter using the default extension catalog and provided features.
+   *
+   * @param features Feature flags controlling conversion behavior; may be {@code null} for
+   *     defaults.
+   */
   public SqlToSubstrait(FeatureBoard features) {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, features);
   }
 
+  /**
+   * Creates a SQL-to-Substrait converter with explicit extensions and features.
+   *
+   * @param extensions Substrait extension collection for function/operator mappings.
+   * @param features Feature flags controlling conversion behavior; may be {@code null} for
+   *     defaults.
+   */
   public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     super(features, extensions);
 

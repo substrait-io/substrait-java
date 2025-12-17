@@ -9,10 +9,17 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
+/**
+ * Defines static mappings between Calcite {@link SqlOperator} signatures and Substrait base
+ * function names, including scalar, aggregate, and window function signatures.
+ *
+ * <p>Also provides type-based resolvers to disambiguate operators by output type.
+ */
 public class FunctionMappings {
   // Static list of signature mapping between Calcite SQL operators and Substrait base function
   // names.
 
+  /** Scalar operator signatures mapped to Substrait function names. */
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -100,6 +107,7 @@ public class FunctionMappings {
               s(SqlLibraryOperators.RPAD, "rpad"))
           .build();
 
+  /** Aggregate operator signatures mapped to Substrait function names. */
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -112,6 +120,7 @@ public class FunctionMappings {
               s(AggregateFunctions.AVG, "avg"))
           .build();
 
+  /** Window function signatures (including supported aggregates) mapped to Substrait names. */
   public static final ImmutableList<Sig> WINDOW_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -131,6 +140,7 @@ public class FunctionMappings {
           .build();
 
   // contains return-type based resolver for both scalar and aggregator operator
+  /** Type-based resolvers to disambiguate Calcite operators by expected output type. */
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER =
       Map.of(
           SqlStdOperatorTable.PLUS,
@@ -146,50 +156,120 @@ public class FunctionMappings {
           SqlStdOperatorTable.BIT_LEFT_SHIFT,
           resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
 
+  /**
+   * Prints all scalar signatures (for quick inspection).
+   *
+   * @param args CLI arguments (unused)
+   */
+  public static void main(String[] args) {
+    SCALAR_SIGS.forEach(System.out::println);
+  }
+
+  /**
+   * Creates a signature mapping entry.
+   *
+   * @param operator the Calcite operator
+   * @param substraitName the Substrait base function name
+   * @return a {@link Sig} instance
+   */
   public static Sig s(SqlOperator operator, String substraitName) {
     return new Sig(operator, substraitName.toLowerCase(Locale.ROOT));
   }
 
+  /**
+   * Creates a signature mapping entry using the operator's own (lowercased) name.
+   *
+   * @param operator the Calcite operator
+   * @return a {@link Sig} instance
+   */
   public static Sig s(SqlOperator operator) {
     return s(operator, operator.getName().toLowerCase(Locale.ROOT));
   }
 
+  /** Simple signature tuple of operator to Substrait name. */
   public static class Sig {
+
+    /** SqlOperator. */
     public final SqlOperator operator;
+
+    /** Name. */
     public final String name;
 
+    /**
+     * Constructs a signature entry.
+     *
+     * @param operator the Calcite operator
+     * @param name the Substrait function name
+     */
     public Sig(final SqlOperator operator, final String name) {
       this.operator = operator;
       this.name = name;
     }
 
+    /**
+     * Returns the Substrait function name.
+     *
+     * @return the Substrait name
+     */
     public String name() {
       return name;
     }
 
+    /**
+     * Returns the Calcite operator.
+     *
+     * @return the operator
+     */
     public SqlOperator operator() {
       return operator;
     }
   }
 
+  /**
+   * Creates a type-based resolver for an operator.
+   *
+   * @param operator the Calcite operator
+   * @param outTypes the set of allowed output type strings (Substrait)
+   * @return a {@link TypeBasedResolver}
+   */
   public static TypeBasedResolver resolver(SqlOperator operator, Set<String> outTypes) {
     return new TypeBasedResolver(operator, outTypes);
   }
 
+  /** Disambiguates operators based on expected output type strings. */
   public static class TypeBasedResolver {
 
+    /** SqlOperator. */
     public final SqlOperator operator;
+
+    /** Types. */
     public final Set<String> types;
 
+    /**
+     * Constructs a resolver.
+     *
+     * @param operator the Calcite operator
+     * @param types allowed output type strings
+     */
     public TypeBasedResolver(final SqlOperator operator, final Set<String> types) {
       this.operator = operator;
       this.types = types;
     }
 
+    /**
+     * Returns the operator this resolver applies to.
+     *
+     * @return the operator
+     */
     public SqlOperator operator() {
       return operator;
     }
 
+    /**
+     * Returns the allowed output type strings.
+     *
+     * @return set of type strings
+     */
     public Set<String> types() {
       return types;
     }

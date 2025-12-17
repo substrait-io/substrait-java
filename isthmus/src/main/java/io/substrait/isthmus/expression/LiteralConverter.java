@@ -26,6 +26,13 @@ import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
+/**
+ * Converts Calcite {@link RexLiteral} values to Substrait {@link Expression.Literal}, using {@link
+ * TypeConverter} for type resolution.
+ *
+ * <p>Supports numeric, boolean, character, binary, temporal, interval, ROW/ARRAY, and selected
+ * symbol/enums. Throws {@link UnsupportedOperationException} for unsupported types.
+ */
 public class LiteralConverter {
   // TODO: Handle conversion of user-defined type literals
 
@@ -50,6 +57,11 @@ public class LiteralConverter {
 
   private final TypeConverter typeConverter;
 
+  /**
+   * Creates a converter that uses the given {@link TypeConverter}.
+   *
+   * @param typeConverter converter for {@link RelDataType} to Substrait {@link Type}
+   */
   public LiteralConverter(TypeConverter typeConverter) {
     this.typeConverter = typeConverter;
   }
@@ -66,6 +78,16 @@ public class LiteralConverter {
     return (BigDecimal) literal.getValue();
   }
 
+  /**
+   * Converts a Calcite {@link RexLiteral} to a Substrait {@link Expression.Literal}.
+   *
+   * <p>Type conversion is performed first to ensure value compatibility. Null literals return a
+   * typed NULL. Unsupported cases throw an exception.
+   *
+   * @param literal the Calcite literal to convert
+   * @return the corresponding Substrait literal
+   * @throws UnsupportedOperationException if the literal type/value cannot be handled
+   */
   public Expression.Literal convert(RexLiteral literal) {
     // convert type first to guarantee we can handle the value.
     final Type type = typeConverter.toSubstrait(literal.getType());
@@ -215,11 +237,28 @@ public class LiteralConverter {
     }
   }
 
+  /**
+   * Pads a Calcite {@link org.apache.calcite.avatica.util.ByteString} right with zeros to the
+   * expected length if needed.
+   *
+   * @param bytes the Calcite {@code ByteString} value
+   * @param length the expected fixed length
+   * @return a new byte array of {@code length} with original bytes and trailing zeros if needed
+   * @throws IllegalArgumentException if {@code length} is less than {@code bytes.length}
+   */
   public static byte[] padRightIfNeeded(
       org.apache.calcite.avatica.util.ByteString bytes, int length) {
     return padRightIfNeeded(bytes.getBytes(), length);
   }
 
+  /**
+   * Pads a byte array right with zeros to the expected length if needed.
+   *
+   * @param value the byte array value
+   * @param length the expected fixed length
+   * @return a new byte array of {@code length} with original bytes and trailing zeros if needed
+   * @throws IllegalArgumentException if {@code length} is less than {@code value.length}
+   */
   public static byte[] padRightIfNeeded(byte[] value, int length) {
 
     if (length < value.length) {
