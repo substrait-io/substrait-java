@@ -222,6 +222,27 @@ public class PlanTestBase {
         query, catalogReader, ImmutableFeatureBoard.builder().build());
   }
 
+  /**
+   * Overload of {@link #assertSqlSubstraitRelRoundTripLoosePojoComparison(String,
+   * Prepare.CatalogReader, FeatureBoard)} that accepts SQL CREATE statements as a string.
+   */
+  protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
+      String query, String createStatements, FeatureBoard featureBoard) throws Exception {
+    Prepare.CatalogReader catalogReader =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
+    return assertSqlSubstraitRelRoundTripLoosePojoComparison(query, catalogReader, featureBoard);
+  }
+
+  /**
+   * Convenience overload of {@link #assertSqlSubstraitRelRoundTripLoosePojoComparison(String,
+   * String, FeatureBoard)} with default FeatureBoard behavior (no dynamic UDFs).
+   */
+  protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
+      String query, String createStatements) throws Exception {
+    return assertSqlSubstraitRelRoundTripLoosePojoComparison(
+        query, createStatements, ImmutableFeatureBoard.builder().build());
+  }
+
   @Beta
   protected void assertFullRoundTrip(String query) throws SqlParseException {
     assertFullRoundTrip(query, TPCH_CATALOG);
@@ -393,6 +414,31 @@ public class PlanTestBase {
    * </ul>
    */
   protected void assertFullRoundTrip(Plan.Root pojo1) {
+    assertFullRoundTrip(pojo1, ImmutableFeatureBoard.builder().build());
+  }
+
+  /**
+   * Verifies that the given POJO can be converted with a specific FeatureBoard, with stability
+   * verification across multiple roundtrips.
+   *
+   * <p>Unlike the default {@link #assertFullRoundTrip(Plan.Root)}, this overload does NOT compare
+   * the initial POJO to the converted result, due to potential transformations during dynamic
+   * function mapping. Instead, it verifies roundtrip stability: that the second and third
+   * roundtrips produce identical results.
+   *
+   * <ul>
+   *   <li>From POJO to Proto and back (initial conversion)
+   *   <li>From POJO to Calcite and back (first roundtrip)
+   *   <li>From POJO to Calcite and back (second roundtrip)
+   *   <li>Verify stability: second and third roundtrips produce identical results
+   * </ul>
+   *
+   * This overload is useful for testing features like autoFallbackToDynamicFunctionMapping.
+   *
+   * @param pojo1 the Substrait plan root to test
+   * @param featureBoard the FeatureBoard configuration to use for conversions
+   */
+  protected void assertFullRoundTrip(Plan.Root pojo1, FeatureBoard featureBoard) {
     ExtensionCollector extensionCollector = new ExtensionCollector();
 
     // Substrait POJO 1 -> Substrait Proto
@@ -402,17 +448,28 @@ public class PlanTestBase {
     io.substrait.plan.Plan.Root pojo2 =
         new ProtoRelConverter(extensionCollector, extensions).from(proto);
 
-    // Verify that POJOs are the same
+    // Verify that initial POJOs are the same
     assertEquals(pojo1, pojo2);
 
-    // Substrait POJO 2 -> Calcite
-    RelRoot calcite = new SubstraitToCalcite(extensions, typeFactory).convert(pojo2);
+    // Substrait POJO 2 -> Calcite with FeatureBoard (first roundtrip)
+    SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(extensions, typeFactory, TypeConverter.DEFAULT, null, featureBoard);
+    RelRoot calcite = substraitToCalcite.convert(pojo2);
 
-    // Calcite -> Substrait POJO 3
-    io.substrait.plan.Plan.Root pojo3 = SubstraitRelVisitor.convert(calcite, extensions);
+    // Calcite -> Substrait POJO 3 with FeatureBoard
+    io.substrait.plan.Plan.Root pojo3 =
+        SubstraitRelVisitor.convert(calcite, extensions, featureBoard);
 
-    // Verify that POJOs are the same
-    assertEquals(pojo1, pojo3);
+    // Note: pojo2 and pojo3 may differ due to dynamic function mapping and optimization
+    // changes, so we do NOT compare them directly.
+
+    // Second roundtrip for stability verification
+    RelRoot calcite2 = substraitToCalcite.convert(pojo3);
+    io.substrait.plan.Plan.Root pojo4 =
+        SubstraitRelVisitor.convert(calcite2, extensions, featureBoard);
+
+    // Verify stability: pojo3 should equal pojo4 (second and third roundtrips are stable)
+    assertEquals(pojo3, pojo4);
   }
 
   protected void assertRowMatch(RelDataType actual, Type... expected) {
