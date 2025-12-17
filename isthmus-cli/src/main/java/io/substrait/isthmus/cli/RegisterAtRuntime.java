@@ -45,6 +45,7 @@ import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 import org.immutables.value.Value;
 
+/** */
 public final class RegisterAtRuntime implements Feature {
   @Override
   public void beforeAnalysis(BeforeAnalysisAccess access) {
