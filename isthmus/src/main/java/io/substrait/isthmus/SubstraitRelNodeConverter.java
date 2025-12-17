@@ -95,16 +95,35 @@ import org.apache.calcite.tools.RelBuilder;
 public class SubstraitRelNodeConverter
     extends AbstractRelVisitor<RelNode, SubstraitRelNodeConverter.Context, RuntimeException> {
 
+  /** Calcite type factory used to construct row and field types. */
   protected final RelDataTypeFactory typeFactory;
 
+  /** Converter for Substrait scalar functions to Calcite operators. */
   protected final ScalarFunctionConverter scalarFunctionConverter;
+
+  /** Converter for Substrait aggregate functions to Calcite operators. */
   protected final AggregateFunctionConverter aggregateFunctionConverter;
+
+  /** Converts Substrait {@code Expression}s into Calcite {@code RexNode}s. */
   protected final ExpressionRexConverter expressionRexConverter;
 
+  /** Calcite {@link RelBuilder} used to construct relational expressions during conversion. */
   protected final RelBuilder relBuilder;
+
+  /** Calcite {@link RexBuilder} used to build Rex nodes (e.g., input refs, literals). */
   protected final RexBuilder rexBuilder;
+
+  /** Type converter to translate between Calcite and Substrait type systems. */
   private final TypeConverter typeConverter;
 
+  /**
+   * Constructs a converter using the given extensions, type factory, and builder with default
+   * features.
+   *
+   * @param extensions Substrait extension collection
+   * @param typeFactory Calcite type factory
+   * @param relBuilder Calcite {@link RelBuilder} used to build relational expressions
+   */
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -112,6 +131,14 @@ public class SubstraitRelNodeConverter
     this(extensions, typeFactory, relBuilder, ImmutableFeatureBoard.builder().build());
   }
 
+  /**
+   * Constructs a converter using the given extensions and feature board.
+   *
+   * @param extensions Substrait extension collection (scalar/aggregate/window function variants)
+   * @param typeFactory Calcite type factory
+   * @param relBuilder Calcite {@link RelBuilder}
+   * @param featureBoard feature flags controlling behavior (e.g., dynamic UDFs)
+   */
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -126,6 +153,16 @@ public class SubstraitRelNodeConverter
         TypeConverter.DEFAULT);
   }
 
+  /**
+   * Constructs a converter with explicit function converters and type converter.
+   *
+   * @param typeFactory Calcite type factory
+   * @param relBuilder Calcite {@link RelBuilder}
+   * @param scalarFunctionConverter converter for scalar functions
+   * @param aggregateFunctionConverter converter for aggregate functions
+   * @param windowFunctionConverter converter for window functions
+   * @param typeConverter Calcite↔Substrait type converter
+   */
   public SubstraitRelNodeConverter(
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder,
@@ -144,6 +181,17 @@ public class SubstraitRelNodeConverter
             typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter));
   }
 
+  /**
+   * Constructs a converter with an explicit {@link ExpressionRexConverter}.
+   *
+   * @param typeFactory Calcite type factory
+   * @param relBuilder Calcite {@link RelBuilder}
+   * @param scalarFunctionConverter converter for scalar functions
+   * @param aggregateFunctionConverter converter for aggregate functions
+   * @param windowFunctionConverter converter for window functions
+   * @param typeConverter Calcite↔Substrait type converter
+   * @param expressionRexConverter converter for Substrait expressions to Calcite Rex nodes
+   */
   public SubstraitRelNodeConverter(
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder,
@@ -202,6 +250,21 @@ public class SubstraitRelNodeConverter
         extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
   }
 
+  /**
+   * Converts a Substrait {@link Rel} plan to a Calcite {@link RelNode} using default feature
+   * settings.
+   *
+   * <p>This method creates a {@link RelBuilder} configured with the provided cluster and catalog,
+   * then delegates to {@link #convert(Rel, RelOptCluster, Prepare.CatalogReader, SqlParser.Config,
+   * SimpleExtension.ExtensionCollection, FeatureBoard)} with default features.
+   *
+   * @param relRoot the root Substrait relation to convert
+   * @param relOptCluster the Calcite cluster providing optimization context
+   * @param catalogReader the Calcite catalog reader for schema resolution
+   * @param parserConfig the SQL parser configuration
+   * @param extensions the Substrait extension collection (scalar, aggregate, window functions)
+   * @return the converted Calcite {@link RelNode}
+   */
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
@@ -217,6 +280,21 @@ public class SubstraitRelNodeConverter
         ImmutableFeatureBoard.builder().build());
   }
 
+  /**
+   * Converts a Substrait {@link Rel} plan to a Calcite {@link RelNode} using the specified feature
+   * board.
+   *
+   * <p>This method initializes a {@link RelBuilder} with the given cluster and catalog, then
+   * constructs a {@link SubstraitRelNodeConverter} to perform the conversion.
+   *
+   * @param relRoot the root Substrait relation to convert
+   * @param relOptCluster the Calcite cluster providing optimization context
+   * @param catalogReader the Calcite catalog reader for schema resolution
+   * @param parserConfig the SQL parser configuration
+   * @param extensions the Substrait extension collection (scalar, aggregate, window functions)
+   * @param featureBoard feature flags controlling conversion behavior (e.g., dynamic UDF support)
+   * @return the converted Calcite {@link RelNode}
+   */
   public static RelNode convert(
       Rel relRoot,
       RelOptCluster relOptCluster,
@@ -850,6 +928,16 @@ public class SubstraitRelNodeConverter
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 
+  /**
+   * Applies an optional field remap to the given node.
+   *
+   * <p>If {@code remap} is present, the node is projected according to the provided indices;
+   * otherwise the original node is returned unchanged.
+   *
+   * @param relNode the node to remap
+   * @param remap optional field index remap
+   * @return remapped node or original node if no remap is present
+   */
   protected RelNode applyRemap(RelNode relNode, Optional<Rel.Remap> remap) {
     if (remap.isPresent()) {
       return applyRemap(relNode, remap.get());
@@ -873,8 +961,10 @@ public class SubstraitRelNodeConverter
 
   /** A shared context for the Substrait to RelNode conversion. */
   public static class Context implements VisitationContext {
+    /** Stack of outer row type range maps used to resolve correlated references. */
     protected final Stack<RangeMap<Integer, RelDataType>> outerRowTypes = new Stack<>();
 
+    /** Stack of correlation ids collected while visiting subqueries. */
     protected final Stack<java.util.Set<CorrelationId>> correlationIds = new Stack<>();
 
     private int subqueryDepth;
@@ -912,6 +1002,7 @@ public class SubstraitRelNodeConverter
       this.correlationIds.push(new HashSet<>());
     }
 
+    /** Pops the most recent outer row type from the stack. */
     public void popOuterRowType() {
       outerRowTypes.pop();
     }
