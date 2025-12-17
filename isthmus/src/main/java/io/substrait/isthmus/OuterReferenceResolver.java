@@ -15,8 +15,20 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil.SubQueryCollector;
 
-/** Resolve correlated variable and get Depth map for RexFieldAccess */
-// See OuterReferenceResolver.md for explanation how the Depth map is computed.
+/**
+ * Resolve correlated variables and compute a depth map for {@link RexFieldAccess}.
+ *
+ * <p>Traverses a {@link RelNode} tree and:
+ *
+ * <ul>
+ *   <li>Tracks nesting depth of {@link CorrelationId}s across filters, projects, subqueries, and
+ *       correlates
+ *   <li>Computes "steps out" for each {@link RexFieldAccess} referencing a {@link
+ *       RexCorrelVariable}
+ * </ul>
+ *
+ * See OuterReferenceResolver.md for details on how the depth map is computed.
+ */
 public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeException> {
 
   private final Map<CorrelationId, Integer> nestedDepth;
@@ -24,16 +36,31 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
 
   private final RexVisitor rexVisitor = new RexVisitor(this);
 
+  /** Creates a new resolver with empty depth tracking maps. */
   public OuterReferenceResolver() {
     nestedDepth = new HashMap<>();
     fieldAccessDepthMap = new IdentityHashMap<>();
   }
-
+  
+  /**
+   * Applies the resolver to a {@link RelNode} tree, computing the depth map.
+   *
+   * @param r the root relational node
+   * @return the same node after traversal
+   * @throws RuntimeException if the visitor encounters an unrecoverable condition
+   */
   public Map<RexFieldAccess, Integer> apply(RelNode r) {
     reverseAccept(r);
     return fieldAccessDepthMap;
   }
 
+  /**
+   * Visits a {@link Filter}, registering any correlation variables and visiting its condition.
+   *
+   * @param filter the filter node
+   * @return the result of {@link RelNodeVisitor#visit(Filter)}
+   * @throws RuntimeException if traversal fails
+   */
   @Override
   public RelNode visit(Filter filter) throws RuntimeException {
     for (CorrelationId id : filter.getVariablesSet()) {
@@ -43,6 +70,16 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return super.visit(filter);
   }
 
+  /**
+   * Visits a {@link Correlate}, handling correlation depth for both sides.
+   *
+   * <p>Special case: the right side is a correlated subquery in the rel tree (not a REX), so we
+   * manually adjust depth before/after visiting it.
+   *
+   * @param correlate the correlate (correlated join) node
+   * @return the correlate node
+   * @throws RuntimeException if traversal fails
+   */
   @Override
   public RelNode visit(Correlate correlate) throws RuntimeException {
     for (CorrelationId id : correlate.getVariablesSet()) {
@@ -63,6 +100,13 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return correlate;
   }
 
+  /**
+   * Visits a generic {@link RelNode}, applying traversal to all inputs.
+   *
+   * @param other the node to visit
+   * @return the node
+   * @throws RuntimeException if traversal fails
+   */
   @Override
   public RelNode visitOther(RelNode other) throws RuntimeException {
     for (RelNode child : other.getInputs()) {
@@ -71,6 +115,14 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return other;
   }
 
+  /**
+   * Visits a {@link Project}, registering correlation variables and visiting any subqueries within
+   * its expressions.
+   *
+   * @param project the project node
+   * @return the result of {@link RelNodeVisitor#visit(Project)}
+   * @throws RuntimeException if traversal fails
+   */
   @Override
   public RelNode visit(Project project) throws RuntimeException {
     for (CorrelationId id : project.getVariablesSet()) {
@@ -84,13 +136,25 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return super.visit(project);
   }
 
+  /** Rex visitor used to track correlation depth within expressions and subqueries. */
   private static class RexVisitor extends RexShuttle {
     final OuterReferenceResolver referenceResolver;
 
+    /**
+     * Creates a new Rex visitor bound to the given reference resolver.
+     *
+     * @param referenceResolver the parent resolver maintaining depth maps
+     */
     RexVisitor(OuterReferenceResolver referenceResolver) {
       this.referenceResolver = referenceResolver;
     }
 
+    /**
+     * Increments correlation depth when entering a subquery and decrements when exiting.
+     *
+     * @param subQuery the subquery expression
+     * @return the same subquery
+     */
     @Override
     public RexNode visitSubQuery(RexSubQuery subQuery) {
       referenceResolver.nestedDepth.replaceAll((k, v) -> v + 1);
@@ -101,6 +165,12 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
       return subQuery;
     }
 
+    /**
+     * Records depth for {@link RexFieldAccess} referencing a {@link RexCorrelVariable}.
+     *
+     * @param fieldAccess the field access expression
+     * @return the same field access
+     */
     @Override
     public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
       if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {

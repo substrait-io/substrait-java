@@ -7,9 +7,33 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+/**
+ * Utility for converting Calcite {@link RexWindowBound} to Substrait {@link WindowBound}.
+ *
+ * <p>Supports {@code CURRENT ROW}, {@code UNBOUNDED}, and integer-offset {@code PRECEDING}/{@code
+ * FOLLOWING} bounds.
+ */
 public class WindowBoundConverter {
 
-  /** Converts a {@link RexWindowBound} to a {@link WindowBound}. */
+  /**
+   * Converts a Calcite {@link RexWindowBound} to a Substrait {@link WindowBound}.
+   *
+   * <p>Accepted forms:
+   *
+   * <ul>
+   *   <li>{@code CURRENT ROW} → {@link WindowBound#CURRENT_ROW}
+   *   <li>{@code UNBOUNDED} → {@link WindowBound#UNBOUNDED}
+   *   <li>{@code PRECEDING n} / {@code FOLLOWING n} where {@code n} is an exact integer → {@link
+   *       WindowBound.Preceding}/{@link WindowBound.Following}
+   * </ul>
+   *
+   * @param rexWindowBound The Calcite window bound to convert.
+   * @return The corresponding Substrait {@link WindowBound}.
+   * @throws IllegalStateException if the bound is not one of CURRENT ROW, UNBOUNDED, PRECEDING, or
+   *     FOLLOWING.
+   * @throws IllegalArgumentException if the offset is not an exact integer type supported by
+   *     Substrait.
+   */
   public static WindowBound toWindowBound(RexWindowBound rexWindowBound) {
     if (rexWindowBound.isCurrentRow()) {
       return WindowBound.CURRENT_ROW;

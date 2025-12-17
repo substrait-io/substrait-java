@@ -12,23 +12,23 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Not all Substrait {@link Aggregate} rels are convertable to {@link
- * org.apache.calcite.rel.core.Aggregate} rels
+ * Validates and rewrites Substrait {@link Aggregate} relations for compatibility with Calcite
+ * {@link org.apache.calcite.rel.core.Aggregate}.
  *
- * <p>The code in this class can:
+ * <p>Responsibilities:
  *
  * <ul>
- *   <li>Check for these cases
- *   <li>Rewrite the Substrait {@link Aggregate} such that it can be converted to Calcite
+ *   <li>Check if an {@link Aggregate} can be converted directly to Calcite
+ *   <li>Rewrite invalid aggregates into a form acceptable by Calcite
  * </ul>
  */
 public class PreCalciteAggregateValidator {
 
   /**
-   * Checks that the given {@link Aggregate} is valid for use in Calcite
+   * Checks whether the given {@link Aggregate} is valid for Calcite conversion.
    *
-   * @param aggregate
-   * @return
+   * @param aggregate the Substrait aggregate relation
+   * @return {@code true} if valid for Calcite, {@code false} otherwise
    */
   public static boolean isValidCalciteAggregate(Aggregate aggregate) {
     return aggregate.getMeasures().stream()
@@ -38,12 +38,11 @@ public class PreCalciteAggregateValidator {
   }
 
   /**
-   * Checks that all expressions present in the given {@link Aggregate.Measure} are {@link
-   * FieldReference}s, as Calcite expects all expressions in {@link
-   * org.apache.calcite.rel.core.Aggregate}s to be field references.
+   * Checks if an {@link Aggregate.Measure} uses only {@link FieldReference}s for arguments, sort
+   * fields, and pre-measure filter.
    *
-   * @return true if the {@code measure} can be converted to a Calcite equivalent without changes,
-   *     false otherwise.
+   * @param measure the aggregate measure to validate
+   * @return {@code true} if valid, {@code false} otherwise
    */
   private static boolean isValidCalciteMeasure(Aggregate.Measure measure) {
     return
@@ -58,32 +57,19 @@ public class PreCalciteAggregateValidator {
   }
 
   /**
-   * Checks that all expressions present in the given {@link Aggregate.Grouping} are {@link
-   * FieldReference}s, as Calcite expects all expressions in {@link
-   * org.apache.calcite.rel.core.Aggregate}s to be field references.
+   * Checks if an {@link Aggregate.Grouping} uses only {@link FieldReference}s and ensures grouping
+   * fields are in ascending order.
    *
-   * <p>Additionally, checks that all grouping fields are specified in ascending order.
-   *
-   * @return true if the {@code grouping} can be converted to a Calcite equivalent without changes,
-   *     false otherwise.
+   * @param grouping the aggregate grouping to validate
+   * @return {@code true} if valid, {@code false} otherwise
    */
   private static boolean isValidCalciteGrouping(Aggregate.Grouping grouping) {
     if (!grouping.getExpressions().stream().allMatch(e -> isSimpleFieldReference(e))) {
-      // all grouping expressions must be field references
       return false;
     }
 
-    // Calcite stores grouping fields in an ImmutableBitSet and does not track the order of the
-    // grouping fields. The output record shape that Calcite generates ALWAYS has the groupings in
-    // ascending field order. This causes issues with Substrait in cases where the grouping fields
-    // in Substrait are not defined in ascending order.
-
-    // For example, if a grouping is defined as (0, 2, 1) in Substrait, Calcite will output it as
-    // (0, 1, 2), which means that the Calcite output will no longer line up with the expectations
-    // of the Substrait plan.
     List<Integer> groupingFields =
         grouping.getExpressions().stream()
-            // isSimpleFieldReference above guarantees that the expr is a FieldReference
             .map(expr -> getFieldRefOffset((FieldReference) expr))
             .collect(Collectors.toList());
 
@@ -112,6 +98,10 @@ public class PreCalciteAggregateValidator {
     return true;
   }
 
+  /**
+   * Transforms invalid aggregates into Calcite-compatible form by projecting non-field expressions
+   * and reordering groupings.
+   */
   public static class PreCalciteAggregateTransformer {
 
     // New expressions to include in the project before the aggregate
@@ -122,18 +112,19 @@ public class PreCalciteAggregateValidator {
 
     private PreCalciteAggregateTransformer(Aggregate aggregate) {
       this.newExpressions = new ArrayList<>();
-      // The Substrait project output includes all input fields, followed by expressions
       this.expressionOffset = aggregate.getInput().getRecordType().fields().size();
     }
 
     /**
-     * Transforms an {@link Aggregate} that cannot be handled by Calcite into an equivalent that can
-     * be handled by:
+     * Rewrites an {@link Aggregate} so that it can be converted to Calcite by:
      *
      * <ul>
-     *   <li>Moving all non-field references into a project before the aggregation
-     *   <li>Adding all groupings to this project so that they are referenced in "order"
+     *   <li>Projecting non-field references before aggregation
+     *   <li>Ensuring groupings are in ascending order
      * </ul>
+     *
+     * @param aggregate the original Substrait aggregate
+     * @return a transformed Calcite-compatible aggregate
      */
     public static Aggregate transformToValidCalciteAggregate(Aggregate aggregate) {
       PreCalciteAggregateTransformer at = new PreCalciteAggregateTransformer(aggregate);
@@ -189,8 +180,6 @@ public class PreCalciteAggregateValidator {
     }
 
     private Aggregate.Grouping updateGrouping(Aggregate.Grouping grouping) {
-      // project out all groupings unconditionally, even field references
-      // this ensures that out of order groupings are re-projected into in order groupings
       List<Expression> newGroupingExpressions =
           grouping.getExpressions().stream().map(this::projectOut).collect(Collectors.toList());
       return Aggregate.Grouping.builder().expressions(newGroupingExpressions).build();
@@ -212,14 +201,15 @@ public class PreCalciteAggregateValidator {
     }
 
     /**
-     * Adds a new expression to the project at {@link
-     * PreCalciteAggregateTransformer#expressionOffset} and returns a field reference to the new
-     * expression
+     * Adds a new expression to the pre-aggregate project and returns a field reference pointing to
+     * it.
+     *
+     * @param expr the expression to project out
+     * @return a {@link FieldReference} to the projected expression
      */
     private Expression projectOut(Expression expr) {
       newExpressions.add(expr);
       return FieldReference.builder()
-          // create a field reference to the new expression, then update the expression offset
           .addSegments(FieldReference.StructField.of(expressionOffset++))
           .type(expr.getType())
           .build();

@@ -33,6 +33,13 @@ public class SubstraitToCalcite {
     this(converterProvider, null);
   }
 
+  /**
+   * Creates a Substrait-to-Calcite converter with default type converter and a catalog reader.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   * @param catalogReader Calcite catalog reader for schema resolution.
+   */
   public SubstraitToCalcite(
       ConverterProvider converterProvider, Prepare.CatalogReader catalogReader) {
     this.converterProvider = converterProvider;

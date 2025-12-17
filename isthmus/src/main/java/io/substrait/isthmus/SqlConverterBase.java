@@ -14,20 +14,43 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
+import io.substrait.extension.DefaultExtensionCatalog;
+
+/**
+ * Base class for Substrait SQL conversion pipelines.
+ *
+ * <p>Configures Calcite parser, connection, planner, and cluster. Holds the Substrait extensions
+ * and feature flags. Subclasses can build conversions from SQL to Calcite/Substrait using this
+ * shared setup.
+ */
 public class SqlConverterBase {
   protected final ConverterProvider converterProvider;
 
+  /** Default Calcite connection config (case-insensitive). */
   public static final CalciteConnectionConfig CONNECTION_CONFIG =
       CalciteConnectionConfig.DEFAULT.set(
           CalciteConnectionProperty.CASE_SENSITIVE, Boolean.FALSE.toString());
 
+  /** Calcite type factory using the Substrait type system. */
   final RelDataTypeFactory factory;
+
+  /** Calcite optimization cluster with planner, type factory, and RexBuilder. */
   final RelOptCluster relOptCluster;
+
+  /** Connection configuration used for SQL parsing and validation. */
   final CalciteConnectionConfig config;
+
+  /** Configuration for SQL-to-Rel conversion. */
   final SqlToRelConverter.Config converterConfig;
 
+  /** Parser configuration, including casing and DDL parser factory. */
   final SqlParser.Config parserConfig;
 
+  /**
+   * Creates a converter base with explicit features and extensions.
+   *
+   * @param converterProvider Converter Provider for configuration
+   */
   protected SqlConverterBase(ConverterProvider converterProvider) {
     this.converterProvider = converterProvider;
     this.factory = converterProvider.getTypeFactory();
