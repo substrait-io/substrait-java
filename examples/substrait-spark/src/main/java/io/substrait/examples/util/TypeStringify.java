@@ -29,10 +29,15 @@ import io.substrait.type.Type.UserDefined;
 import io.substrait.type.Type.VarChar;
 import io.substrait.type.TypeVisitor;
 
-/** TypeStringify produces a simple debug string of Substrait types */
+/** TypeStringify produces a simple debug string of Substrait types. */
 public class TypeStringify extends ParentStringify
     implements TypeVisitor<String, RuntimeException> {
 
+  /**
+   * Constructor.
+   *
+   * @param indent numver of idents to use
+   */
   protected TypeStringify(int indent) {
     super(indent);
   }

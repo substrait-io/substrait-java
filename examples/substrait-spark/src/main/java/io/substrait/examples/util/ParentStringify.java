@@ -6,8 +6,13 @@ package io.substrait.examples.util;
  */
 public class ParentStringify {
 
+  /** Indent character. */
   protected String indentChar = " ";
+
+  /** Indents of idnentsize to use. */
   protected int indent;
+
+  /** Size of each indent. */
   protected int indentSize = 3;
 
   /**
@@ -50,6 +55,12 @@ public class ParentStringify {
     return sb;
   }
 
+  /**
+   * Get the outdent to use, decreats indent counter.
+   *
+   * @param sb Stribug Builder with outdent
+   * @return outdent string
+   */
   protected String getOutdent(StringBuilder sb) {
     indent--;
     return (sb).toString();
