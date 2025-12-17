@@ -273,3 +273,67 @@ protobuf {
   generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
   protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() }
 }
+
+val protoJavaDir = layout.buildDirectory.dir("generated/sources/proto/main/java")
+
+// First pass: Javadoc for generated protobufs — ignore warnings.
+tasks.register<Javadoc>("javadocProto") {
+  group = JavaBasePlugin.DOCUMENTATION_GROUP
+  description = "Generate Javadoc for protobuf-generated sources (warnings suppressed)."
+
+  // Only the generated proto sources
+  setSource(fileTree(protoJavaDir) { include("**/*.java") })
+
+  // Use the main source set classpath to resolve types referenced by the generated code
+  classpath = sourceSets["main"].compileClasspath
+
+  // Destination separate from main Javadoc
+  destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/core-proto").get().asFile
+
+  // Make sure protobufs are generated before Javadoc runs
+  dependsOn("generateProto")
+
+  // Suppress warnings/doclint for protobuf pass
+  (options as StandardJavadocDocletOptions).apply {
+    // Disable doclint entirely
+    addBooleanOption("Xdoclint:none", true)
+    // Be quiet
+    addBooleanOption("quiet", true)
+    // Encoding is good practice
+    encoding = "UTF-8"
+  }
+
+  // Do not fail the build if javadoc finds issues in generated sources
+  isFailOnError = false
+}
+
+// Second pass: Javadoc for main code, excluding the generated protobuf sources.
+tasks.named<Javadoc>("javadoc") {
+  mustRunAfter("javadocProto")
+  description = "Generate Javadoc for main sources (excludes protobuf-generated sources)."
+
+  // Exclude the protobuf-generated directory from the main pass
+  val protoDirFile = protoJavaDir.get().asFile
+  exclude { spec -> spec.file.toPath().startsWith(protoDirFile.toPath()) }
+
+  // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
+  (options as StandardJavadocDocletOptions).apply {
+    encoding = "UTF-8"
+    destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile
+
+    addStringOption("overview", "${rootProject.projectDir}/overview.html")
+    addStringOption("link", "../core-proto")
+  }
+}
+
+// Bundle both passes into the Javadoc JAR used for publishing.
+tasks.named<Jar>("javadocJar") {
+  val shared = rootProject.layout.buildDirectory.dir("docs/${version}").get().asFile
+  if (!shared.exists()) {
+    println("Creating a dir for javadoc ${rootProject.buildDir}/docs/${version}")
+    shared.mkdirs()
+  }
+
+  // Ensure both javadoc tasks have produced outputs
+  dependsOn(tasks.named("javadocProto"), tasks.named("javadoc"))
+}
