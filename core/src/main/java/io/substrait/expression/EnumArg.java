@@ -32,10 +32,8 @@ public interface EnumArg extends FunctionArg {
 
   static EnumArg of(SimpleExtension.EnumArgument enumArg, String option) {
     if (!enumArg.options().contains(option)) {
-      LOGGER.warn(
-          String.format(
-              "Function does not accept those arguments %s %s", option, enumArg.options()));
-      return null;
+      throw new IllegalArgumentException(
+          String.format("EnumArg value %s not valid for options: %s", option, enumArg.options()));
     }
     return builder().value(Optional.of(option)).build();
   }

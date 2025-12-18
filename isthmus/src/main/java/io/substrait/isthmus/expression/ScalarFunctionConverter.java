@@ -30,11 +30,6 @@ public class ScalarFunctionConverter
    */
   private final List<ScalarFunctionMapper> mappers;
 
-  public enum INDEXING {
-    ONE,
-    ZERO
-  }
-
   public ScalarFunctionConverter(
       List<SimpleExtension.ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     this(functions, Collections.emptyList(), typeFactory, TypeConverter.DEFAULT);

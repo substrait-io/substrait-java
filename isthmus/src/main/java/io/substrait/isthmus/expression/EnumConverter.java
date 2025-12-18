@@ -4,7 +4,6 @@ import io.substrait.expression.EnumArg;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
-import io.substrait.isthmus.expression.ScalarFunctionConverter.INDEXING;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +77,7 @@ public class EnumConverter {
         TimeUnitRange.class);
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 1),
-        INDEXING.class);
+        ExtractIndexing.class);
   }
 
   private static Optional<Enum<?>> constructValue(
@@ -91,9 +90,9 @@ public class EnumConverter {
       return option.get().map(SqlTrimFunction.Flag::valueOf);
     }
 
-    if (cls.isAssignableFrom(INDEXING.class)) {
-      return option.get().map(INDEXING::valueOf);
-    }
+    // ExtractIndexing does not need to be converted here. Calcite
+    // doesn't have the concept of the indexing. It's date
+    // functions are all indexed from 1
 
     return Optional.empty();
   }

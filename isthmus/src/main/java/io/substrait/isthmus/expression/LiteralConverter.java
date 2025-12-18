@@ -4,7 +4,6 @@ import com.google.protobuf.ByteString;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.TypeConverter;
-import io.substrait.isthmus.expression.ScalarFunctionConverter.INDEXING;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -89,7 +88,7 @@ public class LiteralConverter {
         return ExpressionCreator.bool(n, literal.getValueAs(Boolean.class));
       case CHAR:
         {
-          Comparable val = literal.getValue();
+          Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
             NlsString nls = (NlsString) val;
             return ExpressionCreator.fixedChar(n, nls.getValue());
@@ -128,14 +127,10 @@ public class LiteralConverter {
       case SYMBOL:
         {
           Object value = literal.getValue();
-          // case TimeUnitRange tur -> string(n, tur.name());
           if (value instanceof NlsString) {
             return ExpressionCreator.string(n, ((NlsString) value).getValue());
           } else if (value instanceof Enum) {
             Enum<?> v = (Enum<?>) value;
-            if (value instanceof INDEXING) {
-              return ExpressionCreator.string(n, v.name());
-            }
 
             Optional<Expression.Literal> r =
                 EnumConverter.canConvert(v)
