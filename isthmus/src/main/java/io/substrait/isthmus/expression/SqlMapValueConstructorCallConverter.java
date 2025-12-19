@@ -15,7 +15,7 @@ import org.apache.calcite.sql.fun.SqlMapValueConstructor;
 
 public class SqlMapValueConstructorCallConverter implements CallConverter {
 
-  SqlMapValueConstructorCallConverter() {}
+  public SqlMapValueConstructorCallConverter() {}
 
   @Override
   public Optional<Expression> convert(
