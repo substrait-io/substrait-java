@@ -120,7 +120,7 @@ public class SubstraitRelNodeConverter
     this(
         typeFactory,
         relBuilder,
-        createScalarFunctionConverter(extensions, typeFactory, featureBoard.allowDynamicUdfs()),
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT);
@@ -134,14 +134,15 @@ public class SubstraitRelNodeConverter
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter) {
     this(
-        typeFactory,
         relBuilder,
-        scalarFunctionConverter,
-        aggregateFunctionConverter,
-        windowFunctionConverter,
-        typeConverter,
         new ExpressionRexConverter(
-            typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter));
+            typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter),
+        new ConverterProvider(
+            typeFactory,
+            scalarFunctionConverter,
+            aggregateFunctionConverter,
+            windowFunctionConverter,
+            typeConverter));
   }
 
   public SubstraitRelNodeConverter(
@@ -152,54 +153,29 @@ public class SubstraitRelNodeConverter
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter,
       ExpressionRexConverter expressionRexConverter) {
-    this.typeFactory = typeFactory;
-    this.typeConverter = typeConverter;
-    this.relBuilder = relBuilder;
-    this.rexBuilder = new RexBuilder(typeFactory);
-    this.scalarFunctionConverter = scalarFunctionConverter;
-    this.aggregateFunctionConverter = aggregateFunctionConverter;
-    this.expressionRexConverter = expressionRexConverter;
-    this.expressionRexConverter.setRelNodeConverter(this);
+    this(
+        relBuilder,
+        expressionRexConverter,
+        new ConverterProvider(
+            typeFactory,
+            scalarFunctionConverter,
+            aggregateFunctionConverter,
+            windowFunctionConverter,
+            typeConverter));
   }
 
-  private static ScalarFunctionConverter createScalarFunctionConverter(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      boolean allowDynamicUdfs) {
-
-    List<FunctionMappings.Sig> additionalSignatures;
-
-    if (allowDynamicUdfs) {
-      java.util.Set<String> knownFunctionNames =
-          FunctionMappings.SCALAR_SIGS.stream()
-              .map(FunctionMappings.Sig::name)
-              .collect(Collectors.toSet());
-
-      List<SimpleExtension.ScalarFunctionVariant> dynamicFunctions =
-          extensions.scalarFunctions().stream()
-              .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
-              .collect(Collectors.toList());
-
-      if (dynamicFunctions.isEmpty()) {
-        additionalSignatures = Collections.emptyList();
-      } else {
-        SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-            SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
-
-        List<SqlOperator> dynamicOperators =
-            SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
-
-        additionalSignatures =
-            dynamicOperators.stream()
-                .map(op -> FunctionMappings.s(op, op.getName()))
-                .collect(Collectors.toList());
-      }
-    } else {
-      additionalSignatures = Collections.emptyList();
-    }
-
-    return new ScalarFunctionConverter(
-        extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+  public SubstraitRelNodeConverter(
+      RelBuilder relBuilder,
+      ExpressionRexConverter expressionRexConverter,
+      ConverterProvider converterProvider) {
+    this.typeFactory = converterProvider.typeFactory;
+    this.typeConverter = converterProvider.getTypeConverter();
+    this.relBuilder = relBuilder;
+    this.rexBuilder = new RexBuilder(typeFactory);
+    this.scalarFunctionConverter = converterProvider.getScalarFunctionConverter();
+    this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
+    this.expressionRexConverter = expressionRexConverter;
+    this.expressionRexConverter.setRelNodeConverter(this);
   }
 
   public static RelNode convert(
