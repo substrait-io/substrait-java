@@ -23,6 +23,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+/** Isthmus CLI entry point. */
 @Command(
     name = "isthmus",
     versionProvider = io.substrait.isthmus.cli.IsthmusCliVersion.class,
@@ -61,6 +62,11 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
   private Casing unquotedCasing = Casing.TO_UPPER;
 
+  /**
+   * Standard Java Main method.
+   *
+   * @param args Isthmus CLI arguments.
+   */
   public static void main(String... args) {
     CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
     commandLine.setCaseInsensitiveEnumValuesAllowed(true);
