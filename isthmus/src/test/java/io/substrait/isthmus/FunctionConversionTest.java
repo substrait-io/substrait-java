@@ -48,9 +48,8 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void subtractDateIDay() {
     // When this function is converted to Calcite, if the Calcite type derivation is used an
-    // java.lang.ArrayIndexOutOfBoundsException is thrown. It is quite likely that this is being
-    // mapped to the wrong
-    // Calcite function.
+    // java.lang.ArrayIndexOutOfBoundsException is thrown. It is quite likely that
+    // this is being mapped to the wrong Calcite function.
     // TODO: https://github.com/substrait-io/substrait-java/issues/377
     Expression.ScalarFunctionInvocation expr =
         b.scalarFn(
@@ -184,6 +183,25 @@ class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
+  void extractDateWithIndexing() {
+    ScalarFunctionInvocation reqReqDateFn =
+        b.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            "extract:req_req_date",
+            TypeCreator.REQUIRED.I64,
+            EnumArg.builder().value("MONTH").build(),
+            EnumArg.builder().value("ONE").build(),
+            Expression.DateLiteral.builder().value(0).build());
+
+    RexNode calciteExpr = reqReqDateFn.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
+    assertInstanceOf(RexCall.class, calciteExpr);
+
+    RexCall extract = (RexCall) calciteExpr;
+    assertEquals("EXTRACT(FLAG(MONTH), 1970-01-01)", extract.toString());
+  }
+
+  @Test
   void unsupportedExtractTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqTstzFn =
         b.scalarFn(
@@ -247,22 +265,6 @@ class FunctionConversionTest extends PlanTestBase {
     assertThrows(
         UnsupportedOperationException.class,
         () -> reqReqPtsFn.accept(expressionRexConverter, Context.newContext()));
-  }
-
-  @Test
-  void unsupportedExtractDateWithIndexing() {
-    ScalarFunctionInvocation reqReqDateFn =
-        b.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_req_date",
-            TypeCreator.REQUIRED.I64,
-            EnumArg.builder().value("MONTH").build(),
-            EnumArg.builder().value("ONE").build(),
-            Expression.DateLiteral.builder().value(0).build());
-
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> reqReqDateFn.accept(expressionRexConverter, Context.newContext()));
   }
 
   @Test

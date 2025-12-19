@@ -72,6 +72,12 @@ public class EnumConverter {
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_STRING, "rtrim:str_str", 0),
         SqlTrimFunction.Flag.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 0),
+        TimeUnitRange.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 1),
+        ExtractIndexing.class);
   }
 
   private static Optional<Enum<?>> constructValue(
@@ -83,6 +89,10 @@ public class EnumConverter {
     if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
       return option.get().map(SqlTrimFunction.Flag::valueOf);
     }
+
+    // ExtractIndexing does not need to be converted here. Calcite
+    // doesn't have the concept of the indexing. It's date
+    // functions are all indexed from 1
 
     return Optional.empty();
   }

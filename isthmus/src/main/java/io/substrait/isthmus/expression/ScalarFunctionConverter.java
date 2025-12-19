@@ -24,7 +24,6 @@ public class ScalarFunctionConverter
         Expression,
         ScalarFunctionConverter.WrappedScalarCall>
     implements CallConverter {
-
   /**
    * Function mappers provide a hook point for any custom mapping to Substrait functions and
    * arguments.
@@ -43,7 +42,11 @@ public class ScalarFunctionConverter
       TypeConverter typeConverter) {
     super(functions, additionalSignatures, typeFactory, typeConverter);
 
-    mappers = List.of(new TrimFunctionMapper(functions), new SqrtFunctionMapper(functions));
+    mappers =
+        List.of(
+            new TrimFunctionMapper(functions),
+            new SqrtFunctionMapper(functions),
+            new ExtractDateFunctionMapper(functions));
   }
 
   @Override
@@ -68,6 +71,7 @@ public class ScalarFunctionConverter
         .orElse(Optional.empty());
   }
 
+  /** Application of the more complex mappings. */
   private Optional<Expression> mappedConvert(
       SubstraitFunctionMapping mapping,
       RexCall call,
@@ -85,6 +89,7 @@ public class ScalarFunctionConverter
     return attemptMatch(finder, wrapped, topLevelConverter);
   }
 
+  /** Default conversion for functions that have simple 1:1 mappings. */
   private Optional<Expression> defaultConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
     FunctionFinder finder = signatures.get(call.op);

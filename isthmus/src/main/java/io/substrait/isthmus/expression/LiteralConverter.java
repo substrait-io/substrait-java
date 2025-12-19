@@ -88,7 +88,7 @@ public class LiteralConverter {
         return ExpressionCreator.bool(n, literal.getValueAs(Boolean.class));
       case CHAR:
         {
-          Comparable val = literal.getValue();
+          Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
             NlsString nls = (NlsString) val;
             return ExpressionCreator.fixedChar(n, nls.getValue());
@@ -127,11 +127,11 @@ public class LiteralConverter {
       case SYMBOL:
         {
           Object value = literal.getValue();
-          // case TimeUnitRange tur -> string(n, tur.name());
           if (value instanceof NlsString) {
             return ExpressionCreator.string(n, ((NlsString) value).getValue());
           } else if (value instanceof Enum) {
             Enum<?> v = (Enum<?>) value;
+
             Optional<Expression.Literal> r =
                 EnumConverter.canConvert(v)
                     ? Optional.of(ExpressionCreator.string(n, v.name()))
