@@ -3,16 +3,10 @@ package io.substrait.isthmus;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.plan.Plan;
-import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelCopyOnWriteVisitor;
-import io.substrait.type.NamedStruct;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
@@ -227,31 +221,6 @@ public class SubstraitToCalcite {
             typeFactory.createMapType(renamedKeyType.right, renamedValueType.right));
       default:
         return Pair.of(currentIndex, type);
-    }
-  }
-
-  private static class NamedStructGatherer extends RelCopyOnWriteVisitor<RuntimeException> {
-    Map<List<String>, NamedStruct> tableMap;
-
-    private NamedStructGatherer() {
-      super();
-      this.tableMap = new HashMap<>();
-    }
-
-    public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
-      NamedStructGatherer visitor = new NamedStructGatherer();
-      rel.accept(visitor, EmptyVisitationContext.INSTANCE);
-      return visitor.tableMap;
-    }
-
-    @Override
-    public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
-      Optional<Rel> result = super.visit(namedScan, context);
-
-      List<String> tableName = namedScan.getNames();
-      tableMap.put(tableName, namedScan.getInitialSchema());
-
-      return result;
     }
   }
 }
