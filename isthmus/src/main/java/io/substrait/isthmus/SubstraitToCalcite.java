@@ -229,29 +229,4 @@ public class SubstraitToCalcite {
         return Pair.of(currentIndex, type);
     }
   }
-
-  private static class NamedStructGatherer extends RelCopyOnWriteVisitor<RuntimeException> {
-    Map<List<String>, NamedStruct> tableMap;
-
-    private NamedStructGatherer() {
-      super();
-      this.tableMap = new HashMap<>();
-    }
-
-    public static Map<List<String>, NamedStruct> gatherTables(Rel rel) {
-      NamedStructGatherer visitor = new NamedStructGatherer();
-      rel.accept(visitor, EmptyVisitationContext.INSTANCE);
-      return visitor.tableMap;
-    }
-
-    @Override
-    public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
-      Optional<Rel> result = super.visit(namedScan, context);
-
-      List<String> tableName = namedScan.getNames();
-      tableMap.put(tableName, namedScan.getInitialSchema());
-
-      return result;
-    }
-  }
 }
