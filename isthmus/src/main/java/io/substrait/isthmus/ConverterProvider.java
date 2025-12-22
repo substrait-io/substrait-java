@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.FieldSelectionConverter;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 
 public class ConverterProvider {
@@ -27,6 +29,10 @@ public class ConverterProvider {
 
   public ConverterProvider() {
     this(SubstraitTypeSystem.TYPE_FACTORY, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+  }
+
+  public ConverterProvider(SimpleExtension.ExtensionCollection extensions) {
+    this(SubstraitTypeSystem.TYPE_FACTORY, extensions);
   }
 
   public ConverterProvider(
@@ -63,6 +69,10 @@ public class ConverterProvider {
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     callConverters.add(scalarFunctionConverter);
     return callConverters;
+  }
+
+  protected SqlOperatorTable getSqlOperatorTable() {
+    return SubstraitOperatorTable.INSTANCE;
   }
 
   protected SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
