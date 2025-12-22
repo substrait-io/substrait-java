@@ -631,6 +631,35 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
    *     output names.
    */
+  public static Plan.Root convert(RelRoot relRoot, ConverterProvider converterProvider) {
+    SubstraitRelVisitor visitor = new SubstraitRelVisitor(converterProvider);
+    visitor.popFieldAccessDepthMap(relRoot.rel);
+    Rel rel = visitor.apply(relRoot.project());
+
+    // Avoid using the names from relRoot.validatedRowType because if there are
+    // nested types (i.e ROW, MAP, etc) the typeConverter will pad names correctly
+    List<String> names = visitor.typeConverter.toNamedStruct(relRoot.validatedRowType).names();
+    return Plan.Root.builder().input(rel).names(names).build();
+  }
+
+  /**
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor.
+   *
+   * <p>This is the main conversion entry point for a complete plan. It applies the provided {@link
+   * SubstraitRelVisitor} to the final projected {@link RelNode} from the {@code relRoot}, and wraps
+   * the resulting {@link Rel} in a {@link Plan.Root}.
+   *
+   * <p>This method also correctly extracts the final output field names, paying special attention
+   * to nested types (structs, maps) via the visitor's type converter, rather than using the names
+   * from {@code relRoot.validatedRowType} directly.
+   *
+   * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete, optimized
+   *     plan.
+   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
+   *     behavior.
+   * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
+   *     output names.
+   */
   public static Plan.Root convert(RelRoot relRoot, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());

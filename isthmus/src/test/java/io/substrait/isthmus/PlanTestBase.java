@@ -50,6 +50,8 @@ public class PlanTestBase {
 
   protected static final CalciteCatalogReader TPCH_CATALOG;
 
+  protected ConverterProvider converterProvider;
+
   static {
     try {
       String tpchCreateStatements = asString("tpch/schema.sql");
@@ -69,8 +71,14 @@ public class PlanTestBase {
   }
 
   protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
+    this(extensions, new ConverterProvider(extensions));
+  }
+
+  protected PlanTestBase(
+      SimpleExtension.ExtensionCollection extensions, ConverterProvider converterProvider) {
     this.extensions = extensions;
     this.substraitBuilder = new SubstraitBuilder(extensions);
+    this.converterProvider = converterProvider;
   }
 
   public static String asString(String resource) throws IOException {
@@ -134,7 +142,8 @@ public class PlanTestBase {
     // Return list of sql -> Substrait rel -> Calcite rel.
 
     SqlToSubstrait s2s = new SqlToSubstrait();
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
+    SubstraitToCalcite substraitToCalcite =
+        new SubstraitToCalcite(converterProvider, catalogReader);
 
     // 1. SQL -> Substrait Plan
     Plan plan1 = s2s.convert(query, catalogReader);
@@ -146,7 +155,7 @@ public class PlanTestBase {
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
 
     // 4. Calcite RelNode -> Substrait Rel
-    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions);
+    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, converterProvider);
 
     assertEquals(pojo1, pojo2);
     return relRoot2;
@@ -181,11 +190,11 @@ public class PlanTestBase {
         featureBoard != null ? featureBoard : ImmutableFeatureBoard.builder().build();
 
     SubstraitToCalcite substraitToCalcite =
-        new SubstraitToCalcite(extensions, typeFactory, TypeConverter.DEFAULT, null, features);
-    SqlToSubstrait s = new SqlToSubstrait(extensions, features);
+        new SubstraitToCalcite(converterProvider, catalogReader);
+    SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(extensions, converterProvider, featureBoard);
 
     // 1. SQL -> Substrait Plan
-    Plan plan1 = s.convert(query, catalogReader);
+    Plan plan1 = sqlToSubstrait.convert(query, catalogReader);
 
     // 2. Substrait Plan -> Substrait Root (POJO 1)
     Plan.Root pojo1 = plan1.getRoots().get(0);
@@ -194,7 +203,7 @@ public class PlanTestBase {
     RelRoot relRoot2 = substraitToCalcite.convert(pojo1);
 
     // 4. Calcite RelNode -> Substrait Root (POJO 2)
-    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, extensions, features);
+    Plan.Root pojo2 = SubstraitRelVisitor.convert(relRoot2, converterProvider);
 
     // Note: pojo1 and pojo2 may differ due to different optimization strategies applied by:
     // - SqlNode->RelRoot conversion during SQL->Substrait conversion
@@ -205,7 +214,7 @@ public class PlanTestBase {
     RelRoot relRoot3 = substraitToCalcite.convert(pojo2);
 
     // 6. Calcite RelNode -> Substrait Root (POJO 3)
-    Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, extensions, features);
+    Plan.Root pojo3 = SubstraitRelVisitor.convert(relRoot3, converterProvider);
 
     // Verify that subsequent round trips are stable (pojo2 and pojo3 should be identical)
     assertEquals(pojo2, pojo3);
