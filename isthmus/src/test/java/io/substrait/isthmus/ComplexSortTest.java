@@ -27,9 +27,6 @@ class ComplexSortTest extends PlanTestBase {
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);
 
-  final SubstraitToCalcite substraitToCalcite =
-      new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
-
   /**
    * A {@link RelWriterImpl} that annotates each {@link RelNode} with its {@link RelCollation} trait
    * information. A {@link RelNode} is only annotated if its {@link RelCollation} is not empty.

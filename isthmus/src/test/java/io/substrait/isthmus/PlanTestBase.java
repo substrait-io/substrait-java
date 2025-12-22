@@ -48,6 +48,8 @@ public class PlanTestBase {
   protected static final TypeCreator R = TypeCreator.of(false);
   protected static final TypeCreator N = TypeCreator.of(true);
 
+  protected final SubstraitToCalcite substraitToCalcite;
+
   protected static final CalciteCatalogReader TPCH_CATALOG;
 
   static {
@@ -71,6 +73,7 @@ public class PlanTestBase {
   protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
     this.extensions = extensions;
     this.substraitBuilder = new SubstraitBuilder(extensions);
+    this.substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
   }
 
   public static String asString(String resource) throws IOException {

@@ -6,8 +6,6 @@ import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -18,9 +16,6 @@ import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class ComplexAggregateTest extends PlanTestBase {
-  protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      DefaultExtensionCatalog.DEFAULT_COLLECTION;
-
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);
 
@@ -59,7 +54,7 @@ class ComplexAggregateTest extends PlanTestBase {
     assertEquals(expectedTransform, converterPojo);
 
     // Substrait POJO -> Calcite
-    new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(pojo);
+    substraitToCalcite.convert(pojo);
   }
 
   @Test
@@ -192,7 +187,7 @@ class ComplexAggregateTest extends PlanTestBase {
             input -> b.grouping(input, 2, 0),
             input -> List.of(),
             b.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
-    RelNode relNode = new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory).convert(rel);
+    RelNode relNode = substraitToCalcite.convert(rel);
     assertRowMatch(relNode.getRowType(), R.STRING, R.I64);
   }
 }

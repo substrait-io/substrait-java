@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 class VirtualTableScanTest extends PlanTestBase {
 
   final SubstraitBuilder b = new SubstraitBuilder(extensions);
-  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
   @Test
   void literalOnlyVirtualTable() {

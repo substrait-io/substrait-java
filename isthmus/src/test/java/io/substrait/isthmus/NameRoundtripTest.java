@@ -23,9 +23,6 @@ class NameRoundtripTest extends PlanTestBase {
     CalciteCatalogReader catalogReader =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatement);
 
-    SubstraitToCalcite substraitToCalcite =
-        new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
-
     String query = "SELECT \"a\", \"B\" FROM foo GROUP BY a, b";
     List<String> expectedNames = List.of("a", "B");
 
