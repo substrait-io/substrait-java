@@ -22,7 +22,6 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
@@ -31,7 +30,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.RelBuilder;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -246,44 +244,18 @@ class CustomFunctionTest extends PlanTestBase {
   WindowFunctionConverter windowFunctionConverter =
       new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
 
-  final SubstraitToCalcite substraitToCalcite =
-      new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
-
-  // Create a SubstraitRelVisitor that uses the custom Function Converters
-  final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
+  ConverterProvider converterProvider =
+      new ConverterProvider(
           typeFactory,
-          scalarFunctionConverter,
-          aggregateFunctionConverter,
-          windowFunctionConverter,
-          typeConverter,
-          ImmutableFeatureBoard.builder().build());
-
-  CustomFunctionTest() {
-    super(extensionCollection);
-  }
-
-  // Create a SubstraitToCalcite converter that has access to the custom Function Converters
-  class CustomSubstraitToCalcite extends SubstraitToCalcite {
-
-    public CustomSubstraitToCalcite(
-        SimpleExtension.ExtensionCollection extensions,
-        RelDataTypeFactory typeFactory,
-        TypeConverter typeConverter) {
-      super(extensions, typeFactory, typeConverter);
-    }
-
-    @Override
-    protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-      return new SubstraitRelNodeConverter(
-          typeFactory,
-          relBuilder,
           scalarFunctionConverter,
           aggregateFunctionConverter,
           windowFunctionConverter,
           typeConverter);
-    }
-  }
+
+  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);
+
+  // Create a SubstraitRelVisitor that uses the custom Function Converters
+  final SubstraitRelVisitor calciteToSubstrait = new SubstraitRelVisitor(converterProvider);
 
   @Test
   void customScalarFunctionRoundtrip() {

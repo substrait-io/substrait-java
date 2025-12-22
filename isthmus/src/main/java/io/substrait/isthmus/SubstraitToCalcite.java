@@ -28,11 +28,9 @@ import org.apache.calcite.util.Pair;
  */
 public class SubstraitToCalcite {
 
-  protected final SimpleExtension.ExtensionCollection extensions;
   protected final RelDataTypeFactory typeFactory;
-  protected final TypeConverter typeConverter;
   protected final Prepare.CatalogReader catalogReader;
-  protected final FeatureBoard featureBoard;
+  protected ConverterProvider converterProvider;
 
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
@@ -72,11 +70,18 @@ public class SubstraitToCalcite {
       TypeConverter typeConverter,
       Prepare.CatalogReader catalogReader,
       FeatureBoard featureBoard) {
-    this.extensions = extensions;
-    this.typeFactory = typeFactory;
-    this.typeConverter = typeConverter;
+    this(new ConverterProvider(typeFactory, extensions), catalogReader);
+  }
+
+  public SubstraitToCalcite(ConverterProvider converterProvider) {
+    this(converterProvider, null);
+  }
+
+  public SubstraitToCalcite(
+      ConverterProvider converterProvider, Prepare.CatalogReader catalogReader) {
+    this.converterProvider = converterProvider;
+    this.typeFactory = converterProvider.getTypeFactory();
     this.catalogReader = catalogReader;
-    this.featureBoard = featureBoard;
   }
 
   /**
@@ -85,7 +90,7 @@ public class SubstraitToCalcite {
    * <p>Override this method to customize schema extraction.
    */
   protected CalciteSchema toSchema(Rel rel) {
-    SchemaCollector schemaCollector = new SchemaCollector(typeFactory, typeConverter);
+    SchemaCollector schemaCollector = new SchemaCollector(converterProvider);
     return schemaCollector.toSchema(rel);
   }
 
@@ -96,15 +101,6 @@ public class SubstraitToCalcite {
    */
   protected RelBuilder createRelBuilder(CalciteSchema schema) {
     return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
-  }
-
-  /**
-   * Creates a {@link SubstraitRelNodeConverter} from the {@link RelBuilder}
-   *
-   * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
-   */
-  protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-    return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder, featureBoard);
   }
 
   /**
@@ -125,7 +121,8 @@ public class SubstraitToCalcite {
       CalciteSchema rootSchema = toSchema(rel);
       relBuilder = createRelBuilder(rootSchema);
     }
-    SubstraitRelNodeConverter converter = createSubstraitRelNodeConverter(relBuilder);
+    SubstraitRelNodeConverter converter =
+        converterProvider.getSubstraitRelNodeConverter(relBuilder);
 
     return rel.accept(converter, Context.newContext());
   }
