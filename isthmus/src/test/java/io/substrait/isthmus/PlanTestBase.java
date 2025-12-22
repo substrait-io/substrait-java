@@ -179,19 +179,13 @@ public class PlanTestBase {
    *
    * @param query the SQL query to test
    * @param catalogReader the Calcite catalog with table definitions
-   * @param featureBoard optional FeatureBoard to control conversion behavior (e.g., dynamic UDFs).
-   *     If null, a default FeatureBoard is used.
    */
   protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
-      String query, Prepare.CatalogReader catalogReader, FeatureBoard featureBoard)
-      throws Exception {
-    // Use provided FeatureBoard, or create default if null
-    FeatureBoard features =
-        featureBoard != null ? featureBoard : ImmutableFeatureBoard.builder().build();
-
+      String query, Prepare.CatalogReader catalogReader) throws Exception {
+    FeatureBoard features = ImmutableFeatureBoard.builder().build();
     SubstraitToCalcite substraitToCalcite =
         new SubstraitToCalcite(converterProvider, catalogReader);
-    SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(extensions, converterProvider, featureBoard);
+    SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(extensions, converterProvider, features);
 
     // 1. SQL -> Substrait Plan
     Plan plan1 = sqlToSubstrait.convert(query, catalogReader);
@@ -219,16 +213,6 @@ public class PlanTestBase {
     // Verify that subsequent round trips are stable (pojo2 and pojo3 should be identical)
     assertEquals(pojo2, pojo3);
     return relRoot2;
-  }
-
-  /**
-   * Convenience overload of {@link #assertSqlSubstraitRelRoundTripLoosePojoComparison(String,
-   * Prepare.CatalogReader, FeatureBoard)} with default FeatureBoard behavior (no dynamic UDFs).
-   */
-  protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
-      String query, Prepare.CatalogReader catalogReader) throws Exception {
-    return assertSqlSubstraitRelRoundTripLoosePojoComparison(
-        query, catalogReader, ImmutableFeatureBoard.builder().build());
   }
 
   @Beta
