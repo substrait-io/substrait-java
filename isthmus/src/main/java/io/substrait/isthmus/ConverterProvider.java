@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.tools.RelBuilder;
 
 public class ConverterProvider {
 
@@ -22,6 +24,10 @@ public class ConverterProvider {
   private final WindowFunctionConverter windowFunctionConverter;
 
   private final TypeConverter typeConverter;
+
+  public ConverterProvider() {
+    this(SubstraitTypeSystem.TYPE_FACTORY, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+  }
 
   public ConverterProvider(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
@@ -57,6 +63,20 @@ public class ConverterProvider {
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     callConverters.add(scalarFunctionConverter);
     return callConverters;
+  }
+
+  protected SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
+    return new SubstraitRelNodeConverter(
+        typeFactory,
+        relBuilder,
+        getScalarFunctionConverter(),
+        getAggregateFunctionConverter(),
+        getWindowFunctionConverter(),
+        typeConverter);
+  }
+
+  public RelDataTypeFactory getTypeFactory() {
+    return typeFactory;
   }
 
   public ScalarFunctionConverter getScalarFunctionConverter() {

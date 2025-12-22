@@ -12,7 +12,6 @@ import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
-import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractDdlRel;
@@ -168,7 +167,7 @@ public class SubstraitRelNodeConverter
       RelBuilder relBuilder,
       ExpressionRexConverter expressionRexConverter,
       ConverterProvider converterProvider) {
-    this.typeFactory = converterProvider.typeFactory;
+    this.typeFactory = converterProvider.getTypeFactory();
     this.typeConverter = converterProvider.getTypeConverter();
     this.relBuilder = relBuilder;
     this.rexBuilder = new RexBuilder(typeFactory);
