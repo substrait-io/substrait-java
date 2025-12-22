@@ -30,6 +30,11 @@ public class SchemaCollector {
     this.typeConverter = typeConverter;
   }
 
+  public SchemaCollector(ConverterProvider converterProvider) {
+    this.typeFactory = converterProvider.getTypeFactory();
+    this.typeConverter = converterProvider.getTypeConverter();
+  }
+
   /**
    * Returns a {@link CalciteSchema} containing all tables and schemas defined in {@link NamedScan}s
    * and {@link NamedWrite}s within the provided relation operation tree.
