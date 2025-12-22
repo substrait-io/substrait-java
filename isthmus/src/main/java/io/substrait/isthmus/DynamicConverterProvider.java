@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import java.util.Collections;
@@ -8,6 +9,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.util.SqlOperatorTables;
 
 public class DynamicConverterProvider extends ConverterProvider {
 
@@ -41,6 +44,21 @@ public class DynamicConverterProvider extends ConverterProvider {
             typeFactory,
             TypeConverter.DEFAULT));
     return callConverters;
+  }
+
+  @Override
+  protected SqlOperatorTable getSqlOperatorTable() {
+    SimpleExtension.ExtensionCollection dynamicExtensionCollection =
+        ExtensionUtils.getDynamicExtensions(extensions);
+    if (!dynamicExtensionCollection.scalarFunctions().isEmpty()
+        || !dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
+      List<SqlOperator> generatedDynamicOperators =
+          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+      return SqlOperatorTables.chain(
+          SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
+    }
+
+    return SubstraitOperatorTable.INSTANCE;
   }
 
   @Override
