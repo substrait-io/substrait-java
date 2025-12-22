@@ -49,26 +49,6 @@ public class SqlToSubstrait extends SqlConverterBase {
   }
 
   /**
-   * Converts one or more SQL statements into a Substrait {@link io.substrait.proto.Plan}.
-   *
-   * @param sqlStatements a string containing one more SQL statements
-   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statements
-   * @return a Substrait proto {@link io.substrait.proto.Plan}
-   * @throws SqlParseException if there is an error while parsing the SQL statements string
-   * @deprecated use {@link #convert(String, org.apache.calcite.prepare.Prepare.CatalogReader)}
-   *     instead to get a {@link Plan} and convert that to a {@link io.substrait.proto.Plan} using
-   *     {@link PlanProtoConverter#toProto(Plan)}
-   */
-  @Deprecated
-  public io.substrait.proto.Plan execute(String sqlStatements, Prepare.CatalogReader catalogReader)
-      throws SqlParseException {
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    return planToProto.toProto(
-        convert(sqlStatements, catalogReader, SqlDialect.DatabaseProduct.CALCITE.getDialect()));
-  }
-
-  /**
    * Converts one or more SQL statements into a Substrait {@link Plan}.
    *
    * @param sqlStatements a string containing one more SQL statements
