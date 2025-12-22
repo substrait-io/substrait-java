@@ -13,6 +13,7 @@ class UdfSqlSubstraitTest extends PlanTestBase {
 
   UdfSqlSubstraitTest() {
     super(loadExtensions(List.of(CUSTOM_FUNCTION_PATH)));
+    this.converterProvider = new DynamicConverterProvider(typeFactory, extensions);
   }
 
   @Test

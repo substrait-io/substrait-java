@@ -21,7 +21,7 @@ public class ConverterProvider {
 
   protected final RelDataTypeFactory typeFactory;
 
-  private final ScalarFunctionConverter scalarFunctionConverter;
+  protected ScalarFunctionConverter scalarFunctionConverter;
   private final AggregateFunctionConverter aggregateFunctionConverter;
   private final WindowFunctionConverter windowFunctionConverter;
 
