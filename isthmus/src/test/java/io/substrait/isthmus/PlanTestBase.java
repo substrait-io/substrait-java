@@ -48,9 +48,10 @@ public class PlanTestBase {
   protected static final TypeCreator R = TypeCreator.of(false);
   protected static final TypeCreator N = TypeCreator.of(true);
 
-  protected static final CalciteCatalogReader TPCH_CATALOG;
-
+  protected SubstraitToCalcite substraitToCalcite;
   protected ConverterProvider converterProvider;
+
+  protected static final CalciteCatalogReader TPCH_CATALOG;
 
   static {
     try {
@@ -79,6 +80,7 @@ public class PlanTestBase {
     this.extensions = extensions;
     this.substraitBuilder = new SubstraitBuilder(extensions);
     this.converterProvider = converterProvider;
+    this.substraitToCalcite = new SubstraitToCalcite(converterProvider);
   }
 
   public static String asString(String resource) throws IOException {
@@ -182,10 +184,9 @@ public class PlanTestBase {
    */
   protected RelRoot assertSqlSubstraitRelRoundTripLoosePojoComparison(
       String query, Prepare.CatalogReader catalogReader) throws Exception {
-    FeatureBoard features = ImmutableFeatureBoard.builder().build();
     SubstraitToCalcite substraitToCalcite =
         new SubstraitToCalcite(converterProvider, catalogReader);
-    SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(extensions, converterProvider, features);
+    SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(converterProvider);
 
     // 1. SQL -> Substrait Plan
     Plan plan1 = sqlToSubstrait.convert(query, catalogReader);
@@ -262,7 +263,7 @@ public class PlanTestBase {
 
     // Substrait Root 2 -> Calcite 2
     final SubstraitToCalcite substraitToCalcite =
-        new SubstraitToCalcite(extensions, typeFactory, catalogReader);
+        new SubstraitToCalcite(converterProvider, catalogReader);
 
     RelRoot calcite2 = substraitToCalcite.convert(root2);
     // It would be ideal to compare calcite1 and calcite2, however there isn't a good mechanism to
@@ -320,7 +321,7 @@ public class PlanTestBase {
     assertEquals(root0, root1);
 
     final SubstraitToCalcite substraitToCalcite =
-        new SubstraitToCalcite(extensions, typeFactory, catalogReader);
+        new SubstraitToCalcite(converterProvider, catalogReader);
 
     // Substrait POJO 1 -> Calcite 1
     RelRoot calcite1 = substraitToCalcite.convert(root1);
@@ -368,7 +369,7 @@ public class PlanTestBase {
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
-    RelNode calcite = new SubstraitToCalcite(extensions, typeFactory).convert(pojo2);
+    RelNode calcite = new SubstraitToCalcite(converterProvider).convert(pojo2);
 
     // Calcite -> Substrait POJO 3
     io.substrait.relation.Rel pojo3 = SubstraitRelVisitor.convert(calcite, extensions);
@@ -399,7 +400,7 @@ public class PlanTestBase {
     assertEquals(pojo1, pojo2);
 
     // Substrait POJO 2 -> Calcite
-    RelRoot calcite = new SubstraitToCalcite(extensions, typeFactory).convert(pojo2);
+    RelRoot calcite = new SubstraitToCalcite(converterProvider).convert(pojo2);
 
     // Calcite -> Substrait POJO 3
     io.substrait.plan.Plan.Root pojo3 = SubstraitRelVisitor.convert(calcite, extensions);
@@ -434,7 +435,7 @@ public class PlanTestBase {
     assertEquals(1, roots.size(), "number of roots");
 
     Root root = roots.get(0);
-    RelRoot relRoot = new SubstraitToCalcite(extensions, typeFactory).convert(root);
+    RelRoot relRoot = new SubstraitToCalcite(converterProvider).convert(root);
     RelNode project = relRoot.project(true);
     return SubstraitSqlDialect.toSql(project).getSql();
   }
