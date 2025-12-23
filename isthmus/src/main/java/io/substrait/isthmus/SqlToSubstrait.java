@@ -12,28 +12,27 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 
-/** Take a SQL statement and a set of table definitions and return a substrait plan. */
+/**
+ * Take a SQL statement and a set of table definitions and return a substrait plan.
+ *
+ * <p>Conversion behaviours can be customized using a {@link ConverterProvider}
+ */
 public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
   protected final ConverterProvider converterProvider;
 
   public SqlToSubstrait() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, FEATURES_DEFAULT);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public SqlToSubstrait(FeatureBoard features) {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, features);
+  /** Use {@link SqlToSubstrait#SqlToSubstrait(ConverterProvider)} instead */
+  @Deprecated
+  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions) {
+    this(new ConverterProvider(extensions));
   }
 
-  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    this(extensions, new ConverterProvider(extensions), features);
-  }
-
-  public SqlToSubstrait(
-      SimpleExtension.ExtensionCollection extensions,
-      ConverterProvider converterProvider,
-      FeatureBoard features) {
-    super(features, extensions);
+  public SqlToSubstrait(ConverterProvider converterProvider) {
+    super(converterProvider);
     this.operatorTable = converterProvider.getSqlOperatorTable();
     this.converterProvider = converterProvider;
   }

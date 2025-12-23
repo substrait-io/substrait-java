@@ -13,7 +13,6 @@ import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractRelVisitor;
 import io.substrait.relation.AbstractUpdate;
@@ -56,7 +55,6 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
@@ -83,7 +81,6 @@ import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 
@@ -104,114 +101,37 @@ public class SubstraitRelNodeConverter
   protected final RexBuilder rexBuilder;
   private final TypeConverter typeConverter;
 
+  /** Use {@link #SubstraitRelNodeConverter(RelBuilder, ConverterProvider)} instead */
+  @Deprecated
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
-    this(extensions, typeFactory, relBuilder, ImmutableFeatureBoard.builder().build());
+    this(relBuilder, new ConverterProvider(typeFactory, extensions));
   }
 
-  public SubstraitRelNodeConverter(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      RelBuilder relBuilder,
-      FeatureBoard featureBoard) {
-    this(
-        typeFactory,
-        relBuilder,
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
-        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
-        TypeConverter.DEFAULT);
-  }
-
-  public SubstraitRelNodeConverter(
-      RelDataTypeFactory typeFactory,
-      RelBuilder relBuilder,
-      ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter,
-      WindowFunctionConverter windowFunctionConverter,
-      TypeConverter typeConverter) {
-    this(
-        relBuilder,
-        new ExpressionRexConverter(
-            typeFactory, scalarFunctionConverter, windowFunctionConverter, typeConverter),
-        new ConverterProvider(
-            typeFactory,
-            scalarFunctionConverter,
-            aggregateFunctionConverter,
-            windowFunctionConverter,
-            typeConverter));
-  }
-
-  public SubstraitRelNodeConverter(
-      RelDataTypeFactory typeFactory,
-      RelBuilder relBuilder,
-      ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter,
-      WindowFunctionConverter windowFunctionConverter,
-      TypeConverter typeConverter,
-      ExpressionRexConverter expressionRexConverter) {
-    this(
-        relBuilder,
-        expressionRexConverter,
-        new ConverterProvider(
-            typeFactory,
-            scalarFunctionConverter,
-            aggregateFunctionConverter,
-            windowFunctionConverter,
-            typeConverter));
-  }
-
-  public SubstraitRelNodeConverter(
-      RelBuilder relBuilder,
-      ExpressionRexConverter expressionRexConverter,
-      ConverterProvider converterProvider) {
+  public SubstraitRelNodeConverter(RelBuilder relBuilder, ConverterProvider converterProvider) {
     this.typeFactory = converterProvider.getTypeFactory();
     this.typeConverter = converterProvider.getTypeConverter();
     this.relBuilder = relBuilder;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = converterProvider.getScalarFunctionConverter();
     this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
-    this.expressionRexConverter = expressionRexConverter;
-    this.expressionRexConverter.setRelNodeConverter(this);
+    this.expressionRexConverter = converterProvider.getExpressionRexConverter(this);
   }
 
   public static RelNode convert(
-      Rel relRoot,
-      RelOptCluster relOptCluster,
-      Prepare.CatalogReader catalogReader,
-      SqlParser.Config parserConfig,
-      SimpleExtension.ExtensionCollection extensions) {
-    return convert(
-        relRoot,
-        relOptCluster,
-        catalogReader,
-        parserConfig,
-        extensions,
-        ImmutableFeatureBoard.builder().build());
-  }
-
-  public static RelNode convert(
-      Rel relRoot,
-      RelOptCluster relOptCluster,
-      Prepare.CatalogReader catalogReader,
-      SqlParser.Config parserConfig,
-      SimpleExtension.ExtensionCollection extensions,
-      FeatureBoard featureBoard) {
+      Rel relRoot, Prepare.CatalogReader catalogReader, ConverterProvider converterProvider) {
     RelBuilder relBuilder =
         RelBuilder.create(
             Frameworks.newConfigBuilder()
-                .parserConfig(parserConfig)
+                .parserConfig(converterProvider.getSqlParserConfig())
                 .defaultSchema(catalogReader.getRootSchema().plus())
                 .traitDefs((List<RelTraitDef>) null)
                 .programs()
                 .build());
-
     return relRoot.accept(
-        new SubstraitRelNodeConverter(
-            extensions, relOptCluster.getTypeFactory(), relBuilder, featureBoard),
-        Context.newContext());
+        converterProvider.getSubstraitRelNodeConverter(relBuilder), Context.newContext());
   }
 
   @Override

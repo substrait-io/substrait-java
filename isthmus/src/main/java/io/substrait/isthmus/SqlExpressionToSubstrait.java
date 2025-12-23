@@ -7,7 +7,6 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.SubstraitTable;
 import io.substrait.isthmus.expression.RexExpressionConverter;
-import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlValidator;
 import io.substrait.type.NamedStruct;
@@ -35,15 +34,17 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   protected final RexExpressionConverter rexConverter;
 
   public SqlExpressionToSubstrait() {
-    this(FEATURES_DEFAULT, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public SqlExpressionToSubstrait(
-      FeatureBoard features, SimpleExtension.ExtensionCollection extensions) {
-    super(features, extensions);
-    ScalarFunctionConverter scalarFunctionConverter =
-        new ScalarFunctionConverter(extensions.scalarFunctions(), factory);
-    this.rexConverter = new RexExpressionConverter(scalarFunctionConverter);
+  /** Use {@link #SqlExpressionToSubstrait(ConverterProvider)} instead */
+  public SqlExpressionToSubstrait(SimpleExtension.ExtensionCollection extensions) {
+    this(new ConverterProvider(extensions));
+  }
+
+  public SqlExpressionToSubstrait(ConverterProvider converterProvider) {
+    super(converterProvider);
+    this.rexConverter = new RexExpressionConverter(converterProvider.getScalarFunctionConverter());
   }
 
   private static final class Result {

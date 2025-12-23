@@ -3,6 +3,7 @@ package io.substrait.examples;
 import io.substrait.examples.IsthmusAppExamples.Action;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SubstraitToCalcite;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.plan.Plan;
@@ -11,7 +12,6 @@ import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
 
@@ -52,9 +52,9 @@ public class ToSql implements Action {
 
       final SimpleExtension.ExtensionCollection extensions =
           DefaultExtensionCatalog.DEFAULT_COLLECTION;
-      final SubstraitToCalcite converter =
-          new SubstraitToCalcite(
-              extensions, new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
+      final ConverterProvider converterProvider =
+          new ConverterProvider(SubstraitTypeSystem.TYPE_FACTORY, extensions);
+      final SubstraitToCalcite converter = new SubstraitToCalcite(converterProvider);
 
       // Determine which SQL Dialect we want the converted queries to be in
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();

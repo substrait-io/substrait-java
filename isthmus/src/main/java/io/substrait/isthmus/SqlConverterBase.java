@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.plan.Contexts;
@@ -14,12 +12,10 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 public class SqlConverterBase {
-  protected final SimpleExtension.ExtensionCollection extensionCollection;
+  protected final ConverterProvider converterProvider;
 
   public static final CalciteConnectionConfig CONNECTION_CONFIG =
       CalciteConnectionConfig.DEFAULT.set(
@@ -32,15 +28,11 @@ public class SqlConverterBase {
 
   final SqlParser.Config parserConfig;
 
-  protected static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
-  final FeatureBoard featureBoard;
-
-  protected SqlConverterBase(
-      FeatureBoard features, SimpleExtension.ExtensionCollection extensionCollection) {
-    this.factory = SubstraitTypeSystem.TYPE_FACTORY;
-    this.config =
-        CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
-    this.converterConfig = SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
+  protected SqlConverterBase(ConverterProvider converterProvider) {
+    this.converterProvider = converterProvider;
+    this.factory = converterProvider.getTypeFactory();
+    this.config = converterProvider.getCalciteConnectionConfig();
+    this.converterConfig = converterProvider.getSqlToRelConverterConfig();
     VolcanoPlanner planner = new VolcanoPlanner(RelOptCostImpl.FACTORY, Contexts.of("hello"));
     this.relOptCluster = RelOptCluster.create(planner, new RexBuilder(factory));
     relOptCluster.setMetadataQuerySupplier(
@@ -49,17 +41,6 @@ public class SqlConverterBase {
               new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE);
           return new RelMetadataQuery(handler);
         });
-    featureBoard = features == null ? FEATURES_DEFAULT : features;
-    parserConfig =
-        SqlParser.Config.DEFAULT
-            .withUnquotedCasing(featureBoard.unquotedCasing())
-            .withParserFactory(SqlDdlParserImpl.FACTORY)
-            .withConformance(SqlConformanceEnum.LENIENT);
-
-    this.extensionCollection = extensionCollection;
-  }
-
-  protected SqlConverterBase(FeatureBoard features) {
-    this(features, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+    parserConfig = converterProvider.getSqlParserConfig();
   }
 }
