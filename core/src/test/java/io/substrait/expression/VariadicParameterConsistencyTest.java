@@ -3,19 +3,17 @@ package io.substrait.expression;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.TestBase;
 import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
-import io.substrait.type.TypeCreator;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** Tests for variadic parameter consistency validation in Expression. */
-class VariadicParameterConsistencyTest {
-
-  private static final TypeCreator R = TypeCreator.of(false);
+class VariadicParameterConsistencyTest extends TestBase {
 
   /**
    * Helper method to create a ScalarFunctionInvocation and test if it validates correctly. The

@@ -15,10 +15,11 @@ import io.substrait.type.TypeCreator;
 import java.io.IOException;
 
 public abstract class TestBase {
-  protected final SimpleExtension.ExtensionCollection extensions;
 
-  protected TypeCreator R = TypeCreator.REQUIRED;
-  protected TypeCreator N = TypeCreator.NULLABLE;
+  protected static final TypeCreator R = TypeCreator.REQUIRED;
+  protected static final TypeCreator N = TypeCreator.NULLABLE;
+
+  protected final SimpleExtension.ExtensionCollection extensions;
 
   protected ExtensionCollector functionCollector = new ExtensionCollector();
   protected RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);

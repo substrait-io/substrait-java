@@ -8,7 +8,6 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
@@ -26,8 +25,6 @@ import org.junit.jupiter.api.Test;
  * </ul>
  */
 class TypeExtensionTest extends TestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
 
   static final String URN = "extension:test:custom_extensions";
   static final SimpleExtension.ExtensionCollection CUSTOM_EXTENSION;

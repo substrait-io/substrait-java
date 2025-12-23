@@ -1,13 +1,10 @@
 package io.substrait.isthmus;
 
 import io.substrait.relation.Rel;
-import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class FetchTest extends PlanTestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
 
   final Rel TABLE = sb.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING));
 

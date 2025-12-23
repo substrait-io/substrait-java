@@ -16,7 +16,6 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -26,9 +25,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Test;
 
 class SubstraitExpressionConverterTest extends PlanTestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
 
   final ExpressionRexConverter converter;
 

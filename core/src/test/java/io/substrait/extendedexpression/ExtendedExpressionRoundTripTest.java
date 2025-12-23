@@ -111,8 +111,9 @@ class ExtendedExpressionRoundTripTest extends TestBase {
             .function(
                 AggregateFunctionInvocation.builder()
                     .arguments(Collections.emptyList())
-                    .declaration(DefaultExtensionCatalog.DEFAULT_COLLECTION.aggregateFunctions().get(0))
-                    .outputType(TypeCreator.of(false).I64)
+                    .declaration(
+                        DefaultExtensionCatalog.DEFAULT_COLLECTION.aggregateFunctions().get(0))
+                    .outputType(R.I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                     .invocation(Expression.AggregationInvocation.ALL)
                     .build())

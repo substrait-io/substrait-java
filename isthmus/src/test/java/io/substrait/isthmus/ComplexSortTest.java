@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.expression.Expression;
 import io.substrait.relation.Rel;
-import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
@@ -17,8 +16,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ComplexSortTest extends PlanTestBase {
-
-  final TypeCreator R = TypeCreator.of(false);
 
   /**
    * A {@link RelWriterImpl} that annotates each {@link RelNode} with its {@link RelCollation} trait

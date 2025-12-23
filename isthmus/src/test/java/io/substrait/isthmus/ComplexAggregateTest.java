@@ -9,13 +9,11 @@ import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class ComplexAggregateTest extends PlanTestBase {
-  final TypeCreator R = TypeCreator.of(false);
 
   private List<Type> columnTypes = List.of(R.I32, R.I32, R.I32, R.I32);
   private List<String> columnNames = List.of("a", "b", "c", "d");

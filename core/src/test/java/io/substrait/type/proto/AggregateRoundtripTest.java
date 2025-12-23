@@ -13,7 +13,6 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
-import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,7 +40,7 @@ class AggregateRoundtripTest extends TestBase {
                 AggregateFunctionInvocation.builder()
                     .arguments(Collections.emptyList())
                     .declaration(extensions.aggregateFunctions().get(0))
-                    .outputType(TypeCreator.of(false).I64)
+                    .outputType(R.I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                     .invocation(invocation)
                     .options(

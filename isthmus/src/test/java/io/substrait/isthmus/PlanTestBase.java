@@ -39,15 +39,17 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 
 public class PlanTestBase {
+
+  protected static final TypeCreator R = TypeCreator.of(false);
+  protected static final TypeCreator N = TypeCreator.of(true);
+
   protected final SimpleExtension.ExtensionCollection extensions;
 
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
-  protected final SubstraitBuilder sb;
-  protected static final TypeCreator R = TypeCreator.of(false);
-  protected static final TypeCreator N = TypeCreator.of(true);
 
+  protected final SubstraitBuilder sb;
   protected final SubstraitToCalcite substraitToCalcite;
 
   protected static final CalciteCatalogReader TPCH_CATALOG;

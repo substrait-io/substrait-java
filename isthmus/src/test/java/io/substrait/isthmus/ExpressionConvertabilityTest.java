@@ -17,7 +17,6 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
 import java.io.IOException;
 import java.util.List;
@@ -29,9 +28,6 @@ import org.junit.jupiter.api.Test;
 
 /** Tests which test that an expression can be converted to and from Calcite expressions. */
 class ExpressionConvertabilityTest extends PlanTestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
 
   final ExpressionProtoConverter expressionProtoConverter =
       new ExpressionProtoConverter(new ExtensionCollector(), null);

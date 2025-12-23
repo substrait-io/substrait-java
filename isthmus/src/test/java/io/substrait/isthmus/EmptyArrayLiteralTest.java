@@ -5,12 +5,10 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class EmptyArrayLiteralTest extends PlanTestBase {
-  private static final TypeCreator N = TypeCreator.of(true);
 
   @Test
   void emptyArrayLiteral() {

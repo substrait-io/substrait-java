@@ -6,7 +6,6 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,9 +15,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class SubstraitRelNodeConverterTest extends PlanTestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
 
   // Define a shared table (i.e. a NamedScan) for use in tests.
   final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
