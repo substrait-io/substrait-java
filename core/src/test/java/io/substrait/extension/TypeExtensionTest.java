@@ -9,7 +9,8 @@ import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.io.InputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,18 +30,26 @@ class TypeExtensionTest extends TestBase {
   static final TypeCreator R = TypeCreator.of(false);
 
   static final String URN = "extension:test:custom_extensions";
-  final SimpleExtension.ExtensionCollection extensionCollection;
+  static final SimpleExtension.ExtensionCollection CUSTOM_EXTENSION;
 
-  {
-    String path = "/extensions/custom_extensions.yaml";
-    InputStream inputStream = this.getClass().getResourceAsStream(path);
-    extensionCollection = SimpleExtension.load(path, inputStream);
+  static {
+    try {
+      String customExtensionStr = asString("extensions/custom_extensions.yaml");
+      CUSTOM_EXTENSION = SimpleExtension.load(URN, customExtensionStr);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   Type customType1 = sb.userDefinedType(URN, "customType1");
   Type customType2 = sb.userDefinedType(URN, "customType2");
   final PlanProtoConverter planProtoConverter = new PlanProtoConverter();
-  final ProtoPlanConverter protoPlanConverter = new ProtoPlanConverter(extensionCollection);
+  final ProtoPlanConverter protoPlanConverter;
+
+  TypeExtensionTest() {
+    super(CUSTOM_EXTENSION);
+    this.protoPlanConverter = new ProtoPlanConverter(extensions);
+  }
 
   @Test
   void roundtripCustomType() {
@@ -48,7 +57,7 @@ class TypeExtensionTest extends TestBase {
     List<String> tableName = Stream.of("example").collect(Collectors.toList());
     List<String> columnNames =
         Stream.of("custom_type_column", "i64_column").collect(Collectors.toList());
-    List<io.substrait.type.Type> types = Stream.of(customType1, R.I64).collect(Collectors.toList());
+    List<Type> types = Stream.of(customType1, R.I64).collect(Collectors.toList());
 
     // SELECT custom_type_column, scalar1(custom_type_column), scalar2(i64_column)
     // FROM example
@@ -79,8 +88,7 @@ class TypeExtensionTest extends TestBase {
     List<String> tableName = Stream.of("example").collect(Collectors.toList());
     List<String> columnNames =
         Stream.of("array_i64_type_column", "array_i64_column").collect(Collectors.toList());
-    List<io.substrait.type.Type> types =
-        Stream.of(REQUIRED.list(R.I64)).collect(Collectors.toList());
+    List<Type> types = Stream.of(REQUIRED.list(R.I64)).collect(Collectors.toList());
 
     Plan plan =
         sb.plan(
