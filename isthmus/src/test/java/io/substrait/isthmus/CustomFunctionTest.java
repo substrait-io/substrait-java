@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.protobuf.Any;
 import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
@@ -14,7 +15,9 @@ import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.isthmus.utils.UserTypeFactory;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Expression.Literal.Builder;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
@@ -49,8 +52,8 @@ class CustomFunctionTest extends PlanTestBase {
   }
 
   // Load custom extension into an ExtensionCollection
-  static final SimpleExtension.ExtensionCollection extensionCollection =
-      SimpleExtension.load("custom.yaml", FUNCTIONS_CUSTOM);
+  static final SimpleExtension.ExtensionCollection CUSTOM_EXTENSIONS =
+      SimpleExtension.load(URN, FUNCTIONS_CUSTOM);
 
   // Create user-defined types
   static final String aTypeName = "a_type";
@@ -231,18 +234,18 @@ class CustomFunctionTest extends PlanTestBase {
   // Create Function Converters that can handle the custom functions
   ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(
-          extensionCollection.scalarFunctions(),
+          CUSTOM_EXTENSIONS.scalarFunctions(),
           additionalScalarSignatures,
           typeFactory,
           typeConverter);
   AggregateFunctionConverter aggregateFunctionConverter =
       new AggregateFunctionConverter(
-          extensionCollection.aggregateFunctions(),
+          CUSTOM_EXTENSIONS.aggregateFunctions(),
           additionalAggregateSignatures,
           typeFactory,
           typeConverter);
   WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
+      new WindowFunctionConverter(CUSTOM_EXTENSIONS.windowFunctions(), typeFactory);
 
   ConverterProvider converterProvider =
       new ConverterProvider(
@@ -252,10 +255,13 @@ class CustomFunctionTest extends PlanTestBase {
           windowFunctionConverter,
           typeConverter);
 
-  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);
-
   // Create a SubstraitRelVisitor that uses the custom Function Converters
   final SubstraitRelVisitor calciteToSubstrait = new SubstraitRelVisitor(converterProvider);
+  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);
+
+  CustomFunctionTest() {
+    super(CUSTOM_EXTENSIONS);
+  }
 
   @Test
   void customScalarFunctionRoundtrip() {
@@ -573,6 +579,11 @@ class CustomFunctionTest extends PlanTestBase {
     RelNode calciteRel = substraitToCalcite.convert(rel1);
     Rel rel2 = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel1, rel2);
+
+    ExtensionCollector extensionCollector = new ExtensionCollector();
+    io.substrait.proto.Rel protoRel = new RelProtoConverter(extensionCollector).toProto(rel1);
+    Rel rel3 = new ProtoRelConverter(extensionCollector, CUSTOM_EXTENSIONS).from(protoRel);
+    assertEquals(rel1, rel3);
   }
 
   @Test
