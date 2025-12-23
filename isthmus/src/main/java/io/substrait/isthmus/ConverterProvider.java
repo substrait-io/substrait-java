@@ -90,7 +90,7 @@ public class ConverterProvider {
    * A {@link SqlParser.Config} is a Calcite class which controls SQL parsing behaviour like
    * identifier casing.
    */
-  protected SqlParser.Config getSqlParserConfig() {
+  public SqlParser.Config getSqlParserConfig() {
     return SqlParser.Config.DEFAULT
         .withUnquotedCasing(Casing.TO_UPPER)
         .withParserFactory(SqlDdlParserImpl.FACTORY)
@@ -101,7 +101,7 @@ public class ConverterProvider {
    * A {@link CalciteConnectionConfig} is a Calcite class which controls SQL processing behaviour
    * like table name case-sensitivity.
    */
-  protected CalciteConnectionConfig getCalciteConnectionConfig() {
+  public CalciteConnectionConfig getCalciteConnectionConfig() {
     return CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
   }
 
@@ -109,7 +109,7 @@ public class ConverterProvider {
    * A {@link SqlToRelConverter.Config} is a Calcite class which controls SQL processing behaviour
    * like field-trimming.
    */
-  protected SqlToRelConverter.Config getSqlToRelConverterConfig() {
+  public SqlToRelConverter.Config getSqlToRelConverterConfig() {
     return SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
   }
 
@@ -118,7 +118,7 @@ public class ConverterProvider {
    * org.apache.calcite.sql.SqlOperator}s available and controls valid identifiers during SQL
    * processing.
    */
-  protected SqlOperatorTable getSqlOperatorTable() {
+  public SqlOperatorTable getSqlOperatorTable() {
     return SubstraitOperatorTable.INSTANCE;
   }
 
@@ -128,7 +128,7 @@ public class ConverterProvider {
    * A {@link SubstraitRelVisitor} converts Calcite {@link org.apache.calcite.rel.RelNode}s to
    * Substrait {@link Rel}s
    */
-  protected SubstraitRelVisitor getSubstraitRelVisitor() {
+  public SubstraitRelVisitor getSubstraitRelVisitor() {
     return new SubstraitRelVisitor(this);
   }
 
@@ -136,7 +136,7 @@ public class ConverterProvider {
    * A {@link RexExpressionConverter} converts Calcite {@link org.apache.calcite.rex.RexNode}s to
    * Substrait equivalents.
    */
-  protected RexExpressionConverter getRexExpressionConverter(SubstraitRelVisitor srv) {
+  public RexExpressionConverter getRexExpressionConverter(SubstraitRelVisitor srv) {
     return new RexExpressionConverter(
         srv, getCallConverters(), getWindowFunctionConverter(), getTypeConverter());
   }
@@ -145,7 +145,7 @@ public class ConverterProvider {
    * {@link CallConverter}s are used to convert Calcite {@link org.apache.calcite.rex.RexCall}s to
    * Substrait equivalents.
    */
-  protected List<CallConverter> getCallConverters() {
+  public List<CallConverter> getCallConverters() {
     ArrayList<CallConverter> callConverters = new ArrayList<>();
     callConverters.add(new FieldSelectionConverter(typeConverter));
     callConverters.add(CallConverters.CASE);
@@ -167,7 +167,7 @@ public class ConverterProvider {
    *
    * <p>Override to customize the schema generation behaviour
    */
-  protected Function<Rel, CalciteSchema> getSchemaResolver() {
+  public Function<Rel, CalciteSchema> getSchemaResolver() {
     SchemaCollector schemaCollector = new SchemaCollector(this);
     return schemaCollector::toSchema;
   }
@@ -176,7 +176,7 @@ public class ConverterProvider {
    * A {@link SubstraitRelNodeConverter} is used when converting from Substrait {@link Rel}s to
    * Calcite {@link org.apache.calcite.rel.RelNode}s.
    */
-  protected SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
+  public SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
     return new SubstraitRelNodeConverter(relBuilder, this);
   }
 
@@ -184,7 +184,7 @@ public class ConverterProvider {
    * A {@link ExpressionRexConverter} converts Substrait {@link io.substrait.expression.Expression}
    * to Calcite equivalents
    */
-  protected ExpressionRexConverter getExpressionRexConverter(
+  public ExpressionRexConverter getExpressionRexConverter(
       SubstraitRelNodeConverter relNodeConverter) {
     ExpressionRexConverter erc =
         new ExpressionRexConverter(
@@ -200,7 +200,7 @@ public class ConverterProvider {
    * A {@link RelBuilder} is a Calcite class used as a factory for creating {@link
    * org.apache.calcite.rel.RelNode}s.
    */
-  protected RelBuilder getRelBuilder(CalciteSchema schema) {
+  public RelBuilder getRelBuilder(CalciteSchema schema) {
     return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
   }
 
