@@ -24,7 +24,7 @@ public class DynamicConverterProvider extends ConverterProvider {
   }
 
   @Override
-  protected List<CallConverter> getCallConverters() {
+  public List<CallConverter> getCallConverters() {
     List<CallConverter> callConverters = super.getCallConverters();
 
     SimpleExtension.ExtensionCollection dynamicExtensionCollection =
@@ -45,7 +45,7 @@ public class DynamicConverterProvider extends ConverterProvider {
   }
 
   @Override
-  protected SqlOperatorTable getSqlOperatorTable() {
+  public SqlOperatorTable getSqlOperatorTable() {
     SimpleExtension.ExtensionCollection dynamicExtensionCollection =
         ExtensionUtils.getDynamicExtensions(extensions);
     if (!dynamicExtensionCollection.scalarFunctions().isEmpty()
