@@ -44,25 +44,23 @@ import org.junit.jupiter.api.Test;
 class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionLeafRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(1));
+    ColumnAppendDetail detail = new ColumnAppendDetail(sb.i32(1));
     ImmutableExtensionLeaf rel = ExtensionLeaf.from(detail).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionSingleRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(2));
-    ImmutableExtensionSingle rel =
-        ExtensionSingle.from(detail, substraitBuilder.emptyScan()).build();
+    ColumnAppendDetail detail = new ColumnAppendDetail(sb.i32(2));
+    ImmutableExtensionSingle rel = ExtensionSingle.from(detail, sb.emptyScan()).build();
     roundtrip(rel);
   }
 
   @Test
   void extensionMultiRelDetailTest() {
-    ColumnAppendDetail detail = new ColumnAppendDetail(substraitBuilder.i32(3));
+    ColumnAppendDetail detail = new ColumnAppendDetail(sb.i32(3));
     ImmutableExtensionMulti rel =
-        ExtensionMulti.from(detail, substraitBuilder.emptyScan(), substraitBuilder.emptyScan())
-            .build();
+        ExtensionMulti.from(detail, sb.emptyScan(), sb.emptyScan()).build();
     roundtrip(rel);
   }
 

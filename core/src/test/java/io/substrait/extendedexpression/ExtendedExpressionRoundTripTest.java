@@ -88,7 +88,7 @@ class ExtendedExpressionRoundTripTest extends TestBase {
 
   private static ImmutableExpressionReference getScalarFunctionExpression() {
     Expression.ScalarFunctionInvocation scalarFunctionInvocation =
-        new SubstraitBuilder(defaultExtensionCollection)
+        new SubstraitBuilder(DefaultExtensionCatalog.DEFAULT_COLLECTION)
             .scalarFn(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                 "add:dec_dec",
@@ -111,8 +111,9 @@ class ExtendedExpressionRoundTripTest extends TestBase {
             .function(
                 AggregateFunctionInvocation.builder()
                     .arguments(Collections.emptyList())
-                    .declaration(defaultExtensionCollection.aggregateFunctions().get(0))
-                    .outputType(TypeCreator.of(false).I64)
+                    .declaration(
+                        DefaultExtensionCatalog.DEFAULT_COLLECTION.aggregateFunctions().get(0))
+                    .outputType(R.I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                     .invocation(Expression.AggregationInvocation.ALL)
                     .build())

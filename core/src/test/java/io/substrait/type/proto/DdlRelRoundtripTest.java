@@ -44,7 +44,7 @@ class DdlRelRoundtripTest extends TestBase {
   @Test
   void alter() {
     ProtoRelConverter protoRelConverter =
-        new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
+        new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
 
     StringHolder detail = new StringHolder("DETAIL");
 

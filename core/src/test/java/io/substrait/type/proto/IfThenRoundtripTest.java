@@ -19,9 +19,9 @@ class IfThenRoundtripTest extends TestBase {
   @Test
   void ifThenNotNullable() {
     final Expression.IfThen ifRel =
-        b.ifThen(
+        sb.ifThen(
             Arrays.asList(
-                b.ifClause(ExpressionCreator.bool(false, false), ExpressionCreator.i64(false, 1))),
+                sb.ifClause(ExpressionCreator.bool(false, false), ExpressionCreator.i64(false, 1))),
             ExpressionCreator.i64(false, 2));
     assertFalse(ifRel.getType().nullable());
 
@@ -34,9 +34,9 @@ class IfThenRoundtripTest extends TestBase {
   @Test
   void ifThenNullable() {
     final Expression.IfThen ifRel =
-        b.ifThen(
+        sb.ifThen(
             Arrays.asList(
-                b.ifClause(ExpressionCreator.bool(true, false), ExpressionCreator.i64(true, 1))),
+                sb.ifClause(ExpressionCreator.bool(true, false), ExpressionCreator.i64(true, 1))),
             ExpressionCreator.i64(false, 2));
     assertTrue(ifRel.getType().nullable());
 

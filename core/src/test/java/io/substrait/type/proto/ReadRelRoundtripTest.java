@@ -20,13 +20,13 @@ class ReadRelRoundtripTest extends TestBase {
     List<String> columnNames = Stream.of("column1", "column2").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I64, R.I64).collect(Collectors.toList());
 
-    NamedScan namedScan = b.namedScan(tableName, columnNames, columnTypes);
+    NamedScan namedScan = sb.namedScan(tableName, columnNames, columnTypes);
     namedScan =
         NamedScan.builder()
             .from(namedScan)
             .bestEffortFilter(
-                b.equal(b.fieldReference(namedScan, 0), b.fieldReference(namedScan, 1)))
-            .filter(b.equal(b.fieldReference(namedScan, 0), b.fieldReference(namedScan, 1)))
+                sb.equal(sb.fieldReference(namedScan, 0), sb.fieldReference(namedScan, 1)))
+            .filter(sb.equal(sb.fieldReference(namedScan, 0), sb.fieldReference(namedScan, 1)))
             .build();
 
     verifyRoundTrip(namedScan);
@@ -34,7 +34,7 @@ class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void emptyScan() {
-    io.substrait.relation.EmptyScan emptyScan = b.emptyScan();
+    io.substrait.relation.EmptyScan emptyScan = sb.emptyScan();
     verifyRoundTrip(emptyScan);
   }
 
@@ -56,8 +56,8 @@ class ReadRelRoundtripTest extends TestBase {
         VirtualTableScan.builder()
             .from(virtTable)
             .bestEffortFilter(
-                b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
-            .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
+                sb.equal(sb.fieldReference(virtTable, 0), sb.fieldReference(virtTable, 1)))
+            .filter(sb.equal(sb.fieldReference(virtTable, 0), sb.fieldReference(virtTable, 1)))
             .build();
     verifyRoundTrip(virtTable);
   }

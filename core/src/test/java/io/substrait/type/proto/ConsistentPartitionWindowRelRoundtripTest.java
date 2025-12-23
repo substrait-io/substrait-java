@@ -18,11 +18,11 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
   @Test
   void consistentPartitionWindowRoundtripSingle() {
     SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
-        defaultExtensionCollection.getWindowFunction(
+        extensions.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
     Rel input =
-        b.namedScan(
+        sb.namedScan(
             Arrays.asList("test"),
             Arrays.asList("a", "b", "c"),
             Arrays.asList(R.I64, R.I16, R.I32));
@@ -34,7 +34,7 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                     ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
                         .declaration(windowFunctionDeclaration)
                         // lead(a)
-                        .arguments(Arrays.asList(b.fieldReference(input, 0)))
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
                         .options(
                             Arrays.asList(
                                 FunctionOption.builder()
@@ -49,12 +49,12 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .boundsType(Expression.WindowBoundsType.RANGE)
                         .build()))
             // PARTITION BY b
-            .partitionExpressions(Arrays.asList(b.fieldReference(input, 1)))
+            .partitionExpressions(Arrays.asList(sb.fieldReference(input, 1)))
             .sorts(
                 Arrays.asList(
                     Expression.SortField.builder()
                         // SORT BY c
-                        .expr(b.fieldReference(input, 2))
+                        .expr(sb.fieldReference(input, 2))
                         .direction(Expression.SortDirection.ASC_NULLS_FIRST)
                         .build()))
             .build();
@@ -71,15 +71,15 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
   @Test
   void consistentPartitionWindowRoundtripMulti() {
     SimpleExtension.WindowFunctionVariant windowFunctionLeadDeclaration =
-        defaultExtensionCollection.getWindowFunction(
+        extensions.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
     SimpleExtension.WindowFunctionVariant windowFunctionLagDeclaration =
-        defaultExtensionCollection.getWindowFunction(
+        extensions.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
     Rel input =
-        b.namedScan(
+        sb.namedScan(
             Arrays.asList("test"),
             Arrays.asList("a", "b", "c"),
             Arrays.asList(R.I64, R.I16, R.I32));
@@ -91,7 +91,7 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                     ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
                         .declaration(windowFunctionLeadDeclaration)
                         // lead(a)
-                        .arguments(Arrays.asList(b.fieldReference(input, 0)))
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
                         .options(
                             Arrays.asList(
                                 FunctionOption.builder()
@@ -108,7 +108,7 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                     ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
                         .declaration(windowFunctionLagDeclaration)
                         // lag(a)
-                        .arguments(Arrays.asList(b.fieldReference(input, 0)))
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
                         .options(
                             Arrays.asList(
                                 FunctionOption.builder()
@@ -123,12 +123,12 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .boundsType(Expression.WindowBoundsType.RANGE)
                         .build()))
             // PARTITION BY b
-            .partitionExpressions(Arrays.asList(b.fieldReference(input, 1)))
+            .partitionExpressions(Arrays.asList(sb.fieldReference(input, 1)))
             .sorts(
                 Arrays.asList(
                     Expression.SortField.builder()
                         // SORT BY c
-                        .expr(b.fieldReference(input, 2))
+                        .expr(sb.fieldReference(input, 2))
                         .direction(Expression.SortDirection.ASC_NULLS_FIRST)
                         .build()))
             .build();

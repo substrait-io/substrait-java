@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class ProtoRelConverterTest extends TestBase {
 
   final NamedScan commonTable =
-      b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+      sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
   /**
    * Verify default behaviour of {@link ProtoRelConverter} in the presence of {@link
@@ -121,9 +121,7 @@ class ProtoRelConverterTest extends TestBase {
 
       final Rel relFromProto =
           new ProtoRelConverter(
-                  functionCollector,
-                  defaultExtensionCollection,
-                  new StringHolderHandlingProtoExtensionConverter())
+                  functionCollector, extensions, new StringHolderHandlingProtoExtensionConverter())
               .from(protoRel);
 
       assertEquals(rel, relFromProto);
@@ -140,9 +138,7 @@ class ProtoRelConverterTest extends TestBase {
 
       final Rel relFromProto =
           new ProtoRelConverter(
-                  functionCollector,
-                  defaultExtensionCollection,
-                  new StringHolderHandlingProtoExtensionConverter())
+                  functionCollector, extensions, new StringHolderHandlingProtoExtensionConverter())
               .from(protoRel);
 
       assertEquals(rel, relFromProto);

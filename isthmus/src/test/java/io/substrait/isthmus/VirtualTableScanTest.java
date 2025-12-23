@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
@@ -19,9 +18,6 @@ import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends PlanTestBase {
 
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
-  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
-
   @Test
   void literalOnlyVirtualTable() {
     NamedStruct schema =
@@ -29,8 +25,8 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(
             schema,
-            List.of(b.i32(2), b.fp64(4), b.str("a")),
-            List.of(b.i32(6), b.fp64(8.8), b.str("b")));
+            List.of(sb.i32(2), sb.fp64(4), sb.str("a")),
+            List.of(sb.i32(6), sb.fp64(8.8), sb.str("b")));
 
     // Check the specific Calcite encoding
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
@@ -48,8 +44,8 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(
             schema,
-            List.of(b.i32(2), b.add(b.fp64(4.4), b.fp64(4.5))),
-            List.of(b.multiply(b.i32(6), b.i32(2)), b.fp64(8.8)));
+            List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5))),
+            List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
 
     // Check the specific Calcite encoding
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);

@@ -13,20 +13,20 @@ import org.junit.jupiter.api.Test;
 
 class ExpandRelRoundtripTest extends TestBase {
   final Rel input =
-      b.namedScan(
+      sb.namedScan(
           Stream.of("a_table").collect(Collectors.toList()),
           Stream.of("column1", "column2").collect(Collectors.toList()),
           Stream.of(R.I64, R.I64).collect(Collectors.toList()));
 
   private Expand.ExpandField getConsistentField(int index) {
-    return Expand.ConsistentField.builder().expression(b.fieldReference(input, index)).build();
+    return Expand.ConsistentField.builder().expression(sb.fieldReference(input, index)).build();
   }
 
   private Expand.ExpandField getSwitchingField(List<Integer> indexes) {
     return Expand.SwitchingField.builder()
         .addAllDuplicates(
             indexes.stream()
-                .map(index -> b.fieldReference(input, index))
+                .map(index -> sb.fieldReference(input, index))
                 .collect(Collectors.toList()))
         .build();
   }
@@ -35,7 +35,7 @@ class ExpandRelRoundtripTest extends TestBase {
   void expandConsistent() {
     Rel rel =
         Expand.builder()
-            .from(b.expand(__ -> Collections.emptyList(), input))
+            .from(sb.expand(__ -> Collections.emptyList(), input))
             .hint(
                 Hint.builder()
                     .alias("alias1")
@@ -52,7 +52,7 @@ class ExpandRelRoundtripTest extends TestBase {
   void expandSwitching() {
     Rel rel =
         Expand.builder()
-            .from(b.expand(__ -> Collections.emptyList(), input))
+            .from(sb.expand(__ -> Collections.emptyList(), input))
             .hint(Hint.builder().addAllOutputNames(Arrays.asList("name1", "name2")).build())
             .fields(
                 Stream.of(

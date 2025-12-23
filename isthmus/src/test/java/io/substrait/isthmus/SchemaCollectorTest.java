@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.Test;
 
 class SchemaCollectorTest extends PlanTestBase {
 
-  SubstraitBuilder b = substraitBuilder;
   SchemaCollector schemaCollector = new SchemaCollector(typeFactory, TypeConverter.DEFAULT);
 
   void hasTable(CalciteSchema schema, String tableName, String tableSchema) {
@@ -33,12 +31,12 @@ class SchemaCollectorTest extends PlanTestBase {
   @Test
   void canCollectTables() {
     Rel rel =
-        b.cross(
-            b.namedScan(
+        sb.cross(
+            sb.namedScan(
                 List.of("table1"),
                 List.of("col1", "col2", "col3"),
                 List.of(N.I64, R.FP64, N.STRING)),
-            b.namedScan(List.of("table2"), List.of("col4", "col5"), List.of(N.BOOLEAN, N.I32)));
+            sb.namedScan(List.of("table2"), List.of("col4", "col5"), List.of(N.BOOLEAN, N.I32)));
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
 
     hasTable(
@@ -51,23 +49,23 @@ class SchemaCollectorTest extends PlanTestBase {
   @Test
   void canCollectTablesInSchemas() {
     Rel rel =
-        b.namedWrite(
+        sb.namedWrite(
             List.of("schema3", "table4"),
             List.of("col1", "col2", "col3", "col4", "col5", "col6"),
             AbstractWriteRel.WriteOp.UPDATE,
             AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
             AbstractWriteRel.OutputMode.MODIFIED_RECORDS,
-            b.cross(
-                b.cross(
-                    b.namedScan(
+            sb.cross(
+                sb.cross(
+                    sb.namedScan(
                         List.of("schema1", "table1"),
                         List.of("col1", "col2", "col3"),
                         List.of(N.I64, N.FP64, N.STRING)),
-                    b.namedScan(
+                    sb.namedScan(
                         List.of("schema1", "table2"),
                         List.of("col4", "col5"),
                         List.of(N.BOOLEAN, N.I32))),
-                b.namedScan(List.of("schema2", "table3"), List.of("col6"), List.of(N.I64))));
+                sb.namedScan(List.of("schema2", "table3"), List.of("col6"), List.of(N.I64))));
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
 
     CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
@@ -113,13 +111,13 @@ class SchemaCollectorTest extends PlanTestBase {
     Expression condition = ExpressionCreator.bool(false, true);
 
     Rel rel =
-        b.namedWrite(
+        sb.namedWrite(
             List.of("schema1", "table2"),
             List.of("col1"),
             AbstractWriteRel.WriteOp.INSERT,
             AbstractWriteRel.CreateMode.APPEND_IF_EXISTS,
             AbstractWriteRel.OutputMode.NO_OUTPUT,
-            b.namedUpdate(
+            sb.namedUpdate(
                 List.of("schema1", "table1"), List.of("col1"), transformations, condition, true));
 
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
@@ -132,10 +130,10 @@ class SchemaCollectorTest extends PlanTestBase {
   @Test
   void canHandleMultipleSchemas() {
     Rel rel =
-        b.cross(
-            b.namedScan(
+        sb.cross(
+            sb.namedScan(
                 List.of("level1", "level2a", "level3", "t1"), List.of("col1"), List.of(N.I64)),
-            b.namedScan(List.of("level1", "level2b", "t2"), List.of("col2"), List.of(N.I32)));
+            sb.namedScan(List.of("level1", "level2b", "t2"), List.of("col2"), List.of(N.I32)));
 
     CalciteSchema rootSchema = schemaCollector.toSchema(rel);
     CalciteSchema level1 = rootSchema.getSubSchema("level1", false);
@@ -150,8 +148,8 @@ class SchemaCollectorTest extends PlanTestBase {
 
   @Test
   void canHandleDuplicateNamedScans() {
-    Rel table = b.namedScan(List.of("table"), List.of("col1"), List.of(N.BOOLEAN));
-    Rel rel = b.cross(table, table);
+    Rel table = sb.namedScan(List.of("table"), List.of("col1"), List.of(N.BOOLEAN));
+    Rel rel = sb.cross(table, table);
 
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
     hasTable(calciteSchema, "table", "RecordType(BOOLEAN col1) NOT NULL");
@@ -160,9 +158,9 @@ class SchemaCollectorTest extends PlanTestBase {
   @Test
   void validatesSchemasForDuplicateNamedScans() {
     Rel rel =
-        b.cross(
-            b.namedScan(List.of("t"), List.of("col1"), List.of(N.BOOLEAN)),
-            b.namedScan(List.of("t"), List.of("col1"), List.of(R.BOOLEAN)));
+        sb.cross(
+            sb.namedScan(List.of("t"), List.of("col1"), List.of(N.BOOLEAN)),
+            sb.namedScan(List.of("t"), List.of("col1"), List.of(R.BOOLEAN)));
 
     IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> schemaCollector.toSchema(rel));
@@ -174,9 +172,9 @@ class SchemaCollectorTest extends PlanTestBase {
   @Test
   void validatesSchemasForNestedDuplicateNamedScans() {
     Rel rel =
-        b.cross(
-            b.namedScan(List.of("s", "t"), List.of("col1"), List.of(N.BOOLEAN)),
-            b.namedScan(List.of("s", "t"), List.of("col1"), List.of(R.BOOLEAN)));
+        sb.cross(
+            sb.namedScan(List.of("s", "t"), List.of("col1"), List.of(N.BOOLEAN)),
+            sb.namedScan(List.of("s", "t"), List.of("col1"), List.of(R.BOOLEAN)));
 
     IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> schemaCollector.toSchema(rel));

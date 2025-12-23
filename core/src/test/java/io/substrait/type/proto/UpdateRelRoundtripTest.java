@@ -47,7 +47,7 @@ class UpdateRelRoundtripTest extends TestBase {
   }
 
   private Expression.ScalarFunctionInvocation fnAdd(int value) {
-    return defaultExtensionCollection.scalarFunctions().stream()
+    return extensions.scalarFunctions().stream()
         .filter(s -> s.name().equalsIgnoreCase("add"))
         .findFirst()
         .map(

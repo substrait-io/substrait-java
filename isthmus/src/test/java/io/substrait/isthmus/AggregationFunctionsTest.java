@@ -1,12 +1,10 @@
 package io.substrait.isthmus;
 
 import com.google.common.collect.Streams;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -15,11 +13,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class AggregationFunctionsTest extends PlanTestBase {
-
-  SubstraitBuilder b = new SubstraitBuilder(extensions);
-
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
 
   // Create a table with that has a column of every numeric type, both NOT NULL and NULL
   private List<Type> numericTypesR = List.of(R.I8, R.I16, R.I32, R.I64, R.FP32, R.FP64);
@@ -37,21 +30,21 @@ class AggregationFunctionsTest extends PlanTestBase {
   private List<String> columnNames =
       Streams.mapWithIndex(tableTypes.stream(), (t, index) -> String.valueOf(index))
           .collect(Collectors.toList());
-  private NamedScan numericTypesTable = b.namedScan(List.of("example"), columnNames, tableTypes);
+  private NamedScan numericTypesTable = sb.namedScan(List.of("example"), columnNames, tableTypes);
 
   // Create the given function call on the given field of the input
   private Aggregate.Measure functionPicker(Rel input, int field, String fname) {
     switch (fname) {
       case "min":
-        return b.min(input, field);
+        return sb.min(input, field);
       case "max":
-        return b.max(input, field);
+        return sb.max(input, field);
       case "sum":
-        return b.sum(input, field);
+        return sb.sum(input, field);
       case "sum0":
-        return b.sum0(input, field);
+        return sb.sum0(input, field);
       case "avg":
-        return b.avg(input, field);
+        return sb.avg(input, field);
       default:
         throw new UnsupportedOperationException(
             String.format("no function is associated with %s", fname));
@@ -71,8 +64,8 @@ class AggregationFunctionsTest extends PlanTestBase {
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
   void emptyGrouping(String aggFunction) {
     Aggregate rel =
-        b.aggregate(
-            input -> b.grouping(input), input -> functions(input, aggFunction), numericTypesTable);
+        sb.aggregate(
+            input -> sb.grouping(input), input -> functions(input, aggFunction), numericTypesTable);
     assertFullRoundTrip(rel);
   }
 
@@ -80,8 +73,8 @@ class AggregationFunctionsTest extends PlanTestBase {
   @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
   void withGrouping(String aggFunction) {
     Aggregate rel =
-        b.aggregate(
-            input -> b.grouping(input, 0),
+        sb.aggregate(
+            input -> sb.grouping(input, 0),
             input -> functions(input, aggFunction),
             numericTypesTable);
     assertFullRoundTrip(rel);

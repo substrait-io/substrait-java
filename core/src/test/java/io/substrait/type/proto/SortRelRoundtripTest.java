@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class SortRelRoundtripTest extends TestBase {
 
   final Rel baseTable =
-      b.namedScan(
+      sb.namedScan(
           Collections.singletonList("test_table"),
           Arrays.asList("id", "amount", "name", "category", "timestamp"),
           Arrays.asList(R.I64, R.FP64, R.STRING, R.STRING, R.TIMESTAMP));
@@ -21,7 +21,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by id ascending, nulls first
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 0))
+            .expr(sb.fieldReference(baseTable, 0))
             .direction(Expression.SortDirection.ASC_NULLS_FIRST)
             .build();
 
@@ -35,7 +35,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by name ascending, nulls last
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 2))
+            .expr(sb.fieldReference(baseTable, 2))
             .direction(Expression.SortDirection.ASC_NULLS_LAST)
             .build();
 
@@ -49,7 +49,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by amount descending, nulls first
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 1))
+            .expr(sb.fieldReference(baseTable, 1))
             .direction(Expression.SortDirection.DESC_NULLS_FIRST)
             .build();
 
@@ -63,7 +63,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by timestamp descending, nulls last
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 4))
+            .expr(sb.fieldReference(baseTable, 4))
             .direction(Expression.SortDirection.DESC_NULLS_LAST)
             .build();
 
@@ -77,7 +77,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort with clustered direction (no specific order guarantee)
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 3))
+            .expr(sb.fieldReference(baseTable, 3))
             .direction(Expression.SortDirection.CLUSTERED)
             .build();
 
@@ -91,13 +91,13 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by category (asc), then amount (desc)
     Expression.SortField sortField1 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 3))
+            .expr(sb.fieldReference(baseTable, 3))
             .direction(Expression.SortDirection.ASC_NULLS_FIRST)
             .build();
 
     Expression.SortField sortField2 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 1))
+            .expr(sb.fieldReference(baseTable, 1))
             .direction(Expression.SortDirection.DESC_NULLS_LAST)
             .build();
 
@@ -111,19 +111,19 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by category, name, and id
     Expression.SortField sortField1 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 3))
+            .expr(sb.fieldReference(baseTable, 3))
             .direction(Expression.SortDirection.ASC_NULLS_LAST)
             .build();
 
     Expression.SortField sortField2 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 2))
+            .expr(sb.fieldReference(baseTable, 2))
             .direction(Expression.SortDirection.ASC_NULLS_LAST)
             .build();
 
     Expression.SortField sortField3 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 0))
+            .expr(sb.fieldReference(baseTable, 0))
             .direction(Expression.SortDirection.ASC_NULLS_FIRST)
             .build();
 
@@ -136,7 +136,7 @@ class SortRelRoundtripTest extends TestBase {
   @Test
   void sortByComputedExpression() {
     // Sort by computed expression: amount * 2
-    Expression computedExpr = b.multiply(b.fieldReference(baseTable, 1), b.fp64(2.0));
+    Expression computedExpr = sb.multiply(sb.fieldReference(baseTable, 1), sb.fp64(2.0));
 
     Expression.SortField sortField =
         Expression.SortField.builder()
@@ -154,7 +154,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort by string field directly
     Expression.SortField sortField =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 2))
+            .expr(sb.fieldReference(baseTable, 2))
             .direction(Expression.SortDirection.ASC_NULLS_LAST)
             .build();
 
@@ -168,19 +168,19 @@ class SortRelRoundtripTest extends TestBase {
     // Sort with different null handling for different fields
     Expression.SortField sortField1 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 3))
+            .expr(sb.fieldReference(baseTable, 3))
             .direction(Expression.SortDirection.ASC_NULLS_FIRST)
             .build();
 
     Expression.SortField sortField2 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 1))
+            .expr(sb.fieldReference(baseTable, 1))
             .direction(Expression.SortDirection.DESC_NULLS_FIRST)
             .build();
 
     Expression.SortField sortField3 =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 2))
+            .expr(sb.fieldReference(baseTable, 2))
             .direction(Expression.SortDirection.ASC_NULLS_LAST)
             .build();
 
@@ -198,23 +198,23 @@ class SortRelRoundtripTest extends TestBase {
             .input(baseTable)
             .addSortFields(
                 Expression.SortField.builder()
-                    .expr(b.fieldReference(baseTable, 0))
+                    .expr(sb.fieldReference(baseTable, 0))
                     .direction(Expression.SortDirection.ASC_NULLS_FIRST)
                     .build(),
                 Expression.SortField.builder()
-                    .expr(b.fieldReference(baseTable, 1))
+                    .expr(sb.fieldReference(baseTable, 1))
                     .direction(Expression.SortDirection.ASC_NULLS_LAST)
                     .build(),
                 Expression.SortField.builder()
-                    .expr(b.fieldReference(baseTable, 2))
+                    .expr(sb.fieldReference(baseTable, 2))
                     .direction(Expression.SortDirection.DESC_NULLS_FIRST)
                     .build(),
                 Expression.SortField.builder()
-                    .expr(b.fieldReference(baseTable, 3))
+                    .expr(sb.fieldReference(baseTable, 3))
                     .direction(Expression.SortDirection.DESC_NULLS_LAST)
                     .build(),
                 Expression.SortField.builder()
-                    .expr(b.fieldReference(baseTable, 4))
+                    .expr(sb.fieldReference(baseTable, 4))
                     .direction(Expression.SortDirection.CLUSTERED)
                     .build())
             .build();
@@ -227,7 +227,7 @@ class SortRelRoundtripTest extends TestBase {
     // Sort on top of another sort
     Expression.SortField firstSort =
         Expression.SortField.builder()
-            .expr(b.fieldReference(baseTable, 3))
+            .expr(sb.fieldReference(baseTable, 3))
             .direction(Expression.SortDirection.ASC_NULLS_FIRST)
             .build();
 
@@ -235,7 +235,7 @@ class SortRelRoundtripTest extends TestBase {
 
     Expression.SortField secondSort =
         Expression.SortField.builder()
-            .expr(b.fieldReference(firstSortRel, 0))
+            .expr(sb.fieldReference(firstSortRel, 0))
             .direction(Expression.SortDirection.DESC_NULLS_LAST)
             .build();
 
