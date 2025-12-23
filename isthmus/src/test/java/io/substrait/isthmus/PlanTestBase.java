@@ -44,7 +44,7 @@ public class PlanTestBase {
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
-  protected final SubstraitBuilder substraitBuilder;
+  protected final SubstraitBuilder sb;
   protected static final TypeCreator R = TypeCreator.of(false);
   protected static final TypeCreator N = TypeCreator.of(true);
 
@@ -72,7 +72,7 @@ public class PlanTestBase {
 
   protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
     this.extensions = extensions;
-    this.substraitBuilder = new SubstraitBuilder(extensions);
+    this.sb = new SubstraitBuilder(extensions);
     this.substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
   }
 

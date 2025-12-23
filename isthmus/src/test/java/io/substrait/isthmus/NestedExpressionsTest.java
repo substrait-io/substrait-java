@@ -3,7 +3,6 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.protobuf.ByteString;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -21,19 +20,18 @@ class NestedExpressionsTest extends PlanTestBase {
 
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
-  protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
 
   Expression literalExpression = Expression.BoolLiteral.builder().value(true).build();
-  Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));
-  Expression.ScalarFunctionInvocation nonLiteralExpression2 = b.add(b.i32(3), b.i32(4));
+  Expression.ScalarFunctionInvocation nonLiteralExpression = sb.add(sb.i32(7), sb.i32(42));
+  Expression.ScalarFunctionInvocation nonLiteralExpression2 = sb.add(sb.i32(3), sb.i32(4));
 
   final List<Type> tableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN, N.STRING);
   final Rel commonTable =
-      b.namedScan(List.of("example"), List.of("a", "b", "c", "d", "e"), tableType);
-  final Rel emptyTable = b.emptyScan();
+      sb.namedScan(List.of("example"), List.of("a", "b", "c", "d", "e"), tableType);
+  final Rel emptyTable = sb.emptyScan();
 
-  Expression fieldRef1 = b.fieldReference(commonTable, 2);
-  Expression fieldRef2 = b.fieldReference(commonTable, 4);
+  Expression fieldRef1 = sb.fieldReference(commonTable, 2);
+  Expression fieldRef2 = sb.fieldReference(commonTable, 4);
 
   @Test
   void nestedListWithLiteralsTest() {
@@ -98,7 +96,7 @@ class NestedExpressionsTest extends PlanTestBase {
   @Test
   void nestedListWithStringLiteralsTest() {
     Expression.NestedList nestedList =
-        Expression.NestedList.builder().addValues(b.str("xzy")).addValues(b.str("abc")).build();
+        Expression.NestedList.builder().addValues(sb.str("xzy")).addValues(sb.str("abc")).build();
 
     Rel project = Project.builder().expressions(List.of(nestedList)).input(emptyTable).build();
 

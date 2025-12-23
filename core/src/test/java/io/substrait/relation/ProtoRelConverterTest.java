@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class ProtoRelConverterTest extends TestBase {
 
   final NamedScan commonTable =
-      b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+      sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
   /**
    * Verify default behaviour of {@link ProtoRelConverter} in the presence of {@link

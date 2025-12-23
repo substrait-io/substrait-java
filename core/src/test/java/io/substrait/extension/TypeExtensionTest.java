@@ -3,7 +3,7 @@ package io.substrait.extension;
 import static io.substrait.type.TypeCreator.REQUIRED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.TestBase;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  *   <li>Roundtrip between POJO and Proto
  * </ul>
  */
-class TypeExtensionTest {
+class TypeExtensionTest extends TestBase {
 
   static final TypeCreator R = TypeCreator.of(false);
 
@@ -37,9 +37,8 @@ class TypeExtensionTest {
     extensionCollection = SimpleExtension.load(path, inputStream);
   }
 
-  final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
-  Type customType1 = b.userDefinedType(URN, "customType1");
-  Type customType2 = b.userDefinedType(URN, "customType2");
+  Type customType1 = sb.userDefinedType(URN, "customType1");
+  Type customType2 = sb.userDefinedType(URN, "customType2");
   final PlanProtoConverter planProtoConverter = new PlanProtoConverter();
   final ProtoPlanConverter protoPlanConverter = new ProtoPlanConverter(extensionCollection);
 
@@ -54,21 +53,21 @@ class TypeExtensionTest {
     // SELECT custom_type_column, scalar1(custom_type_column), scalar2(i64_column)
     // FROM example
     Plan plan =
-        b.plan(
-            b.root(
-                b.project(
+        sb.plan(
+            sb.root(
+                sb.project(
                     input ->
                         Stream.of(
-                                b.fieldReference(input, 0),
-                                b.scalarFn(
+                                sb.fieldReference(input, 0),
+                                sb.scalarFn(
                                     URN,
                                     "scalar1:u!customType1",
                                     R.I64,
-                                    b.fieldReference(input, 0)),
-                                b.scalarFn(
-                                    URN, "scalar2:i64", customType2, b.fieldReference(input, 1)))
+                                    sb.fieldReference(input, 0)),
+                                sb.scalarFn(
+                                    URN, "scalar2:i64", customType2, sb.fieldReference(input, 1)))
                             .collect(Collectors.toList()),
-                    b.namedScan(tableName, columnNames, types))));
+                    sb.namedScan(tableName, columnNames, types))));
 
     io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
     Plan planReturned = protoPlanConverter.from(protoPlan);
@@ -84,15 +83,18 @@ class TypeExtensionTest {
         Stream.of(REQUIRED.list(R.I64)).collect(Collectors.toList());
 
     Plan plan =
-        b.plan(
-            b.root(
-                b.project(
+        sb.plan(
+            sb.root(
+                sb.project(
                     input ->
                         Stream.of(
-                                b.scalarFn(
-                                    URN, "array_index:list_i64", R.I64, b.fieldReference(input, 0)))
+                                sb.scalarFn(
+                                    URN,
+                                    "array_index:list_i64",
+                                    R.I64,
+                                    sb.fieldReference(input, 0)))
                             .collect(Collectors.toList()),
-                    b.namedScan(tableName, columnNames, types))));
+                    sb.namedScan(tableName, columnNames, types))));
     io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
     Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);

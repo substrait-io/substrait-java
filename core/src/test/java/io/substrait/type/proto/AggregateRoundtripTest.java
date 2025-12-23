@@ -56,7 +56,7 @@ class AggregateRoundtripTest extends TestBase {
                         Arrays.asList(
                             Expression.SortField.builder()
                                 // SORT BY decimal
-                                .expr(b.fieldReference(input, 0))
+                                .expr(sb.fieldReference(input, 0))
                                 .direction(Expression.SortDirection.ASC_NULLS_LAST)
                                 .build()))
                     .build())

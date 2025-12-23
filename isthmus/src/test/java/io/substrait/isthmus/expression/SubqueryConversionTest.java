@@ -16,19 +16,19 @@ import org.junit.jupiter.api.Test;
 class SubqueryConversionTest extends PlanTestBase {
 
   private final Rel customerTableScan =
-      substraitBuilder.namedScan(
+      sb.namedScan(
           List.of("customer"),
           List.of("c_custkey", "c_nationkey"),
           List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64));
 
   private final NamedScan orderTableScan =
-      substraitBuilder.namedScan(
+      sb.namedScan(
           List.of("orders"),
           List.of("o_orderkey", "o_custkey"),
           List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.I64));
 
   private final NamedScan nationTableScan =
-      substraitBuilder.namedScan(
+      sb.namedScan(
           List.of("nation"),
           List.of("n_nationkey", "n_name"),
           List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING));
@@ -42,22 +42,22 @@ class SubqueryConversionTest extends PlanTestBase {
      * FROM orders
      */
     final Rel root =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
                     // orders.o_orderkey
-                    substraitBuilder.fieldReference(input, 0),
+                    sb.fieldReference(input, 0),
                     // (SELECT customer.c_nationkey FROM customer WHERE customer.c_custkey =
                     // orders.o_custkey)
-                    substraitBuilder.scalarSubquery(
-                        substraitBuilder.project(
-                            input2 -> List.of(substraitBuilder.fieldReference(input2, 1)),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
                             Remap.of(List.of(1)),
-                            substraitBuilder.filter(
+                            sb.filter(
                                 input2 ->
-                                    substraitBuilder.equal(
+                                    sb.equal(
                                         // customer.c_custkey
-                                        substraitBuilder.fieldReference(input2, 0),
+                                        sb.fieldReference(input2, 0),
                                         // orders.o_custkey
                                         FieldReference.newRootStructOuterReference(
                                             1, TypeCreator.REQUIRED.I64, 1)),
@@ -108,30 +108,27 @@ class SubqueryConversionTest extends PlanTestBase {
      * FROM orders
      */
     final Rel root =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.fieldReference(input, 0),
-                    substraitBuilder.scalarSubquery(
-                        substraitBuilder.project(
-                            input2 -> List.of(substraitBuilder.fieldReference(input2, 1)),
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
                             Remap.of(List.of(2)),
-                            substraitBuilder.filter(
+                            sb.filter(
                                 input2 ->
-                                    substraitBuilder.equal(
-                                        substraitBuilder.fieldReference(input2, 0),
-                                        substraitBuilder.scalarSubquery(
-                                            substraitBuilder.project(
-                                                input3 ->
-                                                    List.of(
-                                                        substraitBuilder.fieldReference(input3, 1)),
+                                    sb.equal(
+                                        sb.fieldReference(input2, 0),
+                                        sb.scalarSubquery(
+                                            sb.project(
+                                                input3 -> List.of(sb.fieldReference(input3, 1)),
                                                 Remap.of(List.of(1)),
-                                                substraitBuilder.filter(
+                                                sb.filter(
                                                     input3 ->
-                                                        substraitBuilder.equal(
+                                                        sb.equal(
                                                             // customer.c_custkey
-                                                            substraitBuilder.fieldReference(
-                                                                input3, 0),
+                                                            sb.fieldReference(input3, 0),
                                                             // orders.o_custkey
                                                             FieldReference
                                                                 .newRootStructOuterReference(
@@ -193,31 +190,30 @@ class SubqueryConversionTest extends PlanTestBase {
      * FROM orders
      */
     final Rel root =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.fieldReference(input, 0),
-                    substraitBuilder.scalarSubquery(
-                        substraitBuilder.project(
-                            input2 -> List.of(substraitBuilder.fieldReference(input2, 1)),
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
                             Remap.of(List.of(2)),
-                            substraitBuilder.filter(
+                            sb.filter(
                                 input2 ->
-                                    substraitBuilder.inPredicate(
-                                        substraitBuilder.project(
-                                            input3 ->
-                                                List.of(substraitBuilder.fieldReference(input3, 1)),
+                                    sb.inPredicate(
+                                        sb.project(
+                                            input3 -> List.of(sb.fieldReference(input3, 1)),
                                             Remap.of(List.of(1)),
-                                            substraitBuilder.filter(
+                                            sb.filter(
                                                 input3 ->
-                                                    substraitBuilder.equal(
+                                                    sb.equal(
                                                         // customer.c_custkey
-                                                        substraitBuilder.fieldReference(input3, 0),
+                                                        sb.fieldReference(input3, 0),
                                                         // orders.o_custkey
                                                         FieldReference.newRootStructOuterReference(
                                                             1, TypeCreator.REQUIRED.I64, 2)),
                                                 customerTableScan)),
-                                        substraitBuilder.fieldReference(input2, 0)),
+                                        sb.fieldReference(input2, 0)),
                                 nationTableScan)),
                         TypeCreator.NULLABLE.STRING)),
             Remap.of(List.of(2, 3)),
@@ -272,38 +268,35 @@ class SubqueryConversionTest extends PlanTestBase {
      * FROM orders
      */
     final Rel root =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.fieldReference(input, 0),
-                    substraitBuilder.scalarSubquery(
-                        substraitBuilder.project(
-                            input2 -> List.of(substraitBuilder.fieldReference(input2, 1)),
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
                             Remap.of(List.of(2)),
-                            substraitBuilder.filter(
+                            sb.filter(
                                 input2 ->
-                                    substraitBuilder.exists(
-                                        substraitBuilder.project(
-                                            input3 ->
-                                                List.of(substraitBuilder.fieldReference(input3, 1)),
+                                    sb.exists(
+                                        sb.project(
+                                            input3 -> List.of(sb.fieldReference(input3, 1)),
                                             Remap.of(List.of(1)),
-                                            substraitBuilder.filter(
+                                            sb.filter(
                                                 input3 ->
-                                                    substraitBuilder.and(
-                                                        substraitBuilder.equal(
+                                                    sb.and(
+                                                        sb.equal(
                                                             // customer.c_custkey
-                                                            substraitBuilder.fieldReference(
-                                                                input3, 0),
+                                                            sb.fieldReference(input3, 0),
                                                             // orders.o_custkey
                                                             FieldReference
                                                                 .newRootStructOuterReference(
                                                                     1,
                                                                     TypeCreator.REQUIRED.I64,
                                                                     2)),
-                                                        substraitBuilder.equal(
+                                                        sb.equal(
                                                             // customer.c_nationkey
-                                                            substraitBuilder.fieldReference(
-                                                                input3, 1),
+                                                            sb.fieldReference(input3, 1),
                                                             // nation.n_nationkey
                                                             FieldReference
                                                                 .newRootStructOuterReference(

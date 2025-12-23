@@ -19,7 +19,7 @@ public abstract class TestBase {
   protected TypeCreator R = TypeCreator.REQUIRED;
   protected TypeCreator N = TypeCreator.NULLABLE;
 
-  protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
+  protected SubstraitBuilder sb = new SubstraitBuilder(defaultExtensionCollection);
   protected ExtensionCollector functionCollector = new ExtensionCollector();
   protected RelProtoConverter relProtoConverter = new RelProtoConverter(functionCollector);
   protected ProtoRelConverter protoRelConverter =

@@ -19,7 +19,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Iterable<Type> types = List.of(TypeCreator.REQUIRED.STRING);
     Root root =
         Root.builder()
-            .input(substraitBuilder.namedScan(List.of("stores"), List.of("s"), types))
+            .input(sb.namedScan(List.of("stores"), List.of("s"), types))
             .addNames("store")
             .build();
 
@@ -33,7 +33,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Iterable<Type> types = List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING);
     Root root =
         Root.builder()
-            .input(substraitBuilder.namedScan(List.of("stores"), List.of("s_store_id", "s"), types))
+            .input(sb.namedScan(List.of("stores"), List.of("s_store_id", "s"), types))
             .addNames("s_store_id", "store")
             .build();
 
@@ -50,8 +50,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Root root =
         Root.builder()
             .input(
-                substraitBuilder.namedScan(
-                    List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
+                sb.namedScan(List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
             .addNames("store", "store_id", "store_name")
             .build();
 
@@ -78,8 +77,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Root root =
         Root.builder()
             .input(
-                substraitBuilder.namedScan(
-                    List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
+                sb.namedScan(List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
             .addNames("store", "store_id", "store_name")
             .build();
 
@@ -108,8 +106,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Root root =
         Root.builder()
             .input(
-                substraitBuilder.namedScan(
-                    List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
+                sb.namedScan(List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
             .addNames("store", "store_id", "store_name")
             .build();
 
@@ -138,8 +135,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
     Root root =
         Root.builder()
             .input(
-                substraitBuilder.namedScan(
-                    List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
+                sb.namedScan(List.of("stores"), List.of("s", "s_store_id", "s_store_name"), types))
             .addNames("store", "store_id", "store_name")
             .build();
 

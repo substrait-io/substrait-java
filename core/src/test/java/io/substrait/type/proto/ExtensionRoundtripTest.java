@@ -50,7 +50,7 @@ class ExtensionRoundtripTest extends TestBase {
       new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
 
   final Rel commonTable =
-      b.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+      sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
   final AdvancedExtension commonExtension =
       AdvancedExtension.builder()
@@ -105,7 +105,7 @@ class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         NamedScan.builder()
             .from(
-                b.namedScan(
+                sb.namedScan(
                     Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
             .commonExtension(commonExtension)
             .extension(relExtension)
@@ -123,7 +123,7 @@ class ExtensionRoundtripTest extends TestBase {
   void filter() {
     Rel rel =
         Filter.builder()
-            .from(b.filter(__ -> b.bool(true), commonTable))
+            .from(sb.filter(__ -> sb.bool(true), commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -134,7 +134,7 @@ class ExtensionRoundtripTest extends TestBase {
   void fetch() {
     Rel rel =
         Fetch.builder()
-            .from(b.fetch(1, 2, commonTable))
+            .from(sb.fetch(1, 2, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -145,7 +145,7 @@ class ExtensionRoundtripTest extends TestBase {
   void aggregate() {
     Rel rel =
         Aggregate.builder()
-            .from(b.aggregate(b::grouping, __ -> Collections.emptyList(), commonTable))
+            .from(sb.aggregate(sb::grouping, __ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -156,7 +156,7 @@ class ExtensionRoundtripTest extends TestBase {
   void sort() {
     Rel rel =
         Sort.builder()
-            .from(b.sort(__ -> Collections.emptyList(), commonTable))
+            .from(sb.sort(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -167,7 +167,7 @@ class ExtensionRoundtripTest extends TestBase {
   void join() {
     Rel rel =
         Join.builder()
-            .from(b.innerJoin(__ -> b.bool(true), commonTable, commonTable))
+            .from(sb.innerJoin(__ -> sb.bool(true), commonTable, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -182,7 +182,7 @@ class ExtensionRoundtripTest extends TestBase {
     Rel relWithoutKeys =
         HashJoin.builder()
             .from(
-                b.hashJoin(
+                sb.hashJoin(
                     leftEmptyKeys,
                     rightEmptyKeys,
                     HashJoin.JoinType.INNER,
@@ -202,7 +202,7 @@ class ExtensionRoundtripTest extends TestBase {
     Rel relWithoutKeys =
         MergeJoin.builder()
             .from(
-                b.mergeJoin(
+                sb.mergeJoin(
                     leftEmptyKeys,
                     rightEmptyKeys,
                     MergeJoin.JoinType.INNER,
@@ -219,8 +219,8 @@ class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         NestedLoopJoin.builder()
             .from(
-                b.nestedLoopJoin(
-                    __ -> b.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
+                sb.nestedLoopJoin(
+                    __ -> sb.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -231,7 +231,7 @@ class ExtensionRoundtripTest extends TestBase {
   void project() {
     Rel rel =
         Project.builder()
-            .from(b.project(__ -> Collections.emptyList(), commonTable))
+            .from(sb.project(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -242,7 +242,7 @@ class ExtensionRoundtripTest extends TestBase {
   void expand() {
     Rel rel =
         Expand.builder()
-            .from(b.expand(__ -> Collections.emptyList(), commonTable))
+            .from(sb.expand(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
             .build();
     verifyRoundTrip(rel);
@@ -252,7 +252,7 @@ class ExtensionRoundtripTest extends TestBase {
   void set() {
     Rel rel =
         Set.builder()
-            .from(b.set(Set.SetOp.UNION_ALL, commonTable))
+            .from(sb.set(Set.SetOp.UNION_ALL, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -284,7 +284,7 @@ class ExtensionRoundtripTest extends TestBase {
   void cross() {
     Rel rel =
         Cross.builder()
-            .from(b.cross(commonTable, commonTable))
+            .from(sb.cross(commonTable, commonTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -297,13 +297,13 @@ class ExtensionRoundtripTest extends TestBase {
     // Check that custom extensions in these relations can be handled.
 
     Rel baseTable =
-        b.namedScan(
+        sb.namedScan(
             Stream.of("test_table").collect(Collectors.toList()),
             Stream.of("test_column").collect(Collectors.toList()),
             Stream.of(TypeCreator.REQUIRED.I64).collect(Collectors.toList()));
     Rel relWithEnhancement =
         Project.builder()
-            .from(b.project(input -> Collections.emptyList(), baseTable))
+            .from(sb.project(input -> Collections.emptyList(), baseTable))
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();
@@ -311,7 +311,7 @@ class ExtensionRoundtripTest extends TestBase {
     @Test
     void scalarSubquery() {
       Project rel =
-          b.project(
+          sb.project(
               input ->
                   Stream.of(
                           Expression.ScalarSubquery.builder()
@@ -327,7 +327,7 @@ class ExtensionRoundtripTest extends TestBase {
     @Test
     void inPredicate() {
       Project rel =
-          b.project(
+          sb.project(
               input ->
                   Stream.of(
                           Expression.InPredicate.builder()
@@ -342,7 +342,7 @@ class ExtensionRoundtripTest extends TestBase {
     @Test
     void setPredicate() {
       Project rel =
-          b.project(
+          sb.project(
               input ->
                   Stream.of(
                           Expression.SetPredicate.builder()

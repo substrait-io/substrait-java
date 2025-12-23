@@ -37,7 +37,7 @@ class WriteRelRoundtripTest extends TestBase {
     virtTable =
         VirtualTableScan.builder()
             .from(virtTable)
-            .filter(b.equal(b.fieldReference(virtTable, 0), b.fieldReference(virtTable, 1)))
+            .filter(sb.equal(sb.fieldReference(virtTable, 0), sb.fieldReference(virtTable, 1)))
             .build();
 
     NamedWrite command =

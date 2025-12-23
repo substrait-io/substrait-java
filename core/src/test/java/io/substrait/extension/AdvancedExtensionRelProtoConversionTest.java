@@ -2,7 +2,7 @@ package io.substrait.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.ExpressionCreator;
@@ -48,9 +48,7 @@ import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
 import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import org.junit.jupiter.api.Test;
 
-class AdvancedExtensionRelProtoConversionTest {
-  final SubstraitBuilder builder = new SubstraitBuilder(DefaultExtensionCatalog.DEFAULT_COLLECTION);
-
+class AdvancedExtensionRelProtoConversionTest extends TestBase {
   final StringHolder enhanced = new StringHolder("ENHANCED");
   final StringHolder optimized = new StringHolder("OPTIMIZED");
   final AdvancedExtension<?, ?> extension =
@@ -168,7 +166,7 @@ class AdvancedExtensionRelProtoConversionTest {
                     .initialSchema(
                         NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                     .build())
-            .addMeasures(builder.countStar())
+            .addMeasures(sb.countStar())
             .extension(extension)
             .build();
 
@@ -191,7 +189,7 @@ class AdvancedExtensionRelProtoConversionTest {
             .addSortFields(
                 SortField.builder()
                     .direction(SortDirection.ASC_NULLS_FIRST)
-                    .expr(builder.fieldReference(scan, 0))
+                    .expr(sb.fieldReference(scan, 0))
                     .build())
             .extension(extension)
             .build();
@@ -214,8 +212,7 @@ class AdvancedExtensionRelProtoConversionTest {
             .left(scan)
             .right(scan)
             .joinType(JoinType.INNER)
-            .condition(
-                builder.equal(builder.fieldReference(scan, 0), builder.fieldReference(scan, 0)))
+            .condition(sb.equal(sb.fieldReference(scan, 0), sb.fieldReference(scan, 0)))
             .extension(extension)
             .build();
 
@@ -235,7 +232,7 @@ class AdvancedExtensionRelProtoConversionTest {
     final Project rel =
         Project.builder()
             .input(scan)
-            .addExpressions(builder.fieldReference(scan, 0))
+            .addExpressions(sb.fieldReference(scan, 0))
             .extension(extension)
             .build();
 
@@ -384,12 +381,12 @@ class AdvancedExtensionRelProtoConversionTest {
             .addNames("CUSTOMER")
             .tableSchema(schema)
             .condition(
-                builder.equal(
+                sb.equal(
                     FieldReference.builder()
                         .addSegments(FieldReference.StructField.of(0))
                         .type(TypeCreator.REQUIRED.BOOLEAN)
                         .build(),
-                    builder.bool(true)))
+                    sb.bool(true)))
             .addTransformations(
                 TransformExpression.builder()
                     .columnTarget(0)

@@ -42,7 +42,7 @@ class NameRoundtripTest extends PlanTestBase {
   @Test
   void preserveNamesFromSubstrait() {
     NamedScan rel =
-        substraitBuilder.namedScan(
+        sb.namedScan(
             List.of("foo"),
             List.of("i64", "struct", "struct0", "struct1"),
             List.of(R.I64, R.struct(R.FP64, R.STRING)));

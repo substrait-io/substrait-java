@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 class ExchangeRelRoundtripTest extends TestBase {
 
   final Rel baseTable =
-      b.namedScan(
+      sb.namedScan(
           Collections.singletonList("exchange_test_table"),
           Arrays.asList("id", "amount", "name", "status"),
           Arrays.asList(R.I64, R.FP64, R.STRING, R.BOOLEAN));
@@ -42,7 +42,7 @@ class ExchangeRelRoundtripTest extends TestBase {
     Rel exchange =
         ScatterExchange.builder()
             .input(baseTable)
-            .addFields(b.fieldReference(baseTable, 0))
+            .addFields(sb.fieldReference(baseTable, 0))
             .partitionCount(1)
             .build();
 
@@ -55,7 +55,7 @@ class ExchangeRelRoundtripTest extends TestBase {
         SingleBucketExchange.builder()
             .input(baseTable)
             .partitionCount(1)
-            .expression(b.fieldReference(baseTable, 0))
+            .expression(sb.fieldReference(baseTable, 0))
             .build();
 
     verifyRoundTrip(exchange);
@@ -66,7 +66,7 @@ class ExchangeRelRoundtripTest extends TestBase {
     Rel exchange =
         MultiBucketExchange.builder()
             .input(baseTable)
-            .expression(b.fieldReference(baseTable, 0))
+            .expression(sb.fieldReference(baseTable, 0))
             .constrainedToCount(true)
             .partitionCount(1)
             .build();
