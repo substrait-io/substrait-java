@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.ByteString;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
@@ -17,9 +15,6 @@ import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class NestedExpressionsTest extends PlanTestBase {
-
-  protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
-      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   Expression literalExpression = Expression.BoolLiteral.builder().value(true).build();
   Expression.ScalarFunctionInvocation nonLiteralExpression = sb.add(sb.i32(7), sb.i32(42));

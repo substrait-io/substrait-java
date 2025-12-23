@@ -17,9 +17,6 @@ import java.io.IOException;
 public abstract class TestBase {
   protected final SimpleExtension.ExtensionCollection extensions;
 
-  protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
-      DefaultExtensionCatalog.DEFAULT_COLLECTION;
-
   protected TypeCreator R = TypeCreator.REQUIRED;
   protected TypeCreator N = TypeCreator.NULLABLE;
 

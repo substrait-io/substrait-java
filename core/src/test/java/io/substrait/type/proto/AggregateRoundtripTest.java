@@ -33,8 +33,6 @@ class AggregateRoundtripTest extends TestBase {
 
     ExtensionCollector functionCollector = new ExtensionCollector();
     RelProtoConverter to = new RelProtoConverter(functionCollector);
-    io.substrait.extension.SimpleExtension.ExtensionCollection extensions =
-        defaultExtensionCollection;
     ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 
     io.substrait.relation.ImmutableMeasure measure =

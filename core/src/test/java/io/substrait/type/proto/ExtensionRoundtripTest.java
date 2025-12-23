@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Test;
 class ExtensionRoundtripTest extends TestBase {
 
   final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
+      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
 
   final Rel commonTable =
       sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());

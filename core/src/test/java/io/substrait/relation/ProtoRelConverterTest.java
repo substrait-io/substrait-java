@@ -121,9 +121,7 @@ class ProtoRelConverterTest extends TestBase {
 
       final Rel relFromProto =
           new ProtoRelConverter(
-                  functionCollector,
-                  defaultExtensionCollection,
-                  new StringHolderHandlingProtoExtensionConverter())
+                  functionCollector, extensions, new StringHolderHandlingProtoExtensionConverter())
               .from(protoRel);
 
       assertEquals(rel, relFromProto);
@@ -140,9 +138,7 @@ class ProtoRelConverterTest extends TestBase {
 
       final Rel relFromProto =
           new ProtoRelConverter(
-                  functionCollector,
-                  defaultExtensionCollection,
-                  new StringHolderHandlingProtoExtensionConverter())
+                  functionCollector, extensions, new StringHolderHandlingProtoExtensionConverter())
               .from(protoRel);
 
       assertEquals(rel, relFromProto);

@@ -56,7 +56,7 @@ class WriteRelRoundtripTest extends TestBase {
   @Test
   void append() {
     ProtoRelConverter protoRelConverter =
-        new StringHolderHandlingProtoRelConverter(functionCollector, defaultExtensionCollection);
+        new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
 
     StringHolder detail = new StringHolder("DETAIL");
 
