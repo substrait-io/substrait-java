@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.PlanTestBase;
-import io.substrait.isthmus.SubstraitToCalcite;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -15,7 +14,6 @@ import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class SubqueryConversionTest extends PlanTestBase {
-  protected final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
 
   private final Rel customerTableScan =
       substraitBuilder.namedScan(
@@ -68,7 +66,7 @@ class SubqueryConversionTest extends PlanTestBase {
             Remap.of(List.of(2, 3)),
             orderTableScan);
 
-    final RelNode calciteRel = converter.convert(root);
+    final RelNode calciteRel = substraitToCalcite.convert(root);
 
     // LogicalFilter has field reference with $cor0 correlation variable
     // outer LogicalProject has variablesSet containing $cor0 correlation variable
@@ -147,7 +145,7 @@ class SubqueryConversionTest extends PlanTestBase {
             Remap.of(List.of(2, 3)),
             orderTableScan);
 
-    final RelNode calciteRel = converter.convert(root);
+    final RelNode calciteRel = substraitToCalcite.convert(root);
 
     // most inner LogicalFilter has field reference with $cor0 correlation variable
     // most outer LogicalProject has variablesSet containing $cor0 correlation variable
@@ -225,7 +223,7 @@ class SubqueryConversionTest extends PlanTestBase {
             Remap.of(List.of(2, 3)),
             orderTableScan);
 
-    final RelNode calciteRel = converter.convert(root);
+    final RelNode calciteRel = substraitToCalcite.convert(root);
 
     // most inner LogicalFilter has field reference with $cor0 correlation variable
     // most outer LogicalProject has variablesSet containing $cor0 correlation variable
@@ -318,7 +316,7 @@ class SubqueryConversionTest extends PlanTestBase {
             Remap.of(List.of(2, 3)),
             orderTableScan);
 
-    final RelNode calciteRel = converter.convert(root);
+    final RelNode calciteRel = substraitToCalcite.convert(root);
 
     // most inner LogicalFilter has field references with $cor0 and $cor1 correlation variables
     // most outer LogicalProject has variablesSet containing $cor0 correlation variable

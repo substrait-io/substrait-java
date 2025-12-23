@@ -2,70 +2,39 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
-import io.substrait.plan.PlanProtoConverter;
-import java.util.List;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.util.SqlOperatorTables;
 
-/** Take a SQL statement and a set of table definitions and return a substrait plan. */
+/**
+ * Take a SQL statement and a set of table definitions and return a substrait plan.
+ *
+ * <p>Conversion behaviours can be customized using a {@link ConverterProvider}
+ */
 public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
+  protected final ConverterProvider converterProvider;
 
   public SqlToSubstrait() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, null);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
-  public SqlToSubstrait(FeatureBoard features) {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, features);
-  }
-
-  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    super(features, extensions);
-
-    if (featureBoard.allowDynamicUdfs()) {
-      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-          ExtensionUtils.getDynamicExtensions(extensions);
-      if (!dynamicExtensionCollection.scalarFunctions().isEmpty()
-          || !dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
-        List<SqlOperator> generatedDynamicOperators =
-            SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, this.factory);
-        this.operatorTable =
-            SqlOperatorTables.chain(
-                SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
-        return;
-      }
-    }
-    this.operatorTable = SubstraitOperatorTable.INSTANCE;
-  }
-
-  /**
-   * Converts one or more SQL statements into a Substrait {@link io.substrait.proto.Plan}.
-   *
-   * @param sqlStatements a string containing one more SQL statements
-   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statements
-   * @return a Substrait proto {@link io.substrait.proto.Plan}
-   * @throws SqlParseException if there is an error while parsing the SQL statements string
-   * @deprecated use {@link #convert(String, org.apache.calcite.prepare.Prepare.CatalogReader)}
-   *     instead to get a {@link Plan} and convert that to a {@link io.substrait.proto.Plan} using
-   *     {@link PlanProtoConverter#toProto(Plan)}
-   */
+  /** Use {@link SqlToSubstrait#SqlToSubstrait(ConverterProvider)} instead */
   @Deprecated
-  public io.substrait.proto.Plan execute(String sqlStatements, Prepare.CatalogReader catalogReader)
-      throws SqlParseException {
-    PlanProtoConverter planToProto = new PlanProtoConverter();
-    return planToProto.toProto(
-        convert(sqlStatements, catalogReader, SqlDialect.DatabaseProduct.CALCITE.getDialect()));
+  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions) {
+    this(new ConverterProvider(extensions));
+  }
+
+  public SqlToSubstrait(ConverterProvider converterProvider) {
+    super(converterProvider);
+    this.operatorTable = converterProvider.getSqlOperatorTable();
+    this.converterProvider = converterProvider;
   }
 
   /**
@@ -84,7 +53,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, operatorTable).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, extensionCollection, featureBoard))
+        .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
         .forEach(root -> builder.addRoots(root));
 
     return builder.build();
@@ -112,7 +81,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, sqlParserConfig).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, extensionCollection, featureBoard))
+        .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
         .forEach(root -> builder.addRoots(root));
 
     return builder.build();

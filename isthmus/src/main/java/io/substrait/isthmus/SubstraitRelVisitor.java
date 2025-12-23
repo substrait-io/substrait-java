@@ -8,8 +8,6 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
-import io.substrait.isthmus.expression.CallConverters;
-import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -59,88 +57,58 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
 
+/**
+ * SubstraitRelVisitor is used to convert Calcite {@link RelNode}s to Substrait {@link Rel}s.
+ *
+ * <p>Conversion behaviours can be customized by using a {@link ConverterProvider} and/or extending
+ * this class
+ */
 @SuppressWarnings("UnstableApiUsage")
 @Value.Enclosing
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
-  private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
   protected final RexExpressionConverter rexExpressionConverter;
   protected final AggregateFunctionConverter aggregateFunctionConverter;
   protected final TypeConverter typeConverter;
-  protected final FeatureBoard featureBoard;
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
+  /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */
+  @Deprecated
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
-    this(typeFactory, extensions, FEATURES_DEFAULT);
+    this(new ConverterProvider(typeFactory, extensions));
   }
 
-  public SubstraitRelVisitor(
-      RelDataTypeFactory typeFactory,
-      SimpleExtension.ExtensionCollection extensions,
-      FeatureBoard features) {
-
-    this.typeConverter = TypeConverter.DEFAULT;
-    ArrayList<CallConverter> converters = new ArrayList<>();
-    converters.addAll(CallConverters.defaults(typeConverter));
-
-    if (features.allowDynamicUdfs()) {
-      SimpleExtension.ExtensionCollection dynamicExtensionCollection =
-          ExtensionUtils.getDynamicExtensions(extensions);
-      List<SqlOperator> dynamicOperators =
-          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
-
-      List<FunctionMappings.Sig> additionalSignatures =
-          dynamicOperators.stream()
-              .map(op -> FunctionMappings.s(op, op.getName()))
-              .collect(Collectors.toList());
-      converters.add(
-          new ScalarFunctionConverter(
-              extensions.scalarFunctions(),
-              additionalSignatures,
-              typeFactory,
-              TypeConverter.DEFAULT));
-    } else {
-      converters.add(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
-    }
-
-    converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
-    this.aggregateFunctionConverter =
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-    WindowFunctionConverter windowFunctionConverter =
-        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
-    this.rexExpressionConverter =
-        new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
-    this.featureBoard = features;
-  }
-
+  /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */
+  @Deprecated
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
       AggregateFunctionConverter aggregateFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
-      TypeConverter typeConverter,
-      FeatureBoard features) {
-    ArrayList<CallConverter> converters = new ArrayList<CallConverter>();
-    converters.addAll(CallConverters.defaults(typeConverter));
-    converters.add(scalarFunctionConverter);
-    converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
-    this.aggregateFunctionConverter = aggregateFunctionConverter;
-    this.rexExpressionConverter =
-        new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
-    this.typeConverter = typeConverter;
-    this.featureBoard = features;
+      TypeConverter typeConverter) {
+    this(
+        new ConverterProvider(
+            typeFactory,
+            scalarFunctionConverter,
+            aggregateFunctionConverter,
+            windowFunctionConverter,
+            typeConverter));
+  }
+
+  public SubstraitRelVisitor(ConverterProvider converterProvider) {
+    this.typeConverter = converterProvider.getTypeConverter();
+    this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
+    this.rexExpressionConverter = converterProvider.getRexExpressionConverter(this);
   }
 
   protected Expression toExpression(RexNode node) {
@@ -628,38 +596,32 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using default features.
-   *
-   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
-   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
+   * Deprecated, use {@link #convert(RelRoot, ConverterProvider)} directly
    *
    * @param relRoot The Calcite RelRoot to convert.
    * @param extensions The extension collection to use for the conversion.
    * @return The resulting Substrait Plan.Root.
    */
+  @Deprecated
   public static Plan.Root convert(RelRoot relRoot, SimpleExtension.ExtensionCollection extensions) {
-    return convert(relRoot, extensions, FEATURES_DEFAULT);
+    return convert(relRoot, new ConverterProvider(extensions));
   }
 
   /**
-   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using a custom visitor.
+   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root}
    *
-   * <p>This is the main conversion entry point for a complete plan. It applies the provided {@link
-   * SubstraitRelVisitor} to the final projected {@link RelNode} from the {@code relRoot}, and wraps
-   * the resulting {@link Rel} in a {@link Plan.Root}.
+   * <p>Converts the output of {@link RelRoot#project()} to a Substrait {@link Rel} and wraps it in
+   * a {@link Plan.Root}. Handles the extraction of final output field names, paying special
+   * attention to nested types (structs, maps) via the visitor's type converter, rather than using
+   * the names from {@link RelRoot#validatedRowType} directly.
    *
-   * <p>This method also correctly extracts the final output field names, paying special attention
-   * to nested types (structs, maps) via the visitor's type converter, rather than using the names
-   * from {@code relRoot.validatedRowType} directly.
-   *
-   * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete, optimized
-   *     plan.
-   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
-   *     behavior.
-   * @return The resulting Substrait Plan.Root, containing the converted relational tree and the
-   *     output names.
+   * @param relRoot The Calcite RelRoot to convert. This is expected to be a complete plan.
+   * @param converterProvider The {@link ConverterProvider} controlling conversion behaviours.
+   * @return The resulting Substrait {@link Plan.Root}, containing the converted relational tree and
+   *     the output names.
    */
-  public static Plan.Root convert(RelRoot relRoot, SubstraitRelVisitor visitor) {
+  public static Plan.Root convert(RelRoot relRoot, ConverterProvider converterProvider) {
+    SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
     visitor.popFieldAccessDepthMap(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
@@ -670,80 +632,31 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Converts a Calcite {@link RelRoot} to a Substrait {@link Plan.Root} using the specified
-   * features.
-   *
-   * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
-   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
-   *
-   * @param relRoot The Calcite RelRoot to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @return The resulting Substrait Plan.Root.
-   */
-  public static Plan.Root convert(
-      RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    return convert(
-        relRoot,
-        new SubstraitRelVisitor(relRoot.rel.getCluster().getTypeFactory(), extensions, features));
-  }
-
-  /**
-   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using default features.
+   * Deprecated, use {@link #convert(RelNode, ConverterProvider)} directly
    *
    * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
    * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
    * SimpleExtension.ExtensionCollection)}.
    *
-   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
-   * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
-   *
    * @param relNode The Calcite RelNode (and its subtree) to convert.
    * @param extensions The extension collection to use for the conversion.
    * @return The resulting Substrait Rel.
    */
+  @Deprecated
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
-    return convert(relNode, extensions, FEATURES_DEFAULT);
+    return convert(relNode, new ConverterProvider(extensions));
   }
 
   /**
-   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using a custom visitor.
+   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel}
    *
-   * <p>This is the main conversion entry point for a partial plan or a single node (and its
-   * children). It applies the provided {@link SubstraitRelVisitor} to the given {@code relNode}.
-   *
-   * <p>This method does not wrap the result in a {@link Plan.Root} or extract output names. For
-   * that, use {@link #convert(RelRoot, SubstraitRelVisitor)}.
-   *
-   * @param relNode The Calcite RelNode (and its subtree) to convert.
-   * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
-   *     behavior.
+   * @param relNode The Calcite RelNode to convert.
+   * @param converterProvider The {@link ConverterProvider} controlling conversion behaviours.
    * @return The resulting Substrait Rel.
    */
-  public static Rel convert(RelNode relNode, SubstraitRelVisitor visitor) {
+  public static Rel convert(RelNode relNode, ConverterProvider converterProvider) {
+    SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
     visitor.popFieldAccessDepthMap(relNode);
     return visitor.apply(relNode);
-  }
-
-  /**
-   * Converts a Calcite {@link RelNode} to a Substrait {@link Rel} using the specified features.
-   *
-   * <p>This method is suitable for converting a relational sub-tree, but it does not produce a
-   * {@link Plan.Root}. For a complete plan conversion, use {@link #convert(RelRoot,
-   * SimpleExtension.ExtensionCollection, FeatureBoard)}.
-   *
-   * <p>This is a convenience method that delegates to {@link #convert(RelNode,
-   * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
-   *
-   * @param relNode The Calcite RelNode (and its subtree) to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @return The resulting Substrait Rel.
-   */
-  public static Rel convert(
-      RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
-    return convert(
-        relNode,
-        new SubstraitRelVisitor(relNode.getCluster().getTypeFactory(), extensions, features));
   }
 }

@@ -74,7 +74,6 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
     Project query = b.project(input -> List.of(expr), b.emptyScan());
 
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
 
     assertInstanceOf(LogicalProject.class, calciteRel);
@@ -95,7 +94,6 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
     Project query = b.project(input -> List.of(expr), b.emptyScan());
 
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
 
     assertInstanceOf(LogicalProject.class, calciteRel);
@@ -116,7 +114,6 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
     Project query = b.project(input -> List.of(expr), b.emptyScan());
 
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     RelNode calciteRel = substraitToCalcite.convert(query);
 
     assertInstanceOf(LogicalProject.class, calciteRel);
@@ -137,7 +134,6 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
     Project query = b.project(input -> List.of(expr), b.emptyScan());
 
-    SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
     Exception exception =
         assertThrows(
             UnsupportedOperationException.class,

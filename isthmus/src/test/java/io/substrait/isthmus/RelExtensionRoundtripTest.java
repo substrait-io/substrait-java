@@ -83,7 +83,9 @@ class RelExtensionRoundtripTest extends PlanTestBase {
             Context.newContext());
 
     // Calcite -> Substrait POJO 3
-    Rel pojo3 = (new CustomSubstraitRelVisitor(typeFactory, extensions)).apply(calcite);
+    Rel pojo3 =
+        (new CustomSubstraitRelVisitor(new ConverterProvider(typeFactory, extensions)))
+            .apply(calcite);
     assertEquals(pojo1, pojo3);
   }
 
@@ -248,9 +250,8 @@ class RelExtensionRoundtripTest extends PlanTestBase {
   /** Extends the standard {@link SubstraitRelVisitor} to handle the {@link ColumnAppenderRel} */
   static class CustomSubstraitRelVisitor extends SubstraitRelVisitor {
 
-    public CustomSubstraitRelVisitor(
-        RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
-      super(typeFactory, extensions);
+    public CustomSubstraitRelVisitor(ConverterProvider converterProvider) {
+      super(converterProvider);
     }
 
     @Override

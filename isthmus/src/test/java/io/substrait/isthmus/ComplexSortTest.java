@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
@@ -21,14 +19,8 @@ import org.junit.jupiter.api.Test;
 
 class ComplexSortTest extends PlanTestBase {
 
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      DefaultExtensionCatalog.DEFAULT_COLLECTION;
-
   final TypeCreator R = TypeCreator.of(false);
   SubstraitBuilder b = new SubstraitBuilder(extensions);
-
-  final SubstraitToCalcite substraitToCalcite =
-      new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
   /**
    * A {@link RelWriterImpl} that annotates each {@link RelNode} with its {@link RelCollation} trait
