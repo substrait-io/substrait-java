@@ -11,23 +11,32 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
 
+/**
+ * SubstraitToSql assists with converting Substrait to SQL
+ *
+ * <p>Conversion behaviours can be customized using a {@link ConverterProvider}
+ */
 public class SubstraitToSql extends SqlConverterBase {
 
   protected SubstraitToCalcite substraitToCalcite;
 
   public SubstraitToSql() {
-    super(FEATURES_DEFAULT);
+    this(new ConverterProvider());
   }
 
+  /** Deprecated, use {@link #SubstraitToSql(ConverterProvider)} instead */
+  @Deprecated
   public SubstraitToSql(SimpleExtension.ExtensionCollection extensions) {
-    super(FEATURES_DEFAULT, extensions);
+    this(new ConverterProvider(extensions));
+  }
 
-    substraitToCalcite = new SubstraitToCalcite(extensions, factory);
+  public SubstraitToSql(ConverterProvider converterProvider) {
+    super(converterProvider);
+    substraitToCalcite = converterProvider.getSubstraitToCalcite();
   }
 
   public RelNode substraitRelToCalciteRel(Rel relRoot, Prepare.CatalogReader catalog) {
-    return SubstraitRelNodeConverter.convert(
-        relRoot, relOptCluster, catalog, parserConfig, extensionCollection);
+    return SubstraitRelNodeConverter.convert(relRoot, catalog, converterProvider);
   }
 
   /**
