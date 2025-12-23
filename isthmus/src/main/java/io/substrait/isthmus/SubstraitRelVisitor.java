@@ -9,6 +9,7 @@ import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
+import io.substrait.isthmus.expression.FunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -67,11 +68,14 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("UnstableApiUsage")
 @Value.Enclosing
 public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SubstraitRelVisitor.class);
   private static final FeatureBoard FEATURES_DEFAULT = ImmutableFeatureBoard.builder().build();
   private static final Expression.BoolLiteral TRUE = ExpressionCreator.bool(false, true);
 
@@ -95,20 +99,43 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     ArrayList<CallConverter> converters = new ArrayList<>();
     converters.addAll(CallConverters.defaults(typeConverter));
 
+    // Handle scalar functions
+    List<FunctionMappings.Sig> scalarAdditionalSignatures = new ArrayList<>();
+
     if (features.allowDynamicUdfs()) {
       SimpleExtension.ExtensionCollection dynamicExtensionCollection =
           ExtensionUtils.getDynamicExtensions(extensions);
       List<SqlOperator> dynamicOperators =
           SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
 
-      List<FunctionMappings.Sig> additionalSignatures =
+      List<FunctionMappings.Sig> udfSignatures =
           dynamicOperators.stream()
               .map(op -> FunctionMappings.s(op, op.getName()))
               .collect(Collectors.toList());
+      scalarAdditionalSignatures.addAll(udfSignatures);
+    }
+
+    if (features.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.ScalarFunctionVariant> unmappedScalars =
+          FunctionConverter.getUnmappedFunctions(
+              extensions.scalarFunctions(), FunctionMappings.SCALAR_SIGS);
+      if (!unmappedScalars.isEmpty()) {
+        List<SqlOperator> unmappedOperators =
+            SimpleExtensionToSqlOperator.from(unmappedScalars, typeFactory);
+        List<FunctionMappings.Sig> unmappedSignatures =
+            unmappedOperators.stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList());
+        scalarAdditionalSignatures.addAll(unmappedSignatures);
+        LOGGER.debug("Dynamically mapped {} unmapped scalar functions", unmappedSignatures.size());
+      }
+    }
+
+    if (!scalarAdditionalSignatures.isEmpty()) {
       converters.add(
           new ScalarFunctionConverter(
               extensions.scalarFunctions(),
-              additionalSignatures,
+              scalarAdditionalSignatures,
               typeFactory,
               TypeConverter.DEFAULT));
     } else {
@@ -116,10 +143,67 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
 
     converters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
-    this.aggregateFunctionConverter =
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-    WindowFunctionConverter windowFunctionConverter =
-        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+
+    // Handle aggregate functions
+    AggregateFunctionConverter aggregateFunctionConverter;
+    if (features.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.AggregateFunctionVariant> unmappedAggregates =
+          FunctionConverter.getUnmappedFunctions(
+              extensions.aggregateFunctions(), FunctionMappings.AGGREGATE_SIGS);
+      if (!unmappedAggregates.isEmpty()) {
+        List<SqlOperator> unmappedOperators =
+            SimpleExtensionToSqlOperator.from(unmappedAggregates, typeFactory);
+        List<FunctionMappings.Sig> unmappedSignatures =
+            unmappedOperators.stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList());
+        aggregateFunctionConverter =
+            new AggregateFunctionConverter(
+                extensions.aggregateFunctions(),
+                unmappedSignatures,
+                typeFactory,
+                TypeConverter.DEFAULT);
+        LOGGER.debug(
+            "Dynamically mapped {} unmapped aggregate functions", unmappedSignatures.size());
+      } else {
+        aggregateFunctionConverter =
+            new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
+      }
+    } else {
+      aggregateFunctionConverter =
+          new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
+    }
+
+    this.aggregateFunctionConverter = aggregateFunctionConverter;
+
+    // Handle window functions
+    WindowFunctionConverter windowFunctionConverter;
+    if (features.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.WindowFunctionVariant> unmappedWindows =
+          FunctionConverter.getUnmappedFunctions(
+              extensions.windowFunctions(), FunctionMappings.WINDOW_SIGS);
+      if (!unmappedWindows.isEmpty()) {
+        List<SqlOperator> unmappedOperators =
+            SimpleExtensionToSqlOperator.from(unmappedWindows, typeFactory);
+        List<FunctionMappings.Sig> unmappedSignatures =
+            unmappedOperators.stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList());
+        windowFunctionConverter =
+            new WindowFunctionConverter(
+                extensions.windowFunctions(),
+                unmappedSignatures,
+                typeFactory,
+                TypeConverter.DEFAULT);
+        LOGGER.debug("Dynamically mapped {} unmapped window functions", unmappedSignatures.size());
+      } else {
+        windowFunctionConverter =
+            new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+      }
+    } else {
+      windowFunctionConverter =
+          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+    }
     this.rexExpressionConverter =
         new RexExpressionConverter(this, converters, windowFunctionConverter, typeConverter);
     this.featureBoard = features;
