@@ -13,7 +13,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
 class SubstraitToCalciteTest extends PlanTestBase {
-  final SubstraitToCalcite converter = new SubstraitToCalcite(extensions, typeFactory);
 
   @Test
   void testConvertRootSingleColumn() {
@@ -24,7 +23,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    RelRoot relRoot = substraitToCalcite.convert(root);
 
     assertEquals(root.getNames(), relRoot.fields.rightList());
   }
@@ -38,7 +37,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("s_store_id", "store")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    RelRoot relRoot = substraitToCalcite.convert(root);
 
     assertEquals(root.getNames(), relRoot.fields.rightList());
   }
@@ -58,7 +57,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
 
     assertEquals(List.of("store", "store_id", "store_name"), root.getNames());
 
-    RelRoot relRoot = converter.convert(root);
+    RelRoot relRoot = substraitToCalcite.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -84,7 +83,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store", "store_id", "store_name")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    RelRoot relRoot = substraitToCalcite.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -114,7 +113,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store", "store_id", "store_name")
             .build();
 
-    final RelRoot relRoot = converter.convert(root);
+    final RelRoot relRoot = substraitToCalcite.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());
@@ -144,7 +143,7 @@ class SubstraitToCalciteTest extends PlanTestBase {
             .addNames("store", "store_id", "store_name")
             .build();
 
-    RelRoot relRoot = converter.convert(root);
+    RelRoot relRoot = substraitToCalcite.convert(root);
 
     // Apache Calcite's RelRoot.fields only contains the top level field names
     assertEquals(List.of("store"), relRoot.fields.rightList());

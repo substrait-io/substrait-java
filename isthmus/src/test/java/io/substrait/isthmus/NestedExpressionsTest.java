@@ -22,7 +22,6 @@ class NestedExpressionsTest extends PlanTestBase {
   protected static final SimpleExtension.ExtensionCollection defaultExtensionCollection =
       DefaultExtensionCatalog.DEFAULT_COLLECTION;
   protected SubstraitBuilder b = new SubstraitBuilder(defaultExtensionCollection);
-  SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
 
   Expression literalExpression = Expression.BoolLiteral.builder().value(true).build();
   Expression.ScalarFunctionInvocation nonLiteralExpression = b.add(b.i32(7), b.i32(42));

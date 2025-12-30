@@ -26,7 +26,6 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
@@ -35,7 +34,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.RelBuilder;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -55,10 +53,10 @@ class CustomFunctionTest extends PlanTestBase {
   }
 
   // Load custom extension into an ExtensionCollection
-  static final SimpleExtension.ExtensionCollection extensionCollection =
-      SimpleExtension.load("custom.yaml", FUNCTIONS_CUSTOM);
+  static final SimpleExtension.ExtensionCollection CUSTOM_EXTENSIONS =
+      SimpleExtension.load(URN, FUNCTIONS_CUSTOM);
 
-  final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
+  final SubstraitBuilder b = new SubstraitBuilder(CUSTOM_EXTENSIONS);
 
   // Create user-defined types
   static final String aTypeName = "a_type";
@@ -239,52 +237,33 @@ class CustomFunctionTest extends PlanTestBase {
   // Create Function Converters that can handle the custom functions
   ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(
-          extensionCollection.scalarFunctions(),
+          CUSTOM_EXTENSIONS.scalarFunctions(),
           additionalScalarSignatures,
           typeFactory,
           typeConverter);
   AggregateFunctionConverter aggregateFunctionConverter =
       new AggregateFunctionConverter(
-          extensionCollection.aggregateFunctions(),
+          CUSTOM_EXTENSIONS.aggregateFunctions(),
           additionalAggregateSignatures,
           typeFactory,
           typeConverter);
   WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(extensionCollection.windowFunctions(), typeFactory);
+      new WindowFunctionConverter(CUSTOM_EXTENSIONS.windowFunctions(), typeFactory);
 
-  final SubstraitToCalcite substraitToCalcite =
-      new CustomSubstraitToCalcite(extensionCollection, typeFactory, typeConverter);
-
-  // Create a SubstraitRelVisitor that uses the custom Function Converters
-  final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
+  ConverterProvider converterProvider =
+      new ConverterProvider(
           typeFactory,
-          scalarFunctionConverter,
-          aggregateFunctionConverter,
-          windowFunctionConverter,
-          typeConverter,
-          ImmutableFeatureBoard.builder().build());
-
-  // Create a SubstraitToCalcite converter that has access to the custom Function Converters
-  class CustomSubstraitToCalcite extends SubstraitToCalcite {
-
-    public CustomSubstraitToCalcite(
-        SimpleExtension.ExtensionCollection extensions,
-        RelDataTypeFactory typeFactory,
-        TypeConverter typeConverter) {
-      super(extensions, typeFactory, typeConverter);
-    }
-
-    @Override
-    protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
-      return new SubstraitRelNodeConverter(
-          typeFactory,
-          relBuilder,
           scalarFunctionConverter,
           aggregateFunctionConverter,
           windowFunctionConverter,
           typeConverter);
-    }
+
+  // Create a SubstraitRelVisitor that uses the custom Function Converters
+  final SubstraitRelVisitor calciteToSubstrait = new SubstraitRelVisitor(converterProvider);
+  final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);
+
+  CustomFunctionTest() {
+    super(CUSTOM_EXTENSIONS);
   }
 
   @Test
@@ -602,7 +581,7 @@ class CustomFunctionTest extends PlanTestBase {
 
     ExtensionCollector extensionCollector = new ExtensionCollector();
     io.substrait.proto.Rel protoRel = new RelProtoConverter(extensionCollector).toProto(rel1);
-    Rel rel3 = new ProtoRelConverter(extensionCollector, extensionCollection).from(protoRel);
+    Rel rel3 = new ProtoRelConverter(extensionCollector, CUSTOM_EXTENSIONS).from(protoRel);
     assertEquals(rel1, rel3);
   }
 }
