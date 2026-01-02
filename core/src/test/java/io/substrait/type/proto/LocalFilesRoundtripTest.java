@@ -33,7 +33,7 @@ class LocalFilesRoundtripTest extends TestBase {
                     .build())
             .addItems(file);
 
-    defaultExtensionCollection.scalarFunctions().stream()
+    extensions.scalarFunctions().stream()
         .filter(s -> s.name().equalsIgnoreCase("equal"))
         .findFirst()
         .map(

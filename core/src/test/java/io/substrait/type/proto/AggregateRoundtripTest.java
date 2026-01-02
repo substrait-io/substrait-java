@@ -13,7 +13,6 @@ import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
-import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,8 +32,6 @@ class AggregateRoundtripTest extends TestBase {
 
     ExtensionCollector functionCollector = new ExtensionCollector();
     RelProtoConverter to = new RelProtoConverter(functionCollector);
-    io.substrait.extension.SimpleExtension.ExtensionCollection extensions =
-        defaultExtensionCollection;
     ProtoRelConverter from = new ProtoRelConverter(functionCollector, extensions);
 
     io.substrait.relation.ImmutableMeasure measure =
@@ -43,7 +40,7 @@ class AggregateRoundtripTest extends TestBase {
                 AggregateFunctionInvocation.builder()
                     .arguments(Collections.emptyList())
                     .declaration(extensions.aggregateFunctions().get(0))
-                    .outputType(TypeCreator.of(false).I64)
+                    .outputType(R.I64)
                     .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                     .invocation(invocation)
                     .options(
@@ -56,7 +53,7 @@ class AggregateRoundtripTest extends TestBase {
                         Arrays.asList(
                             Expression.SortField.builder()
                                 // SORT BY decimal
-                                .expr(b.fieldReference(input, 0))
+                                .expr(sb.fieldReference(input, 0))
                                 .direction(Expression.SortDirection.ASC_NULLS_LAST)
                                 .build()))
                     .build())

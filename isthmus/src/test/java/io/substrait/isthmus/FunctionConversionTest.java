@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.ScalarFunctionInvocation;
@@ -26,8 +25,6 @@ import org.junit.jupiter.api.Test;
  * Verify that "problematic" Substrait functions can be converted to Calcite and back successfully
  */
 class FunctionConversionTest extends PlanTestBase {
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
   final ExpressionRexConverter expressionRexConverter =
       new ExpressionRexConverter(
@@ -52,7 +49,7 @@ class FunctionConversionTest extends PlanTestBase {
     // this is being mapped to the wrong Calcite function.
     // TODO: https://github.com/substrait-io/substrait-java/issues/377
     Expression.ScalarFunctionInvocation expr =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "subtract:date_iday",
             TypeCreator.REQUIRED.DATE,
@@ -71,7 +68,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractTimestampTzScalarFunction() {
     ScalarFunctionInvocation reqTstzFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_tstz_str",
             TypeCreator.REQUIRED.I64,
@@ -92,7 +89,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractPrecisionTimestampTzScalarFunction() {
     ScalarFunctionInvocation reqPtstzFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ptstz_str",
             TypeCreator.REQUIRED.I64,
@@ -113,7 +110,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractTimestampScalarFunction() {
     ScalarFunctionInvocation reqTsFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_ts",
             TypeCreator.REQUIRED.I64,
@@ -131,7 +128,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractPrecisionTimestampScalarFunction() {
     ScalarFunctionInvocation reqPtsFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_pts",
             TypeCreator.REQUIRED.I64,
@@ -149,7 +146,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractDateScalarFunction() {
     ScalarFunctionInvocation reqDateFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_date",
             TypeCreator.REQUIRED.I64,
@@ -167,7 +164,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractTimeScalarFunction() {
     ScalarFunctionInvocation reqTimeFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_time",
             TypeCreator.REQUIRED.I64,
@@ -185,7 +182,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void extractDateWithIndexing() {
     ScalarFunctionInvocation reqReqDateFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_date",
             TypeCreator.REQUIRED.I64,
@@ -204,7 +201,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void unsupportedExtractTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqTstzFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_tstz_str",
             TypeCreator.REQUIRED.I64,
@@ -221,7 +218,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void unsupportedExtractPrecisionTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqPtstzFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ptstz_str",
             TypeCreator.REQUIRED.I64,
@@ -238,7 +235,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void unsupportedExtractTimestampWithIndexing() {
     ScalarFunctionInvocation reqReqTsFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_ts",
             TypeCreator.REQUIRED.I64,
@@ -254,7 +251,7 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void unsupportedExtractPrecisionTimestampWithIndexing() {
     ScalarFunctionInvocation reqReqPtsFn =
-        b.scalarFn(
+        sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "extract:req_req_pts",
             TypeCreator.REQUIRED.I64,

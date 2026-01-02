@@ -2,12 +2,8 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Rel;
-import io.substrait.type.TypeCreator;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
@@ -20,15 +16,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ComplexSortTest extends PlanTestBase {
-
-  private static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
-      DefaultExtensionCatalog.DEFAULT_COLLECTION;
-
-  final TypeCreator R = TypeCreator.of(false);
-  SubstraitBuilder b = new SubstraitBuilder(extensions);
-
-  final SubstraitToCalcite substraitToCalcite =
-      new SubstraitToCalcite(EXTENSION_COLLECTION, typeFactory);
 
   /**
    * A {@link RelWriterImpl} that annotates each {@link RelNode} with its {@link RelCollation} trait
@@ -58,15 +45,15 @@ class ComplexSortTest extends PlanTestBase {
     // SELECT a FROM example ORDER BY a
 
     Rel rel =
-        b.project(
-            input -> b.fieldReferences(input, 0),
-            b.remap(1),
-            b.sort(
+        sb.project(
+            input -> sb.fieldReferences(input, 0),
+            sb.remap(1),
+            sb.sort(
                 input ->
                     List.of(
-                        b.sortField(
-                            b.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                        sb.sortField(
+                            sb.fieldReference(input, 0), Expression.SortDirection.ASC_NULLS_LAST)),
+                sb.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
 
     String expected =
         "Collation: [0]\n"
@@ -85,16 +72,16 @@ class ComplexSortTest extends PlanTestBase {
     // SELECT a FROM example ORDER BY a::INT
 
     Rel rel =
-        b.project(
-            input -> b.fieldReferences(input, 0),
-            b.remap(1),
-            b.sort(
+        sb.project(
+            input -> sb.fieldReferences(input, 0),
+            sb.remap(1),
+            sb.sort(
                 input ->
                     List.of(
-                        b.sortField(
-                            b.cast(b.fieldReference(input, 0), R.I32),
+                        sb.sortField(
+                            sb.cast(sb.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                sb.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
 
     String expected =
         "LogicalProject(a0=[$0])\n"
@@ -115,16 +102,16 @@ class ComplexSortTest extends PlanTestBase {
     // SELECT a::INT FROM example ORDER BY a::INT DESC NULLS LAST
 
     Rel rel =
-        b.project(
-            input -> List.of(b.cast(b.fieldReference(input, 0), R.I32)),
-            b.remap(1),
-            b.sort(
+        sb.project(
+            input -> List.of(sb.cast(sb.fieldReference(input, 0), R.I32)),
+            sb.remap(1),
+            sb.sort(
                 input ->
                     List.of(
-                        b.sortField(
-                            b.cast(b.fieldReference(input, 0), R.I32),
+                        sb.sortField(
+                            sb.cast(sb.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.DESC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                sb.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
 
     String expected =
         "LogicalProject(a0=[CAST($0):INTEGER NOT NULL])\n"
@@ -145,16 +132,16 @@ class ComplexSortTest extends PlanTestBase {
     // SELECT a FROM example ORDER BY a::VARCHAR
 
     Rel rel =
-        b.project(
-            input -> List.of(b.fieldReference(input, 0)),
-            b.remap(1),
-            b.sort(
+        sb.project(
+            input -> List.of(sb.fieldReference(input, 0)),
+            sb.remap(1),
+            sb.sort(
                 input ->
                     List.of(
-                        b.sortField(
-                            b.cast(b.fieldReference(input, 0), R.STRING),
+                        sb.sortField(
+                            sb.cast(sb.fieldReference(input, 0), R.STRING),
                             Expression.SortDirection.DESC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
+                sb.namedScan(List.of("example"), List.of("a"), List.of(R.STRING))));
 
     String expected =
         "LogicalProject(a0=[$0])\n"
@@ -175,19 +162,19 @@ class ComplexSortTest extends PlanTestBase {
     // SELECT b, a FROM example ORDER BY a::INT DESC, -b + 42 ASC NULLS LAST
 
     Rel rel =
-        b.project(
-            input -> List.of(b.fieldReference(input, 0), b.fieldReference(input, 1)),
-            b.remap(2, 3),
-            b.sort(
+        sb.project(
+            input -> List.of(sb.fieldReference(input, 0), sb.fieldReference(input, 1)),
+            sb.remap(2, 3),
+            sb.sort(
                 input ->
                     List.of(
-                        b.sortField(
-                            b.cast(b.fieldReference(input, 0), R.I32),
+                        sb.sortField(
+                            sb.cast(sb.fieldReference(input, 0), R.I32),
                             Expression.SortDirection.DESC_NULLS_FIRST),
-                        b.sortField(
-                            b.add(b.negate(b.fieldReference(input, 1)), b.i32(42)),
+                        sb.sortField(
+                            sb.add(sb.negate(sb.fieldReference(input, 1)), sb.i32(42)),
                             Expression.SortDirection.ASC_NULLS_LAST)),
-                b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.STRING, R.I32))));
+                sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.STRING, R.I32))));
 
     String expected =
         "LogicalProject(a0=[$0], b0=[$1])\n"

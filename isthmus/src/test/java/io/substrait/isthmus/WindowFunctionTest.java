@@ -190,10 +190,10 @@ class WindowFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"lag", "lead"})
   void lagLeadFunctions(String function) {
     Rel rel =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.windowFn(
+                    sb.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any", function),
                         R.FP64,
@@ -202,9 +202,9 @@ class WindowFunctionTest extends PlanTestBase {
                         Expression.WindowBoundsType.ROWS,
                         WindowBound.Preceding.UNBOUNDED,
                         WindowBound.Following.CURRENT_ROW,
-                        substraitBuilder.fieldReference(input, 0))),
-            substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
 
     assertFullRoundTrip(rel);
   }
@@ -213,10 +213,10 @@ class WindowFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"lag", "lead"})
   void lagLeadWithOffset(String function) {
     Rel rel =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.windowFn(
+                    sb.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32", function),
                         R.FP64,
@@ -225,10 +225,10 @@ class WindowFunctionTest extends PlanTestBase {
                         Expression.WindowBoundsType.RANGE,
                         WindowBound.Preceding.UNBOUNDED,
                         WindowBound.Following.UNBOUNDED,
-                        substraitBuilder.fieldReference(input, 0),
-                        substraitBuilder.i32(1))),
-            substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+                        sb.fieldReference(input, 0),
+                        sb.i32(1))),
+            sb.remap(1),
+            sb.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
 
     assertFullRoundTrip(rel);
   }
@@ -237,10 +237,10 @@ class WindowFunctionTest extends PlanTestBase {
   @ValueSource(strings = {"lag", "lead"})
   void lagLeadWithOffsetAndDefault(String function) {
     Rel rel =
-        substraitBuilder.project(
+        sb.project(
             input ->
                 List.of(
-                    substraitBuilder.windowFn(
+                    sb.windowFn(
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
                         String.format("%s:any_i32_any", function),
                         R.I64,
@@ -249,11 +249,11 @@ class WindowFunctionTest extends PlanTestBase {
                         Expression.WindowBoundsType.ROWS,
                         WindowBound.Preceding.UNBOUNDED,
                         WindowBound.Following.CURRENT_ROW,
-                        substraitBuilder.fieldReference(input, 0),
-                        substraitBuilder.i32(1),
-                        substraitBuilder.fp64(100.0))),
-            substraitBuilder.remap(1),
-            substraitBuilder.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+                        sb.fieldReference(input, 0),
+                        sb.i32(1),
+                        sb.fp64(100.0))),
+            sb.remap(1),
+            sb.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
 
     assertFullRoundTrip(rel);
   }
