@@ -388,7 +388,7 @@ public class ExpressionProtoConverter
                       expr.typeParameters().stream()
                           .map(typeProtoConverter::toProto)
                           .collect(java.util.stream.Collectors.toList()))
-                  .setValue(expr.value());
+                  .setValue(expr.value().toProto());
 
           bldr.setNullable(expr.nullable()).setUserDefined(userDefinedBuilder).build();
         });
