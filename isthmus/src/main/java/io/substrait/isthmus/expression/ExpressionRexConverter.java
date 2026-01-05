@@ -112,7 +112,7 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.UserDefinedAnyLiteral expr, Context context)
       throws RuntimeException {
     RexLiteral binaryLiteral =
-        rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toProto().toByteArray()));
+        rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
     RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
   }

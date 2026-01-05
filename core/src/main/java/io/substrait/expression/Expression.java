@@ -712,60 +712,9 @@ public interface Expression extends FunctionArg {
   }
 
   /**
-   * Represents a user-defined value associated with a {@link UserDefinedAnyLiteral}.
+   * User-defined literal with value encoded as {@link com.google.protobuf.Any}.
    *
-   * <p>This interface abstracts the underlying binary representation of user-defined literal
-   * values. Users should implement this interface and provide protobuf conversion logic for their
-   * custom types.
-   */
-  interface UserDefinedAnyValue {
-    /**
-     * Converts this user-defined value to a protobuf Any message for serialization.
-     *
-     * @return the protobuf Any representation of this value
-     */
-    com.google.protobuf.Any toProto();
-
-    /**
-     * Creates a UserDefinedAnyValue from a protobuf Any message.
-     *
-     * <p>This factory method provides a default implementation that wraps the protobuf Any. Users
-     * can create custom implementations for their specific types.
-     *
-     * @param any the protobuf Any to wrap
-     * @return a UserDefinedAnyValue wrapping the protobuf Any
-     */
-    static UserDefinedAnyValue of(com.google.protobuf.Any any) {
-      return DefaultUserDefinedAnyValue.of(any);
-    }
-  }
-
-  /**
-   * Default implementation of {@link UserDefinedAnyValue} that wraps a protobuf Any message.
-   *
-   * <p>This implementation is used when deserializing from protobuf. Users can provide custom
-   * implementations for their specific types.
-   */
-  @Value.Immutable
-  abstract class DefaultUserDefinedAnyValue implements UserDefinedAnyValue {
-    abstract com.google.protobuf.Any any();
-
-    @Override
-    public com.google.protobuf.Any toProto() {
-      return any();
-    }
-
-    static DefaultUserDefinedAnyValue of(com.google.protobuf.Any any) {
-      return ImmutableExpression.DefaultUserDefinedAnyValue.builder().any(any).build();
-    }
-  }
-
-  /**
-   * User-defined literal with value encoded as binary data.
-   *
-   * <p>This encoding allows for arbitrary binary data to be stored in the literal value. Users
-   * should implement {@link UserDefinedAnyValue} to provide their custom type representation and
-   * handle protobuf conversion logic.
+   * <p>This encoding allows for arbitrary binary data to be stored in the literal value.
    */
   @Value.Immutable
   abstract class UserDefinedAnyLiteral implements UserDefinedLiteral {
@@ -778,7 +727,7 @@ public interface Expression extends FunctionArg {
     @Override
     public abstract List<io.substrait.type.Type.Parameter> typeParameters();
 
-    public abstract UserDefinedAnyValue value();
+    public abstract com.google.protobuf.Any value();
 
     @Override
     public Type.UserDefined getType() {

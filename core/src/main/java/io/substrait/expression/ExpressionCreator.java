@@ -307,31 +307,7 @@ public class ExpressionCreator {
   }
 
   /**
-   * Create a UserDefinedAnyLiteral with a custom UserDefinedAnyValue implementation.
-   *
-   * @param nullable whether the literal is nullable
-   * @param urn the URN of the user-defined type
-   * @param name the name of the user-defined type
-   * @param typeParameters the type parameters for the user-defined type (can be empty list)
-   * @param value the value implementing UserDefinedAnyValue interface
-   */
-  public static Expression.UserDefinedAnyLiteral userDefinedLiteralAny(
-      boolean nullable,
-      String urn,
-      String name,
-      java.util.List<io.substrait.type.Type.Parameter> typeParameters,
-      Expression.UserDefinedAnyValue value) {
-    return Expression.UserDefinedAnyLiteral.builder()
-        .nullable(nullable)
-        .urn(urn)
-        .name(name)
-        .addAllTypeParameters(typeParameters)
-        .value(value)
-        .build();
-  }
-
-  /**
-   * Create a UserDefinedAnyLiteral from a protobuf Any message.
+   * Create a UserDefinedAnyLiteral with google.protobuf.Any representation.
    *
    * @param nullable whether the literal is nullable
    * @param urn the URN of the user-defined type
@@ -345,8 +321,13 @@ public class ExpressionCreator {
       String name,
       java.util.List<io.substrait.type.Type.Parameter> typeParameters,
       Any value) {
-    return userDefinedLiteralAny(
-        nullable, urn, name, typeParameters, Expression.UserDefinedAnyValue.of(value));
+    return Expression.UserDefinedAnyLiteral.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .addAllTypeParameters(typeParameters)
+        .value(value)
+        .build();
   }
 
   /**

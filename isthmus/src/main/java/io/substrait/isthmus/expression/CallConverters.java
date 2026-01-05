@@ -81,7 +81,7 @@ public class CallConverters {
                     .urn(t.urn())
                     .name(t.name())
                     .addAllTypeParameters(t.typeParameters())
-                    .value(Expression.UserDefinedAnyValue.of(anyValue))
+                    .value(anyValue)
                     .build();
               } catch (com.google.protobuf.InvalidProtocolBufferException e) {
                 throw new IllegalStateException("Failed to parse UserDefinedAnyLiteral value", e);
