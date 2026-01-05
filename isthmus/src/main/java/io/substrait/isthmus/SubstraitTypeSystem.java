@@ -35,18 +35,29 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         return 6;
+      case DECIMAL:
+        return 38;
     }
     return super.getMaxPrecision(typeName);
   }
 
   @Override
-  public int getMaxNumericScale() {
-    return 38;
+  public int getDefaultPrecision(final SqlTypeName typeName) {
+    switch (typeName) {
+      case DECIMAL:
+        return getMaxPrecision(typeName);
+      default:
+        return super.getDefaultPrecision(typeName);
+    }
   }
 
   @Override
-  public int getMaxNumericPrecision() {
-    return 38;
+  public int getMaxScale(final SqlTypeName typeName) {
+    switch (typeName) {
+      case DECIMAL:
+        return 38;
+    }
+    return super.getMaxScale(typeName);
   }
 
   @Override
