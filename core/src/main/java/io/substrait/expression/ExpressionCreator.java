@@ -312,7 +312,7 @@ public class ExpressionCreator {
    * @param nullable whether the literal is nullable
    * @param urn the URN of the user-defined type
    * @param name the name of the user-defined type
-   * @param typeParameters the type parameters for the user-defined type (can be empty list)
+   * @param typeParameters the type parameters for the user-defined type (can be an empty list)
    * @param value the value, encoded as google.protobuf.Any
    */
   public static Expression.UserDefinedAnyLiteral userDefinedLiteralAny(
@@ -336,7 +336,7 @@ public class ExpressionCreator {
    * @param nullable whether the literal is nullable
    * @param urn the URN of the user-defined type
    * @param name the name of the user-defined type
-   * @param typeParameters the type parameters for the user-defined type (can be empty list)
+   * @param typeParameters the type parameters for the user-defined type (can be an empty list)
    * @param fields the fields, as a list of Literal values
    */
   public static Expression.UserDefinedStructLiteral userDefinedLiteralStruct(
