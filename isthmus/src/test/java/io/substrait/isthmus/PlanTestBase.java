@@ -39,14 +39,18 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 
 public class PlanTestBase {
+
+  protected static final TypeCreator R = TypeCreator.of(false);
+  protected static final TypeCreator N = TypeCreator.of(true);
+
   protected final SimpleExtension.ExtensionCollection extensions;
 
   protected final RelCreator creator = new RelCreator();
   protected final RelBuilder builder = creator.createRelBuilder();
   protected final RelDataTypeFactory typeFactory = creator.typeFactory();
-  protected final SubstraitBuilder substraitBuilder;
-  protected static final TypeCreator R = TypeCreator.of(false);
-  protected static final TypeCreator N = TypeCreator.of(true);
+
+  protected final SubstraitBuilder sb;
+  protected final SubstraitToCalcite substraitToCalcite;
 
   protected static final CalciteCatalogReader TPCH_CATALOG;
 
@@ -70,7 +74,8 @@ public class PlanTestBase {
 
   protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
     this.extensions = extensions;
-    this.substraitBuilder = new SubstraitBuilder(extensions);
+    this.sb = new SubstraitBuilder(extensions);
+    this.substraitToCalcite = new SubstraitToCalcite(extensions, typeFactory);
   }
 
   public static String asString(String resource) throws IOException {

@@ -17,17 +17,6 @@ jobs:
           fetch-depth: 0
       - uses: editorconfig-checker/action-editorconfig-checker@v2
       - run: editorconfig-checker
-  commitlint:
-    name: Lint commits for semantic-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-      - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.sha }} --verbose
   security:
     name: Security validation
     runs-on: ubuntu-latest

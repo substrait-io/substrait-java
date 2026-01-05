@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.74.0](https://github.com/substrait-io/substrait-java/compare/v0.73.0...v0.74.0) (2025-12-21)
+
+### Features
+
+* handle parameterConsistency option in YAML extensions ([#624](https://github.com/substrait-io/substrait-java/issues/624)) ([acaecb5](https://github.com/substrait-io/substrait-java/commit/acaecb5c0ef8f18646bc9a6975599dc826bf74ee))
+* **isthmus:** support month()-style datetime operators ([#643](https://github.com/substrait-io/substrait-java/issues/643)) ([82141bb](https://github.com/substrait-io/substrait-java/commit/82141bb01672dbb61a1f83cc7e8ae499125f5f7e))
+
+### Bug Fixes
+
+* add essential javadoc to remove warnings ([#639](https://github.com/substrait-io/substrait-java/issues/639)) ([89c8538](https://github.com/substrait-io/substrait-java/commit/89c853828eca43be531bc69f29081459bbbc291a))
+
 ## [0.73.0](https://github.com/substrait-io/substrait-java/compare/v0.72.0...v0.73.0) (2025-12-14)
 
 ### Features

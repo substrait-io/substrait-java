@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.protobuf.Any;
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression.UserDefinedLiteral;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.SimpleExtension;
@@ -54,8 +53,6 @@ class CustomFunctionTest extends PlanTestBase {
   // Load custom extension into an ExtensionCollection
   static final SimpleExtension.ExtensionCollection extensionCollection =
       SimpleExtension.load("custom.yaml", FUNCTIONS_CUSTOM);
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensionCollection);
 
   // Create user-defined types
   static final String aTypeName = "a_type";
@@ -262,6 +259,10 @@ class CustomFunctionTest extends PlanTestBase {
           typeConverter,
           ImmutableFeatureBoard.builder().build());
 
+  CustomFunctionTest() {
+    super(extensionCollection);
+  }
+
   // Create a SubstraitToCalcite converter that has access to the custom Function Converters
   class CustomSubstraitToCalcite extends SubstraitToCalcite {
 
@@ -289,11 +290,12 @@ class CustomFunctionTest extends PlanTestBase {
     // CREATE TABLE example(a TEXT)
     // SELECT custom_scalar(a) FROM example
     Rel rel =
-        b.project(
+        sb.project(
             input ->
-                List.of(b.scalarFn(URN, "custom_scalar:str", R.STRING, b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.STRING)));
+                List.of(
+                    sb.scalarFn(URN, "custom_scalar:str", R.STRING, sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -303,12 +305,13 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarAnyFunctionRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(URN, "custom_scalar_any:any", R.STRING, b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
+                    sb.scalarFn(
+                        URN, "custom_scalar_any:any", R.STRING, sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -318,13 +321,13 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarAnyToAnyFunctionRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
-                        URN, "custom_scalar_any_to_any:any", R.FP64, b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.FP64)));
+                    sb.scalarFn(
+                        URN, "custom_scalar_any_to_any:any", R.FP64, sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.FP64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -334,17 +337,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarAny1Any1ToAny1FunctionRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_any1any1_to_any1:any_any",
                         R.FP64,
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.FP64)));
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.FP64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -354,17 +357,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarAny1Any1ToAny1FunctionMismatch() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_any1any1_to_any1:any_any",
                         R.FP64,
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.STRING)));
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.STRING)));
 
     assertThrows(
         IllegalArgumentException.class,
@@ -378,17 +381,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarAny1Any2ToAny2FunctionRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_any1any2_to_any2:any_any",
                         R.STRING,
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.STRING)));
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.FP64, R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -398,16 +401,16 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListAnyRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_listany_to_listany:list",
                         R.list(R.I64),
-                        b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.I64))));
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.I64))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -417,17 +420,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListAnyAndAnyRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_listany_any_to_listany:list_any",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
@@ -438,16 +441,16 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListStringRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_liststring_to_liststring:list",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -457,17 +460,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListStringAndAnyRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_liststring_any_to_liststring:list_any",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
@@ -478,19 +481,19 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListStringAndAnyVariadic0Roundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1),
-                        b.fieldReference(input, 2),
-                        b.fieldReference(input, 3))),
-            b.remap(4),
-            b.namedScan(
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1),
+                        sb.fieldReference(input, 2),
+                        sb.fieldReference(input, 3))),
+            sb.remap(4),
+            sb.namedScan(
                 List.of("example"),
                 List.of("a", "b", "c", "d"),
                 List.of(R.list(R.STRING), R.STRING, R.STRING, R.STRING)));
@@ -503,16 +506,16 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListStringAndAnyVariadic0NoArgsRoundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_liststring_anyvariadic0_to_liststring:list_any",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.list(R.STRING))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -522,17 +525,17 @@ class CustomFunctionTest extends PlanTestBase {
   @Test
   void customScalarListStringAndAnyVariadic1Roundtrip() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "custom_scalar_liststring_anyvariadic1_to_liststring:list_any",
                         R.list(R.STRING),
-                        b.fieldReference(input, 0),
-                        b.fieldReference(input, 1))),
-            b.remap(2),
-            b.namedScan(
+                        sb.fieldReference(input, 0),
+                        sb.fieldReference(input, 1))),
+            sb.remap(2),
+            sb.namedScan(
                 List.of("example"), List.of("a", "b"), List.of(R.list(R.STRING), R.STRING)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
@@ -545,14 +548,14 @@ class CustomFunctionTest extends PlanTestBase {
     // CREATE TABLE example (a BIGINT)
     // SELECT custom_aggregate(a) FROM example GROUP BY a
     Rel rel =
-        b.aggregate(
-            input -> b.grouping(input, 0),
+        sb.aggregate(
+            input -> sb.grouping(input, 0),
             input ->
                 List.of(
-                    b.measure(
-                        b.aggregateFn(
-                            URN, "custom_aggregate:i64", R.I64, b.fieldReference(input, 0)))),
-            b.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN, "custom_aggregate:i64", R.I64, sb.fieldReference(input, 0)))),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -564,16 +567,16 @@ class CustomFunctionTest extends PlanTestBase {
     // CREATE TABLE example(a a_type)
     // SELECT to_b_type(a) FROM example
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
-                    b.scalarFn(
+                    sb.scalarFn(
                         URN,
                         "to_b_type:u!a_type",
                         R.userDefined(URN, "b_type"),
-                        b.fieldReference(input, 0))),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
@@ -589,11 +592,11 @@ class CustomFunctionTest extends PlanTestBase {
             false, URN, "a_type", java.util.Collections.emptyList(), anyValue);
 
     Rel rel1 =
-        b.project(
+        sb.project(
             input ->
-                List.of(b.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
+                List.of(sb.scalarFn(URN, "to_b_type:u!a_type", R.userDefined(URN, "b_type"), val)),
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
 
     RelNode calciteRel = substraitToCalcite.convert(rel1);
     Rel rel2 = calciteToSubstrait.apply(calciteRel);
@@ -609,11 +612,10 @@ class CustomFunctionTest extends PlanTestBase {
             true, URN, "a_type", java.util.Collections.emptyList(), anyValue);
 
     Rel rel =
-        b.project(
+        sb.project(
             input -> List.of(nullableLiteral),
-            b.remap(1),
-            b.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
-
+            sb.remap(1),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(N.userDefined(URN, "a_type"))));
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);

@@ -212,4 +212,11 @@ class Substrait2SqlTest extends PlanTestBase {
     assertFullRoundTrip(
         "select case when p_size > 100 then 'large' when p_size > 50 then 'medium' else 'small' end from part");
   }
+
+  @Test
+  void dateFunctions() throws Exception {
+    assertSqlSubstraitRelRoundTrip("select month(o_orderdate),year(o_orderdate) from orders");
+    assertSqlSubstraitRelRoundTrip(
+        "select extract(month from o_orderdate),extract(year from o_orderdate),extract(day from o_orderdate) from orders");
+  }
 }

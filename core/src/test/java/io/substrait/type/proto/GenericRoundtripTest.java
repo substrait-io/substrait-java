@@ -54,10 +54,7 @@ class GenericRoundtripTest extends TestBase {
     ExpressionProtoConverter to = new ExpressionProtoConverter(null, null);
     ProtoExpressionConverter from =
         new ProtoExpressionConverter(
-            null,
-            null,
-            EMPTY_TYPE,
-            new ProtoRelConverter(new ExtensionCollector(), defaultExtensionCollection));
+            null, null, EMPTY_TYPE, new ProtoRelConverter(new ExtensionCollector(), extensions));
     assertEquals(val, from.from(val.accept(to, EmptyVisitationContext.INSTANCE)));
   }
 

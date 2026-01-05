@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.proto.ExpressionProtoConverter;
@@ -18,7 +17,6 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
 import java.io.IOException;
 import java.util.List;
@@ -30,11 +28,6 @@ import org.junit.jupiter.api.Test;
 
 /** Tests which test that an expression can be converted to and from Calcite expressions. */
 class ExpressionConvertabilityTest extends PlanTestBase {
-
-  static final TypeCreator R = TypeCreator.of(false);
-  static final TypeCreator N = TypeCreator.of(true);
-
-  final SubstraitBuilder b = new SubstraitBuilder(extensions);
 
   final ExpressionProtoConverter expressionProtoConverter =
       new ExpressionProtoConverter(new ExtensionCollector(), null);
@@ -51,7 +44,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
   // Define a shared table (i.e. a NamedScan) for use in tests.
   final List<Type> commonTableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN);
   final Rel commonTable =
-      b.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
+      sb.namedScan(List.of("example"), List.of("a", "b", "c", "d"), commonTableType);
 
   @Test
   void listLiteral() throws IOException, SqlParseException {
@@ -72,7 +65,8 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void singleOrList() {
-    Expression singleOrList = b.singleOrList(b.fieldReference(commonTable, 0), b.i32(5), b.i32(10));
+    Expression singleOrList =
+        sb.singleOrList(sb.fieldReference(commonTable, 0), sb.i32(5), sb.i32(10));
     RexNode rexNode = singleOrList.accept(converter, Context.newContext());
     Expression substraitExpression =
         rexNode.accept(
@@ -82,19 +76,19 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
     // cannot roundtrip test singleOrList because Calcite simplifies the representation
     assertExpressionEquality(
-        b.or(
-            b.equal(b.fieldReference(commonTable, 0), b.i32(5)),
-            b.equal(b.fieldReference(commonTable, 0), b.i32(10))),
+        sb.or(
+            sb.equal(sb.fieldReference(commonTable, 0), sb.i32(5)),
+            sb.equal(sb.fieldReference(commonTable, 0), sb.i32(10))),
         substraitExpression);
   }
 
   @Test
   void switchExpression() {
     Expression switchExpression =
-        b.switchExpression(
-            b.fieldReference(commonTable, 0),
-            List.of(b.switchClause(b.i32(5), b.i32(1)), b.switchClause(b.i32(10), b.i32(2))),
-            b.i32(3));
+        sb.switchExpression(
+            sb.fieldReference(commonTable, 0),
+            List.of(sb.switchClause(sb.i32(5), sb.i32(1)), sb.switchClause(sb.i32(10), sb.i32(2))),
+            sb.i32(3));
     RexNode rexNode = switchExpression.accept(converter, Context.newContext());
     Expression expression =
         rexNode.accept(
@@ -103,28 +97,30 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
     // cannot roundtrip test switchExpression because Calcite simplifies the representation
     assertExpressionEquality(
-        b.ifThen(
+        sb.ifThen(
             List.of(
-                b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(5)), b.i32(1)),
-                b.ifClause(b.equal(b.fieldReference(commonTable, 0), b.i32(10)), b.i32(2))),
-            b.i32(3)),
+                sb.ifClause(sb.equal(sb.fieldReference(commonTable, 0), sb.i32(5)), sb.i32(1)),
+                sb.ifClause(sb.equal(sb.fieldReference(commonTable, 0), sb.i32(10)), sb.i32(2))),
+            sb.i32(3)),
         expression);
   }
 
   @Test
   void castFailureCondition() {
     Rel rel =
-        b.project(
+        sb.project(
             input ->
                 List.of(
                     ExpressionCreator.cast(
                         R.I64,
-                        b.fieldReference(input, 0),
+                        sb.fieldReference(input, 0),
                         Expression.FailureBehavior.THROW_EXCEPTION),
                     ExpressionCreator.cast(
-                        R.I32, b.fieldReference(input, 0), Expression.FailureBehavior.RETURN_NULL)),
-            b.remap(1, 2),
-            b.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
+                        R.I32,
+                        sb.fieldReference(input, 0),
+                        Expression.FailureBehavior.RETURN_NULL)),
+            sb.remap(1, 2),
+            sb.namedScan(List.of("test"), List.of("col1"), List.of(R.STRING)));
 
     assertFullRoundTrip(rel);
   }
