@@ -1,5 +1,5 @@
 _apps
 _data
-**/*/bin
+bin
 build
 substrait.plan
