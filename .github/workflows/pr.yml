@@ -39,8 +39,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+          cache: 'gradle'
       - name: Scan
         run: make component=${{ matrix.project }} scan
   java:
@@ -55,8 +54,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+          cache: 'gradle'
       - name: Build with Gradle
         run: |
           # fetch submodule tags since actions/checkout@v6 does not
@@ -75,6 +73,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
       - uses: extractions/setup-just@v3
       - name: substrait-spark
         shell: bash
@@ -98,8 +97,7 @@ jobs:
       with:
         java-version: 25
         distribution: graalvm
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v5
+        cache: 'gradle'
     - name: Report Java Version
       run: java -version
     - name: Build with Gradle

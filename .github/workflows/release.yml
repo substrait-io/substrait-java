@@ -26,8 +26,7 @@ jobs:
         with:
           java-version: 25
           distribution: graalvm
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+          cache: 'gradle'
       - name: Report Java Version
         run: java -version
       - name: Build with Gradle
@@ -71,11 +70,10 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
+          cache: 'gradle'
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
       - name: Download isthmus-ubuntu-latest binary
         uses: actions/download-artifact@v7
         with:
