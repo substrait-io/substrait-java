@@ -86,6 +86,7 @@ configurations[JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME].extendsFrom(sh
 dependencies {
   testImplementation(platform(libs.junit.bom))
   testImplementation(libs.protobuf.java.util)
+  testImplementation(libs.guava)
 
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
