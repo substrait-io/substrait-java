@@ -109,12 +109,19 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.UserDefinedLiteral expr, Context context)
+  public RexNode visit(Expression.UserDefinedAnyLiteral expr, Context context)
       throws RuntimeException {
     RexLiteral binaryLiteral =
         rexBuilder.makeBinaryLiteral(new ByteString(expr.value().toByteArray()));
     RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeReinterpretCast(type, binaryLiteral, rexBuilder.makeLiteral(false));
+  }
+
+  @Override
+  public RexNode visit(Expression.UserDefinedStructLiteral expr, Context context)
+      throws RuntimeException {
+    throw new UnsupportedOperationException(
+        "UserDefinedStructLiteral representation is not yet supported in Isthmus");
   }
 
   @Override
