@@ -29,15 +29,8 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     fieldAccessDepthMap = new IdentityHashMap<>();
   }
 
-  public int getStepsOut(RexFieldAccess fieldAccess) {
-    return fieldAccessDepthMap.get(fieldAccess);
-  }
-
-  public RelNode apply(RelNode r) {
-    return reverseAccept(r);
-  }
-
-  public Map<RexFieldAccess, Integer> getFieldAccessDepthMap() {
+  public Map<RexFieldAccess, Integer> apply(RelNode r) {
+    reverseAccept(r);
     return fieldAccessDepthMap;
   }
 
