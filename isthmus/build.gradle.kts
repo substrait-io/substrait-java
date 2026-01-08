@@ -105,6 +105,7 @@ dependencies {
   testImplementation(platform(libs.junit.bom))
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
+  testRuntimeOnly(libs.slf4j.jdk14)
   implementation(libs.guava)
   implementation(libs.protobuf.java.util) {
     exclude("com.google.guava", "guava")
