@@ -32,10 +32,7 @@ class OuterReferenceResolverTest extends PlanTestBase {
 
   private static Map<RexFieldAccess, Integer> buildOuterFieldRefMap(final RelNode root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
-    final Map<RexFieldAccess, Integer> fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
-    Assertions.assertEquals(0, fieldAccessDepthMap.size());
-    resolver.apply(root);
-    return fieldAccessDepthMap;
+    return resolver.apply(root);
   }
 
   @Test

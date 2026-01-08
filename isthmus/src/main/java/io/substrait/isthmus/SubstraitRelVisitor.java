@@ -609,8 +609,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   protected void popFieldAccessDepthMap(RelNode root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
-    resolver.apply(root);
-    fieldAccessDepthMap = resolver.getFieldAccessDepthMap();
+    fieldAccessDepthMap = resolver.apply(root);
   }
 
   public Integer getFieldAccessDepth(RexFieldAccess fieldAccess) {
