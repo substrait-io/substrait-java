@@ -73,6 +73,7 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
                       .filter(op -> !OVERRIDE_KINDS.contains(op.kind))))
           .collect(Collectors.toUnmodifiableList());
 
+  /** Private constructor. */
   private SubstraitOperatorTable() {}
 
   /**

@@ -99,8 +99,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Creates a visitor with default features.
    *
-   * @param typeFactory Calcite type factory.
-   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory
+   * @param extensions Substrait extension collection
    */
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
@@ -110,9 +110,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Creates a visitor with explicit features.
    *
-   * @param typeFactory Calcite type factory.
-   * @param extensions Substrait extension collection.
-   * @param features Feature flags.
+   * @param typeFactory Calcite type factory
+   * @param extensions Substrait extension collection
+   * @param features Feature flags
    */
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory,
@@ -156,12 +156,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Creates a visitor with custom converters and features.
    *
-   * @param typeFactory Calcite type factory.
-   * @param scalarFunctionConverter Converter for scalar functions.
-   * @param aggregateFunctionConverter Converter for aggregate functions.
-   * @param windowFunctionConverter Converter for window functions.
-   * @param typeConverter Converter for types.
-   * @param features Feature flags.
+   * @param typeFactory Calcite type factory
+   * @param scalarFunctionConverter Converter for scalar functions
+   * @param aggregateFunctionConverter Converter for aggregate functions
+   * @param windowFunctionConverter Converter for window functions
+   * @param typeConverter Converter for types
+   * @param features Feature flags
    */
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory,
@@ -184,8 +184,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a {@link RexNode} to a Substrait {@link Expression}.
    *
-   * @param node Rex expression node.
-   * @return Substrait expression.
+   * @param node Rex expression node
+   * @return Substrait expression
    */
   protected Expression toExpression(RexNode node) {
     return node.accept(rexExpressionConverter);
@@ -194,8 +194,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.TableScan}.
    *
-   * @param scan Calcite table scan.
-   * @return Substrait named scan.
+   * @param scan Calcite table scan
+   * @return Substrait named scan
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.TableScan scan) {
@@ -209,8 +209,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.TableFunctionScan}.
    *
-   * @param scan Calcite table function scan.
-   * @return Converted relation or {@code super.visit(scan)}.
+   * @param scan Calcite table function scan
+   * @return Converted relation or {@code super.visit(scan)}
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.TableFunctionScan scan) {
@@ -220,8 +220,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Values}.
    *
-   * @param values Calcite values relation.
-   * @return Substrait scan (empty or virtual table).
+   * @param values Calcite values relation
+   * @return Substrait scan (empty or virtual table)
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Values values) {
@@ -247,8 +247,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Filter}.
    *
-   * @param filter Calcite filter relation.
-   * @return Substrait filter.
+   * @param filter Calcite filter relation
+   * @return Substrait filter
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Filter filter) {
@@ -259,8 +259,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Calc}.
    *
-   * @param calc Calcite calc relation.
-   * @return Converted relation or {@code super.visit(calc)}.
+   * @param calc Calcite calc relation
+   * @return Converted relation
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Calc calc) {
@@ -270,8 +270,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Project}.
    *
-   * @param project Calcite project relation.
-   * @return Substrait project.
+   * @param project Calcite project relation
+   * @return Substrait project
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
@@ -297,8 +297,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Join}.
    *
-   * @param join Calcite join relation.
-   * @return Substrait join or cross.
+   * @param join Calcite join relation
+   * @return Substrait join or cross
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Join join) {
@@ -337,8 +337,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Correlate}.
    *
-   * @param correlate Calcite correlate relation.
-   * @return Converted relation or {@code super.visit(correlate)}.
+   * @param correlate Calcite correlate relation
+   * @return Converted relation
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Correlate correlate) {
@@ -354,8 +354,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Union}.
    *
-   * @param union Calcite union relation.
-   * @return Substrait set-union.
+   * @param union Calcite union relation
+   * @return Substrait set-union
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Union union) {
@@ -367,8 +367,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Intersect}.
    *
-   * @param intersect Calcite intersect relation.
-   * @return Substrait set-intersection.
+   * @param intersect Calcite intersect relation
+   * @return Substrait set-intersection
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Intersect intersect) {
@@ -381,8 +381,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Minus}.
    *
-   * @param minus Calcite minus relation.
-   * @return Substrait set-minus.
+   * @param minus Calcite minus relation
+   * @return Substrait set-minus
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Minus minus) {
@@ -394,8 +394,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Aggregate}.
    *
-   * @param aggregate Calcite aggregate relation.
-   * @return Substrait aggregate.
+   * @param aggregate Calcite aggregate relation
+   * @return Substrait aggregate
    * @throws IllegalStateException if unexpected remap state is encountered.
    */
   @Override
@@ -499,8 +499,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Match}.
    *
-   * @param match Calcite match relation.
-   * @return Converted relation or {@code super.visit(match)}.
+   * @param match Calcite match relation
+   * @return Converted relation
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Match match) {
@@ -510,8 +510,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Sort}.
    *
-   * @param sort Calcite sort relation.
-   * @return Substrait sort/fetch chain.
+   * @param sort Calcite sort relation
+   * @return Substrait sort/fetch chain
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Sort sort) {
@@ -557,9 +557,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite sort collation to a Substrait {@link Expression.SortField}.
    *
-   * @param collation Calcite field collation.
-   * @param inputType Input record type.
-   * @return Substrait sort field.
+   * @param collation Calcite field collation
+   * @param inputType Input record type
+   * @return Substrait sort field
    */
   public static Expression.SortField toSortField(
       RelFieldCollation collation, Type.Struct inputType) {
@@ -592,8 +592,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link org.apache.calcite.rel.core.Exchange}.
    *
-   * @param exchange Calcite exchange relation.
-   * @return Converted relation or {@code super.visit(exchange)}.
+   * @param exchange Calcite exchange relation
+   * @return Converted relation
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Exchange exchange) {
@@ -603,8 +603,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link TableModify} (INSERT/DELETE/UPDATE).
    *
-   * @param modify Calcite table modify node.
-   * @return Substrait write/update relation.
+   * @param modify Calcite table modify node
+   * @return Substrait write/update relation
    * @throws IllegalStateException if an update column is not found in the table schema.
    */
   @Override
@@ -716,10 +716,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Handles Calcite {@link CreateTable} as Substrait CTAS.
+   * Handles Calcite {@link CreateTable} as Substrait CTAS. (Create Table As Select)
    *
-   * @param createTable Calcite create-table node.
-   * @return Substrait CTAS write relation.
+   * @param createTable Calcite create-table node
+   * @return Substrait CTAS write relation
    */
   public Rel handleCreateTable(CreateTable createTable) {
     RelNode input = createTable.getInput();
@@ -738,8 +738,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Handles Calcite {@link CreateView} as Substrait view DDL.
    *
-   * @param createView Calcite create-view node.
-   * @return Substrait view DDL relation.
+   * @param createView Calcite create-view node
+   * @return Substrait view DDL relation
    */
   public Rel handleCreateView(CreateView createView) {
     RelNode input = createView.getInput();
@@ -760,8 +760,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Visits other Calcite nodes (e.g., DDL wrappers).
    *
-   * @param other Calcite node.
-   * @return Converted relation.
+   * @param other Calcite node
+   * @return Converted relation
    * @throws UnsupportedOperationException if the node type is unsupported.
    */
   @Override
@@ -778,7 +778,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Precomputes depth for outer field accesses used by correlated expressions.
    *
-   * @param root Root Calcite node to analyze.
+   * @param root Root Calcite node to analyze
    */
   protected void popFieldAccessDepthMap(RelNode root) {
     final OuterReferenceResolver resolver = new OuterReferenceResolver();
@@ -788,8 +788,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Returns the depth of a field access for correlated expressions.
    *
-   * @param fieldAccess Rex field access.
-   * @return Depth value, or {@code null} if unknown.
+   * @param fieldAccess Rex field access
+   * @return Depth value, or {@code null} if unknown
    */
   public Integer getFieldAccessDepth(RexFieldAccess fieldAccess) {
     return fieldAccessDepthMap.get(fieldAccess);
@@ -798,8 +798,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Applies the visitor to a Calcite {@link RelNode}.
    *
-   * @param r Calcite node.
-   * @return Converted Substrait relation.
+   * @param r Calcite node
+   * @return Converted Substrait relation
    */
   public Rel apply(RelNode r) {
     return reverseAccept(r);
@@ -808,8 +808,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Applies the visitor to a list of Calcite {@link RelNode}s.
    *
-   * @param inputs Calcite input relations.
-   * @return Converted Substrait relations.
+   * @param inputs Calcite input relations
+   * @return Converted Substrait relations
    */
   public List<Rel> apply(List<RelNode> inputs) {
     return inputs.stream()
@@ -823,9 +823,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
    * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
    *
-   * @param relRoot The Calcite RelRoot to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @return The resulting Substrait Plan.Root.
+   * @param relRoot The Calcite RelRoot to convert
+   * @param extensions The extension collection to use for the conversion
+   * @return The resulting Substrait Plan.Root
    */
   public static Plan.Root convert(RelRoot relRoot, SimpleExtension.ExtensionCollection extensions) {
     return convert(relRoot, extensions, FEATURES_DEFAULT);
@@ -866,10 +866,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * <p>This is a convenience method that delegates to {@link #convert(RelRoot,
    * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
    *
-   * @param relRoot The Calcite RelRoot to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @return The resulting Substrait Plan.Root.
+   * @param relRoot The Calcite RelRoot to convert
+   * @param extensions The extension collection to use for the conversion
+   * @param features The feature board specifying enabled Substrait features
+   * @return The resulting Substrait Plan.Root
    */
   public static Plan.Root convert(
       RelRoot relRoot, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
@@ -888,9 +888,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * <p>This is a convenience method that delegates to {@link #convert(RelNode,
    * SimpleExtension.ExtensionCollection, FeatureBoard)} using {@link #FEATURES_DEFAULT}.
    *
-   * @param relNode The Calcite RelNode (and its subtree) to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @return The resulting Substrait Rel.
+   * @param relNode The Calcite RelNode (and its subtree) to convert
+   * @param extensions The extension collection to use for the conversion
+   * @return The resulting Substrait Rel
    */
   public static Rel convert(RelNode relNode, SimpleExtension.ExtensionCollection extensions) {
     return convert(relNode, extensions, FEATURES_DEFAULT);
@@ -905,10 +905,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * <p>This method does not wrap the result in a {@link Plan.Root} or extract output names. For
    * that, use {@link #convert(RelRoot, SubstraitRelVisitor)}.
    *
-   * @param relNode The Calcite RelNode (and its subtree) to convert.
+   * @param relNode The Calcite RelNode (and its subtree) to convert
    * @param visitor {@link SubstraitRelVisitor} or its subclass. This allows for custom visitor
    *     behavior.
-   * @return The resulting Substrait Rel.
+   * @return The resulting Substrait Rel
    */
   public static Rel convert(RelNode relNode, SubstraitRelVisitor visitor) {
     visitor.popFieldAccessDepthMap(relNode);
@@ -925,10 +925,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * <p>This is a convenience method that delegates to {@link #convert(RelNode,
    * SubstraitRelVisitor)} using an instance of the {@link SubstraitRelVisitor} as the visitor.
    *
-   * @param relNode The Calcite RelNode (and its subtree) to convert.
-   * @param extensions The extension collection to use for the conversion.
-   * @param features The feature board specifying enabled Substrait features.
-   * @return The resulting Substrait Rel.
+   * @param relNode The Calcite RelNode (and its subtree) to convert
+   * @param extensions The extension collection to use for the conversion
+   * @param features The feature board specifying enabled Substrait features
+   * @return The resulting Substrait Rel
    */
   public static Rel convert(
       RelNode relNode, SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {

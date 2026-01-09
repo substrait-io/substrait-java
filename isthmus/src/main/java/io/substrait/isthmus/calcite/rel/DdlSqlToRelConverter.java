@@ -84,7 +84,7 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
    *
    * @param sqlCreateTable the CREATE TABLE node
    * @return a {@link RelRoot} wrapping a synthetic {@code CreateTable} relational node
-   * @throws IllegalArgumentException if the statement is not CTAS
+   * @throws IllegalArgumentException if the statement is not a CTAS
    */
   protected RelRoot handleCreateTable(final SqlCreateTable sqlCreateTable) {
     if (sqlCreateTable.query == null) {

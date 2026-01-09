@@ -137,7 +137,7 @@ public class SubstraitRelNodeConverter
    * @param extensions Substrait extension collection (scalar/aggregate/window function variants)
    * @param typeFactory Calcite type factory
    * @param relBuilder Calcite {@link RelBuilder}
-   * @param featureBoard feature flags controlling behavior (e.g., dynamic UDFs)
+   * @param featureBoard feature flags controlling behavior
    */
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,

@@ -31,7 +31,7 @@ public class SubstraitTable extends AbstractTable {
   /**
    * Returns the name of the table.
    *
-   * @return The table name as a {@link String}.
+   * @return The table name
    */
   public String getName() {
     return tableName;

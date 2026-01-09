@@ -22,8 +22,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
 
   /**
-   * Creates a SQL-to-Substrait converter using the default extension catalog and no feature
-   * overrides.
+   * Creates a SQL-to-Substrait converter using the default extension catalog and default features.
    */
   public SqlToSubstrait() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, null);
