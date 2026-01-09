@@ -321,7 +321,7 @@ tasks.named<Javadoc>("javadoc") {
     encoding = "UTF-8"
     destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile
 
-    addStringOption("overview", "${rootProject.projectDir}/overview.html")
+    addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")
     addStringOption("link", "../core-proto")
   }
 }
