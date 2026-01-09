@@ -1,7 +1,8 @@
 package io.substrait.isthmus.cli;
 
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Empty;
-import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.ProtocolMessageEnum;
 import io.github.classgraph.ClassGraph;
@@ -54,10 +55,11 @@ public final class RegisterAtRuntime implements Feature {
 
       // Empty class
       register(Empty.class);
+      registerDeclaredClassesRecursively(DescriptorProtos.class);
 
       try (PackageScanner substrait = new PackageScanner("io.substrait")) {
         // protobuf items
-        substrait.registerByParent(GeneratedMessageV3.class);
+        substrait.registerByParent(GeneratedMessage.class);
         substrait.registerByParent(MessageLite.Builder.class);
         substrait.registerByParent(ProtocolMessageEnum.class);
 
@@ -129,6 +131,13 @@ public final class RegisterAtRuntime implements Feature {
     RuntimeReflection.register(c.getConstructors());
     RuntimeReflection.register(c.getFields());
     RuntimeReflection.register(c.getMethods());
+  }
+
+  private static void registerDeclaredClassesRecursively(Class<?> c) {
+    register(c);
+    for (Class<?> declaredClass : c.getDeclaredClasses()) {
+      registerDeclaredClassesRecursively(declaredClass);
+    }
   }
 
   private static final class PackageScanner implements AutoCloseable {
