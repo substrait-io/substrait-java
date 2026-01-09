@@ -36,7 +36,7 @@ public class TypeStringify extends ParentStringify
   /**
    * Constructor.
    *
-   * @param indent numver of idents to use
+   * @param indent Number of indents to use.
    */
   protected TypeStringify(int indent) {
     super(indent);
