@@ -68,6 +68,15 @@ public class PreCalciteAggregateValidator {
       return false;
     }
 
+    // Calcite stores grouping fields in an ImmutableBitSet and does not track the order of the
+    // grouping fields. The output record shape that Calcite generates ALWAYS has the groupings in
+    // ascending field order. This causes issues with Substrait in cases where the grouping fields
+    // in Substrait are not defined in ascending order.
+
+    // For example, if a grouping is defined as (0, 2, 1) in Substrait, Calcite will output it as
+    // (0, 1, 2), which means that the Calcite output will no longer line up with the expectations
+    // of the Substrait plan.
+
     List<Integer> groupingFields =
         grouping.getExpressions().stream()
             .map(expr -> getFieldRefOffset((FieldReference) expr))
