@@ -1,15 +1,15 @@
 package io.substrait.examples.util;
 
 /**
- * Parent class of all stringifiers Created as it seemed there could be an optimization to share
- * formatting fns between the various stringifiers
+ * Parent class of all string-ifiers Created as it seemed there could be an optimization to share
+ * formatting fns between the various string-ifiers
  */
 public class ParentStringify {
 
   /** Indent character. */
   protected String indentChar = " ";
 
-  /** Indents of idnentsize to use. */
+  /** Number of indents to use. */
   protected int indent;
 
   /** Size of each indent. */
@@ -18,7 +18,7 @@ public class ParentStringify {
   /**
    * Build with a specific indent at the start - note 'an indent' is set by default to be 3 spaces.
    *
-   * @param indent number of indentes
+   * @param indent Number of indents to use.
    */
   public ParentStringify(int indent) {
     this.indent = indent;
@@ -56,9 +56,9 @@ public class ParentStringify {
   }
 
   /**
-   * Get the outdent to use, decreats indent counter.
+   * Get the outdent to use, decrements indent counter.
    *
-   * @param sb Stribug Builder with outdent
+   * @param sb StringBuilder with outdent
    * @return outdent string
    */
   protected String getOutdent(StringBuilder sb) {
