@@ -24,8 +24,6 @@ import org.jspecify.annotations.Nullable;
  * Utility for converting between Calcite {@link org.apache.calcite.rel.type.RelDataType} and
  * Substrait {@link io.substrait.type.Type}.
  *
- * <p>Supports primitive, complex, and user *
- *
  * <p>Supports primitive, complex, and user-defined types in both directions.
  *
  * @see UserTypeMapper
