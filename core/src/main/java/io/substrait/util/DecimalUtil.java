@@ -33,13 +33,13 @@ public class DecimalUtil {
   };
 
   /**
-   * Given an input of little-endian twos-complement with byeWidth bytes of a scaled big integer,
-   * convert it back to BigDecimal. This method is the opposite of encodeDecimalIntoBytes()
+   * Converts a little-endian two's-complement byte array of a scaled big integer into a {@link
+   * BigDecimal}. Opposite of {@link #encodeDecimalIntoBytes(BigDecimal, int, int)}.
    *
-   * @param value
-   * @param scale
-   * @param byteWidth
-   * @return
+   * @param value the little-endian two's-complement bytes
+   * @param scale the decimal scale to apply
+   * @param byteWidth the number of bytes used for the integer representation
+   * @return the reconstructed {@code BigDecimal}
    */
   public static BigDecimal getBigDecimalFromBytes(byte[] value, int scale, int byteWidth) {
     byte[] reversed = new byte[value.length];
@@ -51,13 +51,14 @@ public class DecimalUtil {
   }
 
   /**
-   * Given a big decimal and its scale, convert into a scaled big integer, and then convert the
-   * scaled big integer into little-endian twos-complement with byeWidth bytes.
+   * Encodes a {@link BigDecimal} into a scaled big integer and serializes it as little-endian
+   * two's-complement bytes of fixed {@code byteWidth}.
    *
-   * @param decimal
-   * @param scale
-   * @param byteWidth
-   * @return
+   * @param decimal the decimal value to encode
+   * @param scale the scale used to produce the scaled integer
+   * @param byteWidth the target width in bytes for the output
+   * @return the encoded little-endian two's-complement byte array
+   * @throws UnsupportedOperationException if the encoded integer exceeds {@code byteWidth}
    */
   public static byte[] encodeDecimalIntoBytes(BigDecimal decimal, int scale, int byteWidth) {
     BigDecimal scaledDecimal = decimal.multiply(powerOfTen(scale));
