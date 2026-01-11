@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.75.0](https://github.com/substrait-io/substrait-java/compare/v0.74.0...v0.75.0) (2026-01-11)
+
+### Features
+
+* **isthmus:** improve DECIMAL type handling ([#655](https://github.com/substrait-io/substrait-java/issues/655)) ([#656](https://github.com/substrait-io/substrait-java/issues/656)) ([bce3e73](https://github.com/substrait-io/substrait-java/commit/bce3e7324738a070947b61e7cb8f949c5f6f45e6))
+
 ## [0.74.0](https://github.com/substrait-io/substrait-java/compare/v0.73.0...v0.74.0) (2025-12-21)
 
 ### Features
