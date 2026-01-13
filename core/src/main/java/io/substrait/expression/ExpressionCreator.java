@@ -306,13 +306,51 @@ public class ExpressionCreator {
     return Expression.NestedStruct.builder().nullable(nullable).addFields(fields).build();
   }
 
-  public static Expression.UserDefinedLiteral userDefinedLiteral(
-      boolean nullable, String urn, String name, Any value) {
-    return Expression.UserDefinedLiteral.builder()
+  /**
+   * Create a UserDefinedAnyLiteral with google.protobuf.Any representation.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param typeParameters the type parameters for the user-defined type (can be an empty list)
+   * @param value the value, encoded as google.protobuf.Any
+   */
+  public static Expression.UserDefinedAnyLiteral userDefinedLiteralAny(
+      boolean nullable,
+      String urn,
+      String name,
+      java.util.List<io.substrait.type.Type.Parameter> typeParameters,
+      Any value) {
+    return Expression.UserDefinedAnyLiteral.builder()
         .nullable(nullable)
         .urn(urn)
         .name(name)
-        .value(value.toByteString())
+        .addAllTypeParameters(typeParameters)
+        .value(value)
+        .build();
+  }
+
+  /**
+   * Create a UserDefinedStructLiteral with Struct representation.
+   *
+   * @param nullable whether the literal is nullable
+   * @param urn the URN of the user-defined type
+   * @param name the name of the user-defined type
+   * @param typeParameters the type parameters for the user-defined type (can be an empty list)
+   * @param fields the fields, as a list of Literal values
+   */
+  public static Expression.UserDefinedStructLiteral userDefinedLiteralStruct(
+      boolean nullable,
+      String urn,
+      String name,
+      java.util.List<io.substrait.type.Type.Parameter> typeParameters,
+      java.util.List<Expression.Literal> fields) {
+    return Expression.UserDefinedStructLiteral.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .addAllTypeParameters(typeParameters)
+        .addAllFields(fields)
         .build();
   }
 

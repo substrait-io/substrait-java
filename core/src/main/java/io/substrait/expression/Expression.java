@@ -693,21 +693,94 @@ public interface Expression extends FunctionArg {
     }
   }
 
-  @Value.Immutable
-  abstract class UserDefinedLiteral implements Literal {
-    public abstract ByteString value();
+  /**
+   * Base interface for user-defined literals.
+   *
+   * <p>User-defined literals can be encoded in one of two ways as per the Substrait spec:
+   *
+   * <ul>
+   *   <li>As {@code google.protobuf.Any} - see {@link UserDefinedAnyLiteral}
+   *   <li>As {@code Literal.Struct} - see {@link UserDefinedStructLiteral}
+   * </ul>
+   */
+  interface UserDefinedLiteral extends Literal {
+    String urn();
 
+    String name();
+
+    List<io.substrait.type.Type.Parameter> typeParameters();
+  }
+
+  /**
+   * User-defined literal with value encoded as {@link com.google.protobuf.Any}.
+   *
+   * <p>This encoding allows for arbitrary binary data to be stored in the literal value.
+   */
+  @Value.Immutable
+  abstract class UserDefinedAnyLiteral implements UserDefinedLiteral {
+    @Override
     public abstract String urn();
 
+    @Override
     public abstract String name();
 
     @Override
-    public Type getType() {
-      return Type.withNullability(nullable()).userDefined(urn(), name());
+    public abstract List<io.substrait.type.Type.Parameter> typeParameters();
+
+    public abstract com.google.protobuf.Any value();
+
+    @Override
+    public Type.UserDefined getType() {
+      return Type.UserDefined.builder()
+          .nullable(nullable())
+          .urn(urn())
+          .name(name())
+          .typeParameters(typeParameters())
+          .build();
     }
 
-    public static ImmutableExpression.UserDefinedLiteral.Builder builder() {
-      return ImmutableExpression.UserDefinedLiteral.builder();
+    public static ImmutableExpression.UserDefinedAnyLiteral.Builder builder() {
+      return ImmutableExpression.UserDefinedAnyLiteral.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  /**
+   * User-defined literal with value encoded as {@link
+   * io.substrait.proto.Expression.Literal.Struct}.
+   *
+   * <p>This encoding uses a structured list of fields to represent the literal value.
+   */
+  @Value.Immutable
+  abstract class UserDefinedStructLiteral implements UserDefinedLiteral {
+    @Override
+    public abstract String urn();
+
+    @Override
+    public abstract String name();
+
+    @Override
+    public abstract List<io.substrait.type.Type.Parameter> typeParameters();
+
+    public abstract List<Literal> fields();
+
+    @Override
+    public Type.UserDefined getType() {
+      return Type.UserDefined.builder()
+          .nullable(nullable())
+          .urn(urn())
+          .name(name())
+          .typeParameters(typeParameters())
+          .build();
+    }
+
+    public static ImmutableExpression.UserDefinedStructLiteral.Builder builder() {
+      return ImmutableExpression.UserDefinedStructLiteral.builder();
     }
 
     @Override

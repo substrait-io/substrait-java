@@ -312,14 +312,24 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.NestedStruct expr, C context) throws E;
 
   /**
-   * Visit a user-defined literal.
+   * Visit a user-defined any literal.
    *
    * @param expr the user-defined literal
    * @param context visitation context
    * @return visit result
    * @throws E on visit failure
    */
-  R visit(Expression.UserDefinedLiteral expr, C context) throws E;
+  R visit(Expression.UserDefinedAnyLiteral expr, C context) throws E;
+
+  /**
+   * Visit a user-defined struct literal.
+   *
+   * @param expr the user-defined literal
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.UserDefinedStructLiteral expr, C context) throws E;
 
   /**
    * Visit a switch expression.

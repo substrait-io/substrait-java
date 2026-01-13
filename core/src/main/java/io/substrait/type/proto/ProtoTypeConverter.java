@@ -2,6 +2,7 @@ package io.substrait.type.proto;
 
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.type.ImmutableType;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 
@@ -90,7 +91,16 @@ public class ProtoTypeConverter {
         {
           io.substrait.proto.Type.UserDefined userDefined = type.getUserDefined();
           SimpleExtension.Type t = lookup.getType(userDefined.getTypeReference(), extensions);
-          return n(userDefined.getNullability()).userDefined(t.urn(), t.name());
+          boolean nullable = isNullable(userDefined.getNullability());
+          return io.substrait.type.Type.UserDefined.builder()
+              .nullable(nullable)
+              .urn(t.urn())
+              .name(t.name())
+              .typeParameters(
+                  userDefined.getTypeParametersList().stream()
+                      .map(this::from)
+                      .collect(java.util.stream.Collectors.toList()))
+              .build();
         }
       case USER_DEFINED_TYPE_REFERENCE:
         throw new UnsupportedOperationException("Unsupported user defined reference: " + type);
@@ -117,5 +127,29 @@ public class ProtoTypeConverter {
     return n == io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE
         ? TypeCreator.NULLABLE
         : TypeCreator.REQUIRED;
+  }
+
+  public io.substrait.type.Type.Parameter from(io.substrait.proto.Type.Parameter parameter) {
+    switch (parameter.getParameterCase()) {
+      case NULL:
+        return io.substrait.type.Type.ParameterNull.INSTANCE;
+      case DATA_TYPE:
+        return ImmutableType.ParameterDataType.builder()
+            .type(from(parameter.getDataType()))
+            .build();
+      case BOOLEAN:
+        return ImmutableType.ParameterBooleanValue.builder().value(parameter.getBoolean()).build();
+      case INTEGER:
+        return ImmutableType.ParameterIntegerValue.builder().value(parameter.getInteger()).build();
+      case ENUM:
+        return ImmutableType.ParameterEnumValue.builder().value(parameter.getEnum()).build();
+      case STRING:
+        return ImmutableType.ParameterStringValue.builder().value(parameter.getString()).build();
+      case PARAMETER_NOT_SET:
+        throw new IllegalArgumentException("Parameter type is not set: " + parameter);
+      default:
+        throw new UnsupportedOperationException(
+            "Unsupported parameter type: " + parameter.getParameterCase());
+    }
   }
 }

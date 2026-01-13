@@ -5,17 +5,52 @@ import io.substrait.proto.Type;
 
 /** Convert from {@link io.substrait.type.Type} to {@link io.substrait.proto.Type} */
 public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
-  private static final BaseProtoTypes<Type, Integer> NULLABLE =
-      new Types(Type.Nullability.NULLABILITY_NULLABLE);
-  private static final BaseProtoTypes<Type, Integer> REQUIRED =
-      new Types(Type.Nullability.NULLABILITY_REQUIRED);
+  // Instance fields (not static) because Types is a non-static inner class that calls
+  // TypeProtoConverter.this.toProto() to recursively convert nested type parameters.
+  // Each converter instance needs its own Types instances to ensure type registrations
+  // use the correct ExtensionCollector.
+  private final BaseProtoTypes<Type, Integer> NULLABLE;
+  private final BaseProtoTypes<Type, Integer> REQUIRED;
 
   public TypeProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Type literals cannot contain parameters or expressions.");
+    NULLABLE = new Types(Type.Nullability.NULLABILITY_NULLABLE);
+    REQUIRED = new Types(Type.Nullability.NULLABILITY_REQUIRED);
   }
 
   public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return type.accept(this);
+  }
+
+  public io.substrait.proto.Type.Parameter toProto(io.substrait.type.Type.Parameter parameter) {
+    if (parameter instanceof io.substrait.type.Type.ParameterNull) {
+      return Type.Parameter.newBuilder()
+          .setNull(com.google.protobuf.Empty.getDefaultInstance())
+          .build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterDataType) {
+      io.substrait.type.Type.ParameterDataType dataType =
+          (io.substrait.type.Type.ParameterDataType) parameter;
+      return Type.Parameter.newBuilder().setDataType(toProto(dataType.type())).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterBooleanValue) {
+      io.substrait.type.Type.ParameterBooleanValue boolValue =
+          (io.substrait.type.Type.ParameterBooleanValue) parameter;
+      return Type.Parameter.newBuilder().setBoolean(boolValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterIntegerValue) {
+      io.substrait.type.Type.ParameterIntegerValue intValue =
+          (io.substrait.type.Type.ParameterIntegerValue) parameter;
+      return Type.Parameter.newBuilder().setInteger(intValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterEnumValue) {
+      io.substrait.type.Type.ParameterEnumValue enumValue =
+          (io.substrait.type.Type.ParameterEnumValue) parameter;
+      return Type.Parameter.newBuilder().setEnum(enumValue.value()).build();
+    } else if (parameter instanceof io.substrait.type.Type.ParameterStringValue) {
+      io.substrait.type.Type.ParameterStringValue stringValue =
+          (io.substrait.type.Type.ParameterStringValue) parameter;
+      return Type.Parameter.newBuilder().setString(stringValue.value()).build();
+    } else {
+      throw new UnsupportedOperationException(
+          "Unsupported parameter type: " + parameter.getClass());
+    }
   }
 
   @Override
@@ -23,7 +58,15 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     return nullable ? NULLABLE : REQUIRED;
   }
 
-  private static class Types extends BaseProtoTypes<Type, Integer> {
+  /**
+   * Non-static inner class that can access the outer TypeProtoConverter instance.
+   *
+   * <p>This class must be non-static to access TypeProtoConverter.this.toProto() for converting
+   * nested type parameters (e.g., ParameterDataType containing another Type). Being non-static
+   * means instances are bound to a specific outer TypeProtoConverter instance, ensuring parameter
+   * conversions use the correct ExtensionCollector.
+   */
+  private class Types extends BaseProtoTypes<Type, Integer> {
 
     public Types(final Type.Nullability nullability) {
       super(nullability);
@@ -131,6 +174,20 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     public Type userDefined(int ref) {
       return wrap(
           Type.UserDefined.newBuilder().setTypeReference(ref).setNullability(nullability).build());
+    }
+
+    @Override
+    public Type userDefined(
+        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
+      return wrap(
+          Type.UserDefined.newBuilder()
+              .setTypeReference(ref)
+              .setNullability(nullability)
+              .addAllTypeParameters(
+                  typeParameters.stream()
+                      .map(TypeProtoConverter.this::toProto)
+                      .collect(java.util.stream.Collectors.toList()))
+              .build());
     }
 
     @Override
