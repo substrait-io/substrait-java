@@ -52,6 +52,8 @@ public class DefaultExtensionCatalog {
 
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
+
+  /** Identifier for extension types. */
   public static final String EXTENSION_TYPES = "extension:io.substrait:extension_types";
 
   /** Default collection of built-in extensions loaded from YAML resources. */
