@@ -32,6 +32,8 @@ public class SqlToSubstrait extends SqlConverterBase {
   public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions, FeatureBoard features) {
     super(features, extensions);
 
+    List<SqlOperator> dynamicOperators = new java.util.ArrayList<>();
+
     if (featureBoard.allowDynamicUdfs()) {
       SimpleExtension.ExtensionCollection dynamicExtensionCollection =
           ExtensionUtils.getDynamicExtensions(extensions);
@@ -39,13 +41,43 @@ public class SqlToSubstrait extends SqlConverterBase {
           || !dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
         List<SqlOperator> generatedDynamicOperators =
             SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, this.factory);
-        this.operatorTable =
-            SqlOperatorTables.chain(
-                SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
-        return;
+        dynamicOperators.addAll(generatedDynamicOperators);
       }
     }
-    this.operatorTable = SubstraitOperatorTable.INSTANCE;
+
+    if (featureBoard.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.ScalarFunctionVariant> unmappedScalars =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.scalarFunctions(),
+              io.substrait.isthmus.expression.FunctionMappings.SCALAR_SIGS);
+      List<SimpleExtension.AggregateFunctionVariant> unmappedAggregates =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.aggregateFunctions(),
+              io.substrait.isthmus.expression.FunctionMappings.AGGREGATE_SIGS);
+      List<SimpleExtension.WindowFunctionVariant> unmappedWindows =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.windowFunctions(),
+              io.substrait.isthmus.expression.FunctionMappings.WINDOW_SIGS);
+
+      if (!unmappedScalars.isEmpty()) {
+        dynamicOperators.addAll(SimpleExtensionToSqlOperator.from(unmappedScalars, this.factory));
+      }
+      if (!unmappedAggregates.isEmpty()) {
+        dynamicOperators.addAll(
+            SimpleExtensionToSqlOperator.from(unmappedAggregates, this.factory));
+      }
+      if (!unmappedWindows.isEmpty()) {
+        dynamicOperators.addAll(SimpleExtensionToSqlOperator.from(unmappedWindows, this.factory));
+      }
+    }
+
+    if (!dynamicOperators.isEmpty()) {
+      this.operatorTable =
+          SqlOperatorTables.chain(
+              SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(dynamicOperators));
+    } else {
+      this.operatorTable = SubstraitOperatorTable.INSTANCE;
+    }
   }
 
   /**

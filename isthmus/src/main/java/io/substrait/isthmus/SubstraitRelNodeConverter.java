@@ -87,6 +87,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RelVisitor to convert Substrait Rel plan to Calcite RelNode plan. Unsupported Rel node will call
@@ -94,6 +96,8 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class SubstraitRelNodeConverter
     extends AbstractRelVisitor<RelNode, SubstraitRelNodeConverter.Context, RuntimeException> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SubstraitRelNodeConverter.class);
 
   protected final RelDataTypeFactory typeFactory;
 
@@ -120,9 +124,9 @@ public class SubstraitRelNodeConverter
     this(
         typeFactory,
         relBuilder,
-        createScalarFunctionConverter(extensions, typeFactory, featureBoard.allowDynamicUdfs()),
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
-        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+        createScalarFunctionConverter(extensions, typeFactory, featureBoard),
+        createAggregateFunctionConverter(extensions, typeFactory, featureBoard),
+        createWindowFunctionConverter(extensions, typeFactory, featureBoard),
         TypeConverter.DEFAULT);
   }
 
@@ -165,11 +169,11 @@ public class SubstraitRelNodeConverter
   private static ScalarFunctionConverter createScalarFunctionConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
-      boolean allowDynamicUdfs) {
+      FeatureBoard featureBoard) {
 
-    List<FunctionMappings.Sig> additionalSignatures;
+    List<FunctionMappings.Sig> additionalSignatures = new ArrayList<>();
 
-    if (allowDynamicUdfs) {
+    if (featureBoard.allowDynamicUdfs()) {
       java.util.Set<String> knownFunctionNames =
           FunctionMappings.SCALAR_SIGS.stream()
               .map(FunctionMappings.Sig::name)
@@ -180,26 +184,122 @@ public class SubstraitRelNodeConverter
               .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
               .collect(Collectors.toList());
 
-      if (dynamicFunctions.isEmpty()) {
-        additionalSignatures = Collections.emptyList();
-      } else {
+      if (!dynamicFunctions.isEmpty()) {
         SimpleExtension.ExtensionCollection dynamicExtensionCollection =
             SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
 
         List<SqlOperator> dynamicOperators =
             SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
 
-        additionalSignatures =
+        additionalSignatures.addAll(
             dynamicOperators.stream()
                 .map(op -> FunctionMappings.s(op, op.getName()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
       }
-    } else {
-      additionalSignatures = Collections.emptyList();
+    }
+
+    if (featureBoard.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.ScalarFunctionVariant> unmappedFunctions =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.scalarFunctions(), FunctionMappings.SCALAR_SIGS);
+
+      if (!unmappedFunctions.isEmpty()) {
+        LOGGER.info(
+            "Dynamically mapping {} unmapped scalar functions: {}",
+            unmappedFunctions.size(),
+            unmappedFunctions.stream().map(f -> f.name()).collect(Collectors.toList()));
+
+        List<SqlOperator> dynamicOperators =
+            SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
+
+        // Note: We use last-wins deduplication here because:
+        // 1. Multiple variants of the same function create separate SqlOperator instances
+        // 2. Calcite's SqlOperator equality is based on name and kind, not identity
+        // 3. RexCalls may use any one of these equivalent operators
+        // 4. We only need ONE SqlOperator registered per function name as a key in signatures map
+        // 5. The FunctionFinder will match all variants based on type signatures
+        java.util.Map<String, SqlOperator> operatorsByName = new java.util.LinkedHashMap<>();
+        for (SqlOperator op : dynamicOperators) {
+          operatorsByName.put(op.getName().toLowerCase(), op);
+        }
+
+        additionalSignatures.addAll(
+            operatorsByName.values().stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList()));
+      }
     }
 
     return new ScalarFunctionConverter(
         extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  private static AggregateFunctionConverter createAggregateFunctionConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      FeatureBoard featureBoard) {
+
+    List<FunctionMappings.Sig> additionalSignatures = new ArrayList<>();
+
+    if (featureBoard.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.AggregateFunctionVariant> unmappedFunctions =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.aggregateFunctions(), FunctionMappings.AGGREGATE_SIGS);
+
+      if (!unmappedFunctions.isEmpty()) {
+        List<SqlOperator> dynamicOperators =
+            SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
+
+        // Deduplicate operators by name (last-wins precedence) since multiple variants
+        // of the same function create multiple SqlOperator objects
+        java.util.Map<String, SqlOperator> operatorsByName = new java.util.LinkedHashMap<>();
+        for (SqlOperator op : dynamicOperators) {
+          operatorsByName.put(op.getName().toLowerCase(), op);
+        }
+
+        additionalSignatures.addAll(
+            operatorsByName.values().stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList()));
+      }
+    }
+
+    return new AggregateFunctionConverter(
+        extensions.aggregateFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  private static WindowFunctionConverter createWindowFunctionConverter(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      FeatureBoard featureBoard) {
+
+    List<FunctionMappings.Sig> additionalSignatures = new ArrayList<>();
+
+    if (featureBoard.autoFallbackToDynamicFunctionMapping()) {
+      List<SimpleExtension.WindowFunctionVariant> unmappedFunctions =
+          io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
+              extensions.windowFunctions(), FunctionMappings.WINDOW_SIGS);
+
+      if (!unmappedFunctions.isEmpty()) {
+        List<SqlOperator> dynamicOperators =
+            SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
+
+        // Deduplicate operators by name (last-wins precedence) since multiple variants
+        // of the same function create multiple SqlOperator objects
+        java.util.Map<String, SqlOperator> operatorsByName = new java.util.LinkedHashMap<>();
+        for (SqlOperator op : dynamicOperators) {
+          operatorsByName.put(op.getName().toLowerCase(), op);
+        }
+
+        additionalSignatures.addAll(
+            operatorsByName.values().stream()
+                .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
+                .collect(Collectors.toList()));
+      }
+    }
+
+    return new WindowFunctionConverter(
+        extensions.windowFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
   }
 
   public static RelNode convert(
