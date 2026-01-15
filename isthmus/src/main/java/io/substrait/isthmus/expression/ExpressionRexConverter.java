@@ -120,8 +120,12 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(Expression.UserDefinedStructLiteral expr, Context context)
       throws RuntimeException {
-    throw new UnsupportedOperationException(
-        "UserDefinedStructLiteral representation is not yet supported in Isthmus");
+    // UserDefinedStructLiteral: Struct is just the ENCODING/REPRESENTATION of a UDT value.
+    // The ROW is never nullable (it's just encoding). UDT nullability is carried by the
+    // REINTERPRET target type: REINTERPRET(ROW(...), udt{nullable=true/false}).
+    RelDataType type = typeConverter.toCalcite(typeFactory, expr.getType());
+    RexNode structValue = toStructEncoding(expr.fields(), context);
+    return rexBuilder.makeReinterpretCast(type, structValue, rexBuilder.makeLiteral(false));
   }
 
   @Override
@@ -318,6 +322,14 @@ public class ExpressionRexConverter
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
     return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(Expression.StructLiteral expr, Context context) throws RuntimeException {
+    List<RexNode> fieldNodes =
+        expr.fields().stream().map(f -> f.accept(this, context)).collect(Collectors.toList());
+    RelDataType structType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(structType, SqlStdOperatorTable.ROW, fieldNodes);
   }
 
   @Override
@@ -722,5 +734,36 @@ public class ExpressionRexConverter
             String.format(
                 "Cannot handle SetPredicate when PredicateOp is %s.", expr.predicateOp().name()));
     }
+  }
+
+  /**
+   * Helper method to create a Calcite ROW expression for encoding UDT struct literals.
+   *
+   * <p>Used specifically for {@link Expression.UserDefinedStructLiteral} where the struct is just
+   * the encoding representation of the UDT value. The ROW is never nullable because it's just the
+   * encoding - nullability is carried by the REINTERPRET target UDT type.
+   *
+   * <p>For regular {@link Expression.StructLiteral}, use the struct's own type via {@code
+   * expr.getType()} instead.
+   */
+  private RexNode toStructEncoding(List<? extends Expression.Literal> fields, Context context) {
+    List<RexNode> fieldNodes =
+        fields.stream().map(f -> f.accept(this, context)).collect(Collectors.toList());
+
+    // Note: Field names ("field0", "field1", etc.) are dummy values required by Calcite's ROW
+    // type. These names are discarded during roundtrip conversion back to Substrait, as Substrait
+    // struct literals are position-based and only the field values are preserved.
+    //
+    // The ROW type is never nullable because it's just encoding for the UDT. Field nullability
+    // comes from individual field types.
+    RelDataTypeFactory.Builder rowBuilder = typeFactory.builder();
+    IntStream.range(0, fields.size())
+        .forEach(
+            i -> {
+              RelDataType fieldType = typeConverter.toCalcite(typeFactory, fields.get(i).getType());
+              rowBuilder.add("field" + i, fieldType);
+            });
+
+    return rexBuilder.makeCall(rowBuilder.build(), SqlStdOperatorTable.ROW, fieldNodes);
   }
 }
