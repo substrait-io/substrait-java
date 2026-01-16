@@ -16,8 +16,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
  * <p>Also provides type-based resolvers to disambiguate operators by output type.
  */
 public class FunctionMappings {
-  // Static list of signature mapping between Calcite SQL operators and Substrait base function
-  // names.
 
   /** Scalar operator signatures mapped to Substrait function names. */
   public static final ImmutableList<Sig> SCALAR_SIGS =
@@ -139,7 +137,7 @@ public class FunctionMappings {
           .addAll(AGGREGATE_SIGS)
           .build();
 
-  // contains return-type based resolver for both scalar and aggregator operator
+  
   /** Type-based resolvers to disambiguate Calcite operators by expected output type. */
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER =
       Map.of(
@@ -169,7 +167,7 @@ public class FunctionMappings {
    * Creates a signature mapping entry.
    *
    * @param operator the Calcite operator
-   * @param substraitName the Substrait base function name
+   * @param substraitName the Substrait canonical function name
    * @return a {@link Sig} instance
    */
   public static Sig s(SqlOperator operator, String substraitName) {
