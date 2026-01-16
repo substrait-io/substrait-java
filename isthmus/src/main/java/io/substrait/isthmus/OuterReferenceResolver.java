@@ -41,7 +41,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     nestedDepth = new HashMap<>();
     fieldAccessDepthMap = new IdentityHashMap<>();
   }
-  
+
   /**
    * Applies the resolver to a {@link RelNode} tree, computing the depth map.
    *

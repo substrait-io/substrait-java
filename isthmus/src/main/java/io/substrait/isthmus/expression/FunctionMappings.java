@@ -137,7 +137,6 @@ public class FunctionMappings {
           .addAll(AGGREGATE_SIGS)
           .build();
 
-  
   /** Type-based resolvers to disambiguate Calcite operators by expected output type. */
   public static final Map<SqlOperator, TypeBasedResolver> OPERATOR_RESOLVER =
       Map.of(
