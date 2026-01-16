@@ -65,7 +65,12 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
           + "      - name: mode\n"
           + "        type: enum\n"
           + "    structure:\n"
-          + "      value: T\n";
+          + "      value: T\n"
+          + "  - name: complex_record\n"
+          + "    structure:\n"
+          + "      id: i32\n"
+          + "      tags: list<string>\n"
+          + "      attributes: map<string, i32>\n";
 
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
       SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
@@ -77,7 +82,8 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
           "point", new UserTypeFactory(NESTED_TYPES_URN, "point"),
           "triangle", new UserTypeFactory(NESTED_TYPES_URN, "triangle"),
           "vector", new UserTypeFactory(NESTED_TYPES_URN, "vector"),
-          "multi_param", new UserTypeFactory(NESTED_TYPES_URN, "multi_param"));
+          "multi_param", new UserTypeFactory(NESTED_TYPES_URN, "multi_param"),
+          "complex_record", new UserTypeFactory(NESTED_TYPES_URN, "complex_record"));
 
   private final UserTypeMapper userTypeMapper =
       new UserTypeMapper() {
@@ -359,5 +365,35 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void listAndMapFieldsInStructUdtRoundTrip() {
+    // Test UDT with list and map typed fields
+    Expression.Literal idField = ExpressionCreator.i32(false, 42);
+
+    Expression.Literal tagsField =
+        ExpressionCreator.list(
+            false,
+            ExpressionCreator.string(false, "tag1"),
+            ExpressionCreator.string(false, "tag2"),
+            ExpressionCreator.string(false, "tag3"));
+
+    Expression.Literal attributesField =
+        ExpressionCreator.map(
+            false,
+            com.google.common.collect.ImmutableMap.of(
+                ExpressionCreator.string(false, "key1"), ExpressionCreator.i32(false, 100),
+                ExpressionCreator.string(false, "key2"), ExpressionCreator.i32(false, 200)));
+
+    Expression.UserDefinedStructLiteral literal =
+        ExpressionCreator.userDefinedLiteralStruct(
+            false,
+            NESTED_TYPES_URN,
+            "complex_record",
+            Collections.emptyList(),
+            Arrays.asList(idField, tagsField, attributesField));
+
+    assertRoundTrip(literal);
   }
 }
