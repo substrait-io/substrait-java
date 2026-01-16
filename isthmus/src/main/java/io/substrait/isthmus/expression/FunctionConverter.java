@@ -158,6 +158,10 @@ public abstract class FunctionConverter<
 
   /**
    * Resolves a Calcite {@link SqlOperator} from a Substrait function key (Substrait → Calcite).
+   * <p>
+   * Given a Substrait function key (e.g., "concat:str_str") and output type, this method finds
+   * the corresponding Calcite {@link SqlOperator}. When multiple operators match, the output type
+   * is used to disambiguate.
    *
    * @param key Substrait function key (e.g., {@code concat:str_str})
    * @param outputType expected Substrait output type used for disambiguation

@@ -221,10 +221,9 @@ public class IgnoreNullableAndParameters
    *
    * @param type user-defined type
    * @return {@code true} if {@code typeToMatch} equals {@code type}
-   * @throws RuntimeException if comparison cannot be performed
    */
   @Override
-  public Boolean visit(Type.UserDefined type) throws RuntimeException {
+  public Boolean visit(Type.UserDefined type) {
     // Two user-defined types are equal if they have the same uri AND name
     return typeToMatch.equals(type);
   }
