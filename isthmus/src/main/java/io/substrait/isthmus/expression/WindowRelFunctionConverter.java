@@ -23,22 +23,48 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.SqlAggFunction;
 
+/**
+ * Converts Calcite window aggregate calls (from {@link Window.RexWinAggCall}) into Substrait {@link
+ * ConsistentPartitionWindow.WindowRelFunctionInvocation}s.
+ *
+ * <p>Handles bounds type (ROWS/RANGE), lower/upper bounds, DISTINCT/ALL invocation, and function
+ * signature matching against configured Substrait window function variants.
+ */
 public class WindowRelFunctionConverter
     extends FunctionConverter<
         SimpleExtension.WindowFunctionVariant,
         ConsistentPartitionWindow.WindowRelFunctionInvocation,
         WindowRelFunctionConverter.WrappedWindowRelCall> {
 
+  /**
+   * Returns the supported window function signatures used for matching.
+   *
+   * @return immutable list of supported signatures.
+   */
   @Override
   protected ImmutableList<FunctionMappings.Sig> getSigs() {
     return FunctionMappings.WINDOW_SIGS;
   }
 
+  /**
+   * Creates a converter with the provided window function variants.
+   *
+   * @param functions Supported Substrait window function variants.
+   * @param typeFactory Calcite type factory for type handling.
+   */
   public WindowRelFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions, RelDataTypeFactory typeFactory) {
     super(functions, typeFactory);
   }
 
+  /**
+   * Creates a converter with provided function variants and additional signatures.
+   *
+   * @param functions Supported Substrait window function variants.
+   * @param additionalSignatures Extra signatures to consider during matching.
+   * @param typeFactory Calcite type factory for type handling.
+   * @param typeConverter Converter for Calcite/Substrait types.
+   */
   public WindowRelFunctionConverter(
       List<SimpleExtension.WindowFunctionVariant> functions,
       List<FunctionMappings.Sig> additionalSignatures,
@@ -47,6 +73,15 @@ public class WindowRelFunctionConverter
     super(functions, additionalSignatures, typeFactory, typeConverter);
   }
 
+  /**
+   * Generates a bound Substrait window relation function invocation for a matched call.
+   *
+   * @param call Wrapped window rel call, including bounds and the original win-agg call.
+   * @param function Selected Substrait function variant.
+   * @param arguments Converted Substrait function arguments.
+   * @param outputType Result type for the invocation.
+   * @return Built {@link ConsistentPartitionWindow.WindowRelFunctionInvocation}.
+   */
   @Override
   protected ConsistentPartitionWindow.WindowRelFunctionInvocation generateBinding(
       WrappedWindowRelCall call,
@@ -77,6 +112,22 @@ public class WindowRelFunctionConverter
         arguments);
   }
 
+  /**
+   * Attempts to convert a Calcite {@link Window.RexWinAggCall} into a Substrait window relation
+   * function invocation.
+   *
+   * <p>Resolves the corresponding Substrait aggregate function variant, checks arity using
+   * signatures, and builds the invocation if match succeeds.
+   *
+   * @param winAggCall Calcite window aggregate call.
+   * @param lowerBound Lower bound of the window.
+   * @param upperBound Upper bound of the window.
+   * @param isRows Whether the window uses ROWS (true) or RANGE (false).
+   * @param topLevelConverter Function converting top-level {@link RexNode}s to Substrait {@link
+   *     Expression}s.
+   * @return {@link Optional} containing the {@link
+   *     ConsistentPartitionWindow.WindowRelFunctionInvocation} if matched; otherwise empty.
+   */
   public Optional<ConsistentPartitionWindow.WindowRelFunctionInvocation> convert(
       Window.RexWinAggCall winAggCall,
       RexWindowBound lowerBound,
@@ -127,18 +178,38 @@ public class WindowRelFunctionConverter
       return winAggCall.getType();
     }
 
+    /**
+     * Returns the underlying Calcite window aggregate call.
+     *
+     * @return the {@link Window.RexWinAggCall}.
+     */
     public Window.RexWinAggCall getWinAggCall() {
       return winAggCall;
     }
 
+    /**
+     * Returns the lower bound of the window.
+     *
+     * @return the {@link RexWindowBound} lower bound.
+     */
     public RexWindowBound getLowerBound() {
       return lowerBound;
     }
 
+    /**
+     * Returns the upper bound of the window.
+     *
+     * @return the {@link RexWindowBound} upper bound.
+     */
     public RexWindowBound getUpperBound() {
       return upperBound;
     }
 
+    /**
+     * Whether the window uses ROWS (true) or RANGE (false).
+     *
+     * @return {@code true} if ROWS; {@code false} if RANGE.
+     */
     public boolean isRows() {
       return isRows;
     }
