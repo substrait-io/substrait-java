@@ -67,6 +67,7 @@ public class SubstraitStringify extends ParentStringify
 
   private boolean showRemap = false;
 
+  /** Constructor. */
   public SubstraitStringify() {
     super(0);
   }
