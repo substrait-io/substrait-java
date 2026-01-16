@@ -30,6 +30,13 @@ public interface Expression extends FunctionArg {
     default boolean nullable() {
       return false;
     }
+
+    /**
+     * Returns a copy of this literal with the specified nullability.
+     *
+     * <p>This method is implemented by all concrete Literal classes via Immutables code generation.
+     */
+    Literal withNullable(boolean nullable);
   }
 
   interface Nested extends Expression {

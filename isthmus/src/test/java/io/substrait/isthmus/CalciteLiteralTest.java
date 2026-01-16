@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.calcite.rex.RexLiteral;
@@ -386,6 +387,77 @@ class CalciteLiteralTest extends CalciteObjs {
                 Arrays.asList("c1", "c2")),
             false,
             false));
+  }
+
+  @Test
+  void tStructRoundtripNullableFields() {
+    // Test regular struct with nullable fields roundtrips correctly
+    Expression.StructLiteral struct =
+        ExpressionCreator.struct(
+            false, ExpressionCreator.i32(true, 4), ExpressionCreator.i32(true, -1));
+
+    RexNode rex = struct.accept(expressionRexConverter, Context.newContext());
+    Expression roundtrip = rex.accept(rexExpressionConverter);
+
+    assertEquals(struct, roundtrip);
+  }
+
+  @Test
+  void tStructRoundtripMixedFieldNullability() {
+    // Test regular struct with mixed field nullability roundtrips correctly
+    Expression.StructLiteral struct =
+        ExpressionCreator.struct(
+            false, ExpressionCreator.i32(true, 4), ExpressionCreator.i32(false, -1));
+
+    RexNode rex = struct.accept(expressionRexConverter, Context.newContext());
+    Expression roundtrip = rex.accept(rexExpressionConverter);
+
+    assertEquals(struct, roundtrip);
+  }
+
+  @Test
+  void tStructRoundtripWithNullFieldValues() {
+    // Test struct with actual NULL field values roundtrips correctly
+    Expression.NullLiteral nullField =
+        Expression.NullLiteral.builder()
+            .nullable(true)
+            .type(io.substrait.type.Type.I32.builder().nullable(true).build())
+            .build();
+
+    Expression.StructLiteral struct =
+        ExpressionCreator.struct(false, nullField, ExpressionCreator.i32(false, 100));
+
+    RexNode rex = struct.accept(expressionRexConverter, Context.newContext());
+    Expression roundtrip = rex.accept(rexExpressionConverter);
+
+    assertEquals(struct, roundtrip);
+  }
+
+  @Test
+  void tStructRoundtripNested() {
+    // Test nested regular structs roundtrip correctly
+    Expression.StructLiteral innerStruct =
+        ExpressionCreator.struct(
+            false, ExpressionCreator.i32(false, 1), ExpressionCreator.i32(false, 2));
+
+    Expression.StructLiteral outerStruct =
+        ExpressionCreator.struct(false, innerStruct, ExpressionCreator.i32(false, 3));
+
+    RexNode rex = outerStruct.accept(expressionRexConverter, Context.newContext());
+    Expression roundtrip = rex.accept(rexExpressionConverter);
+
+    assertEquals(outerStruct, roundtrip);
+  }
+
+  @Test
+  void tStructRoundtripEmpty() {
+    // Test empty struct roundtrips correctly
+    Expression.StructLiteral struct = ExpressionCreator.struct(false, Collections.emptyList());
+
+    RexNode rex = struct.accept(expressionRexConverter, Context.newContext());
+    Expression roundtrip = rex.accept(rexExpressionConverter);
+
+    assertEquals(struct, roundtrip);
   }
 
   @Test

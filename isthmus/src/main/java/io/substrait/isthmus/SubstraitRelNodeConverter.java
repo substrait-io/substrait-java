@@ -162,7 +162,7 @@ public class SubstraitRelNodeConverter
     this.expressionRexConverter.setRelNodeConverter(this);
   }
 
-  private static ScalarFunctionConverter createScalarFunctionConverter(
+  static ScalarFunctionConverter createScalarFunctionConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       boolean allowDynamicUdfs) {
