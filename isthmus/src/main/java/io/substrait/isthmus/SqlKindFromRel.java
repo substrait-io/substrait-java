@@ -3,7 +3,6 @@ package io.substrait.isthmus;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
 import io.substrait.relation.ExtensionDdl;
 import io.substrait.relation.ExtensionLeaf;
@@ -49,13 +48,6 @@ public class SqlKindFromRel
   public SqlKind visit(Aggregate aggregate, EmptyVisitationContext context)
       throws RuntimeException {
 
-    return QUERY_KIND;
-  }
-
-  @Override
-  public SqlKind visit(EmptyScan emptyScan, EmptyVisitationContext context)
-      throws RuntimeException {
-    // An empty scan is typically the result of a query that returns no rows.
     return QUERY_KIND;
   }
 

@@ -135,13 +135,6 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
       })
   }
 
-  override def visit(emptyScan: EmptyScan, context: EmptyVisitationContext): String = {
-    withBuilder(emptyScan, 10)(
-      builder => {
-        fillReadRel(emptyScan, builder)
-      })
-  }
-
   override def visit(project: Project, context: EmptyVisitationContext): String = {
     withBuilder(project, 8)(
       builder => {

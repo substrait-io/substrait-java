@@ -186,21 +186,14 @@ public class ProtoRelConverter {
   }
 
   protected Rel newRead(ReadRel rel) {
-    if (rel.hasVirtualTable()) {
-      ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
-      if (virtualTable.getValuesCount() == 0 && virtualTable.getExpressionsCount() == 0) {
-        return newEmptyScan(rel);
-      } else {
-        return newVirtualTable(rel);
-      }
-    } else if (rel.hasNamedTable()) {
+    if (rel.hasNamedTable()) {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
       return newLocalFiles(rel);
     } else if (rel.hasExtensionTable()) {
       return newExtensionTable(rel);
     } else {
-      return newEmptyScan(rel);
+      return newVirtualTable(rel);
     }
   }
 
@@ -404,36 +397,6 @@ public class ProtoRelConverter {
                 .nullable(ProtoTypeConverter.isNullable(struct.getNullability()))
                 .build())
         .build();
-  }
-
-  protected EmptyScan newEmptyScan(ReadRel rel) {
-    NamedStruct namedStruct = newNamedStruct(rel);
-    ImmutableEmptyScan.Builder builder =
-        EmptyScan.builder()
-            .initialSchema(namedStruct)
-            .bestEffortFilter(
-                Optional.ofNullable(
-                    rel.hasBestEffortFilter()
-                        ? new ProtoExpressionConverter(
-                                lookup, extensions, namedStruct.struct(), this)
-                            .from(rel.getBestEffortFilter())
-                        : null))
-            .filter(
-                Optional.ofNullable(
-                    rel.hasFilter()
-                        ? new ProtoExpressionConverter(
-                                lookup, extensions, namedStruct.struct(), this)
-                            .from(rel.getFilter())
-                        : null));
-
-    builder
-        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
-        .remap(optionalRelmap(rel.getCommon()))
-        .hint(optionalHint(rel.getCommon()));
-    if (rel.hasAdvancedExtension()) {
-      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
-    }
-    return builder.build();
   }
 
   protected ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {

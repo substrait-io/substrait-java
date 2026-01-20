@@ -52,7 +52,7 @@ class RelExtensionRoundtripTest extends PlanTestBase {
   @Test
   void extensionSingleRelDetailTest() {
     ColumnAppendDetail detail = new ColumnAppendDetail(sb.i32(2));
-    ImmutableExtensionSingle rel = ExtensionSingle.from(detail, sb.emptyScan()).build();
+    ImmutableExtensionSingle rel = ExtensionSingle.from(detail, sb.emptyVirtualTableScan()).build();
     roundtrip(rel);
   }
 
@@ -60,7 +60,7 @@ class RelExtensionRoundtripTest extends PlanTestBase {
   void extensionMultiRelDetailTest() {
     ColumnAppendDetail detail = new ColumnAppendDetail(sb.i32(3));
     ImmutableExtensionMulti rel =
-        ExtensionMulti.from(detail, sb.emptyScan(), sb.emptyScan()).build();
+        ExtensionMulti.from(detail, sb.emptyVirtualTableScan(), sb.emptyVirtualTableScan()).build();
     roundtrip(rel);
   }
 

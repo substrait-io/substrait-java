@@ -29,7 +29,7 @@ class NestedListExpressionTest extends TestBase {
     io.substrait.relation.Project project =
         io.substrait.relation.Project.builder()
             .addExpressions(builder.build())
-            .input(sb.emptyScan())
+            .input(sb.emptyVirtualTableScan())
             .build();
     verifyRoundTrip(project);
   }
@@ -51,7 +51,7 @@ class NestedListExpressionTest extends TestBase {
     io.substrait.relation.Project project =
         io.substrait.relation.Project.builder()
             .addExpressions(literalNestedList)
-            .input(sb.emptyScan())
+            .input(sb.emptyVirtualTableScan())
             .build();
 
     verifyRoundTrip(project);
@@ -69,7 +69,7 @@ class NestedListExpressionTest extends TestBase {
     io.substrait.relation.Project project =
         io.substrait.relation.Project.builder()
             .addExpressions(literalNestedList)
-            .input(sb.emptyScan())
+            .input(sb.emptyVirtualTableScan())
             .build();
 
     verifyRoundTrip(project);
@@ -86,7 +86,7 @@ class NestedListExpressionTest extends TestBase {
     io.substrait.relation.Project project =
         io.substrait.relation.Project.builder()
             .addExpressions(nonLiteralNestedList)
-            .input(sb.emptyScan())
+            .input(sb.emptyVirtualTableScan())
             .build();
 
     verifyRoundTrip(project);

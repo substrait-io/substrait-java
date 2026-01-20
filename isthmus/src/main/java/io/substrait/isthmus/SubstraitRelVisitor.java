@@ -21,7 +21,6 @@ import io.substrait.relation.Aggregate;
 import io.substrait.relation.Aggregate.Grouping;
 import io.substrait.relation.Aggregate.Measure;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.ImmutableAggregate;
@@ -164,9 +163,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Values values) {
     NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
-    if (values.getTuples().isEmpty()) {
-      return EmptyScan.builder().initialSchema(type).build();
-    }
+
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
     List<Expression.NestedStruct> structs =
         values.getTuples().stream()

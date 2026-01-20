@@ -3,7 +3,6 @@ package io.substrait.examples.util;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
 import io.substrait.relation.ExtensionDdl;
 import io.substrait.relation.ExtensionLeaf;
@@ -154,13 +153,6 @@ public class SubstraitStringify extends ParentStringify
             });
     aggregate.getRemap().ifPresent(s -> sb.append(s.toString()));
 
-    return getOutdent(sb);
-  }
-
-  @Override
-  public String visit(EmptyScan emptyScan, EmptyVisitationContext context) throws RuntimeException {
-    StringBuilder sb = new StringBuilder("EmptyScan:: ").append(getRemap(emptyScan));
-    // sb.append(emptyScan.accept(this));
     return getOutdent(sb);
   }
 

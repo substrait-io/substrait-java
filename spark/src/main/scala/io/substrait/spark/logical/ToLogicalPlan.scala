@@ -358,12 +358,6 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   override def visit(
-      emptyScan: relation.EmptyScan,
-      context: EmptyVisitationContext): LogicalPlan = {
-    LocalRelation(ToSparkType.toAttributeSeq(emptyScan.getInitialSchema))
-  }
-
-  override def visit(
       virtualTableScan: relation.VirtualTableScan,
       context: EmptyVisitationContext): LogicalPlan = {
     val rows = virtualTableScan.getRows.asScala.map {

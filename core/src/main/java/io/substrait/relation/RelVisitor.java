@@ -30,16 +30,6 @@ public interface RelVisitor<O, C extends VisitationContext, E extends Exception>
   O visit(Aggregate aggregate, C context) throws E;
 
   /**
-   * Visit an empty scan relation.
-   *
-   * @param emptyScan the empty scan node
-   * @param context visitation context
-   * @return visit result
-   * @throws E on visit failure
-   */
-  O visit(EmptyScan emptyScan, C context) throws E;
-
-  /**
    * Visit a fetch (limit/offset) relation.
    *
    * @param fetch the fetch node

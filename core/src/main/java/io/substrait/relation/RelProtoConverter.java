@@ -210,20 +210,6 @@ public class RelProtoConverter
   }
 
   @Override
-  public Rel visit(final EmptyScan emptyScan, EmptyVisitationContext context)
-      throws RuntimeException {
-    final ReadRel.Builder builder =
-        ReadRel.newBuilder()
-            .setCommon(common(emptyScan))
-            .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
-            .setBaseSchema(emptyScan.getInitialSchema().toProto(typeProtoConverter));
-    emptyScan
-        .getExtension()
-        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
-    return Rel.newBuilder().setRead(builder.build()).build();
-  }
-
-  @Override
   public Rel visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
     FetchRel.Builder builder =
         FetchRel.newBuilder()

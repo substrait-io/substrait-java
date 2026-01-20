@@ -452,30 +452,26 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       data: Seq[InternalRow]): relation.AbstractReadRel = {
     val namedStruct = ToSubstraitType.toNamedStruct(schema)
 
-    if (data.isEmpty) {
-      relation.EmptyScan.builder().initialSchema(namedStruct).build()
-    } else {
-      relation.VirtualTableScan
-        .builder()
-        .initialSchema(namedStruct)
-        .addAllRows(
-          data
-            .map(
-              row => {
-                var idx = 0
-                val buf = new ArrayBuffer[SExpression](row.numFields)
-                while (idx < row.numFields) {
-                  val schemaField = schema(idx)
-                  val dt = schemaField.dataType
-                  val l = Literal.apply(row.get(idx, dt), dt)
-                  buf += ToSubstraitLiteral.apply(l, Some(schemaField.nullable))
-                  idx += 1
-                }
-                ExpressionCreator.nestedStruct(false, buf.asJava)
-              })
-            .asJava)
-        .build()
-    }
+    relation.VirtualTableScan
+      .builder()
+      .initialSchema(namedStruct)
+      .addAllRows(
+        data
+          .map(
+            row => {
+              var idx = 0
+              val buf = new ArrayBuffer[SExpression](row.numFields)
+              while (idx < row.numFields) {
+                val schemaField = schema(idx)
+                val dt = schemaField.dataType
+                val l = Literal.apply(row.get(idx, dt), dt)
+                buf += ToSubstraitLiteral.apply(l, Some(schemaField.nullable))
+                idx += 1
+              }
+              ExpressionCreator.nestedStruct(false, buf.asJava)
+            })
+          .asJava)
+      .build()
   }
 
   private def buildLocalFileScan(fsRelation: HadoopFsRelation): relation.AbstractReadRel = {
