@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -142,9 +143,8 @@ public class CallConverters {
           throw new IllegalArgumentException("ROW operands must be literals.");
         }
 
-        java.util.List<org.apache.calcite.rel.type.RelDataTypeField> fieldTypes =
-            call.getType().getFieldList();
-        List<Expression.Literal> literals = new java.util.ArrayList<>();
+        List<RelDataTypeField> fieldTypes = call.getType().getFieldList();
+        List<Expression.Literal> literals = new ArrayList<>();
 
         for (int i = 0; i < operands.size(); i++) {
           Expression.Literal lit = (Expression.Literal) operands.get(i);
