@@ -102,11 +102,7 @@ public class CallConverters {
                   .addAllFields(structLiteral.fields())
                   .build();
             }
-            throw new IllegalStateException(
-                "Unexpected REINTERPRET operand type: "
-                    + operand.getClass().getSimpleName()
-                    + " with target type: "
-                    + type.getClass().getSimpleName());
+            return null;
           };
 
   //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
