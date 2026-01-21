@@ -33,6 +33,12 @@ class ReadRelRoundtripTest extends TestBase {
   }
 
   @Test
+  void emptyVirtualTableScan() {
+    io.substrait.relation.VirtualTableScan emptyVirtualTableScan = sb.emptyVirtualTableScan();
+    verifyRoundTrip(emptyVirtualTableScan);
+  }
+
+  @Test
   void virtualTable() {
     io.substrait.relation.ImmutableVirtualTableScan virtTable =
         VirtualTableScan.builder()
