@@ -69,7 +69,11 @@ class AggregateRelTest extends TestBase {
             .build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    ReadRel readProto =
+        ReadRel.newBuilder()
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
+            .setBaseSchema(namedStruct)
+            .build();
 
     // Build the AggregateRel with the new grouping_expressions field
     AggregateRel aggrProto =
@@ -100,7 +104,11 @@ class AggregateRelTest extends TestBase {
             .build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    ReadRel readProto =
+        ReadRel.newBuilder()
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
+            .setBaseSchema(namedStruct)
+            .build();
 
     // Build the AggregateRel with the new grouping_expressions field
     AggregateRel aggrProto =
@@ -136,7 +144,11 @@ class AggregateRelTest extends TestBase {
         AggregateRel.Grouping.newBuilder().addExpressionReferences(1).build();
 
     // Build an input ReadRel
-    ReadRel readProto = ReadRel.newBuilder().setBaseSchema(namedStruct).build();
+    ReadRel readProto =
+        ReadRel.newBuilder()
+            .setVirtualTable(ReadRel.VirtualTable.newBuilder().build())
+            .setBaseSchema(namedStruct)
+            .build();
 
     // Build the AggregateRel with the new grouping_expressions field
     AggregateRel aggrProto =

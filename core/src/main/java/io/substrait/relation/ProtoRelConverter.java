@@ -186,15 +186,17 @@ public class ProtoRelConverter {
   }
 
   protected Rel newRead(ReadRel rel) {
-    if (rel.hasNamedTable()) {
+    if (rel.hasVirtualTable()) {
+      return newVirtualTable(rel);
+    } else if (rel.hasNamedTable()) {
       return newNamedScan(rel);
     } else if (rel.hasLocalFiles()) {
       return newLocalFiles(rel);
     } else if (rel.hasExtensionTable()) {
       return newExtensionTable(rel);
-    } else {
-      return newVirtualTable(rel);
     }
+    throw new IllegalArgumentException(
+        "ReadRel must have one of: NamedTable, LocalFiles, ExtensionTable, or VirtualTable");
   }
 
   protected Rel newWrite(final WriteRel rel) {
