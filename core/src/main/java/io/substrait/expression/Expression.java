@@ -46,6 +46,20 @@ public interface Expression extends FunctionArg {
   abstract class NullLiteral implements Literal {
     public abstract Type type();
 
+    /** A null literal is inherently nullable. You cannot have a null of a non nullable type. */
+    @Override
+    public boolean nullable() {
+      return true;
+    }
+
+    @Value.Check
+    protected void check() {
+      if (!type().nullable()) {
+        throw new IllegalArgumentException(
+            "NullLiteral requires a nullable type, but got: " + type());
+      }
+    }
+
     @Override
     public Type getType() {
       return type();
