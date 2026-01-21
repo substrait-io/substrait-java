@@ -81,6 +81,15 @@ class VirtualTableScanTest extends PlanTestBase {
         AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
+  @Test
+  void nullableFieldRoundTrip() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, R.FP64));
+    Expression nullableI32 = Expression.I32Literal.builder().value(6).nullable(true).build();
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(nullableI32, sb.fp64(8)));
+    assertFullRoundTrip(virtualTableScan);
+  }
+
   @SafeVarargs
   private VirtualTableScan createVirtualTableScan(NamedStruct schema, List<Expression>... rows) {
     List<Expression.NestedStruct> structs =

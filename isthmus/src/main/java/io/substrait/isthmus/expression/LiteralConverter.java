@@ -5,6 +5,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -69,10 +70,28 @@ public class LiteralConverter {
   public Expression.Literal convert(RexLiteral literal) {
     // convert type first to guarantee we can handle the value.
     final Type type = typeConverter.toSubstrait(literal.getType());
-    final boolean n = type.nullable();
+    return convert(literal, type.nullable());
+  }
+
+  /**
+   * Converts a RexLiteral to a Substrait Literal with the specified nullability.
+   *
+   * <p>This overload is useful when the target nullability should come from the schema rather than
+   * the literal's own type. For example, Calcite's LogicalValues may have literals with
+   * non-nullable types even when the schema field is nullable.
+   *
+   * @param literal the RexLiteral to convert
+   * @param nullable the nullability to use for the resulting Substrait literal
+   * @return the converted Substrait Literal
+   */
+  public Expression.Literal convert(RexLiteral literal, boolean nullable) {
+    final boolean n = nullable;
 
     if (literal.isNull()) {
-      return ExpressionCreator.typedNull(type);
+      final Type type = typeConverter.toSubstrait(literal.getType());
+      final Type typeWithNullability =
+          n ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
+      return ExpressionCreator.typedNull(typeWithNullability);
     }
 
     switch (literal.getType().getSqlTypeName()) {

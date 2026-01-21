@@ -165,13 +165,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
 
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
+    List<Type> schemaFieldTypes = type.struct().fields();
     List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
+                  // Use schema field nullability when converting literals, since Calcite's
+                  // LogicalValues may have literals with non-nullable types even when the
+                  // schema field is nullable
                   List<Expression> fields =
-                      list.stream()
-                          .map(l -> literalConverter.convert(l))
+                      IntStream.range(0, list.size())
+                          .mapToObj(
+                              i ->
+                                  literalConverter.convert(
+                                      list.get(i), schemaFieldTypes.get(i).nullable()))
                           .collect(Collectors.toUnmodifiableList());
                   return ExpressionCreator.nestedStruct(false, fields);
                 })
