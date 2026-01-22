@@ -170,7 +170,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         values.getTuples().stream()
             .map(
                 list -> {
-                  // Use schema nullability since Calcite infers non-nullable for all non-null values
+                  // Use schema nullability since Calcite infers non-nullable for all non-null
+                  // values
                   List<Expression> fields =
                       IntStream.range(0, list.size())
                           .mapToObj(

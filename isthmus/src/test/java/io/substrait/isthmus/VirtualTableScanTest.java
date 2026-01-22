@@ -95,8 +95,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, N.FP64));
     Expression nullI32 = Expression.NullLiteral.builder().type(N.I32).build();
     Expression nullFp64 = Expression.NullLiteral.builder().type(N.FP64).build();
-    VirtualTableScan virtualTableScan =
-        createVirtualTableScan(schema, List.of(nullI32, nullFp64));
+    VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(nullI32, nullFp64));
     assertFullRoundTrip(virtualTableScan);
   }
 
