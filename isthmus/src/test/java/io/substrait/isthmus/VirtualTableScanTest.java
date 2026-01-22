@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
 import io.substrait.relation.VirtualTableScan;
@@ -65,6 +66,19 @@ class VirtualTableScanTest extends PlanTestBase {
   void emptyVirtualTableScan() {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
     assertDoesNotThrow(() -> createVirtualTableScan(schema, new ArrayList<>()));
+  }
+
+  @Test
+  void emptyTableNonEmptySchema() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(R.I32));
+    assertDoesNotThrow(() -> createVirtualTableScan(schema));
+  }
+
+  @Test
+  void emptySchemaNonEmptyTable() {
+    NamedStruct schema = NamedStruct.of(List.of(), R.struct());
+    assertThrows(
+        AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
   @SafeVarargs
