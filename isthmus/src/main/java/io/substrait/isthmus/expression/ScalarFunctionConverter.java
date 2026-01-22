@@ -46,7 +46,8 @@ public class ScalarFunctionConverter
         List.of(
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions),
-            new ExtractDateFunctionMapper(functions));
+            new ExtractDateFunctionMapper(functions),
+            new PositionFunctionMapper(functions));
   }
 
   @Override

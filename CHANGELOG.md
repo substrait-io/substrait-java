@@ -1,6 +1,23 @@
 Release Notes
 ---
 
+## [0.76.0](https://github.com/substrait-io/substrait-java/compare/v0.75.0...v0.76.0) (2026-01-18)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** `UserDefinedLiteral` immutable abstract class becomes a `UserDefinedAnyLiteral` and `UserDefinedStructLiteral`
+* **core:** Removed `ExpressionCreator#userDefinedLiteral` method
+* **core:** Removed all visitor methods operating on `Expression.UserDefinedLiteral`
+
+### Features
+
+* **core:** handle struct-based UDT literals ([#613](https://github.com/substrait-io/substrait-java/issues/613)) ([13309df](https://github.com/substrait-io/substrait-java/commit/13309df36b01b4fb3f4b8edc5c8ad8a8dffe2e92))
+
+### Bug Fixes
+
+* add javadoc to core (part i) ([#648](https://github.com/substrait-io/substrait-java/issues/648)) ([5e2d0bb](https://github.com/substrait-io/substrait-java/commit/5e2d0bb189fb24dbdc44d10c1c905fd0ef3f6e3a))
+* **isthmus:** correct strpos parameter order ([#676](https://github.com/substrait-io/substrait-java/issues/676)) ([e0d0e52](https://github.com/substrait-io/substrait-java/commit/e0d0e52b56a0750a10f0612ba18818b99fd3c2d7))
+
 ## [0.75.0](https://github.com/substrait-io/substrait-java/compare/v0.74.0...v0.75.0) (2026-01-11)
 
 ### Features
