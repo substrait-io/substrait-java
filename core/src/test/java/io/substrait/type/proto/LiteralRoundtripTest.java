@@ -2,6 +2,7 @@ package io.substrait.type.proto;
 
 import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.protobuf.Any;
 import io.substrait.TestBase;
@@ -286,5 +287,15 @@ class LiteralRoundtripTest extends TestBase {
             java.util.Arrays.asList(ExpressionCreator.i32(false, 42)));
 
     verifyNestedTypesRoundTrip(multiParam);
+  }
+
+  /** Verifies that NullLiteral rejects non nullable types. See issue #685. */
+  @Test
+  void nullLiteralRejectsNonNullableType() {
+    io.substrait.type.Type nonNullableType =
+        io.substrait.type.Type.I32.builder().nullable(false).build();
+
+    assertThrows(
+        IllegalArgumentException.class, () -> ExpressionCreator.typedNull(nonNullableType));
   }
 }
