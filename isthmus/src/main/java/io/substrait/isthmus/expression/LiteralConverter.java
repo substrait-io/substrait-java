@@ -85,75 +85,74 @@ public class LiteralConverter {
    * @return the converted Substrait Literal
    */
   public Expression.Literal convert(RexLiteral literal, boolean nullable) {
-    final boolean n = nullable;
-
     if (literal.isNull()) {
       final Type type = typeConverter.toSubstrait(literal.getType());
       final Type typeWithNullability =
-          n ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
+          nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
       return ExpressionCreator.typedNull(typeWithNullability);
     }
 
     switch (literal.getType().getSqlTypeName()) {
       case TINYINT:
-        return ExpressionCreator.i8(n, i(literal).intValue());
+        return ExpressionCreator.i8(nullable, i(literal).intValue());
       case SMALLINT:
-        return ExpressionCreator.i16(n, i(literal).intValue());
+        return ExpressionCreator.i16(nullable, i(literal).intValue());
       case INTEGER:
-        return ExpressionCreator.i32(n, i(literal).intValue());
+        return ExpressionCreator.i32(nullable, i(literal).intValue());
       case BIGINT:
-        return ExpressionCreator.i64(n, i(literal).longValue());
+        return ExpressionCreator.i64(nullable, i(literal).longValue());
       case BOOLEAN:
-        return ExpressionCreator.bool(n, literal.getValueAs(Boolean.class));
+        return ExpressionCreator.bool(nullable, literal.getValueAs(Boolean.class));
       case CHAR:
         {
           Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
             NlsString nls = (NlsString) val;
-            return ExpressionCreator.fixedChar(n, nls.getValue());
+            return ExpressionCreator.fixedChar(nullable, nls.getValue());
           }
           throw new UnsupportedOperationException("Unable to handle char type: " + val);
         }
       case FLOAT:
       case DOUBLE:
-        return ExpressionCreator.fp64(n, literal.getValueAs(Double.class));
+        return ExpressionCreator.fp64(nullable, literal.getValueAs(Double.class));
       case REAL:
-        return ExpressionCreator.fp32(n, literal.getValueAs(Float.class));
+        return ExpressionCreator.fp32(nullable, literal.getValueAs(Float.class));
 
       case DECIMAL:
         {
           BigDecimal bd = bd(literal);
           return ExpressionCreator.decimal(
-              n, bd, literal.getType().getPrecision(), literal.getType().getScale());
+              nullable, bd, literal.getType().getPrecision(), literal.getType().getScale());
         }
       case VARCHAR:
         {
           if (literal.getType().getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
-            return ExpressionCreator.string(n, s(literal));
+            return ExpressionCreator.string(nullable, s(literal));
           }
 
-          return ExpressionCreator.varChar(n, s(literal), literal.getType().getPrecision());
+          return ExpressionCreator.varChar(nullable, s(literal), literal.getType().getPrecision());
         }
       case BINARY:
         return ExpressionCreator.fixedBinary(
-            n,
+            nullable,
             ByteString.copyFrom(
                 padRightIfNeeded(
                     literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
                     literal.getType().getPrecision())));
       case VARBINARY:
-        return ExpressionCreator.binary(n, ByteString.copyFrom(literal.getValueAs(byte[].class)));
+        return ExpressionCreator.binary(
+            nullable, ByteString.copyFrom(literal.getValueAs(byte[].class)));
       case SYMBOL:
         {
           Object value = literal.getValue();
           if (value instanceof NlsString) {
-            return ExpressionCreator.string(n, ((NlsString) value).getValue());
+            return ExpressionCreator.string(nullable, ((NlsString) value).getValue());
           } else if (value instanceof Enum) {
             Enum<?> v = (Enum<?>) value;
 
             Optional<Expression.Literal> r =
                 EnumConverter.canConvert(v)
-                    ? Optional.of(ExpressionCreator.string(n, v.name()))
+                    ? Optional.of(ExpressionCreator.string(nullable, v.name()))
                     : Optional.empty();
             return r.orElseThrow(
                 () -> new UnsupportedOperationException("Unable to handle symbol: " + value));
@@ -165,13 +164,14 @@ public class LiteralConverter {
         {
           DateString date = literal.getValueAs(DateString.class);
           LocalDate localDate = LocalDate.parse(date.toString(), CALCITE_LOCAL_DATE_FORMATTER);
-          return ExpressionCreator.date(n, (int) localDate.toEpochDay());
+          return ExpressionCreator.date(nullable, (int) localDate.toEpochDay());
         }
       case TIME:
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          return ExpressionCreator.time(n, TimeUnit.NANOSECONDS.toMicros(localTime.toNanoOfDay()));
+          return ExpressionCreator.time(
+              nullable, TimeUnit.NANOSECONDS.toMicros(localTime.toNanoOfDay()));
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -179,7 +179,7 @@ public class LiteralConverter {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
           LocalDateTime ldt =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          return ExpressionCreator.timestamp(n, ldt);
+          return ExpressionCreator.timestamp(nullable, ldt);
         }
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
@@ -188,7 +188,7 @@ public class LiteralConverter {
           long intervalLength = Objects.requireNonNull(literal.getValueAs(Long.class));
           long years = intervalLength / 12;
           long months = intervalLength - years * 12;
-          return ExpressionCreator.intervalYear(n, (int) years, (int) months);
+          return ExpressionCreator.intervalYear(nullable, (int) years, (int) months);
         }
       case INTERVAL_DAY:
       case INTERVAL_DAY_HOUR:
@@ -201,7 +201,7 @@ public class LiteralConverter {
       case INTERVAL_MINUTE_SECOND:
       case INTERVAL_SECOND:
         {
-          // Calcite represents day/time intervals in milliseconds, despite a default scale of 6.
+          // Calcite represents day/time intervals in milliseconds, despite a default scale of 6
           Long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
           Duration interval = Duration.ofMillis(totalMillis);
 
@@ -209,21 +209,21 @@ public class LiteralConverter {
           long seconds = interval.minusDays(days).toSeconds();
           int micros = interval.toMillisPart() * 1000;
 
-          return ExpressionCreator.intervalDay(n, (int) days, (int) seconds, micros, 6);
+          return ExpressionCreator.intervalDay(nullable, (int) days, (int) seconds, micros, 6);
         }
 
       case ROW:
         {
           List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
           return ExpressionCreator.struct(
-              n, literals.stream().map(this::convert).collect(Collectors.toList()));
+              nullable, literals.stream().map(this::convert).collect(Collectors.toList()));
         }
 
       case ARRAY:
         {
           List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
           return ExpressionCreator.list(
-              n, literals.stream().map(this::convert).collect(Collectors.toList()));
+              nullable, literals.stream().map(this::convert).collect(Collectors.toList()));
         }
 
       default:

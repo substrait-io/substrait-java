@@ -90,6 +90,27 @@ class VirtualTableScanTest extends PlanTestBase {
     assertFullRoundTrip(virtualTableScan);
   }
 
+  @Test
+  void nullLiteralRoundTrip() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, N.FP64));
+    Expression nullI32 = Expression.NullLiteral.builder().type(N.I32).build();
+    Expression nullFp64 = Expression.NullLiteral.builder().type(N.FP64).build();
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(nullI32, nullFp64));
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void mixedNullabilityRoundTrip() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(N.I32, R.FP64, N.STRING));
+    Expression nullI32 = Expression.NullLiteral.builder().type(N.I32).build();
+    Expression nullString = Expression.NullLiteral.builder().type(N.STRING).build();
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
+    assertFullRoundTrip(virtualTableScan);
+  }
+
   @SafeVarargs
   private VirtualTableScan createVirtualTableScan(NamedStruct schema, List<Expression>... rows) {
     List<Expression.NestedStruct> structs =
