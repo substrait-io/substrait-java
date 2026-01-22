@@ -123,9 +123,7 @@ public class CallConverters {
    * nullable=false. The ROW's type may be nullable (for regular structs) or non-nullable (for UDT
    * struct encoding), but the value itself is always concrete.
    *
-   * <p>Field nullability comes from individual field types in the ROW's type definition. When a
-   * field's type is nullable but the literal operand is not, we update the literal's nullability to
-   * match.
+   * <p>Each literal's nullability is set to match its field type's nullability.
    */
   public static SimpleCallConverter ROW =
       (call, visitor) -> {
@@ -147,10 +145,9 @@ public class CallConverters {
           boolean fieldIsNullable = fieldTypes.get(i).getType().isNullable();
 
           // ROW types are never nullable (struct literals are always concrete values).
-          // Field nullability comes from individual field types.
-          if (fieldIsNullable && !lit.nullable()) {
-            lit = lit.withNullable(true);
-          }
+          // Field nullability comes from individual field types, so match literal nullability
+          // to field type nullability.
+          lit = lit.withNullable(fieldIsNullable);
           literals.add(lit);
         }
 
