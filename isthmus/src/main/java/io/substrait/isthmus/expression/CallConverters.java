@@ -137,19 +137,19 @@ public class CallConverters {
           throw new IllegalArgumentException("ROW operands must be literals.");
         }
 
+        // ROW types are never nullable (struct literals are always concrete values).
+        // Field nullability comes from individual field types, so match literal nullability
+        // to field type nullability.
         List<RelDataTypeField> fieldTypes = call.getType().getFieldList();
-        List<Expression.Literal> literals = new ArrayList<>();
-
-        for (int i = 0; i < operands.size(); i++) {
-          Expression.Literal lit = (Expression.Literal) operands.get(i);
-          boolean fieldIsNullable = fieldTypes.get(i).getType().isNullable();
-
-          // ROW types are never nullable (struct literals are always concrete values).
-          // Field nullability comes from individual field types, so match literal nullability
-          // to field type nullability.
-          lit = lit.withNullable(fieldIsNullable);
-          literals.add(lit);
-        }
+        List<Expression.Literal> literals =
+            java.util.stream.IntStream.range(0, operands.size())
+                .mapToObj(
+                    i -> {
+                      Expression.Literal lit = (Expression.Literal) operands.get(i);
+                      boolean fieldIsNullable = fieldTypes.get(i).getType().isNullable();
+                      return lit.withNullable(fieldIsNullable);
+                    })
+                .collect(java.util.stream.Collectors.toList());
 
         // Struct literals are always concrete values (never null).
         // For UDT struct literals, struct-level nullability is in the REINTERPRET target type.
