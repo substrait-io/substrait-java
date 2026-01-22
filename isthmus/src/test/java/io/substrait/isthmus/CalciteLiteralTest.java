@@ -419,10 +419,7 @@ class CalciteLiteralTest extends CalciteObjs {
   void tStructRoundtripWithNullFieldValues() {
     // Test struct with actual NULL field values roundtrips correctly
     Expression.NullLiteral nullField =
-        Expression.NullLiteral.builder()
-            .nullable(true)
-            .type(io.substrait.type.Type.I32.builder().nullable(true).build())
-            .build();
+        ExpressionCreator.typedNull(io.substrait.type.Type.I32.builder().nullable(true).build());
 
     Expression.StructLiteral struct =
         ExpressionCreator.struct(false, nullField, ExpressionCreator.i32(false, 100));

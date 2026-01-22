@@ -59,6 +59,14 @@ public interface Expression extends FunctionArg {
       return true;
     }
 
+    @Override
+    public NullLiteral withNullable(boolean nullable) {
+      if (!nullable) {
+        throw new IllegalArgumentException("NullLiteral cannot be made non-nullable");
+      }
+      return this;
+    }
+
     @Value.Check
     protected void check() {
       if (!type().nullable()) {
