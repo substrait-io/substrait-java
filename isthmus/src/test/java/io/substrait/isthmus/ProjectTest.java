@@ -5,7 +5,7 @@ import io.substrait.relation.Rel;
 import org.junit.jupiter.api.Test;
 
 class ProjectTest extends PlanTestBase {
-  final Rel emptyTable = sb.emptyScan();
+  final Rel emptyTable = sb.emptyVirtualTableScan();
 
   @Test
   void avoidProjectRemapOnEmptyInput() {

@@ -1,12 +1,15 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,6 +60,25 @@ class VirtualTableScanTest extends PlanTestBase {
             + "    LogicalProject(exprs=[[*(6, 2), 8.8E0:DOUBLE]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
+  }
+
+  @Test
+  void emptyVirtualTableScan() {
+    NamedStruct schema = NamedStruct.of(List.of(), R.struct());
+    assertDoesNotThrow(() -> createVirtualTableScan(schema, new ArrayList<>()));
+  }
+
+  @Test
+  void emptyTableNonEmptySchema() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(R.I32));
+    assertDoesNotThrow(() -> createVirtualTableScan(schema));
+  }
+
+  @Test
+  void emptySchemaNonEmptyTable() {
+    NamedStruct schema = NamedStruct.of(List.of(), R.struct());
+    assertThrows(
+        AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
   @SafeVarargs

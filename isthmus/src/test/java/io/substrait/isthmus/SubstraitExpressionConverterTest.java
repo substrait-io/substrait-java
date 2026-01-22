@@ -65,7 +65,7 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
     Expression.ScalarSubquery expr =
         Expression.ScalarSubquery.builder().type(R.I64).input(subQueryRel).build();
 
-    Project query = sb.project(input -> List.of(expr), sb.emptyScan());
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
 
     RelNode calciteRel = substraitToCalcite.convert(query);
 
@@ -85,7 +85,7 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = sb.project(input -> List.of(expr), sb.emptyScan());
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
 
     RelNode calciteRel = substraitToCalcite.convert(query);
 
@@ -105,7 +105,7 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = sb.project(input -> List.of(expr), sb.emptyScan());
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
 
     RelNode calciteRel = substraitToCalcite.convert(query);
 
@@ -125,7 +125,7 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
             .tuples(subQueryRel)
             .build();
 
-    Project query = sb.project(input -> List.of(expr), sb.emptyScan());
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
 
     Exception exception =
         assertThrows(

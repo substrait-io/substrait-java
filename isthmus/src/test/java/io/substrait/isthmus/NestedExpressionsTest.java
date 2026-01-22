@@ -23,7 +23,7 @@ class NestedExpressionsTest extends PlanTestBase {
   final List<Type> tableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN, N.STRING);
   final Rel commonTable =
       sb.namedScan(List.of("example"), List.of("a", "b", "c", "d", "e"), tableType);
-  final Rel emptyTable = sb.emptyScan();
+  final Rel emptyTable = sb.emptyVirtualTableScan();
 
   Expression fieldRef1 = sb.fieldReference(commonTable, 2);
   Expression fieldRef2 = sb.fieldReference(commonTable, 4);

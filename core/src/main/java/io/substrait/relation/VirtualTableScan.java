@@ -17,8 +17,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * Checks the following invariants when construction a VirtualTableScan
    *
    * <ul>
-   *   <li>non-empty rowset
-   *   <li>non-null field-names
+   *   <li>no null field names
    *   <li>no null rows
    *   <li>row shape must match field-list
    *   <li>row field types must match schema types
@@ -45,8 +44,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
       assert !row.nullable();
     }
 
-    assert !rows.isEmpty()
-        && names.stream().noneMatch(Objects::isNull)
+    assert names.stream().noneMatch(Objects::isNull)
         && rows.stream().noneMatch(Objects::isNull)
         && rows.stream()
             .allMatch(r -> NamedFieldCountingTypeVisitor.countNames(r.getType()) == names.size());

@@ -23,16 +23,16 @@ class SetTest {
         Arrays.asList("col1", "col2", "col3", "col4", "col5", "col6", "col7", "col8");
 
     // From https://substrait.io/relations/logical_relations/#output-type-derivation-examples
-    EmptyScan input1 =
-        EmptyScan.builder()
+    VirtualTableScan input1 =
+        VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, R, R, R, N, N, N, N)))
             .build();
-    EmptyScan input2 =
-        EmptyScan.builder()
+    VirtualTableScan input2 =
+        VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, R, N, N, R, R, N, N)))
             .build();
-    EmptyScan input3 =
-        EmptyScan.builder()
+    VirtualTableScan input3 =
+        VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(names, getStruct(R, N, R, N, R, N, R, N)))
             .build();
 
