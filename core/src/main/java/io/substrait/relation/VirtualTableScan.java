@@ -17,6 +17,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * Checks the following invariants when construction a VirtualTableScan
    *
    * <ul>
+   *   <li>no null field names
    *   <li>no null rows
    *   <li>row shape must match field-list
    *   <li>row field types must match schema types
