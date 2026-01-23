@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
@@ -132,7 +133,7 @@ public class CallConverters {
         }
 
         List<Expression> operands =
-            call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
+            call.getOperands().stream().map(visitor).collect(Collectors.toList());
         if (!operands.stream().allMatch(expr -> expr instanceof Expression.Literal)) {
           throw new IllegalArgumentException("ROW operands must be literals.");
         }
@@ -149,7 +150,7 @@ public class CallConverters {
                       boolean fieldIsNullable = fieldTypes.get(i).getType().isNullable();
                       return lit.withNullable(fieldIsNullable);
                     })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         // Struct literals are always concrete values (never null).
         // For UDT struct literals, struct-level nullability is in the REINTERPRET target type.
@@ -168,7 +169,7 @@ public class CallConverters {
         assert call.getOperands().size() % 2 == 1;
 
         List<Expression> caseArgs =
-            call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
+            call.getOperands().stream().map(visitor).collect(Collectors.toList());
 
         int last = caseArgs.size() - 1;
         // for if/else, process in reverse to maintain query order
