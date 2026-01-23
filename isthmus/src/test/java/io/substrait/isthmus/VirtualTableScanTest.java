@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
@@ -84,7 +85,7 @@ class VirtualTableScanTest extends PlanTestBase {
   @Test
   void nullableFieldRoundTrip() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, R.FP64));
-    Expression nullableI32 = Expression.I32Literal.builder().value(6).nullable(true).build();
+    Expression nullableI32 = ExpressionCreator.i32(true, 6);
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(schema, List.of(nullableI32, sb.fp64(8)));
     assertFullRoundTrip(virtualTableScan);
@@ -93,8 +94,8 @@ class VirtualTableScanTest extends PlanTestBase {
   @Test
   void nullLiteralRoundTrip() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, N.FP64));
-    Expression nullI32 = Expression.NullLiteral.builder().type(N.I32).build();
-    Expression nullFp64 = Expression.NullLiteral.builder().type(N.FP64).build();
+    Expression nullI32 = ExpressionCreator.typedNull(N.I32);
+    Expression nullFp64 = ExpressionCreator.typedNull(N.FP64);
     VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(nullI32, nullFp64));
     assertFullRoundTrip(virtualTableScan);
   }
@@ -103,8 +104,8 @@ class VirtualTableScanTest extends PlanTestBase {
   void mixedNullabilityRoundTrip() {
     NamedStruct schema =
         NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(N.I32, R.FP64, N.STRING));
-    Expression nullI32 = Expression.NullLiteral.builder().type(N.I32).build();
-    Expression nullString = Expression.NullLiteral.builder().type(N.STRING).build();
+    Expression nullI32 = ExpressionCreator.typedNull(N.I32);
+    Expression nullString = ExpressionCreator.typedNull(N.STRING);
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
     assertFullRoundTrip(virtualTableScan);
