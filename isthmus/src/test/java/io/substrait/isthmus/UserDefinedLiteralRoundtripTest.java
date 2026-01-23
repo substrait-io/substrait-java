@@ -360,7 +360,8 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
             ExpressionCreator.fp64(false, 2.2),
             ExpressionCreator.fp64(false, 3.3));
 
-    Rel rel = builder.project(input -> Arrays.asList(vecI32, vecFp64), builder.emptyScan());
+    Rel rel =
+        builder.project(input -> Arrays.asList(vecI32, vecFp64), builder.emptyVirtualTableScan());
 
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
