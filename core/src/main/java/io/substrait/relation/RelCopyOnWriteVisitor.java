@@ -111,20 +111,6 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
-  public Optional<Rel> visit(EmptyScan emptyScan, EmptyVisitationContext context) throws E {
-    Optional<Expression> filter = visitOptionalExpression(emptyScan.getFilter(), context);
-
-    if (allEmpty(filter)) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        EmptyScan.builder()
-            .from(emptyScan)
-            .filter(filter.isPresent() ? filter : emptyScan.getFilter())
-            .build());
-  }
-
-  @Override
   public Optional<Rel> visit(Fetch fetch, EmptyVisitationContext context) throws E {
     return fetch
         .getInput()

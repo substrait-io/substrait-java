@@ -4,9 +4,7 @@ import io.substrait.plan.Plan;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
-import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -262,35 +260,6 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       RelNode relNode = substraitToCalcite.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
-    }
-  }
-
-  @Nested
-  class EmptyScan {
-
-    @Test
-    void direct() {
-      Rel emptyScan =
-          io.substrait.relation.EmptyScan.builder()
-              .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct(R.I32, N.STRING)))
-              .build();
-
-      Plan.Root root = sb.root(emptyScan);
-      RelNode relNode = substraitToCalcite.convert(root.getInput());
-      assertRowMatch(relNode.getRowType(), List.of(R.I32, N.STRING));
-    }
-
-    @Test
-    void emit() {
-      Rel emptyScanWithRemap =
-          io.substrait.relation.EmptyScan.builder()
-              .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct(R.I32, N.STRING)))
-              .remap(Rel.Remap.of(List.of(0)))
-              .build();
-
-      Plan.Root root = sb.root(emptyScanWithRemap);
-      RelNode relNode = substraitToCalcite.convert(root.getInput());
-      assertRowMatch(relNode.getRowType(), R.I32);
     }
   }
 }

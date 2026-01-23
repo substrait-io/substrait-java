@@ -8,7 +8,6 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan.Root;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.ImmutableVirtualTableScan;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
@@ -176,7 +175,7 @@ class PlanConverterTest {
             .addRoots(
                 Root.builder()
                     .input(
-                        EmptyScan.builder()
+                        VirtualTableScan.builder()
                             .initialSchema(
                                 NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                             .extension(

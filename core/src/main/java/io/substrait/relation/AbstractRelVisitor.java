@@ -20,11 +20,6 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   }
 
   @Override
-  public O visit(EmptyScan emptyScan, C context) throws E {
-    return visitFallback(emptyScan, context);
-  }
-
-  @Override
   public O visit(Fetch fetch, C context) throws E {
     return visitFallback(fetch, context);
   }

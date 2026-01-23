@@ -21,7 +21,6 @@ import io.substrait.relation.AbstractUpdate;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
@@ -259,14 +258,6 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(LocalFiles localFiles, Context context) throws RuntimeException {
     return visitFallback(localFiles, context);
-  }
-
-  @Override
-  public RelNode visit(EmptyScan emptyScan, Context context) throws RuntimeException {
-    RelDataType rowType =
-        typeConverter.toCalcite(relBuilder.getTypeFactory(), emptyScan.getInitialSchema().struct());
-    RelNode node = LogicalValues.create(relBuilder.getCluster(), rowType, ImmutableList.of());
-    return applyRemap(node, emptyScan.getRemap());
   }
 
   @Override

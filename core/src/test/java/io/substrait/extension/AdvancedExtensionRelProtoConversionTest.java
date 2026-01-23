@@ -18,7 +18,6 @@ import io.substrait.relation.AbstractWriteRel.OutputMode;
 import io.substrait.relation.AbstractWriteRel.WriteOp;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.ExtensionDdl;
 import io.substrait.relation.ExtensionTable;
 import io.substrait.relation.ExtensionWrite;
@@ -129,7 +128,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
     final Filter rel =
         Filter.builder()
             .input(
-                EmptyScan.builder()
+                VirtualTableScan.builder()
                     .initialSchema(
                         NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                     .build())
@@ -145,7 +144,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
     final Fetch rel =
         Fetch.builder()
             .input(
-                EmptyScan.builder()
+                VirtualTableScan.builder()
                     .initialSchema(
                         NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                     .build())
@@ -162,7 +161,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
     final Aggregate rel =
         Aggregate.builder()
             .input(
-                EmptyScan.builder()
+                VirtualTableScan.builder()
                     .initialSchema(
                         NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                     .build())
@@ -175,8 +174,8 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
 
   @Test
   void testSortRelConversionRoundtrip() throws Exception {
-    final EmptyScan scan =
-        EmptyScan.builder()
+    final VirtualTableScan scan =
+        VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.builder()
                     .addNames("KEY")
@@ -199,8 +198,8 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
 
   @Test
   void testJoinRelConversionRoundtrip() throws Exception {
-    final EmptyScan scan =
-        EmptyScan.builder()
+    final VirtualTableScan scan =
+        VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.builder()
                     .addNames("KEY")
@@ -221,8 +220,8 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
 
   @Test
   void testProjectRelConversionRoundtrip() throws Exception {
-    final EmptyScan scan =
-        EmptyScan.builder()
+    final VirtualTableScan scan =
+        VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.builder()
                     .addNames("KEY")
@@ -241,8 +240,8 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
 
   @Test
   void testSetRelConversionRoundtrip() throws Exception {
-    final EmptyScan scan =
-        EmptyScan.builder()
+    final VirtualTableScan scan =
+        VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.builder()
                     .addNames("KEY")
@@ -261,8 +260,8 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
 
   @Test
   void testCrossRelConversionRoundtrip() throws Exception {
-    final EmptyScan scan =
-        EmptyScan.builder()
+    final VirtualTableScan scan =
+        VirtualTableScan.builder()
             .initialSchema(
                 NamedStruct.builder()
                     .addNames("KEY")
@@ -281,7 +280,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
             .addNames("KEY")
             .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.BOOLEAN))
             .build();
-    final EmptyScan scan = EmptyScan.builder().initialSchema(schema).build();
+    final VirtualTableScan scan = VirtualTableScan.builder().initialSchema(schema).build();
     final NamedWrite rel =
         NamedWrite.builder()
             .createMode(CreateMode.REPLACE_IF_EXISTS)
@@ -302,7 +301,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
             .addNames("KEY")
             .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.BOOLEAN))
             .build();
-    final EmptyScan scan = EmptyScan.builder().initialSchema(schema).build();
+    final VirtualTableScan scan = VirtualTableScan.builder().initialSchema(schema).build();
     final ExtensionWrite rel =
         ExtensionWrite.builder()
             .createMode(CreateMode.REPLACE_IF_EXISTS)
@@ -324,7 +323,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
             .addNames("KEY")
             .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.BOOLEAN))
             .build();
-    final EmptyScan scan = EmptyScan.builder().initialSchema(schema).build();
+    final VirtualTableScan scan = VirtualTableScan.builder().initialSchema(schema).build();
     final NamedDdl rel =
         NamedDdl.builder()
             .addNames("CUSTOMER")
@@ -350,7 +349,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
             .addNames("KEY")
             .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.BOOLEAN))
             .build();
-    final EmptyScan scan = EmptyScan.builder().initialSchema(schema).build();
+    final VirtualTableScan scan = VirtualTableScan.builder().initialSchema(schema).build();
     final ExtensionDdl rel =
         ExtensionDdl.builder()
             .detail(new EmptyDetail())

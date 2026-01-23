@@ -21,7 +21,6 @@ import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Aggregate.Measure;
 import io.substrait.relation.Cross;
-import io.substrait.relation.EmptyScan;
 import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
@@ -33,6 +32,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -315,8 +315,8 @@ public class SubstraitBuilder {
     return NamedScan.builder().names(tableName).initialSchema(namedStruct).remap(remap).build();
   }
 
-  public EmptyScan emptyScan() {
-    return EmptyScan.builder()
+  public VirtualTableScan emptyVirtualTableScan() {
+    return VirtualTableScan.builder()
         .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
         .build();
   }
