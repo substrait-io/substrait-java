@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
@@ -79,6 +80,35 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
     assertThrows(
         AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
+  }
+
+  @Test
+  void nullableFieldRoundTrip() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, R.FP64));
+    Expression nullableI32 = ExpressionCreator.i32(true, 6);
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(nullableI32, sb.fp64(8)));
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void nullLiteralRoundTrip() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, N.FP64));
+    Expression nullI32 = ExpressionCreator.typedNull(N.I32);
+    Expression nullFp64 = ExpressionCreator.typedNull(N.FP64);
+    VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(nullI32, nullFp64));
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void mixedNullabilityRoundTrip() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(N.I32, R.FP64, N.STRING));
+    Expression nullI32 = ExpressionCreator.typedNull(N.I32);
+    Expression nullString = ExpressionCreator.typedNull(N.STRING);
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
+    assertFullRoundTrip(virtualTableScan);
   }
 
   @SafeVarargs
