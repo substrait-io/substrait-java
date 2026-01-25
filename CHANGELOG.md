@@ -1,6 +1,21 @@
 Release Notes
 ---
 
+## [0.77.0](https://github.com/substrait-io/substrait-java/compare/v0.76.0...v0.77.0) (2026-01-25)
+
+### ⚠ BREAKING CHANGES
+
+* io.substrait.relation.EmptyScan has been removed
+
+### Features
+
+* allow the creation of VirtualTableScans with no rows ([#682](https://github.com/substrait-io/substrait-java/issues/682)) ([32add4d](https://github.com/substrait-io/substrait-java/commit/32add4d9d621071887f84f9c3c2e50ee62eee803))
+
+### Bug Fixes
+
+* **core:** enforce NullLiteral nullable invariant ([#686](https://github.com/substrait-io/substrait-java/issues/686)) ([65c6881](https://github.com/substrait-io/substrait-java/commit/65c6881d60cc0db9e3632cb97659aea0d585ef3f)), closes [#685](https://github.com/substrait-io/substrait-java/issues/685)
+* **isthmus:** preserve nullability in VirtualTableScan Calcite roundtrip ([#684](https://github.com/substrait-io/substrait-java/issues/684)) ([e1c5207](https://github.com/substrait-io/substrait-java/commit/e1c520764986d0762fa2091837c87dfe64fa9dfe)), closes [#683](https://github.com/substrait-io/substrait-java/issues/683)
+
 ## [0.76.0](https://github.com/substrait-io/substrait-java/compare/v0.75.0...v0.76.0) (2026-01-18)
 
 ### ⚠ BREAKING CHANGES
