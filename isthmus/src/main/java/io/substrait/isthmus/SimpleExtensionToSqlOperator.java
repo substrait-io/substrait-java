@@ -45,9 +45,45 @@ public final class SimpleExtensionToSqlOperator {
       SimpleExtension.ExtensionCollection collection,
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
-    // TODO: add support for windows functions
     return Stream.concat(
-            collection.scalarFunctions().stream(), collection.aggregateFunctions().stream())
+            Stream.concat(
+                collection.scalarFunctions().stream(), collection.aggregateFunctions().stream()),
+            collection.windowFunctions().stream())
+        .map(function -> toSqlFunction(function, typeFactory, typeConverter))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Converts a list of functions to SqlOperators. Handles scalar, aggregate, and window functions.
+   *
+   * @param functions list of functions to convert
+   * @param typeFactory the Calcite type factory
+   * @return list of SqlOperators
+   */
+  public static List<SqlOperator> from(
+      List<? extends SimpleExtension.Function> functions, RelDataTypeFactory typeFactory) {
+    return from(functions, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  /**
+   * Converts a list of functions to SqlOperators. Handles scalar, aggregate, and window functions.
+   *
+   * <p>Each function variant is converted to a separate SqlOperator. Functions with the same base
+   * name but different type signatures (e.g., strftime:ts_str, strftime:ts_string) are ALL added to
+   * the operator table. Calcite will try to match the function call arguments against all available
+   * operators and select the one that matches. This allows functions with multiple signatures to be
+   * used correctly without explicit deduplication.
+   *
+   * @param functions list of functions to convert
+   * @param typeFactory the Calcite type factory
+   * @param typeConverter the type converter
+   * @return list of SqlOperators
+   */
+  public static List<SqlOperator> from(
+      List<? extends SimpleExtension.Function> functions,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    return functions.stream()
         .map(function -> toSqlFunction(function, typeFactory, typeConverter))
         .collect(Collectors.toList());
   }

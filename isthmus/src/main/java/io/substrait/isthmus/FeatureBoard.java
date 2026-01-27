@@ -32,4 +32,22 @@ public abstract class FeatureBoard {
   public boolean allowDynamicUdfs() {
     return false;
   }
+
+  /**
+   * Controls whether to automatically create mappings for all unmapped functions using
+   * SimpleExtensionToSqlOperator.
+   *
+   * <p>When enabled, functions from extension YAML files that are not explicitly mapped in
+   * FunctionMappings will be automatically mapped to Calcite SqlOperators. This allows custom and
+   * dynamic functions to be used in SQL queries without manual mapping configuration.
+   *
+   * <p>This feature is disabled by default for backward compatibility.
+   *
+   * @return true if automatic fallback to dynamic function mapping should be enabled; false
+   *     otherwise (default)
+   */
+  @Value.Default
+  public boolean autoFallbackToDynamicFunctionMapping() {
+    return false;
+  }
 }
