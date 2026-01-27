@@ -17,9 +17,9 @@ public final class SchemaHelper {
    * Parses one or more SQL strings containing only CREATE statements into a {@link
    * CalciteCatalogReader}
    *
-   * @param createStatements a SQL string containing only CREATE statements
+   * @param createStatements a list of SQL strings containing only CREATE statements
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
-   * @throws SqlParseException
+   * @throws SqlParseException if any of the SQL strings can not be parsed
    */
   public static CalciteSchema processCreateStatementsToSchema(final List<String> createStatements)
       throws SqlParseException {

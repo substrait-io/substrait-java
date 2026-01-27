@@ -49,10 +49,15 @@ import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 
-/** ExpressionStringify gives a simple debug text output for Expressions */
+/** ExpressionStringify gives a simple debug text output for Expressions. */
 public class ExpressionStringify extends ParentStringify
     implements ExpressionVisitor<String, EmptyVisitationContext, RuntimeException> {
 
+  /**
+   * Constructor.
+   *
+   * @param indent indent size
+   */
   public ExpressionStringify(int indent) {
     super(indent);
   }
