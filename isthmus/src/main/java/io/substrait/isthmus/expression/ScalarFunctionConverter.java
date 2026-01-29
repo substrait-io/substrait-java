@@ -47,7 +47,10 @@ public class ScalarFunctionConverter
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions),
             new ExtractDateFunctionMapper(functions),
-            new PositionFunctionMapper(functions));
+            new PositionFunctionMapper(functions),
+            new StrptimeDateFunctionMapper(functions),
+            new StrptimeTimeFunctionMapper(functions),
+            new StrptimeTimestampFunctionMapper(functions));
   }
 
   @Override
