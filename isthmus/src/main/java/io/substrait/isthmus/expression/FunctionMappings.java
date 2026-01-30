@@ -97,7 +97,10 @@ public class FunctionMappings {
               s(SqlLibraryOperators.LEFT, "left"),
               s(SqlLibraryOperators.RIGHT, "right"),
               s(SqlLibraryOperators.LPAD, "lpad"),
-              s(SqlLibraryOperators.RPAD, "rpad"))
+              s(SqlLibraryOperators.RPAD, "rpad"),
+              s(SqlLibraryOperators.PARSE_TIME, "strptime_time"),
+              s(SqlLibraryOperators.PARSE_TIMESTAMP, "strptime_timestamp"),
+              s(SqlLibraryOperators.PARSE_DATE, "strptime_date"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
