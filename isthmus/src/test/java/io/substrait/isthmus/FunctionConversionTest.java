@@ -301,8 +301,7 @@ class FunctionConversionTest extends PlanTestBase {
     assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
-    assertEquals("PARSE_TIME('%H:%M:%S':VARCHAR, '12:34:56':VARCHAR)", extract.toString());
+    assertEquals("PARSE_TIME('%H:%M:%S':VARCHAR, '12:34:56':VARCHAR)", calciteExpr.toString());
 
     // tests the reverse Calcite -> Substrait
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
@@ -329,10 +328,9 @@ class FunctionConversionTest extends PlanTestBase {
     assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
     assertEquals(
         "PARSE_TIMESTAMP('%Y:%m:%dT%H:%M:%S':VARCHAR, '2026-01-29T12:34:56':VARCHAR)",
-        extract.toString());
+        calciteExpr.toString());
 
     // tests the reverse Calcite -> Substrait
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
@@ -356,8 +354,7 @@ class FunctionConversionTest extends PlanTestBase {
     assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall extract = (RexCall) calciteExpr;
-    assertEquals("PARSE_DATE('%Y:%m:%d':VARCHAR, '2026-01-29':VARCHAR)", extract.toString());
+    assertEquals("PARSE_DATE('%Y:%m:%d':VARCHAR, '2026-01-29':VARCHAR)", calciteExpr.toString());
 
     // tests the reverse Calcite -> Substrait
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
