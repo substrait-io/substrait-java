@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.78.0](https://github.com/substrait-io/substrait-java/compare/v0.77.0...v0.78.0) (2026-02-01)
+
+### Features
+
+* **isthmus:** add strptime_* function mappings ([#695](https://github.com/substrait-io/substrait-java/issues/695)) ([d93efe4](https://github.com/substrait-io/substrait-java/commit/d93efe446de2e4a6e8f830ebfc20f9bb82a0f485))
+
 ## [0.77.0](https://github.com/substrait-io/substrait-java/compare/v0.76.0...v0.77.0) (2026-01-25)
 
 ### ⚠ BREAKING CHANGES
