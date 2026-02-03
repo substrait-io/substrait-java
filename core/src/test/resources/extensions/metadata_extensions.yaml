@@ -1,0 +1,39 @@
+%YAML 1.2
+---
+urn: extension:test:metadata_extensions
+metadata:
+  version: "1.0"
+  author: "test-team"
+  custom_data:
+    nested_value: true
+    numeric_value: 42
+types:
+  - name: "metadataType"
+    metadata:
+      type_info: "custom-type-metadata"
+      category: "user-defined"
+scalar_functions:
+  - name: "metadataScalar"
+    metadata:
+      perf_hint: "vectorized"
+      cost: 1
+    impls:
+      - args:
+          - value: i64
+        return: i64
+aggregate_functions:
+  - name: "metadataAggregate"
+    metadata:
+      agg_info: "incremental"
+    impls:
+      - args:
+          - value: i64
+        return: i64
+window_functions:
+  - name: "metadataWindow"
+    metadata:
+      window_info: "partitioned"
+    impls:
+      - args:
+          - value: i64
+        return: i64
