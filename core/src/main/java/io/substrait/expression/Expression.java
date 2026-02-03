@@ -30,6 +30,13 @@ public interface Expression extends FunctionArg {
     default boolean nullable() {
       return false;
     }
+
+    /**
+     * Returns a copy of this literal with the specified nullability.
+     *
+     * <p>This method is implemented by all concrete Literal classes via Immutables code generation.
+     */
+    Literal withNullable(boolean nullable);
   }
 
   interface Nested extends Expression {
@@ -50,6 +57,14 @@ public interface Expression extends FunctionArg {
     @Override
     public boolean nullable() {
       return true;
+    }
+
+    @Override
+    public NullLiteral withNullable(boolean nullable) {
+      if (!nullable) {
+        throw new IllegalArgumentException("NullLiteral cannot be made non-nullable");
+      }
+      return this;
     }
 
     @Value.Check
