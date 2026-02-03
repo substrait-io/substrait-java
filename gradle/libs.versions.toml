@@ -23,7 +23,7 @@ scalatestplus-junit5 = "3.2.19.0"
 shadow = "9.3.1"
 slf4j = "2.0.17"
 spark = "3.4.4"
-spotless = "8.0.0"
+spotless = "8.2.1"
 validator = "3.0.0"
 
 [libraries]
