@@ -240,9 +240,30 @@ public abstract class FunctionConverter<
       for (F function : functions) {
         List<SimpleExtension.Argument> args = function.requiredArguments();
         // Make sure that arguments & return are within bounds and match the types
-        if (function.returnType() instanceof ParameterizedType
-            && isMatch(outputType, (ParameterizedType) function.returnType())
-            && inputTypesMatchDefinedArguments(inputTypes, args)) {
+        boolean returnTypeMatches;
+        Object funcReturnType = function.returnType();
+
+        if (funcReturnType instanceof ParameterizedType) {
+          returnTypeMatches = isMatch(outputType, (ParameterizedType) funcReturnType);
+        } else if (funcReturnType instanceof Type) {
+          // For non-parameterized return types, check if they match
+          Type targetType = (Type) funcReturnType;
+          if (outputType instanceof ParameterizedType) {
+            // outputType is parameterized but targetType is not - use visitor pattern
+            returnTypeMatches =
+                ((ParameterizedType) outputType)
+                    .accept(new IgnoreNullableAndParameters(targetType));
+          } else {
+            // Both are non-parameterized types - compare them directly by using the visitor
+            // Create a simple visitor that just checks class equality
+            returnTypeMatches = outputType.getClass().equals(targetType.getClass());
+          }
+        } else {
+          // If function.returnType() is neither Type nor ParameterizedType, skip it
+          returnTypeMatches = false;
+        }
+
+        if (returnTypeMatches && inputTypesMatchDefinedArguments(inputTypes, args)) {
           return Optional.of(function);
         }
       }
@@ -476,6 +497,13 @@ public abstract class FunctionConverter<
         if (leastRestrictive.isPresent()) {
           return leastRestrictive;
         }
+      } else {
+        // Fallback: try matchCoerced even if singularInputType is empty
+        // This handles functions with mixed argument types like strftime(timestamp, string)
+        Optional<T> coerced = matchCoerced(call, outputType, operands);
+        if (coerced.isPresent()) {
+          return coerced;
+        }
       }
       return Optional.empty();
     }
@@ -564,5 +592,26 @@ public abstract class FunctionConverter<
       return true;
     }
     return actualType.accept(new IgnoreNullableAndParameters(targetType));
+  }
+
+  /**
+   * Identifies functions that are not mapped in the provided Sig list.
+   *
+   * @param functions the list of function variants to check
+   * @param sigs the list of mapped Sig signatures
+   * @return a list of functions that are not found in the Sig mappings (case-insensitive name
+   *     comparison)
+   */
+  public static <F extends SimpleExtension.Function> List<F> getUnmappedFunctions(
+      List<F> functions, ImmutableList<FunctionMappings.Sig> sigs) {
+    Set<String> mappedNames =
+        sigs.stream()
+            .map(FunctionMappings.Sig::name)
+            .map(name -> name.toLowerCase(Locale.ROOT))
+            .collect(Collectors.toSet());
+
+    return functions.stream()
+        .filter(fn -> !mappedNames.contains(fn.name().toLowerCase(Locale.ROOT)))
+        .collect(Collectors.toList());
   }
 }
