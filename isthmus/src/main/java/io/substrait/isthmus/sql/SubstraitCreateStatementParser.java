@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 /** Utility class for parsing CREATE statements into a {@link CalciteCatalogReader} */
 public class SubstraitCreateStatementParser {
 
+  /** An empty catalog reader used for validating CREATE statements. */
   public static final CalciteCatalogReader EMPTY_CATALOG =
       new CalciteCatalogReader(
           CalciteSchema.createRootSchema(false),
@@ -31,21 +32,21 @@ public class SubstraitCreateStatementParser {
           SubstraitTypeSystem.TYPE_FACTORY,
           SqlConverterBase.CONNECTION_CONFIG);
 
-  // A validator is needed to convert the types in column declarations to Calcite types
+  /** SQL validator configured for validating CREATE statements against the empty catalog. */
   public static final SqlValidator VALIDATOR =
       new SubstraitSqlValidator(
           // as we are validating CREATE statements, an empty catalog suffices
           EMPTY_CATALOG);
 
   /**
-   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s
+   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s.
    *
    * <p>This method only supports simple table names without any additional qualifiers. Only used
    * with {@link io.substrait.isthmus.SqlExpressionToSubstrait}.
    *
-   * @param createStatements a SQL string containing only CREATE statements, must not be null
-   * @return a list of {@link SubstraitTable}s generated from the CREATE statements
-   * @throws SqlParseException
+   * @param createStatements a SQL string containing only CREATE statements; must not be null
+   * @return list of {@link SubstraitTable}s generated from the CREATE statements
+   * @throws SqlParseException if parsing fails or statements are invalid
    */
   public static List<SubstraitTable> processCreateStatements(@NonNull final String createStatements)
       throws SqlParseException {
@@ -75,13 +76,14 @@ public class SubstraitCreateStatementParser {
 
   /**
    * Parses one or more SQL strings containing only CREATE statements into a {@link
-   * CalciteCatalogReader}
+   * CalciteCatalogReader}.
    *
    * <p>This method expects the use of fully qualified table names in the CREATE statements.
    *
-   * @param createStatements a SQL string containing only CREATE statements, must not be null
+   * @param createStatements one or more SQL strings containing only CREATE statements; must not be
+   *     null
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
-   * @throws SqlParseException
+   * @throws SqlParseException if parsing fails or statements are invalid
    */
   public static CalciteCatalogReader processCreateStatementsToCatalog(
       @NonNull final String... createStatements) throws SqlParseException {
@@ -97,9 +99,9 @@ public class SubstraitCreateStatementParser {
   /**
    * Creates a new {@link SqlParseException} with the given message and {@link SqlParserPos}.
    *
-   * @param message the exception message, may be null
-   * @param pos the position where this error occured, may be null
-   * @return the {@link SqlParseException} with the given message and {@link SqlParserPos}
+   * @param message the exception message; may be null
+   * @param pos the position where this error occurred; may be null
+   * @return a {@link SqlParseException} with the given message and position
    */
   private static SqlParseException fail(
       @Nullable final String message, @Nullable final SqlParserPos pos) {
@@ -109,8 +111,8 @@ public class SubstraitCreateStatementParser {
   /**
    * Creates a new {@link SqlParseException} with the given message.
    *
-   * @param message the exception message, may be null
-   * @return the {@link SqlParseException} with the given message
+   * @param message the exception message; may be null
+   * @return a {@link SqlParseException} with the given message
    */
   private static SqlParseException fail(@Nullable final String message) {
     return fail(message, SqlParserPos.ZERO);
@@ -119,9 +121,10 @@ public class SubstraitCreateStatementParser {
   /**
    * Parses one or more SQL strings containing only CREATE statements into a {@link CalciteSchema}.
    *
-   * @param createStatements a SQL string containing only CREATE statements, must not be null
+   * @param createStatements one or more SQL strings containing only CREATE statements; must not be
+   *     null
    * @return a {@link CalciteSchema} generated from the CREATE statements
-   * @throws SqlParseException
+   * @throws SqlParseException if parsing fails or statements are invalid
    */
   private static CalciteSchema processCreateStatementsToSchema(
       @NonNull final String... createStatements) throws SqlParseException {
@@ -158,11 +161,11 @@ public class SubstraitCreateStatementParser {
    * Creates a new {@link SubstraitTable} with the given table name and the table schema from the
    * given {@link SqlNodeList} containing {@link SqlColumnDeclaration}s.
    *
-   * @param tableName the table name to use, must not be null
-   * @param columnList the {@link SqlNodeList} containing {@link SqlColumnDeclaration}s to create
-   *     the table schema from, must not be null
-   * @return the {@link SubstraitTable}
-   * @throws SqlParseException
+   * @param tableName the table name to use; must not be null
+   * @param columnList the {@link SqlNodeList} containing {@link SqlColumnDeclaration}s to build the
+   *     table schema from; must not be null
+   * @return the constructed {@link SubstraitTable}
+   * @throws SqlParseException if the column list contains unexpected nodes or invalid names
    */
   private static SubstraitTable createSubstraitTable(
       @NonNull final String tableName, @NonNull final SqlNodeList columnList)

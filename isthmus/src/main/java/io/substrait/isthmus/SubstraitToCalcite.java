@@ -28,17 +28,39 @@ import org.apache.calcite.util.Pair;
  */
 public class SubstraitToCalcite {
 
+  /** Substrait extension collection used for function/operator mappings. */
   protected final SimpleExtension.ExtensionCollection extensions;
+
+  /** Calcite type factory for creating and managing relational types. */
   protected final RelDataTypeFactory typeFactory;
+
+  /** Converter for translating Substrait types to Calcite types. */
   protected final TypeConverter typeConverter;
+
+  /** Catalog reader for schema resolution during conversion. */
   protected final Prepare.CatalogReader catalogReader;
+
+  /** Feature flags controlling Substrait-to-Calcite conversion behavior. */
   protected final FeatureBoard featureBoard;
 
+  /**
+   * Creates a Substrait-to-Calcite converter with default type converter and no catalog reader.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   */
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     this(extensions, typeFactory, TypeConverter.DEFAULT, null);
   }
 
+  /**
+   * Creates a Substrait-to-Calcite converter with default type converter and a catalog reader.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   * @param catalogReader Calcite catalog reader for schema resolution.
+   */
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -46,6 +68,13 @@ public class SubstraitToCalcite {
     this(extensions, typeFactory, TypeConverter.DEFAULT, catalogReader);
   }
 
+  /**
+   * Creates a Substrait-to-Calcite converter with a custom type converter and no catalog reader.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   * @param typeConverter Converter for Substrait types to Calcite types.
+   */
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -53,6 +82,14 @@ public class SubstraitToCalcite {
     this(extensions, typeFactory, typeConverter, null);
   }
 
+  /**
+   * Creates a Substrait-to-Calcite converter with a custom type converter and catalog reader.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   * @param typeConverter Converter for Substrait types to Calcite types.
+   * @param catalogReader Calcite catalog reader for schema resolution.
+   */
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -66,6 +103,15 @@ public class SubstraitToCalcite {
         ImmutableFeatureBoard.builder().build());
   }
 
+  /**
+   * Creates a Substrait-to-Calcite converter with full configuration.
+   *
+   * @param extensions Substrait extension collection.
+   * @param typeFactory Calcite type factory.
+   * @param typeConverter Converter for Substrait types to Calcite types.
+   * @param catalogReader Calcite catalog reader for schema resolution.
+   * @param featureBoard Feature flags controlling conversion behavior.
+   */
   public SubstraitToCalcite(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -83,6 +129,9 @@ public class SubstraitToCalcite {
    * Extracts a {@link CalciteSchema} from a {@link Rel}
    *
    * <p>Override this method to customize schema extraction.
+   *
+   * @param rel The Substrait {@link Rel} root to analyze.
+   * @return The extracted {@link CalciteSchema}.
    */
   protected CalciteSchema toSchema(Rel rel) {
     SchemaCollector schemaCollector = new SchemaCollector(typeFactory, typeConverter);
@@ -93,6 +142,9 @@ public class SubstraitToCalcite {
    * Creates a {@link RelBuilder} from the extracted {@link CalciteSchema}
    *
    * <p>Override this method to customize the {@link RelBuilder}.
+   *
+   * @param schema The extracted {@link CalciteSchema} used as the default schema.
+   * @return A configured {@link RelBuilder}.
    */
   protected RelBuilder createRelBuilder(CalciteSchema schema) {
     return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
@@ -102,6 +154,9 @@ public class SubstraitToCalcite {
    * Creates a {@link SubstraitRelNodeConverter} from the {@link RelBuilder}
    *
    * <p>Override this method to customize the {@link SubstraitRelNodeConverter}.
+   *
+   * @param relBuilder The {@link RelBuilder} used to build Calcite relational nodes.
+   * @return A configured {@link SubstraitRelNodeConverter}.
    */
   protected SubstraitRelNodeConverter createSubstraitRelNodeConverter(RelBuilder relBuilder) {
     return new SubstraitRelNodeConverter(extensions, typeFactory, relBuilder, featureBoard);

@@ -7,6 +7,12 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Utility methods for working with Substrait extensions.
+ *
+ * <p>Provides helpers to identify and extract dynamic (custom/user-defined) functions from an
+ * {@link io.substrait.extension.SimpleExtension.ExtensionCollection}.
+ */
 public class ExtensionUtils {
 
   /**

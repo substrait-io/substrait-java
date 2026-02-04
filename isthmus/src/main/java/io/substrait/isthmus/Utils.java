@@ -12,6 +12,11 @@ import java.util.stream.Stream;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.jspecify.annotations.NonNull;
 
+/**
+ * Utility helpers for Substrait conversions and Calcite schema management.
+ *
+ * <p>Includes helpers for computing cartesian products and building hierarchical Calcite schemas.
+ */
 public class Utils {
   /**
    * Compute the cartesian product for n lists.
@@ -19,6 +24,12 @@ public class Utils {
    * <p>Based on <a
    * href="https://thomas.preissler.me/blog/2020/12/29/permutations-using-java-streams">Soln by
    * Thomas Preissler</a>
+   *
+   * @param <T> element type contained within each list.
+   * @param lists A list of lists whose cross product is computed. Null or empty inner lists are
+   *     skipped.
+   * @return A stream of lists representing the cartesian product (each output list has one element
+   *     from each input list), or an empty stream if {@code lists} is empty.
    */
   public static <T> Stream<List<T>> crossProduct(List<List<T>> lists) {
 

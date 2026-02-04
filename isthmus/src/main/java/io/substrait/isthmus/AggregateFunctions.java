@@ -11,31 +11,35 @@ import org.apache.calcite.sql.fun.SqlSumAggFunction;
 import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
 import org.apache.calcite.sql.type.ReturnTypes;
 
+/**
+ * Provides Substrait-specific variants of Calcite aggregate functions to ensure type inference
+ * matches Substrait expectations.
+ *
+ * <p>Default Calcite implementations may infer return types that differ from Substrait, causing
+ * conversion issues. This class overrides those behaviors.
+ */
 public class AggregateFunctions {
 
-  // For some arithmetic aggregate functions, the default Calcite aggregate function implementations
-  // will infer return types that differ from those expected by Substrait.
-  // This type mismatch can cause conversion and planning failures.
-
+  /** Substrait-specific MIN aggregate function (nullable return type). */
   public static SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
+
+  /** Substrait-specific MAX aggregate function (nullable return type). */
   public static SqlAggFunction MAX = new SubstraitSqlMinMaxAggFunction(SqlKind.MAX);
+
+  /** Substrait-specific AVG aggregate function (nullable return type). */
   public static SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
+
+  /** Substrait-specific SUM aggregate function (nullable return type). */
   public static SqlAggFunction SUM = new SubstraitSumAggFunction();
+
+  /** Substrait-specific SUM0 aggregate function (non-null BIGINT return type). */
   public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
 
   /**
-   * Some Calcite rules, like {@link
-   * org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule}, introduce the default
-   * Calcite aggregate functions into plans.
+   * Converts default Calcite aggregate functions to Substrait-specific variants when needed.
    *
-   * <p>When converting these Calcite plans to Substrait, we need to convert the default Calcite
-   * aggregate calls to the Substrait specific variants.
-   *
-   * <p>This function attempts to convert the given {@code aggFunction} to its Substrait equivalent
-   *
-   * @param aggFunction the {@link SqlAggFunction} to convert to a Substrait specific variant
-   * @return an optional containing the Substrait equivalent of the given {@code aggFunction} if
-   *     conversion was needed, empty otherwise.
+   * @param aggFunction the Calcite aggregate function
+   * @return optional containing Substrait equivalent if conversion applies
    */
   public static Optional<SqlAggFunction> toSubstraitAggVariant(SqlAggFunction aggFunction) {
     if (aggFunction instanceof SqlMinMaxAggFunction) {
@@ -53,7 +57,7 @@ public class AggregateFunctions {
     }
   }
 
-  /** Extension of {@link SqlMinMaxAggFunction} that ALWAYS infers a nullable return type */
+  /** Substrait variant of {@link SqlMinMaxAggFunction} that forces nullable return type. */
   private static class SubstraitSqlMinMaxAggFunction extends SqlMinMaxAggFunction {
     public SubstraitSqlMinMaxAggFunction(SqlKind kind) {
       super(kind);
@@ -65,12 +69,10 @@ public class AggregateFunctions {
     }
   }
 
-  /** Extension of {@link SqlSumAggFunction} that ALWAYS infers a nullable return type */
+  /** Substrait variant of {@link SqlSumAggFunction} that forces nullable return type. */
   private static class SubstraitSumAggFunction extends SqlSumAggFunction {
     public SubstraitSumAggFunction() {
-      // This is intentionally null
-      // See the instantiation of SqlSumAggFunction in SqlStdOperatorTable
-      super(null);
+      super(null); // Matches Calcite's instantiation pattern
     }
 
     @Override
@@ -79,7 +81,7 @@ public class AggregateFunctions {
     }
   }
 
-  /** Extension of {@link SqlAvgAggFunction} that ALWAYS infers a nullable return type */
+  /** Substrait variant of {@link SqlAvgAggFunction} that forces nullable return type. */
   private static class SubstraitAvgAggFunction extends SqlAvgAggFunction {
     public SubstraitAvgAggFunction(SqlKind kind) {
       super(kind);
@@ -92,8 +94,8 @@ public class AggregateFunctions {
   }
 
   /**
-   * Extension of {@link SqlSumEmptyIsZeroAggFunction} that ALWAYS infers a NOT NULL BIGINT return
-   * type
+   * Substrait variant of {@link SqlSumEmptyIsZeroAggFunction} that forces BIGINT return type and
+   * uses a user-friendly name.
    */
   private static class SubstraitSumEmptyIsZeroAggFunction
       extends org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction {
@@ -103,8 +105,7 @@ public class AggregateFunctions {
 
     @Override
     public String getName() {
-      // the default name for this function is `$sum0`
-      // override this to `sum0` which is a nicer name to use in queries
+      // Override default `$sum0` with `sum0` for readability
       return "sum0";
     }
 

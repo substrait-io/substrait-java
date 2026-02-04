@@ -20,11 +20,27 @@ import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Utility for converting between Calcite {@link org.apache.calcite.rel.type.RelDataType} and
+ * Substrait {@link io.substrait.type.Type}.
+ *
+ * <p>Supports primitive, complex, and user-defined types in both directions.
+ *
+ * @see UserTypeMapper
+ * @see io.substrait.type.Type
+ * @see org.apache.calcite.rel.type.RelDataType
+ */
 public class TypeConverter {
 
   private final UserTypeMapper userTypeMapper;
 
   // DEFAULT TypeConverter which does not handle user-defined types
+  /**
+   * Default {@link TypeConverter} instance that does not handle user-defined types.
+   *
+   * <p>Both {@link UserTypeMapper#toSubstrait(RelDataType)} and {@link
+   * UserTypeMapper#toCalcite(Type.UserDefined)} return {@code null} in this default configuration.
+   */
   public static TypeConverter DEFAULT =
       new TypeConverter(
           new UserTypeMapper() {
@@ -41,14 +57,39 @@ public class TypeConverter {
             }
           });
 
+  /**
+   * Creates a {@link TypeConverter} with a provided user type mapper.
+   *
+   * @param userTypeMapper Mapper for converting user-defined types between Calcite and Substrait.
+   */
   public TypeConverter(UserTypeMapper userTypeMapper) {
     this.userTypeMapper = userTypeMapper;
   }
 
+  /**
+   * Converts a Calcite {@link RelDataType} to a Substrait {@link Type}.
+   *
+   * @param type Calcite type to convert.
+   * @return Corresponding Substrait type.
+   * @throws UnsupportedOperationException if the type cannot be converted or has unsupported
+   *     properties.
+   */
   public Type toSubstrait(RelDataType type) {
     return toSubstrait(type, new ArrayList<>());
   }
 
+  /**
+   * Converts a Calcite {@link RelDataType} of SQL type {@link SqlTypeName#ROW} to a Substrait
+   * {@link NamedStruct}.
+   *
+   * <p>Field names are extracted from the Calcite struct type and paired with the converted
+   * Substrait struct.
+   *
+   * @param type Calcite struct type ({@link SqlTypeName#ROW}).
+   * @return Substrait {@link NamedStruct} containing field names and struct type.
+   * @throws IllegalArgumentException if {@code type} is not a struct ({@code ROW}).
+   * @throws UnsupportedOperationException if any child field type cannot be converted.
+   */
   public NamedStruct toNamedStruct(RelDataType type) {
     if (type.getSqlTypeName() != SqlTypeName.ROW) {
       throw new IllegalArgumentException("Expected type of struct.");
@@ -153,11 +194,31 @@ public class TypeConverter {
     }
   }
 
+  /**
+   * Converts a Substrait {@link TypeExpression} to a Calcite {@link RelDataType}.
+   *
+   * @param relDataTypeFactory Calcite type factory.
+   * @param typeExpression Substrait type expression to convert.
+   * @return Calcite relational type.
+   * @throws UnsupportedOperationException if the expression contains unsupported precision or
+   *     user-defined types cannot be mapped.
+   */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory, TypeExpression typeExpression) {
     return toCalcite(relDataTypeFactory, typeExpression, null);
   }
 
+  /**
+   * Converts a Substrait {@link TypeExpression} to a Calcite {@link RelDataType}, with optional
+   * field names for DFS/nested structs.
+   *
+   * @param relDataTypeFactory Calcite type factory.
+   * @param typeExpression Substrait type expression to convert.
+   * @param dfsFieldNames Optional list of field names to apply to struct fields, in DFS order.
+   * @return Calcite relational type.
+   * @throws UnsupportedOperationException if the expression contains unsupported precision or
+   *     user-defined types cannot be mapped.
+   */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory,
       TypeExpression typeExpression,

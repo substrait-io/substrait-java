@@ -20,11 +20,17 @@ import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Overrides SQL operator lookups to return Substrait specific functions variants (e.g. {@link
- * AggregateFunctions#MAX}} when they are available.
+ * SQL operator table that prioritizes Substrait-specific operator variants where available, falling
+ * back to extended library operators and the standard Calcite operator table.
+ *
+ * <p>Overrides lookups to return Substrait variants first (e.g., {@link AggregateFunctions#MAX}),
+ * ensuring deterministic resolution when multiple implementations exist.
+ *
+ * @see SqlOperatorTable
  */
 public class SubstraitOperatorTable implements SqlOperatorTable {
 
+  /** Singleton instance of the Substrait operator table. */
   public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
@@ -67,8 +73,22 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
                       .filter(op -> !OVERRIDE_KINDS.contains(op.kind))))
           .collect(Collectors.toUnmodifiableList());
 
+  /** Private constructor. */
   private SubstraitOperatorTable() {}
 
+  /**
+   * Looks up operators by name and syntax, preferring Substrait variants first, then library
+   * operators, and finally the standard operator table.
+   *
+   * <p>If a Substrait operator match is found, it is returned immediately to avoid ambiguous
+   * resolution when multiple matches exist.
+   *
+   * @param opName The operator name as a {@link SqlIdentifier}.
+   * @param category Optional {@link SqlFunctionCategory} to narrow the lookup; may be {@code null}.
+   * @param syntax The {@link SqlSyntax} (e.g., FUNCTION, BINARY, SPECIAL).
+   * @param operatorList Output list to which matching {@link SqlOperator}s are added.
+   * @param nameMatcher The {@link SqlNameMatcher} used to match names.
+   */
   @Override
   public void lookupOperatorOverloads(
       SqlIdentifier opName,
@@ -95,6 +115,12 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
         opName, category, syntax, operatorList, nameMatcher);
   }
 
+  /**
+   * Returns the combined operator list, including Substrait operators, extended library operators,
+   * and standard operators (excluding kinds overridden by Substrait).
+   *
+   * @return Immutable list of all available {@link SqlOperator}s.
+   */
   @Override
   public List<SqlOperator> getOperatorList() {
     return OPERATOR_LIST;

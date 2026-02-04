@@ -30,14 +30,28 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
+/**
+ * Converts SQL expressions to Substrait {@link io.substrait.proto.ExtendedExpression} payloads.
+ *
+ * <p>Supports optional CREATE TABLE statements to provide schema and column bindings for expression
+ * validation and Rex conversion.
+ */
 public class SqlExpressionToSubstrait extends SqlConverterBase {
 
+  /** Converter for RexNodes to Substrait expressions. */
   protected final RexExpressionConverter rexConverter;
 
+  /** Creates a converter with default features and the default extension catalog. */
   public SqlExpressionToSubstrait() {
     this(FEATURES_DEFAULT, DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
+  /**
+   * Creates a converter with the given feature board and extension collection.
+   *
+   * @param features feature flags for conversion
+   * @param extensions extension functions used during expression conversion
+   */
   public SqlExpressionToSubstrait(
       FeatureBoard features, SimpleExtension.ExtensionCollection extensions) {
     super(features, extensions);
@@ -46,12 +60,21 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     this.rexConverter = new RexExpressionConverter(scalarFunctionConverter);
   }
 
+  /** Bundled result carrying validator, catalog reader, and name/type and name/node maps. */
   private static final class Result {
     final SqlValidator validator;
     final CalciteCatalogReader catalogReader;
     final Map<String, RelDataType> nameToTypeMap;
     final Map<String, RexNode> nameToNodeMap;
 
+    /**
+     * Creates a result bundle.
+     *
+     * @param validator SQL validator
+     * @param catalogReader Calcite catalog reader
+     * @param nameToTypeMap mapping from column name to Calcite type
+     * @param nameToNodeMap mapping from column name to Rex input ref
+     */
     Result(
         SqlValidator validator,
         CalciteCatalogReader catalogReader,
@@ -65,12 +88,12 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   /**
-   * Converts the given SQL expression to an {@link io.substrait.proto.ExtendedExpression }
+   * Converts a single SQL expression to a Substrait {@link io.substrait.proto.ExtendedExpression}.
    *
    * @param sqlExpression a SQL expression
    * @param createStatements table creation statements defining fields referenced by the expression
-   * @return a {@link io.substrait.proto.ExtendedExpression }
-   * @throws SqlParseException
+   * @return the Substrait extended expression proto
+   * @throws SqlParseException if parsing or validation fails
    */
   public io.substrait.proto.ExtendedExpression convert(
       String sqlExpression, List<String> createStatements) throws SqlParseException {
@@ -78,12 +101,12 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   }
 
   /**
-   * Converts the given SQL expressions to an {@link io.substrait.proto.ExtendedExpression }
+   * Converts multiple SQL expressions to a Substrait {@link io.substrait.proto.ExtendedExpression}.
    *
-   * @param sqlExpressions an array of SQL expressions
-   * @param createStatements table creation statements defining fields referenced by the expression
-   * @return a {@link io.substrait.proto.ExtendedExpression }
-   * @throws SqlParseException
+   * @param sqlExpressions array of SQL expressions
+   * @param createStatements table creation statements defining fields referenced by the expressions
+   * @return the Substrait extended expression proto
+   * @throws SqlParseException if parsing or validation fails
    */
   public io.substrait.proto.ExtendedExpression convert(
       String[] sqlExpressions, List<String> createStatements) throws SqlParseException {
@@ -96,6 +119,17 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         result.nameToNodeMap);
   }
 
+  /**
+   * Converts the given SQL expressions using the provided validator/catalog and column bindings.
+   *
+   * @param sqlExpressions array of SQL expressions
+   * @param validator SQL validator
+   * @param catalogReader Calcite catalog reader
+   * @param nameToTypeMap mapping from column name to Calcite type
+   * @param nameToNodeMap mapping from column name to Rex input ref
+   * @return the Substrait extended expression proto
+   * @throws SqlParseException if parsing or validation fails
+   */
   private io.substrait.proto.ExtendedExpression executeInnerSQLExpressions(
       String[] sqlExpressions,
       SqlValidator validator,
@@ -126,6 +160,17 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     return new ExtendedExpressionProtoConverter().toProto(extendedExpression.build());
   }
 
+  /**
+   * Parses and validates a SQL expression, then converts it to a {@link RexNode}.
+   *
+   * @param sql SQL expression string
+   * @param validator SQL validator
+   * @param catalogReader Calcite catalog reader
+   * @param nameToTypeMap mapping from column name to Calcite type
+   * @param nameToNodeMap mapping from column name to Rex input ref
+   * @return the converted RexNode
+   * @throws SqlParseException if parsing or validation fails
+   */
   private RexNode sqlToRexNode(
       String sql,
       SqlValidator validator,
@@ -147,6 +192,13 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     return converter.convertExpression(validSqlNode, nameToNodeMap);
   }
 
+  /**
+   * Registers tables from CREATE statements and prepares validator, catalog, and column bindings.
+   *
+   * @param tables list of CREATE TABLE statements; may be null
+   * @return result bundle containing validator, catalog reader, and name/type and name/node maps
+   * @throws SqlParseException if any CREATE statement is invalid
+   */
   private Result registerCreateTablesForExtendedExpression(List<String> tables)
       throws SqlParseException {
     Map<String, RelDataType> nameToTypeMap = new LinkedHashMap<>();
@@ -183,6 +235,12 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
 
+  /**
+   * Converts a name-to-type map into a {@link NamedStruct} in Substrait types.
+   *
+   * @param nameToTypeMap mapping from column name to Calcite type
+   * @return a {@link NamedStruct} with non-nullable struct type
+   */
   private NamedStruct toNamedStruct(Map<String, RelDataType> nameToTypeMap) {
     ArrayList<String> names = new ArrayList<String>();
     ArrayList<Type> types = new ArrayList<Type>();
