@@ -45,6 +45,10 @@ import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 import org.immutables.value.Value;
 
+/**
+ * GraalVM {@link Feature} used during native image generation which registers classes for
+ * reflection at runtime using {@link RuntimeReflection}.
+ */
 public final class RegisterAtRuntime implements Feature {
   @Override
   public void beforeAnalysis(BeforeAnalysisAccess access) {

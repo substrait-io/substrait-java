@@ -97,3 +97,10 @@ tasks.register("writeIsthmusVersion") {
 }
 
 tasks.named("compileJava") { dependsOn("writeIsthmusVersion") }
+
+tasks.named<Javadoc>("javadoc") {
+  description = "Generate Javadoc for main source files (excludes generated)."
+
+  val isthmusVersionClass = layout.buildDirectory.file("generated/sources").get().getAsFile()
+  exclude { spec -> spec.file.toPath().startsWith(isthmusVersionClass.toPath()) }
+}
