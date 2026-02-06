@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.annotations.Beta;
-import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.DefaultExtensionCatalog;
@@ -24,6 +23,7 @@ import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
@@ -79,7 +79,7 @@ public class PlanTestBase {
   }
 
   public static String asString(String resource) throws IOException {
-    return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
+    return Resources.toString(Resources.getResource(resource), StandardCharsets.UTF_8);
   }
 
   protected Plan assertProtoPlanRoundrip(String query) throws SqlParseException {
