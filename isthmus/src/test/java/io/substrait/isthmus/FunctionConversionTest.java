@@ -17,10 +17,8 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
-import java.util.List;
 import java.util.stream.Stream;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Test;
@@ -341,16 +339,10 @@ class FunctionConversionTest extends PlanTestBase {
     assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
 
-    RexCall call = (RexCall) calciteExpr;
-    assertEquals(expectedCalciteFunctionName, call.getOperator().getName());
-
-    List<String> operands =
-        call.getOperands().stream()
-            .filter(RexLiteral.class::isInstance)
-            .map(RexLiteral.class::cast)
-            .map(literal -> literal.getValueAs(String.class))
-            .toList();
-    assertEquals(List.of(formatValue, inputValue), operands);
+    String expectedCallString =
+        String.format(
+            "%s('%s':VARCHAR, '%s':VARCHAR)", expectedCalciteFunctionName, formatValue, inputValue);
+    assertEquals(expectedCallString, calciteExpr.toString());
 
     // tests the reverse Calcite -> Substrait
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
