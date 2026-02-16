@@ -15,17 +15,42 @@ import org.apache.calcite.sql.SqlKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Converts field selections from Calcite representation. */
+/**
+ * Converts Calcite {@link RexCall} ITEM operators into Substrait {@link FieldReference}
+ * expressions.
+ *
+ * <p>Handles dereferencing of ROW, ARRAY, and MAP types using literal indices or keys.
+ */
 public class FieldSelectionConverter implements CallConverter {
   private static final Logger LOGGER = LoggerFactory.getLogger(FieldSelectionConverter.class);
 
   private final TypeConverter typeConverter;
 
+  /**
+   * Creates a converter for field selection operations.
+   *
+   * @param typeConverter converter for Substrait ↔ Calcite type mappings
+   */
   public FieldSelectionConverter(TypeConverter typeConverter) {
     super();
     this.typeConverter = typeConverter;
   }
 
+  /**
+   * Converts a Calcite ITEM operator into a Substrait {@link FieldReference}, if applicable.
+   *
+   * <p>Supports:
+   *
+   * <ul>
+   *   <li>ROW dereference by integer index
+   *   <li>ARRAY dereference by integer index
+   *   <li>MAP dereference by string key
+   * </ul>
+   *
+   * @param call the Calcite ITEM operator call
+   * @param topLevelConverter function to convert nested operands
+   * @return an {@link Optional} containing the converted expression, or empty if not applicable
+   */
   @Override
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
@@ -96,6 +121,12 @@ public class FieldSelectionConverter implements CallConverter {
     return Optional.empty();
   }
 
+  /**
+   * Converts a numeric literal to an integer index.
+   *
+   * @param l literal to convert
+   * @return optional integer value, empty if not numeric
+   */
   private Optional<Integer> toInt(Expression.Literal l) {
     if (l instanceof Expression.I8Literal) {
       return Optional.of(((Expression.I8Literal) l).value());
@@ -110,6 +141,12 @@ public class FieldSelectionConverter implements CallConverter {
     return Optional.empty();
   }
 
+  /**
+   * Converts a fixed-char literal to a string key.
+   *
+   * @param l literal to convert
+   * @return optional string value, empty if not a fixed-char literal
+   */
   public Optional<String> toString(Expression.Literal l) {
     if (!(l instanceof Expression.FixedCharLiteral)) {
       LOGGER.atWarn().log("Literal expected to be char type but was not. {}", l);

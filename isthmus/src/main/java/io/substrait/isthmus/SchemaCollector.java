@@ -25,6 +25,12 @@ public class SchemaCollector {
   private final RelDataTypeFactory typeFactory;
   private final TypeConverter typeConverter;
 
+  /**
+   * Creates a new {@code SchemaCollector} with the specified type factory and type converter.
+   *
+   * @param typeFactory Calcite {@link RelDataTypeFactory} used for creating relational types
+   * @param typeConverter converter for mapping between Calcite and Substrait types
+   */
   public SchemaCollector(RelDataTypeFactory typeFactory, TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
