@@ -36,8 +36,7 @@ import io.substrait.function.{ParameterizedType, ToTypeString}
 import java.{util => ju}
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.jdk.CollectionConverters._
 
 abstract class FunctionConverter[F <: SimpleExtension.Function, T](functions: Seq[F])
   extends Logging {
@@ -61,24 +60,23 @@ abstract class FunctionConverter[F <: SimpleExtension.Function, T](functions: Se
     val matcherMap =
       new ju.IdentityHashMap[Class[_], FunctionFinder[F, T]]
 
-    JavaConverters
-      .asScalaSet(alm.keySet())
+    alm
+      .keySet()
+      .asScala
       .foreach(
         key => {
           val sigs = sparkExpressions.get(key)
           if (sigs == null) {
             logInfo("Dropping function due to no binding:" + key)
           } else {
-            JavaConverters
-              .asScalaBuffer(sigs)
-              .foreach(
-                sig => {
-                  val implList = alm.get(key)
-                  if (implList != null && !implList.isEmpty) {
-                    matcherMap
-                      .put(sig.expClass, createFinder(key, JavaConverters.asScalaBuffer(implList)))
-                  }
-                })
+            sigs.asScala.foreach(
+              sig => {
+                val implList = alm.get(key)
+                if (implList != null && !implList.isEmpty) {
+                  matcherMap
+                    .put(sig.expClass, createFinder(key, implList.asScala.toSeq))
+                }
+              })
           }
         })
     val keyMap = ArrayListMultimap.create[String, Sig]

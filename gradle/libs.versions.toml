@@ -17,7 +17,7 @@ nmcp = "1.4.4"
 picocli = "4.7.7"
 protobuf-plugin = "0.9.6"
 protobuf = "3.25.8"
-scala-library = "2.12.21"
+scala-library = "2.13.18"
 scalatest = "3.2.19"
 scalatestplus-junit5 = "3.2.19.0"
 shadow = "9.3.1"
@@ -60,14 +60,14 @@ protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "p
 protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 scala-library = { module = "org.scala-lang:scala-library", version.ref = "scala-library" }
-scalatest = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest" }
-scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-13_2.12", version.ref = "scalatestplus-junit5" }
+scalatest = { module = "org.scalatest:scalatest_2.13", version.ref = "scalatest" }
+scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-13_2.13", version.ref = "scalatestplus-junit5" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
-spark-catalyst = { module = "org.apache.spark:spark-catalyst_2.12", version.ref = "spark" }
-spark-core = { module = "org.apache.spark:spark-core_2.12", version.ref = "spark" }
-spark-hive = { module = "org.apache.spark:spark-hive_2.12", version.ref = "spark" }
-spark-sql = { module = "org.apache.spark:spark-sql_2.12", version.ref = "spark" }
+spark-catalyst = { module = "org.apache.spark:spark-catalyst_2.13", version.ref = "spark" }
+spark-core = { module = "org.apache.spark:spark-core_2.13", version.ref = "spark" }
+spark-hive = { module = "org.apache.spark:spark-hive_2.13", version.ref = "spark" }
+spark-sql = { module = "org.apache.spark:spark-sql_2.13", version.ref = "spark" }
 
 [bundles]
 jackson = [ "jackson-databind", "jackson-annotations", "jackson-datatype-jdk8", "jackson-dataformat-yaml" ]

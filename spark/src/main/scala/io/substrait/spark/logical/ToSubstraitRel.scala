@@ -58,9 +58,9 @@ import io.substrait.util.EmptyVisitationContext
 import java.util
 import java.util.{Collections, Optional}
 
-import scala.collection.JavaConverters.{asJavaIterableConverter, seqAsJavaList}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.jdk.CollectionConverters._
 
 class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
 
@@ -91,7 +91,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       output: Seq[Attribute]): relation.Aggregate.Grouping = {
 
     relation.Aggregate.Grouping.builder
-      .addAllExpressions(e.map(toExpression(output)).asJava)
+      .addAllExpressions(e.map(toExpression(output)).toSeq.asJava)
       .build()
   }
 
@@ -132,7 +132,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       output: Seq[Attribute],
       input: relation.Rel): relation.Aggregate = {
     val groupings = Collections.singletonList(fromGroupSet(groupBy, output))
-    val aggCalls = aggregates.map(fromAggCall(_, output)).asJava
+    val aggCalls = aggregates.map(fromAggCall(_, output)).toSeq.asJava
 
     relation.Aggregate.builder
       .input(input)
@@ -213,12 +213,12 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             groupOutput(ordinal)
         }
     }
-    val projects = projectExpressions.map(toExpression(newOutput))
+    val projects = projectExpressions.map(toExpression(newOutput)).toSeq
     val names = ToSubstraitType.toNamedStruct(agg.schema).names()
 
     relation.Project.builder
       .remap(relation.Rel.Remap.offset(newOutput.size, projects.size))
-      .expressions(projects.asJava)
+      .expressions(projects.toSeq.asJava)
       .hint(Hint.builder.addAllOutputNames(names).build())
       .input(substraitAgg)
       .build()
@@ -237,15 +237,19 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   override def visitWindow(window: Window): relation.Rel = {
-    val windowExpressions = window.windowExpressions.map {
-      case w: WindowExpression => fromWindowCall(w, window.child.output)
-      case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
-      case other =>
-        throw new UnsupportedOperationException(s"Unsupported window expression: $other")
-    }.asJava
+    val windowExpressions = window.windowExpressions
+      .map {
+        case w: WindowExpression => fromWindowCall(w, window.child.output)
+        case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
+        case other =>
+          throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+      }
+      .toSeq
+      .asJava
 
-    val partitionExpressions = window.partitionSpec.map(toExpression(window.child.output)).asJava
-    val sorts = window.orderSpec.map(toSortField(window.child.output)).asJava
+    val partitionExpressions =
+      window.partitionSpec.map(toExpression(window.child.output)).toSeq.asJava
+    val sorts = window.orderSpec.map(toSortField(window.child.output)).toSeq.asJava
     relation.ConsistentPartitionWindow.builder
       .input(visit(window.child))
       .addAllWindowFunctions(windowExpressions)
@@ -359,7 +363,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         throw new UnsupportedOperationException(
           s"Unable to convert the ExistenceJoin condition: $expr")
     }
-    val needles = condition.toIterable
+    val needles = condition.toSeq
       .flatMap(w => findNeedles(w))
       .map(toExpression(left.output))
       .asJava
@@ -385,7 +389,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
 
     relation.Project.builder
       .remap(remap)
-      .expressions(expressions.asJava)
+      .expressions(expressions.toSeq.asJava)
       .hint(Hint.builder.addAllOutputNames(ToSubstraitType.toNamedStruct(p.schema).names()).build())
       .input(child)
       .build()
@@ -396,13 +400,13 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       proj => {
         relation.Expand.SwitchingField.builder
           .duplicates(
-            proj.map(toExpression(p.child.output)).asJava
+            proj.map(toExpression(p.child.output)).toSeq.asJava
           )
           .build()
       })
 
     relation.Expand.builder
-      .fields(fields.asJava)
+      .fields(fields.toSeq.asJava)
       .hint(Hint.builder.addAllOutputNames(ToSubstraitType.toNamedStruct(p.schema).names()).build())
       .input(visit(p.child))
       .build()
@@ -420,7 +424,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
   override def visitSort(sort: Sort): relation.Rel = {
     val input = visit(sort.child)
-    val fields = sort.order.map(toSortField(sort.child.output)).asJava
+    val fields = sort.order.map(toSortField(sort.child.output)).toSeq.asJava
     relation.Sort.builder.addAllSortFields(fields).input(input).build
   }
 
@@ -429,7 +433,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       throw new UnsupportedOperationException("Union by column name is not supported")
     }
     relation.Set.builder
-      .inputs(union.children.map(c => visit(c)).asJava)
+      .inputs(union.children.map(c => visit(c)).toSeq.asJava)
       .setOp(SetOp.UNION_ALL)
       .build()
   }
@@ -443,7 +447,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
 
     val namedScan = relation.NamedScan.builder
       .initialSchema(namedStruct)
-      .addAllNames(tableNames.asJava)
+      .addAllNames(tableNames.toSeq.asJava)
       .build
     namedScan
   }
@@ -468,7 +472,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
                 buf += ToSubstraitLiteral.apply(l, Some(schemaField.nullable))
                 idx += 1
               }
-              ExpressionCreator.nestedStruct(false, buf.asJava)
+              ExpressionCreator.nestedStruct(false, buf.toSeq.asJava)
             })
           .asJava)
       .build()
@@ -542,7 +546,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           logWarning(
             s"LogicalRDD relation contains ${rdd.rdd.count()} rows.  Truncating to ${_rddLimit}. This limit can be changed by setting the `rddLimit` property on this ToSubstraitRel instance.")
         }
-        buildVirtualTableScan(rdd.schema, rdd.rdd.take(_rddLimit))
+        buildVirtualTableScan(rdd.schema, rdd.rdd.take(_rddLimit).toIndexedSeq)
       case logicalRelation: LogicalRelation =>
         logicalRelation.relation match {
           case fsRelation: HadoopFsRelation =>
@@ -557,7 +561,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .initialSchema(NamedStruct
             .of(new util.ArrayList[String](), Type.Struct.builder().nullable(false).build()))
-          .addRows(ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression].asJava))
+          .addRows(ExpressionCreator.nestedStruct(false, new ArrayBuffer[SExpression].toSeq.asJava))
           .build()
       case _ =>
         throw new UnsupportedOperationException(
@@ -572,9 +576,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case CreateHiveTableAsSelectCommand(table, query, names, mode) =>
       convertCTAS(table, mode, query, names)
     case CreateTableCommand(table, _) =>
-      convertCreateTable(table.identifier.unquotedString.split("\\."), table.schema)
+      convertCreateTable(table.identifier.unquotedString.split("\\.").toIndexedSeq, table.schema)
     case DropTableCommand(tableName, ifExists, _, _) =>
-      convertDropTable(tableName.unquotedString.split("\\."), ifExists)
+      convertDropTable(tableName.unquotedString.split("\\.").toIndexedSeq, ifExists)
     case CreateTable(ResolvedIdentifier(c: V2SessionCatalog, id), tableSchema, _, _, _)
         if id.namespace().length > 0 =>
       val names = Seq(c.name(), id.namespace()(0), id.name())
@@ -628,7 +632,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .operation(WriteOp.INSERT)
           .outputMode(OutputMode.UNSPECIFIED)
           .createMode(if (overwrite) CreateMode.REPLACE_IF_EXISTS else CreateMode.ERROR_IF_EXISTS)
-          .names(seqAsJavaList(table.identifier.unquotedString.split("\\.").toList))
+          .names(table.identifier.unquotedString.split("\\.").toSeq.asJava)
           .tableSchema(outputSchema(child.output, outputColumnNames))
           .build()
       case _ =>
@@ -655,7 +659,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .builder()
       .operation(DdlOp.CREATE)
       .`object`(DdlObject.TABLE)
-      .names(seqAsJavaList(names))
+      .names(names.toSeq.asJava)
       .tableSchema(ToSubstraitType.toNamedStruct(schema))
       .tableDefaults(StructLiteral.builder.nullable(true).build())
       .build()
@@ -666,7 +670,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .builder()
       .operation(if (ifExists) DdlOp.DROP_IF_EXIST else DdlOp.DROP)
       .`object`(DdlObject.TABLE)
-      .names(seqAsJavaList(names))
+      .names(names.toSeq.asJava)
       .tableSchema(
         NamedStruct.builder().struct(Type.Struct.builder().nullable(true).build()).build())
       .tableDefaults(StructLiteral.builder.nullable(true).build())
@@ -684,8 +688,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   private def outputSchema(output: Seq[Attribute], outputNames: Seq[String]): NamedStruct = {
     val children = output.map(op => ToSubstraitType.apply(op.dataType, op.nullable))
     val creator = Type.withNullability(true)
-    val struct = creator.struct(children.asJava)
-    NamedStruct.of(outputNames.asJava, struct)
+    val struct = creator.struct(children.toSeq.asJava)
+    NamedStruct.of(outputNames.toSeq.asJava, struct)
   }
 
   def convert(p: LogicalPlan): Plan = {
@@ -758,7 +762,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
           Some(
             SExpression.InPredicate
               .builder()
-              .needles(values.asJava)
+              .needles(values.toSeq.asJava)
               .haystack(toSubstraitRel.visit(expr.query.plan))
               .build()
           ))

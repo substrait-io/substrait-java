@@ -57,8 +57,8 @@ import org.apache.hadoop.fs.Path
 import java.net.URI
 
 import scala.annotation.nowarn
-import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ArrayBuffer
+import scala.jdk.CollectionConverters._
 
 /**
  * RelVisitor to convert Substrait Rel plan to [[LogicalPlan]]. Unsupported Rel node will call
@@ -73,13 +73,22 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   private def fromMeasure(measure: relation.Aggregate.Measure): AggregateExpression = {
     // this functions is called in createParentwithChild
     val function = measure.getFunction
-    var arguments = function.arguments().asScala.zipWithIndex.map {
-      case (arg, i) =>
-        arg.accept(function.declaration(), i, expressionConverter, EmptyVisitationContext.INSTANCE)
-    }
+    var arguments = function
+      .arguments()
+      .asScala
+      .zipWithIndex
+      .map {
+        case (arg, i) =>
+          arg.accept(
+            function.declaration(),
+            i,
+            expressionConverter,
+            EmptyVisitationContext.INSTANCE)
+      }
+      .toSeq
     if (function.declaration.name == "count" && function.arguments.size == 0) {
       // HACK - count() needs to be rewritten as count(1)
-      arguments = ArrayBuffer(Literal(1))
+      arguments = ArrayBuffer(Literal(1)).toSeq
     }
 
     val aggregateFunction = SparkExtension.toAggregateFunction
@@ -128,11 +137,12 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
         .getExpressions
         .asScala
         .map(expr => expr.accept(expressionConverter, context))
+        .toSeq
 
       val outputs = groupBy.map(toNamedExpression)
       val aggregateExpressions =
-        aggregate.getMeasures.asScala.map(fromMeasure).map(toNamedExpression)
-      Aggregate(groupBy, outputs ++= aggregateExpressions, child)
+        aggregate.getMeasures.asScala.map(fromMeasure).map(toNamedExpression).toSeq
+      Aggregate(groupBy, outputs ++ aggregateExpressions, child)
     }
   }
 
@@ -143,14 +153,20 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     withChild(child) {
       val partitions = window.getPartitionExpressions.asScala
         .map(expr => expr.accept(expressionConverter, context))
-      val sortOrders = window.getSorts.asScala.map(toSortOrder)
+        .toSeq
+      val sortOrders = window.getSorts.asScala.map(toSortOrder).toSeq
       val windowExpressions = window.getWindowFunctions.asScala
         .map(
           func => {
-            val arguments = func.arguments().asScala.zipWithIndex.map {
-              case (arg, i) =>
-                arg.accept(func.declaration(), i, expressionConverter, context)
-            }
+            val arguments = func
+              .arguments()
+              .asScala
+              .zipWithIndex
+              .map {
+                case (arg, i) =>
+                  arg.accept(func.declaration(), i, expressionConverter, context)
+              }
+              .toSeq
             val windowFunction = SparkExtension.toWindowFunction
               .getSparkExpressionFromSubstraitFunc(func.declaration.key, arguments)
               .map {
@@ -182,7 +198,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
             val spec = WindowSpecDefinition(partitions, sortOrders, frame)
             WindowExpression(windowFunction, spec)
           })
-        .map(toNamedExpression)
+        .map(toNamedExpression(_))
+        .toSeq
       Window(windowExpressions, partitions, sortOrders, child)
     }
   }
@@ -259,7 +276,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   override def visit(sort: relation.Sort, context: EmptyVisitationContext): LogicalPlan = {
     val child = sort.getInput.accept(this, context)
     withChild(child) {
-      val sortOrders = sort.getSortFields.asScala.map(toSortOrder)
+      val sortOrders = sort.getSortFields.asScala.map(toSortOrder).toSeq
       Sort(sortOrders, global = true, child)
     }
   }
@@ -278,7 +295,8 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
           .toNamedStruct(ToSparkType.toStructType(
             NamedStruct.of(rel.getHint.get.getOutputNames, rel.getRecordType)))
           .names
-          .asScala)
+          .asScala
+          .toSeq)
     } else {
       None
     }
@@ -296,6 +314,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       val projectExprs =
         project.getExpressions.asScala
           .map(expr => expr.accept(expressionConverter, context))
+          .toSeq
       val projectList = if (names.size == projectExprs.size) {
         projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
       } else {
@@ -317,15 +336,15 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     )
 
     withChild(child) {
-      val projections = expand.getFields.asScala
-        .map {
-          case sf: SwitchingField =>
-            sf.getDuplicates.asScala
-              .map(expr => expr.accept(expressionConverter, context))
-              .map(toNamedExpression)
-          case _: ConsistentField =>
-            throw new UnsupportedOperationException("ConsistentField not currently supported")
-        }
+      val projections = expand.getFields.asScala.map {
+        case sf: SwitchingField =>
+          sf.getDuplicates.asScala
+            .map(expr => expr.accept(expressionConverter, context))
+            .map(toNamedExpression)
+            .toSeq
+        case _: ConsistentField =>
+          throw new UnsupportedOperationException("ConsistentField not currently supported")
+      }.toSeq
 
       // An output column is nullable if any of the projections can assign null to it
       val output = projections
@@ -347,7 +366,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   }
 
   override def visit(set: relation.Set, context: EmptyVisitationContext): LogicalPlan = {
-    val children = set.getInputs.asScala.map(_.accept(this, context))
+    val children = set.getInputs.asScala.map(_.accept(this, context)).toSeq
     withOutput(children.flatMap(_.output)) {
       set.getSetOp match {
         case SetOp.UNION_ALL => Union(children, byName = false, allowMissingCol = false)
@@ -365,8 +384,9 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
         InternalRow.fromSeq(
           nestedStruct.fields.asScala
             .map(expr => expr.accept(expressionConverter, context).asInstanceOf[Literal].value)
+            .toSeq
         )
-    }
+    }.toSeq
     virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
         OneRowRelation()
@@ -378,7 +398,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   override def visit(
       namedScan: relation.NamedScan,
       context: EmptyVisitationContext): LogicalPlan = {
-    resolve(UnresolvedRelation(namedScan.getNames.asScala)) match {
+    resolve(UnresolvedRelation(namedScan.getNames.asScala.toSeq)) match {
       case m: MultiInstanceRelation => m.newInstance()
       case other => other
     }
@@ -398,7 +418,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       relation = HadoopFsRelation(
         location = new InMemoryFileIndex(
           spark,
-          localFiles.getItems.asScala.map(i => new Path(i.getPath.get())),
+          localFiles.getItems.asScala.map(i => new Path(i.getPath.get())).toSeq,
           Map(),
           Some(schema)),
         partitionSchema = new StructType(),
@@ -439,7 +459,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
 
   override def visit(write: NamedWrite, context: EmptyVisitationContext): LogicalPlan = {
     val child = write.getInput.accept(this, context)
-    val table = catalogTable(write.getNames.asScala)
+    val table = catalogTable(write.getNames.asScala.toSeq)
     val isHive = spark.conf.get(StaticSQLConf.CATALOG_IMPLEMENTATION.key) match {
       case "hive" => true
       case _ => false
@@ -451,7 +471,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
             CreateHiveTableAsSelectCommand(
               table,
               child,
-              write.getTableSchema.names().asScala,
+              write.getTableSchema.names().asScala.toSeq,
               saveMode(write.getCreateMode)
             )
           } else {
@@ -459,19 +479,21 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
               table,
               saveMode(write.getCreateMode),
               child,
-              write.getTableSchema.names().asScala
+              write.getTableSchema.names().asScala.toSeq
             )
           }
         }
       case WriteOp.INSERT if isHive =>
         withChild(child) {
           InsertIntoHiveTable(
-            catalogTable(write.getNames.asScala, ToSparkType.toStructType(write.getTableSchema)),
+            catalogTable(
+              write.getNames.asScala.toSeq,
+              ToSparkType.toStructType(write.getTableSchema)),
             Map.empty,
             child,
             write.getCreateMode == CreateMode.REPLACE_IF_EXISTS,
             false,
-            write.getTableSchema.names().asScala
+            write.getTableSchema.names().asScala.toSeq
           )
         }
       case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
@@ -518,13 +540,14 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
           mode = mode,
           catalogTable = Some(table),
           fileIndex = None,
-          outputColumnNames = write.getTableSchema.names.asScala
+          outputColumnNames = write.getTableSchema.names.asScala.toSeq
         ))
     }
   }
 
   override def visit(ddl: NamedDdl, context: EmptyVisitationContext): LogicalPlan = {
-    val table = catalogTable(ddl.getNames.asScala, ToSparkType.toStructType(ddl.getTableSchema))
+    val table =
+      catalogTable(ddl.getNames.asScala.toSeq, ToSparkType.toStructType(ddl.getTableSchema))
 
     (ddl.getOperation, ddl.getObject) match {
       case (DdlOp.CREATE, DdlObject.TABLE) => CreateTableCommand(table, false)

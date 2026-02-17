@@ -27,7 +27,7 @@ import org.apache.spark.unsafe.types.UTF8String
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.expression.ExpressionCreator._
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters._
 
 class ToSubstraitLiteral {
 
@@ -50,7 +50,7 @@ class ToSubstraitLiteral {
     if (elements.isEmpty) {
       emptyList(nullable, ToSubstraitType.convert(elementType, nullable = containsNull).get)
     } else {
-      list(nullable, JavaConverters.asJavaIterable(elements))
+      list(nullable, elements.toSeq.asJava)
     }
   }
 
@@ -69,7 +69,7 @@ class ToSubstraitLiteral {
         ToSubstraitType.convert(keyType, nullable = false).get,
         ToSubstraitType.convert(valueType, nullable = valueContainsNull).get)
     } else {
-      map(nullable, JavaConverters.mapAsJavaMap(keys.zip(values).toMap))
+      map(nullable, keys.zip(values).toMap.asJava)
     }
   }
 
@@ -79,9 +79,11 @@ class ToSubstraitLiteral {
       nullable: Boolean): SExpression.Literal = {
     struct(
       nullable,
-      JavaConverters.asJavaIterable(fields.zip(structData.values).map {
-        case (field, any) => apply(Literal(any, field.dataType), Some(field.nullable))
-      }))
+      fields
+        .zip(structData.values)
+        .map { case (field, any) => apply(Literal(any, field.dataType), Some(field.nullable)) }
+        .toSeq
+        .asJava)
   }
 
   private def convertWithValue(literal: Literal, nullable: Boolean): Option[SExpression.Literal] = {

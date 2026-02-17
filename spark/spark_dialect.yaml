@@ -423,13 +423,6 @@ supported_scalar_functions:
     notation: "FUNCTION"
   supported_impls:
   - "bool"
-- source: "comparison"
-  name: "lt"
-  system_metadata:
-    name: "<"
-    notation: "INFIX"
-  supported_impls:
-  - "any_any"
 - source: "datetime"
   name: "lt"
   system_metadata:
@@ -444,9 +437,9 @@ supported_scalar_functions:
   - "iday_iday"
   - "iyear_iyear"
 - source: "comparison"
-  name: "lte"
+  name: "lt"
   system_metadata:
-    name: "<="
+    name: "<"
     notation: "INFIX"
   supported_impls:
   - "any_any"
@@ -464,9 +457,9 @@ supported_scalar_functions:
   - "iday_iday"
   - "iyear_iyear"
 - source: "comparison"
-  name: "gt"
+  name: "lte"
   system_metadata:
-    name: ">"
+    name: "<="
     notation: "INFIX"
   supported_impls:
   - "any_any"
@@ -484,9 +477,9 @@ supported_scalar_functions:
   - "iday_iday"
   - "iyear_iyear"
 - source: "comparison"
-  name: "gte"
+  name: "gt"
   system_metadata:
-    name: ">="
+    name: ">"
     notation: "INFIX"
   supported_impls:
   - "any_any"
@@ -503,6 +496,13 @@ supported_scalar_functions:
   - "date_date"
   - "iday_iday"
   - "iyear_iyear"
+- source: "comparison"
+  name: "gte"
+  system_metadata:
+    name: ">="
+    notation: "INFIX"
+  supported_impls:
+  - "any_any"
 - source: "comparison"
   name: "equal"
   system_metadata:

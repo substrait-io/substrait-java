@@ -26,7 +26,7 @@ import io.substrait.function.ToTypeString
 import io.substrait.util.DecimalUtil
 import io.substrait.util.EmptyVisitationContext
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.jdk.CollectionConverters._
 
 class ExpressionToString extends DefaultExpressionVisitor[String] {
 

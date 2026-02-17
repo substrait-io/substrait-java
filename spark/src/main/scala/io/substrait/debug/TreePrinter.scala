@@ -23,7 +23,7 @@ import RelToVerboseString.{verboseString, verboseStringWithSuffix}
 import io.substrait.relation
 import io.substrait.relation.Rel
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.jdk.CollectionConverters._
 
 trait TreePrinter[T] {
   def tree(t: T): String

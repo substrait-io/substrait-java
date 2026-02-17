@@ -29,7 +29,7 @@ import io.substrait.expression.Expression.FailureBehavior
 
 import java.util.Optional
 
-import scala.collection.JavaConverters.asJavaIterableConverter
+import scala.jdk.CollectionConverters._
 
 /** The builder to generate substrait expressions from catalyst expressions. */
 abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
