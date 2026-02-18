@@ -59,6 +59,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
               _,
               _,
               _,
+              _,
               _),
             ordinal,
             _) =>
@@ -66,7 +67,7 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
           args.grouped(2).map { case Seq(name, value) => (name, value) }.toArray.apply(ordinal)
 
         child match {
-          case Aggregate(groupingExpressions, aggregateExpressions, child)
+          case Aggregate(groupingExpressions, aggregateExpressions, child, _)
               if aggregateExpressions.forall(e => e.isInstanceOf[Alias]) =>
             val used = value match {
               case ref: AttributeReference => ref.exprId.id

@@ -37,7 +37,7 @@ import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation, V2SessionCatalog}
 import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
-import org.apache.spark.sql.types.{NullType, StructType}
+import org.apache.spark.sql.types.{NullType, StructField, StructType}
 
 import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
@@ -83,6 +83,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case p: LeafNode => convertReadOperator(p)
     case s: SubqueryAlias => visit(s.child)
     case v: View => visit(v.child)
+    case w: WindowGroupLimit => visitWindowGroupLimit(w)
     case other => t(other)
   }
 
@@ -256,6 +257,13 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .addAllPartitionExpressions(partitionExpressions)
       .addAllSorts(sorts)
       .build()
+  }
+
+  def visitWindowGroupLimit(windowGroupLimit: WindowGroupLimit): relation.Rel = {
+    // WindowGroupLimit is a Spark 3.4+ optimization that combines Window + Filter for rank-based limits
+    // We convert it by visiting its child, which will be a Window node that already has the filter applied
+    // The WindowGroupLimit itself is just an optimization wrapper, so we unwrap it
+    visit(windowGroupLimit.child)
   }
 
   private def asLong(e: Expression): Long = e match {
@@ -582,7 +590,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case CreateTable(ResolvedIdentifier(c: V2SessionCatalog, id), tableSchema, _, _, _)
         if id.namespace().length > 0 =>
       val names = Seq(c.name(), id.namespace()(0), id.name())
-      convertCreateTable(names, tableSchema)
+      val schema = StructType(
+        tableSchema.map(col => StructField(col.name, col.dataType, col.nullable)))
+      convertCreateTable(names, schema)
     case DropTable(ResolvedIdentifier(c: V2SessionCatalog, id), ifExists, _)
         if id.namespace().length > 0 =>
       val names = Seq(c.name(), id.namespace()(0), id.name())

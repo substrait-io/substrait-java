@@ -88,8 +88,8 @@ tasks.withType<ScalaCompile>() {
 var SPARKBUNDLE_VERSION = properties.get("sparkbundle.version")
 
 sourceSets {
-  main { scala { setSrcDirs(listOf("src/main/scala", "src/main/spark-3.4")) } }
-  test { scala { setSrcDirs(listOf("src/test/scala", "src/test/spark-3.2", "src/main/scala")) } }
+  main { scala { setSrcDirs(listOf("src/main/scala", "src/main/spark-4.0")) } }
+  test { scala { setSrcDirs(listOf("src/test/scala", "src/test/spark-4.0", "src/main/scala")) } }
 }
 
 dependencies {

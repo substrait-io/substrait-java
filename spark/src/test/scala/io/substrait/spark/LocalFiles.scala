@@ -19,8 +19,9 @@ package io.substrait.spark
 
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
-import org.apache.spark.sql.{Dataset, DatasetUtil, Encoders, Row}
+import org.apache.spark.sql.{Dataset, Encoders, Row}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}

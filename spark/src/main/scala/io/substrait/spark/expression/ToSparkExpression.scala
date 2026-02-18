@@ -248,7 +248,7 @@ class ToSparkExpression(
   override def visit(expr: SExpression.InPredicate, context: EmptyVisitationContext): Expression = {
     val needles = expr.needles().asScala.map(e => e.accept(this, context)).toSeq
     val haystack = expr.haystack().accept(toLogicalPlan.get, context)
-    new InSubquery(needles, ListQuery(haystack, childOutputs = haystack.output)) {
+    new InSubquery(needles, ListQuery(haystack, numCols = haystack.output.length)) {
       override def nullable: Boolean = expr.getType.nullable()
     }
   }

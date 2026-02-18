@@ -141,7 +141,7 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
     val originalValues = l.value.asInstanceOf[MapData].valueArray().toArray[UTF8String](StringType)
     val sparkValues =
       sparkLiteral.value.asInstanceOf[MapData].valueArray().toArray[UTF8String](StringType)
-    assert(originalValues.sorted.sameElements(sparkValues.sorted))
+    assert(originalValues.sameElements(sparkValues))
   }
 
   test(s"test named struct") {
