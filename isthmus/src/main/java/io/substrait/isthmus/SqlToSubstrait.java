@@ -1,7 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
@@ -22,13 +20,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   protected final ConverterProvider converterProvider;
 
   public SqlToSubstrait() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
-  }
-
-  /** Use {@link SqlToSubstrait#SqlToSubstrait(ConverterProvider)} instead */
-  @Deprecated
-  public SqlToSubstrait(SimpleExtension.ExtensionCollection extensions) {
-    this(new ConverterProvider(extensions));
+    this(new ConverterProvider());
   }
 
   public SqlToSubstrait(ConverterProvider converterProvider) {

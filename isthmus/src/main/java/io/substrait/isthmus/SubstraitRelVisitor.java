@@ -10,8 +10,6 @@ import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
-import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractWriteRel;
@@ -85,23 +83,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
     this(new ConverterProvider(typeFactory, extensions));
-  }
-
-  /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */
-  @Deprecated
-  public SubstraitRelVisitor(
-      RelDataTypeFactory typeFactory,
-      ScalarFunctionConverter scalarFunctionConverter,
-      AggregateFunctionConverter aggregateFunctionConverter,
-      WindowFunctionConverter windowFunctionConverter,
-      TypeConverter typeConverter) {
-    this(
-        new ConverterProvider(
-            typeFactory,
-            scalarFunctionConverter,
-            aggregateFunctionConverter,
-            windowFunctionConverter,
-            typeConverter));
   }
 
   public SubstraitRelVisitor(ConverterProvider converterProvider) {
