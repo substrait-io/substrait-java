@@ -1,7 +1,6 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import java.util.Collections;
@@ -46,17 +45,16 @@ public class DynamicConverterProvider extends ConverterProvider {
 
   @Override
   public SqlOperatorTable getSqlOperatorTable() {
+    SqlOperatorTable operatorTable = super.getSqlOperatorTable();
     SimpleExtension.ExtensionCollection dynamicExtensionCollection =
         ExtensionUtils.getDynamicExtensions(extensions);
-    if (!dynamicExtensionCollection.scalarFunctions().isEmpty()
-        || !dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
-      List<SqlOperator> generatedDynamicOperators =
-          SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
-      return SqlOperatorTables.chain(
-          SubstraitOperatorTable.INSTANCE, SqlOperatorTables.of(generatedDynamicOperators));
+    if (dynamicExtensionCollection.scalarFunctions().isEmpty()
+        && dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
+      return operatorTable;
     }
-
-    return SubstraitOperatorTable.INSTANCE;
+    List<SqlOperator> generatedDynamicOperators =
+        SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
+    return SqlOperatorTables.chain(operatorTable, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
   @Override
