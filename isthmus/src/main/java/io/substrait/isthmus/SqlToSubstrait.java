@@ -17,7 +17,6 @@ import org.apache.calcite.sql.parser.SqlParser;
  */
 public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
-  protected final ConverterProvider converterProvider;
 
   public SqlToSubstrait() {
     this(new ConverterProvider());
@@ -26,7 +25,6 @@ public class SqlToSubstrait extends SqlConverterBase {
   public SqlToSubstrait(ConverterProvider converterProvider) {
     super(converterProvider);
     this.operatorTable = converterProvider.getSqlOperatorTable();
-    this.converterProvider = converterProvider;
   }
 
   /**

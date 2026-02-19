@@ -25,6 +25,7 @@ public class SchemaCollector {
   private final RelDataTypeFactory typeFactory;
   private final TypeConverter typeConverter;
 
+  @Deprecated
   public SchemaCollector(RelDataTypeFactory typeFactory, TypeConverter typeConverter) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
