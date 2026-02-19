@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.google.common.annotations.Beta;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
-import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -71,18 +70,13 @@ public class PlanTestBase {
       PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
 
   protected PlanTestBase() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
+    this(new ConverterProvider());
   }
 
-  protected PlanTestBase(SimpleExtension.ExtensionCollection extensions) {
-    this(extensions, new ConverterProvider(extensions));
-  }
-
-  protected PlanTestBase(
-      SimpleExtension.ExtensionCollection extensions, ConverterProvider converterProvider) {
-    this.extensions = extensions;
-    this.sb = new SubstraitBuilder(extensions);
+  protected PlanTestBase(ConverterProvider converterProvider) {
     this.converterProvider = converterProvider;
+    this.extensions = converterProvider.getExtensions();
+    this.sb = new SubstraitBuilder(extensions);
     this.substraitToCalcite = new SubstraitToCalcite(converterProvider);
   }
 

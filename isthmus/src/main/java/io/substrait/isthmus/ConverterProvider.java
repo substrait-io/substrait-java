@@ -48,6 +48,8 @@ public class ConverterProvider {
 
   protected RelDataTypeFactory typeFactory;
 
+  protected final SimpleExtension.ExtensionCollection extensions;
+
   protected ScalarFunctionConverter scalarFunctionConverter;
   protected AggregateFunctionConverter aggregateFunctionConverter;
   protected WindowFunctionConverter windowFunctionConverter;
@@ -55,17 +57,18 @@ public class ConverterProvider {
   protected TypeConverter typeConverter;
 
   public ConverterProvider() {
-    this(SubstraitTypeSystem.TYPE_FACTORY, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
   public ConverterProvider(SimpleExtension.ExtensionCollection extensions) {
-    this(SubstraitTypeSystem.TYPE_FACTORY, extensions);
+    this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
   public ConverterProvider(
-      RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
+      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     this(
         typeFactory,
+        extensions,
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
@@ -74,11 +77,13 @@ public class ConverterProvider {
 
   public ConverterProvider(
       RelDataTypeFactory typeFactory,
+      SimpleExtension.ExtensionCollection extensions,
       ScalarFunctionConverter sfc,
       AggregateFunctionConverter afc,
       WindowFunctionConverter wfc,
       TypeConverter tc) {
     this.typeFactory = typeFactory;
+    this.extensions = extensions;
     this.scalarFunctionConverter = sfc;
     this.aggregateFunctionConverter = afc;
     this.windowFunctionConverter = wfc;
@@ -232,6 +237,10 @@ public class ConverterProvider {
 
   public RelDataTypeFactory getTypeFactory() {
     return typeFactory;
+  }
+
+  public SimpleExtension.ExtensionCollection getExtensions() {
+    return extensions;
   }
 
   public ScalarFunctionConverter getScalarFunctionConverter() {

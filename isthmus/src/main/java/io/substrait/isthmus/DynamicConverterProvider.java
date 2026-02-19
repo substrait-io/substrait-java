@@ -16,8 +16,8 @@ public class DynamicConverterProvider extends ConverterProvider {
   private final SimpleExtension.ExtensionCollection extensions;
 
   public DynamicConverterProvider(
-      RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
-    super(typeFactory, extensions);
+      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+    super(extensions, typeFactory);
     this.extensions = extensions;
     this.scalarFunctionConverter = createScalarFunctionConverter(extensions, typeFactory);
   }

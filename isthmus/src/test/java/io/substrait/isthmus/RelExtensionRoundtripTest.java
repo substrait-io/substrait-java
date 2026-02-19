@@ -82,7 +82,7 @@ class RelExtensionRoundtripTest extends PlanTestBase {
 
     // Calcite -> Substrait POJO 3
     Rel pojo3 =
-        (new CustomSubstraitRelVisitor(new ConverterProvider(typeFactory, extensions)))
+        (new CustomSubstraitRelVisitor(new ConverterProvider(extensions, typeFactory)))
             .apply(calcite);
     assertEquals(pojo1, pojo3);
   }

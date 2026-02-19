@@ -96,22 +96,7 @@ class CustomFunctionTest extends PlanTestBase {
   static final RelDataType varcharArrayType =
       new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT).createArrayType(varcharType, -1);
 
-  // Define additional mapping signatures for the custom scalar functions
-  final List<FunctionMappings.Sig> additionalScalarSignatures =
-      List.of(
-          FunctionMappings.s(customScalarFn),
-          FunctionMappings.s(customScalarAnyFn),
-          FunctionMappings.s(customScalarAnyToAnyFn),
-          FunctionMappings.s(customScalarAny1Any1ToAny1Fn),
-          FunctionMappings.s(customScalarAny1Any2ToAny2Fn),
-          FunctionMappings.s(customScalarListAnyFn),
-          FunctionMappings.s(customScalarListAnyAndAnyFn),
-          FunctionMappings.s(customScalarListStringFn),
-          FunctionMappings.s(customScalarListStringAndAnyFn),
-          FunctionMappings.s(customScalarListStringAndAnyVariadic0Fn),
-          FunctionMappings.s(customScalarListStringAndAnyVariadic1Fn),
-          FunctionMappings.s(toBType));
-
+  // Define additional signatures for the custom scalar functions
   static final SqlFunction customScalarFn =
       new SqlFunction(
           "custom_scalar",
@@ -190,6 +175,7 @@ class CustomFunctionTest extends PlanTestBase {
           null,
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
+
   static final SqlFunction customScalarListStringAndAnyVariadic0Fn =
       new SqlFunction(
           "custom_scalar_liststring_anyvariadic0_to_liststring",
@@ -198,6 +184,7 @@ class CustomFunctionTest extends PlanTestBase {
           null,
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
+
   static final SqlFunction customScalarListStringAndAnyVariadic1Fn =
       new SqlFunction(
           "custom_scalar_liststring_anyvariadic1_to_liststring",
@@ -216,9 +203,22 @@ class CustomFunctionTest extends PlanTestBase {
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
 
-  // Define additional mapping signatures for the custom aggregate functions
-  final List<FunctionMappings.Sig> additionalAggregateSignatures =
-      List.of(FunctionMappings.s(customAggregateFn));
+  static final List<FunctionMappings.Sig> additionalScalarSignatures =
+      List.of(
+          FunctionMappings.s(customScalarFn),
+          FunctionMappings.s(customScalarAnyFn),
+          FunctionMappings.s(customScalarAnyToAnyFn),
+          FunctionMappings.s(customScalarAny1Any1ToAny1Fn),
+          FunctionMappings.s(customScalarAny1Any2ToAny2Fn),
+          FunctionMappings.s(customScalarListAnyFn),
+          FunctionMappings.s(customScalarListAnyAndAnyFn),
+          FunctionMappings.s(customScalarListStringFn),
+          FunctionMappings.s(customScalarListStringAndAnyFn),
+          FunctionMappings.s(customScalarListStringAndAnyVariadic0Fn),
+          FunctionMappings.s(customScalarListStringAndAnyVariadic1Fn),
+          FunctionMappings.s(toBType));
+
+  // Define additional signatures for the custom aggregate functions
 
   static final SqlAggFunction customAggregateFn =
       new SqlAggFunction(
@@ -229,38 +229,50 @@ class CustomFunctionTest extends PlanTestBase {
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
 
-  TypeConverter typeConverter = new TypeConverter(userTypeMapper);
+  static final List<FunctionMappings.Sig> additionalAggregateSignatures =
+      List.of(FunctionMappings.s(customAggregateFn));
+
+  static TypeConverter typeConverter = new TypeConverter(userTypeMapper);
 
   // Create Function Converters that can handle the custom functions
-  ScalarFunctionConverter scalarFunctionConverter =
+  static ScalarFunctionConverter scalarFunctionConverter =
       new ScalarFunctionConverter(
           CUSTOM_EXTENSIONS.scalarFunctions(),
           additionalScalarSignatures,
-          typeFactory,
+          SubstraitTypeSystem.TYPE_FACTORY,
           typeConverter);
-  AggregateFunctionConverter aggregateFunctionConverter =
+  static AggregateFunctionConverter aggregateFunctionConverter =
       new AggregateFunctionConverter(
           CUSTOM_EXTENSIONS.aggregateFunctions(),
           additionalAggregateSignatures,
-          typeFactory,
+          SubstraitTypeSystem.TYPE_FACTORY,
           typeConverter);
-  WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(CUSTOM_EXTENSIONS.windowFunctions(), typeFactory);
+  static WindowFunctionConverter windowFunctionConverter =
+      new WindowFunctionConverter(
+          CUSTOM_EXTENSIONS.windowFunctions(), SubstraitTypeSystem.TYPE_FACTORY);
 
-  ConverterProvider converterProvider =
-      new ConverterProvider(
-          typeFactory,
-          scalarFunctionConverter,
-          aggregateFunctionConverter,
-          windowFunctionConverter,
-          typeConverter);
+  //  static ConverterProvider converterProvider =
+  //      new ConverterProvider(
+  //          SubstraitTypeSystem.TYPE_FACTORY,
+  //          CUSTOM_EXTENSIONS,
+  //          scalarFunctionConverter,
+  //          aggregateFunctionConverter,
+  //          windowFunctionConverter,
+  //          typeConverter);
 
   // Create a SubstraitRelVisitor that uses the custom Function Converters
   final SubstraitRelVisitor calciteToSubstrait = new SubstraitRelVisitor(converterProvider);
   final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);
 
   CustomFunctionTest() {
-    super(CUSTOM_EXTENSIONS);
+    super(
+        new ConverterProvider(
+            SubstraitTypeSystem.TYPE_FACTORY,
+            CUSTOM_EXTENSIONS,
+            scalarFunctionConverter,
+            aggregateFunctionConverter,
+            windowFunctionConverter,
+            typeConverter));
   }
 
   @Test

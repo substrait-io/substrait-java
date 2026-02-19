@@ -106,7 +106,7 @@ public class SubstraitRelNodeConverter
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
       RelBuilder relBuilder) {
-    this(relBuilder, new ConverterProvider(typeFactory, extensions));
+    this(relBuilder, new ConverterProvider(extensions, typeFactory));
   }
 
   public SubstraitRelNodeConverter(RelBuilder relBuilder, ConverterProvider converterProvider) {

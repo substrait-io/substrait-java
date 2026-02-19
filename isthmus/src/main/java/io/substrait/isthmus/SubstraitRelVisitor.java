@@ -82,7 +82,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Deprecated
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
-    this(new ConverterProvider(typeFactory, extensions));
+    this(new ConverterProvider(extensions, typeFactory));
   }
 
   public SubstraitRelVisitor(ConverterProvider converterProvider) {
