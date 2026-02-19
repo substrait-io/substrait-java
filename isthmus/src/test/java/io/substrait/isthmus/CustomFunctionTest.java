@@ -251,15 +251,6 @@ class CustomFunctionTest extends PlanTestBase {
       new WindowFunctionConverter(
           CUSTOM_EXTENSIONS.windowFunctions(), SubstraitTypeSystem.TYPE_FACTORY);
 
-  //  static ConverterProvider converterProvider =
-  //      new ConverterProvider(
-  //          SubstraitTypeSystem.TYPE_FACTORY,
-  //          CUSTOM_EXTENSIONS,
-  //          scalarFunctionConverter,
-  //          aggregateFunctionConverter,
-  //          windowFunctionConverter,
-  //          typeConverter);
-
   // Create a SubstraitRelVisitor that uses the custom Function Converters
   final SubstraitRelVisitor calciteToSubstrait = new SubstraitRelVisitor(converterProvider);
   final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(converterProvider);

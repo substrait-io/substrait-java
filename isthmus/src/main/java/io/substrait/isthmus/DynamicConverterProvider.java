@@ -57,11 +57,6 @@ public class DynamicConverterProvider extends ConverterProvider {
     return SqlOperatorTables.chain(operatorTable, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
-  @Override
-  public ScalarFunctionConverter getScalarFunctionConverter() {
-    return scalarFunctionConverter;
-  }
-
   private static ScalarFunctionConverter createScalarFunctionConverter(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
 
