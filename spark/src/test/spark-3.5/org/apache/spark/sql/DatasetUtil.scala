@@ -17,15 +17,10 @@
 
 package org.apache.spark.sql
 
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
 object DatasetUtil {
   def fromLogicalPlan(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
-    sparkSession.withActive {
-      val qe = sparkSession.sessionState.executePlan(logicalPlan)
-      qe.assertAnalyzed()
-      new Dataset[Row](qe, RowEncoder(qe.analyzed.schema))
-    }
+    Dataset.ofRows(sparkSession, logicalPlan)
   }
 }

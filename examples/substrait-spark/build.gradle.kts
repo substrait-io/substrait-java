@@ -10,22 +10,23 @@ repositories {
   mavenCentral()
 }
 
-// Get the Spark variant property
+// Get the Spark variant property - determines which spark subproject to use
 val sparkVariantProp = findProperty("sparkVariant")?.toString() ?: "spark40_2.13"
 
-// Map variants to their versions
-val variantVersions =
+// Map variants to their subproject paths and versions
+val variantConfig =
   mapOf(
-    "spark34_2.12" to Pair("3.4.4", "2.12"),
-    "spark35_2.12" to Pair("3.5.3", "2.12"),
-    "spark40_2.13" to Pair("4.0.2", "2.13"),
+    "spark34_2.12" to Triple(":spark:spark-3.4_2.12", "3.4.4", "2.12"),
+    "spark35_2.12" to Triple(":spark:spark-3.5_2.12", "3.5.4", "2.12"),
+    "spark40_2.13" to Triple(":spark:spark-4.0_2.13", "4.0.2", "2.13"),
   )
 
-val (sparkVersion, scalaBinary) =
-  variantVersions[sparkVariantProp] ?: variantVersions["spark40_2.13"]!!
+val (sparkProject, sparkVersion, scalaBinary) =
+  variantConfig[sparkVariantProp] ?: variantConfig["spark40_2.13"]!!
 
 dependencies {
-  implementation(project(":spark"))
+  // Depend on the specific spark variant subproject
+  implementation(project(sparkProject))
 
   // For a real Spark application, these would not be required since they would be in the Spark
   // server classpath. Use direct Maven coordinates to match the spark module's variant.
@@ -34,7 +35,7 @@ dependencies {
 }
 
 tasks.jar {
-  dependsOn(":spark:jar", ":core:jar", ":core:shadowJar")
+  dependsOn("$sparkProject:jar", ":core:jar", ":core:shadowJar")
 
   isZip64 = true
   exclude("META-INF/*.RSA")

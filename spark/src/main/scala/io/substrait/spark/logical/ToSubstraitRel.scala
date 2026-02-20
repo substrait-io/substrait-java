@@ -17,6 +17,7 @@
 package io.substrait.spark.logical
 
 import io.substrait.spark.{FileHolder, SparkExtension, ToSubstraitType}
+import io.substrait.spark.compat.WindowGroupLimitCase
 import io.substrait.spark.expression._
 import io.substrait.spark.utils.Util
 
@@ -83,7 +84,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case p: LeafNode => convertReadOperator(p)
     case s: SubqueryAlias => visit(s.child)
     case v: View => visit(v.child)
-    case w: WindowGroupLimit => visitWindowGroupLimit(w)
+//    case plan if SparkCompat.instance.supportsWindowGroupLimit =>
+//      SparkCompat.instance.handleWindowGroupLimit(plan, visit)
+    case WindowGroupLimitCase(child) => visit(child)
     case other => t(other)
   }
 
@@ -257,13 +260,6 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .addAllPartitionExpressions(partitionExpressions)
       .addAllSorts(sorts)
       .build()
-  }
-
-  def visitWindowGroupLimit(windowGroupLimit: WindowGroupLimit): relation.Rel = {
-    // WindowGroupLimit is a Spark 3.4+ optimization that combines Window + Filter for rank-based limits
-    // We convert it by visiting its child, which will be a Window node that already has the filter applied
-    // The WindowGroupLimit itself is just an optimization wrapper, so we unwrap it
-    visit(windowGroupLimit.child)
   }
 
   private def asLong(e: Expression): Long = e match {

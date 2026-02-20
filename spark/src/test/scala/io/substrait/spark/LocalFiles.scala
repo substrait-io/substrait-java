@@ -33,6 +33,8 @@ import io.substrait.relation.ProtoRelConverter
 import java.nio.file.Paths
 
 class LocalFiles extends SharedSparkSession {
+  private val testResourcesPath = Paths.get("../src/test/resources/")
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     sparkContext.setLogLevel("WARN")
@@ -78,7 +80,7 @@ class LocalFiles extends SharedSparkSession {
     val table = spark.read
       .option("header", true)
       .option("inferSchema", true)
-      .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("dataset-a.csv").toAbsolutePath.toString)
 
     assertRoundTripData(table)
   }
@@ -88,7 +90,7 @@ class LocalFiles extends SharedSparkSession {
       .option("header", true)
       .option("inferSchema", true)
       .option("nullValue", "seven")
-      .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("dataset-a.csv").toAbsolutePath.toString)
 
     val result = assertRoundTripData(table)
     val id = result.filter("isnull(VALUE)").head().get(0)
@@ -105,7 +107,7 @@ class LocalFiles extends SharedSparkSession {
       .schema(schema)
       .option("delimiter", "|")
       .option("quote", "'")
-      .csv(Paths.get("src/test/resources/dataset-a.txt").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("dataset-a.txt").toAbsolutePath.toString)
 
     assertRoundTripData(table)
   }
@@ -114,21 +116,21 @@ class LocalFiles extends SharedSparkSession {
     val table = spark.read
       .option("header", true)
       .option("inferSchema", true)
-      .csv(Paths.get("src/test/resources/csv/").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("csv/").toAbsolutePath.toString)
 
     assertRoundTripData(table)
   }
 
   test("Read parquet file") {
     val table = spark.read
-      .parquet(Paths.get("src/test/resources/dataset-a.parquet").toAbsolutePath.toString)
+      .parquet(testResourcesPath.resolve("dataset-a.parquet").toAbsolutePath.toString)
 
     assertRoundTripData(table)
   }
 
   test("Read orc file") {
     val table = spark.read
-      .orc(Paths.get("src/test/resources/dataset-a.orc").toAbsolutePath.toString)
+      .orc(testResourcesPath.resolve("dataset-a.orc").toAbsolutePath.toString)
 
     assertRoundTripData(table)
   }
@@ -137,10 +139,10 @@ class LocalFiles extends SharedSparkSession {
     val csv = spark.read
       .option("header", true)
       .option("inferSchema", true)
-      .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("dataset-a.csv").toAbsolutePath.toString)
 
     val orc = spark.read
-      .orc(Paths.get("src/test/resources/dataset-a.orc").toAbsolutePath.toString)
+      .orc(testResourcesPath.resolve("dataset-a.orc").toAbsolutePath.toString)
       .withColumnRenamed("ID", "ID_B")
       .withColumnRenamed("VALUE", "VALUE_B");
 
@@ -155,7 +157,7 @@ class LocalFiles extends SharedSparkSession {
     val csv = spark.read
       .option("header", true)
       .option("inferSchema", true)
-      .csv(Paths.get("src/test/resources/dataset-a.csv").toAbsolutePath.toString)
+      .csv(testResourcesPath.resolve("dataset-a.csv").toAbsolutePath.toString)
 
     csv.createOrReplaceTempView("csv")
     val data = spark.sql("""

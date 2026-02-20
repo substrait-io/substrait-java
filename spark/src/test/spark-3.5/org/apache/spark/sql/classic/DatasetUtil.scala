@@ -15,17 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.classic
 
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
+/** Compatibility wrapper for Spark 3.5 to provide classic package API */
 object DatasetUtil {
   def fromLogicalPlan(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
-    sparkSession.withActive {
-      val qe = sparkSession.sessionState.executePlan(logicalPlan)
-      qe.assertAnalyzed()
-      new Dataset[Row](qe, RowEncoder(qe.analyzed.schema))
-    }
+    Dataset.ofRows(sparkSession, logicalPlan)
   }
 }

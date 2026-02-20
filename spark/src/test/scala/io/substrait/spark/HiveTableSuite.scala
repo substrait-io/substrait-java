@@ -3,8 +3,8 @@ package io.substrait.spark
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
 import org.apache.spark.SparkFunSuite
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.classic.SparkSession
 
 import io.substrait.extension.ExtensionLookup
 import io.substrait.plan.{PlanProtoConverter, ProtoPlanConverter}

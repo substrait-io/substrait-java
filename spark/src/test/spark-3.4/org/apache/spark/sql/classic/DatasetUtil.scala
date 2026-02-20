@@ -17,10 +17,12 @@
 
 package org.apache.spark.sql.classic
 
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
+/** Compatibility wrapper for Spark 3.4 to provide classic package API */
 object DatasetUtil {
   def fromLogicalPlan(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
-    Dataset.ofRows(sparkSession, logicalPlan)
+    org.apache.spark.sql.DatasetUtil.fromLogicalPlan(sparkSession, logicalPlan)
   }
 }
