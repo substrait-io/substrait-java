@@ -3,6 +3,7 @@ package io.substrait.isthmus.cli;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -12,7 +13,9 @@ import io.substrait.proto.Plan;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.parser.SqlParser;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -52,6 +55,20 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     BINARY, // protobuf BINARY format
   }
 
+  @Option(
+      names = {"--unquotedcasing"},
+      description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
+  private Casing unquotedCasing = Casing.TO_UPPER;
+
+  private ConverterProvider converterProvider() {
+    return new ConverterProvider() {
+      @Override
+      public SqlParser.Config getSqlParserConfig() {
+        return super.getSqlParserConfig().withUnquotedCasing(unquotedCasing);
+      }
+    };
+  }
+
   /**
    * Standard Java Main method invoked by the isthmus CLI command.
    *
@@ -81,11 +98,11 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   public Integer call() throws Exception {
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
-      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait();
+      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(converterProvider());
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait();
+      SqlToSubstrait converter = new SqlToSubstrait(converterProvider());
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
               createStatements.toArray(String[]::new));
