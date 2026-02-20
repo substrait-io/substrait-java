@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -14,6 +15,14 @@ import org.apache.calcite.sql.util.SqlOperatorTables;
 public class DynamicConverterProvider extends ConverterProvider {
 
   private final SimpleExtension.ExtensionCollection extensions;
+
+  public DynamicConverterProvider() {
+    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
+  }
+
+  public DynamicConverterProvider(SimpleExtension.ExtensionCollection extensions) {
+    this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
+  }
 
   public DynamicConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {

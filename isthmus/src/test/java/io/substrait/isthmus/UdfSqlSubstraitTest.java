@@ -12,9 +12,7 @@ class UdfSqlSubstraitTest extends PlanTestBase {
   private static final String CUSTOM_FUNCTION_PATH = "/extensions/scalar_functions_custom.yaml";
 
   UdfSqlSubstraitTest() {
-    super(
-        new DynamicConverterProvider(
-            loadExtensions(List.of(CUSTOM_FUNCTION_PATH)), SubstraitTypeSystem.TYPE_FACTORY));
+    super(new DynamicConverterProvider(loadExtensions(List.of(CUSTOM_FUNCTION_PATH))));
   }
 
   @Test
