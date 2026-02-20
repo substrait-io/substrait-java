@@ -69,7 +69,7 @@ public class DynamicConverterProvider extends ConverterProvider {
   private static ScalarFunctionConverter createScalarFunctionConverter(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
 
-    List<FunctionMappings.Sig> additionalSignatures;
+    List<FunctionMappings.Sig> additionalSignatures = Collections.emptyList();
 
     java.util.Set<String> knownFunctionNames =
         FunctionMappings.SCALAR_SIGS.stream()
@@ -81,9 +81,7 @@ public class DynamicConverterProvider extends ConverterProvider {
             .filter(f -> !knownFunctionNames.contains(f.name().toLowerCase()))
             .collect(Collectors.toList());
 
-    if (dynamicFunctions.isEmpty()) {
-      additionalSignatures = Collections.emptyList();
-    } else {
+    if (!dynamicFunctions.isEmpty()) {
       SimpleExtension.ExtensionCollection dynamicExtensionCollection =
           SimpleExtension.ExtensionCollection.builder().scalarFunctions(dynamicFunctions).build();
 
