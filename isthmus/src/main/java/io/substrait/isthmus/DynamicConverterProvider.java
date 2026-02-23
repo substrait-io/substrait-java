@@ -25,7 +25,7 @@ public class DynamicConverterProvider extends ConverterProvider {
   public DynamicConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     super(extensions, typeFactory);
-    this.scalarFunctionConverter = createScalarFunctionConverter(extensions, typeFactory);
+    this.scalarFunctionConverter = createScalarFunctionConverter();
   }
 
   @Override
@@ -42,10 +42,7 @@ public class DynamicConverterProvider extends ConverterProvider {
             .collect(Collectors.toList());
     callConverters.add(
         new ScalarFunctionConverter(
-            extensions.scalarFunctions(),
-            additionalSignatures,
-            typeFactory,
-            TypeConverter.DEFAULT));
+            extensions.scalarFunctions(), additionalSignatures, typeFactory, typeConverter));
     return callConverters;
   }
 
@@ -63,9 +60,7 @@ public class DynamicConverterProvider extends ConverterProvider {
     return SqlOperatorTables.chain(operatorTable, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
-  private static ScalarFunctionConverter createScalarFunctionConverter(
-      SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-
+  private ScalarFunctionConverter createScalarFunctionConverter() {
     List<FunctionMappings.Sig> additionalSignatures = Collections.emptyList();
 
     java.util.Set<String> knownFunctionNames =
@@ -92,6 +87,6 @@ public class DynamicConverterProvider extends ConverterProvider {
     }
 
     return new ScalarFunctionConverter(
-        extensions.scalarFunctions(), additionalSignatures, typeFactory, TypeConverter.DEFAULT);
+        extensions.scalarFunctions(), additionalSignatures, typeFactory, typeConverter);
   }
 }
