@@ -14,8 +14,6 @@ import org.apache.calcite.sql.util.SqlOperatorTables;
 
 public class DynamicConverterProvider extends ConverterProvider {
 
-  private final SimpleExtension.ExtensionCollection extensions;
-
   public DynamicConverterProvider() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
   }
@@ -27,7 +25,6 @@ public class DynamicConverterProvider extends ConverterProvider {
   public DynamicConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     super(extensions, typeFactory);
-    this.extensions = extensions;
     this.scalarFunctionConverter = createScalarFunctionConverter(extensions, typeFactory);
   }
 
