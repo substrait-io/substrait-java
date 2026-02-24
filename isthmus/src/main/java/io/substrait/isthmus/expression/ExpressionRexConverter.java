@@ -41,6 +41,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLambdaRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
@@ -382,6 +383,23 @@ public class ExpressionRexConverter
   }
 
   @Override
+  public RexNode visit(Expression.Lambda expr, Context context) throws RuntimeException {
+    List<RexLambdaRef> parameters =
+        IntStream.range(0, expr.parameters().fields().size())
+            .mapToObj(
+                i ->
+                    new RexLambdaRef(
+                        i,
+                        "p" + i,
+                        typeConverter.toCalcite(typeFactory, expr.parameters().fields().get(i))))
+            .collect(Collectors.toList());
+
+    RexNode body = expr.body().accept(this, context);
+
+    return rexBuilder.makeLambdaCall(body, parameters);
+  }
+
+  @Override
   public RexNode visit(Switch expr, Context context) throws RuntimeException {
     RexNode match = expr.match().accept(this, context);
     Stream<RexNode> caseThenArgs =
@@ -655,6 +673,21 @@ public class ExpressionRexConverter
       }
 
       return rexInputRef;
+    } else if (expr.isLambdaParameterReference()) {
+      int stepsOut = expr.lambdaParameterReferenceStepsOut().get();
+      if (stepsOut != 0) {
+        throw new UnsupportedOperationException(
+            "Calcite does not support nested lambdas (stepsOut=" + stepsOut + ")");
+      }
+
+      final ReferenceSegment segment = expr.segments().get(0);
+      if (segment instanceof FieldReference.StructField) {
+        final FieldReference.StructField field = (FieldReference.StructField) segment;
+        RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
+        return new RexLambdaRef(field.offset(), "p" + field.offset(), calciteType);
+      } else {
+        throw new IllegalArgumentException("Unhandled type: " + segment);
+      }
     }
 
     return visitFallback(expr, context);

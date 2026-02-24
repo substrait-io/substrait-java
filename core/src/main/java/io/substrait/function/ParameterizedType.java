@@ -201,6 +201,23 @@ public interface ParameterizedType extends TypeExpression {
   }
 
   @Value.Immutable
+  abstract class Func extends BaseParameterizedType implements NullableType {
+    public abstract java.util.List<ParameterizedType> parameterTypes();
+
+    public abstract ParameterizedType returnType();
+
+    public static ImmutableParameterizedType.Func.Builder builder() {
+      return ImmutableParameterizedType.Func.builder();
+    }
+
+    @Override
+    <R, E extends Throwable> R accept(final ParameterizedTypeVisitor<R, E> parameterizedTypeVisitor)
+        throws E {
+      return parameterizedTypeVisitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract class ListType extends BaseParameterizedType implements NullableType {
     public abstract ParameterizedType name();
 

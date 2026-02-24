@@ -119,6 +119,8 @@ abstract class BaseProtoTypes<T, I> {
 
   public abstract T intervalCompound(I precision);
 
+  public abstract T func(Iterable<T> parameterTypes, T returnType);
+
   public final T struct(T... types) {
     return struct(Arrays.asList(types));
   }

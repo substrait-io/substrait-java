@@ -353,6 +353,22 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
+  abstract class Func implements Type {
+    public abstract java.util.List<Type> parameterTypes();
+
+    public abstract Type returnType();
+
+    public static ImmutableType.Func.Builder builder() {
+      return ImmutableType.Func.builder();
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract class Struct implements Type {
     public abstract java.util.List<Type> fields();
 

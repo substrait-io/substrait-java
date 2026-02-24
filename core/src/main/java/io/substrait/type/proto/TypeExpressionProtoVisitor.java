@@ -318,6 +318,13 @@ public class TypeExpressionProtoVisitor
     }
 
     @Override
+    public DerivationExpression func(
+        Iterable<DerivationExpression> parameterTypes, DerivationExpression returnType) {
+      throw new UnsupportedOperationException(
+          "User defined types are not supported in Derivation Expressions for now");
+    }
+
+    @Override
     public DerivationExpression struct(Iterable<DerivationExpression> types) {
       return wrap(
           DerivationExpression.ExpressionStruct.newBuilder()

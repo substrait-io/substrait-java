@@ -37,6 +37,7 @@ public class ProtoExpressionConverter {
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
+  private final List<Type.Struct> lambdaParameterStack = new ArrayList<>();
 
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
@@ -75,6 +76,26 @@ public class ProtoExpressionConverter {
             reference.getDirectReference().getStructField().getField(),
             rootType,
             reference.getOuterReference().getStepsOut());
+      case LAMBDA_PARAMETER_REFERENCE:
+        {
+          io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =
+              reference.getLambdaParameterReference();
+
+          int stepsOut = lambdaParamRef.getStepsOut();
+          int lambdaIndex = lambdaParameterStack.size() - 1 - stepsOut;
+          if (lambdaIndex < 0 || lambdaIndex >= lambdaParameterStack.size()) {
+            throw new IllegalArgumentException(
+                String.format(
+                    "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
+                    stepsOut, lambdaParameterStack.size()));
+          }
+
+          Type.Struct lambdaParameters = lambdaParameterStack.get(lambdaIndex);
+          return FieldReference.newLambdaParameterReference(
+              reference.getDirectReference().getStructField().getField(),
+              lambdaParameters,
+              stepsOut);
+        }
       case ROOTTYPE_NOT_SET:
       default:
         throw new IllegalArgumentException("Unhandled type: " + reference.getRootTypeCase());
@@ -258,6 +279,44 @@ public class ProtoExpressionConverter {
               throw new IllegalArgumentException(
                   "Unknown subquery type: " + expr.getSubquery().getSubqueryTypeCase());
           }
+        }
+
+      case LAMBDA:
+        {
+          io.substrait.proto.Expression.Lambda protoLambda = expr.getLambda();
+          Type.Struct parameters =
+              (Type.Struct)
+                  protoTypeConverter.from(
+                      io.substrait.proto.Type.newBuilder()
+                          .setStruct(protoLambda.getParameters())
+                          .build());
+
+          lambdaParameterStack.add(parameters);
+
+          Expression body;
+          try {
+            body = from(protoLambda.getBody());
+          } finally {
+            lambdaParameterStack.remove(lambdaParameterStack.size() - 1);
+          }
+
+          return Expression.Lambda.builder().parameters(parameters).body(body).build();
+        }
+      case LAMBDA_INVOCATION:
+        {
+          io.substrait.proto.Expression.LambdaInvocation protoInvocation =
+              expr.getLambdaInvocation();
+
+          Expression.Lambda lambda =
+              (Expression.Lambda)
+                  from(
+                      io.substrait.proto.Expression.newBuilder()
+                          .setLambda(protoInvocation.getLambda())
+                          .build());
+
+          Expression.NestedStruct arguments = from(protoInvocation.getArguments());
+
+          return Expression.LambdaInvocation.builder().lambda(lambda).arguments(arguments).build();
         }
 
       // TODO enum.

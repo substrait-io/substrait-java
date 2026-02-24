@@ -707,6 +707,31 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  @Value.Immutable
+  abstract class Lambda implements Expression {
+    public abstract Type.Struct parameters();
+
+    public abstract Expression body();
+
+    @Override
+    public Type getType() {
+      List<Type> paramTypes = parameters().fields();
+      Type returnType = body().getType();
+
+      return Type.withNullability(false).func(paramTypes, returnType);
+    }
+
+    public static ImmutableExpression.Lambda.Builder builder() {
+      return ImmutableExpression.Lambda.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
   /**
    * Base interface for user-defined literals.
    *
@@ -893,6 +918,28 @@ public interface Expression extends FunctionArg {
 
     public static ImmutableExpression.Cast.Builder builder() {
       return ImmutableExpression.Cast.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  @Value.Immutable
+  abstract class LambdaInvocation implements Expression {
+    public abstract Lambda lambda();
+
+    public abstract Expression.NestedStruct arguments();
+
+    @Override
+    public Type getType() {
+      return ((Type.Func) lambda().getType()).returnType();
+    }
+
+    public static ImmutableExpression.LambdaInvocation.Builder builder() {
+      return ImmutableExpression.LambdaInvocation.builder();
     }
 
     @Override

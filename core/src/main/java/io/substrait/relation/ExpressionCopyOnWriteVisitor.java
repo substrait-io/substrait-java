@@ -432,6 +432,35 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Expression> visit(Expression.Lambda lambda, EmptyVisitationContext context)
+      throws E {
+    Optional<Expression> newBody = lambda.body().accept(this, context);
+
+    if (allEmpty(newBody)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Expression.Lambda.builder().from(lambda).body(newBody.orElse(lambda.body())).build());
+  }
+
+  @Override
+  public Optional<Expression> visit(
+      Expression.LambdaInvocation expr, EmptyVisitationContext context) throws E {
+    Optional<Expression> lambda = expr.lambda().accept(this, context);
+    Optional<Expression> arguments = expr.arguments().accept(this, context);
+
+    if (allEmpty(lambda, arguments)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Expression.LambdaInvocation.builder()
+            .from(expr)
+            .lambda((Expression.Lambda) lambda.orElse(expr.lambda()))
+            .arguments((Expression.NestedStruct) arguments.orElse(expr.arguments()))
+            .build());
+  }
+
   // utilities
 
   protected Optional<List<Expression>> visitExprList(

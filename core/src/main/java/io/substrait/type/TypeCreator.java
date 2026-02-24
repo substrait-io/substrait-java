@@ -89,6 +89,14 @@ public class TypeCreator {
     return Type.IntervalCompound.builder().nullable(nullable).precision(precision).build();
   }
 
+  public Type.Func func(java.util.List<Type> parameterTypes, Type returnType) {
+    return Type.Func.builder()
+        .nullable(nullable)
+        .parameterTypes(parameterTypes)
+        .returnType(returnType)
+        .build();
+  }
+
   public Type.Struct struct(Iterable<? extends Type> types) {
     return Type.Struct.builder().nullable(nullable).addAllFields(types).build();
   }
@@ -256,6 +264,11 @@ public class TypeCreator {
     @Override
     public Type visit(Type.Struct type) throws RuntimeException {
       return Type.Struct.builder().from(type).nullable(nullability).build();
+    }
+
+    @Override
+    public Type visit(Type.Func type) throws RuntimeException {
+      return Type.Func.builder().from(type).nullable(nullability).build();
     }
 
     @Override

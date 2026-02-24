@@ -375,6 +375,18 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
+      io.substrait.expression.Expression.Lambda expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return io.substrait.proto.Expression.newBuilder()
+        .setLambda(
+            io.substrait.proto.Expression.Lambda.newBuilder()
+                .setParameters(typeProtoConverter.toProto(expr.parameters()).getStruct())
+                .setBody(expr.body().accept(this, context)))
+        .build();
+  }
+
+  @Override
+  public Expression visit(
       io.substrait.expression.Expression.UserDefinedAnyLiteral expr,
       EmptyVisitationContext context) {
     int typeReference =
@@ -465,6 +477,18 @@ public class ExpressionProtoConverter
     return Expression.newBuilder()
         .setIfThen(
             Expression.IfThen.newBuilder().addAllIfs(clauses).setElse(toProto(expr.elseClause())))
+        .build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.LambdaInvocation expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return io.substrait.proto.Expression.newBuilder()
+        .setLambdaInvocation(
+            io.substrait.proto.Expression.LambdaInvocation.newBuilder()
+                .setLambda(expr.lambda().accept(this, context).getLambda())
+                .setArguments(expr.arguments().accept(this, context).getNested().getStruct()))
         .build();
   }
 
@@ -603,6 +627,10 @@ public class ExpressionProtoConverter
       out.setOuterReference(
           io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
               .setStepsOut(expr.outerReferenceStepsOut().get()));
+    } else if (expr.lambdaParameterReferenceStepsOut().isPresent()) {
+      out.setLambdaParameterReference(
+          io.substrait.proto.Expression.FieldReference.LambdaParameterReference.newBuilder()
+              .setStepsOut(expr.lambdaParameterReferenceStepsOut().get()));
     } else {
       out.setRootReference(Expression.FieldReference.RootReference.getDefaultInstance());
     }

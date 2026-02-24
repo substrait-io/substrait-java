@@ -196,6 +196,12 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Expression.Lambda expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<Lambda>";
+  }
+
+  @Override
   public String visit(UserDefinedAnyLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
     return "<UserDefinedAnyLiteral " + expr.value() + ">";
@@ -215,6 +221,12 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(IfThen expr, EmptyVisitationContext context) throws RuntimeException {
     return "<IfThen " + expr.ifClauses() + ">";
+  }
+
+  @Override
+  public String visit(Expression.LambdaInvocation expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<LambdaInvocation>";
   }
 
   @Override

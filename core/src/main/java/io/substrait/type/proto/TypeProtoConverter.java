@@ -155,6 +155,16 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
+    public Type func(Iterable<Type> parameterTypes, Type returnType) {
+      return wrap(
+          Type.Func.newBuilder()
+              .addAllParameterTypes(parameterTypes)
+              .setReturnType(returnType)
+              .setNullability(nullability)
+              .build());
+    }
+
+    @Override
     public Type struct(Iterable<Type> types) {
       return wrap(Type.Struct.newBuilder().addAllTypes(types).setNullability(nullability).build());
     }
@@ -237,6 +247,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setPrecisionTimestamp((Type.PrecisionTimestamp) o).build();
       } else if (o instanceof Type.PrecisionTimestampTZ) {
         return bldr.setPrecisionTimestampTz((Type.PrecisionTimestampTZ) o).build();
+      } else if (o instanceof Type.Func) {
+        return bldr.setFunc((Type.Func) o).build();
       } else if (o instanceof Type.Struct) {
         return bldr.setStruct((Type.Struct) o).build();
       } else if (o instanceof Type.List) {

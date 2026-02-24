@@ -257,6 +257,13 @@ public class ParameterizedProtoConverter
     }
 
     @Override
+    public ParameterizedType func(
+        Iterable<ParameterizedType> parameterTypes, ParameterizedType returnType) {
+      throw new UnsupportedOperationException(
+          "Function types are not supported in Parameterized Types - ParameterizedFunc does not exist in proto");
+    }
+
+    @Override
     public ParameterizedType userDefined(int ref) {
       throw new UnsupportedOperationException(
           "User defined types are not supported in Parameterized Types for now");

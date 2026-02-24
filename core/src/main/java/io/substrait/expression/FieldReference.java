@@ -20,6 +20,8 @@ public abstract class FieldReference implements Expression {
 
   public abstract Optional<Integer> outerReferenceStepsOut();
 
+  public abstract Optional<Integer> lambdaParameterReferenceStepsOut();
+
   @Override
   public Type getType() {
     return type();
@@ -38,11 +40,16 @@ public abstract class FieldReference implements Expression {
   public boolean isSimpleRootReference() {
     return segments().size() == 1
         && !inputExpression().isPresent()
-        && !outerReferenceStepsOut().isPresent();
+        && !outerReferenceStepsOut().isPresent()
+        && !lambdaParameterReferenceStepsOut().isPresent();
   }
 
   public boolean isOuterReference() {
     return outerReferenceStepsOut().orElse(0) > 0;
+  }
+
+  public boolean isLambdaParameterReference() {
+    return lambdaParameterReferenceStepsOut().isPresent();
   }
 
   public FieldReference dereferenceStruct(int index) {
@@ -132,6 +139,15 @@ public abstract class FieldReference implements Expression {
         String.format(
             "The current index %d wasn't found within the number of fields %d",
             index, currentOffset));
+  }
+
+  public static FieldReference newLambdaParameterReference(
+      int paramIndex, Type.Struct lambdaParamsType, int stepsOut) {
+    return ImmutableFieldReference.builder()
+        .addSegments(StructField.of(paramIndex))
+        .type(lambdaParamsType.fields().get(paramIndex))
+        .lambdaParameterReferenceStepsOut(stepsOut)
+        .build();
   }
 
   public interface ReferenceSegment {
