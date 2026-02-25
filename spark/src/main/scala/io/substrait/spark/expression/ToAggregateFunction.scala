@@ -25,7 +25,7 @@ import io.substrait.extension.SimpleExtension
 
 import java.util.Collections
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters._
 
 abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunctionVariant])
   extends FunctionConverter[SimpleExtension.AggregateFunctionVariant, AggregateFunctionInvocation](
@@ -45,7 +45,7 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
       ToAggregateFunction.fromSpark(sparkAggregate.mode),
       Collections.emptyList[SExpression.SortField](),
       ToAggregateFunction.fromSpark(sparkAggregate.isDistinct),
-      JavaConverters.asJavaIterable(arguments)
+      arguments.asJava
     )
   }
 

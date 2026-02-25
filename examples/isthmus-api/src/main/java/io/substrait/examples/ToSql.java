@@ -1,18 +1,13 @@
 package io.substrait.examples;
 
 import io.substrait.examples.IsthmusAppExamples.Action;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.SimpleExtension;
-import io.substrait.isthmus.SubstraitToCalcite;
-import io.substrait.isthmus.SubstraitTypeSystem;
+import io.substrait.isthmus.SubstraitToSql;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
@@ -50,28 +45,15 @@ public class ToSql implements Action {
       final io.substrait.proto.Plan protoPlan = planToProto.toProto(substraitPlan);
       System.out.println(protoPlan);
 
-      final SimpleExtension.ExtensionCollection extensions =
-          DefaultExtensionCatalog.DEFAULT_COLLECTION;
-      final SubstraitToCalcite converter =
-          new SubstraitToCalcite(
-              extensions, new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
-
       // Determine which SQL Dialect we want the converted queries to be in
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();
 
-      // Create the Sql to Calcite Relation Parser
-      final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
+      SubstraitToSql substraitToSql = new SubstraitToSql();
 
       System.out.println("\n");
 
       // Convert each of the Substrait plan roots to SQL
-      substraitPlan.getRoots().stream()
-          // Substrait -> Calcite Rel
-          .map(root -> converter.convert(root).project(true))
-          // Calcite Rel -> Calcite SQL
-          .map(calciteRelNode -> relToSql.visitRoot(calciteRelNode).asStatement())
-          // Calcite SQL -> SQL String
-          .map(sqlNode -> sqlNode.toSqlString(sqlDialect).getSql())
+      substraitToSql.convert(substraitPlan, sqlDialect).stream()
           .forEachOrdered(System.out::println);
 
     } catch (IOException e) {

@@ -22,8 +22,7 @@ import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 
 import java.util.Collections
 
-import scala.collection.JavaConverters
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.jdk.CollectionConverters._
 
 object SparkExtension {
   final val file = "/spark.yml"
@@ -40,13 +39,13 @@ object SparkExtension {
     val ret = new collection.mutable.ArrayBuffer[SimpleExtension.ScalarFunctionVariant]()
     ret.appendAll(EXTENSION_COLLECTION.scalarFunctions().asScala)
     ret.appendAll(SparkImpls.scalarFunctions().asScala)
-    ret
+    ret.toSeq
   }
 
   val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(
-    JavaConverters.asScalaBuffer(EXTENSION_COLLECTION.aggregateFunctions()))
+    EXTENSION_COLLECTION.aggregateFunctions().asScala.toSeq)
 
   val toWindowFunction: ToWindowFunction = ToWindowFunction(
-    JavaConverters.asScalaBuffer(EXTENSION_COLLECTION.windowFunctions())
+    EXTENSION_COLLECTION.windowFunctions().asScala.toSeq
   )
 }

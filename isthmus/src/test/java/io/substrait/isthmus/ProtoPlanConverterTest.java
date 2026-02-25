@@ -73,7 +73,6 @@ class ProtoPlanConverterTest extends PlanTestBase {
             return super.visit(cross, context);
           }
         };
-    ImmutableFeatureBoard featureBoard = ImmutableFeatureBoard.builder().build();
 
     String query1 =
         "select\n"
@@ -82,7 +81,7 @@ class ProtoPlanConverterTest extends PlanTestBase {
             + "from\n"
             + "  \"customer\" c cross join\n"
             + "  \"orders\" o";
-    Plan plan1 = assertProtoPlanRoundrip(query1, new SqlToSubstrait(featureBoard));
+    Plan plan1 = assertProtoPlanRoundrip(query1, new SqlToSubstrait());
     plan1
         .getRoots()
         .forEach(
@@ -96,7 +95,7 @@ class ProtoPlanConverterTest extends PlanTestBase {
             + "from\n"
             + "  \"customer\" c,\n"
             + "  \"orders\" o";
-    Plan plan2 = assertProtoPlanRoundrip(query2, new SqlToSubstrait(featureBoard));
+    Plan plan2 = assertProtoPlanRoundrip(query2, new SqlToSubstrait());
     plan2
         .getRoots()
         .forEach(

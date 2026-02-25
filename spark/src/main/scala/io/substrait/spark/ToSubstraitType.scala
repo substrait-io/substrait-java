@@ -24,8 +24,7 @@ import org.apache.spark.sql.types._
 import io.substrait.`type`.{NamedStruct, Type, TypeVisitor}
 import io.substrait.function.TypeExpression
 
-import scala.collection.JavaConverters
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.jdk.CollectionConverters._
 
 /**
  * @param dfsNames
@@ -86,21 +85,19 @@ private class ToSparkType(dfsNames: Seq[String])
       valueContainsNull = expr.value().nullable())
 
   override def visit(expr: Type.Struct): StructType =
-    StructType(
-      expr.fields.asScala.zipWithIndex
-        .map {
-          case (f, i) =>
-            val name = if (dfsNames.nonEmpty) {
-              require(nameIdx < dfsNames.size)
-              val n = dfsNames(nameIdx)
-              nameIdx += 1
-              n
-            } else {
-              // If names are not given, default to "col1", "col2", ... like Spark
-              s"col${i + 1}"
-            }
-            StructField(name, f.accept(this), f.nullable())
-        })
+    StructType(expr.fields.asScala.zipWithIndex.map {
+      case (f, i) =>
+        val name = if (dfsNames.nonEmpty) {
+          require(nameIdx < dfsNames.size)
+          val n = dfsNames(nameIdx)
+          nameIdx += 1
+          n
+        } else {
+          // If names are not given, default to "col1", "col2", ... like Spark
+          s"col${i + 1}"
+        }
+        StructField(name, f.accept(this), f.nullable())
+    }.toSeq)
 
   def convert(typeExpression: TypeExpression): DataType = {
     typeExpression.accept(this)
@@ -113,13 +110,13 @@ object ToSparkType {
   }
 
   def toStructType(namedStruct: NamedStruct): StructType = {
-    new ToSparkType(namedStruct.names().asScala)
+    new ToSparkType(namedStruct.names().asScala.toSeq)
       .visit(namedStruct.struct())
       .asInstanceOf[StructType]
   }
 
   def toAttributeSeq(namedStruct: NamedStruct): Seq[AttributeReference] = {
-    toStructType(namedStruct).fields
+    toStructType(namedStruct).fields.toIndexedSeq
       .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
   }
 }
@@ -166,20 +163,19 @@ class ToSubstraitType {
                 .map(valueT => creator.map(keyT, valueT)))
       case StructType(fields) =>
         if (fields.isEmpty) {
-          Some(creator.struct(JavaConverters.asJavaIterable(Seq.empty)))
+          Some(creator.struct(Seq.empty.asJava))
         } else {
           Util
-            .seqToOption(fields.map(f => convert(f.dataType, f.nullable)))
-            .map(l => creator.struct(JavaConverters.asJavaIterable(l)))
+            .seqToOption(fields.toIndexedSeq.map(f => convert(f.dataType, f.nullable)))
+            .map(l => creator.struct(l.asJava))
         }
       case _ => None
     }
   }
 
   def toNamedStruct(schema: StructType): NamedStruct = {
-    val dfsNames = JavaConverters.seqAsJavaList(fieldNamesDfs(schema))
-    val types = JavaConverters.seqAsJavaList(
-      schema.fields.map(field => apply(field.dataType, field.nullable)))
+    val dfsNames = fieldNamesDfs(schema).asJava
+    val types = schema.fields.map(field => apply(field.dataType, field.nullable)).toSeq.asJava
     val struct = Type.withNullability(false).struct(types)
     NamedStruct.of(dfsNames, struct)
   }
@@ -188,7 +184,7 @@ class ToSubstraitType {
     // NamedStruct expects a flattened list of the full tree of names, including subtype names
     dtype match {
       case StructType(fields) =>
-        fields.flatMap(field => Seq(field.name) ++ fieldNamesDfs(field.dataType))
+        fields.toIndexedSeq.flatMap(field => Seq(field.name) ++ fieldNamesDfs(field.dataType))
       case ArrayType(elementType, _) => fieldNamesDfs(elementType)
       case MapType(keyType, valueType, _) => fieldNamesDfs(keyType) ++ fieldNamesDfs(valueType)
       case _ => Seq()

@@ -52,7 +52,7 @@ object Util {
       (list, elemsToAppend) => elemsToAppend.map(e => appendElementToList(list, e))
 
     val firstListToJoin = lists.head
-    val startProduct = appendAndGen(new ArrayBuffer[T], firstListToJoin)
+    val startProduct = appendAndGen(new ArrayBuffer[T].toSeq, firstListToJoin)
 
     /** ([ [a, b], [c, d] ], [1, 2]) -> [a, b, 1], [a, b, 2], [c, d, 1], [c, d, 2] */
     val appendAndGenLists: (Seq[Seq[T]], Seq[T]) => Seq[Seq[T]] =
