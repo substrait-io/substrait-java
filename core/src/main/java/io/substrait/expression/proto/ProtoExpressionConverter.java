@@ -302,23 +302,6 @@ public class ProtoExpressionConverter {
 
           return Expression.Lambda.builder().parameters(parameters).body(body).build();
         }
-      case LAMBDA_INVOCATION:
-        {
-          io.substrait.proto.Expression.LambdaInvocation protoInvocation =
-              expr.getLambdaInvocation();
-
-          Expression.Lambda lambda =
-              (Expression.Lambda)
-                  from(
-                      io.substrait.proto.Expression.newBuilder()
-                          .setLambda(protoInvocation.getLambda())
-                          .build());
-
-          Expression.NestedStruct arguments = from(protoInvocation.getArguments());
-
-          return Expression.LambdaInvocation.builder().lambda(lambda).arguments(arguments).build();
-        }
-
       // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());

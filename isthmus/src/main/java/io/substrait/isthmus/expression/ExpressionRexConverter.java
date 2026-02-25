@@ -674,6 +674,8 @@ public class ExpressionRexConverter
 
       return rexInputRef;
     } else if (expr.isLambdaParameterReference()) {
+      // as of now calcite doesn't support nested lambda functions
+      // https://github.com/substrait-io/substrait-java/issues/711
       int stepsOut = expr.lambdaParameterReferenceStepsOut().get();
       if (stepsOut != 0) {
         throw new UnsupportedOperationException(

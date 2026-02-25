@@ -224,12 +224,6 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(Expression.LambdaInvocation expr, EmptyVisitationContext context)
-      throws RuntimeException {
-    return "<LambdaInvocation>";
-  }
-
-  @Override
   public String visit(ScalarFunctionInvocation expr, EmptyVisitationContext context)
       throws RuntimeException {
     StringBuilder sb = new StringBuilder("<ScalarFn>");

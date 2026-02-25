@@ -362,16 +362,6 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.IfThen expr, C context) throws E;
 
   /**
-   * Visit a Lambda expression invocation.
-   *
-   * @param expr the Lambda expression invocation
-   * @param context visitation context
-   * @return visit result
-   * @throws E on visit failure
-   */
-  R visit(Expression.LambdaInvocation expr, C context) throws E;
-
-  /**
    * Visit a scalar function invocation.
    *
    * @param expr the scalar function invocation

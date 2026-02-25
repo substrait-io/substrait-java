@@ -208,10 +208,9 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
             .map(param -> typeConverter.toSubstrait(param.getType()))
             .collect(Collectors.toList());
 
-      Type.Struct parameters = Type.Struct.builder().nullable(false).addAllFields(paramTypes).build();
+    Type.Struct parameters = Type.Struct.builder().nullable(false).addAllFields(paramTypes).build();
 
-
-      Expression body = rexLambda.getExpression().accept(this);
+    Expression body = rexLambda.getExpression().accept(this);
 
     return Expression.Lambda.builder().parameters(parameters).body(body).build();
   }
@@ -225,7 +224,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
         .addSegments(FieldReference.StructField.of(fieldIndex))
         .type(paramType)
         .lambdaParameterReferenceStepsOut(
-            0) // Always 0 since Calcite doesn't support nested Lambda expressions
+            0) // Always 0 since Calcite doesn't support nested Lambda expressions for now
+        // https://github.com/substrait-io/substrait-java/issues/711
         .build();
   }
 

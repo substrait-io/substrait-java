@@ -928,28 +928,6 @@ public interface Expression extends FunctionArg {
   }
 
   @Value.Immutable
-  abstract class LambdaInvocation implements Expression {
-    public abstract Lambda lambda();
-
-    public abstract Expression.NestedStruct arguments();
-
-    @Override
-    public Type getType() {
-      return ((Type.Func) lambda().getType()).returnType();
-    }
-
-    public static ImmutableExpression.LambdaInvocation.Builder builder() {
-      return ImmutableExpression.LambdaInvocation.builder();
-    }
-
-    @Override
-    public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
-      return visitor.visit(this, context);
-    }
-  }
-
-  @Value.Immutable
   abstract class ScalarFunctionInvocation implements Expression {
     public abstract SimpleExtension.ScalarFunctionVariant declaration();
 

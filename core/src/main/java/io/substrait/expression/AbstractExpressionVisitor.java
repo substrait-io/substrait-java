@@ -462,19 +462,6 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   /**
-   * Visits a Lambda expression invocation.
-   *
-   * @param expr the Lambda expression invocation
-   * @param context the visitation context
-   * @return the visit result
-   * @throws E if visitation fails
-   */
-  @Override
-  public O visit(Expression.LambdaInvocation expr, C context) throws E {
-    return visitFallback(expr, context);
-  }
-
-  /**
    * Visits a scalar function invocation.
    *
    * @param expr the scalar function invocation

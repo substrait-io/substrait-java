@@ -482,18 +482,6 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.LambdaInvocation expr, EmptyVisitationContext context)
-      throws RuntimeException {
-    return io.substrait.proto.Expression.newBuilder()
-        .setLambdaInvocation(
-            io.substrait.proto.Expression.LambdaInvocation.newBuilder()
-                .setLambda(expr.lambda().accept(this, context).getLambda())
-                .setArguments(expr.arguments().accept(this, context).getNested().getStruct()))
-        .build();
-  }
-
-  @Override
-  public Expression visit(
       io.substrait.expression.Expression.ScalarFunctionInvocation expr,
       EmptyVisitationContext context) {
 
