@@ -1,9 +1,6 @@
 package io.substrait.isthmus;
 
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
-import io.substrait.isthmus.expression.AggregateFunctionConverter;
-import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import io.substrait.util.EmptyVisitationContext;

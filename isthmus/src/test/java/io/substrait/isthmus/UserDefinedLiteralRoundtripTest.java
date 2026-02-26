@@ -133,10 +133,10 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
 
   private final SubstraitBuilder builder = new SubstraitBuilder(NESTED_TYPES_EXTENSIONS);
 
-  private final SubstraitToCalcite udtSubstraitToCalcite = new SubstraitToCalcite(converterProvider);
+  private final SubstraitToCalcite udtSubstraitToCalcite =
+      new SubstraitToCalcite(converterProvider);
 
-  private final SubstraitRelVisitor calciteToSubstrait =
-      converterProvider.getSubstraitRelVisitor();
+  private final SubstraitRelVisitor calciteToSubstrait = converterProvider.getSubstraitRelVisitor();
 
   UserDefinedLiteralRoundtripTest() {
     super(
