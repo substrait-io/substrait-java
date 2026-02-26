@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.ArrayList;
@@ -68,8 +69,7 @@ public class CallConverters {
             Expression operand = visitor.apply(call.getOperands().get(0));
             Type type = typeConverter.toSubstrait(call.getType());
 
-            // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
-            // user-defined literals
+            // Calcite encoded Expression.UserDefinedAnyLiteral
             if (operand instanceof Expression.FixedBinaryLiteral
                 && type instanceof Type.UserDefined) {
               Expression.FixedBinaryLiteral literal = (Expression.FixedBinaryLiteral) operand;
@@ -90,7 +90,9 @@ public class CallConverters {
               } catch (com.google.protobuf.InvalidProtocolBufferException e) {
                 throw new IllegalStateException("Failed to parse UserDefinedAnyLiteral value", e);
               }
-            } else if (operand instanceof Expression.StructLiteral
+            }
+            // Calcite encoded Expression.UserDefinedStructLiteral
+            else if (operand instanceof Expression.StructLiteral
                 && type instanceof Type.UserDefined) {
               Expression.StructLiteral structLiteral = (Expression.StructLiteral) operand;
               Type.UserDefined t = (Type.UserDefined) type;
@@ -106,18 +108,8 @@ public class CallConverters {
             return null;
           };
 
-  //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
-  //      return (call, visitor) -> {
-  //        if (call.getKind() != SqlKind.AND && call.getKind() != SqlKind.OR) {
-  //          return null;
-  //        }
-  //
-  //
-  //        return null;
-  //      };
-  //  }
   /**
-   * Converts Calcite ROW constructors into Substrait struct literals.
+   * Converts Calcite ROW constructors into Substrait {@link Expression.StructLiteral}s.
    *
    * <p>ROW values are always concrete (never null themselves) - if a value is actually null, use
    * NullLiteral instead of StructLiteral. Therefore, the resulting StructLiteral always has
