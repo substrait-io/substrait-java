@@ -29,7 +29,7 @@ import io.substrait.expression.WindowBound.{CURRENT_ROW, UNBOUNDED, WindowBoundV
 import io.substrait.extension.SimpleExtension
 import io.substrait.relation.ConsistentPartitionWindow.WindowRelFunctionInvocation
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters._
 
 abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVariant])
   extends FunctionConverter[SimpleExtension.WindowFunctionVariant, WindowRelFunctionInvocation](
@@ -64,7 +64,7 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       frameType,
       lower,
       upper,
-      JavaConverters.asJavaIterable(arguments)
+      arguments.asJava
     )
   }
 

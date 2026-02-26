@@ -15,7 +15,7 @@ import io.substrait.extension.SimpleExtension
 
 import java.io.{File, FileInputStream, FileWriter, OutputStreamWriter}
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.jdk.CollectionConverters._
 
 case class Dialect(
     name: String,
@@ -63,9 +63,11 @@ class DialectGenerator {
     val relations = supportedRelations()
     val scalars = SCALAR_SIGS.flatMap(supportedFunctions(SparkScalarFunctions))
     val aggregates =
-      AGGREGATE_SIGS.flatMap(supportedFunctions(COLLECTION.aggregateFunctions().asScala))
+      AGGREGATE_SIGS
+        .flatMap(supportedFunctions(COLLECTION.aggregateFunctions().asScala.toSeq))
     val windows =
-      WINDOW_SIGS.flatMap(supportedFunctions(COLLECTION.windowFunctions().asScala))
+      WINDOW_SIGS
+        .flatMap(supportedFunctions(COLLECTION.windowFunctions().asScala.toSeq))
 
     Dialect(
       "Spark Dialect",
@@ -226,7 +228,9 @@ class DialectGenerator {
           }
           .groupBy(_._1) // group by URN
           .filter(_._1 != "FAILED")
+          .view
           .mapValues(_.map(_._2))
+          .toMap
       case _ =>
         println(s"NO INPUT TYPES")
         Map.empty

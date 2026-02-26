@@ -1,6 +1,48 @@
 Release Notes
 ---
 
+## [0.80.0](https://github.com/substrait-io/substrait-java/compare/v0.79.0...v0.80.0) (2026-02-24)
+
+### ⚠ BREAKING CHANGES
+
+* removed FeatureBoard class
+* all constructors consuming a FeatureBoard have been
+removed
+* a number of methods/constructors have been replaced
+with ConverterProvider equivalents
+
+### Features
+
+* introduce ConverterProvider to control conversion behaviour ([#649](https://github.com/substrait-io/substrait-java/issues/649)) ([bb58d42](https://github.com/substrait-io/substrait-java/commit/bb58d4233abb21d87b7d89f6778e3fa5043fcb9b))
+
+## [0.79.0](https://github.com/substrait-io/substrait-java/compare/v0.78.0...v0.79.0) (2026-02-22)
+
+### Features
+
+* **isthmus:** add method to convert Plan into SQL strings using dialect ([#704](https://github.com/substrait-io/substrait-java/issues/704)) ([e75b621](https://github.com/substrait-io/substrait-java/commit/e75b621c8a73e032ba76964df70527b62ac7adff))
+* **spark:** upgrade scala compiler to 2.13.18 ([#705](https://github.com/substrait-io/substrait-java/issues/705)) ([becd45e](https://github.com/substrait-io/substrait-java/commit/becd45e080085733222d4cb2b0b6d5f0438fa07c))
+
+## [0.78.0](https://github.com/substrait-io/substrait-java/compare/v0.77.0...v0.78.0) (2026-02-01)
+
+### Features
+
+* **isthmus:** add strptime_* function mappings ([#695](https://github.com/substrait-io/substrait-java/issues/695)) ([d93efe4](https://github.com/substrait-io/substrait-java/commit/d93efe446de2e4a6e8f830ebfc20f9bb82a0f485))
+
+## [0.77.0](https://github.com/substrait-io/substrait-java/compare/v0.76.0...v0.77.0) (2026-01-25)
+
+### ⚠ BREAKING CHANGES
+
+* io.substrait.relation.EmptyScan has been removed
+
+### Features
+
+* allow the creation of VirtualTableScans with no rows ([#682](https://github.com/substrait-io/substrait-java/issues/682)) ([32add4d](https://github.com/substrait-io/substrait-java/commit/32add4d9d621071887f84f9c3c2e50ee62eee803))
+
+### Bug Fixes
+
+* **core:** enforce NullLiteral nullable invariant ([#686](https://github.com/substrait-io/substrait-java/issues/686)) ([65c6881](https://github.com/substrait-io/substrait-java/commit/65c6881d60cc0db9e3632cb97659aea0d585ef3f)), closes [#685](https://github.com/substrait-io/substrait-java/issues/685)
+* **isthmus:** preserve nullability in VirtualTableScan Calcite roundtrip ([#684](https://github.com/substrait-io/substrait-java/issues/684)) ([e1c5207](https://github.com/substrait-io/substrait-java/commit/e1c520764986d0762fa2091837c87dfe64fa9dfe)), closes [#683](https://github.com/substrait-io/substrait-java/issues/683)
+
 ## [0.76.0](https://github.com/substrait-io/substrait-java/compare/v0.75.0...v0.76.0) (2026-01-18)
 
 ### ⚠ BREAKING CHANGES

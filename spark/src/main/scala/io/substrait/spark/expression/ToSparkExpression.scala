@@ -34,7 +34,7 @@ import io.substrait.extension.SimpleExtension
 import io.substrait.util.DecimalUtil
 import io.substrait.util.EmptyVisitationContext
 
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
+import scala.jdk.CollectionConverters._
 
 class ToSparkExpression(
     val scalarFunctionConverter: ToScalarFunction,
@@ -143,7 +143,11 @@ class ToSparkExpression(
 
   override def visit(expr: SExpression.ListLiteral, context: EmptyVisitationContext): Literal = {
     val array =
-      expr.values().asScala.map(value => value.accept(this, context).asInstanceOf[Literal].value)
+      expr
+        .values()
+        .asScala
+        .map(value => value.accept(this, context).asInstanceOf[Literal].value)
+        .toArray
     Literal.create(array, ToSparkType.convert(expr.getType))
   }
 
@@ -173,7 +177,9 @@ class ToSparkExpression(
   override def visit(expr: SExpression.StructLiteral, context: EmptyVisitationContext): Literal = {
     Literal.create(
       Row.fromSeq(
-        expr.fields.asScala.map(field => field.accept(this, context).asInstanceOf[Literal].value)),
+        expr.fields.asScala
+          .map(field => field.accept(this, context).asInstanceOf[Literal].value)
+          .toSeq),
       ToSparkType.convert(expr.getType))
   }
 
@@ -206,6 +212,7 @@ class ToSparkExpression(
           val elseValue = ifClause.`then`().accept(this, context)
           (predicate, elseValue)
         })
+      .toSeq
     val default = expr.elseClause().accept(this, context) match {
       case l: Literal if l.nullable => None
       case other => Some(other)
@@ -234,12 +241,12 @@ class ToSparkExpression(
       expr: SExpression.SingleOrList,
       context: EmptyVisitationContext): Expression = {
     val value = expr.condition().accept(this, context)
-    val list = expr.options().asScala.map(e => e.accept(this, context))
+    val list = expr.options().asScala.map(e => e.accept(this, context)).toSeq
     In(value, list)
   }
 
   override def visit(expr: SExpression.InPredicate, context: EmptyVisitationContext): Expression = {
-    val needles = expr.needles().asScala.map(e => e.accept(this, context))
+    val needles = expr.needles().asScala.map(e => e.accept(this, context)).toSeq
     val haystack = expr.haystack().accept(toLogicalPlan.get, context)
     new InSubquery(needles, ListQuery(haystack, childOutputs = haystack.output)) {
       override def nullable: Boolean = expr.getType.nullable()

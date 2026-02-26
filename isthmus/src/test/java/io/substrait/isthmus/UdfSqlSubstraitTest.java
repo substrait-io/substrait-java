@@ -12,7 +12,7 @@ class UdfSqlSubstraitTest extends PlanTestBase {
   private static final String CUSTOM_FUNCTION_PATH = "/extensions/scalar_functions_custom.yaml";
 
   UdfSqlSubstraitTest() {
-    super(loadExtensions(List.of(CUSTOM_FUNCTION_PATH)));
+    super(new DynamicConverterProvider(loadExtensions(List.of(CUSTOM_FUNCTION_PATH))));
   }
 
   @Test
@@ -22,16 +22,14 @@ class UdfSqlSubstraitTest extends PlanTestBase {
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "CREATE TABLE t(x VARCHAR NOT NULL)");
 
-    FeatureBoard featureBoard = ImmutableFeatureBoard.builder().allowDynamicUdfs(true).build();
-
     assertSqlSubstraitRelRoundTripLoosePojoComparison(
-        "SELECT regexp_extract_custom(x, 'ab') from t", catalogReader, featureBoard);
+        "SELECT regexp_extract_custom(x, 'ab') from t", catalogReader);
     assertSqlSubstraitRelRoundTripLoosePojoComparison(
-        "SELECT format_text('UPPER', x) FROM t", catalogReader, featureBoard);
+        "SELECT format_text('UPPER', x) FROM t", catalogReader);
     assertSqlSubstraitRelRoundTripLoosePojoComparison(
-        "SELECT system_property_get(x) FROM t", catalogReader, featureBoard);
+        "SELECT system_property_get(x) FROM t", catalogReader);
     assertSqlSubstraitRelRoundTripLoosePojoComparison(
-        "SELECT safe_divide_custom(10,0) FROM t", catalogReader, featureBoard);
+        "SELECT safe_divide_custom(10,0) FROM t", catalogReader);
   }
 
   private static SimpleExtension.ExtensionCollection loadExtensions(

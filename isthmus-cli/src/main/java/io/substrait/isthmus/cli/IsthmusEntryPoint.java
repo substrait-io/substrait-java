@@ -1,12 +1,9 @@
 package io.substrait.isthmus.cli;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.JsonFormat;
-import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.isthmus.FeatureBoard;
-import io.substrait.isthmus.ImmutableFeatureBoard;
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -18,11 +15,13 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.parser.SqlParser;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+/** Isthmus CLI entry point. */
 @Command(
     name = "isthmus",
     versionProvider = io.substrait.isthmus.cli.IsthmusCliVersion.class,
@@ -61,6 +60,20 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
   private Casing unquotedCasing = Casing.TO_UPPER;
 
+  private ConverterProvider converterProvider() {
+    return new ConverterProvider() {
+      @Override
+      public SqlParser.Config getSqlParserConfig() {
+        return super.getSqlParserConfig().withUnquotedCasing(unquotedCasing);
+      }
+    };
+  }
+
+  /**
+   * Standard Java Main method invoked by the isthmus CLI command.
+   *
+   * @param args Isthmus CLI arguments.
+   */
   public static void main(String... args) {
     CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
     commandLine.setCaseInsensitiveEnumValuesAllowed(true);
@@ -83,15 +96,13 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    FeatureBoard featureBoard = buildFeatureBoard();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
-      SqlExpressionToSubstrait converter =
-          new SqlExpressionToSubstrait(featureBoard, DefaultExtensionCatalog.DEFAULT_COLLECTION);
+      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(converterProvider());
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(featureBoard);
+      SqlToSubstrait converter = new SqlToSubstrait(converterProvider());
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
               createStatements.toArray(String[]::new));
@@ -109,10 +120,5 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     } else if (outputFormat == OutputFormat.BINARY) {
       message.writeTo(System.out);
     }
-  }
-
-  @VisibleForTesting
-  FeatureBoard buildFeatureBoard() {
-    return ImmutableFeatureBoard.builder().unquotedCasing(unquotedCasing).build();
   }
 }

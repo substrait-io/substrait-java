@@ -61,7 +61,7 @@ class LocalFiles extends SharedSparkSession {
     val result = DatasetUtil.fromLogicalPlan(spark, sparkPlan2)
 
     assertResult(data.columns)(result.columns)
-    assertResult(data.count)(result.count)
+    assertResult(data.count())(result.count())
     data.collect().zip(result.collect()).foreach {
       case (before, after) => assertResult(before)(after)
     }

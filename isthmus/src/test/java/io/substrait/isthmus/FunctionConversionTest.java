@@ -15,31 +15,40 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.stream.Stream;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Verify that "problematic" Substrait functions can be converted to Calcite and back successfully
  */
 class FunctionConversionTest extends PlanTestBase {
+  final ScalarFunctionConverter scalarFnConverter =
+      new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
+
+  final WindowFunctionConverter windowFnConverter =
+      new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
 
   final ExpressionRexConverter expressionRexConverter =
       new ExpressionRexConverter(
-          typeFactory,
-          new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
-          new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
-          TypeConverter.DEFAULT);
+          typeFactory, scalarFnConverter, windowFnConverter, TypeConverter.DEFAULT);
 
   final RexExpressionConverter rexExpressionConverter =
       new RexExpressionConverter(
           // a SubstraitRelVisitor is not needed for these tests
           null,
-          CallConverters.defaults(TypeConverter.DEFAULT),
-          // TODO: set WindowFunctionConverter if/when tests for window functions are added
-          null,
+          Stream.concat(
+                  CallConverters.defaults(TypeConverter.DEFAULT).stream(),
+                  Stream.of(scalarFnConverter))
+              .toList(),
+          windowFnConverter,
           TypeConverter.DEFAULT);
 
   @Test
@@ -61,8 +70,8 @@ class FunctionConversionTest extends PlanTestBase {
         TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
         calciteExpr.getType());
 
-    // TODO: remove once this can be converted back to Substrait
-    assertThrows(IllegalArgumentException.class, () -> calciteExpr.accept(rexExpressionConverter));
+    Expression reverse = calciteExpr.accept(rexExpressionConverter);
+    assertEquals(expr, reverse);
   }
 
   @Test
@@ -277,5 +286,66 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void concatStringLiteralAndChar() throws Exception {
     assertProtoPlanRoundrip("select 'brand_'||P_BRAND from PART");
+  }
+
+  /**
+   * Provides test cases for strptime function tests.
+   *
+   * @return Stream of test arguments containing: function name, input string value, format string,
+   *     output type, and expected Calcite function name
+   */
+  private static Stream<Arguments> strptimeTestCases() {
+    return Stream.of(
+        Arguments.of(
+            "strptime_time:str_str",
+            "12:34:56",
+            "%H:%M:%S",
+            TypeCreator.REQUIRED.TIME,
+            "PARSE_TIME"),
+        Arguments.of(
+            "strptime_timestamp:str_str",
+            "2026-01-29T12:34:56",
+            "%Y:%m:%dT%H:%M:%S",
+            TypeCreator.REQUIRED.precisionTimestamp(6),
+            "PARSE_TIMESTAMP"),
+        Arguments.of(
+            "strptime_date:str_str",
+            "2026-01-29",
+            "%Y:%m:%d",
+            TypeCreator.REQUIRED.DATE,
+            "PARSE_DATE"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("strptimeTestCases")
+  void testStrptimeFunctions(
+      String functionSignature,
+      String inputValue,
+      String formatValue,
+      Type outputType,
+      String expectedCalciteFunctionName) {
+    Expression.StrLiteral inputString = Expression.StrLiteral.builder().value(inputValue).build();
+    Expression.StrLiteral formatString = Expression.StrLiteral.builder().value(formatValue).build();
+    ScalarFunctionInvocation strptimeFn =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            functionSignature,
+            outputType,
+            inputString,
+            formatString);
+
+    // tests Substrait -> Calcite
+    RexNode calciteExpr = strptimeFn.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
+    assertInstanceOf(RexCall.class, calciteExpr);
+
+    String expectedCallString =
+        String.format(
+            "%s('%s':VARCHAR, '%s':VARCHAR)", expectedCalciteFunctionName, formatValue, inputValue);
+    assertEquals(expectedCallString, calciteExpr.toString());
+
+    // tests the reverse Calcite -> Substrait
+    Expression reverse = calciteExpr.accept(rexExpressionConverter);
+    assertEquals(strptimeFn, reverse);
   }
 }

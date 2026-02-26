@@ -75,9 +75,7 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
       SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
 
-  private final SubstraitBuilder builder = new SubstraitBuilder(NESTED_TYPES_EXTENSIONS);
-
-  private final Map<String, UserTypeFactory> userTypeFactories =
+  private static final Map<String, UserTypeFactory> USER_TYPE_FACTORIES =
       Map.of(
           "point", new UserTypeFactory(NESTED_TYPES_URN, "point"),
           "triangle", new UserTypeFactory(NESTED_TYPES_URN, "triangle"),
@@ -85,11 +83,11 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
           "multi_param", new UserTypeFactory(NESTED_TYPES_URN, "multi_param"),
           "complex_record", new UserTypeFactory(NESTED_TYPES_URN, "complex_record"));
 
-  private final UserTypeMapper userTypeMapper =
+  private static final UserTypeMapper USER_TYPE_MAPPER =
       new UserTypeMapper() {
         @Override
         public @Nullable Type toSubstrait(RelDataType relDataType) {
-          return userTypeFactories.values().stream()
+          return USER_TYPE_FACTORIES.values().stream()
               .filter(factory -> factory.isTypeFromFactory(relDataType))
               .findFirst()
               .map(
@@ -104,7 +102,7 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
           if (!type.urn().equals(NESTED_TYPES_URN)) {
             return null;
           }
-          UserTypeFactory factory = userTypeFactories.get(type.name());
+          UserTypeFactory factory = USER_TYPE_FACTORIES.get(type.name());
           if (factory == null) {
             return null;
           }
@@ -113,36 +111,43 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
         }
       };
 
-  private final TypeConverter typeConverter = new TypeConverter(userTypeMapper);
+  private static final TypeConverter TYPE_CONVERTER = new TypeConverter(USER_TYPE_MAPPER);
 
-  private final ScalarFunctionConverter scalarFunctionConverter =
+  private static final ScalarFunctionConverter SCALAR_FUNCTION_CONVERTER =
       new ScalarFunctionConverter(
           NESTED_TYPES_EXTENSIONS.scalarFunctions(),
           Collections.emptyList(),
-          typeFactory,
-          typeConverter);
+          SubstraitTypeSystem.TYPE_FACTORY,
+          TYPE_CONVERTER);
 
-  private final AggregateFunctionConverter aggregateFunctionConverter =
+  private static final AggregateFunctionConverter AGGREGATE_FUNCTION_CONVERTER =
       new AggregateFunctionConverter(
           NESTED_TYPES_EXTENSIONS.aggregateFunctions(),
           Collections.emptyList(),
-          typeFactory,
-          typeConverter);
+          SubstraitTypeSystem.TYPE_FACTORY,
+          TYPE_CONVERTER);
 
-  private final WindowFunctionConverter windowFunctionConverter =
-      new WindowFunctionConverter(NESTED_TYPES_EXTENSIONS.windowFunctions(), typeFactory);
+  private static final WindowFunctionConverter WINDOW_FUNCTION_CONVERTER =
+      new WindowFunctionConverter(
+          NESTED_TYPES_EXTENSIONS.windowFunctions(), SubstraitTypeSystem.TYPE_FACTORY);
 
-  private final SubstraitToCalcite substraitToCalcite =
-      new SubstraitToCalcite(NESTED_TYPES_EXTENSIONS, typeFactory, typeConverter);
+  private final SubstraitBuilder builder = new SubstraitBuilder(NESTED_TYPES_EXTENSIONS);
+
+  private final SubstraitToCalcite udtSubstraitToCalcite = new SubstraitToCalcite(converterProvider);
 
   private final SubstraitRelVisitor calciteToSubstrait =
-      new SubstraitRelVisitor(
-          typeFactory,
-          scalarFunctionConverter,
-          aggregateFunctionConverter,
-          windowFunctionConverter,
-          typeConverter,
-          ImmutableFeatureBoard.builder().build());
+      converterProvider.getSubstraitRelVisitor();
+
+  UserDefinedLiteralRoundtripTest() {
+    super(
+        new ConverterProvider(
+            SubstraitTypeSystem.TYPE_FACTORY,
+            NESTED_TYPES_EXTENSIONS,
+            SCALAR_FUNCTION_CONVERTER,
+            AGGREGATE_FUNCTION_CONVERTER,
+            WINDOW_FUNCTION_CONVERTER,
+            TYPE_CONVERTER));
+  }
 
   private void assertRoundTrip(Expression.UserDefinedLiteral literal) {
     Rel rel =
@@ -151,7 +156,7 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
             builder.remap(1),
             builder.namedScan(List.of("example"), List.of("udt_col"), List.of(literal.getType())));
 
-    RelNode calciteRel = substraitToCalcite.convert(rel);
+    RelNode calciteRel = udtSubstraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }
@@ -363,7 +368,7 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
     Rel rel =
         builder.project(input -> Arrays.asList(vecI32, vecFp64), builder.emptyVirtualTableScan());
 
-    RelNode calciteRel = substraitToCalcite.convert(rel);
+    RelNode calciteRel = udtSubstraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
   }

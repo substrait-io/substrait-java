@@ -22,7 +22,7 @@ import io.substrait.`type`.Type
 import io.substrait.expression.{Expression => SExpression, FunctionArg}
 import io.substrait.extension.SimpleExtension
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters._
 
 abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVariant])
   extends FunctionConverter[SimpleExtension.ScalarFunctionVariant, SExpression](functions) {
@@ -36,7 +36,7 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
       .builder()
       .outputType(outputType)
       .declaration(function)
-      .addAllArguments(JavaConverters.asJavaIterable(arguments))
+      .addAllArguments(arguments.asJava)
       .build()
   }
 
