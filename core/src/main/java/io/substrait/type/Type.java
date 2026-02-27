@@ -11,6 +11,14 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface Type extends TypeExpression, ParameterizedType, NullableType, FunctionArg {
 
+  /**
+   * Returns a copy of the {@link Type} with the specified nullability.
+   *
+   * <p>This method is implemented by all concrete {@link Type} classes via Immutables code
+   * generation.
+   */
+  Type withNullable(boolean nullable);
+
   static TypeCreator withNullability(boolean nullable) {
     return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
   }
