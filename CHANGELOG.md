@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.81.0](https://github.com/substrait-io/substrait-java/compare/v0.80.0...v0.81.0) (2026-03-01)
+
+### Features
+
+* **isthmus:** support Substrait struct literal conversions ([#677](https://github.com/substrait-io/substrait-java/issues/677)) ([cd2535b](https://github.com/substrait-io/substrait-java/commit/cd2535b9cf34749baac5e60e2daa4a17690c19b6))
+
 ## [0.80.0](https://github.com/substrait-io/substrait-java/compare/v0.79.0...v0.80.0) (2026-02-24)
 
 ### ⚠ BREAKING CHANGES

@@ -41,6 +41,7 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -508,8 +509,43 @@ public class SubstraitBuilder {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  /**
+   * Creates a field reference for a join operation by index across both left and right relations.
+   * The index spans across the combined schema of both join inputs, where fields from the left
+   * relation come first, followed by fields from the right relation.
+   *
+   * @param inputs the join inputs containing both left and right relations
+   * @param index the zero-based field index across the combined schema of both relations
+   * @return a {@link FieldReference} pointing to the specified field in the join context
+   */
+  public FieldReference fieldReference(JoinInput inputs, int index) {
+    final List<Rel> inputsList = new LinkedList<>();
+    inputsList.add(inputs.left);
+    inputsList.add(inputs.right);
+    return FieldReference.newInputRelReference(index, inputsList);
+  }
+
   public FieldReference fieldReference(List<Rel> inputs, int index) {
     return FieldReference.newInputRelReference(index, inputs);
+  }
+
+  /**
+   * Creates multiple field references for a join operation by indexes across both left and right
+   * relations. Each index spans across the combined schema of both join inputs, where fields from
+   * the left relation come first, followed by fields from the right relation.
+   *
+   * @param inputs the join inputs containing both left and right relations
+   * @param indexes the zero-based field indexes across the combined schema of both relations
+   * @return a list of {@link FieldReference} objects pointing to the specified fields in the join
+   *     context
+   */
+  public List<FieldReference> fieldReferences(JoinInput inputs, int... indexes) {
+    final List<Rel> inputsList = new LinkedList<>();
+    inputsList.add(inputs.left);
+    inputsList.add(inputs.right);
+    return Arrays.stream(indexes)
+        .mapToObj(index -> fieldReference(inputsList, index))
+        .collect(java.util.stream.Collectors.toList());
   }
 
   public List<FieldReference> fieldReferences(List<Rel> inputs, int... indexes) {

@@ -4,12 +4,15 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -44,16 +47,18 @@ public class CallConverters {
    * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link
    * Expression.UserDefinedLiteral}s within Calcite.
    *
-   * <p>When converting from Substrait to Calcite, the {@link
-   * Expression.UserDefinedAnyLiteral#value()} is stored within a {@link
-   * org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link org.apache.calcite.rex.RexLiteral} and
-   * then re-interpreted to have the correct type.
+   * <p>When converting from Substrait to Calcite, the user-defined literal value is stored either
+   * as a {@link org.apache.calcite.sql.type.SqlTypeName#BINARY} {@link
+   * org.apache.calcite.rex.RexLiteral} (for ANY-encoded values) or a {@link SqlKind#ROW} (for
+   * struct-encoded values) and then re-interpreted to have the correct user-defined type.
    *
    * <p>See {@link ExpressionRexConverter#visit(Expression.UserDefinedAnyLiteral,
+   * SubstraitRelNodeConverter.Context)} and {@link
+   * ExpressionRexConverter#visit(Expression.UserDefinedStructLiteral,
    * SubstraitRelNodeConverter.Context)} for this conversion.
    *
-   * <p>When converting from Calcite to Substrait, this call converter extracts the {@link
-   * Expression.UserDefinedAnyLiteral} that was stored.
+   * <p>When converting from Calcite to Substrait, this call converter extracts the stored {@link
+   * Expression.UserDefinedLiteral}.
    */
   public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
@@ -64,8 +69,7 @@ public class CallConverters {
             Expression operand = visitor.apply(call.getOperands().get(0));
             Type type = typeConverter.toSubstrait(call.getType());
 
-            // For now, we only support handling of SqlKind.REINTEPRETET for the case of stored
-            // user-defined literals
+            // Calcite encoded Expression.UserDefinedAnyLiteral
             if (operand instanceof Expression.FixedBinaryLiteral
                 && type instanceof Type.UserDefined) {
               Expression.FixedBinaryLiteral literal = (Expression.FixedBinaryLiteral) operand;
@@ -87,19 +91,64 @@ public class CallConverters {
                 throw new IllegalStateException("Failed to parse UserDefinedAnyLiteral value", e);
               }
             }
+            // Calcite encoded Expression.UserDefinedStructLiteral
+            else if (operand instanceof Expression.StructLiteral
+                && type instanceof Type.UserDefined) {
+              Expression.StructLiteral structLiteral = (Expression.StructLiteral) operand;
+              Type.UserDefined t = (Type.UserDefined) type;
+
+              return Expression.UserDefinedStructLiteral.builder()
+                  .nullable(t.nullable())
+                  .urn(t.urn())
+                  .name(t.name())
+                  .addAllTypeParameters(t.typeParameters())
+                  .addAllFields(structLiteral.fields())
+                  .build();
+            }
             return null;
           };
 
-  //  public static SimpleCallConverter OrAnd(FunctionConverter c) {
-  //      return (call, visitor) -> {
-  //        if (call.getKind() != SqlKind.AND && call.getKind() != SqlKind.OR) {
-  //          return null;
-  //        }
-  //
-  //
-  //        return null;
-  //      };
-  //  }
+  /**
+   * Converts Calcite ROW constructors into Substrait {@link Expression.StructLiteral}s.
+   *
+   * <p>ROW values are always concrete (never null themselves) - if a value is actually null, use
+   * NullLiteral instead of StructLiteral. Therefore, the resulting StructLiteral always has
+   * nullable=false. The ROW's type may be nullable (for regular structs) or non-nullable (for UDT
+   * struct encoding), but the value itself is always concrete.
+   *
+   * <p>Each literal's nullability is set to match its field type's nullability.
+   */
+  public static SimpleCallConverter ROW =
+      (call, visitor) -> {
+        if (call.getKind() != SqlKind.ROW) {
+          return null;
+        }
+
+        List<Expression> operands =
+            call.getOperands().stream().map(visitor).collect(Collectors.toList());
+        if (!operands.stream().allMatch(expr -> expr instanceof Expression.Literal)) {
+          throw new IllegalArgumentException("ROW operands must be literals.");
+        }
+
+        // ROW types are never nullable (struct literals are always concrete values).
+        // Field nullability comes from individual field types, so match literal nullability
+        // to field type nullability.
+        List<RelDataTypeField> fieldTypes = call.getType().getFieldList();
+        List<Expression.Literal> literals =
+            java.util.stream.IntStream.range(0, operands.size())
+                .mapToObj(
+                    i -> {
+                      Expression.Literal lit = (Expression.Literal) operands.get(i);
+                      boolean fieldIsNullable = fieldTypes.get(i).getType().isNullable();
+                      return lit.withNullable(fieldIsNullable);
+                    })
+                .collect(Collectors.toList());
+
+        // Struct literals are always concrete values (never null).
+        // For UDT struct literals, struct-level nullability is in the REINTERPRET target type.
+        return ExpressionCreator.struct(false, literals);
+      };
+
   /** */
   public static SimpleCallConverter CASE =
       (call, visitor) -> {
@@ -112,7 +161,7 @@ public class CallConverters {
         assert call.getOperands().size() % 2 == 1;
 
         List<Expression> caseArgs =
-            call.getOperands().stream().map(visitor).collect(java.util.stream.Collectors.toList());
+            call.getOperands().stream().map(visitor).collect(Collectors.toList());
 
         int last = caseArgs.size() - 1;
         // for if/else, process in reverse to maintain query order
@@ -150,6 +199,7 @@ public class CallConverters {
     return ImmutableList.of(
         new FieldSelectionConverter(typeConverter),
         CallConverters.CASE,
+        CallConverters.ROW,
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
         new SqlArrayValueConstructorCallConverter(typeConverter),

@@ -48,12 +48,11 @@ class JoinRoundtripTest extends TestBase {
 
   @Test
   void nestedLoopJoin() {
-    List<Rel> inputRels = Arrays.asList(leftTable, rightTable);
     Rel rel =
         NestedLoopJoin.builder()
             .from(
                 sb.nestedLoopJoin(
-                    __ ->
+                    inputRels ->
                         sb.equal(sb.fieldReference(inputRels, 0), sb.fieldReference(inputRels, 5)),
                     NestedLoopJoin.JoinType.INNER,
                     leftTable,

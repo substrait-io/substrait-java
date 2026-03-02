@@ -178,6 +178,7 @@ public class ConverterProvider {
     ArrayList<CallConverter> callConverters = new ArrayList<>();
     callConverters.add(new FieldSelectionConverter(typeConverter));
     callConverters.add(CallConverters.CASE);
+    callConverters.add(CallConverters.ROW);
     callConverters.add(CallConverters.CAST.apply(typeConverter));
     callConverters.add(CallConverters.REINTERPRET.apply(typeConverter));
     callConverters.add(new SqlArrayValueConstructorCallConverter(typeConverter));

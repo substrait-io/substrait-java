@@ -158,6 +158,8 @@ class FunctionMappings {
     s[Substring]("substring"),
     s[Upper]("upper"),
     s[Lower]("lower"),
+    s[StringLPad]("lpad"),
+    s[StringRPad]("rpad"),
     s[Concat]("concat"),
     s[Coalesce]("coalesce"),
     s[ShiftLeft]("shift_left"),
