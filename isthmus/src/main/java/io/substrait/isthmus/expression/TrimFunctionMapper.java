@@ -23,12 +23,13 @@ import org.apache.calcite.sql.type.SqlTypeName;
 /**
  * Custom mapping for the Calcite TRIM function to various Substrait functions. The first TRIM
  * operand indicates the Substrait function to which it should be mapped. The first operand is then
- * omitted from the arguments supplied to the Substrait function.
+ * omitted from the arguments supplied to the Substrait function. The second and third operands are
+ * swapped in order.
  *
  * <ul>
- *   <li>TRIM('BOTH', characters, string) -> trim(characters, string)
- *   <li>TRIM('LEADING', characters, string) -> ltrim(characters, string)
- *   <li>TRIM('TRAILING', .characters, string) -> rtrim(characters, string)
+ *   <li>TRIM('BOTH', characters, string) -> trim(string, characters)
+ *   <li>TRIM('LEADING', characters, string) -> ltrim(string, characters)
+ *   <li>TRIM('TRAILING', .characters, string) -> rtrim(string, characters)
  * </ul>
  */
 final class TrimFunctionMapper implements ScalarFunctionMapper {
@@ -99,8 +100,11 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
           }
 
           String name = trim.substraitName();
-          List<RexNode> operands =
-              call.getOperands().stream().skip(1).collect(Collectors.toUnmodifiableList());
+          List<RexNode> operands = call.getOperands().stream().skip(1).collect(Collectors.toList());
+
+          // Substrait expects (string, characters) while Calcite has (characters, string)
+          Collections.swap(operands, 0, 1);
+
           return new SubstraitFunctionMapping(name, operands, functions);
         });
   }
@@ -129,7 +133,9 @@ final class TrimFunctionMapper implements ScalarFunctionMapper {
         .map(EnumArg::of)
         .map(
             trimTypeArg -> {
-              LinkedList args = new LinkedList<>(expression.arguments());
+              LinkedList<FunctionArg> args = new LinkedList<>(expression.arguments());
+              // Substrait expects (string, characters) while Calcite has (characters, string)
+              Collections.swap(args, 0, 1);
               args.addFirst(trimTypeArg);
               return args;
             });
