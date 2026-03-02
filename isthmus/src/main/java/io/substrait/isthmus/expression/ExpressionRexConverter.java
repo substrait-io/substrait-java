@@ -7,6 +7,7 @@ import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FailureBehavior;
+import io.substrait.expression.Expression.PrecisionTimeLiteral;
 import io.substrait.expression.Expression.PrecisionTimestampLiteral;
 import io.substrait.expression.Expression.PrecisionTimestampTZLiteral;
 import io.substrait.expression.Expression.ScalarSubquery;
@@ -205,19 +206,48 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.TimeLiteral expr, Context context) throws RuntimeException {
-    // Expression.TimeLiteral is Microseconds
-    // Construct a TimeString :
-    // 1. Truncate microseconds to seconds
-    // 2. Get the fraction seconds in precision of nanoseconds.
-    // 3. Construct TimeString :  seconds  + fraction_seconds part.
-    long microSec = expr.value();
-    long seconds = TimeUnit.MICROSECONDS.toSeconds(microSec);
-    int fracSecondsInNano =
-        (int) (TimeUnit.MICROSECONDS.toNanos(microSec) - TimeUnit.SECONDS.toNanos(seconds));
-    TimeString timeString =
-        TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
-            .withNanos(fracSecondsInNano);
-    return rexBuilder.makeLiteral(timeString, typeConverter.toCalcite(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        createTimeString(expr.value(), 6), typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  @Override
+  public RexNode visit(PrecisionTimeLiteral expr, Context context) throws RuntimeException {
+    return rexBuilder.makeLiteral(
+        createTimeString(expr.value(), expr.precision()),
+        typeConverter.toCalcite(typeFactory, expr.getType()));
+  }
+
+  protected TimeString createTimeString(long value, int precision) {
+    switch (precision) {
+      case 0:
+        return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(value));
+      case 3:
+        {
+          long seconds = TimeUnit.MILLISECONDS.toSeconds(value);
+          int fracSecondsInNano =
+              (int) (TimeUnit.MILLISECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
+          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      case 6:
+        {
+          long seconds = TimeUnit.MICROSECONDS.toSeconds(value);
+          int fracSecondsInNano =
+              (int) (TimeUnit.MICROSECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
+          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      case 9:
+        {
+          long seconds = TimeUnit.NANOSECONDS.toSeconds(value);
+          int fracSecondsInNano = (int) (value - TimeUnit.SECONDS.toNanos(seconds));
+          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
+              .withNanos(fracSecondsInNano);
+        }
+      default:
+        throw new UnsupportedOperationException(
+            String.format("Cannot handle PrecisionTime with precision %d.", precision));
+    }
   }
 
   @Override

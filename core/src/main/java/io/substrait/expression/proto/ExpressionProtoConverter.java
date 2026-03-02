@@ -141,6 +141,20 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
+      io.substrait.expression.Expression.PrecisionTimeLiteral expr,
+      EmptyVisitationContext context) {
+    return lit(
+        bldr ->
+            bldr.setNullable(expr.nullable())
+                .setPrecisionTime(
+                    Expression.Literal.PrecisionTime.newBuilder()
+                        .setValue(expr.value())
+                        .setPrecision(expr.precision())
+                        .build()));
+  }
+
+  @Override
+  public Expression visit(
       io.substrait.expression.Expression.DateLiteral expr, EmptyVisitationContext context) {
     return lit(bldr -> bldr.setNullable(expr.nullable()).setDate(expr.value()));
   }
