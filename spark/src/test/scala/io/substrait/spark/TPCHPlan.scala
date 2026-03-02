@@ -224,6 +224,16 @@ class TPCHPlan extends TPCHBase with SubstraitPlanTestBase {
     )
   }
 
+  test("pad") {
+    assertSqlSubstraitRelRoundTrip(
+      "select lpad(o_comment, 5), rpad(o_comment, 2) from orders"
+    )
+
+    assertSqlSubstraitRelRoundTrip(
+      "select lpad(o_comment, 5, '-'), rpad(o_comment, 2, '*') from orders"
+    )
+  }
+
   test("tpch_q1_variant") {
     // difference from tpch_q1 : 1) remove order by clause; 2) remove interval date literal
     assertSqlSubstraitRelRoundTrip(
