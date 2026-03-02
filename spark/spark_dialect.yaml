@@ -611,6 +611,22 @@ supported_scalar_functions:
   - "str"
   - "vchar"
   - "fchar"
+- source: "string"
+  name: "lpad"
+  system_metadata:
+    name: "lpad"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_i32_vchar"
+  - "str_i32_str"
+- source: "string"
+  name: "rpad"
+  system_metadata:
+    name: "rpad"
+    notation: "FUNCTION"
+  supported_impls:
+  - "vchar_i32_vchar"
+  - "str_i32_str"
 - source: "arithmetic"
   name: "shift_left"
   system_metadata:
