@@ -610,6 +610,18 @@ public class ProtoExpressionConverter {
     return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
   }
 
+  /**
+   * A stack for tracking lambda parameter types during expression parsing.
+   *
+   * <p>When parsing nested lambda expressions, each lambda's parameters are pushed onto this stack.
+   * Lambda parameter references use "stepsOut" to indicate which enclosing lambda they reference:
+   *
+   * <ul>
+   *   <li>stepsOut=0 refers to the innermost (current) lambda
+   *   <li>stepsOut=1 refers to the next enclosing lambda
+   *   <li>stepsOut=N refers to N levels up
+   * </ul>
+   */
   private static class LambdaParameterStack {
     private final List<Type.Struct> stack = new ArrayList<>();
 
