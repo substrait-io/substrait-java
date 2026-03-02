@@ -37,7 +37,7 @@ public class ProtoExpressionConverter {
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
-  private final List<Type.Struct> lambdaParameterStack = new ArrayList<>();
+  private final LambdaParameterStack lambdaParameterStack = new LambdaParameterStack();
 
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
@@ -82,15 +82,8 @@ public class ProtoExpressionConverter {
               reference.getLambdaParameterReference();
 
           int stepsOut = lambdaParamRef.getStepsOut();
-          int lambdaIndex = lambdaParameterStack.size() - 1 - stepsOut;
-          if (lambdaIndex < 0 || lambdaIndex >= lambdaParameterStack.size()) {
-            throw new IllegalArgumentException(
-                String.format(
-                    "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
-                    stepsOut, lambdaParameterStack.size()));
-          }
+          Type.Struct lambdaParameters = lambdaParameterStack.get(stepsOut);
 
-          Type.Struct lambdaParameters = lambdaParameterStack.get(lambdaIndex);
           return FieldReference.newLambdaParameterReference(
               reference.getDirectReference().getStructField().getField(),
               lambdaParameters,
@@ -291,13 +284,13 @@ public class ProtoExpressionConverter {
                           .setStruct(protoLambda.getParameters())
                           .build());
 
-          lambdaParameterStack.add(parameters);
+          lambdaParameterStack.push(parameters);
 
           Expression body;
           try {
             body = from(protoLambda.getBody());
           } finally {
-            lambdaParameterStack.remove(lambdaParameterStack.size() - 1);
+            lambdaParameterStack.pop();
           }
 
           return Expression.Lambda.builder().parameters(parameters).body(body).build();
@@ -615,5 +608,31 @@ public class ProtoExpressionConverter {
 
   public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
     return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
+  }
+
+  private static class LambdaParameterStack {
+    private final List<Type.Struct> stack = new ArrayList<>();
+
+    void push(Type.Struct parameters) {
+      stack.add(parameters);
+    }
+
+    void pop() {
+      if (stack.isEmpty()) {
+        throw new IllegalArgumentException("Lambda parameter stack is empty");
+      }
+      stack.remove(stack.size() - 1);
+    }
+
+    Type.Struct get(int stepsOut) {
+      int index = stack.size() - 1 - stepsOut;
+      if (index < 0 || index >= stack.size()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
+                stepsOut, stack.size()));
+      }
+      return stack.get(index);
+    }
   }
 }
