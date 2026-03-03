@@ -166,6 +166,19 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   /**
+   * Visits a precision time literal.
+   *
+   * @param expr the precision time literal
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.PrecisionTimeLiteral expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  /**
    * Visits a date literal.
    *
    * @param expr the date literal

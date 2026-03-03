@@ -25,6 +25,7 @@ import io.substrait.expression.Expression.ListLiteral;
 import io.substrait.expression.Expression.MapLiteral;
 import io.substrait.expression.Expression.MultiOrList;
 import io.substrait.expression.Expression.NullLiteral;
+import io.substrait.expression.Expression.PrecisionTimeLiteral;
 import io.substrait.expression.Expression.PrecisionTimestampLiteral;
 import io.substrait.expression.Expression.PrecisionTimestampTZLiteral;
 import io.substrait.expression.Expression.ScalarFunctionInvocation;
@@ -110,6 +111,12 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(TimeLiteral expr, EmptyVisitationContext context) throws RuntimeException {
     return "<TimeLiteral " + expr.value() + ">";
+  }
+
+  @Override
+  public String visit(PrecisionTimeLiteral expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<PrecisionTimeLiteral " + expr.value() + ">";
   }
 
   @Override

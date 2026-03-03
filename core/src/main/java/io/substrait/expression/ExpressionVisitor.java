@@ -122,6 +122,16 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.TimeLiteral expr, C context) throws E;
 
   /**
+   * Visit a precision time literal.
+   *
+   * @param expr the precision time literal
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.PrecisionTimeLiteral expr, C context) throws E;
+
+  /**
    * Visit a date literal.
    *
    * @param expr the date literal

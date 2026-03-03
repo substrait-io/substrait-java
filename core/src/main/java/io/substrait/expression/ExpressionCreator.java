@@ -72,8 +72,21 @@ public class ExpressionCreator {
     return Expression.DateLiteral.builder().nullable(nullable).value(value).build();
   }
 
+  /**
+   * @deprecated Time is deprecated in favor of PrecisionTime
+   */
+  @Deprecated
   public static Expression.TimeLiteral time(boolean nullable, long value) {
     return Expression.TimeLiteral.builder().nullable(nullable).value(value).build();
+  }
+
+  public static Expression.PrecisionTimeLiteral precisionTime(
+      boolean nullable, long value, int precision) {
+    return Expression.PrecisionTimeLiteral.builder()
+        .nullable(nullable)
+        .value(value)
+        .precision(precision)
+        .build();
   }
 
   /**
