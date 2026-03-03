@@ -10,13 +10,27 @@ repositories {
   mavenCentral()
 }
 
+// Get the Spark variant property
+val sparkVariantProp = findProperty("sparkVariant")?.toString() ?: "spark40_2.13"
+
+// Map variants to their versions
+val variantVersions =
+  mapOf(
+    "spark34_2.12" to Pair("3.4.4", "2.12"),
+    "spark35_2.12" to Pair("3.5.3", "2.12"),
+    "spark40_2.13" to Pair("4.0.2", "2.13"),
+  )
+
+val (sparkVersion, scalaBinary) =
+  variantVersions[sparkVariantProp] ?: variantVersions["spark40_2.13"]!!
+
 dependencies {
   implementation(project(":spark"))
 
   // For a real Spark application, these would not be required since they would be in the Spark
-  // server classpath
-  runtimeOnly(libs.spark.core)
-  runtimeOnly(libs.spark.hive)
+  // server classpath. Use direct Maven coordinates to match the spark module's variant.
+  runtimeOnly("org.apache.spark:spark-core_${scalaBinary}:${sparkVersion}")
+  runtimeOnly("org.apache.spark:spark-hive_${scalaBinary}:${sparkVersion}")
 }
 
 tasks.jar {
