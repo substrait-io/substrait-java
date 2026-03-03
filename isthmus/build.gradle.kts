@@ -121,6 +121,12 @@ dependencies {
   }
   testImplementation(libs.protobuf.java)
   api(libs.jspecify)
+
+  testImplementation(libs.bundles.testcontainers)
+
+  testImplementation(libs.postgresql.jdbc)
+
+  testImplementation(libs.slf4j.jdk14)
 }
 
 tasks {
