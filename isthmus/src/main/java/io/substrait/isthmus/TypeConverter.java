@@ -106,7 +106,7 @@ public class TypeConverter {
       case DATE:
         return creator.DATE;
       case TIME:
-        return creator.TIME;
+        return creator.precisionTime(type.getPrecision());
       case TIMESTAMP:
         return creator.precisionTimestamp(type.getPrecision());
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:

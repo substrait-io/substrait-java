@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
@@ -90,6 +91,23 @@ public class ExpressionCreator {
   }
 
   /**
+   * Creates a precision time literal from a LocalTime value.
+   *
+   * <p>This method converts a Java {@link LocalTime} to a Substrait precision time literal with
+   * nanosecond precision (precision = 9). The time value is represented as nanoseconds since
+   * midnight (00:00:00).
+   *
+   * @param nullable whether the literal can be null
+   * @param value the LocalTime value to convert
+   * @return a PrecisionTimeLiteral with nanosecond precision representing the given time
+   * @see #precisionTime(boolean, long, int) for creating precision time with custom precision
+   */
+  public static Expression.PrecisionTimeLiteral precisionTime(boolean nullable, LocalTime value) {
+    long epochNano = value.toNanoOfDay();
+    return precisionTime(nullable, epochNano, 9);
+  }
+
+  /**
    * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
    */
   @Deprecated
@@ -153,6 +171,27 @@ public class ExpressionCreator {
         .value(value)
         .precision(precision)
         .build();
+  }
+
+  /**
+   * Creates a precision timestamp literal from a LocalDateTime value.
+   *
+   * <p>This method converts a Java {@link LocalDateTime} to a Substrait precision timestamp literal
+   * with nanosecond precision (precision = 9). The timestamp value is represented as nanoseconds
+   * since the Unix epoch (1970-01-01 00:00:00 UTC), assuming the LocalDateTime is in UTC timezone.
+   *
+   * @param nullable whether the literal can be null
+   * @param value the LocalDateTime value to convert (interpreted as UTC)
+   * @return a PrecisionTimestampLiteral with nanosecond precision representing the given timestamp
+   * @see #precisionTimestamp(boolean, long, int) for creating precision timestamp with custom
+   *     precision
+   */
+  public static Expression.PrecisionTimestampLiteral precisionTimestamp(
+      boolean nullable, LocalDateTime value) {
+    long epochNano =
+        TimeUnit.SECONDS.toNanos(value.toEpochSecond(ZoneOffset.UTC))
+            + value.toLocalTime().getNano();
+    return precisionTimestamp(nullable, epochNano, 9);
   }
 
   public static Expression.PrecisionTimestampTZLiteral precisionTimestampTZ(

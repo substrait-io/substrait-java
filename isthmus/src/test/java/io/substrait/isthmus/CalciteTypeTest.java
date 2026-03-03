@@ -104,7 +104,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void time(boolean nullable) {
-    testType(Type.withNullability(nullable).TIME, SqlTypeName.TIME, nullable, 6);
+    testType(Type.withNullability(nullable).precisionTime(6), SqlTypeName.TIME, nullable, 6);
   }
 
   @ParameterizedTest

@@ -103,7 +103,7 @@ class FunctionConversionTest extends PlanTestBase {
             "extract:req_ptstz_str",
             TypeCreator.REQUIRED.I64,
             EnumArg.builder().value("MONTH").build(),
-            Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(6).build(),
+            Expression.PrecisionTimestampTZLiteral.builder().value(0).precision(3).build(),
             Expression.StrLiteral.builder().value("GMT").build());
 
     RexNode calciteExpr = reqPtstzFn.accept(expressionRexConverter, Context.newContext());
@@ -112,7 +112,7 @@ class FunctionConversionTest extends PlanTestBase {
 
     RexCall extract = (RexCall) calciteExpr;
     assertEquals(
-        "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(6), 'GMT':VARCHAR)",
+        "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(3), 'GMT':VARCHAR)",
         extract.toString());
   }
 
@@ -300,7 +300,7 @@ class FunctionConversionTest extends PlanTestBase {
             "strptime_time:str_str",
             "12:34:56",
             "%H:%M:%S",
-            TypeCreator.REQUIRED.TIME,
+            TypeCreator.REQUIRED.precisionTime(6),
             "PARSE_TIME"),
         Arguments.of(
             "strptime_timestamp:str_str",

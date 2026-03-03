@@ -53,6 +53,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
@@ -212,9 +213,16 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(PrecisionTimeLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(
-        createTimeString(expr.value(), expr.precision()),
-        typeConverter.toCalcite(typeFactory, expr.getType()));
+    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
+    if (expr.precision() > maxPrecision) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "unsupported precision_time precision %s, max precision in Calcite type system is set to %s",
+              expr.precision(), maxPrecision));
+    }
+
+    return rexBuilder.makeTimeLiteral(
+        createTimeString(expr.value(), expr.precision()), expr.precision());
   }
 
   protected TimeString createTimeString(long value, int precision) {
@@ -278,13 +286,28 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(PrecisionTimestampLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(
-        getTimestampString(expr.value(), expr.precision()),
-        typeConverter.toCalcite(typeFactory, expr.getType()));
+    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+    if (expr.precision() > maxPrecision) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
+              expr.precision(), maxPrecision));
+    }
+
+    return rexBuilder.makeTimestampLiteral(
+        getTimestampString(expr.value(), expr.precision()), expr.precision());
   }
 
   @Override
   public RexNode visit(PrecisionTimestampTZLiteral expr, Context context) throws RuntimeException {
+    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_TZ);
+    if (expr.precision() > maxPrecision) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
+              expr.precision(), maxPrecision));
+    }
+
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
         typeConverter.toCalcite(typeFactory, expr.getType()));

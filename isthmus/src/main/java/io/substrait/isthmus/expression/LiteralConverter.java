@@ -170,16 +170,23 @@ public class LiteralConverter {
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          return ExpressionCreator.time(
-              nullable, TimeUnit.NANOSECONDS.toMicros(localTime.toNanoOfDay()));
+          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
+          long nanos = localTime.toNanoOfDay();
+          long micros = TimeUnit.NANOSECONDS.toMicros(nanos);
+          return ExpressionCreator.precisionTime(nullable, micros, 6);
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
-          LocalDateTime ldt =
+          LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          return ExpressionCreator.timestamp(nullable, ldt);
+          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
+          long epochNanos =
+              TimeUnit.SECONDS.toNanos(localDateTime.toEpochSecond(java.time.ZoneOffset.UTC))
+                  + localDateTime.toLocalTime().getNano();
+          long epochMicros = TimeUnit.NANOSECONDS.toMicros(epochNanos);
+          return ExpressionCreator.precisionTimestamp(nullable, epochMicros, 6);
         }
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
