@@ -1,6 +1,6 @@
 package io.substrait.examples;
 
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.classic.SparkSession;
 
 /** Collection of helper fns */
 public final class SparkHelper {

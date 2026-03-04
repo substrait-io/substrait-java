@@ -17,6 +17,7 @@
 package io.substrait.spark.logical
 
 import io.substrait.spark.{FileHolder, SparkExtension, ToSubstraitType}
+import io.substrait.spark.compat.WindowGroupLimitCase
 import io.substrait.spark.expression._
 import io.substrait.spark.utils.Util
 
@@ -37,7 +38,7 @@ import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation, V2SessionCatalog}
 import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
-import org.apache.spark.sql.types.{NullType, StructType}
+import org.apache.spark.sql.types.{NullType, StructField, StructType}
 
 import io.substrait.`type`.{NamedStruct, Type}
 import io.substrait.{proto, relation}
@@ -83,6 +84,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case p: LeafNode => convertReadOperator(p)
     case s: SubqueryAlias => visit(s.child)
     case v: View => visit(v.child)
+//    case plan if SparkCompat.instance.supportsWindowGroupLimit =>
+//      SparkCompat.instance.handleWindowGroupLimit(plan, visit)
+    case WindowGroupLimitCase(child) => visit(child)
     case other => t(other)
   }
 
@@ -582,7 +586,9 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     case CreateTable(ResolvedIdentifier(c: V2SessionCatalog, id), tableSchema, _, _, _)
         if id.namespace().length > 0 =>
       val names = Seq(c.name(), id.namespace()(0), id.name())
-      convertCreateTable(names, tableSchema)
+      val schema = StructType(
+        tableSchema.map(col => StructField(col.name, col.dataType, col.nullable)))
+      convertCreateTable(names, schema)
     case DropTable(ResolvedIdentifier(c: V2SessionCatalog, id), ifExists, _)
         if id.namespace().length > 0 =>
       val names = Seq(c.name(), id.namespace()(0), id.name())

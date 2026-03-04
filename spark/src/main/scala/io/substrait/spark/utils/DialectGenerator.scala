@@ -40,7 +40,7 @@ case class SupportedFunction(
     supported_impls: Seq[String])
 
 class DialectGenerator {
-  val schemaPath = "../substrait/text/dialect_schema.yaml"
+  val schemaPath = "../../substrait/text/dialect_schema.yaml"
 
   private val sourceURNs = Map(
     "extension:io.substrait:functions_aggregate_approx" -> "aggregate_approx",
@@ -75,9 +75,10 @@ class DialectGenerator {
       expressions,
       relations,
       sourceURNs.map(_.swap),
-      scalars,
-      aggregates,
-      windows)
+      scalars.sortBy(f => (f.source, f.name)),
+      aggregates.sortBy(f => (f.source, f.name)),
+      windows.sortBy(f => (f.source, f.name))
+    )
   }
 
   def generateYaml(): String = {
@@ -229,7 +230,7 @@ class DialectGenerator {
           .groupBy(_._1) // group by URN
           .filter(_._1 != "FAILED")
           .view
-          .mapValues(_.map(_._2))
+          .map { case (k, v) => (k, v.map(_._2)) }
           .toMap
       case _ =>
         println(s"NO INPUT TYPES")
@@ -241,7 +242,7 @@ class DialectGenerator {
           sourceURNs.getOrElse(urn, ""),
           sig.name,
           FunctionMetadata(sqlName, notation),
-          sigs)
+          sigs.sorted)
     }.toSeq
   }
 

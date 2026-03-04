@@ -69,4 +69,8 @@ class AbstractLogicalPlanVisitor extends LogicalPlanVisitor[relation.Rel] {
   override def visitSort(sort: Sort): Rel = t(sort)
 
   override def visitWithCTE(p: WithCTE): Rel = t(p)
+
+  override def visitOffset(p: Offset): Rel = t(p)
+
+  override def visitRebalancePartitions(p: RebalancePartitions): Rel = t(p)
 }

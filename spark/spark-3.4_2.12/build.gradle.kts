@@ -1,0 +1,188 @@
+plugins {
+  `maven-publish`
+  signing
+  id("java-library")
+  id("scala")
+  id("idea")
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.nmcp)
+  id("substrait.java-conventions")
+}
+
+// Spark 3.4 with Scala 2.12 variant configuration
+val sparkVersion = "3.4.4"
+val scalaVersion = "2.12.20"
+val sparkMajorMinor = "3.4"
+val scalaBinary = "2.12"
+val classifier = "spark34_2.12"
+
+publishing {
+  publications {
+    create<MavenPublication>("maven-publish") {
+      from(components["java"])
+
+      artifactId = classifier
+
+      pom {
+        name.set("Substrait Spark $classifier")
+        description.set(
+          "Substrait integration for Apache Spark $sparkMajorMinor with Scala $scalaBinary"
+        )
+        url.set("https://github.com/substrait-io/substrait-java")
+
+        properties.put("spark.version", sparkVersion)
+        properties.put("scala.version", scalaVersion)
+        properties.put("scala.binary.version", scalaBinary)
+
+        licenses {
+          license {
+            name.set("The Apache License, Version 2.0")
+            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+          }
+        }
+        scm {
+          connection.set("scm:git:git://github.com:substrait-io/substrait-java.git")
+          developerConnection.set("scm:git:ssh://github.com:substrait-io/substrait-java")
+          url.set("https://github.com/substrait-io/substrait-java/")
+        }
+      }
+    }
+  }
+  repositories {
+    maven {
+      name = "local"
+      val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
+      val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
+      url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
+    }
+  }
+}
+
+signing {
+  setRequired({
+    gradle.taskGraph.hasTask(":${project.name}:publishMaven-publishPublicationToNmcpRepository")
+  })
+  val signingKeyId =
+    System.getenv("SIGNING_KEY_ID").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY_ID"].toString()
+  val signingPassword =
+    System.getenv("SIGNING_PASSWORD").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_PASSWORD"].toString()
+  val signingKey =
+    System.getenv("SIGNING_KEY").takeUnless { it.isNullOrEmpty() }
+      ?: extra["SIGNING_KEY"].toString()
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign(publishing.publications["maven-publish"])
+}
+
+configurations.all {
+  if (name.startsWith("incrementalScalaAnalysis")) {
+    setExtendsFrom(emptyList())
+  }
+}
+
+java {
+  toolchain { languageVersion = JavaLanguageVersion.of(17) }
+  withJavadocJar()
+  withSourcesJar()
+}
+
+tasks.withType<ScalaCompile>() {
+  scalaCompileOptions.additionalParameters = listOf("-release:17", "-Xfatal-warnings")
+}
+
+// Configure source sets to reference parent's src directory
+sourceSets {
+  main {
+    scala { setSrcDirs(listOf("../src/main/scala", "../src/main/spark-$sparkMajorMinor")) }
+    resources { setSrcDirs(listOf("../src/main/resources")) }
+  }
+  test {
+    scala {
+      setSrcDirs(
+        listOf("../src/test/scala", "../src/test/spark-$sparkMajorMinor", "../src/main/scala")
+      )
+    }
+    resources { setSrcDirs(listOf("../src/test/resources")) }
+  }
+}
+
+dependencies {
+  api(project(":core"))
+
+  // Scala dependencies
+  implementation("org.scala-lang:scala-library:$scalaVersion")
+  testImplementation("org.scalatest:scalatest_$scalaBinary:3.2.19")
+  testRuntimeOnly("org.scalatestplus:junit-5-12_$scalaBinary:3.2.19.0")
+
+  // Spark dependencies
+  api("org.apache.spark:spark-core_$scalaBinary:$sparkVersion")
+  api("org.apache.spark:spark-sql_$scalaBinary:$sparkVersion")
+  implementation("org.apache.spark:spark-hive_$scalaBinary:$sparkVersion")
+  implementation("org.apache.spark:spark-catalyst_$scalaBinary:$sparkVersion")
+  testImplementation("org.apache.spark:spark-core_$scalaBinary:$sparkVersion:tests")
+  testImplementation("org.apache.spark:spark-sql_$scalaBinary:$sparkVersion:tests")
+  testImplementation("org.apache.spark:spark-catalyst_$scalaBinary:$sparkVersion:tests")
+
+  // Common dependencies
+  implementation(libs.slf4j.api)
+  implementation(platform(libs.jackson.bom))
+  implementation(libs.bundles.jackson)
+  implementation(libs.json.schema.validator)
+
+  testImplementation(platform(libs.junit.bom))
+  testRuntimeOnly(libs.junit.platform.engine)
+  testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+// Spotless is disabled for subprojects since source files are in parent directory
+// The parent spark project handles formatting
+spotless { isEnforceCheck = false }
+
+tasks {
+  // Ensure shadowJar runs before compilation, but skip core tests
+  named("compileJava") {
+    dependsOn(":core:shadowJar")
+    mustRunAfter(":core:compileJava")
+  }
+  named("compileScala") {
+    dependsOn(":core:shadowJar")
+    mustRunAfter(":core:compileJava")
+  }
+
+  // Explicitly skip core test compilation for this build
+  gradle.taskGraph.whenReady {
+    allTasks
+      .filter { it.path.startsWith(":core:") && it.name.contains("Test") }
+      .forEach { it.enabled = false }
+  }
+
+  jar {
+    manifest {
+      from("../../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
+      attributes("Implementation-Title" to "substrait-spark-$classifier")
+    }
+  }
+
+  test {
+    dependsOn(":core:shadowJar")
+    useJUnitPlatform { includeEngines("scalatest") }
+
+    // Set system properties for variant identification
+    systemProperty("spark.version", sparkVersion)
+    systemProperty("scala.version", scalaVersion)
+    systemProperty("variant.classifier", classifier)
+
+    jvmArgs(
+      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-opens=java.base/java.net=ALL-UNNAMED",
+    )
+    environment("SPARK_LOCAL_IP", "127.0.0.1")
+
+    // Separate test reports per variant
+    reports {
+      html.outputLocation.set(layout.buildDirectory.dir("reports/tests/$classifier"))
+      junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/$classifier"))
+    }
+  }
+}

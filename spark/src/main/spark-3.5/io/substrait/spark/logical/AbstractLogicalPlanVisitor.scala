@@ -24,7 +24,7 @@ import io.substrait.relation.Rel
 class AbstractLogicalPlanVisitor extends LogicalPlanVisitor[relation.Rel] {
 
   protected def t(p: LogicalPlan): relation.Rel =
-    throw new UnsupportedOperationException(s"Unable to convert the expression ${p.nodeName}")
+    throw new UnsupportedOperationException(s"Unable to convert the LogicalPlan ${p.nodeName}")
 
   override def visitDistinct(p: Distinct): relation.Rel = t(p)
 
@@ -69,6 +69,8 @@ class AbstractLogicalPlanVisitor extends LogicalPlanVisitor[relation.Rel] {
   override def visitSort(sort: Sort): Rel = t(sort)
 
   override def visitWithCTE(p: WithCTE): Rel = t(p)
+
+  override def visitOffset(p: Offset): Rel = t(p)
 
   override def visitRebalancePartitions(p: RebalancePartitions): Rel = t(p)
 }
