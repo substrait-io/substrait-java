@@ -150,13 +150,6 @@ tasks {
     mustRunAfter(":core:compileJava")
   }
 
-  // Explicitly skip core test compilation for this build
-  gradle.taskGraph.whenReady {
-    allTasks
-      .filter { it.path.startsWith(":core:") && it.name.contains("Test") }
-      .forEach { it.enabled = false }
-  }
-
   jar {
     manifest {
       from("../../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
