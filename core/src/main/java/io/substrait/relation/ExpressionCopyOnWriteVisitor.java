@@ -4,6 +4,7 @@ import static io.substrait.relation.CopyOnWriteUtils.allEmpty;
 import static io.substrait.relation.CopyOnWriteUtils.transformList;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.Expression.PrecisionTimeLiteral;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
@@ -91,6 +92,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Expression> visit(Expression.TimeLiteral expr, EmptyVisitationContext context)
+      throws E {
+    return visitLiteral(expr);
+  }
+
+  @Override
+  public Optional<Expression> visit(PrecisionTimeLiteral expr, EmptyVisitationContext context)
       throws E {
     return visitLiteral(expr);
   }

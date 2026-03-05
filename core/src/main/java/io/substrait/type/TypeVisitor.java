@@ -21,6 +21,7 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Date type) throws E;
 
+  @Deprecated
   R visit(Type.Time type) throws E;
 
   @Deprecated

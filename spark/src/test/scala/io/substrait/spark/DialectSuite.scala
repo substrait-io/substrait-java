@@ -16,7 +16,7 @@ import java.io.{File, FileInputStream}
 import scala.io.Source
 
 class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitPlanTestBase {
-  private val dialectPath = "spark_dialect.yaml"
+  private val dialectPath = "../spark_dialect.yaml"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
