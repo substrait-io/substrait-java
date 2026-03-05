@@ -680,6 +680,11 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
+    /** Returns true if the given URN has any functions or types loaded in this collection. */
+    public boolean containsUrn(String urn) {
+      return urnSupplier.get().contains(urn) || types().stream().anyMatch(t -> t.urn().equals(urn));
+    }
+
     private void checkUrn(String name) {
       if (urnSupplier.get().contains(name)) {
         return;
