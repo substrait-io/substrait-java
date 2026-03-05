@@ -14,6 +14,10 @@ public class DefaultExtensionCatalog {
   public static final String FUNCTIONS_AGGREGATE_APPROX =
       "extension:io.substrait:functions_aggregate_approx";
 
+  /** Extension identifier for aggregate functions with decimal output. */
+  public static final String FUNCTIONS_AGGREGATE_DECIMAL_OUTPUT =
+      "extension:io.substrait:functions_aggregate_decimal_output";
+
   /** Extension identifier for generic aggregate functions. */
   public static final String FUNCTIONS_AGGREGATE_GENERIC =
       "extension:io.substrait:functions_aggregate_generic";
@@ -36,6 +40,9 @@ public class DefaultExtensionCatalog {
 
   /** Extension identifier for geometry functions. */
   public static final String FUNCTIONS_GEOMETRY = "extension:io.substrait:functions_geometry";
+
+  /** Extension identifier for list functions. */
+  public static final String FUNCTIONS_LIST = "extension:io.substrait:functions_list";
 
   /** Extension identifier for logarithmic functions. */
   public static final String FUNCTIONS_LOGARITHMIC = "extension:io.substrait:functions_logarithmic";
@@ -78,11 +85,15 @@ public class DefaultExtensionCatalog {
                 "arithmetic",
                 "comparison",
                 "datetime",
+                "geometry",
                 "list",
                 "logarithmic",
                 "rounding",
                 "rounding_decimal",
+                "set",
                 "string")
+            // TODO(#688): functions_list.yaml is not loaded here because it uses lambda type
+            // expressions (e.g. func<any1 -> any2>) that are not yet supported by the type parser.
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
             .collect(Collectors.toList());
