@@ -122,7 +122,7 @@ public class ExpressionCreator {
   public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
     long epochMicro =
         TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
-            + TimeUnit.NANOSECONDS.toMicros(value.toLocalTime().getNano());
+            + TimeUnit.NANOSECONDS.toMicros(value.getNano());
     return timestamp(nullable, epochMicro);
   }
 
@@ -189,8 +189,7 @@ public class ExpressionCreator {
   public static Expression.PrecisionTimestampLiteral precisionTimestamp(
       boolean nullable, LocalDateTime value) {
     long epochNano =
-        TimeUnit.SECONDS.toNanos(value.toEpochSecond(ZoneOffset.UTC))
-            + value.toLocalTime().getNano();
+        TimeUnit.SECONDS.toNanos(value.toEpochSecond(ZoneOffset.UTC)) + value.getNano();
     return precisionTimestamp(nullable, epochNano, 9);
   }
 
