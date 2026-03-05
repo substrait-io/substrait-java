@@ -215,7 +215,7 @@ public class ExpressionRexConverter
   public RexNode visit(PrecisionTimeLiteral expr, Context context) throws RuntimeException {
     int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
     if (expr.precision() > maxPrecision) {
-      throw new UnsupportedOperationException(
+      throw new IllegalArgumentException(
           String.format(
               "unsupported precision_time precision %s, max precision in Calcite type system is set to %s",
               expr.precision(), maxPrecision));
@@ -253,7 +253,7 @@ public class ExpressionRexConverter
               .withNanos(fracSecondsInNano);
         }
       default:
-        throw new UnsupportedOperationException(
+        throw new IllegalArgumentException(
             String.format("Cannot handle PrecisionTime with precision %d.", precision));
     }
   }
@@ -288,7 +288,7 @@ public class ExpressionRexConverter
   public RexNode visit(PrecisionTimestampLiteral expr, Context context) throws RuntimeException {
     int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
     if (expr.precision() > maxPrecision) {
-      throw new UnsupportedOperationException(
+      throw new IllegalArgumentException(
           String.format(
               "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
               expr.precision(), maxPrecision));
@@ -302,7 +302,7 @@ public class ExpressionRexConverter
   public RexNode visit(PrecisionTimestampTZLiteral expr, Context context) throws RuntimeException {
     int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_TZ);
     if (expr.precision() > maxPrecision) {
-      throw new UnsupportedOperationException(
+      throw new IllegalArgumentException(
           String.format(
               "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
               expr.precision(), maxPrecision));
@@ -345,7 +345,7 @@ public class ExpressionRexConverter
               .withNanos(fracSecondsInNano);
         }
       default:
-        throw new UnsupportedOperationException(
+        throw new IllegalArgumentException(
             String.format("Cannot handle PrecisionTimestamp with precision %d.", precision));
     }
   }

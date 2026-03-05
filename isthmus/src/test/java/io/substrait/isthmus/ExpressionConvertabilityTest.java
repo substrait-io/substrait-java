@@ -230,6 +230,6 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   void assertThrowsExpressionLiteral(Expression.Literal expr) {
     assertThrows(
-        UnsupportedOperationException.class, () -> expr.accept(converter, Context.newContext()));
+        IllegalArgumentException.class, () -> expr.accept(converter, Context.newContext()));
   }
 }
