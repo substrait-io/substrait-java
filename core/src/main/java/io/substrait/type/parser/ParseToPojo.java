@@ -5,10 +5,12 @@ import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
+import io.substrait.type.ImmutableType;
 import io.substrait.type.SubstraitTypeParser;
 import io.substrait.type.SubstraitTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -203,9 +205,39 @@ public class ParseToPojo {
     }
 
     @Override
-    public Type visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
+    public TypeExpression visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
       String name = ctx.Identifier().getSymbol().getText();
-      return withNull(ctx).userDefined(urn, name);
+      boolean nullable = ctx.isnull != null;
+      List<SubstraitTypeParser.ExprContext> paramExprs = ctx.expr();
+      if (paramExprs.isEmpty()) {
+        return withNull(nullable).userDefined(urn, name);
+      }
+      List<Type.Parameter> params = new ArrayList<>();
+      for (SubstraitTypeParser.ExprContext paramExpr : paramExprs) {
+        TypeExpression te = paramExpr.accept(this);
+        if (te instanceof Type) {
+          params.add(ImmutableType.ParameterDataType.builder().type((Type) te).build());
+        } else if (te instanceof TypeExpression.IntegerLiteral) {
+          params.add(
+              ImmutableType.ParameterIntegerValue.builder()
+                  .value(((TypeExpression.IntegerLiteral) te).value())
+                  .build());
+        } else if (te instanceof ParameterizedType.StringLiteral) {
+          params.add(
+              ImmutableType.ParameterStringValue.builder()
+                  .value(((ParameterizedType.StringLiteral) te).value())
+                  .build());
+        } else {
+          throw new UnsupportedOperationException(
+              "Unsupported type parameter in user-defined type: " + te);
+        }
+      }
+      return Type.UserDefined.builder()
+          .nullable(nullable)
+          .urn(urn)
+          .name(name)
+          .addAllTypeParameters(params)
+          .build();
     }
 
     @Override
