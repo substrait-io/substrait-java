@@ -207,7 +207,7 @@ public class ParseToPojo {
     public TypeExpression visitFixedChar(final SubstraitTypeParser.FixedCharContext ctx) {
       boolean nullable = ctx.isnull != null;
       return of(
-          ctx.len,
+          ctx.length,
           withNull(nullable)::fixedChar,
           withNullP(nullable)::fixedCharE,
           withNullE(nullable)::fixedCharE);
@@ -234,7 +234,7 @@ public class ParseToPojo {
     public TypeExpression visitVarChar(final SubstraitTypeParser.VarCharContext ctx) {
       boolean nullable = ctx.isnull != null;
       return of(
-          ctx.len,
+          ctx.length,
           withNull(nullable)::varChar,
           withNullP(nullable)::varCharE,
           withNullE(nullable)::varCharE);
@@ -244,7 +244,7 @@ public class ParseToPojo {
     public TypeExpression visitFixedBinary(final SubstraitTypeParser.FixedBinaryContext ctx) {
       boolean nullable = ctx.isnull != null;
       return of(
-          ctx.len,
+          ctx.length,
           withNull(nullable)::fixedBinary,
           withNullP(nullable)::fixedBinaryE,
           withNullE(nullable)::fixedBinaryE);
