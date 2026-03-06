@@ -67,6 +67,13 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  public ParameterizedType precisionTimeE(String precision) {
+    return ParameterizedType.PrecisionTime.builder()
+        .nullable(nullable)
+        .precision(parameter(precision, false))
+        .build();
+  }
+
   public ParameterizedType precisionTimestampE(String precision) {
     return ParameterizedType.PrecisionTimestamp.builder()
         .nullable(nullable)

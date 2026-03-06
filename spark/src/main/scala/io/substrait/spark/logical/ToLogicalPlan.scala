@@ -17,9 +17,10 @@
 package io.substrait.spark.logical
 
 import io.substrait.spark.{DefaultRelVisitor, FileHolder, SparkExtension, ToSparkType, ToSubstraitType}
+import io.substrait.spark.compat.SparkCompat
 import io.substrait.spark.expression._
 
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{caseSensitiveResolution, MultiInstanceRelation, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable, CatalogTableType}
@@ -28,9 +29,8 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression,
 import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, LeftAnti, LeftOuter, LeftSemi, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.toPrettySQL
-import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.execution.command.{CreateDataSourceTableAsSelectCommand, CreateTableCommand, DataWritingCommand, DropTableCommand, LeafRunnableCommand}
-import org.apache.spark.sql.execution.datasources.{FileFormat => SparkFileFormat, HadoopFsRelation, InMemoryFileIndex, InsertIntoHadoopFsRelationCommand, LogicalRelation, V1Writes}
+import org.apache.spark.sql.execution.datasources.{FileFormat => SparkFileFormat, InsertIntoHadoopFsRelationCommand, V1Writes}
 import org.apache.spark.sql.execution.datasources.csv.CSVFileFormat
 import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
@@ -41,7 +41,6 @@ import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructTyp
 import io.substrait.`type`.{NamedStruct, StringTypeVisitor, Type}
 import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
-import io.substrait.expression.Expression.NestedStruct
 import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
@@ -64,7 +63,7 @@ import scala.jdk.CollectionConverters._
  * RelVisitor to convert Substrait Rel plan to [[LogicalPlan]]. Unsupported Rel node will call
  * visitFallback and throw UnsupportedOperationException.
  */
-class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
+class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSession())
   extends DefaultRelVisitor[LogicalPlan] {
 
   private val expressionConverter =
@@ -142,7 +141,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       val outputs = groupBy.map(toNamedExpression)
       val aggregateExpressions =
         aggregate.getMeasures.asScala.map(fromMeasure).map(toNamedExpression).toSeq
-      Aggregate(groupBy, outputs ++ aggregateExpressions, child)
+      SparkCompat.instance.createAggregate(groupBy, outputs ++ aggregateExpressions, child)
     }
   }
 
@@ -414,19 +413,22 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       throw new UnsupportedOperationException(s"All files must have the same format")
     }
     val (format, options) = convertFileFormat(formats.head)
-    new LogicalRelation(
-      relation = HadoopFsRelation(
-        location = new InMemoryFileIndex(
-          spark,
-          localFiles.getItems.asScala.map(i => new Path(i.getPath.get())).toSeq,
-          Map(),
-          Some(schema)),
-        partitionSchema = new StructType(),
-        dataSchema = schema,
-        bucketSpec = None,
-        fileFormat = format,
-        options = options
-      )(spark),
+    val location = SparkCompat.instance.createInMemoryFileIndex(
+      spark,
+      localFiles.getItems.asScala.map(i => new Path(i.getPath.get())).toSeq,
+      Map(),
+      Some(schema))
+    val hadoopFsRelation = SparkCompat.instance.createHadoopFsRelation(
+      spark,
+      location,
+      new StructType(),
+      schema,
+      None,
+      format,
+      options
+    )
+    SparkCompat.instance.createLogicalRelation(
+      relation = hadoopFsRelation,
       output = output,
       catalogTable = None,
       isStreaming = false
@@ -460,10 +462,11 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
   override def visit(write: NamedWrite, context: EmptyVisitationContext): LogicalPlan = {
     val child = write.getInput.accept(this, context)
     val table = catalogTable(write.getNames.asScala.toSeq)
-    val isHive = spark.conf.get(StaticSQLConf.CATALOG_IMPLEMENTATION.key) match {
-      case "hive" => true
-      case _ => false
-    }
+    val isHive =
+      SparkCompat.instance.getConf(spark, StaticSQLConf.CATALOG_IMPLEMENTATION.key) match {
+        case "hive" => true
+        case _ => false
+      }
     write.getOperation match {
       case WriteOp.CTAS =>
         withChild(child) {
@@ -570,7 +573,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
           s"NamedWrite requires up to three names ([[catalog,] database,] table): $names")
     }
 
-    val loc = spark.conf.get(StaticSQLConf.WAREHOUSE_PATH.key)
+    val loc = SparkCompat.instance.getConf(spark, StaticSQLConf.WAREHOUSE_PATH.key)
     val storage = CatalogStorageFormat(
       locationUri = Some(URI.create(f"$loc/$table")),
       inputFormat = Some("org.apache.hadoop.mapred.TextInputFormat"),
@@ -611,7 +614,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
     }
   }
   private def resolve(plan: LogicalPlan): LogicalPlan = {
-    val qe = new QueryExecution(spark, plan)
+    val qe = SparkCompat.instance.createQueryExecution(spark, plan)
     qe.analyzed match {
       case SubqueryAlias(_, child) => child
       case other => other
@@ -666,7 +669,7 @@ class ToLogicalPlan(spark: SparkSession = SparkSession.builder().getOrCreate())
       // This is helps a bit with round-trip testing and plan readability
       case project: Project => Project(renameAndCastExprs(project.projectList), project.child)
       case aggregate: Aggregate =>
-        Aggregate(
+        SparkCompat.instance.createAggregate(
           aggregate.groupingExpressions,
           renameAndCastExprs(aggregate.aggregateExpressions),
           aggregate.child)

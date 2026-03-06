@@ -17,6 +17,7 @@
 package io.substrait.spark.expression
 
 import io.substrait.spark.{HasOutputStack, ToSubstraitType}
+import io.substrait.spark.compat.SparkCompat
 import io.substrait.spark.utils.Util
 
 import org.apache.spark.sql.catalyst.expressions._
@@ -52,38 +53,35 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
     // its original form to make it substrait friendly.
     // https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/MergeScalarSubqueries.scala#L76
     def unapply(e: Expression): Option[ScalarSubquery] = e match {
-      case GetStructField(
-            ScalarSubquery(
-              Project(Seq(Alias(CreateNamedStruct(args), "mergedValue")), child),
-              _,
-              _,
-              _,
-              _,
-              _),
-            ordinal,
-            _) =>
-        val (name, value) =
-          args.grouped(2).map { case Seq(name, value) => (name, value) }.toArray.apply(ordinal)
+      case GetStructField(subquery: ScalarSubquery, ordinal, _) =>
+        // Extract the project and child from the subquery
+        subquery.plan match {
+          case Project(Seq(Alias(CreateNamedStruct(args), "mergedValue")), child) =>
+            val (name, value) =
+              args.grouped(2).map { case Seq(name, value) => (name, value) }.toArray.apply(ordinal)
 
-        child match {
-          case Aggregate(groupingExpressions, aggregateExpressions, child)
-              if aggregateExpressions.forall(e => e.isInstanceOf[Alias]) =>
-            val used = value match {
-              case ref: AttributeReference => ref.exprId.id
-              case _ => throw new UnsupportedOperationException(s"Cannot convert expression: $e")
+            child match {
+              case agg: Aggregate if agg.aggregateExpressions.forall(e => e.isInstanceOf[Alias]) =>
+                val used = value match {
+                  case ref: AttributeReference => ref.exprId.id
+                  case _ =>
+                    throw new UnsupportedOperationException(s"Cannot convert expression: $e")
+                }
+                val filteredAggExprs = agg.aggregateExpressions.filter(ae => used == ae.exprId.id)
+                Some(
+                  SparkCompat.instance.createScalarSubquery(
+                    SparkCompat.instance
+                      .createAggregate(agg.groupingExpressions, filteredAggExprs, agg.child)
+                  )
+                )
+              case _ =>
+                Some(
+                  SparkCompat.instance.createScalarSubquery(
+                    Project(Seq(Alias(value, name.toString())()), child)
+                  )
+                )
             }
-            val filteredAggExprs = aggregateExpressions.filter(ae => used == ae.exprId.id)
-            Some(
-              ScalarSubquery(
-                Aggregate(groupingExpressions, filteredAggExprs, child)
-              )
-            )
-          case _ =>
-            Some(
-              ScalarSubquery(
-                Project(Seq(Alias(value, name.toString())()), child)
-              )
-            )
+          case _ => None
         }
       case _ => None
     }

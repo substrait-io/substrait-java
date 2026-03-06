@@ -271,7 +271,12 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * @deprecated {@link TimestampLiteral} is deprecated in favor of {@link
+   *     PrecisionTimestampLiteral}
+   */
   @Value.Immutable
+  @Deprecated
   abstract class TimestampLiteral implements Literal {
     public abstract long value();
 
@@ -291,7 +296,11 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * @deprecated {@link TimeLiteral} is deprecated in favor of {@link PrecisionTimeLiteral}
+   */
   @Value.Immutable
+  @Deprecated
   abstract class TimeLiteral implements Literal {
     public abstract long value();
 
@@ -302,6 +311,28 @@ public interface Expression extends FunctionArg {
 
     public static ImmutableExpression.TimeLiteral.Builder builder() {
       return ImmutableExpression.TimeLiteral.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  @Value.Immutable
+  abstract class PrecisionTimeLiteral implements Literal {
+    public abstract long value();
+
+    public abstract int precision();
+
+    @Override
+    public Type getType() {
+      return Type.withNullability(nullable()).precisionTimestamp(precision());
+    }
+
+    public static ImmutableExpression.PrecisionTimeLiteral.Builder builder() {
+      return ImmutableExpression.PrecisionTimeLiteral.builder();
     }
 
     @Override
@@ -331,7 +362,12 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * @deprecated {@link TimestampTZLiteral} is deprecated in favor of {@link
+   *     PrecisionTimestampTZLiteral}
+   */
   @Value.Immutable
+  @Deprecated
   abstract class TimestampTZLiteral implements Literal {
     public abstract long value();
 

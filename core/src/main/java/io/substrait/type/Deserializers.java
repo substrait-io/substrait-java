@@ -32,10 +32,10 @@ public class Deserializers {
 
     private static final long serialVersionUID = 2105956703553161270L;
 
-    private final BiFunction<String, SubstraitTypeParser.StartContext, T> converter;
+    private final BiFunction<String, SubstraitTypeParser.StartRuleContext, T> converter;
 
     public ParseDeserializer(
-        Class<T> clazz, BiFunction<String, SubstraitTypeParser.StartContext, T> converter) {
+        Class<T> clazz, BiFunction<String, SubstraitTypeParser.StartRuleContext, T> converter) {
       super(clazz);
       this.converter = converter;
     }

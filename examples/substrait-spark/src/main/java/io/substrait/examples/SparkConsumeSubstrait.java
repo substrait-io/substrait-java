@@ -9,9 +9,9 @@ import io.substrait.spark.logical.ToLogicalPlan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.classic.Dataset;
+import org.apache.spark.sql.classic.SparkSession;
 
 /** Minimal Spark application */
 public class SparkConsumeSubstrait implements App.Action {

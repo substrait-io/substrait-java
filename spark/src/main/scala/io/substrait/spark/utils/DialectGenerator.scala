@@ -7,8 +7,8 @@ import io.substrait.spark.expression.Sig
 import org.apache.spark.sql.catalyst.expressions.{BinaryOperator, Expression, Literal}
 import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, DoubleType, FloatType, IntegerType, LongType, NullType, ShortType, TimestampNTZType, TimestampType, YearMonthIntervalType}
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
 import io.substrait.extension.SimpleExtension
@@ -29,7 +29,7 @@ case class Dialect(
 
 // Types section
 case class TypeMetadata(name: String, supported_as_column: Boolean)
-case class SupportedType(`type`: String, system_metadata: TypeMetadata)
+case class SupportedType(`type`: String, system_metadata: TypeMetadata, max_precision: Option[Integer] = None)
 
 // Functions section
 case class FunctionMetadata(name: String, notation: String)
@@ -40,7 +40,7 @@ case class SupportedFunction(
     supported_impls: Seq[String])
 
 class DialectGenerator {
-  val schemaPath = "../substrait/text/dialect_schema.yaml"
+  val schemaPath = "../../substrait/text/dialect_schema.yaml"
 
   private val sourceURNs = Map(
     "extension:io.substrait:functions_aggregate_approx" -> "aggregate_approx",
@@ -75,14 +75,20 @@ class DialectGenerator {
       expressions,
       relations,
       sourceURNs.map(_.swap),
-      scalars,
-      aggregates,
-      windows)
+      scalars.sortBy(f => (f.source, f.name)),
+      aggregates.sortBy(f => (f.source, f.name)),
+      windows.sortBy(f => (f.source, f.name))
+    )
   }
 
   def generateYaml(): String = {
     // Generate the dialect YAML
-    val mapper = new ObjectMapper(new YAMLFactory()).registerModules(DefaultScalaModule)
+    val mapper = YAMLMapper
+      .builder()
+      .defaultPropertyInclusion(
+        JsonInclude.Value.ALL_NON_ABSENT)
+      .addModule(DefaultScalaModule)
+      .build()
     val yaml = mapper.writeValueAsString(generate())
 
     // Validate against the substrait dialect schema
@@ -112,9 +118,9 @@ class DialectGenerator {
       SupportedType("FIXED_CHAR", TypeMetadata("StringType", true)),
       SupportedType("BINARY", TypeMetadata("BinaryType", true)),
       SupportedType("BOOL", TypeMetadata("BooleanType", true)),
-      SupportedType("PRECISION_TIMESTAMP", TypeMetadata("TimestampNTZType", true)),
-      SupportedType("PRECISION_TIMESTAMP_TZ", TypeMetadata("TimestampType", true)),
-      SupportedType("INTERVAL_DAY", TypeMetadata("DayTimeIntervalType", true)),
+      SupportedType("PRECISION_TIMESTAMP", TypeMetadata("TimestampNTZType", true), max_precision = Some(9)),
+      SupportedType("PRECISION_TIMESTAMP_TZ", TypeMetadata("TimestampType", true), max_precision = Some(9)),
+      SupportedType("INTERVAL_DAY", TypeMetadata("DayTimeIntervalType", true), max_precision = Some(9)),
       SupportedType("INTERVAL_YEAR", TypeMetadata("YearMonthIntervalType", true)),
       SupportedType("LIST", TypeMetadata("ArrayType", true)),
       SupportedType("MAP", TypeMetadata("MapType", true)),
@@ -229,7 +235,7 @@ class DialectGenerator {
           .groupBy(_._1) // group by URN
           .filter(_._1 != "FAILED")
           .view
-          .mapValues(_.map(_._2))
+          .map { case (k, v) => (k, v.map(_._2)) }
           .toMap
       case _ =>
         println(s"NO INPUT TYPES")
@@ -241,7 +247,7 @@ class DialectGenerator {
           sourceURNs.getOrElse(urn, ""),
           sig.name,
           FunctionMetadata(sqlName, notation),
-          sigs)
+          sigs.sorted)
     }.toSeq
   }
 

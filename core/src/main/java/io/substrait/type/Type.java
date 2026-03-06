@@ -164,6 +164,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
+  @Deprecated
   abstract class Time implements Type {
     public static ImmutableType.Time.Builder builder() {
       return ImmutableType.Time.builder();

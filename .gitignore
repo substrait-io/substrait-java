@@ -13,3 +13,4 @@ out/**
 */bin
 .metals
 .bloop
+.project

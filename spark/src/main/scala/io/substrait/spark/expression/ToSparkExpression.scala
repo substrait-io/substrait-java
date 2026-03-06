@@ -17,6 +17,7 @@
 package io.substrait.spark.expression
 
 import io.substrait.spark.{DefaultExpressionVisitor, HasOutputStack, SparkExtension, ToSparkType}
+import io.substrait.spark.compat.SparkCompat
 import io.substrait.spark.logical.ToLogicalPlan
 import io.substrait.spark.utils.Util
 
@@ -230,7 +231,7 @@ class ToSparkExpression(
         relConverter => {
           val plan = rel.accept(relConverter, context)
           require(plan.resolved)
-          val result = ScalarSubquery(plan)
+          val result = SparkCompat.instance.createScalarSubquery(plan)
           SparkTypeUtil.sameType(result.dataType, dataType)
           result
         })
@@ -248,7 +249,7 @@ class ToSparkExpression(
   override def visit(expr: SExpression.InPredicate, context: EmptyVisitationContext): Expression = {
     val needles = expr.needles().asScala.map(e => e.accept(this, context)).toSeq
     val haystack = expr.haystack().accept(toLogicalPlan.get, context)
-    new InSubquery(needles, ListQuery(haystack, childOutputs = haystack.output)) {
+    new InSubquery(needles, SparkCompat.instance.createListQuery(haystack, haystack.output)) {
       override def nullable: Boolean = expr.getType.nullable()
     }
   }

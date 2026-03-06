@@ -58,7 +58,7 @@ public class SparkSQL implements App.Action {
       Dataset<Row> result = spark.sql(sqlQuery);
       result.show();
 
-      LogicalPlan logical = result.logicalPlan();
+      LogicalPlan logical = result.queryExecution().logical();
       System.out.println(logical);
 
       LogicalPlan optimised = result.queryExecution().optimizedPlan();

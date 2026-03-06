@@ -38,7 +38,9 @@ dependencies {
   compileOnly(libs.immutables.annotations)
 
   nmcpAggregation(project(":core"))
-  nmcpAggregation(project(":spark"))
+  nmcpAggregation(project(":spark:spark-3.4_2.12"))
+  nmcpAggregation(project(":spark:spark-3.5_2.12"))
+  nmcpAggregation(project(":spark:spark-4.0_2.13"))
   nmcpAggregation(project(":isthmus"))
 }
 

@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.82.0](https://github.com/substrait-io/substrait-java/compare/v0.81.0...v0.82.0) (2026-03-02)
+
+### Features
+
+* **core:** add SubstraitBuilder.fieldReference(s) methods for joins ([#712](https://github.com/substrait-io/substrait-java/issues/712)) ([66d7c0b](https://github.com/substrait-io/substrait-java/commit/66d7c0bff7638e3cff096e19762819c719d7a91b))
+* introduce Type[#with](https://github.com/substrait-io/substrait-java/issues/with)Nullable(boolean) ([#713](https://github.com/substrait-io/substrait-java/issues/713)) ([ea1a708](https://github.com/substrait-io/substrait-java/commit/ea1a7084c7bae6bdca54431e244b9465054ba753))
+* **spark:** support lpad and rpad functions ([#719](https://github.com/substrait-io/substrait-java/issues/719)) ([5cf6820](https://github.com/substrait-io/substrait-java/commit/5cf6820bf2a8d22454e6ae69a25d92c2122f8422))
+
+### Bug Fixes
+
+* **isthmus:** fix argument order for trim function mapping ([#714](https://github.com/substrait-io/substrait-java/issues/714)) ([45750bf](https://github.com/substrait-io/substrait-java/commit/45750bff27a8cd5dfdaa8bf8d6338f9149cf56f8))
+
 ## [0.81.0](https://github.com/substrait-io/substrait-java/compare/v0.80.0...v0.81.0) (2026-03-01)
 
 ### Features

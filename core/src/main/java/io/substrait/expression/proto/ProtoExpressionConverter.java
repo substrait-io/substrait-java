@@ -448,6 +448,11 @@ public class ProtoExpressionConverter {
         return ExpressionCreator.date(literal.getNullable(), literal.getDate());
       case TIME:
         return ExpressionCreator.time(literal.getNullable(), literal.getTime());
+      case PRECISION_TIME:
+        return ExpressionCreator.precisionTime(
+            literal.getNullable(),
+            literal.getPrecisionTime().getValue(),
+            literal.getPrecisionTime().getPrecision());
       case INTERVAL_YEAR_TO_MONTH:
         return ExpressionCreator.intervalYear(
             literal.getNullable(),
