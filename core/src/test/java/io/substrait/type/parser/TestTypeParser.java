@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
+import io.substrait.type.ImmutableType;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import org.junit.jupiter.api.Test;
 
@@ -107,6 +109,17 @@ class TestTypeParser {
     test(v, n.struct(r.I8, n.I16), "STRUCT?<i8, i16?>");
     test(v, n.list(n.I8), "LIST?<i8?>");
     test(v, n.map(r.I16, n.I8), "MAP?<i16, i8?>");
+
+    test(v, r.intervalDay(6), "INTERVAL_DAY<6>");
+    test(v, n.intervalDay(9), "INTERVAL_DAY?<9>");
+    test(v, r.intervalCompound(6), "INTERVAL_COMPOUND<6>");
+    test(v, n.intervalCompound(9), "INTERVAL_COMPOUND?<9>");
+    test(v, r.precisionTime(6), "PRECISION_TIME<6>");
+    test(v, n.precisionTime(9), "PRECISION_TIME?<9>");
+    test(v, r.precisionTimestamp(6), "PRECISION_TIMESTAMP<6>");
+    test(v, n.precisionTimestamp(9), "PRECISION_TIMESTAMP?<9>");
+    test(v, r.precisionTimestampTZ(6), "PRECISION_TIMESTAMP_TZ<6>");
+    test(v, n.precisionTimestampTZ(9), "PRECISION_TIMESTAMP_TZ?<9>");
   }
 
   private <T> void parameterizedTests(ParseToPojo.Visitor v) {
@@ -114,12 +127,63 @@ class TestTypeParser {
     test(v, pr.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT<i8, i16, i8?, K>");
     test(v, pr.parameter("any"), "any");
     test(v, pn.parameter("any"), "any?");
+    test(v, pr.parameter("any1"), "any1");
+    test(v, pn.parameter("any1"), "any1?");
     test(v, pn.listE(pr.parameter("any")), "list?<any>");
     test(v, pn.listE(pn.parameter("any")), "list?<any?>");
     test(v, pn.structE(r.I8, r.I16, n.I8, pr.parameter("K")), "STRUCT?<i8, i16, i8?, K>");
     test(v, pr.decimalE("P", "S"), "DECIMAL<P, S>");
     test(v, pr.decimalE("P", "0"), "DECIMAL<P, 0>");
     test(v, pr.decimalE("14", "S"), "DECIMAL<14, S>");
+
+    test(v, pr.intervalDayE("P"), "INTERVAL_DAY<P>");
+    test(v, pr.intervalCompoundE("P"), "INTERVAL_COMPOUND<P>");
+    test(v, pn.precisionTimeE("P"), "PRECISION_TIME?<P>");
+    test(v, pr.precisionTimeE("P"), "PRECISION_TIME<P>");
+    test(v, pr.precisionTimestampE("P"), "PRECISION_TIMESTAMP<P>");
+    test(v, pr.precisionTimestampTZE("P"), "PRECISION_TIMESTAMP_TZ<P>");
+  }
+
+  @Test
+  void userDefinedWithTypeParams() {
+    ParseToPojo.Visitor v = ParseToPojo.Visitor.simple(URN);
+    test(
+        v,
+        Type.UserDefined.builder()
+            .nullable(false)
+            .urn(URN)
+            .name("foo")
+            .addTypeParameters(ImmutableType.ParameterDataType.builder().type(r.I8).build())
+            .build(),
+        "u!foo<i8>");
+    test(
+        v,
+        Type.UserDefined.builder()
+            .nullable(true)
+            .urn(URN)
+            .name("foo")
+            .addTypeParameters(ImmutableType.ParameterDataType.builder().type(r.I8).build())
+            .build(),
+        "u!foo?<i8>");
+    test(
+        v,
+        Type.UserDefined.builder()
+            .nullable(false)
+            .urn(URN)
+            .name("foo")
+            .addTypeParameters(ImmutableType.ParameterIntegerValue.builder().value(1).build())
+            .build(),
+        "u!foo<1>");
+    test(
+        v,
+        Type.UserDefined.builder()
+            .nullable(false)
+            .urn(URN)
+            .name("foo")
+            .addTypeParameters(ImmutableType.ParameterDataType.builder().type(r.I8).build())
+            .addTypeParameters(ImmutableType.ParameterIntegerValue.builder().value(2).build())
+            .build(),
+        "u!foo<i8, 2>");
   }
 
   private static void test(ParseToPojo.Visitor visitor, TypeExpression expected, String toParse) {
