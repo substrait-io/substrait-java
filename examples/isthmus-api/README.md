@@ -4,7 +4,7 @@ The Isthmus library converts Substrait plans to and from SQL Plans. There are tw
 
 ## How does this work in theory?
 
-The [Calcite](https://calcite.apache.org/) library is used to do parsing and generation of the SQL String. Calcite has it's own relational object model, distinct from substrait's. There are classes within Isthmus to convert Substrait to and from Calcite's object model.
+The [Calcite](https://calcite.apache.org/) library is used to do parsing and generation of the SQL String. Calcite has its own relational object model, distinct from substrait's. There are classes within Isthmus to convert Substrait to and from Calcite's object model.
 
 The conversion flows work as follows:
 
@@ -16,15 +16,16 @@ The conversion flows work as follows:
 
 ## Running the examples
 
-There are 2 example classes:
+The examples:
 
-- [FromSql](./src/main/java/io/substrait/examples/FromSql.java) that creates a plan starting from SQL
-- [ToSql](./app/src/main/java/io/substrait/examples/ToSQL.java) that reads a plan and creates the SQL
+- [FromSql](./src/main/java/io/substrait/examples/FromSql.java) - creates a plan starting from SQL
+- [ToSql](./src/main/java/io/substrait/examples/ToSQL.java) - reads a plan and creates the SQL
+- [DynamicFnToSql](./src/main/java/io/substrait/examples/DynamicFnToSql.java) - uses the `substrait-java` API to create a plan using a Dynamic Function; then shows how to convert this to SQL with a custom dialect.
 
 
 ### Requirements
 
-To run these you will need Java 17 or greater, and this repository cloned to you local system.
+To run these you will need Java 17 or greater, and this repository cloned to your local system.
 
 
 ## Creating a Substrait Plan from SQL
@@ -90,7 +91,7 @@ To run [`ToSql.java`](./src/main/java/io/substrait/examples/ToSql.java), execute
 ./gradlew examples:isthmus-api:run --args "ToSql substrait.plan"
 ```
 
-The example reads from `substrait.plan` (likely the file created by `FromSql`) and outputs SQL. The text format of the protobuf has been abbreviated
+The example reads from `substrait.plan` (likely the file created by `FromSql`) and outputs SQL. The text format of the protobuf has been abbreviated.
 ```bash
 > Task :examples:isthmus-api:run
 Reading from substrait.plan
