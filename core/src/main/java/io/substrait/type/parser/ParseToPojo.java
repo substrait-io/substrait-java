@@ -84,6 +84,11 @@ public class ParseToPojo {
     }
 
     @Override
+    public TypeExpression visitTypeStatement(SubstraitTypeParser.TypeStatementContext ctx) {
+      return ctx.typeDef().accept(this);
+    }
+
+    @Override
     public Type visitBoolean(final SubstraitTypeParser.BooleanContext ctx) {
       return withNull(ctx).BOOLEAN;
     }
