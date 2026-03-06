@@ -540,8 +540,9 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitAnyType(SubstraitTypeParser.AnyTypeContext anyType) {
-      boolean nullable = ((SubstraitTypeParser.TypeDefContext) anyType.parent).isnull != null;
-      return withNullP(nullable).parameter("any");
+      boolean nullable = anyType.isnull != null;
+      String name = anyType.AnyVar() != null ? anyType.AnyVar().getText().toLowerCase() : "any";
+      return withNullP(nullable).parameter(name);
     }
 
     @Override
