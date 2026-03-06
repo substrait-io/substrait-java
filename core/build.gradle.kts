@@ -226,6 +226,7 @@ tasks.named<Jar>("sourcesJar") {
 
 sourceSets {
   main {
+    antlr.srcDirs("../substrait/grammar")
     proto.srcDir("../substrait/proto")
     resources.srcDir("../substrait/extensions")
     resources.srcDir("build/generated/sources/manifest/")
@@ -248,19 +249,6 @@ project.configure<IdeaModel> {
   }
 }
 
-tasks.named<AntlrTask>("generateGrammarSource") {
-  arguments.add("-package")
-  arguments.add("io.substrait.type")
-  arguments.add("-visitor")
-  arguments.add("-long-messages")
-  arguments.add("-Xlog")
-  arguments.add("-Werror")
-  arguments.add("-Xexact-output-dir")
-  setSource(fileTree("src/main/antlr/SubstraitType.g4"))
-  outputDirectory =
-    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
-}
-
 val submodulesUpdate by
   tasks.registering(Exec::class) {
     group = "Build Setup"
@@ -268,6 +256,20 @@ val submodulesUpdate by
     commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
     workingDir = rootProject.projectDir
   }
+
+tasks.named<AntlrTask>("generateGrammarSource") {
+  dependsOn(submodulesUpdate)
+  arguments.add("-package")
+  arguments.add("io.substrait.type")
+  arguments.add("-visitor")
+  arguments.add("-long-messages")
+  arguments.add("-Xlog")
+  arguments.add("-Werror")
+  arguments.add("-Xexact-output-dir")
+  exclude("FuncTestCaseLexer.g4", "FuncTestCaseParser.g4")
+  outputDirectory =
+    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
+}
 
 protobuf {
   generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
