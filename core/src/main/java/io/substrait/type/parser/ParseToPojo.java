@@ -420,7 +420,7 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitTypeParam(final SubstraitTypeParser.TypeParamContext ctx) {
+    public TypeExpression visitParameterName(final SubstraitTypeParser.ParameterNameContext ctx) {
       checkParameterizedOrExpression();
       boolean nullable = ctx.isnull != null;
       return ParameterizedType.StringLiteral.builder()
