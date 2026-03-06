@@ -159,7 +159,8 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitIntervalDay(final SubstraitTypeParser.IntervalDayContext ctx) {
+    public TypeExpression visitPrecisionIntervalDay(
+        final SubstraitTypeParser.PrecisionIntervalDayContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
@@ -175,8 +176,8 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitIntervalCompound(
-        final SubstraitTypeParser.IntervalCompoundContext ctx) {
+    public TypeExpression visitPrecisionIntervalCompound(
+        final SubstraitTypeParser.PrecisionIntervalCompoundContext ctx) {
       boolean nullable = ctx.isnull != null;
       Object precision = i(ctx.precision);
       if (precision instanceof Integer) {
