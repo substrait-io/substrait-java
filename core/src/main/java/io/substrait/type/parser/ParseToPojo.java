@@ -110,7 +110,7 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitTypeLiteral(final SubstraitTypeParser.TypeLiteralContext ctx) {
-      return ctx.type().accept(this);
+      return ctx.typeDef().accept(this);
     }
 
     @Override
@@ -391,7 +391,7 @@ public class ParseToPojo {
 
     private TypeCreator withNull(SubstraitTypeParser.ScalarTypeContext required) {
       return Type.withNullability(
-          ((SubstraitTypeParser.TypeContext) required.parent).isnull != null);
+          ((SubstraitTypeParser.TypeDefContext) required.parent).isnull != null);
     }
 
     private TypeCreator withNull(boolean nullable) {
@@ -407,7 +407,7 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitType(final SubstraitTypeParser.TypeContext ctx) {
+    public TypeExpression visitTypeDef(final SubstraitTypeParser.TypeDefContext ctx) {
       if (ctx.scalarType() != null) {
         return ctx.scalarType().accept(this);
       } else if (ctx.parameterizedType() != null) {
@@ -539,7 +539,7 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitAnyType(SubstraitTypeParser.AnyTypeContext anyType) {
-      boolean nullable = ((SubstraitTypeParser.TypeContext) anyType.parent).isnull != null;
+      boolean nullable = ((SubstraitTypeParser.TypeDefContext) anyType.parent).isnull != null;
       return withNullP(nullable).parameter("any");
     }
 
