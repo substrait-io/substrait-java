@@ -48,6 +48,10 @@ public class TypeExpressionCreator extends TypeCreator
         .build();
   }
 
+  public TypeExpression precisionTimeE(TypeExpression precision) {
+    return TypeExpression.PrecisionTime.builder().nullable(nullable).precision(precision).build();
+  }
+
   public TypeExpression precisionTimestampE(TypeExpression precision) {
     return TypeExpression.PrecisionTimestamp.builder()
         .nullable(nullable)

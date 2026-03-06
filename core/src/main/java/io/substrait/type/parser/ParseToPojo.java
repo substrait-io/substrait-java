@@ -316,6 +316,22 @@ public class ParseToPojo {
     }
 
     @Override
+    public TypeExpression visitPrecisionTime(final SubstraitTypeParser.PrecisionTimeContext ctx) {
+      boolean nullable = ctx.isnull != null;
+      Object precision = i(ctx.precision);
+      if (precision instanceof Integer) {
+        return withNull(nullable).precisionTime((Integer) precision);
+      }
+      if (precision instanceof String) {
+        checkParameterizedOrExpression();
+        return withNullP(nullable).precisionTimeE((String) precision);
+      }
+
+      checkExpression();
+      return withNullE(nullable).precisionTimeE(ctx.precision.accept(this));
+    }
+
+    @Override
     public TypeExpression visitPrecisionTimestamp(
         final SubstraitTypeParser.PrecisionTimestampContext ctx) {
       boolean nullable = ctx.isnull != null;
@@ -390,6 +406,23 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitNStruct(final SubstraitTypeParser.NStructContext ctx) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TypeExpression visitFunc(final SubstraitTypeParser.FuncContext ctx) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TypeExpression visitSingleFuncParam(
+        final SubstraitTypeParser.SingleFuncParamContext ctx) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TypeExpression visitFuncParamsWithParens(
+        final SubstraitTypeParser.FuncParamsWithParensContext ctx) {
       throw new UnsupportedOperationException();
     }
 
