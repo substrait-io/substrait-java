@@ -57,14 +57,17 @@ supported_types:
   system_metadata:
     name: "TimestampNTZType"
     supported_as_column: true
+  max_precision: 9
 - type: "PRECISION_TIMESTAMP_TZ"
   system_metadata:
     name: "TimestampType"
     supported_as_column: true
+  max_precision: 9
 - type: "INTERVAL_DAY"
   system_metadata:
     name: "DayTimeIntervalType"
     supported_as_column: true
+  max_precision: 9
 - type: "INTERVAL_YEAR"
   system_metadata:
     name: "YearMonthIntervalType"
