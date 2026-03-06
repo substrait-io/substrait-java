@@ -28,7 +28,7 @@ public class TypeStringParser {
     return parse(str, urn, ParseToPojo::typeExpression);
   }
 
-  private static SubstraitTypeParser.StartContext parse(String str) {
+  private static SubstraitTypeParser.StartRuleContext parse(String str) {
     SubstraitTypeLexer lexer = new SubstraitTypeLexer(CharStreams.fromString(str));
     lexer.removeErrorListeners();
     lexer.addErrorListener(TypeErrorListener.INSTANCE);
@@ -36,11 +36,11 @@ public class TypeStringParser {
     SubstraitTypeParser parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
     parser.removeErrorListeners();
     parser.addErrorListener(TypeErrorListener.INSTANCE);
-    return parser.start();
+    return parser.startRule();
   }
 
   public static <T> T parse(
-      String str, String urn, BiFunction<String, SubstraitTypeParser.StartContext, T> func) {
+      String str, String urn, BiFunction<String, SubstraitTypeParser.StartRuleContext, T> func) {
     return func.apply(urn, parse(str));
   }
 
