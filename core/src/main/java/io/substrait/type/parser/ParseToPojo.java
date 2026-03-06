@@ -21,17 +21,18 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class ParseToPojo {
 
-  public static Type type(String urn, SubstraitTypeParser.StartContext ctx) {
+  public static Type type(String urn, SubstraitTypeParser.StartRuleContext ctx) {
     Visitor visitor = Visitor.simple(urn);
     return (Type) ctx.accept(visitor);
   }
 
   public static ParameterizedType parameterizedType(
-      String urn, SubstraitTypeParser.StartContext ctx) {
+      String urn, SubstraitTypeParser.StartRuleContext ctx) {
     return (ParameterizedType) ctx.accept(Visitor.parameterized(urn));
   }
 
-  public static TypeExpression typeExpression(String urn, SubstraitTypeParser.StartContext ctx) {
+  public static TypeExpression typeExpression(
+      String urn, SubstraitTypeParser.StartRuleContext ctx) {
     return ctx.accept(Visitor.expression(urn));
   }
 
@@ -78,7 +79,7 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitStart(final SubstraitTypeParser.StartContext ctx) {
+    public TypeExpression visitStartRule(SubstraitTypeParser.StartRuleContext ctx) {
       return ctx.expr().accept(this);
     }
 
