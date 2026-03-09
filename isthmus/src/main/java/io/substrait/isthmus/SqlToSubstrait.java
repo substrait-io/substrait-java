@@ -68,7 +68,9 @@ public class SqlToSubstrait extends SqlConverterBase {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
-    final SqlParser.Config sqlParserConfig = sqlDialect.configureParser(SqlParser.config().withParserFactory(ServerDdlExecutor.PARSER_FACTORY));
+    final SqlParser.Config sqlParserConfig =
+        sqlDialect.configureParser(
+            SqlParser.config().withParserFactory(ServerDdlExecutor.PARSER_FACTORY));
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, sqlParserConfig).stream()
