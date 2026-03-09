@@ -22,22 +22,12 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
   }
 
   public static Builder builder() {
-    return builder(DefaultExtensionCatalog.DEFAULT_COLLECTION);
-  }
-
-  public static Builder builder(SimpleExtension.ExtensionCollection extensionCollection) {
-    return new Builder(extensionCollection);
+    return new Builder();
   }
 
   public static class Builder {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
-
-    public Builder(SimpleExtension.ExtensionCollection extensionCollection) {
-      if (extensionCollection == null) {
-        throw new IllegalArgumentException("ExtensionCollection is required");
-      }
-    }
 
     private SimpleExtension.FunctionAnchor resolveFunctionAnchor(
         SimpleExtensionDeclaration.ExtensionFunction func, Map<Integer, String> urnMap) {

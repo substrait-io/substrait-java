@@ -67,8 +67,7 @@ public class ProtoPlanConverter {
   }
 
   public Plan from(io.substrait.proto.Plan plan) {
-    ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder(extensionCollection).from(plan).build();
+    ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
