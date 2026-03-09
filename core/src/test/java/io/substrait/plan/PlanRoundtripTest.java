@@ -20,8 +20,6 @@ import org.junit.jupiter.api.Test;
  */
 class PlanRoundtripTest {
 
-  record TestCase(String input, String expected) {}
-
   private static final List<TestCase> TEST_CASES =
       List.of(
           new TestCase(
@@ -62,6 +60,8 @@ class PlanRoundtripTest {
 
     assertEquals(expectedPlan, actualPlan);
   }
+
+  record TestCase(String input, String expected) {}
 
   @Test
   void testAllPlanRoundtrips() throws IOException {
