@@ -40,6 +40,12 @@ publishing {
             url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
           }
         }
+        developers {
+          developer {
+            id = "andrew-coleman"
+            name = "Andrew Coleman"
+          }
+        }
         scm {
           connection.set("scm:git:git://github.com:substrait-io/substrait-java.git")
           developerConnection.set("scm:git:ssh://github.com:substrait-io/substrait-java")
