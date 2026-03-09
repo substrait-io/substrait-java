@@ -106,7 +106,7 @@ public class TypeConverter {
       case DATE:
         return creator.DATE;
       case TIME:
-        return creator.TIME;
+        return creator.precisionTime(type.getPrecision());
       case TIMESTAMP:
         return creator.precisionTimestamp(type.getPrecision());
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -256,7 +256,7 @@ public class TypeConverter {
     public RelDataType visit(Type.PrecisionTime expr) {
       int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
       if (expr.precision() > maxPrecision) {
-        throw new UnsupportedOperationException(
+        throw new IllegalArgumentException(
             String.format(
                 "unsupported precision_time precision %s, max precision in Calcite type system is set to %s",
                 expr.precision(), maxPrecision));
@@ -268,7 +268,7 @@ public class TypeConverter {
     public RelDataType visit(Type.PrecisionTimestamp expr) {
       int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
       if (expr.precision() > maxPrecision) {
-        throw new UnsupportedOperationException(
+        throw new IllegalArgumentException(
             String.format(
                 "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
                 expr.precision(), maxPrecision));
@@ -281,7 +281,7 @@ public class TypeConverter {
       int maxPrecision =
           typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
       if (expr.precision() > maxPrecision) {
-        throw new UnsupportedOperationException(
+        throw new IllegalArgumentException(
             String.format(
                 "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
                 expr.precision(), maxPrecision));

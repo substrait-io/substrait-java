@@ -154,7 +154,6 @@ class ExpressionConvertabilityTest extends PlanTestBase {
   void supportedPrecisionForPrecisionTimestampTZLiteral() {
     assertPrecisionTimestampTZLiteral(0);
     assertPrecisionTimestampTZLiteral(3);
-    assertPrecisionTimestampTZLiteral(6);
   }
 
   void assertPrecisionTimestampTZLiteral(int precision) {
@@ -207,7 +206,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(4);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(5);
-
+    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(6);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(7);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(8);
 
@@ -231,6 +230,6 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   void assertThrowsExpressionLiteral(Expression.Literal expr) {
     assertThrows(
-        UnsupportedOperationException.class, () -> expr.accept(converter, Context.newContext()));
+        IllegalArgumentException.class, () -> expr.accept(converter, Context.newContext()));
   }
 }

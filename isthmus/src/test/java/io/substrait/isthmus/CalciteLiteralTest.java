@@ -8,7 +8,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.IntervalDayLiteral;
 import io.substrait.expression.Expression.IntervalYearLiteral;
 import io.substrait.expression.Expression.Literal;
-import io.substrait.expression.Expression.TimestampLiteral;
+import io.substrait.expression.Expression.PrecisionTimestampLiteral;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -21,6 +21,8 @@ import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -106,7 +108,7 @@ class CalciteLiteralTest extends CalciteObjs {
   @Test
   void tTime() {
     bitest(
-        ExpressionCreator.time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000),
+        ExpressionCreator.precisionTime(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000, 6),
         rex.makeTimeLiteral(new TimeString(14, 22, 47), 6));
   }
 
@@ -122,7 +124,8 @@ class CalciteLiteralTest extends CalciteObjs {
         new TimeString("14:22:47.123456"));
 
     bitest(
-        ExpressionCreator.time(false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456),
+        ExpressionCreator.precisionTime(
+            false, (14L * 60 * 60 + 22 * 60 + 47) * 1000 * 1000 + 123456, 6),
         rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
   }
 
@@ -142,15 +145,23 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimestamp() {
-    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123);
+    long epochMicro =
+        TimeUnit.SECONDS.toMicros(
+                LocalDateTime.of(2002, 2, 14, 16, 20, 47).toEpochSecond(ZoneOffset.UTC))
+            + 123;
+    PrecisionTimestampLiteral ts = ExpressionCreator.precisionTimestamp(false, epochMicro, 6);
     int nano = (int) TimeUnit.MICROSECONDS.toNanos(123);
     TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
   @Test
-  void tTimestampWithMilliMacroSeconds() {
-    TimestampLiteral ts = ExpressionCreator.timestamp(false, 2002, 2, 14, 16, 20, 47, 123456);
+  void tTimestampWithMilliMicroSeconds() {
+    long epochMicro =
+        TimeUnit.SECONDS.toMicros(
+                LocalDateTime.of(2002, 2, 14, 16, 20, 47).toEpochSecond(ZoneOffset.UTC))
+            + 123456;
+    PrecisionTimestampLiteral ts = ExpressionCreator.precisionTimestamp(false, epochMicro, 6);
     int nano = (int) TimeUnit.MICROSECONDS.toNanos(123456);
     TimestampString tsx = new TimestampString(2002, 2, 14, 16, 20, 47).withNanos(nano);
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
