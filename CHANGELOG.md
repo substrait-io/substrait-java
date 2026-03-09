@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.83.0](https://github.com/substrait-io/substrait-java/compare/v0.82.0...v0.83.0) (2026-03-09)
+
+### Features
+
+* **isthmus:** migrate to PrecisionTime / PrecisionTimestamp ([#721](https://github.com/substrait-io/substrait-java/issues/721)) ([7b43752](https://github.com/substrait-io/substrait-java/commit/7b43752971b904e62cc8acaac9319e1594703022))
+* **spark:** build and publish multi-variant targets ([#707](https://github.com/substrait-io/substrait-java/issues/707)) ([d3ce994](https://github.com/substrait-io/substrait-java/commit/d3ce9947cff8c53aebafbe0255e45df7dd371e95))
+
+### Bug Fixes
+
+* properly deprecate Time(stamp) in favor of PrecisionTime(stamp) ([#720](https://github.com/substrait-io/substrait-java/issues/720)) ([d4697f7](https://github.com/substrait-io/substrait-java/commit/d4697f7c0ee9b9e04b1561104e1036c25f16405b))
+* release of spark variants failed ([#734](https://github.com/substrait-io/substrait-java/issues/734)) ([724aa22](https://github.com/substrait-io/substrait-java/commit/724aa22c855f875443997873aa2071231a634446))
+
 ## [0.82.0](https://github.com/substrait-io/substrait-java/compare/v0.81.0...v0.82.0) (2026-03-02)
 
 ### Features
