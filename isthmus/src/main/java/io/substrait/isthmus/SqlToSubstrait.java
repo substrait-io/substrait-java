@@ -5,6 +5,7 @@ import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.server.ServerDdlExecutor;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -67,7 +68,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
 
-    final SqlParser.Config sqlParserConfig = sqlDialect.configureParser(SqlParser.config());
+    final SqlParser.Config sqlParserConfig = sqlDialect.configureParser(SqlParser.config().withParserFactory(ServerDdlExecutor.PARSER_FACTORY));
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, sqlParserConfig).stream()
