@@ -29,10 +29,8 @@ class ExtensionCollectionMergeTest {
             + "      - args: []\n"
             + "        return: i32\n";
 
-    SimpleExtension.ExtensionCollection collection1 =
-        SimpleExtension.load("uri1://extensions", yaml1);
-    SimpleExtension.ExtensionCollection collection2 =
-        SimpleExtension.load("uri2://extensions", yaml2);
+    SimpleExtension.ExtensionCollection collection1 = SimpleExtension.load(yaml1);
+    SimpleExtension.ExtensionCollection collection2 = SimpleExtension.load(yaml2);
 
     SimpleExtension.ExtensionCollection merged = collection1.merge(collection2);
 
@@ -51,8 +49,8 @@ class ExtensionCollectionMergeTest {
             + "      - args: []\n"
             + "        return: boolean\n";
 
-    SimpleExtension.ExtensionCollection collection1 = SimpleExtension.load("shared://uri", yaml);
-    SimpleExtension.ExtensionCollection collection2 = SimpleExtension.load("shared://uri", yaml);
+    SimpleExtension.ExtensionCollection collection1 = SimpleExtension.load(yaml);
+    SimpleExtension.ExtensionCollection collection2 = SimpleExtension.load(yaml);
 
     SimpleExtension.ExtensionCollection merged =
         assertDoesNotThrow(() -> collection1.merge(collection2));

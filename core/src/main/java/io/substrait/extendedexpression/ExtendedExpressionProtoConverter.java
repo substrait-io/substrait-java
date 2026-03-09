@@ -58,8 +58,7 @@ public class ExtendedExpressionProtoConverter {
     builder.setBaseSchema(
         extendedExpression.getBaseSchema().toProto(new TypeProtoConverter(functionCollector)));
 
-    // the process of adding simple extensions, such as extensionURIs and extensions, is handled on
-    // the fly
+    // the process of adding simple extensions (URNs and declarations) is handled on the fly
     functionCollector.addExtensionsToExtendedExpression(builder);
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());

@@ -12,8 +12,7 @@ class UrnValidationTest {
   void testMissingUrnThrowsException() {
     String yamlWithoutUrn = "%YAML 1.2\n" + "---\n" + "scalar_functions:\n" + "  - name: test\n";
     IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class, () -> SimpleExtension.load("some/uri", yamlWithoutUrn));
+        assertThrows(IllegalArgumentException.class, () -> SimpleExtension.load(yamlWithoutUrn));
     assertTrue(exception.getMessage().contains("Extension YAML file must contain a 'urn' field"));
   }
 
@@ -27,8 +26,7 @@ class UrnValidationTest {
             + "  - name: test\n";
     IllegalArgumentException exception =
         assertThrows(
-            IllegalArgumentException.class,
-            () -> SimpleExtension.load("some/uri", yamlWithInvalidUrn));
+            IllegalArgumentException.class, () -> SimpleExtension.load(yamlWithInvalidUrn));
     assertTrue(
         exception.getMessage().contains("URN must follow format 'extension:<namespace>:<name>'"));
   }
@@ -41,6 +39,6 @@ class UrnValidationTest {
             + "urn: extension:test:valid\n"
             + "scalar_functions:\n"
             + "  - name: test\n";
-    assertDoesNotThrow(() -> SimpleExtension.load("some/uri", yamlWithValidUrn));
+    assertDoesNotThrow(() -> SimpleExtension.load(yamlWithValidUrn));
   }
 }

@@ -22,8 +22,7 @@ class VariadicBehaviorTest {
             + "          parameterConsistency: CONSISTENT\n"
             + "        return: string\n";
 
-    SimpleExtension.ExtensionCollection collection =
-        SimpleExtension.load("test://example", yamlContent);
+    SimpleExtension.ExtensionCollection collection = SimpleExtension.load(yamlContent);
 
     assertEquals(
         SimpleExtension.VariadicBehavior.ParameterConsistency.CONSISTENT,
@@ -45,8 +44,7 @@ class VariadicBehaviorTest {
             + "          parameterConsistency: INCONSISTENT\n"
             + "        return: string\n";
 
-    SimpleExtension.ExtensionCollection collection =
-        SimpleExtension.load("test://example", yamlContent);
+    SimpleExtension.ExtensionCollection collection = SimpleExtension.load(yamlContent);
 
     assertEquals(
         SimpleExtension.VariadicBehavior.ParameterConsistency.INCONSISTENT,

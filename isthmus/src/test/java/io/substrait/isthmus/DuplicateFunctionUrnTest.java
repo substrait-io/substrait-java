@@ -30,9 +30,8 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     try {
       String extensions1 = asString("extensions/functions_duplicate_urn1.yaml");
       String extensions2 = asString("extensions/functions_duplicate_urn2.yaml");
-      collection1 =
-          SimpleExtension.load("urn:extension:io.substrait:functions_string", extensions1);
-      collection2 = SimpleExtension.load("urn:extension:com.domain:string", extensions2);
+      collection1 = SimpleExtension.load(extensions1);
+      collection2 = SimpleExtension.load(extensions2);
       collection = collection1.merge(collection2);
 
       // Verify that the merged collection contains duplicate concat functions with different URNs

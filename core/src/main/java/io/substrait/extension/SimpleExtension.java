@@ -738,7 +738,7 @@ public class SimpleExtension {
             .map(
                 path -> {
                   try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
-                    return load(path, stream);
+                    return load(stream);
                   } catch (IOException e) {
                     throw new UncheckedIOException(e);
                   }
@@ -751,7 +751,7 @@ public class SimpleExtension {
     return complete;
   }
 
-  public static ExtensionCollection load(String uri, String content) {
+  public static ExtensionCollection load(String content) {
     try {
       // Parse with basic YAML mapper first to extract URN
       ObjectMapper basicYamlMapper = new ObjectMapper(new YAMLFactory());
@@ -763,28 +763,24 @@ public class SimpleExtension {
       String urn = urnNode.asText();
       validateUrn(urn);
 
-      ExtensionSignatures docWithoutUri =
-          objectMapper(urn).readValue(content, ExtensionSignatures.class);
+      ExtensionSignatures doc = objectMapper(urn).readValue(content, ExtensionSignatures.class);
 
-      ExtensionSignatures doc =
-          ImmutableSimpleExtension.ExtensionSignatures.builder().from(docWithoutUri).build();
-
-      return buildExtensionCollection(uri, doc);
+      return buildExtensionCollection(doc);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
   }
 
-  public static ExtensionCollection load(String uri, InputStream stream) {
+  public static ExtensionCollection load(InputStream stream) {
     try (Scanner scanner = new Scanner(stream)) {
       scanner.useDelimiter(READ_WHOLE_FILE);
       String content = scanner.next();
-      return load(uri, content);
+      return load(content);
     }
   }
 
   public static ExtensionCollection buildExtensionCollection(
-      String uri, ExtensionSignatures extensionSignatures) {
+      ExtensionSignatures extensionSignatures) {
     String urn = extensionSignatures.urn();
     validateUrn(urn);
     List<ScalarFunctionVariant> scalarFunctionVariants =

@@ -64,7 +64,7 @@ class LiteralRoundtripTest extends TestBase {
           + "      value: T\n";
 
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
-      SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
+      SimpleExtension.load(NESTED_TYPES_YAML);
 
   private static final ExtensionCollector NESTED_TYPES_FUNCTION_COLLECTOR =
       new ExtensionCollector();
