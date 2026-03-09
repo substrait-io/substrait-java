@@ -1,7 +1,6 @@
 package io.substrait.extension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,18 +42,5 @@ class UrnValidationTest {
             + "scalar_functions:\n"
             + "  - name: test\n";
     assertDoesNotThrow(() -> SimpleExtension.load("some/uri", yamlWithValidUrn));
-  }
-
-  @Test
-  void testUriUrnMapIsPopulated() {
-    String yamlWithValidUrn =
-        "%YAML 1.2\n"
-            + "---\n"
-            + "urn: extension:test:valid\n"
-            + "scalar_functions:\n"
-            + "  - name: test\n";
-    SimpleExtension.ExtensionCollection collection =
-        SimpleExtension.load("test://uri", yamlWithValidUrn);
-    assertEquals("extension:test:valid", collection.getUrnFromUri("test://uri"));
   }
 }
