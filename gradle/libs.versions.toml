@@ -28,7 +28,7 @@ slf4j = "2.0.17"
 spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
-spotless = "8.2.1"
+spotless = "8.3.0"
 validator = "3.0.0"
 
 [libraries]
