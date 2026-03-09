@@ -6,7 +6,7 @@ import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
-public class DdlToSubstraitConversionTest {
+class DdlToSubstraitConversionTest {
   @Test
   void testConversion() throws SqlParseException {
     final Prepare.CatalogReader catalogReader =
