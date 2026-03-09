@@ -20,18 +20,19 @@ import org.junit.jupiter.api.Test;
  */
 class PlanRoundtripTest {
 
-  private static final List<String[]> TEST_CASES =
+  record TestCase(String input, String expected) {}
+
+  private static final List<TestCase> TEST_CASES =
       List.of(
-          new String[] {
-            "plan-roundtrip/simple-input-plan.json", "plan-roundtrip/simple-expected-plan.json"
-          },
-          new String[] {
-            "plan-roundtrip/complex-input-plan.json", "plan-roundtrip/complex-expected-plan.json"
-          },
-          new String[] {
-            "plan-roundtrip/zero-anchor-input-plan.json",
-            "plan-roundtrip/zero-anchor-expected-plan.json"
-          });
+          new TestCase(
+              "plan-roundtrip/simple-input-plan.json",
+              "plan-roundtrip/simple-expected-plan.json"),
+          new TestCase(
+              "plan-roundtrip/complex-input-plan.json",
+              "plan-roundtrip/complex-expected-plan.json"),
+          new TestCase(
+              "plan-roundtrip/zero-anchor-input-plan.json",
+              "plan-roundtrip/zero-anchor-expected-plan.json"));
 
   private Plan loadPlanFromJson(String resourcePath) throws IOException {
     try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
@@ -64,9 +65,9 @@ class PlanRoundtripTest {
 
   @Test
   void testAllPlanRoundtrips() throws IOException {
-    for (String[] testCase : TEST_CASES) {
-      Plan inputPlan = loadPlanFromJson(testCase[0]);
-      Plan expectedPlan = loadPlanFromJson(testCase[1]);
+    for (TestCase tc : TEST_CASES) {
+      Plan inputPlan = loadPlanFromJson(tc.input());
+      Plan expectedPlan = loadPlanFromJson(tc.expected());
       testPlanRoundtrip(inputPlan, expectedPlan);
     }
   }
