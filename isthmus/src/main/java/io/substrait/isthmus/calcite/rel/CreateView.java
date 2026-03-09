@@ -1,41 +1,37 @@
 package io.substrait.isthmus.calcite.rel;
 
 import java.util.List;
-import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.SingleRel;
 
-public class CreateView extends AbstractRelNode {
+public class CreateView extends SingleRel {
   private final List<String> viewName;
-  private final RelNode input;
 
-  public CreateView(List<String> viewName, RelNode input) {
-    super(input.getCluster(), input.getTraitSet());
+  private CreateView(
+      RelOptCluster cluster, RelTraitSet traitSet, List<String> viewName, RelNode input) {
+    super(cluster, traitSet, input);
     this.viewName = viewName;
-    this.input = input;
   }
 
-  @Override
-  protected RelDataType deriveRowType() {
-    return input.getRowType();
+  public CreateView(List<String> viewName, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), viewName, input);
   }
 
   @Override
   public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw).input("input", getInput()).item("viewName", getViewName());
+    return super.explainTerms(pw).item("viewName", getViewName());
   }
 
   @Override
-  public List<RelNode> getInputs() {
-    return List.of(input);
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+    assert inputs.size() == 1;
+    return new CreateView(getCluster(), traitSet, viewName, inputs.get(0));
   }
 
   public List<String> getViewName() {
     return viewName;
-  }
-
-  public RelNode getInput() {
-    return input;
   }
 }

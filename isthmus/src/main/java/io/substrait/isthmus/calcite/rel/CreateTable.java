@@ -1,43 +1,38 @@
 package io.substrait.isthmus.calcite.rel;
 
 import java.util.List;
-import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.SingleRel;
 
-public class CreateTable extends AbstractRelNode {
+public class CreateTable extends SingleRel {
 
   private final List<String> tableName;
-  private final RelNode input;
 
-  public CreateTable(List<String> tableName, RelNode input) {
-    super(input.getCluster(), input.getTraitSet());
-
+  private CreateTable(
+      RelOptCluster cluster, RelTraitSet traitSet, List<String> tableName, RelNode input) {
+    super(cluster, traitSet, input);
     this.tableName = tableName;
-    this.input = input;
   }
 
-  @Override
-  protected RelDataType deriveRowType() {
-    return input.getRowType();
+  public CreateTable(List<String> tableName, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), tableName, input);
   }
 
   @Override
   public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw).input("input", getInput()).item("tableName", getTableName());
+    return super.explainTerms(pw).item("tableName", getTableName());
   }
 
   @Override
-  public List<RelNode> getInputs() {
-    return List.of(input);
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+    assert inputs.size() == 1;
+    return new CreateTable(getCluster(), traitSet, tableName, inputs.get(0));
   }
 
   public List<String> getTableName() {
     return tableName;
-  }
-
-  public RelNode getInput() {
-    return input;
   }
 }
