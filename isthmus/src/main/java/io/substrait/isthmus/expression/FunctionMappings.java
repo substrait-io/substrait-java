@@ -5,13 +5,24 @@ import io.substrait.isthmus.AggregateFunctions;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.apache.calcite.sql.SqlBasicFunction;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 
 public class FunctionMappings {
   // Static list of signature mapping between Calcite SQL operators and Substrait base function
   // names.
+
+  /** The transform:list_func function; applies a lambda to each element of an array. */
+  public static final SqlFunction TRANSFORM =
+      SqlBasicFunction.create(
+          "transform",
+          opBinding -> opBinding.getTypeFactory().createArrayType(opBinding.getOperandType(1), -1),
+          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
 
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
@@ -100,7 +111,8 @@ public class FunctionMappings {
               s(SqlLibraryOperators.RPAD, "rpad"),
               s(SqlLibraryOperators.PARSE_TIME, "strptime_time"),
               s(SqlLibraryOperators.PARSE_TIMESTAMP, "strptime_timestamp"),
-              s(SqlLibraryOperators.PARSE_DATE, "strptime_date"))
+              s(SqlLibraryOperators.PARSE_DATE, "strptime_date"),
+              s(TRANSFORM, "transform"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
