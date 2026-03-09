@@ -226,9 +226,7 @@ tasks.named<Jar>("sourcesJar") {
 
 sourceSets {
   main {
-    antlr {
-      setSrcDirs(listOf(file("${rootProject.projectDir}/substrait/grammar")))
-    }
+    antlr { setSrcDirs(listOf(file("${rootProject.projectDir}/substrait/grammar"))) }
     proto.srcDir("../substrait/proto")
     resources.srcDir("../substrait/extensions")
     resources.srcDir("build/generated/sources/manifest/")
