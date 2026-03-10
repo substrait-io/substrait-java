@@ -10,26 +10,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Roundtrip tests: parse a JSON proto plan, convert to POJO, convert back to proto, and compare
  * with the expected output.
  */
 class PlanRoundtripTest {
-
-  private static final List<TestCase> TEST_CASES =
-      List.of(
-          new TestCase(
-              "plan-roundtrip/simple-input-plan.json", "plan-roundtrip/simple-expected-plan.json"),
-          new TestCase(
-              "plan-roundtrip/complex-input-plan.json",
-              "plan-roundtrip/complex-expected-plan.json"),
-          new TestCase(
-              "plan-roundtrip/zero-anchor-input-plan.json",
-              "plan-roundtrip/zero-anchor-expected-plan.json"));
 
   private Plan loadPlanFromJson(String resourcePath) throws IOException {
     try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
@@ -48,7 +39,28 @@ class PlanRoundtripTest {
     }
   }
 
-  private void testPlanRoundtrip(Plan inputPlan, Plan expectedPlan) {
+  static Stream<Arguments> roundtripCases() {
+    return Stream.of(
+        Arguments.of(
+            "simple",
+            "plan-roundtrip/simple-input-plan.json",
+            "plan-roundtrip/simple-expected-plan.json"),
+        Arguments.of(
+            "complex",
+            "plan-roundtrip/complex-input-plan.json",
+            "plan-roundtrip/complex-expected-plan.json"),
+        Arguments.of(
+            "zero-anchor",
+            "plan-roundtrip/zero-anchor-input-plan.json",
+            "plan-roundtrip/zero-anchor-expected-plan.json"));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("roundtripCases")
+  void testPlanRoundtrip(String name, String inputPath, String expectedPath) throws IOException {
+    Plan inputPlan = loadPlanFromJson(inputPath);
+    Plan expectedPlan = loadPlanFromJson(expectedPath);
+
     ProtoPlanConverter protoToPojo =
         new ProtoPlanConverter(DefaultExtensionCatalog.DEFAULT_COLLECTION);
     io.substrait.plan.Plan pojoPlan = protoToPojo.from(inputPlan);
@@ -58,16 +70,5 @@ class PlanRoundtripTest {
     Plan actualPlan = pojoToProto.toProto(pojoPlan);
 
     assertEquals(expectedPlan, actualPlan);
-  }
-
-  record TestCase(String input, String expected) {}
-
-  @Test
-  void testAllPlanRoundtrips() throws IOException {
-    for (TestCase tc : TEST_CASES) {
-      Plan inputPlan = loadPlanFromJson(tc.input());
-      Plan expectedPlan = loadPlanFromJson(tc.expected());
-      testPlanRoundtrip(inputPlan, expectedPlan);
-    }
   }
 }
