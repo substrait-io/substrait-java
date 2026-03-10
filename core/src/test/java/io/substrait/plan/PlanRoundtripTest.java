@@ -23,8 +23,7 @@ class PlanRoundtripTest {
   private static final List<TestCase> TEST_CASES =
       List.of(
           new TestCase(
-              "plan-roundtrip/simple-input-plan.json",
-              "plan-roundtrip/simple-expected-plan.json"),
+              "plan-roundtrip/simple-input-plan.json", "plan-roundtrip/simple-expected-plan.json"),
           new TestCase(
               "plan-roundtrip/complex-input-plan.json",
               "plan-roundtrip/complex-expected-plan.json"),
