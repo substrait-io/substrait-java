@@ -11,6 +11,7 @@ import io.substrait.proto.Expression;
 import io.substrait.proto.Plan;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.Rel;
+import io.substrait.util.EmptyVisitationContext;
 import org.junit.jupiter.api.Test;
 
 class AggregateRelTest extends TestBase {
@@ -90,6 +91,24 @@ class AggregateRelTest extends TestBase {
     Aggregate agg = (Aggregate) resultRel;
     assertEquals(1, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
+
+    Rel roundtripRel = relProtoConverter.visit(agg, EmptyVisitationContext.INSTANCE);
+    assertTrue(roundtripRel.hasAggregate());
+
+    AggregateRel roundtripAggr = roundtripRel.getAggregate();
+    assertEquals(1, roundtripAggr.getGroupingsCount(), "grouping count should be 1");
+    assertEquals(
+        2,
+        roundtripAggr.getGroupingExpressionsCount(),
+        "grouping expressions count of aggregate should be 2");
+    assertEquals(
+        0,
+        roundtripAggr.getGroupings(0).getGroupingExpressionsCount(),
+        "grouping expressions count of grouping should be 0");
+    assertEquals(
+        2,
+        roundtripAggr.getGroupings(0).getExpressionReferencesCount(),
+        "expression reference count of grouping should be 2");
   }
 
   @Test
@@ -127,6 +146,24 @@ class AggregateRelTest extends TestBase {
     Aggregate agg = (Aggregate) resultRel;
     assertEquals(1, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
+
+    Rel roundtripRel = relProtoConverter.visit(agg, EmptyVisitationContext.INSTANCE);
+    assertTrue(roundtripRel.hasAggregate());
+
+    AggregateRel roundtripAgg = roundtripRel.getAggregate();
+    assertEquals(1, roundtripAgg.getGroupingsCount(), "grouping count should be 1");
+    assertEquals(
+        2,
+        roundtripAgg.getGroupingExpressionsCount(),
+        "grouping expressions count of aggregate should be 2");
+    assertEquals(
+        0,
+        roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
+        "grouping expressions count of grouping should be 0");
+    assertEquals(
+        2,
+        roundtripAgg.getGroupings(0).getExpressionReferencesCount(),
+        "expression reference count of grouping should be 2");
   }
 
   @Test
@@ -169,5 +206,27 @@ class AggregateRelTest extends TestBase {
     assertEquals(2, agg.getGroupings().size());
     assertEquals(2, agg.getGroupings().get(0).getExpressions().size());
     assertEquals(1, agg.getGroupings().get(1).getExpressions().size());
+
+    Rel roundtripRel = relProtoConverter.visit(agg, EmptyVisitationContext.INSTANCE);
+    assertTrue(roundtripRel.hasAggregate());
+
+    AggregateRel roundtripAgg = roundtripRel.getAggregate();
+    assertEquals(2, roundtripAgg.getGroupingsCount(), "grouping count should be 2");
+    assertEquals(
+        2,
+        roundtripAgg.getGroupingExpressionsCount(),
+        "grouping expressions count of aggregate should be 2");
+    assertEquals(
+        0,
+        roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
+        "grouping expressions count of grouping should be 0");
+    assertEquals(
+        2,
+        roundtripAgg.getGroupings(0).getExpressionReferencesCount(),
+        "expression reference count of grouping should be 2");
+    assertEquals(
+        1,
+        roundtripAgg.getGroupings(1).getExpressionReferencesCount(),
+        "expression reference count of grouping should be 2");
   }
 }
