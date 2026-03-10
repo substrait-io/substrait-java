@@ -69,6 +69,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
         List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
       Map<Integer, String> urnMap = new HashMap<>();
 
+      // TODO: consider validating URN format (e.g. must start with "extension:")
       for (SimpleExtensionURN extension : simpleExtensionURNs) {
         urnMap.put(extension.getExtensionUrnAnchor(), extension.getUrn());
       }
