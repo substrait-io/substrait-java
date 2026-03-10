@@ -57,10 +57,14 @@ allprojects {
 
   plugins.withType<SpotlessPlugin>().configureEach {
     configure<SpotlessExtension> {
-      kotlinGradle { ktfmt().googleStyle() }
+      // latest ktfmt version is 0.61
+      // https://github.com/facebook/ktfmt/releases
+      kotlinGradle { ktfmt("0.61").googleStyle() }
       java {
         target("src/*/java/**/*.java")
-        googleJavaFormat()
+        // since kfmt also brings in google-java-format we need to sync versions
+        // https://github.com/facebook/ktfmt/blob/v0.61/gradle/libs.versions.toml#L7
+        googleJavaFormat("1.23.0")
         removeUnusedImports()
         trimTrailingWhitespace()
         forbidWildcardImports()
