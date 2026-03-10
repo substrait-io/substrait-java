@@ -6,59 +6,59 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class TestTypeRoundtrip {
 
-  private ExtensionCollector lookup = new ExtensionCollector();
-  private TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
-
-  private ProtoTypeConverter protoTypeConverter =
+  private static ExtensionCollector lookup = new ExtensionCollector();
+  private static TypeProtoConverter typeProtoConverter = new TypeProtoConverter(lookup);
+  private static ProtoTypeConverter protoTypeConverter =
       new ProtoTypeConverter(lookup, SimpleExtension.ExtensionCollection.builder().build());
 
+  static Stream<Type> types() {
+    return Stream.of(true, false)
+        .map(nullable -> nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED)
+        .flatMap(
+            creator ->
+                Stream.of(
+                    creator.BOOLEAN,
+                    creator.I8,
+                    creator.I16,
+                    creator.I32,
+                    creator.I64,
+                    creator.FP32,
+                    creator.FP64,
+                    creator.STRING,
+                    creator.BINARY,
+                    creator.TIME,
+                    creator.DATE,
+                    creator.TIMESTAMP,
+                    creator.TIMESTAMP_TZ,
+                    creator.INTERVAL_YEAR,
+                    creator.UUID,
+                    creator.fixedChar(25),
+                    creator.varChar(35),
+                    creator.fixedBinary(45),
+                    creator.decimal(34, 3),
+                    creator.intervalDay(6),
+                    creator.intervalCompound(3),
+                    creator.precisionTime(3),
+                    creator.precisionTimestamp(1),
+                    creator.precisionTimestampTZ(2),
+                    creator.map(creator.I8, creator.I16),
+                    creator.list(creator.TIME),
+                    creator.struct(creator.TIME, creator.TIMESTAMP, creator.TIMESTAMP_TZ)));
+  }
+
   @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void roundtrip(boolean n) {
-    t(creator(n).BOOLEAN);
-    t(creator(n).I8);
-    t(creator(n).I16);
-    t(creator(n).I32);
-    t(creator(n).I64);
-    t(creator(n).FP32);
-    t(creator(n).FP64);
-    t(creator(n).STRING);
-    t(creator(n).BINARY);
-    t(creator(n).TIME);
-    t(creator(n).DATE);
-    t(creator(n).TIMESTAMP);
-    t(creator(n).TIMESTAMP_TZ);
-    t(creator(n).INTERVAL_YEAR);
-    t(creator(n).UUID);
-    t(creator(n).fixedChar(25));
-    t(creator(n).varChar(35));
-    t(creator(n).fixedBinary(45));
-    t(creator(n).decimal(34, 3));
-    t(creator(n).intervalDay(6));
-    t(creator(n).intervalCompound(3));
-    t(creator(n).precisionTimestamp(1));
-    t(creator(n).precisionTimestampTZ(2));
-    t(creator(n).map(creator(n).I8, creator(n).I16));
-    t(creator(n).list(creator(n).TIME));
-    t(creator(n).struct(creator(n).TIME, creator(n).TIMESTAMP, creator(n).TIMESTAMP_TZ));
-  }
-
-  /*
-   * Test a type pojo -> proto -> pojo roundtrip.
-   *
-   * @param type
-   */
-  private void t(Type type) {
+  @MethodSource("types")
+  @DisplayName("pojo -> proto -> pojo round trip")
+  void roundtripFromType(Type type) {
     io.substrait.proto.Type converted = type.accept(typeProtoConverter);
-    assertEquals(type, protoTypeConverter.from(converted));
-  }
-
-  private TypeCreator creator(boolean nullable) {
-    return nullable ? TypeCreator.NULLABLE : TypeCreator.REQUIRED;
+    Type actual = protoTypeConverter.from(converted);
+    assertEquals(type, actual);
   }
 }
