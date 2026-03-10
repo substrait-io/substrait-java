@@ -95,19 +95,19 @@ class AggregateRelTest extends TestBase {
     Rel roundtripRel = relProtoConverter.visit(agg, EmptyVisitationContext.INSTANCE);
     assertTrue(roundtripRel.hasAggregate());
 
-    AggregateRel roundtripAggr = roundtripRel.getAggregate();
-    assertEquals(1, roundtripAggr.getGroupingsCount(), "grouping count should be 1");
+    AggregateRel roundtripAgg = roundtripRel.getAggregate();
+    assertEquals(1, roundtripAgg.getGroupingsCount(), "grouping count should be 1");
     assertEquals(
         2,
-        roundtripAggr.getGroupingExpressionsCount(),
+        roundtripAgg.getGroupingExpressionsCount(),
         "grouping expressions count of aggregate should be 2");
     assertEquals(
         0,
-        roundtripAggr.getGroupings(0).getGroupingExpressionsCount(),
+        roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
         "grouping expressions count of grouping should be 0");
     assertEquals(
         2,
-        roundtripAggr.getGroupings(0).getExpressionReferencesCount(),
+        roundtripAgg.getGroupings(0).getExpressionReferencesCount(),
         "expression reference count of grouping should be 2");
   }
 
