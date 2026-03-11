@@ -24,6 +24,13 @@ public class FunctionMappings {
           opBinding -> opBinding.getTypeFactory().createArrayType(opBinding.getOperandType(1), -1),
           OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
 
+  /** The filter:list_func function; filters elements of an array using a predicate lambda. */
+  public static final SqlFunction FILTER =
+      SqlBasicFunction.create(
+          "filter",
+          opBinding -> opBinding.getOperandType(0),
+          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
+
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
           .add(
@@ -112,7 +119,8 @@ public class FunctionMappings {
               s(SqlLibraryOperators.PARSE_TIME, "strptime_time"),
               s(SqlLibraryOperators.PARSE_TIMESTAMP, "strptime_timestamp"),
               s(SqlLibraryOperators.PARSE_DATE, "strptime_date"),
-              s(TRANSFORM, "transform"))
+              s(TRANSFORM, "transform"),
+              s(FILTER, "filter"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =

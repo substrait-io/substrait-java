@@ -6,7 +6,7 @@ import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 
-public class LambdaRoundtripTest extends PlanTestBase {
+class LambdaRoundtripTest extends PlanTestBase {
 
   public static io.substrait.proto.Plan readJsonPlan(String resourcePath) throws IOException {
     String json = asString(resourcePath);
