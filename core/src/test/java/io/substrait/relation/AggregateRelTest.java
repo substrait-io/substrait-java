@@ -102,9 +102,9 @@ class AggregateRelTest extends TestBase {
         roundtripAgg.getGroupingExpressionsCount(),
         "grouping expressions count of aggregate should be 2");
     assertEquals(
-        0,
+        2,
         roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
-        "grouping expressions count of grouping should be 0");
+        "grouping expressions count of grouping should be 2");
     assertEquals(
         2,
         roundtripAgg.getGroupings(0).getExpressionReferencesCount(),
@@ -157,9 +157,9 @@ class AggregateRelTest extends TestBase {
         roundtripAgg.getGroupingExpressionsCount(),
         "grouping expressions count of aggregate should be 2");
     assertEquals(
-        0,
+        2,
         roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
-        "grouping expressions count of grouping should be 0");
+        "grouping expressions count of grouping should be 2");
     assertEquals(
         2,
         roundtripAgg.getGroupings(0).getExpressionReferencesCount(),
@@ -217,9 +217,9 @@ class AggregateRelTest extends TestBase {
         roundtripAgg.getGroupingExpressionsCount(),
         "grouping expressions count of aggregate should be 2");
     assertEquals(
-        0,
+        2,
         roundtripAgg.getGroupings(0).getGroupingExpressionsCount(),
-        "grouping expressions count of grouping should be 0");
+        "grouping expressions count of grouping should be 2");
     assertEquals(
         2,
         roundtripAgg.getGroupings(0).getExpressionReferencesCount(),

@@ -215,6 +215,8 @@ public class RelProtoConverter
   private AggregateRel.Grouping toProto(
       Aggregate.Grouping grouping, List<Expression> uniqueGroupingExpressions) {
     return AggregateRel.Grouping.newBuilder()
+        .addAllGroupingExpressions(
+            grouping.getExpressions().stream().map(this::toProto).collect(Collectors.toList()))
         .addAllExpressionReferences(
             grouping.getExpressions().stream()
                 .map(e -> uniqueGroupingExpressions.indexOf(e))
