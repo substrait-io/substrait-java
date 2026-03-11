@@ -78,6 +78,7 @@ public class DefaultExtensionCatalog {
                 "arithmetic",
                 "comparison",
                 "datetime",
+                "list",
                 "logarithmic",
                 "rounding",
                 "rounding_decimal",
