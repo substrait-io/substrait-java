@@ -233,6 +233,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setFixedBinary((Type.FixedBinary) o).build();
       } else if (o instanceof Type.Decimal) {
         return bldr.setDecimal((Type.Decimal) o).build();
+      } else if (o instanceof Type.PrecisionTime) {
+        return bldr.setPrecisionTime((Type.PrecisionTime) o).build();
       } else if (o instanceof Type.PrecisionTimestamp) {
         return bldr.setPrecisionTimestamp((Type.PrecisionTimestamp) o).build();
       } else if (o instanceof Type.PrecisionTimestampTZ) {
