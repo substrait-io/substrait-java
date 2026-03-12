@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.84.0](https://github.com/substrait-io/substrait-java/compare/v0.83.0...v0.84.0) (2026-03-12)
+
+### Features
+
+* **core:** expose metadata from YAML extension files ([#691](https://github.com/substrait-io/substrait-java/issues/691)) ([b865296](https://github.com/substrait-io/substrait-java/commit/b865296f8088bb7abbbbce3730fa346445d5d6e5))
+* **isthmus:** enable precision timestamp addition/subtraction ([#745](https://github.com/substrait-io/substrait-java/issues/745)) ([df13eb8](https://github.com/substrait-io/substrait-java/commit/df13eb8306afcb1ea748b6ce2c4f15265e5fffd5))
+
+### Bug Fixes
+
+* **core:** create precision time protobuf ([#742](https://github.com/substrait-io/substrait-java/issues/742)) ([824fc58](https://github.com/substrait-io/substrait-java/commit/824fc5868112945b7d1d3147e366cab74b302869))
+* **isthmus:** support DDL statements in SqlToSubstrait conversion ([#736](https://github.com/substrait-io/substrait-java/issues/736)) ([ff3607d](https://github.com/substrait-io/substrait-java/commit/ff3607df30df17a038b74b5de3801a916a2af0b0))
+
 ## [0.83.0](https://github.com/substrait-io/substrait-java/compare/v0.82.0...v0.83.0) (2026-03-09)
 
 ### Features
