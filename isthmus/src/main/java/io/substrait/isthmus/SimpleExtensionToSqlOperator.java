@@ -22,8 +22,13 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/** Utility class to convert Substrait extension functions to Calcite SqlOperators. */
 public final class SimpleExtensionToSqlOperator {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtensionToSqlOperator.class);
 
   private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
       new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
@@ -32,15 +37,38 @@ public final class SimpleExtensionToSqlOperator {
 
   private SimpleExtensionToSqlOperator() {}
 
+  /**
+   * Converts all functions from an extension collection to SqlOperators.
+   *
+   * @param collection the extension collection
+   * @return list of SqlOperators
+   */
   public static List<SqlOperator> from(SimpleExtension.ExtensionCollection collection) {
     return from(collection, DEFAULT_TYPE_FACTORY);
   }
 
+  /**
+   * Converts all functions from an extension collection to SqlOperators using a specific type
+   * factory.
+   *
+   * @param collection the extension collection
+   * @param typeFactory the Calcite type factory
+   * @return list of SqlOperators
+   */
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection, RelDataTypeFactory typeFactory) {
     return from(collection, typeFactory, TypeConverter.DEFAULT);
   }
 
+  /**
+   * Converts all functions from an extension collection to SqlOperators using a specific type
+   * factory and converter.
+   *
+   * @param collection the extension collection
+   * @param typeFactory the Calcite type factory
+   * @param typeConverter the type converter
+   * @return list of SqlOperators
+   */
   public static List<SqlOperator> from(
       SimpleExtension.ExtensionCollection collection,
       RelDataTypeFactory typeFactory,
@@ -371,7 +399,8 @@ public final class SimpleExtensionToSqlOperator {
           if (type.startsWith("LIST")) {
             return SqlTypeName.ARRAY;
           }
-          return super.visit(expr);
+          LOGGER.warn("Unsupported type literal for Calcite conversion: {}", type);
+          return SqlTypeName.ANY;
       }
     }
   }
