@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
@@ -181,11 +182,11 @@ public class LiteralConverter {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
           LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
-          long epochNanos =
-              TimeUnit.SECONDS.toNanos(localDateTime.toEpochSecond(java.time.ZoneOffset.UTC))
-                  + localDateTime.toLocalTime().getNano();
-          long epochMicros = TimeUnit.NANOSECONDS.toMicros(epochNanos);
+          // Calcite supports up to microsecond precision (6)
+          long epochSeconds = localDateTime.toEpochSecond(ZoneOffset.UTC);
+          long epochMicros =
+              TimeUnit.SECONDS.toMicros(epochSeconds)
+                  + TimeUnit.NANOSECONDS.toMicros(localDateTime.getNano());
           return ExpressionCreator.precisionTimestamp(nullable, epochMicros, 6);
         }
       case INTERVAL_YEAR:
