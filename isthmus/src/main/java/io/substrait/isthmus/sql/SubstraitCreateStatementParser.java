@@ -79,6 +79,21 @@ public class SubstraitCreateStatementParser {
    *
    * <p>This method expects the use of fully qualified table names in the CREATE statements.
    *
+   * @param createStatements List of SQL strings containing only CREATE statements, must not be null
+   * @return a {@link CalciteCatalogReader} generated from the CREATE statements
+   * @throws SqlParseException
+   */
+  public static CalciteCatalogReader processCreateStatementsToCatalog(
+      @NonNull final List<String> createStatements) throws SqlParseException {
+    return processCreateStatementsToCatalog(createStatements.toArray(new String[0]));
+  }
+
+  /**
+   * Parses one or more SQL strings containing only CREATE statements into a {@link
+   * CalciteCatalogReader}
+   *
+   * <p>This method expects the use of fully qualified table names in the CREATE statements.
+   *
    * @param createStatements a SQL string containing only CREATE statements, must not be null
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
    * @throws SqlParseException
