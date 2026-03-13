@@ -60,6 +60,6 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
 
   protected RelRoot handleCreateView(final SqlCreateView sqlCreateView) {
     final RelNode input = converter.convertQuery(sqlCreateView.query, true, true).rel;
-    return RelRoot.of(new CreateTable(sqlCreateView.name.names, input), sqlCreateView.getKind());
+    return RelRoot.of(new CreateView(sqlCreateView.name.names, input), sqlCreateView.getKind());
   }
 }
