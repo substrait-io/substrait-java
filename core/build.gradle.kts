@@ -289,13 +289,14 @@ tasks.register<Javadoc>("javadocProto") {
 
   // Only the generated proto sources
   setSource(fileTree(protoJavaDir) { include("**/*.java") })
-  // source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
   // Use the main source set classpath to resolve types referenced by the generated code
   classpath = sourceSets["main"].compileClasspath
 
   // Destination separate from main Javadoc
-  destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/core-proto").get().asFile
+  setDestinationDir(
+    rootProject.layout.buildDirectory.dir("docs/${version}/core-proto").get().asFile
+  )
 
   // Make sure protobufs are generated before Javadoc runs
   dependsOn("generateProto")
@@ -326,13 +327,12 @@ tasks.register<Javadoc>("javadocImmutable") {
 
   // Only the generated proto sources
   setSource(fileTree(immuteableJavaDir) { include("**/*.java") })
-  // source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
   // Use the main source set classpath to resolve types referenced by the generated code
   classpath = sourceSets["main"].compileClasspath
 
   // Destination separate from main Javadoc
-  destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile
+  setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile)
 
   // Suppress warnings/doclint for protobuf pass
   (options as StandardJavadocDocletOptions).apply {
@@ -376,12 +376,16 @@ tasks.named<Javadoc>("javadoc") {
 
 // Bundle both passes into the Javadoc JAR used for publishing.
 tasks.named<Jar>("javadocJar") {
-  val shared = rootProject.layout.buildDirectory.dir("docs/${version}").get().asFile
-  if (!shared.exists()) {
-    println("Creating a dir for javadoc ${rootProject.buildDir}/docs/${version}")
-    shared.mkdirs()
-  }
+  // auto creates the directories if needed
+  val docsDir = rootProject.layout.buildDirectory.dir("docs/${version}")
+  destinationDirectory.set(docsDir)
 
-  // Ensure both javadoc tasks have produced outputs
-  dependsOn(tasks.named("javadocProto"), tasks.named("javadoc"), tasks.named("javadocImmutable"))
+  // Add the outputs of the Javadoc tasks to this JAR
+  // Using 'from' on a task automatically adds the 'dependsOn'
+  from(tasks.named("javadocProto"))
+  from(tasks.named("javadoc"))
+  from(tasks.named("javadocImmutable"))
+
+  // Handle duplicate files (e.g., allclasses-index.html) from multiple javadoc tasks
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
