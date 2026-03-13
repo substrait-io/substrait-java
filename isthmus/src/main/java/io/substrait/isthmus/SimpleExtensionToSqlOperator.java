@@ -22,6 +22,8 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for converting Substrait {@link SimpleExtension} function definitions (scalar and
@@ -39,6 +41,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
  * <p>Currently supports scalar and aggregate functions; window functions are not yet implemented.
  */
 public final class SimpleExtensionToSqlOperator {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtensionToSqlOperator.class);
 
   private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
       new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
@@ -411,7 +415,8 @@ public final class SimpleExtensionToSqlOperator {
           if (type.startsWith("LIST")) {
             return SqlTypeName.ARRAY;
           }
-          return super.visit(expr);
+          LOGGER.warn("Unsupported type literal for Calcite conversion: {}", type);
+          return SqlTypeName.ANY;
       }
     }
   }
