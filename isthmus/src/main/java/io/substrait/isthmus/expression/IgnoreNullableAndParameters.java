@@ -150,21 +150,18 @@ public class IgnoreNullableAndParameters
   @Override
   public Boolean visit(Type.PrecisionTime type) {
     return typeToMatch instanceof Type.PrecisionTime
-        || typeToMatch instanceof Type.Time
         || typeToMatch instanceof ParameterizedType.PrecisionTime;
   }
 
   @Override
   public Boolean visit(Type.PrecisionTimestamp type) {
     return typeToMatch instanceof Type.PrecisionTimestamp
-        || typeToMatch instanceof Type.Timestamp
         || typeToMatch instanceof ParameterizedType.PrecisionTimestamp;
   }
 
   @Override
   public Boolean visit(Type.PrecisionTimestampTZ type) {
     return typeToMatch instanceof Type.PrecisionTimestampTZ
-        || typeToMatch instanceof Type.TimestampTZ
         || typeToMatch instanceof ParameterizedType.PrecisionTimestampTZ;
   }
 
@@ -230,21 +227,18 @@ public class IgnoreNullableAndParameters
   @Override
   public Boolean visit(ParameterizedType.PrecisionTime expr) throws RuntimeException {
     return typeToMatch instanceof Type.PrecisionTime
-        || typeToMatch instanceof Type.Time
         || typeToMatch instanceof ParameterizedType.PrecisionTime;
   }
 
   @Override
   public Boolean visit(ParameterizedType.PrecisionTimestamp expr) throws RuntimeException {
     return typeToMatch instanceof Type.PrecisionTimestamp
-        || typeToMatch instanceof Type.Timestamp
         || typeToMatch instanceof ParameterizedType.PrecisionTimestamp;
   }
 
   @Override
   public Boolean visit(ParameterizedType.PrecisionTimestampTZ expr) throws RuntimeException {
     return typeToMatch instanceof Type.PrecisionTimestampTZ
-        || typeToMatch instanceof Type.TimestampTZ
         || typeToMatch instanceof ParameterizedType.PrecisionTimestampTZ;
   }
 
