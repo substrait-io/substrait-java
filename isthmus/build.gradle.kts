@@ -147,3 +147,31 @@ tasks {
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
 
 protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }
+
+tasks.named<Javadoc>("javadoc") {
+  dependsOn(":core:javadoc", ":core:javadocProto")
+  description = "Generate Javadoc for main sources."
+
+  // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
+  (options as StandardJavadocDocletOptions).apply {
+    encoding = "UTF-8"
+    destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/isthmus").get().asFile
+
+    addStringOption("overview", "${rootProject.projectDir}/isthmus/src/main/javadoc/overview.html")
+    links("../core-proto/")
+    links("../core/")
+    links("https://calcite.apache.org/javadocAggregate/")
+  }
+}
+
+// Bundle both passes into the Javadoc JAR used for publishing.
+tasks.named<Jar>("javadocJar") {
+  val shared = rootProject.layout.buildDirectory.dir("docs/${version}").get().asFile
+  if (!shared.exists()) {
+    println("Creating a dir for javadoc ${rootProject.buildDir}/${version}")
+    shared.mkdirs()
+  }
+
+  // Ensure javadoc tasks have produced output
+  dependsOn(tasks.named("javadoc"))
+}
