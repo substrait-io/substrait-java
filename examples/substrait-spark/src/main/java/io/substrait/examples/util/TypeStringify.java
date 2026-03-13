@@ -150,6 +150,11 @@ public class TypeStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Type.Func type) throws RuntimeException {
+    return type.getClass().getSimpleName();
+  }
+
+  @Override
   public String visit(Struct type) throws RuntimeException {
     StringBuffer sb = new StringBuffer(type.getClass().getSimpleName());
     type.fields()

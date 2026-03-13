@@ -1,0 +1,172 @@
+{
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_arithmetic"
+    },
+    {
+      "extensionUrnAnchor": 2,
+      "urn": "extension:io.substrait:functions_list"
+    }
+  ],
+  "extensionUris": [
+    {
+      "extensionUriAnchor": 1,
+      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_arithmetic.yaml"
+    },
+    {
+      "extensionUriAnchor": 2,
+      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_list.yaml"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "extensionUrnReference": 1,
+        "extensionUriReference": 1,
+        "functionAnchor": 1,
+        "name": "multiply:i32_i32"
+      }
+    },
+    {
+      "extensionFunction": {
+        "extensionUrnReference": 2,
+        "extensionUriReference": 2,
+        "functionAnchor": 2,
+        "name": "transform:list_func"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "common": {
+              "emit": {
+                "outputMapping": [
+                  1
+                ]
+              }
+            },
+            "input": {
+              "read": {
+                "common": {
+                  "direct": {}
+                },
+                "baseSchema": {
+                  "names": [
+                    "values"
+                  ],
+                  "struct": {
+                    "nullability": "NULLABILITY_REQUIRED",
+                    "types": [
+                      {
+                        "list": {
+                          "type": {
+                            "i32": {
+                              "nullability": "NULLABILITY_REQUIRED"
+                            }
+                          },
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "test_table"
+                  ]
+                }
+              }
+            },
+            "expressions": [
+              {
+                "scalarFunction": {
+                  "functionReference": 2,
+                  "outputType": {
+                    "list": {
+                      "type": {
+                        "i32": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      },
+                      "nullability": "NULLABILITY_REQUIRED"
+                    }
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 0
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "lambda": {
+                          "parameters": {
+                            "nullability": "NULLABILITY_REQUIRED",
+                            "types": [
+                              {
+                                "i32": {
+                                  "nullability": "NULLABILITY_REQUIRED"
+                                }
+                              }
+                            ]
+                          },
+                          "body": {
+                            "scalarFunction": {
+                              "functionReference": 1,
+                              "outputType": {
+                                "i32": {
+                                  "nullability": "NULLABILITY_REQUIRED"
+                                }
+                              },
+                              "arguments": [
+                                {
+                                  "value": {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {
+                                          "field": 0
+                                        }
+                                      },
+                                      "lambdaParameterReference": {
+                                        "stepsOut": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "value": {
+                                    "literal": {
+                                      "i32": 2
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "result"
+        ]
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 package io.substrait.type.parser;
 
+import io.substrait.function.ImmutableParameterizedType;
 import io.substrait.function.ImmutableTypeExpression;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
@@ -411,19 +412,61 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitFunc(final SubstraitTypeParser.FuncContext ctx) {
-      throw new UnsupportedOperationException();
+      boolean nullable = ctx.isnull != null;
+
+      // Process function parameters
+      List<TypeExpression> paramExprs;
+      if (ctx.params instanceof SubstraitTypeParser.SingleFuncParamContext) {
+        paramExprs =
+            java.util.Collections.singletonList(
+                ((SubstraitTypeParser.SingleFuncParamContext) ctx.params).expr().accept(this));
+      } else if (ctx.params instanceof SubstraitTypeParser.FuncParamsWithParensContext) {
+        paramExprs =
+            ((SubstraitTypeParser.FuncParamsWithParensContext) ctx.params)
+                .expr().stream()
+                    .map(e -> e.accept(this))
+                    .collect(java.util.stream.Collectors.toList());
+      } else {
+        throw new UnsupportedOperationException(
+            "Unknown funcParams type: " + ctx.params.getClass());
+      }
+
+      // Process return type
+      TypeExpression returnExpr = ctx.returnType.accept(this);
+
+      // If all types are instances of Type, we return a Type
+      if (paramExprs.stream().allMatch(p -> p instanceof Type) && returnExpr instanceof Type) {
+        ImmutableType.Func.Builder builder = ImmutableType.Func.builder().nullable(nullable);
+        paramExprs.forEach(p -> builder.addParameterTypes((Type) p));
+        return builder.returnType((Type) returnExpr).build();
+      }
+
+      // If all types are instances of ParameterizedType, we return a ParameterizedType
+      if (paramExprs.stream().allMatch(p -> p instanceof ParameterizedType)
+          && returnExpr instanceof ParameterizedType) {
+        checkParameterizedOrExpression();
+        ImmutableParameterizedType.Func.Builder builder =
+            ParameterizedType.Func.builder().nullable(nullable);
+        paramExprs.forEach(p -> builder.addParameterTypes((ParameterizedType) p));
+        return builder.returnType((ParameterizedType) returnExpr).build();
+      }
+
+      throw new UnsupportedOperationException(
+          "func type with TypeExpression-level parameter or return types are not yet supported");
     }
 
     @Override
     public TypeExpression visitSingleFuncParam(
         final SubstraitTypeParser.SingleFuncParamContext ctx) {
-      throw new UnsupportedOperationException();
+      throw new UnsupportedOperationException(
+          "visitSingleFuncParam is handled in visitFunc directly");
     }
 
     @Override
     public TypeExpression visitFuncParamsWithParens(
         final SubstraitTypeParser.FuncParamsWithParensContext ctx) {
-      throw new UnsupportedOperationException();
+      throw new UnsupportedOperationException(
+          "visitFuncParamsWithParens is handled in visitFunc directly");
     }
 
     @Override

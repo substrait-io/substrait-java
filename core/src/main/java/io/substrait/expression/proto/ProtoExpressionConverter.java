@@ -37,6 +37,7 @@ public class ProtoExpressionConverter {
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
+  private final LambdaParameterStack lambdaParameterStack = new LambdaParameterStack();
 
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
@@ -75,6 +76,25 @@ public class ProtoExpressionConverter {
             reference.getDirectReference().getStructField().getField(),
             rootType,
             reference.getOuterReference().getStepsOut());
+      case LAMBDA_PARAMETER_REFERENCE:
+        {
+          io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =
+              reference.getLambdaParameterReference();
+
+          int stepsOut = lambdaParamRef.getStepsOut();
+          Type.Struct lambdaParameters = lambdaParameterStack.get(stepsOut);
+
+          // Check for unsupported nested field access
+          if (reference.getDirectReference().getStructField().hasChild()) {
+            throw new UnsupportedOperationException(
+                "Nested field access in lambda parameters is not yet supported");
+          }
+
+          return FieldReference.newLambdaParameterReference(
+              reference.getDirectReference().getStructField().getField(),
+              lambdaParameters,
+              stepsOut);
+        }
       case ROOTTYPE_NOT_SET:
       default:
         throw new IllegalArgumentException("Unhandled type: " + reference.getRootTypeCase());
@@ -260,6 +280,27 @@ public class ProtoExpressionConverter {
           }
         }
 
+      case LAMBDA:
+        {
+          io.substrait.proto.Expression.Lambda protoLambda = expr.getLambda();
+          Type.Struct parameters =
+              (Type.Struct)
+                  protoTypeConverter.from(
+                      io.substrait.proto.Type.newBuilder()
+                          .setStruct(protoLambda.getParameters())
+                          .build());
+
+          lambdaParameterStack.push(parameters);
+
+          Expression body;
+          try {
+            body = from(protoLambda.getBody());
+          } finally {
+            lambdaParameterStack.pop();
+          }
+
+          return Expression.Lambda.builder().parameters(parameters).body(body).build();
+        }
       // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
@@ -578,5 +619,43 @@ public class ProtoExpressionConverter {
 
   public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
     return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
+  }
+
+  /**
+   * A stack for tracking lambda parameter types during expression parsing.
+   *
+   * <p>When parsing nested lambda expressions, each lambda's parameters are pushed onto this stack.
+   * Lambda parameter references use "stepsOut" to indicate which enclosing lambda they reference:
+   *
+   * <ul>
+   *   <li>stepsOut=0 refers to the innermost (current) lambda
+   *   <li>stepsOut=1 refers to the next enclosing lambda
+   *   <li>stepsOut=N refers to N levels up
+   * </ul>
+   */
+  private static class LambdaParameterStack {
+    private final List<Type.Struct> stack = new ArrayList<>();
+
+    void push(Type.Struct parameters) {
+      stack.add(parameters);
+    }
+
+    void pop() {
+      if (stack.isEmpty()) {
+        throw new IllegalArgumentException("Lambda parameter stack is empty");
+      }
+      stack.remove(stack.size() - 1);
+    }
+
+    Type.Struct get(int stepsOut) {
+      int index = stack.size() - 1 - stepsOut;
+      if (index < 0 || index >= stack.size()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
+                stepsOut, stack.size()));
+      }
+      return stack.get(index);
+    }
   }
 }

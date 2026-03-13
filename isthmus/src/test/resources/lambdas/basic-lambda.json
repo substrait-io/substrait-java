@@ -1,0 +1,132 @@
+{
+  "version": {
+    "majorNumber": 0,
+    "minorNumber": 79
+  },
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_list"
+    }
+  ],
+  "extensionUris": [
+    {
+      "extensionUriAnchor": 1,
+      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_list.yaml"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "extensionUrnReference": 1,
+        "extensionUriReference": 1,
+        "functionAnchor": 1,
+        "name": "transform:list_func"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "common": {
+              "emit": {
+                "outputMapping": [
+                  1
+                ]
+              }
+            },
+            "input": {
+              "read": {
+                "common": {
+                  "direct": {}
+                },
+                "baseSchema": {
+                  "names": [
+                    "values"
+                  ],
+                  "struct": {
+                    "nullability": "NULLABILITY_REQUIRED",
+                    "types": [
+                      {
+                        "list": {
+                          "type": {
+                            "i32": {
+                              "nullability": "NULLABILITY_REQUIRED"
+                            }
+                          },
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "test_table"
+                  ]
+                }
+              }
+            },
+            "expressions": [
+              {
+                "scalarFunction": {
+                  "functionReference": 1,
+                  "outputType": {
+                    "list": {
+                      "type": {
+                        "i32": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      },
+                      "nullability": "NULLABILITY_REQUIRED"
+                    }
+                  },
+                  "arguments": [
+                    {
+                      "value": {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 0
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "lambda": {
+                          "parameters": {
+                            "nullability": "NULLABILITY_REQUIRED",
+                            "types": [
+                              {
+                                "i32": {
+                                  "nullability": "NULLABILITY_REQUIRED"
+                                }
+                              }
+                            ]
+                          },
+                          "body": {
+                            "literal": {
+                              "i32": 42
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "result"
+        ]
+      }
+    }
+  ]
+}

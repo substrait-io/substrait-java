@@ -104,6 +104,16 @@ public class ParameterizedTypeCreator extends TypeCreator
   }
 
   @Override
+  public ParameterizedType funcE(
+      Iterable<? extends ParameterizedType> parameterTypes, ParameterizedType returnType) {
+    return ParameterizedType.Func.builder()
+        .nullable(nullable)
+        .addAllParameterTypes(parameterTypes)
+        .returnType(returnType)
+        .build();
+  }
+
+  @Override
   public ParameterizedType mapE(ParameterizedType key, ParameterizedType value) {
     return ParameterizedType.Map.builder().nullable(nullable).key(key).value(value).build();
   }

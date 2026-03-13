@@ -151,6 +151,11 @@ public class ToTypeString
   }
 
   @Override
+  public String visit(Type.Func type) throws RuntimeException {
+    return "func";
+  }
+
+  @Override
   public String visit(final Type.UserDefined expr) {
     return String.format("u!%s", expr.name());
   }
@@ -208,6 +213,11 @@ public class ToTypeString
   @Override
   public String visit(ParameterizedType.Map expr) throws RuntimeException {
     return "map";
+  }
+
+  @Override
+  public String visit(ParameterizedType.Func expr) throws RuntimeException {
+    return "func";
   }
 
   @Override

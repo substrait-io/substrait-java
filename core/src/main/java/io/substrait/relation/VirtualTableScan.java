@@ -242,5 +242,10 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     public Integer visit(Type.UserDefined type) throws RuntimeException {
       return 0;
     }
+
+    @Override
+    public Integer visit(Type.Func type) throws RuntimeException {
+      return 0;
+    }
   }
 }
