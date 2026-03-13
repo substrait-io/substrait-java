@@ -155,12 +155,21 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
-    AggregateRel.Builder builder =
+    final List<Expression> uniqueGroupingExpressions =
+        aggregate.getGroupings().stream()
+            .flatMap(g -> g.getExpressions().stream())
+            .distinct()
+            .collect(Collectors.toList());
+
+    final AggregateRel.Builder builder =
         AggregateRel.newBuilder()
             .setInput(toProto(aggregate.getInput()))
             .setCommon(common(aggregate))
+            .addAllGroupingExpressions(toProto(uniqueGroupingExpressions))
             .addAllGroupings(
-                aggregate.getGroupings().stream().map(this::toProto).collect(Collectors.toList()))
+                aggregate.getGroupings().stream()
+                    .map(g -> toProto(g, uniqueGroupingExpressions))
+                    .collect(Collectors.toList()))
             .addAllMeasures(
                 aggregate.getMeasures().stream().map(this::toProto).collect(Collectors.toList()));
 
@@ -203,9 +212,15 @@ public class RelProtoConverter
     return builder.build();
   }
 
-  private AggregateRel.Grouping toProto(Aggregate.Grouping grouping) {
+  private AggregateRel.Grouping toProto(
+      Aggregate.Grouping grouping, List<Expression> uniqueGroupingExpressions) {
     return AggregateRel.Grouping.newBuilder()
-        .addAllGroupingExpressions(toProto(grouping.getExpressions()))
+        .addAllGroupingExpressions(
+            grouping.getExpressions().stream().map(this::toProto).collect(Collectors.toList()))
+        .addAllExpressionReferences(
+            grouping.getExpressions().stream()
+                .map(e -> uniqueGroupingExpressions.indexOf(e))
+                .collect(Collectors.toList()))
         .build();
   }
 
