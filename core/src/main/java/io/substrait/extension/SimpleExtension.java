@@ -614,7 +614,7 @@ public class SimpleExtension {
   }
 
   /**
-   * The catalog of function and type definitions loaded from YAML extension files. Maps URN+name
+   * The catalog of function and type definitions loaded from YAML extension files. Maps URN + name
    * pairs to full definitions (argument types, return types, etc.).
    *
    * <p>Used by {@link AbstractExtensionLookup#getScalarFunction} and similar methods to resolve a
