@@ -84,6 +84,12 @@ public class ProtoExpressionConverter {
           int stepsOut = lambdaParamRef.getStepsOut();
           Type.Struct lambdaParameters = lambdaParameterStack.get(stepsOut);
 
+          // Check for unsupported nested field access
+          if (reference.getDirectReference().getStructField().hasChild()) {
+            throw new UnsupportedOperationException(
+                "Nested field access in lambda parameters is not yet supported");
+          }
+
           return FieldReference.newLambdaParameterReference(
               reference.getDirectReference().getStructField().getField(),
               lambdaParameters,

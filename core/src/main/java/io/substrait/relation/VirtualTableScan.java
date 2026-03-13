@@ -245,8 +245,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
 
     @Override
     public Integer visit(Type.Func type) throws RuntimeException {
-      return type.parameterTypes().stream().mapToInt(p -> p.accept(this)).sum()
-          + type.returnType().accept(this);
+      return 0;
     }
   }
 }

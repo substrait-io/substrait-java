@@ -769,8 +769,9 @@ public interface Expression extends FunctionArg {
       List<Type> paramTypes = parameters().fields();
       Type returnType = body().getType();
 
-      // TO DO: fix Lambda return type once this issue
-      // https://github.com/substrait-io/substrait/issues/976 is resolved
+      // TODO: Type.Func nullability is hardcoded to false here because the spec does not allow for
+      //   declaring otherwise.
+      // See: https://github.com/substrait-io/substrait/issues/976
       return Type.withNullability(false).func(paramTypes, returnType);
     }
 

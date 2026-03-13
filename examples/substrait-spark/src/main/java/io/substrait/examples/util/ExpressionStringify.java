@@ -205,7 +205,7 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(Expression.Lambda expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<Lambda>";
+    return "<Lambda >";
   }
 
   @Override
