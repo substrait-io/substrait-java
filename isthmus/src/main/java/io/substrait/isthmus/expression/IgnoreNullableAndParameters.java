@@ -50,7 +50,12 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(Type.Str type) {
-    return typeToMatch instanceof Type.Str;
+    // Treat all string types as compatible: Str, VarChar, and FixedChar
+    return typeToMatch instanceof Type.Str
+        || typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof Type.FixedChar
+        || typeToMatch instanceof ParameterizedType.VarChar
+        || typeToMatch instanceof ParameterizedType.FixedChar;
   }
 
   @Override
@@ -108,13 +113,22 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(Type.FixedChar type) {
+    // Treat all string types as compatible: Str, VarChar, and FixedChar
     return typeToMatch instanceof Type.FixedChar
-        || typeToMatch instanceof ParameterizedType.FixedChar;
+        || typeToMatch instanceof ParameterizedType.FixedChar
+        || typeToMatch instanceof Type.Str
+        || typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof ParameterizedType.VarChar;
   }
 
   @Override
   public Boolean visit(Type.VarChar type) {
-    return typeToMatch instanceof Type.VarChar || typeToMatch instanceof ParameterizedType.VarChar;
+    // Treat all string types as compatible: Str, VarChar, and FixedChar
+    return typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof ParameterizedType.VarChar
+        || typeToMatch instanceof Type.Str
+        || typeToMatch instanceof Type.FixedChar
+        || typeToMatch instanceof ParameterizedType.FixedChar;
   }
 
   @Override
@@ -164,13 +178,22 @@ public class IgnoreNullableAndParameters
 
   @Override
   public Boolean visit(ParameterizedType.FixedChar expr) throws RuntimeException {
+    // Treat all string types as compatible: Str, VarChar, and FixedChar
     return typeToMatch instanceof Type.FixedChar
-        || typeToMatch instanceof ParameterizedType.FixedChar;
+        || typeToMatch instanceof ParameterizedType.FixedChar
+        || typeToMatch instanceof Type.Str
+        || typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof ParameterizedType.VarChar;
   }
 
   @Override
   public Boolean visit(ParameterizedType.VarChar expr) throws RuntimeException {
-    return typeToMatch instanceof Type.VarChar || typeToMatch instanceof ParameterizedType.VarChar;
+    // Treat all string types as compatible: Str, VarChar, and FixedChar
+    return typeToMatch instanceof Type.VarChar
+        || typeToMatch instanceof ParameterizedType.VarChar
+        || typeToMatch instanceof Type.Str
+        || typeToMatch instanceof Type.FixedChar
+        || typeToMatch instanceof ParameterizedType.FixedChar;
   }
 
   @Override
