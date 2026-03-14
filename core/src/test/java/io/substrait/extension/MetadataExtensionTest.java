@@ -26,7 +26,7 @@ class MetadataExtensionTest extends TestBase {
   static {
     try {
       String extensionStr = asString("extensions/metadata_extensions.yaml");
-      METADATA_EXTENSION = SimpleExtension.load(URN, extensionStr);
+      METADATA_EXTENSION = SimpleExtension.load(extensionStr);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -91,8 +91,7 @@ class MetadataExtensionTest extends TestBase {
   @Test
   void testMergePreservesMetadata() throws IOException {
     String customExtensionStr = asString("extensions/custom_extensions.yaml");
-    SimpleExtension.ExtensionCollection customExtension =
-        SimpleExtension.load("extension:test:custom_extensions", customExtensionStr);
+    SimpleExtension.ExtensionCollection customExtension = SimpleExtension.load(customExtensionStr);
 
     SimpleExtension.ExtensionCollection merged = METADATA_EXTENSION.merge(customExtension);
 

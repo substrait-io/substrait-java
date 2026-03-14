@@ -32,7 +32,7 @@ class TypeExtensionTest extends TestBase {
   static {
     try {
       String customExtensionStr = asString("extensions/custom_extensions.yaml");
-      CUSTOM_EXTENSION = SimpleExtension.load(URN, customExtensionStr);
+      CUSTOM_EXTENSION = SimpleExtension.load(customExtensionStr);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

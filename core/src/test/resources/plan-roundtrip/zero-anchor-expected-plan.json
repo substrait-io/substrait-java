@@ -1,8 +1,8 @@
 {
-  "extensionUris": [
+  "extensionUrns": [
     {
-      "extensionUriAnchor": 1,
-      "uri": "/functions_arithmetic.yaml"
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_arithmetic"
     }
   ],
   "extensions": [
@@ -10,7 +10,7 @@
       "extensionFunction": {
         "functionAnchor": 1,
         "name": "add:i32_i32",
-        "extensionUriReference": 1
+        "extensionUrnReference": 1
       }
     }
   ],
@@ -19,18 +19,33 @@
       "root": {
         "input": {
           "project": {
+            "common": {
+              "direct": {}
+            },
             "input": {
               "read": {
+                "common": {
+                  "direct": {}
+                },
                 "baseSchema": {
                   "names": [
-                    "dummy"
+                    "a",
+                    "b"
                   ],
                   "struct": {
                     "types": [
                       {
-                        "i32": {}
+                        "i32": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      },
+                      {
+                        "i32": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
                       }
-                    ]
+                    ],
+                    "nullability": "NULLABILITY_REQUIRED"
                   }
                 },
                 "namedTable": {
@@ -45,20 +60,22 @@
                 "scalarFunction": {
                   "functionReference": 1,
                   "outputType": {
-                    "i32": {}
+                    "i32": {
+                      "nullability": "NULLABILITY_REQUIRED"
+                    }
                   },
                   "arguments": [
                     {
                       "value": {
                         "literal": {
-                          "i32": 7
+                          "i32": 10
                         }
                       }
                     },
                     {
                       "value": {
                         "literal": {
-                          "i32": 3
+                          "i32": 5
                         }
                       }
                     }
@@ -69,7 +86,7 @@
           }
         },
         "names": [
-          "result"
+          "sum_result"
         ]
       }
     }

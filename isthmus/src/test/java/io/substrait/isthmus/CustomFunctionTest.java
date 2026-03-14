@@ -53,7 +53,7 @@ class CustomFunctionTest extends PlanTestBase {
 
   // Load custom extension into an ExtensionCollection
   static final SimpleExtension.ExtensionCollection CUSTOM_EXTENSIONS =
-      SimpleExtension.load(URN, FUNCTIONS_CUSTOM);
+      SimpleExtension.load(FUNCTIONS_CUSTOM);
 
   // Create user-defined types
   static final String aTypeName = "a_type";

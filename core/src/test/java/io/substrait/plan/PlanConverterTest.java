@@ -226,7 +226,7 @@ class PlanConverterTest {
             + "      y: T\n"
             + "      z: T\n";
 
-    SimpleExtension.ExtensionCollection extensions = SimpleExtension.load("test.yaml", yaml);
+    SimpleExtension.ExtensionCollection extensions = SimpleExtension.load(yaml);
 
     // Create type objects
     Type pointType = Type.UserDefined.builder().nullable(false).urn(urn).name("point").build();

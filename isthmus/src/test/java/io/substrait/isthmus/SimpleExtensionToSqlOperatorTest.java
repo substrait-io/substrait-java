@@ -39,7 +39,6 @@ class SimpleExtensionToSqlOperatorTest {
   static {
     final SimpleExtension.ExtensionCollection extensions =
         SimpleExtension.load(
-            CUSTOM_FUNCTION_PATH,
             SimpleExtensionToSqlOperatorTest.class.getResourceAsStream(CUSTOM_FUNCTION_PATH));
 
     FUNCTION_DEFS =
