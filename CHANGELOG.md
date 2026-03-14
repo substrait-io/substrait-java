@@ -1,6 +1,16 @@
 Release Notes
 ---
 
+## [0.85.0](https://github.com/substrait-io/substrait-java/compare/v0.84.1...v0.85.0) (2026-03-14)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** fully drops URI usage
+
+### Features
+
+* **core:** bump substrait to v0.85.0, drop URI support ([#740](https://github.com/substrait-io/substrait-java/issues/740)) ([441d355](https://github.com/substrait-io/substrait-java/commit/441d355b184e6bd8000143111b64bb39583b7dec))
+
 ## [0.84.1](https://github.com/substrait-io/substrait-java/compare/v0.84.0...v0.84.1) (2026-03-14)
 
 ### Bug Fixes
