@@ -42,12 +42,12 @@ public class FromSql implements Action {
               CREATE TABLE "vehicles" ("vehicle_id" varchar(15), "make" varchar(40), "model" varchar(40),
                   "colour" varchar(15), "fuel_type" varchar(15),
                   "cylinder_capacity" int, "first_use_date" varchar(15));
-                """,
+              """,
               """
               CREATE TABLE "tests" ("test_id" varchar(15), "vehicle_id" varchar(15),
                         "test_date" varchar(20), "test_class" varchar(20), "test_type" varchar(20),
                         "test_result" varchar(15),"test_mileage" int, "postcode_area" varchar(15));
-                    """);
+              """);
 
       final CalciteCatalogReader catalogReader =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(createSqlStatements);
@@ -62,7 +62,7 @@ public class FromSql implements Action {
           """;
       final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
 
-      // choose Apache Derby as an example dialect
+      // choose DuckDB as an example dialect
       final SqlDialect dialect = SqlDialect.DatabaseProduct.DUCKDB.getDialect();
       final Plan substraitPlan = sqlToSubstrait.convert(sqlQuery, catalogReader, dialect);
 
