@@ -69,9 +69,7 @@ class AggregateRelTest extends TestBase {
    */
   private static List<List<Integer>> getExpressionReferences(AggregateRel aggregateRel) {
     return aggregateRel.getGroupingsList().stream()
-        .map(
-            grouping ->
-                grouping.getExpressionReferencesList().stream().collect(Collectors.toList()))
+        .map(AggregateRel.Grouping::getExpressionReferencesList)
         .collect(Collectors.toList());
   }
 
@@ -85,16 +83,6 @@ class AggregateRelTest extends TestBase {
     return aggregateRel.getGroupingsList().stream()
         .map(grouping -> grouping.getGroupingExpressionsList())
         .collect(Collectors.toList());
-  }
-
-  /**
-   * Helper method to extract aggregate-level grouping expressions from an AggregateRel.
-   *
-   * @param aggregateRel the AggregateRel to extract grouping expressions from
-   * @return a list of expressions at the aggregate level
-   */
-  private static List<Expression> getAggregateGroupingExpressions(AggregateRel aggregateRel) {
-    return aggregateRel.getGroupingExpressionsList();
   }
 
   @Test
@@ -140,7 +128,7 @@ class AggregateRelTest extends TestBase {
     // Verify backward compatibility: deprecated grouping_expressions field is also populated
     assertEquals(List.of(List.of(col1Ref, col2Ref)), getGroupingExpressions(roundtripAgg));
     // Verify aggregate-level grouping_expressions field is populated
-    assertEquals(List.of(col1Ref, col2Ref), getAggregateGroupingExpressions(roundtripAgg));
+    assertEquals(List.of(col1Ref, col2Ref), roundtripAgg.getGroupingExpressionsList());
   }
 
   @Test
@@ -188,7 +176,7 @@ class AggregateRelTest extends TestBase {
     // Verify backward compatibility: deprecated grouping_expressions field is also populated
     assertEquals(List.of(List.of(col1Ref, col2Ref)), getGroupingExpressions(roundtripAgg));
     // Verify aggregate-level grouping_expressions field is populated
-    assertEquals(List.of(col1Ref, col2Ref), getAggregateGroupingExpressions(roundtripAgg));
+    assertEquals(List.of(col1Ref, col2Ref), roundtripAgg.getGroupingExpressionsList());
   }
 
   @Test
@@ -242,6 +230,34 @@ class AggregateRelTest extends TestBase {
     assertEquals(
         List.of(List.of(col1Ref, col2Ref), List.of(col2Ref)), getGroupingExpressions(roundtripAgg));
     // Verify aggregate-level grouping_expressions field is populated
-    assertEquals(List.of(col1Ref, col2Ref), getAggregateGroupingExpressions(roundtripAgg));
+    assertEquals(List.of(col1Ref, col2Ref), roundtripAgg.getGroupingExpressionsList());
+  }
+
+  /**
+   * Tests deduplication of non-trivial grouping expressions by equals() (not identity), and that an
+   * empty grouping set is handled correctly alongside non-empty ones.
+   */
+  @Test
+  void testGroupingExpressionDeduplicationAndEmptyGroupingSet() {
+    NamedScan input = sb.namedScan(List.of("t"), List.of("a", "b"), List.of(R.I32, R.I32));
+
+    // Two independently constructed add(a, b) expressions — equal but not same instance.
+    io.substrait.expression.Expression addAB1 =
+        sb.add(sb.fieldReference(input, 0), sb.fieldReference(input, 1));
+    io.substrait.expression.Expression addAB2 =
+        sb.add(sb.fieldReference(input, 0), sb.fieldReference(input, 1));
+
+    Aggregate agg =
+        Aggregate.builder()
+            .input(input)
+            .addGroupings(sb.grouping(addAB1), sb.grouping(addAB2), sb.grouping())
+            .build();
+
+    Rel roundtripRel = relProtoConverter.visit(agg, EmptyVisitationContext.INSTANCE);
+    AggregateRel result = roundtripRel.getAggregate();
+
+    assertEquals(
+        List.of(expressionProtoConverter.toProto(addAB1)), result.getGroupingExpressionsList());
+    assertEquals(List.of(List.of(0), List.of(0), List.of()), getExpressionReferences(result));
   }
 }
