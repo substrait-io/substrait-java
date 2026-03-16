@@ -11,6 +11,11 @@ import io.substrait.util.EmptyVisitationContext;
 public class FunctionArgStringify extends ParentStringify
     implements FuncArgVisitor<String, EmptyVisitationContext, RuntimeException> {
 
+  /**
+   * Constructor
+   *
+   * @param indent number of indents to use
+   */
   public FunctionArgStringify(int indent) {
     super(indent);
   }

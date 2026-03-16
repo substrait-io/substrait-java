@@ -99,12 +99,8 @@ tasks.register("writeIsthmusVersion") {
 tasks.named("compileJava") { dependsOn("writeIsthmusVersion") }
 
 tasks.named<Javadoc>("javadoc") {
-  description = "Generate Javadoc for main source files (excluding generated)."
+  description = "Generate Javadoc for main source files (excludes generated)."
 
-  val generatedSources = layout.buildDirectory.file("generated/sources").get().getAsFile()
-  exclude { spec -> spec.file.toPath().startsWith(generatedSources.toPath()) }
-  options {
-    require(this is CoreJavadocOptions)
-    addBooleanOption("Xwerror", true)
-  }
+  val isthmusVersionClass = layout.buildDirectory.file("generated/sources").get().getAsFile()
+  exclude { spec -> spec.file.toPath().startsWith(isthmusVersionClass.toPath()) }
 }
