@@ -13,20 +13,22 @@ import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 import java.util.Optional;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.dialect.SparkSqlDialect;
 
 /**
  * Example use of dynamic functions and the {@link SubstraitBuilder} API.
  *
- * <p>DuckDB used here supports the function `regexp_matches' as well as the SQL standard `SIMILAR
- * TO`
+ * <p>SparkSQL supports regular rexpression matching with `RLIKE` TO"
  *
  * <p>This example creates a dynamic function that enables plans to be create that use the
- * `regexp-matches` function.
+ * `regexp-matches` function. A custom SQL dialect can map that to operations supported by SparkSQL.
  *
- * <p>./gradlew examples:isthmus-api:run --args "DynamicFnToSql"
+ * <p>./gradlew examples:isthmus-api:run --args "CustomDialectDynamicFnToSql"
  */
-public class DynamicFnToSql implements Action {
+public class CustomDialectDynamicFnToSql implements Action {
 
   @Override
   public void run(final String[] args) {
@@ -78,8 +80,33 @@ public class DynamicFnToSql implements Action {
     // Convert the plan to SQL, first with the default dialect and then custom
     final SubstraitToSql substraitToSql =
         new SubstraitToSql(new DynamicConverterProvider(extensions));
-    System.out.println("\nWith default DuckDB SqlDialect::");
-    substraitToSql.convert(plan, SqlDialect.DatabaseProduct.DUCKDB.getDialect()).stream()
-        .forEachOrdered(System.out::println);
+
+    System.out.println("\nWith custom SparkSQL SqlDialect::");
+    substraitToSql.convert(plan, customSqlDialect()).stream().forEachOrdered(System.out::println);
+  }
+
+  /** Create a Custom dialect. Converts the function 'regexp_matches' to 'SIMILAR TO' */
+  public static final SqlDialect customSqlDialect() {
+
+    return new SparkSqlDialect(SparkSqlDialect.DEFAULT_CONTEXT) {
+
+      @Override
+      public void unparseCall(
+          final SqlWriter writer, final SqlCall call, final int leftPrec, final int rightPrec) {
+        if ("REGEXP_MATCHES".equalsIgnoreCase(call.getOperator().getName())) {
+          // Convert REGEXP_EXTRACT_CUSTOM(aa, bb) to aa SIMILAR TO bb
+          if (call.operandCount() == 2) {
+            call.operand(0).unparse(writer, leftPrec, rightPrec);
+            writer.keyword("RLIKE");
+            call.operand(1).unparse(writer, leftPrec, rightPrec);
+          } else {
+            // Fallback to default if operand count is unexpected
+            super.unparseCall(writer, call, leftPrec, rightPrec);
+          }
+        } else {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+      }
+    };
   }
 }

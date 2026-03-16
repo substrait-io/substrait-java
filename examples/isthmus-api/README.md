@@ -4,7 +4,7 @@ The Isthmus library converts Substrait plans to and from SQL Plans. There are tw
 
 ## How does this work in theory?
 
-The [Calcite](https://calcite.apache.org/) library is used to do parsing and generation of the SQL String. Calcite has its own relational object model, distinct from substrait's. There are classes within Isthmus to convert Substrait to and from Calcite's object model.
+The [Calcite](https://calcite.apache.org/) library is used to do parsing and generation of the SQL String. Calcite has its own relational object model, distinct from Substrait's. There are classes within Isthmus to convert Substrait to and from Calcite's object model.
 
 The conversion flows work as follows:
 
@@ -20,9 +20,8 @@ The examples:
 
 - [FromSql](./src/main/java/io/substrait/examples/FromSql.java) - creates a plan starting from SQL
 - [ToSql](./src/main/java/io/substrait/examples/ToSQL.java) - reads a plan and creates the SQL
-- [DynamicFnToSql](./src/main/java/io/substrait/examples/DynamicFnToSql.java) - uses the `substrait-java` API to create a plan using a Dynamic Function; then shows how to convert this to SQL with a custom dialect.
-
-
+- [DynamicFnToSql](./src/main/java/io/substrait/examples/DynamicFnToSql.java) - uses the `substrait-java` API to create a plan using a Dynamic Function
+- [CustomDialectDynamicFnToSql](./src/main/java/io/substrait/examples/CustomDialectDynamicFnToSql.java) - using the same approach with a dynamic function but using a custom SQL dialect to make it applicable to SparkSQL
 ### Requirements
 
 To run these you will need Java 17 or greater, and this repository cloned to your local system.
