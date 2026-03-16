@@ -717,6 +717,18 @@ public class ExpressionProtoConverter
         .build();
   }
 
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.DynamicParameter expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setDynamicParameter(
+            io.substrait.proto.DynamicParameter.newBuilder()
+                .setType(toProto(expr.type()))
+                .setParameterReference(expr.parameterReference()))
+        .build();
+  }
+
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
     private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
