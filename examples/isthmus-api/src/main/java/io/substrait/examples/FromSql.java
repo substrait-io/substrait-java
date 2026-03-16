@@ -45,8 +45,8 @@ public class FromSql implements Action {
               """,
               """
               CREATE TABLE "tests" ("test_id" varchar(15), "vehicle_id" varchar(15),
-                        "test_date" varchar(20), "test_class" varchar(20), "test_type" varchar(20),
-                        "test_result" varchar(15),"test_mileage" int, "postcode_area" varchar(15));
+                  "test_date" varchar(20), "test_class" varchar(20), "test_type" varchar(20),
+                  "test_result" varchar(15),"test_mileage" int, "postcode_area" varchar(15));
               """);
 
       final CalciteCatalogReader catalogReader =
