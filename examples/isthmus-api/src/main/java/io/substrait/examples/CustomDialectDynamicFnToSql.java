@@ -21,7 +21,7 @@ import org.apache.calcite.sql.dialect.SparkSqlDialect;
 /**
  * Example use of dynamic functions and the {@link SubstraitBuilder} API.
  *
- * <p>SparkSQL supports regular rexpression matching with `RLIKE` TO"
+ * <p>SparkSQL supports regular rexpression matching with `RLIKE`
  *
  * <p>This example creates a dynamic function that enables plans to be create that use the
  * `regexp-matches` function. A custom SQL dialect can map that to operations supported by SparkSQL.
@@ -85,7 +85,7 @@ public class CustomDialectDynamicFnToSql implements Action {
     substraitToSql.convert(plan, customSqlDialect()).stream().forEachOrdered(System.out::println);
   }
 
-  /** Create a Custom dialect. Converts the function 'regexp_matches' to 'SIMILAR TO' */
+  /** Create a Custom dialect. Converts the function 'regexp_matches' to 'RLIKE' */
   public static final SqlDialect customSqlDialect() {
 
     return new SparkSqlDialect(SparkSqlDialect.DEFAULT_CONTEXT) {
@@ -94,7 +94,7 @@ public class CustomDialectDynamicFnToSql implements Action {
       public void unparseCall(
           final SqlWriter writer, final SqlCall call, final int leftPrec, final int rightPrec) {
         if ("REGEXP_MATCHES".equalsIgnoreCase(call.getOperator().getName())) {
-          // Convert REGEXP_EXTRACT_CUSTOM(aa, bb) to aa SIMILAR TO bb
+          // Convert REGEXP_EXTRACT_CUSTOM(aa, bb) to a RLIKE
           if (call.operandCount() == 2) {
             call.operand(0).unparse(writer, leftPrec, rightPrec);
             writer.keyword("RLIKE");
