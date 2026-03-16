@@ -19,12 +19,12 @@ import java.util.function.Function;
  * LambdaBuilder lb = new LambdaBuilder();
  *
  * // Simple: (x: i32) -> x
- * Expression.Lambda simple = lb.lambda(List.of(R.I32), x -> x.ref(0));
+ * Expression.Lambda simple = lb.lambda(List.of(R.I32), params -> params.ref(0));
  *
  * // Nested: (x: i32) -> (y: i64) -> add(x, y)
- * Expression.Lambda nested = lb.lambda(List.of(R.I32), x ->
- *     lb.lambda(List.of(R.I64), y ->
- *         add(x.ref(0), y.ref(0))
+ * Expression.Lambda nested = lb.lambda(List.of(R.I32), outer ->
+ *     lb.lambda(List.of(R.I64), inner ->
+ *         add(outer.ref(0), inner.ref(0))
  *     )
  * );
  * }</pre>
