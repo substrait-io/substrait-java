@@ -1,0 +1,99 @@
+package io.substrait.expression;
+
+import io.substrait.type.Type;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
+/**
+ * Builds lambda expressions with build-time validation of parameter references.
+ *
+ * <p>Maintains a stack of lambda parameter scopes. Each call to {@link #lambda} pushes parameters
+ * onto the stack, builds the body via a callback, and pops. Nested lambdas simply call {@code
+ * lambda()} again on the same builder.
+ *
+ * <p>The callback receives a {@link Scope} handle for creating validated parameter references. The
+ * correct {@code stepsOut} value is computed automatically from the stack.
+ *
+ * <pre>{@code
+ * LambdaBuilder lb = new LambdaBuilder();
+ *
+ * // Simple: (x: i32) -> x
+ * Expression.Lambda simple = lb.lambda(List.of(R.I32), x -> x.ref(0));
+ *
+ * // Nested: (x: i32) -> (y: i64) -> add(x, y)
+ * Expression.Lambda nested = lb.lambda(List.of(R.I32), x ->
+ *     lb.lambda(List.of(R.I64), y ->
+ *         add(x.ref(0), y.ref(0))
+ *     )
+ * );
+ * }</pre>
+ */
+public class LambdaBuilder {
+  private final List<Type.Struct> lambdaContext = new ArrayList<>();
+
+  /**
+   * Builds a lambda expression. The body function receives a {@link Scope} for creating validated
+   * parameter references. Nested lambdas are built by calling this method again inside the
+   * callback.
+   *
+   * @param paramTypes the lambda's parameter types
+   * @param bodyFn function that builds the lambda body given a scope handle
+   * @return the constructed lambda expression
+   */
+  public Expression.Lambda lambda(List<Type> paramTypes, Function<Scope, Expression> bodyFn) {
+    Type.Struct params = Type.Struct.builder().nullable(false).addAllFields(paramTypes).build();
+    pushLambdaContext(params);
+    try {
+      int index = lambdaContext.size() - 1;
+      Scope scope = new Scope(index);
+      Expression body = bodyFn.apply(scope);
+      return ImmutableExpression.Lambda.builder().parameters(params).body(body).build();
+    } finally {
+      popLambdaContext();
+    }
+  }
+
+  /**
+   * Pushes a lambda's parameters onto the context stack. This makes the parameters available for
+   * validation when building the lambda's body, and allows nested lambda parameter references to
+   * correctly compute their stepsOut values.
+   */
+  private void pushLambdaContext(Type.Struct params) {
+    lambdaContext.add(params);
+  }
+
+  /**
+   * Pops the most recently pushed lambda parameters from the context stack. Called after a lambda's
+   * body has been built, restoring the context to the enclosing lambda's scope.
+   */
+  private void popLambdaContext() {
+    lambdaContext.remove(lambdaContext.size() - 1);
+  }
+
+  /**
+   * A handle to a particular lambda's parameter scope. Use {@link #ref} to create validated
+   * parameter references.
+   */
+  public class Scope {
+    private final int index;
+
+    private Scope(int index) {
+      this.index = index;
+    }
+
+    /**
+     * Creates a validated reference to a parameter of this lambda. The correct {@code stepsOut}
+     * value is computed automatically.
+     *
+     * @param paramIndex index of the parameter within this lambda's parameter struct
+     * @return a {@link FieldReference} pointing to the specified parameter
+     * @throws IndexOutOfBoundsException if paramIndex is out of bounds
+     */
+    public FieldReference ref(int paramIndex) {
+      int stepsOut = lambdaContext.size() - 1 - index;
+      return FieldReference.newLambdaParameterReference(
+          paramIndex, lambdaContext.get(index), stepsOut);
+    }
+  }
+}

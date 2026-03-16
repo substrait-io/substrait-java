@@ -6,6 +6,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -282,6 +283,7 @@ public class ProtoExpressionConverter {
 
       case LAMBDA:
         {
+          // TODO: Add build-time validation of lambda parameter references during deserialization.
           io.substrait.proto.Expression.Lambda protoLambda = expr.getLambda();
           Type.Struct parameters =
               (Type.Struct)
@@ -299,7 +301,7 @@ public class ProtoExpressionConverter {
             lambdaParameterStack.pop();
           }
 
-          return Expression.Lambda.builder().parameters(parameters).body(body).build();
+          return ImmutableExpression.Lambda.builder().parameters(parameters).body(body).build();
         }
       // TODO enum.
       case ENUM:

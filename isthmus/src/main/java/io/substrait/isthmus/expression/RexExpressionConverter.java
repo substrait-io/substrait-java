@@ -2,6 +2,7 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
@@ -212,7 +213,7 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
     Expression body = rexLambda.getExpression().accept(this);
 
-    return Expression.Lambda.builder().parameters(parameters).body(body).build();
+    return ImmutableExpression.Lambda.builder().parameters(parameters).body(body).build();
   }
 
   @Override
