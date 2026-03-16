@@ -18,11 +18,11 @@ import org.apache.calcite.sql.SqlDialect;
 /**
  * Example use of dynamic functions and the {@link SubstraitBuilder} API.
  *
- * <p>DuckDB used here supports the function `regexp_matches' as well as the SQL standard `SIMILAR
- * TO`
+ * <p>DuckDB used here supports the function `regexp_matches' for comparing values with a regular
+ * expression.
  *
  * <p>This example creates a dynamic function that enables plans to be create that use the
- * `regexp-matches` function.
+ * `regexp_matches` function.
  *
  * <p>./gradlew examples:isthmus-api:run --args "DynamicFnToSql"
  */
@@ -44,7 +44,7 @@ public class DynamicFnToSql implements Action {
     // Create a Substrait builder with default extensions
     final SubstraitBuilder builder = new io.substrait.dsl.SubstraitBuilder(extensions);
 
-    // Setup a list of the names of each of the 'columns'
+    // Setup a list of the names of each of the columns
     // start with the overall record count
     final List<String> names = List.of("id", "colour");
     // Create a named scan for a table with columns: id (i32), colour (string)
@@ -75,7 +75,7 @@ public class DynamicFnToSql implements Action {
     System.out.println("\nCreated the Substrait plan::");
     System.out.println(plan);
 
-    // Convert the plan to SQL, first with the default dialect and then custom
+    // Convert the plan to SQL
     final SubstraitToSql substraitToSql =
         new SubstraitToSql(new DynamicConverterProvider(extensions));
     System.out.println("\nWith default DuckDB SqlDialect::");

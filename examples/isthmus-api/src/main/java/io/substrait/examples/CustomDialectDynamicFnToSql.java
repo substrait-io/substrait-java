@@ -24,7 +24,7 @@ import org.apache.calcite.sql.dialect.SparkSqlDialect;
  * <p>SparkSQL supports regular rexpression matching with `RLIKE`
  *
  * <p>This example creates a dynamic function that enables plans to be create that use the
- * `regexp-matches` function. A custom SQL dialect can map that to operations supported by SparkSQL.
+ * `regexp_matches` function. A custom SQL dialect can map that to operations supported by SparkSQL.
  *
  * <p>./gradlew examples:isthmus-api:run --args "CustomDialectDynamicFnToSql"
  */
@@ -46,7 +46,7 @@ public class CustomDialectDynamicFnToSql implements Action {
     // Create a Substrait builder with default extensions
     final SubstraitBuilder builder = new io.substrait.dsl.SubstraitBuilder(extensions);
 
-    // Setup a list of the names of each of the 'columns'
+    // Setup a list of the names of each of the columns
     // start with the overall record count
     final List<String> names = List.of("id", "colour");
     // Create a named scan for a table with columns: id (i32), colour (string)
@@ -77,7 +77,7 @@ public class CustomDialectDynamicFnToSql implements Action {
     System.out.println("\nCreated the Substrait plan::");
     System.out.println(plan);
 
-    // Convert the plan to SQL, first with the default dialect and then custom
+    // Convert the plan to SQL
     final SubstraitToSql substraitToSql =
         new SubstraitToSql(new DynamicConverterProvider(extensions));
 
@@ -94,7 +94,7 @@ public class CustomDialectDynamicFnToSql implements Action {
       public void unparseCall(
           final SqlWriter writer, final SqlCall call, final int leftPrec, final int rightPrec) {
         if ("REGEXP_MATCHES".equalsIgnoreCase(call.getOperator().getName())) {
-          // Convert REGEXP_EXTRACT_CUSTOM(aa, bb) to a RLIKE
+          // Convert REGEXP_MATCHES(aa, bb) to a RLIKE
           if (call.operandCount() == 2) {
             call.operand(0).unparse(writer, leftPrec, rightPrec);
             writer.keyword("RLIKE");
