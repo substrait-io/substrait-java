@@ -367,8 +367,7 @@ tasks.named<Javadoc>("javadoc") {
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
   (options as StandardJavadocDocletOptions).apply {
     encoding = "UTF-8"
-    destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile
-
+    setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")
     links("../core-proto/")
   }

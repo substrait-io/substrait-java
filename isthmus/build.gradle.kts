@@ -155,8 +155,7 @@ tasks.named<Javadoc>("javadoc") {
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
   (options as StandardJavadocDocletOptions).apply {
     encoding = "UTF-8"
-    destinationDir = rootProject.layout.buildDirectory.dir("docs/${version}/isthmus").get().asFile
-
+    setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/isthmus").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/isthmus/src/main/javadoc/overview.html")
     links("../core-proto/")
     links("../core/")
@@ -166,12 +165,12 @@ tasks.named<Javadoc>("javadoc") {
 
 // Bundle both passes into the Javadoc JAR used for publishing.
 tasks.named<Jar>("javadocJar") {
-  val shared = rootProject.layout.buildDirectory.dir("docs/${version}").get().asFile
-  if (!shared.exists()) {
-    println("Creating a dir for javadoc ${rootProject.buildDir}/${version}")
-    shared.mkdirs()
-  }
+  // auto creates the directories if needed
+  val docsDir = rootProject.layout.buildDirectory.dir("docs/${version}")
+  destinationDirectory.set(docsDir)
 
+  from(tasks.named("javadoc"))
   // Ensure javadoc tasks have produced output
-  dependsOn(tasks.named("javadoc"))
+  // Handle duplicate files (e.g., allclasses-index.html) from multiple javadoc tasks
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
