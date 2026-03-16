@@ -1,0 +1,39 @@
+{
+  "lambda": {
+    "parameters": {
+      "types": [
+        { "i32": { "nullability": "NULLABILITY_REQUIRED" } }
+      ]
+    },
+    "body": {
+      "lambda": {
+        "parameters": {
+          "types": [
+            { "i64": { "nullability": "NULLABILITY_REQUIRED" } }
+          ]
+        },
+        "body": {
+          "lambda": {
+            "parameters": {
+              "types": [
+                { "string": { "nullability": "NULLABILITY_REQUIRED" } }
+              ]
+            },
+            "body": {
+              "selection": {
+                "directReference": {
+                  "structField": {
+                    "field": 0
+                  }
+                },
+                "lambdaParameterReference": {
+                  "stepsOut": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,32 +1,73 @@
 package io.substrait.expression;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Tests for {@link LambdaBuilder} build-time validation. */
+/** Tests for {@link LambdaBuilder}. */
 class LambdaBuilderTest {
 
   static final TypeCreator R = TypeCreator.REQUIRED;
 
   final LambdaBuilder lb = new LambdaBuilder();
 
-  // (x: i32) -> x[5] — field index 5 is out of bounds (only 1 param)
+  // (x: i32)@p -> p[0]
+  @Test
+  void simpleLambda() {
+    Expression.Lambda lambda = lb.lambda(List.of(R.I32), params -> params.ref(0));
+
+    Expression.Lambda expected =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
+            .body(
+                FieldReference.newLambdaParameterReference(
+                    0, Type.Struct.builder().nullable(false).addFields(R.I32).build(), 0))
+            .build();
+
+    assertEquals(expected, lambda);
+  }
+
+  // (x: i32)@outer -> (y: i64)@inner -> outer[0]
+  @Test
+  void nestedLambda() {
+    Expression.Lambda lambda =
+        lb.lambda(List.of(R.I32), outer -> lb.lambda(List.of(R.I64), inner -> outer.ref(0)));
+
+    Expression.Lambda expectedInner =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I64).build())
+            .body(
+                FieldReference.newLambdaParameterReference(
+                    0, Type.Struct.builder().nullable(false).addFields(R.I32).build(), 1))
+            .build();
+
+    Expression.Lambda expected =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
+            .body(expectedInner)
+            .build();
+
+    assertEquals(expected, lambda);
+  }
+
+  // (x: i32)@p -> p[5] — only 1 param, index 5 is out of bounds
   @Test
   void invalidFieldIndex_outOfBounds() {
     assertThrows(
         IndexOutOfBoundsException.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(5)));
   }
 
-  // (x: i32) -> x[-1] — negative field index
+  // (x: i32)@p -> p[-1] — negative index
   @Test
   void negativeFieldIndex() {
     assertThrows(Exception.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(-1)));
   }
 
-  // (x: i32) -> (y: i64) -> x[5] — outer field index 5 is out of bounds
+  // (x: i32)@outer -> (y: i64)@inner -> outer[5] — outer only has 1 param
   @Test
   void nestedOuterFieldIndexOutOfBounds() {
     assertThrows(
@@ -34,7 +75,7 @@ class LambdaBuilderTest {
         () -> lb.lambda(List.of(R.I32), outer -> lb.lambda(List.of(R.I64), inner -> outer.ref(5))));
   }
 
-  // (x: i32) -> (y: i64) -> y[3] — inner field index 3 is out of bounds (only 1 param)
+  // (x: i32)@outer -> (y: i64)@inner -> inner[3] — inner only has 1 param
   @Test
   void nestedInnerFieldIndexOutOfBounds() {
     assertThrows(

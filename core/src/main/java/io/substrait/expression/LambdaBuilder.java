@@ -55,6 +55,45 @@ public class LambdaBuilder {
   }
 
   /**
+   * Builds a lambda expression from a pre-built parameter struct. Used by internal converters that
+   * already have a Type.Struct (e.g., during protobuf deserialization).
+   *
+   * @param params the lambda's parameter struct
+   * @param bodyFn function that builds the lambda body
+   * @return the constructed lambda expression
+   */
+  public Expression.Lambda lambdaFromStruct(
+      Type.Struct params, java.util.function.Supplier<Expression> bodyFn) {
+    pushLambdaContext(params);
+    try {
+      Expression body = bodyFn.get();
+      return ImmutableExpression.Lambda.builder().parameters(params).body(body).build();
+    } finally {
+      popLambdaContext();
+    }
+  }
+
+  /**
+   * Resolves the parameter struct for a lambda at the given stepsOut from the current innermost
+   * scope. Used by internal converters to validate lambda parameter references during
+   * deserialization.
+   *
+   * @param stepsOut number of lambda scopes to traverse outward (0 = current/innermost)
+   * @return the parameter struct at the target scope level
+   * @throws IllegalArgumentException if stepsOut exceeds the current nesting depth
+   */
+  public Type.Struct resolveParams(int stepsOut) {
+    int index = lambdaContext.size() - 1 - stepsOut;
+    if (index < 0 || index >= lambdaContext.size()) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
+              stepsOut, lambdaContext.size()));
+    }
+    return lambdaContext.get(index);
+  }
+
+  /**
    * Pushes a lambda's parameters onto the context stack. This makes the parameters available for
    * validation when building the lambda's body, and allows nested lambda parameter references to
    * correctly compute their stepsOut values.
