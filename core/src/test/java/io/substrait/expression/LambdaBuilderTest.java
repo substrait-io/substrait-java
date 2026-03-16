@@ -58,9 +58,6 @@ class LambdaBuilderTest {
   // outer.ref(0) should produce stepsOut=0 at the top level and stepsOut=1 inside a nested lambda.
   @Test
   void scopeStepsOutChangesDynamically() {
-    Type.Struct outerParams = Type.Struct.builder().nullable(false).addFields(R.I32).build();
-    Type.Struct innerParams = Type.Struct.builder().nullable(false).addFields(R.I64).build();
-
     lb.lambda(
         List.of(R.I32),
         outer -> {
