@@ -118,7 +118,10 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitDynamicParam(RexDynamicParam dynamicParam) {
-    throw new UnsupportedOperationException("RexDynamicParam not supported");
+    return Expression.DynamicParameter.builder()
+        .type(typeConverter.toSubstrait(dynamicParam.getType()))
+        .parameterReference(dynamicParam.getIndex())
+        .build();
   }
 
   @Override

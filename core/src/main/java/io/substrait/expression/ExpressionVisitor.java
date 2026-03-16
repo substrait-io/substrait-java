@@ -470,4 +470,14 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
    * @throws E on visit failure
    */
   R visit(Expression.InPredicate expr, C context) throws E;
+
+  /**
+   * Visit a dynamic parameter expression.
+   *
+   * @param expr the dynamic parameter expression
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.DynamicParameter expr, C context) throws E;
 }

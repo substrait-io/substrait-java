@@ -824,6 +824,12 @@ public class ExpressionRexConverter
     }
   }
 
+  @Override
+  public RexNode visit(Expression.DynamicParameter expr, Context context) throws RuntimeException {
+    RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.type());
+    return rexBuilder.makeDynamicParam(calciteType, expr.parameterReference());
+  }
+
   /**
    * Helper method to create a Calcite ROW expression for encoding UDT struct literals.
    *
