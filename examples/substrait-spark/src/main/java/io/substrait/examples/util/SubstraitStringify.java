@@ -71,9 +71,9 @@ public class SubstraitStringify extends ParentStringify
   }
 
   /**
-   * Explains the Sustrait plan
+   * Explains the Substrait plan
    *
-   * @param plan Subsrait plan
+   * @param plan Substrait Plan
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.plan.Plan plan) {
@@ -93,9 +93,9 @@ public class SubstraitStringify extends ParentStringify
   }
 
   /**
-   * Explains the Sustrait relation
+   * Explains the Substrait relation
    *
-   * @param rel Subsrait relation
+   * @param rel Substrait relation
    * @return List of strings; typically these would then be logged or sent to stdout
    */
   public static List<String> explain(io.substrait.relation.Rel rel) {
