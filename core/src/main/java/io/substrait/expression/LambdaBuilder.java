@@ -45,8 +45,7 @@ public class LambdaBuilder {
     Type.Struct params = Type.Struct.builder().nullable(false).addAllFields(paramTypes).build();
     pushLambdaContext(params);
     try {
-      int index = lambdaContext.size() - 1;
-      Scope scope = new Scope(index);
+      Scope scope = new Scope(params);
       Expression body = bodyFn.apply(scope);
       return ImmutableExpression.Lambda.builder().parameters(params).body(body).build();
     } finally {
@@ -83,14 +82,14 @@ public class LambdaBuilder {
    * @throws IllegalArgumentException if stepsOut exceeds the current nesting depth
    */
   public Type.Struct resolveParams(int stepsOut) {
-    int index = lambdaContext.size() - 1 - stepsOut;
-    if (index < 0 || index >= lambdaContext.size()) {
+    int targetDepth = lambdaContext.size() - stepsOut;
+    if (targetDepth <= 0 || targetDepth > lambdaContext.size()) {
       throw new IllegalArgumentException(
           String.format(
               "Lambda parameter reference with stepsOut=%d is invalid (current depth: %d)",
               stepsOut, lambdaContext.size()));
     }
-    return lambdaContext.get(index);
+    return lambdaContext.get(targetDepth - 1);
   }
 
   /**
@@ -113,26 +112,39 @@ public class LambdaBuilder {
   /**
    * A handle to a particular lambda's parameter scope. Use {@link #ref} to create validated
    * parameter references.
+   *
+   * <p>Each Scope captures the depth of the lambdaContext stack at the time it was created. When
+   * {@link #ref} is called, the Substrait {@code stepsOut} value is computed as the difference
+   * between the current stack depth and the captured depth. This means the same Scope produces
+   * different stepsOut values depending on the nesting level at the time of the call, which is what
+   * allows outer.ref(0) to produce stepsOut=1 when called inside a nested lambda.
    */
   public class Scope {
-    private final int index;
+    private final Type.Struct params;
+    private final int depth;
 
-    private Scope(int index) {
-      this.index = index;
+    private Scope(Type.Struct params) {
+      this.params = params;
+      this.depth = lambdaContext.size();
     }
 
     /**
-     * Creates a validated reference to a parameter of this lambda. The correct {@code stepsOut}
-     * value is computed automatically.
+     * Computes the number of lambda boundaries between this scope and the current innermost scope.
+     * This value changes dynamically as nested lambdas are built.
+     */
+    private int stepsOut() {
+      return lambdaContext.size() - depth;
+    }
+
+    /**
+     * Creates a validated reference to a parameter of this lambda.
      *
      * @param paramIndex index of the parameter within this lambda's parameter struct
      * @return a {@link FieldReference} pointing to the specified parameter
      * @throws IndexOutOfBoundsException if paramIndex is out of bounds
      */
     public FieldReference ref(int paramIndex) {
-      int stepsOut = lambdaContext.size() - 1 - index;
-      return FieldReference.newLambdaParameterReference(
-          paramIndex, lambdaContext.get(index), stepsOut);
+      return FieldReference.newLambdaParameterReference(paramIndex, params, stepsOut());
     }
   }
 }
