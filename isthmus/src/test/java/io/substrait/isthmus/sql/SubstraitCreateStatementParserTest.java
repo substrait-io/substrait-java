@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Set;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -53,6 +54,21 @@ class SubstraitCreateStatementParserTest {
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "create table schema1.src1 (intcol int, charcol varchar(10))",
             "create table schema1.src2 (intcol int, charcol varchar(10))");
+
+    final CalciteSchema rootSchema = catalogReader.getRootSchema();
+
+    assertTrue(rootSchema.getTableNames().isEmpty());
+    assertEquals(Set.of("SCHEMA1"), rootSchema.getSubSchemaMap().keySet());
+    assertEquals(Set.of("SRC1", "SRC2"), rootSchema.getSubSchema("schema1", false).getTableNames());
+  }
+
+  @Test
+  void testToCatalogWithMultipleCreateTableWithList() throws SqlParseException {
+    final CalciteCatalogReader catalogReader =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            List.of(
+                "create table schema1.src1 (intcol int, charcol varchar(10))",
+                "create table schema1.src2 (intcol int, charcol varchar(10))"));
 
     final CalciteSchema rootSchema = catalogReader.getRootSchema();
 
