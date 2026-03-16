@@ -54,6 +54,31 @@ class LambdaBuilderTest {
     assertEquals(expected, lambda);
   }
 
+  // Verify that the same scope handle produces different stepsOut values depending on nesting.
+  // outer.ref(0) should produce stepsOut=0 at the top level and stepsOut=1 inside a nested lambda.
+  @Test
+  void scopeStepsOutChangesDynamically() {
+    Type.Struct outerParams = Type.Struct.builder().nullable(false).addFields(R.I32).build();
+    Type.Struct innerParams = Type.Struct.builder().nullable(false).addFields(R.I64).build();
+
+    lb.lambda(
+        List.of(R.I32),
+        outer -> {
+          FieldReference atTopLevel = outer.ref(0);
+          assertEquals(0, atTopLevel.lambdaParameterReferenceStepsOut().orElse(-1));
+
+          lb.lambda(
+              List.of(R.I64),
+              inner -> {
+                FieldReference atNestedLevel = outer.ref(0);
+                assertEquals(1, atNestedLevel.lambdaParameterReferenceStepsOut().orElse(-1));
+                return inner.ref(0);
+              });
+
+          return atTopLevel;
+        });
+  }
+
   // (x: i32)@p -> p[5] — only 1 param, index 5 is out of bounds
   @Test
   void invalidFieldIndex_outOfBounds() {
