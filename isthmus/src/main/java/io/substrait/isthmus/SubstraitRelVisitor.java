@@ -86,11 +86,22 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */
   @Deprecated
+  /**
+   * Creates a new SubstraitRelVisitor with the specified type factory and extensions.
+   *
+   * @param typeFactory the Calcite type factory
+   * @param extensions the Substrait extension collection
+   */
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
     this(new ConverterProvider(extensions, typeFactory));
   }
 
+  /**
+   * Creates a new SubstraitRelVisitor with the specified converter provider.
+   *
+   * @param converterProvider the converter provider containing configuration and converters
+   */
   public SubstraitRelVisitor(ConverterProvider converterProvider) {
     this.typeConverter = converterProvider.getTypeConverter();
     this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();

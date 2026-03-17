@@ -157,15 +157,6 @@ public class FunctionMappings {
           resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
 
   /**
-   * Prints all scalar signatures (for quick inspection).
-   *
-   * @param args CLI arguments (unused)
-   */
-  public static void main(String[] args) {
-    SCALAR_SIGS.forEach(System.out::println);
-  }
-
-  /**
    * Creates a signature mapping entry.
    *
    * @param operator the Calcite operator

@@ -113,6 +113,14 @@ public class SubstraitRelNodeConverter
 
   /** Use {@link #SubstraitRelNodeConverter(RelBuilder, ConverterProvider)} instead */
   @Deprecated
+  /**
+   * Creates a new SubstraitRelNodeConverter with the specified extensions, type factory, and
+   * relation builder.
+   *
+   * @param extensions the Substrait extension collection
+   * @param typeFactory the Calcite type factory
+   * @param relBuilder the Calcite relation builder
+   */
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -120,6 +128,13 @@ public class SubstraitRelNodeConverter
     this(relBuilder, new ConverterProvider(extensions, typeFactory));
   }
 
+  /**
+   * Creates a new SubstraitRelNodeConverter with the specified relation builder and converter
+   * provider.
+   *
+   * @param relBuilder the Calcite relation builder
+   * @param converterProvider the converter provider containing configuration and converters
+   */
   public SubstraitRelNodeConverter(RelBuilder relBuilder, ConverterProvider converterProvider) {
     this.typeFactory = converterProvider.getTypeFactory();
     this.typeConverter = converterProvider.getTypeConverter();
@@ -135,14 +150,11 @@ public class SubstraitRelNodeConverter
    * settings.
    *
    * <p>This method creates a {@link RelBuilder} configured with the provided cluster and catalog,
-   * then delegates to {@link #convert(Rel, RelOptCluster, Prepare.CatalogReader, SqlParser.Config,
-   * SimpleExtension.ExtensionCollection, FeatureBoard)} with default features.
+   * then delegates to the converter with default features.
    *
    * @param relRoot the root Substrait relation to convert
-   * @param relOptCluster the Calcite cluster providing optimization context
    * @param catalogReader the Calcite catalog reader for schema resolution
-   * @param parserConfig the SQL parser configuration
-   * @param extensions the Substrait extension collection (scalar, aggregate, window functions)
+   * @param converterProvider the converter provider containing configuration and converters
    * @return the converted Calcite {@link RelNode}
    */
   public static RelNode convert(
