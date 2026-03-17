@@ -42,7 +42,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   public SqlExpressionToSubstrait() {
     this(new ConverterProvider());
   }
-  
+
   /**
    * Creates a converter with the given feature board and extension collection.
    *

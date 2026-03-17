@@ -81,6 +81,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   /** Converter for Calcite {@link RelDataType} to Substrait {@link Type}. */
   protected final TypeConverter typeConverter;
+
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
   /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */

@@ -25,7 +25,7 @@ public class SqlToSubstrait extends SqlConverterBase {
   public SqlToSubstrait() {
     this(new ConverterProvider());
   }
-  
+
   /**
    * Creates a SQL-to-Substrait converter with explicit extensions and features.
    *

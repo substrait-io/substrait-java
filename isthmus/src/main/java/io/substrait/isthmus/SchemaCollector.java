@@ -25,7 +25,6 @@ public class SchemaCollector {
   private final RelDataTypeFactory typeFactory;
   private final TypeConverter typeConverter;
 
-
   /**
    * Creates a new {@code SchemaCollector} with the specified type factory and type converter.
    *

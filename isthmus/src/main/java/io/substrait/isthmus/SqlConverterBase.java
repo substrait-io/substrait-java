@@ -14,8 +14,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 
-import io.substrait.extension.DefaultExtensionCatalog;
-
 /**
  * Base class for Substrait SQL conversion pipelines.
  *
