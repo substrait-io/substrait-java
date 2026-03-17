@@ -38,7 +38,7 @@ public class ProtoExtendedExpressionConverter {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
     ExtensionLookup functionLookup =
-        ImmutableExtensionLookup.builder(extensionCollection).from(extendedExpression).build();
+        ImmutableExtensionLookup.builder().from(extendedExpression).build();
 
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 

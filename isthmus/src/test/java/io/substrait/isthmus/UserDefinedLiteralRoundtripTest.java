@@ -73,7 +73,7 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
           + "      attributes: map<string, i32>\n";
 
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
-      SimpleExtension.load("nested_types.yaml", NESTED_TYPES_YAML);
+      SimpleExtension.load(NESTED_TYPES_YAML);
 
   private static final Map<String, UserTypeFactory> USER_TYPE_FACTORIES =
       Map.of(

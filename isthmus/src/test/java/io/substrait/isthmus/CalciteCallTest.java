@@ -35,7 +35,7 @@ class CalciteCallTest extends CalciteObjs {
   @Test
   void extract() {
     test(
-        "extract:req_ts",
+        "extract:req_pts",
         rex.makeCall(
             t(SqlTypeName.INTEGER),
             SqlStdOperatorTable.EXTRACT,

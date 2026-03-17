@@ -226,6 +226,7 @@ tasks.named<Jar>("sourcesJar") {
 
 sourceSets {
   main {
+    antlr { setSrcDirs(listOf(file("${rootProject.projectDir}/substrait/grammar"))) }
     proto.srcDir("../substrait/proto")
     resources.srcDir("../substrait/extensions")
     resources.srcDir("build/generated/sources/manifest/")
@@ -248,19 +249,6 @@ project.configure<IdeaModel> {
   }
 }
 
-tasks.named<AntlrTask>("generateGrammarSource") {
-  arguments.add("-package")
-  arguments.add("io.substrait.type")
-  arguments.add("-visitor")
-  arguments.add("-long-messages")
-  arguments.add("-Xlog")
-  arguments.add("-Werror")
-  arguments.add("-Xexact-output-dir")
-  setSource(fileTree("src/main/antlr/SubstraitType.g4"))
-  outputDirectory =
-    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
-}
-
 val submodulesUpdate by
   tasks.registering(Exec::class) {
     group = "Build Setup"
@@ -269,7 +257,134 @@ val submodulesUpdate by
     workingDir = rootProject.projectDir
   }
 
+tasks.named<AntlrTask>("generateGrammarSource") {
+  dependsOn(submodulesUpdate)
+  arguments.add("-package")
+  arguments.add("io.substrait.type")
+  arguments.add("-visitor")
+  arguments.add("-long-messages")
+  arguments.add("-Xlog")
+  arguments.add("-Werror")
+  arguments.add("-Xexact-output-dir")
+  exclude("FuncTestCaseLexer.g4", "FuncTestCaseParser.g4")
+  outputDirectory =
+    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
+}
+
 protobuf {
   generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
   protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() }
+}
+
+val protoJavaDir = layout.buildDirectory.dir("generated/sources/proto/main/java")
+
+val immuteableJavaDir = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")
+
+// First pass: Javadoc for generated protobufs — ignore warnings.
+tasks.register<Javadoc>("javadocProto") {
+  dependsOn("generateProto", "compileJava")
+
+  group = JavaBasePlugin.DOCUMENTATION_GROUP
+  description = "Generate Javadoc for protobuf-generated sources (warnings suppressed)."
+
+  // Only the generated proto sources
+  setSource(fileTree(protoJavaDir) { include("**/*.java") })
+
+  // Use the main source set classpath to resolve types referenced by the generated code
+  classpath = sourceSets["main"].compileClasspath
+
+  // Destination separate from main Javadoc
+  setDestinationDir(
+    rootProject.layout.buildDirectory.dir("docs/${version}/core-proto").get().asFile
+  )
+
+  // Make sure protobufs are generated before Javadoc runs
+  dependsOn("generateProto")
+
+  // Suppress warnings/doclint for protobuf pass
+  (options as StandardJavadocDocletOptions).apply {
+    // Disable doclint entirely
+    addBooleanOption("Xdoclint:none", true)
+    // Be quiet
+    addBooleanOption("quiet", true)
+    // Encoding is good practice
+    encoding = "UTF-8"
+    addStringOption(
+      "overview",
+      "${rootProject.projectDir}/core/src/main/javadoc/overview-proto.html",
+    )
+  }
+
+  // Do not fail the build if javadoc finds issues in generated sources
+  isFailOnError = false
+}
+
+tasks.register<Javadoc>("javadocImmutable") {
+  dependsOn("compileJava", "javadoc")
+
+  group = JavaBasePlugin.DOCUMENTATION_GROUP
+  description = "Generate Javadoc for immutable-generated sources (warnings suppressed)."
+
+  // Only the generated proto sources
+  setSource(fileTree(immuteableJavaDir) { include("**/*.java") })
+
+  // Use the main source set classpath to resolve types referenced by the generated code
+  classpath = sourceSets["main"].compileClasspath
+
+  // Destination separate from main Javadoc
+  setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile)
+
+  // Suppress warnings/doclint for protobuf pass
+  (options as StandardJavadocDocletOptions).apply {
+    // Disable doclint entirely
+    addBooleanOption("Xdoclint:none", true)
+    // Be quiet
+    addBooleanOption("quiet", true)
+    // Encoding is good practice
+    encoding = "UTF-8"
+    addStringOption(
+      "overview",
+      "${rootProject.projectDir}/core/src/main/javadoc/overview-immutable.html",
+    )
+    links("../core/")
+    links("../core-proto/")
+  }
+
+  // Do not fail the build if javadoc finds issues in generated sources
+  isFailOnError = false
+}
+
+// Second pass: Javadoc for main code, excluding the generated protobuf sources.
+tasks.named<Javadoc>("javadoc") {
+  dependsOn("javadocProto")
+  description = "Generate Javadoc for main sources (excludes protobuf-generated sources)."
+
+  // Exclude the protobuf-generated directory from the main pass
+  val protoDirFile = protoJavaDir.get().asFile
+  exclude { spec -> spec.file.toPath().startsWith(protoDirFile.toPath()) }
+  source(fileTree(immuteableJavaDir) { include("**/*.java") })
+
+  // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
+  (options as StandardJavadocDocletOptions).apply {
+    encoding = "UTF-8"
+    setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
+    addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")
+    links("../core-proto/")
+  }
+}
+
+// Bundle both passes into the Javadoc JAR used for publishing.
+tasks.named<Jar>("javadocJar") {
+  // auto creates the directories if needed
+  val docsDir = rootProject.layout.buildDirectory.dir("docs/${version}")
+  destinationDirectory.set(docsDir)
+
+  // Add the outputs of the Javadoc tasks to this JAR
+  // Using 'from' on a task automatically adds the 'dependsOn'
+  from(tasks.named("javadocProto"))
+  from(tasks.named("javadoc"))
+  from(tasks.named("javadocImmutable"))
+
+  // Handle duplicate files (e.g., allclasses-index.html) from multiple javadoc tasks
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

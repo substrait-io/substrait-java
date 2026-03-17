@@ -1,10 +1,4 @@
 {
-  "extensionUris": [
-    {
-      "extensionUriAnchor": 1,
-      "uri": "/functions_arithmetic.yaml"
-    }
-  ],
   "extensionUrns": [
     {
       "extensionUrnAnchor": 1,
@@ -16,15 +10,13 @@
       "extensionFunction": {
         "functionAnchor": 1,
         "name": "add:i32_i32",
-        "extensionUriReference": 1,
         "extensionUrnReference": 1
       }
     },
     {
       "extensionFunction": {
         "functionAnchor": 2,
-        "name": "multiply:i32_i32",
-        "extensionUriReference": 1,
+        "name": "subtract:i32_i32",
         "extensionUrnReference": 1
       }
     }
@@ -44,8 +36,8 @@
                 },
                 "baseSchema": {
                   "names": [
-                    "x",
-                    "y"
+                    "value1",
+                    "value2"
                   ],
                   "struct": {
                     "types": [
@@ -65,7 +57,7 @@
                 },
                 "namedTable": {
                   "names": [
-                    "test_table"
+                    "numbers"
                   ]
                 }
               }
@@ -82,13 +74,6 @@
                   "arguments": [
                     {
                       "value": {
-                        "literal": {
-                          "i32": 10
-                        }
-                      }
-                    },
-                    {
-                      "value": {
                         "scalarFunction": {
                           "functionReference": 2,
                           "outputType": {
@@ -100,18 +85,25 @@
                             {
                               "value": {
                                 "literal": {
-                                  "i32": 2
+                                  "i32": 20
                                 }
                               }
                             },
                             {
                               "value": {
                                 "literal": {
-                                  "i32": 3
+                                  "i32": 5
                                 }
                               }
                             }
                           ]
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "literal": {
+                          "i32": 10
                         }
                       }
                     }
@@ -122,7 +114,7 @@
           }
         },
         "names": [
-          "calculation"
+          "sum_result"
         ]
       }
     }

@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
@@ -170,16 +171,23 @@ public class LiteralConverter {
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          return ExpressionCreator.time(
-              nullable, TimeUnit.NANOSECONDS.toMicros(localTime.toNanoOfDay()));
+          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
+          long nanos = localTime.toNanoOfDay();
+          long micros = TimeUnit.NANOSECONDS.toMicros(nanos);
+          return ExpressionCreator.precisionTime(nullable, micros, 6);
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
-          LocalDateTime ldt =
+          LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          return ExpressionCreator.timestamp(nullable, ldt);
+          // Calcite supports up to microsecond precision (6)
+          long epochSeconds = localDateTime.toEpochSecond(ZoneOffset.UTC);
+          long epochMicros =
+              TimeUnit.SECONDS.toMicros(epochSeconds)
+                  + TimeUnit.NANOSECONDS.toMicros(localDateTime.getNano());
+          return ExpressionCreator.precisionTimestamp(nullable, epochMicros, 6);
         }
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
