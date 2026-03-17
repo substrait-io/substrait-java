@@ -775,10 +775,6 @@ public interface Expression extends FunctionArg {
       return Type.withNullability(false).func(paramTypes, returnType);
     }
 
-    public static ImmutableExpression.Lambda.Builder builder() {
-      return ImmutableExpression.Lambda.builder();
-    }
-
     @Override
     public <R, C extends VisitationContext, E extends Throwable> R accept(
         ExpressionVisitor<R, C, E> visitor, C context) throws E {

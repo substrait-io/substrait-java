@@ -8,6 +8,7 @@ import io.substrait.expression.Expression.PrecisionTimeLiteral;
 import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -448,7 +449,10 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
       return Optional.empty();
     }
     return Optional.of(
-        Expression.Lambda.builder().from(lambda).body(newBody.orElse(lambda.body())).build());
+        ImmutableExpression.Lambda.builder()
+            .from(lambda)
+            .body(newBody.orElse(lambda.body()))
+            .build());
   }
 
   // utilities

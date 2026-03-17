@@ -1,0 +1,14 @@
+{
+  "lambda": {
+    "parameters": {
+      "types": [
+        { "i32": { "nullability": "NULLABILITY_REQUIRED" } }
+      ]
+    },
+    "body": {
+      "literal": {
+        "i32": 42
+      }
+    }
+  }
+}
