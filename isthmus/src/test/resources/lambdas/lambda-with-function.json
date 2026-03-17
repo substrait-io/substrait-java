@@ -9,21 +9,10 @@
       "urn": "extension:io.substrait:functions_list"
     }
   ],
-  "extensionUris": [
-    {
-      "extensionUriAnchor": 1,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_arithmetic.yaml"
-    },
-    {
-      "extensionUriAnchor": 2,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_list.yaml"
-    }
-  ],
   "extensions": [
     {
       "extensionFunction": {
         "extensionUrnReference": 1,
-        "extensionUriReference": 1,
         "functionAnchor": 1,
         "name": "multiply:i32_i32"
       }
@@ -31,7 +20,6 @@
     {
       "extensionFunction": {
         "extensionUrnReference": 2,
-        "extensionUriReference": 2,
         "functionAnchor": 2,
         "name": "transform:list_func"
       }

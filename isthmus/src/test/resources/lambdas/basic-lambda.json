@@ -9,17 +9,10 @@
       "urn": "extension:io.substrait:functions_list"
     }
   ],
-  "extensionUris": [
-    {
-      "extensionUriAnchor": 1,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_list.yaml"
-    }
-  ],
   "extensions": [
     {
       "extensionFunction": {
         "extensionUrnReference": 1,
-        "extensionUriReference": 1,
         "functionAnchor": 1,
         "name": "transform:list_func"
       }

@@ -12,6 +12,7 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 public class FunctionMappings {
   // Static list of signature mapping between Calcite SQL operators and Substrait base function
@@ -29,6 +30,20 @@ public class FunctionMappings {
       SqlBasicFunction.create(
           "filter",
           opBinding -> opBinding.getOperandType(0),
+          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
+
+  /** The any_match:list_func function; returns true if any element matches the predicate. */
+  public static final SqlFunction ANY_MATCH =
+      SqlBasicFunction.create(
+          "any_match",
+          opBinding -> opBinding.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
+          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
+
+  /** The all_match:list_func function; returns true if all elements match the predicate. */
+  public static final SqlFunction ALL_MATCH =
+      SqlBasicFunction.create(
+          "all_match",
+          opBinding -> opBinding.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
           OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
 
   public static final ImmutableList<Sig> SCALAR_SIGS =
@@ -120,7 +135,9 @@ public class FunctionMappings {
               s(SqlLibraryOperators.PARSE_TIMESTAMP, "strptime_timestamp"),
               s(SqlLibraryOperators.PARSE_DATE, "strptime_date"),
               s(TRANSFORM, "transform"),
-              s(FILTER, "filter"))
+              s(FILTER, "filter"),
+              s(ANY_MATCH, "any_match"),
+              s(ALL_MATCH, "all_match"))
           .build();
 
   public static final ImmutableList<Sig> AGGREGATE_SIGS =
