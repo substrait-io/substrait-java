@@ -3,6 +3,9 @@ package io.substrait.expression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
@@ -12,8 +15,11 @@ import org.junit.jupiter.api.Test;
 class LambdaBuilderTest {
 
   static final TypeCreator R = TypeCreator.REQUIRED;
+  static final SimpleExtension.ExtensionCollection EXTENSIONS =
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
 
   final LambdaBuilder lb = new LambdaBuilder();
+  final SubstraitBuilder sb = new SubstraitBuilder(EXTENSIONS);
 
   // (x: i32)@p -> p[0]
   @Test
@@ -48,6 +54,23 @@ class LambdaBuilderTest {
             .build();
 
     assertEquals(expected, lambda);
+  }
+
+  // (x: i64) -> add(x, x)
+  // Example of a lambda with a function call in the body
+  @Test
+  void lambdaWithFunctionCall() {
+    String ARITH = DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC;
+
+    Expression.Lambda lambda =
+        lb.lambda(
+            List.of(R.I64),
+            params -> sb.scalarFn(ARITH, "add:i64_i64", R.I64, params.ref(0), params.ref(0)));
+
+    Type.Struct expectedParams = Type.Struct.builder().nullable(false).addFields(R.I64).build();
+    assertEquals(expectedParams, lambda.parameters());
+
+    assertEquals(R.I64, lambda.body().getType());
   }
 
   // Verify that the same scope handle produces different stepsOut values depending on nesting.
