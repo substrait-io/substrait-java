@@ -150,6 +150,16 @@ public abstract class FieldReference implements Expression {
             index, currentOffset));
   }
 
+  /**
+   * Creates a field reference to a lambda parameter. This method does not validate that stepsOut is
+   * correct for any particular lambda nesting context. For validated lambda construction, use
+   * {@link LambdaBuilder} and {@link LambdaBuilder.Scope#ref(int)}.
+   *
+   * @param stepsOut number of lambda scopes to traverse outward (0 = innermost/current lambda)
+   * @param paramIndex index of the parameter within the lambda's parameter struct
+   * @param lambdaParamsType the lambda's parameter struct type
+   * @return a field reference to the specified lambda parameter
+   */
   public static FieldReference newLambdaParameterReference(
       int stepsOut, int paramIndex, Type.Struct lambdaParamsType) {
     return ImmutableFieldReference.builder()
