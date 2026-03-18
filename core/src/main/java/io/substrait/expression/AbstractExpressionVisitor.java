@@ -590,4 +590,17 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   public O visit(Expression.InPredicate expr, C context) throws E {
     return visitFallback(expr, context);
   }
+
+  /**
+   * Visits a dynamic parameter expression.
+   *
+   * @param expr the dynamic parameter
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.DynamicParameter expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
 }

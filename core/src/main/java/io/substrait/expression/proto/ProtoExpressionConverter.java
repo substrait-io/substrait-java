@@ -260,6 +260,15 @@ public class ProtoExpressionConverter {
           }
         }
 
+      case DYNAMIC_PARAMETER:
+        {
+          io.substrait.proto.DynamicParameter dp = expr.getDynamicParameter();
+          return Expression.DynamicParameter.builder()
+              .type(protoTypeConverter.from(dp.getType()))
+              .parameterReference(dp.getParameterReference())
+              .build();
+        }
+
       // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());

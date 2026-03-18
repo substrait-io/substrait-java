@@ -357,4 +357,10 @@ public class ExpressionStringify extends ParentStringify
       throws RuntimeException {
     return "<EmptyMapLiteral>";
   }
+
+  @Override
+  public String visit(Expression.DynamicParameter expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<DynamicParameter " + expr.parameterReference() + " " + expr.type() + ">";
+  }
 }

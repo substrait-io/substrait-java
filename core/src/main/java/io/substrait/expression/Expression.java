@@ -1226,6 +1226,28 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  @Value.Immutable
+  abstract class DynamicParameter implements Expression {
+    public abstract Type type();
+
+    public abstract int parameterReference();
+
+    @Override
+    public Type getType() {
+      return type();
+    }
+
+    public static ImmutableExpression.DynamicParameter.Builder builder() {
+      return ImmutableExpression.DynamicParameter.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
   enum PredicateOp {
     PREDICATE_OP_UNSPECIFIED(
         io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNSPECIFIED),
