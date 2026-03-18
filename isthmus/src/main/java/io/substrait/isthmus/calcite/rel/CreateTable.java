@@ -17,21 +17,45 @@ public class CreateTable extends SingleRel {
     this.tableName = tableName;
   }
 
+  /**
+   * CreateTable Constructor.
+   *
+   * @param tableName tablename components
+   * @param input RelNode input
+   */
   public CreateTable(List<String> tableName, RelNode input) {
     this(input.getCluster(), input.getTraitSet(), tableName, input);
   }
 
+  /**
+   * Explains the node terms for plan output.
+   *
+   * @param pw plan writer
+   * @return the plan writer with this node's fields added
+   */
   @Override
   public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw).item("tableName", getTableName());
   }
 
+  /**
+   * Returns the inputs to this node (single input).
+   *
+   * @param traitSet the RelTraitSet
+   * @param inputs List of RelNodes
+   * @return the input relation
+   */
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     assert inputs.size() == 1;
     return new CreateTable(getCluster(), traitSet, tableName, inputs.get(0));
   }
 
+  /**
+   * Returns the fully qualified table name parts.
+   *
+   * @return table name components (e.g., [schema, table])
+   */
   public List<String> getTableName() {
     return tableName;
   }
