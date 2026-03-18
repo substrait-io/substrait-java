@@ -25,7 +25,7 @@ class LambdaBuilderTest {
             .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
             .body(
                 FieldReference.newLambdaParameterReference(
-                    0, Type.Struct.builder().nullable(false).addFields(R.I32).build(), 0))
+                    0, 0, Type.Struct.builder().nullable(false).addFields(R.I32).build()))
             .build();
 
     assertEquals(expected, lambda);
@@ -42,7 +42,7 @@ class LambdaBuilderTest {
             .parameters(Type.Struct.builder().nullable(false).addFields(R.I64).build())
             .body(
                 FieldReference.newLambdaParameterReference(
-                    0, Type.Struct.builder().nullable(false).addFields(R.I32).build(), 1))
+                    1, 0, Type.Struct.builder().nullable(false).addFields(R.I32).build()))
             .build();
 
     Expression.Lambda expected =

@@ -151,7 +151,7 @@ public abstract class FieldReference implements Expression {
   }
 
   public static FieldReference newLambdaParameterReference(
-      int paramIndex, Type.Struct lambdaParamsType, int stepsOut) {
+      int stepsOut, int paramIndex, Type.Struct lambdaParamsType) {
     return ImmutableFieldReference.builder()
         .addSegments(StructField.of(paramIndex))
         .type(lambdaParamsType.fields().get(paramIndex))

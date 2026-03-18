@@ -144,7 +144,7 @@ public class LambdaBuilder {
      * @throws IndexOutOfBoundsException if paramIndex is out of bounds
      */
     public FieldReference ref(int paramIndex) throws IndexOutOfBoundsException {
-      return FieldReference.newLambdaParameterReference(paramIndex, params, stepsOut());
+      return FieldReference.newLambdaParameterReference(stepsOut(), paramIndex, params);
     }
   }
 }

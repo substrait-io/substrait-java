@@ -92,9 +92,9 @@ public class ProtoExpressionConverter {
           }
 
           return FieldReference.newLambdaParameterReference(
+              stepsOut,
               reference.getDirectReference().getStructField().getField(),
-              lambdaParameters,
-              stepsOut);
+              lambdaParameters);
         }
       case ROOTTYPE_NOT_SET:
       default:
