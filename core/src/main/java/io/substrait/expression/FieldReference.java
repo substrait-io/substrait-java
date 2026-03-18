@@ -37,6 +37,14 @@ public abstract class FieldReference implements Expression {
     return visitor.visit(this, context);
   }
 
+  @Value.Check
+  protected void check() {
+    if (outerReferenceStepsOut().isPresent() && lambdaParameterReferenceStepsOut().isPresent()) {
+      throw new IllegalArgumentException(
+          "FieldReference cannot have both outerReferenceStepsOut and lambdaParameterReferenceStepsOut set");
+    }
+  }
+
   public boolean isSimpleRootReference() {
     return segments().size() == 1
         && !inputExpression().isPresent()
@@ -48,6 +56,7 @@ public abstract class FieldReference implements Expression {
     return outerReferenceStepsOut().orElse(0) > 0;
   }
 
+  /** Returns true if this field reference refers to a lambda parameter. */
   public boolean isLambdaParameterReference() {
     return lambdaParameterReferenceStepsOut().isPresent();
   }

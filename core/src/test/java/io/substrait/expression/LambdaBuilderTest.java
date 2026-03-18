@@ -86,7 +86,8 @@ class LambdaBuilderTest {
   // (x: i32)@p -> p[-1] — negative index
   @Test
   void negativeFieldIndex() {
-    assertThrows(Exception.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(-1)));
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(-1)));
   }
 
   // (x: i32)@outer -> (y: i64)@inner -> outer[5] — outer only has 1 param
