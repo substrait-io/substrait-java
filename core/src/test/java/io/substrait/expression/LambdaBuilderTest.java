@@ -1,0 +1,127 @@
+package io.substrait.expression;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
+import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+/** Tests for {@link LambdaBuilder}. */
+class LambdaBuilderTest {
+
+  static final TypeCreator R = TypeCreator.REQUIRED;
+  static final SimpleExtension.ExtensionCollection EXTENSIONS =
+      DefaultExtensionCatalog.DEFAULT_COLLECTION;
+
+  final LambdaBuilder lb = new LambdaBuilder();
+  final SubstraitBuilder sb = new SubstraitBuilder(EXTENSIONS);
+
+  // (x: i32)@p -> p[0]
+  @Test
+  void simpleLambda() {
+    Expression.Lambda lambda = lb.lambda(List.of(R.I32), params -> params.ref(0));
+
+    Expression.Lambda expected =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
+            .body(FieldReference.newLambdaParameterReference(0, 0, R.I32))
+            .build();
+
+    assertEquals(expected, lambda);
+  }
+
+  // (x: i32)@outer -> (y: i64)@inner -> outer[0]
+  @Test
+  void nestedLambda() {
+    Expression.Lambda lambda =
+        lb.lambda(List.of(R.I32), outer -> lb.lambda(List.of(R.I64), inner -> outer.ref(0)));
+
+    Expression.Lambda expectedInner =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I64).build())
+            .body(FieldReference.newLambdaParameterReference(1, 0, R.I32))
+            .build();
+
+    Expression.Lambda expected =
+        ImmutableExpression.Lambda.builder()
+            .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
+            .body(expectedInner)
+            .build();
+
+    assertEquals(expected, lambda);
+  }
+
+  // (x: i64) -> add(x, x)
+  // Example of a lambda with a function call in the body
+  @Test
+  void lambdaWithFunctionCall() {
+    String ARITH = DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC;
+
+    Expression.Lambda lambda =
+        lb.lambda(
+            List.of(R.I64),
+            params -> sb.scalarFn(ARITH, "add:i64_i64", R.I64, params.ref(0), params.ref(0)));
+
+    Type.Struct expectedParams = Type.Struct.builder().nullable(false).addFields(R.I64).build();
+    assertEquals(expectedParams, lambda.parameters());
+
+    assertEquals(R.I64, lambda.body().getType());
+  }
+
+  // Verify that the same scope handle produces different stepsOut values depending on nesting.
+  // outer.ref(0) should produce stepsOut=0 at the top level and stepsOut=1 inside a nested lambda.
+  @Test
+  void scopeStepsOutChangesDynamically() {
+    lb.lambda(
+        List.of(R.I32),
+        outer -> {
+          FieldReference atTopLevel = outer.ref(0);
+          assertEquals(0, atTopLevel.lambdaParameterReferenceStepsOut().orElse(-1));
+
+          lb.lambda(
+              List.of(R.I64),
+              inner -> {
+                FieldReference atNestedLevel = outer.ref(0);
+                assertEquals(1, atNestedLevel.lambdaParameterReferenceStepsOut().orElse(-1));
+                return inner.ref(0);
+              });
+
+          return atTopLevel;
+        });
+  }
+
+  // (x: i32)@p -> p[5] — only 1 param, index 5 is out of bounds
+  @Test
+  void invalidFieldIndex_outOfBounds() {
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(5)));
+  }
+
+  // (x: i32)@p -> p[-1] — negative index
+  @Test
+  void negativeFieldIndex() {
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> lb.lambda(List.of(R.I32), params -> params.ref(-1)));
+  }
+
+  // (x: i32)@outer -> (y: i64)@inner -> outer[5] — outer only has 1 param
+  @Test
+  void nestedOuterFieldIndexOutOfBounds() {
+    assertThrows(
+        IndexOutOfBoundsException.class,
+        () -> lb.lambda(List.of(R.I32), outer -> lb.lambda(List.of(R.I64), inner -> outer.ref(5))));
+  }
+
+  // (x: i32)@outer -> (y: i64)@inner -> inner[3] — inner only has 1 param
+  @Test
+  void nestedInnerFieldIndexOutOfBounds() {
+    assertThrows(
+        IndexOutOfBoundsException.class,
+        () -> lb.lambda(List.of(R.I32), outer -> lb.lambda(List.of(R.I64), inner -> inner.ref(3))));
+  }
+}

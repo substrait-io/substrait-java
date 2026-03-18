@@ -77,6 +77,13 @@ public class ProtoTypeConverter {
       case PRECISION_TIMESTAMP_TZ:
         return n(type.getPrecisionTimestampTz().getNullability())
             .precisionTimestampTZ(type.getPrecisionTimestampTz().getPrecision());
+      case FUNC:
+        return n(type.getFunc().getNullability())
+            .func(
+                type.getFunc().getParameterTypesList().stream()
+                    .map(this::from)
+                    .collect(java.util.stream.Collectors.toList()),
+                from(type.getFunc().getReturnType()));
       case STRUCT:
         return n(type.getStruct().getNullability())
             .struct(

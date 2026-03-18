@@ -8,6 +8,7 @@ import io.substrait.function.TypeExpressionCreator;
 import io.substrait.type.ImmutableType;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TestTypeParser {
@@ -120,6 +121,11 @@ class TestTypeParser {
     test(v, n.precisionTimestamp(9), "PRECISION_TIMESTAMP?<9>");
     test(v, r.precisionTimestampTZ(6), "PRECISION_TIMESTAMP_TZ<6>");
     test(v, n.precisionTimestampTZ(9), "PRECISION_TIMESTAMP_TZ?<9>");
+
+    test(v, r.func(List.of(r.I8), r.I32), "func<i8 -> i32>");
+    test(v, r.func(List.of(r.I8, r.I8), r.I32), "func<(i8, i8) -> i32>");
+    test(v, n.func(List.of(r.I8), r.I32), "func?<i8 -> i32>");
+    test(v, r.func(List.of(n.I8), n.I32), "func<i8? -> i32?>");
   }
 
   private <T> void parameterizedTests(ParseToPojo.Visitor v) {
@@ -142,6 +148,16 @@ class TestTypeParser {
     test(v, pr.precisionTimeE("P"), "PRECISION_TIME<P>");
     test(v, pr.precisionTimestampE("P"), "PRECISION_TIMESTAMP<P>");
     test(v, pr.precisionTimestampTZE("P"), "PRECISION_TIMESTAMP_TZ<P>");
+
+    test(v, pr.funcE(List.of(pr.parameter("any")), r.I64), "func<any -> i64>");
+    test(v, pr.funcE(List.of(pr.parameter("any"), r.I64), r.I64), "func<(any, i64) -> i64>");
+    test(v, pr.funcE(List.of(pr.parameter("any1")), pr.parameter("any1")), "func<any1 -> any1>");
+    test(v, pn.funcE(List.of(pr.parameter("any")), n.I64), "func?<any -> i64?>");
+    test(v, pn.funcE(List.of(pr.parameter("any1")), pr.parameter("any1")), "func?<any1 -> any1>");
+    test(
+        v,
+        pr.funcE(List.of(pr.parameter("any1"), r.I8), pr.parameter("any1")),
+        "func<(any1, i8) -> any1>");
   }
 
   @Test

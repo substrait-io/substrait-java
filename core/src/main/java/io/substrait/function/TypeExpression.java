@@ -207,6 +207,22 @@ public interface TypeExpression {
   }
 
   @Value.Immutable
+  abstract class Func extends BaseTypeExpression implements NullableType {
+    public abstract java.util.List<TypeExpression> parameterTypes();
+
+    public abstract TypeExpression returnType();
+
+    public static ImmutableTypeExpression.Func.Builder builder() {
+      return ImmutableTypeExpression.Func.builder();
+    }
+
+    @Override
+    <R, E extends Throwable> R acceptE(final TypeExpressionVisitor<R, E> visitor) throws E {
+      return visitor.visit(this);
+    }
+  }
+
+  @Value.Immutable
   abstract class BinaryOperation extends BaseTypeExpression {
     public enum OpType {
       ADD,

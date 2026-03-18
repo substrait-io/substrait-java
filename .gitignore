@@ -14,3 +14,6 @@ out/**
 .metals
 .bloop
 .project
+.classpath
+.settings
+bin/

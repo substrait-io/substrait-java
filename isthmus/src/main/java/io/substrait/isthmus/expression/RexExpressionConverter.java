@@ -2,11 +2,13 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.relation.Rel;
 import io.substrait.type.StringTypeVisitor;
+import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -202,12 +204,30 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
 
   @Override
   public Expression visitLambda(RexLambda rexLambda) {
-    throw new UnsupportedOperationException("RexLambda not supported");
+    List<Type> paramTypes =
+        rexLambda.getParameters().stream()
+            .map(param -> typeConverter.toSubstrait(param.getType()))
+            .collect(Collectors.toList());
+
+    Type.Struct parameters = Type.Struct.builder().nullable(false).addAllFields(paramTypes).build();
+
+    Expression body = rexLambda.getExpression().accept(this);
+
+    return ImmutableExpression.Lambda.builder().parameters(parameters).body(body).build();
   }
 
   @Override
   public Expression visitLambdaRef(RexLambdaRef rexLambdaRef) {
-    throw new UnsupportedOperationException("RexLambdaRef not supported");
+    int fieldIndex = rexLambdaRef.getIndex();
+    Type paramType = typeConverter.toSubstrait(rexLambdaRef.getType());
+
+    return FieldReference.builder()
+        .addSegments(FieldReference.StructField.of(fieldIndex))
+        .type(paramType)
+        .lambdaParameterReferenceStepsOut(
+            0) // Always 0 since Calcite doesn't support nested Lambda expressions for now
+        // https://github.com/substrait-io/substrait-java/issues/711
+        .build();
   }
 
   @Override

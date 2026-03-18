@@ -208,6 +208,12 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Expression.Lambda expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<Lambda >";
+  }
+
+  @Override
   public String visit(UserDefinedAnyLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
     return "<UserDefinedAnyLiteral " + expr.value() + ">";

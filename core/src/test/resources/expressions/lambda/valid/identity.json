@@ -1,0 +1,21 @@
+{
+  "lambda": {
+    "parameters": {
+      "types": [
+        { "i32": { "nullability": "NULLABILITY_REQUIRED" } }
+      ]
+    },
+    "body": {
+      "selection": {
+        "directReference": {
+          "structField": {
+            "field": 0
+          }
+        },
+        "lambdaParameterReference": {
+          "stepsOut": 0
+        }
+      }
+    }
+  }
+}

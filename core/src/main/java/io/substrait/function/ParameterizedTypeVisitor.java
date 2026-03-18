@@ -29,6 +29,8 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
 
   R visit(ParameterizedType.StringLiteral stringLiteral) throws E;
 
+  R visit(ParameterizedType.Func expr) throws E;
+
   abstract class ParameterizedTypeThrowsVisitor<R, E extends Throwable>
       extends TypeVisitor.TypeThrowsVisitor<R, E> implements ParameterizedTypeVisitor<R, E> {
 
@@ -98,6 +100,11 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
 
     @Override
     public R visit(ParameterizedType.StringLiteral stringLiteral) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(ParameterizedType.Func expr) throws E {
       throw t();
     }
   }
