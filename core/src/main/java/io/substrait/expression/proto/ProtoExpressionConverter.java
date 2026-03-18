@@ -82,19 +82,15 @@ public class ProtoExpressionConverter {
           io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =
               reference.getLambdaParameterReference();
 
-          int stepsOut = lambdaParamRef.getStepsOut();
-          Type.Struct lambdaParameters = lambdaBuilder.resolveParams(stepsOut);
-
           // Check for unsupported nested field access
           if (reference.getDirectReference().getStructField().hasChild()) {
             throw new UnsupportedOperationException(
                 "Nested field access in lambda parameters is not yet supported");
           }
 
-          return FieldReference.newLambdaParameterReference(
-              stepsOut,
-              reference.getDirectReference().getStructField().getField(),
-              lambdaParameters);
+          return lambdaBuilder.newParameterReference(
+              lambdaParamRef.getStepsOut(),
+              reference.getDirectReference().getStructField().getField());
         }
       case ROOTTYPE_NOT_SET:
       default:

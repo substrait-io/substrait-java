@@ -93,6 +93,21 @@ public class LambdaBuilder {
   }
 
   /**
+   * Creates a validated field reference to a lambda parameter. Validates that stepsOut is valid for
+   * the current lambda nesting context.
+   *
+   * @param stepsOut number of lambda scopes to traverse outward (0 = current/innermost)
+   * @param paramIndex index of the parameter within the target lambda's parameter struct
+   * @return a field reference to the specified lambda parameter
+   * @throws IllegalArgumentException if stepsOut exceeds the current nesting depth
+   * @throws IndexOutOfBoundsException if paramIndex is out of bounds for the target lambda
+   */
+  public FieldReference newParameterReference(int stepsOut, int paramIndex) {
+    Type.Struct params = resolveParams(stepsOut);
+    return FieldReference.newLambdaParameterReference(stepsOut, paramIndex, params);
+  }
+
+  /**
    * Pushes a lambda's parameters onto the context stack. This makes the parameters available for
    * validation when building the lambda's body, and allows nested lambda parameter references to
    * correctly compute their stepsOut values.
