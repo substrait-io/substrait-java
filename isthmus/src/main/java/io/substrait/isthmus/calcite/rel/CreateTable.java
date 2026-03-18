@@ -17,6 +17,12 @@ public class CreateTable extends SingleRel {
     this.tableName = tableName;
   }
 
+  /**
+   * CreateTable Constructor.
+   *
+   * @param tableName tablename components
+   * @param input RelNode input
+   */
   public CreateTable(List<String> tableName, RelNode input) {
     this(input.getCluster(), input.getTraitSet(), tableName, input);
   }
@@ -35,7 +41,9 @@ public class CreateTable extends SingleRel {
   /**
    * Returns the inputs to this node (single input).
    *
-   * @return a list containing the input relation
+   * @param traitSet the RelTraitSet
+   * @param inputs List of RelNodes
+   * @return the input relation
    */
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
