@@ -23,9 +23,7 @@ class LambdaBuilderTest {
     Expression.Lambda expected =
         ImmutableExpression.Lambda.builder()
             .parameters(Type.Struct.builder().nullable(false).addFields(R.I32).build())
-            .body(
-                FieldReference.newLambdaParameterReference(
-                    0, 0, Type.Struct.builder().nullable(false).addFields(R.I32).build()))
+            .body(FieldReference.newLambdaParameterReference(0, 0, R.I32))
             .build();
 
     assertEquals(expected, lambda);
@@ -40,9 +38,7 @@ class LambdaBuilderTest {
     Expression.Lambda expectedInner =
         ImmutableExpression.Lambda.builder()
             .parameters(Type.Struct.builder().nullable(false).addFields(R.I64).build())
-            .body(
-                FieldReference.newLambdaParameterReference(
-                    1, 0, Type.Struct.builder().nullable(false).addFields(R.I32).build()))
+            .body(FieldReference.newLambdaParameterReference(1, 0, R.I32))
             .build();
 
     Expression.Lambda expected =

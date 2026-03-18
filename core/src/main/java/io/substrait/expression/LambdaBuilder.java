@@ -104,7 +104,8 @@ public class LambdaBuilder {
    */
   public FieldReference newParameterReference(int stepsOut, int paramIndex) {
     Type.Struct params = resolveParams(stepsOut);
-    return FieldReference.newLambdaParameterReference(stepsOut, paramIndex, params);
+    Type type = params.fields().get(paramIndex);
+    return FieldReference.newLambdaParameterReference(stepsOut, paramIndex, type);
   }
 
   /**
@@ -159,7 +160,8 @@ public class LambdaBuilder {
      * @throws IndexOutOfBoundsException if paramIndex is out of bounds
      */
     public FieldReference ref(int paramIndex) throws IndexOutOfBoundsException {
-      return FieldReference.newLambdaParameterReference(stepsOut(), paramIndex, params);
+      Type type = params.fields().get(paramIndex);
+      return FieldReference.newLambdaParameterReference(stepsOut(), paramIndex, type);
     }
   }
 }

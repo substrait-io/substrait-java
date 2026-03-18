@@ -150,11 +150,10 @@ public abstract class FieldReference implements Expression {
             index, currentOffset));
   }
 
-  static FieldReference newLambdaParameterReference(
-      int stepsOut, int paramIndex, Type.Struct lambdaParamsType) {
+  static FieldReference newLambdaParameterReference(int stepsOut, int paramIndex, Type knownType) {
     return ImmutableFieldReference.builder()
         .addSegments(StructField.of(paramIndex))
-        .type(lambdaParamsType.fields().get(paramIndex))
+        .type(knownType)
         .lambdaParameterReferenceStepsOut(stepsOut)
         .build();
   }
