@@ -90,18 +90,37 @@ import org.apache.calcite.tools.RelBuilder;
 public class SubstraitRelNodeConverter
     extends AbstractRelVisitor<RelNode, SubstraitRelNodeConverter.Context, RuntimeException> {
 
+  /** Calcite type factory used to construct row and field types. */
   protected final RelDataTypeFactory typeFactory;
 
+  /** Converter for Substrait scalar functions to Calcite operators. */
   protected final ScalarFunctionConverter scalarFunctionConverter;
+
+  /** Converter for Substrait aggregate functions to Calcite operators. */
   protected final AggregateFunctionConverter aggregateFunctionConverter;
+
+  /** Converts Substrait {@code Expression}s into Calcite {@code RexNode}s. */
   protected final ExpressionRexConverter expressionRexConverter;
 
+  /** Calcite {@link RelBuilder} used to construct relational expressions during conversion. */
   protected final RelBuilder relBuilder;
+
+  /** Calcite {@link RexBuilder} used to build Rex nodes (e.g., input refs, literals). */
   protected final RexBuilder rexBuilder;
+
+  /** Type converter to translate between Calcite and Substrait type systems. */
   private final TypeConverter typeConverter;
 
   /** Use {@link #SubstraitRelNodeConverter(RelBuilder, ConverterProvider)} instead */
   @Deprecated
+  /**
+   * Creates a new SubstraitRelNodeConverter with the specified extensions, type factory, and
+   * relation builder.
+   *
+   * @param extensions the Substrait extension collection
+   * @param typeFactory the Calcite type factory
+   * @param relBuilder the Calcite relation builder
+   */
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -109,6 +128,13 @@ public class SubstraitRelNodeConverter
     this(relBuilder, new ConverterProvider(extensions, typeFactory));
   }
 
+  /**
+   * Creates a new SubstraitRelNodeConverter with the specified relation builder and converter
+   * provider.
+   *
+   * @param relBuilder the Calcite relation builder
+   * @param converterProvider the converter provider containing configuration and converters
+   */
   public SubstraitRelNodeConverter(RelBuilder relBuilder, ConverterProvider converterProvider) {
     this.typeFactory = converterProvider.getTypeFactory();
     this.typeConverter = converterProvider.getTypeConverter();
@@ -119,6 +145,18 @@ public class SubstraitRelNodeConverter
     this.expressionRexConverter = converterProvider.getExpressionRexConverter(this);
   }
 
+  /**
+   * Converts a Substrait {@link Rel} plan to a Calcite {@link RelNode} using default feature
+   * settings.
+   *
+   * <p>This method creates a {@link RelBuilder} configured with the provided cluster and catalog,
+   * then delegates to the converter with default features.
+   *
+   * @param relRoot the root Substrait relation to convert
+   * @param catalogReader the Calcite catalog reader for schema resolution
+   * @param converterProvider the converter provider containing configuration and converters
+   * @return the converted Calcite {@link RelNode}
+   */
   public static RelNode convert(
       Rel relRoot, Prepare.CatalogReader catalogReader, ConverterProvider converterProvider) {
     RelBuilder relBuilder =
@@ -736,6 +774,16 @@ public class SubstraitRelNodeConverter
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
   }
 
+  /**
+   * Applies an optional field remap to the given node.
+   *
+   * <p>If {@code remap} is present, the node is projected according to the provided indices;
+   * otherwise the original node is returned unchanged.
+   *
+   * @param relNode the node to remap
+   * @param remap optional field index remap
+   * @return remapped node or original node if no remap is present
+   */
   protected RelNode applyRemap(RelNode relNode, Optional<Rel.Remap> remap) {
     if (remap.isPresent()) {
       return applyRemap(relNode, remap.get());
@@ -759,8 +807,10 @@ public class SubstraitRelNodeConverter
 
   /** A shared context for the Substrait to RelNode conversion. */
   public static class Context implements VisitationContext {
+    /** Stack of outer row type range maps used to resolve correlated references. */
     protected final Stack<RangeMap<Integer, RelDataType>> outerRowTypes = new Stack<>();
 
+    /** Stack of correlation ids collected while visiting subqueries. */
     protected final Stack<java.util.Set<CorrelationId>> correlationIds = new Stack<>();
 
     private int subqueryDepth;
@@ -798,6 +848,7 @@ public class SubstraitRelNodeConverter
       this.correlationIds.push(new HashSet<>());
     }
 
+    /** Pops the most recent outer row type from the stack. */
     public void popOuterRowType() {
       outerRowTypes.pop();
     }
