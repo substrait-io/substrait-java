@@ -49,7 +49,7 @@ public class SubstraitSqlDialect extends SqlDialect {
   /**
    * Indicates whether this dialect supports approximate COUNT(DISTINCT) operations.
    *
-   * @return akways {@code true}, as Substrait SQL dialect supports approximate count distinct.
+   * @return always {@code true}, as Substrait SQL dialect supports approximate count distinct.
    */
   @Override
   public boolean supportsApproxCountDistinct() {
