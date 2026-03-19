@@ -89,12 +89,14 @@ public final class SimpleExtensionToSqlOperator {
       SimpleExtension.ExtensionCollection collection,
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
-    return Stream.concat(
-            Stream.concat(
-                collection.scalarFunctions().stream(), collection.aggregateFunctions().stream()),
-            collection.windowFunctions().stream())
-        .map(function -> toSqlFunction(function, typeFactory, typeConverter))
-        .collect(Collectors.toList());
+    List<? extends SimpleExtension.Function> functions =
+        Stream.of(
+                collection.scalarFunctions(),
+                collection.aggregateFunctions(),
+                collection.windowFunctions())
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+    return from(functions, typeFactory, typeConverter);
   }
 
   /**
