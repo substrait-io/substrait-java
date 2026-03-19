@@ -38,13 +38,13 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   /** Converter for RexNodes to Substrait expressions. */
   protected final RexExpressionConverter rexConverter;
 
-  /** Creates a converter with default features and the default extension catalog. */
+  /** Creates a converter with default configuration. */
   public SqlExpressionToSubstrait() {
     this(new ConverterProvider());
   }
 
   /**
-   * Creates a converter with the given feature board and extension collection.
+   * Creates a converter with the given converter provider.
    *
    * @param converterProvider Converter Provider to use for configuration
    */

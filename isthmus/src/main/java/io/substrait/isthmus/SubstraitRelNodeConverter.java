@@ -111,8 +111,6 @@ public class SubstraitRelNodeConverter
   /** Type converter to translate between Calcite and Substrait type systems. */
   private final TypeConverter typeConverter;
 
-  /** Use {@link #SubstraitRelNodeConverter(RelBuilder, ConverterProvider)} instead */
-  @Deprecated
   /**
    * Creates a new SubstraitRelNodeConverter with the specified extensions, type factory, and
    * relation builder.
@@ -120,7 +118,9 @@ public class SubstraitRelNodeConverter
    * @param extensions the Substrait extension collection
    * @param typeFactory the Calcite type factory
    * @param relBuilder the Calcite relation builder
+   * @deprecated Use {@link #SubstraitRelNodeConverter(RelBuilder, ConverterProvider)} instead
    */
+  @Deprecated
   public SubstraitRelNodeConverter(
       SimpleExtension.ExtensionCollection extensions,
       RelDataTypeFactory typeFactory,
@@ -146,11 +146,7 @@ public class SubstraitRelNodeConverter
   }
 
   /**
-   * Converts a Substrait {@link Rel} plan to a Calcite {@link RelNode} using default feature
-   * settings.
-   *
-   * <p>This method creates a {@link RelBuilder} configured with the provided cluster and catalog,
-   * then delegates to the converter with default features.
+   * Converts a Substrait {@link Rel} plan to a Calcite {@link RelNode}.
    *
    * @param relRoot the root Substrait relation to convert
    * @param catalogReader the Calcite catalog reader for schema resolution

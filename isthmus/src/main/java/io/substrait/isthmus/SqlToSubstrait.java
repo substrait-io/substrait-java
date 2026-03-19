@@ -19,9 +19,7 @@ import org.apache.calcite.sql.parser.SqlParser;
 public class SqlToSubstrait extends SqlConverterBase {
   private final SqlOperatorTable operatorTable;
 
-  /**
-   * Creates a SQL-to-Substrait converter using the default extension catalog and default features.
-   */
+  /** Creates a SQL-to-Substrait converter using the default configuration. */
   public SqlToSubstrait() {
     this(new ConverterProvider());
   }
