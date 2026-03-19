@@ -35,6 +35,15 @@ public class SubstraitToSql extends SqlConverterBase {
     substraitToCalcite = converterProvider.getSubstraitToCalcite();
   }
 
+  /**
+   * Converts a Substrait {@link Rel} to a Calcite {@link RelNode}.
+   *
+   * <p>This is the first step before generating SQL from Substrait plans.
+   *
+   * @param relRoot The Substrait relational root to convert.
+   * @param catalog The Calcite catalog reader for schema resolution.
+   * @return A Calcite {@link RelNode} representing the converted Substrait plan.
+   */
   public RelNode substraitRelToCalciteRel(Rel relRoot, Prepare.CatalogReader catalog) {
     return SubstraitRelNodeConverter.convert(relRoot, catalog, converterProvider);
   }
