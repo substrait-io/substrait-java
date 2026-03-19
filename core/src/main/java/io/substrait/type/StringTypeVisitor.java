@@ -150,4 +150,13 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
   public String visit(Type.UserDefined type) throws RuntimeException {
     return String.format("u!%s%s", type.name(), n(type));
   }
+
+  @Override
+  public String visit(Type.Func type) throws RuntimeException {
+    return String.format(
+        "func%s<%s -> %s>",
+        n(type),
+        type.parameterTypes().stream().map(t -> t.accept(this)).collect(Collectors.joining(", ")),
+        type.returnType().accept(this));
+  }
 }

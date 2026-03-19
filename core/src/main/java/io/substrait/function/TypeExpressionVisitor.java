@@ -26,6 +26,8 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
 
   R visit(TypeExpression.Map expr) throws E;
 
+  R visit(TypeExpression.Func expr) throws E;
+
   R visit(TypeExpression.BinaryOperation expr) throws E;
 
   R visit(TypeExpression.NotOperation expr) throws E;
@@ -101,6 +103,11 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
 
     @Override
     public R visit(TypeExpression.Map expr) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(TypeExpression.Func expr) throws E {
       throw t();
     }
 

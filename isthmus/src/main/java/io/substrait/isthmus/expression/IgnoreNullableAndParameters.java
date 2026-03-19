@@ -129,6 +129,11 @@ public class IgnoreNullableAndParameters
   }
 
   @Override
+  public Boolean visit(Type.Func type) throws RuntimeException {
+    return typeToMatch instanceof Type.Func || typeToMatch instanceof ParameterizedType.Func;
+  }
+
+  @Override
   public Boolean visit(Type.PrecisionTime type) {
     return typeToMatch instanceof Type.PrecisionTime
         || typeToMatch instanceof ParameterizedType.PrecisionTime;
@@ -233,5 +238,10 @@ public class IgnoreNullableAndParameters
   @Override
   public Boolean visit(ParameterizedType.StringLiteral stringLiteral) throws RuntimeException {
     return false;
+  }
+
+  @Override
+  public Boolean visit(ParameterizedType.Func expr) throws RuntimeException {
+    return typeToMatch instanceof Type.Func || typeToMatch instanceof ParameterizedType.Func;
   }
 }

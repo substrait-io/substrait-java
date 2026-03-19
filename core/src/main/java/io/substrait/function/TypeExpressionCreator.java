@@ -86,6 +86,16 @@ public class TypeExpressionCreator extends TypeCreator
     return TypeExpression.Map.builder().nullable(nullable).key(key).value(value).build();
   }
 
+  @Override
+  public TypeExpression funcE(
+      Iterable<? extends TypeExpression> parameterTypes, TypeExpression returnType) {
+    return TypeExpression.Func.builder()
+        .nullable(nullable)
+        .addAllParameterTypes(parameterTypes)
+        .returnType(returnType)
+        .build();
+  }
+
   public static class Assign {
     String name;
     TypeExpression expr;

@@ -322,6 +322,16 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.NestedStruct expr, C context) throws E;
 
   /**
+   * Visit a Lambda expression.
+   *
+   * @param expr the Lambda expression
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.Lambda expr, C context) throws E;
+
+  /**
    * Visit a user-defined any literal.
    *
    * @param expr the user-defined literal

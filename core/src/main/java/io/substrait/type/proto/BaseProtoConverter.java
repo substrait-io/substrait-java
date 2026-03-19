@@ -143,6 +143,16 @@ abstract class BaseProtoConverter<T, I>
   }
 
   @Override
+  public final T visit(final Type.Func expr) {
+    return typeContainer(expr)
+        .func(
+            expr.parameterTypes().stream()
+                .map(t -> t.accept(this))
+                .collect(java.util.stream.Collectors.toList()),
+            expr.returnType().accept(this));
+  }
+
+  @Override
   public final T visit(final Type.Struct expr) {
     return typeContainer(expr)
         .struct(

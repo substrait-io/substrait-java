@@ -20,6 +20,8 @@ public abstract class FieldReference implements Expression {
 
   public abstract Optional<Integer> outerReferenceStepsOut();
 
+  public abstract Optional<Integer> lambdaParameterReferenceStepsOut();
+
   @Override
   public Type getType() {
     return type();
@@ -35,14 +37,28 @@ public abstract class FieldReference implements Expression {
     return visitor.visit(this, context);
   }
 
+  @Value.Check
+  protected void check() {
+    if (outerReferenceStepsOut().isPresent() && lambdaParameterReferenceStepsOut().isPresent()) {
+      throw new IllegalArgumentException(
+          "FieldReference cannot have both outerReferenceStepsOut and lambdaParameterReferenceStepsOut set");
+    }
+  }
+
   public boolean isSimpleRootReference() {
     return segments().size() == 1
         && !inputExpression().isPresent()
-        && !outerReferenceStepsOut().isPresent();
+        && !outerReferenceStepsOut().isPresent()
+        && !lambdaParameterReferenceStepsOut().isPresent();
   }
 
   public boolean isOuterReference() {
     return outerReferenceStepsOut().orElse(0) > 0;
+  }
+
+  /** Returns true if this field reference refers to a lambda parameter. */
+  public boolean isLambdaParameterReference() {
+    return lambdaParameterReferenceStepsOut().isPresent();
   }
 
   public FieldReference dereferenceStruct(int index) {
@@ -132,6 +148,14 @@ public abstract class FieldReference implements Expression {
         String.format(
             "The current index %d wasn't found within the number of fields %d",
             index, currentOffset));
+  }
+
+  static FieldReference newLambdaParameterReference(int stepsOut, int paramIndex, Type knownType) {
+    return ImmutableFieldReference.builder()
+        .addSegments(StructField.of(paramIndex))
+        .type(knownType)
+        .lambdaParameterReferenceStepsOut(stepsOut)
+        .build();
   }
 
   public interface ReferenceSegment {

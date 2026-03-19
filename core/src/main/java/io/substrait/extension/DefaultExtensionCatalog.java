@@ -50,6 +50,9 @@ public class DefaultExtensionCatalog {
   /** Extension identifier for set functions. */
   public static final String FUNCTIONS_SET = "extension:io.substrait:functions_set";
 
+  /** Extension identifier for list functions. */
+  public static final String FUNCTIONS_LIST = "extension:io.substrait:functions_list";
+
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
 
@@ -75,6 +78,7 @@ public class DefaultExtensionCatalog {
                 "arithmetic",
                 "comparison",
                 "datetime",
+                "list",
                 "logarithmic",
                 "rounding",
                 "rounding_decimal",

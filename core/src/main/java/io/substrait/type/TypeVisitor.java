@@ -52,6 +52,8 @@ public interface TypeVisitor<R, E extends Throwable> {
 
   R visit(Type.Decimal type) throws E;
 
+  R visit(Type.Func type) throws E;
+
   R visit(Type.Struct type) throws E;
 
   R visit(Type.ListType type) throws E;
@@ -189,6 +191,11 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.PrecisionTimestampTZ type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.Func type) throws E {
       throw t();
     }
 

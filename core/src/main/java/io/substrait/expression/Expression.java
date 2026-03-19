@@ -758,6 +758,30 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  @Value.Immutable
+  abstract class Lambda implements Expression {
+    public abstract Type.Struct parameters();
+
+    public abstract Expression body();
+
+    @Override
+    public Type getType() {
+      List<Type> paramTypes = parameters().fields();
+      Type returnType = body().getType();
+
+      // TODO: Type.Func nullability is hardcoded to false here because the spec does not allow for
+      //   declaring otherwise.
+      // See: https://github.com/substrait-io/substrait/issues/976
+      return Type.withNullability(false).func(paramTypes, returnType);
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
   /**
    * Base interface for user-defined literals.
    *

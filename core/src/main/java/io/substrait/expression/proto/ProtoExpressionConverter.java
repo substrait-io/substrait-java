@@ -6,6 +6,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
+import io.substrait.expression.LambdaBuilder;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -37,6 +38,7 @@ public class ProtoExpressionConverter {
   private final Type.Struct rootType;
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
+  private final LambdaBuilder lambdaBuilder = new LambdaBuilder();
 
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
@@ -75,6 +77,21 @@ public class ProtoExpressionConverter {
             reference.getDirectReference().getStructField().getField(),
             rootType,
             reference.getOuterReference().getStepsOut());
+      case LAMBDA_PARAMETER_REFERENCE:
+        {
+          io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =
+              reference.getLambdaParameterReference();
+
+          // Check for unsupported nested field access
+          if (reference.getDirectReference().getStructField().hasChild()) {
+            throw new UnsupportedOperationException(
+                "Nested field access in lambda parameters is not yet supported");
+          }
+
+          return lambdaBuilder.newParameterReference(
+              lambdaParamRef.getStepsOut(),
+              reference.getDirectReference().getStructField().getField());
+        }
       case ROOTTYPE_NOT_SET:
       default:
         throw new IllegalArgumentException("Unhandled type: " + reference.getRootTypeCase());
@@ -260,6 +277,18 @@ public class ProtoExpressionConverter {
           }
         }
 
+      case LAMBDA:
+        {
+          io.substrait.proto.Expression.Lambda protoLambda = expr.getLambda();
+          Type.Struct parameters =
+              (Type.Struct)
+                  protoTypeConverter.from(
+                      io.substrait.proto.Type.newBuilder()
+                          .setStruct(protoLambda.getParameters())
+                          .build());
+
+          return lambdaBuilder.lambdaFromStruct(parameters, () -> from(protoLambda.getBody()));
+        }
       // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());

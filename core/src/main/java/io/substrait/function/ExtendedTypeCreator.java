@@ -16,4 +16,6 @@ public interface ExtendedTypeCreator<T, I> {
   T listE(T type);
 
   T mapE(T key, T value);
+
+  T funcE(Iterable<? extends T> parameterTypes, T returnType);
 }

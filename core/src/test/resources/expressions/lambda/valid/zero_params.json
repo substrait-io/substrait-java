@@ -1,0 +1,12 @@
+{
+  "lambda": {
+    "parameters": {
+      "types": []
+    },
+    "body": {
+      "literal": {
+        "i32": 42
+      }
+    }
+  }
+}
