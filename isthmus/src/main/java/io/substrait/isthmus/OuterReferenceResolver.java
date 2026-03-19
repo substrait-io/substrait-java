@@ -101,7 +101,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
   }
 
   /**
-   * Visits a generic {@link RelNode}, applying traversal to all inputs.
+   * Visits a generic {@link RelNode}, applying the resolver to all the node inputs.
    *
    * @param other the node to visit
    * @return the node
