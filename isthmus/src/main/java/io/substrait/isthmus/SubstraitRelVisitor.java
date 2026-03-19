@@ -84,14 +84,14 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
-  /** Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)} */
-  @Deprecated
   /**
    * Creates a new SubstraitRelVisitor with the specified type factory and extensions.
    *
    * @param typeFactory the Calcite type factory
    * @param extensions the Substrait extension collection
+   * @deprecated Use {@link SubstraitRelVisitor#SubstraitRelVisitor(ConverterProvider)}
    */
+  @Deprecated
   public SubstraitRelVisitor(
       RelDataTypeFactory typeFactory, SimpleExtension.ExtensionCollection extensions) {
     this(new ConverterProvider(extensions, typeFactory));
