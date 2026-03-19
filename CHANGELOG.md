@@ -1,6 +1,26 @@
 Release Notes
 ---
 
+## [0.86.0](https://github.com/substrait-io/substrait-java/compare/v0.85.0...v0.86.0) (2026-03-19)
+
+### Features
+
+* add example on Dynamic fns ([#746](https://github.com/substrait-io/substrait-java/issues/746)) ([e710747](https://github.com/substrait-io/substrait-java/commit/e710747717a204af5ef4d278fe75afb38bffc584))
+* add lambda expression support ([#710](https://github.com/substrait-io/substrait-java/issues/710)) ([190c071](https://github.com/substrait-io/substrait-java/commit/190c071e98092cf9682941f6f09b465cae623463))
+
+### Bug Fixes
+
+* **core:** use new aggregate grouping behavior in RelProtoConverter ([#744](https://github.com/substrait-io/substrait-java/issues/744)) ([dc33518](https://github.com/substrait-io/substrait-java/commit/dc3351820f8a6a426e091f7b12611b357d972f77))
+* **examples:** update sql example ([#747](https://github.com/substrait-io/substrait-java/issues/747)) ([a4bb095](https://github.com/substrait-io/substrait-java/commit/a4bb095917b4e4ca38fea87e7f9ee9e566a64126))
+* improve the javadoc generation ([#642](https://github.com/substrait-io/substrait-java/issues/642)) ([b06c786](https://github.com/substrait-io/substrait-java/commit/b06c7860057968b34a295301ca4d5be9e438e2ce))
+* javadoc for isthmus-cli and examples ([#644](https://github.com/substrait-io/substrait-java/issues/644)) ([7cbeec5](https://github.com/substrait-io/substrait-java/commit/7cbeec5fae50f1beac463bd52bcf797246efbbab))
+* **javadoc:** partial isthmus ([#758](https://github.com/substrait-io/substrait-java/issues/758)) ([5ee2b63](https://github.com/substrait-io/substrait-java/commit/5ee2b63e766402a123f717ecb1ff26ff6152fcde))
+* **javadoc:** partial isthmus ([#765](https://github.com/substrait-io/substrait-java/issues/765)) ([57ac3fb](https://github.com/substrait-io/substrait-java/commit/57ac3fbd2d4dc85ab0b988fb3e0ad33a52884d86))
+* **javadoc:** partial isthmus ([#766](https://github.com/substrait-io/substrait-java/issues/766)) ([9718899](https://github.com/substrait-io/substrait-java/commit/971889994207e2e847c8ddb00e74a8781b18fec8))
+* **javadoc:** partial isthmus calcite ([#755](https://github.com/substrait-io/substrait-java/issues/755)) ([163e23a](https://github.com/substrait-io/substrait-java/commit/163e23ab460707914103f3ead01912f2b2d1e862))
+* **javadoc:** partial isthmus calcite rel ([#756](https://github.com/substrait-io/substrait-java/issues/756)) ([68c8671](https://github.com/substrait-io/substrait-java/commit/68c8671960d213a3dba24084eb80fcf0746fb6e4))
+* **javadoc:** partial isthmus sql ([#754](https://github.com/substrait-io/substrait-java/issues/754)) ([3fc1c58](https://github.com/substrait-io/substrait-java/commit/3fc1c58641ac701e65949b8f2a3ac2e0c5e66268))
+
 ## [0.85.0](https://github.com/substrait-io/substrait-java/compare/v0.84.1...v0.85.0) (2026-03-14)
 
 ### ⚠ BREAKING CHANGES
