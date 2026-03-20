@@ -2,13 +2,17 @@ package io.substrait.isthmus;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.extension.SimpleExtension.Function;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -36,8 +40,7 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
   private static final Logger LOGGER =
       LoggerFactory.getLogger(AutomaticDynamicFunctionMappingConverterProvider.class);
 
-  private SqlOperatorTable cachedOperatorTable = null;
-  private final List<SqlOperator> additionalOperators = new ArrayList<>();
+  private final SqlOperatorTable operatorTable;
 
   public AutomaticDynamicFunctionMappingConverterProvider() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
@@ -51,89 +54,106 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
   public AutomaticDynamicFunctionMappingConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     super(extensions, typeFactory);
-    this.scalarFunctionConverter = createScalarFunctionConverter();
-    this.aggregateFunctionConverter = createAggregateFunctionConverter();
-    this.windowFunctionConverter = createWindowFunctionConverter();
+
+    List<SqlOperator> dynamicScalarOperators = getDynamicScalarOperators();
+    this.scalarFunctionConverter = createScalarFunctionConverter(dynamicScalarOperators);
+
+    List<SqlOperator> dynamicAggregateOperators = getDynamicAggregateOperators();
+    this.aggregateFunctionConverter = createAggregateFunctionConverter(dynamicAggregateOperators);
+
+    List<SqlOperator> dynamicWindowOperators = getDynamicWindowOperators();
+    this.windowFunctionConverter = createWindowFunctionConverter(dynamicWindowOperators);
+
+    List<SqlOperator> allOperators =
+        Stream.of(dynamicScalarOperators, dynamicAggregateOperators, dynamicWindowOperators)
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+    this.operatorTable = buildOperatorTable(allOperators);
   }
 
   @Override
   public SqlOperatorTable getSqlOperatorTable() {
-    if (cachedOperatorTable == null) {
-      cachedOperatorTable = buildOperatorTable();
-    }
-    return cachedOperatorTable;
+    return operatorTable;
   }
 
-  private SqlOperatorTable buildOperatorTable() {
-    SqlOperatorTable baseOperatorTable = super.getSqlOperatorTable();
-
-    if (!additionalOperators.isEmpty()) {
-      return SqlOperatorTables.chain(baseOperatorTable, SqlOperatorTables.of(additionalOperators));
-    } else {
-      return baseOperatorTable;
-    }
-  }
-
-  private List<FunctionMappings.Sig> createDynamicSignatures(
-      String functionType, List<? extends SimpleExtension.Function> unmappedFunctions) {
-    if (unmappedFunctions.isEmpty()) {
-      return java.util.Collections.emptyList();
-    }
-
-    LOGGER.info(
-        "Dynamically mapping {} unmapped {} functions: {}",
-        unmappedFunctions.size(),
-        functionType,
-        unmappedFunctions.stream().map(f -> f.name()).collect(Collectors.toList()));
-
-    List<SqlOperator> dynamicOperators =
-        SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
-
-    this.additionalOperators.addAll(dynamicOperators);
-
-    java.util.Map<String, SqlOperator> operatorsByName = new java.util.LinkedHashMap<>();
-    for (SqlOperator op : dynamicOperators) {
-      operatorsByName.put(op.getName().toLowerCase(), op);
-    }
-
-    return operatorsByName.values().stream()
-        .map(op -> FunctionMappings.s(op, op.getName().toLowerCase()))
-        .collect(Collectors.toList());
-  }
-
-  protected ScalarFunctionConverter createScalarFunctionConverter() {
+  private List<SqlOperator> getDynamicScalarOperators() {
     List<SimpleExtension.ScalarFunctionVariant> unmappedFunctions =
         io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
             extensions.scalarFunctions(), FunctionMappings.SCALAR_SIGS);
 
-    List<FunctionMappings.Sig> additionalSignatures =
-        new ArrayList<>(createDynamicSignatures("scalar", unmappedFunctions));
+    LOGGER.info(
+        "Dynamically mapping {} unmapped scalar functions: {}",
+        unmappedFunctions.size(),
+        unmappedFunctions.stream().map(Function::name).collect(Collectors.toList()));
 
-    return new ScalarFunctionConverter(
-        extensions.scalarFunctions(), additionalSignatures, typeFactory, typeConverter);
+    return SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
   }
 
-  protected AggregateFunctionConverter createAggregateFunctionConverter() {
+  private List<SqlOperator> getDynamicAggregateOperators() {
     List<SimpleExtension.AggregateFunctionVariant> unmappedFunctions =
         io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
             extensions.aggregateFunctions(), FunctionMappings.AGGREGATE_SIGS);
 
-    List<FunctionMappings.Sig> additionalSignatures =
-        new ArrayList<>(createDynamicSignatures("aggregate", unmappedFunctions));
+    LOGGER.info(
+        "Dynamically mapping {} unmapped aggregate functions: {}",
+        unmappedFunctions.size(),
+        unmappedFunctions.stream().map(Function::name).collect(Collectors.toList()));
 
-    return new AggregateFunctionConverter(
-        extensions.aggregateFunctions(), additionalSignatures, typeFactory, typeConverter);
+    return SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
   }
 
-  protected WindowFunctionConverter createWindowFunctionConverter() {
+  private List<SqlOperator> getDynamicWindowOperators() {
     List<SimpleExtension.WindowFunctionVariant> unmappedFunctions =
         io.substrait.isthmus.expression.FunctionConverter.getUnmappedFunctions(
             extensions.windowFunctions(), FunctionMappings.WINDOW_SIGS);
 
-    List<FunctionMappings.Sig> additionalSignatures =
-        new ArrayList<>(createDynamicSignatures("window", unmappedFunctions));
+    LOGGER.info(
+        "Dynamically mapping {} unmapped window functions: {}",
+        unmappedFunctions.size(),
+        unmappedFunctions.stream().map(Function::name).collect(Collectors.toList()));
 
+    return SimpleExtensionToSqlOperator.from(unmappedFunctions, typeFactory);
+  }
+
+  private ScalarFunctionConverter createScalarFunctionConverter(
+      List<SqlOperator> dynamicOperators) {
+    List<FunctionMappings.Sig> additionalSignatures = createDynamicSignatures(dynamicOperators);
+    return new ScalarFunctionConverter(
+        extensions.scalarFunctions(), additionalSignatures, typeFactory, typeConverter);
+  }
+
+  private AggregateFunctionConverter createAggregateFunctionConverter(
+      List<SqlOperator> dynamicOperators) {
+    List<FunctionMappings.Sig> additionalSignatures = createDynamicSignatures(dynamicOperators);
+    return new AggregateFunctionConverter(
+        extensions.aggregateFunctions(), additionalSignatures, typeFactory, typeConverter);
+  }
+
+  private WindowFunctionConverter createWindowFunctionConverter(
+      List<SqlOperator> dynamicOperators) {
+    List<FunctionMappings.Sig> additionalSignatures = createDynamicSignatures(dynamicOperators);
     return new WindowFunctionConverter(
         extensions.windowFunctions(), additionalSignatures, typeFactory, typeConverter);
+  }
+
+  private List<FunctionMappings.Sig> createDynamicSignatures(List<SqlOperator> dynamicOperators) {
+    Map<String, SqlOperator> uniqueOperators = new LinkedHashMap<>(dynamicOperators.size());
+    for (SqlOperator op : dynamicOperators) {
+      uniqueOperators.put(op.getName().toLowerCase(Locale.ROOT), op);
+    }
+
+    return uniqueOperators.values().stream()
+        .map(op -> FunctionMappings.s(op))
+        .collect(Collectors.toList());
+  }
+
+  private SqlOperatorTable buildOperatorTable(List<SqlOperator> additionalOperators) {
+    SqlOperatorTable baseOperatorTable = super.getSqlOperatorTable();
+
+    if (additionalOperators.isEmpty()) {
+      return baseOperatorTable;
+    }
+
+    return SqlOperatorTables.chain(baseOperatorTable, SqlOperatorTables.of(additionalOperators));
   }
 }
