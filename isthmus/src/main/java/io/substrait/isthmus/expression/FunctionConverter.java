@@ -14,6 +14,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ToTypeString;
+import io.substrait.function.TypeExpression;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.expression.FunctionMappings.Sig;
@@ -238,30 +239,11 @@ public abstract class FunctionConverter<
 
     private Optional<F> signatureMatch(List<Type> inputTypes, Type outputType) {
       for (F function : functions) {
-        List<SimpleExtension.Argument> args = function.requiredArguments();
         // Make sure that arguments & return are within bounds and match the types
-        boolean returnTypeMatches;
-        Object funcReturnType = function.returnType();
+        TypeExpression funcReturnType = function.returnType();
+        boolean returnTypeMatches = isReturnTypeMatch(outputType, funcReturnType);
 
-        if (funcReturnType instanceof ParameterizedType) {
-          returnTypeMatches = isMatch(outputType, (ParameterizedType) funcReturnType);
-        } else if (funcReturnType instanceof Type) {
-          // For non-parameterized return types, check if they match
-          Type targetType = (Type) funcReturnType;
-          if (outputType instanceof ParameterizedType) {
-            // outputType is parameterized but targetType is not - use visitor pattern
-            returnTypeMatches =
-                ((ParameterizedType) outputType)
-                    .accept(new IgnoreNullableAndParameters(targetType));
-          } else {
-            // Both are non-parameterized types - compare them directly by using the visitor
-            // Create a simple visitor that just checks class equality
-            returnTypeMatches = outputType.getClass().equals(targetType.getClass());
-          }
-        } else {
-          // If function.returnType() is neither Type nor ParameterizedType, skip it
-          returnTypeMatches = false;
-        }
+        List<SimpleExtension.Argument> args = function.requiredArguments();
 
         if (returnTypeMatches && inputTypesMatchDefinedArguments(inputTypes, args)) {
           return Optional.of(function);
@@ -269,6 +251,28 @@ public abstract class FunctionConverter<
       }
 
       return Optional.empty();
+    }
+
+    private boolean isReturnTypeMatch(final Type outputType, final TypeExpression funcReturnType) {
+      if (funcReturnType instanceof ParameterizedType) {
+        return isMatch(outputType, (ParameterizedType) funcReturnType);
+      }
+
+      if (funcReturnType instanceof Type) {
+        // For non-parameterized return types, check if they match
+        Type targetType = (Type) funcReturnType;
+
+        if (outputType instanceof ParameterizedType) {
+          // outputType is parameterized but targetType is not - use visitor pattern
+          return ((ParameterizedType) outputType)
+              .accept(new IgnoreNullableAndParameters(targetType));
+        }
+
+        // Both are non-parameterized types - compare them directly
+        return outputType.getClass().equals(targetType.getClass());
+      }
+
+      return false;
     }
 
     /**
@@ -488,23 +492,17 @@ public abstract class FunctionConverter<
         }
       }
 
-      if (singularInputType.isPresent()) {
-        Optional<T> coerced = matchCoerced(call, outputType, operands);
-        if (coerced.isPresent()) {
-          return coerced;
-        }
-        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
-        if (leastRestrictive.isPresent()) {
-          return leastRestrictive;
-        }
-      } else {
-        // Fallback: try matchCoerced even if singularInputType is empty
-        // This handles functions with mixed argument types like strftime(timestamp, string)
-        Optional<T> coerced = matchCoerced(call, outputType, operands);
-        if (coerced.isPresent()) {
-          return coerced;
-        }
+      // Try matchCoerced even if singularInputType is empty.
+      // This handles functions with mixed argument types like strftime(timestamp, string)
+      Optional<T> coerced = matchCoerced(call, outputType, operands);
+      if (coerced.isPresent()) {
+        return coerced;
       }
+
+      if (singularInputType.isPresent()) {
+        return matchByLeastRestrictive(call, outputType, operands);
+      }
+
       return Optional.empty();
     }
 
