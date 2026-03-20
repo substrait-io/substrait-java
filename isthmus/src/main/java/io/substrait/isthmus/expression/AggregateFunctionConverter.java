@@ -3,8 +3,9 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.FunctionOption;
+import io.substrait.expression.ImmutableAggregateFunctionInvocation;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.SubstraitRelVisitor;
@@ -22,6 +23,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /**
@@ -76,11 +78,24 @@ public class AggregateFunctionConverter
   /**
    * Builds a Substrait aggregate invocation from the matched call and arguments.
    *
-   * @param call wrapped aggregate call
-   * @param function matched Substrait function variant
-   * @param arguments converted arguments
+   * <p>This method constructs an {@link AggregateFunctionInvocation} with appropriate configuration
+   * including sort fields, invocation type (DISTINCT or ALL), and function-specific options.
+   *
+   * <p><b>Statistical Functions:</b> For standard deviation and variance functions (STDDEV_POP,
+   * STDDEV_SAMP, VAR_POP, VAR_SAMP), this method automatically adds a "distribution" function
+   * option to distinguish between population and sample variants:
+   *
+   * <ul>
+   *   <li>STDDEV_SAMP, VAR_SAMP → distribution=SAMPLE (uses n-1 denominator)
+   *   <li>STDDEV_POP, VAR_POP → distribution=POPULATION (uses n denominator)
+   * </ul>
+   *
+   * @param call wrapped aggregate call containing the Calcite aggregate information
+   * @param function matched Substrait function variant from the extension catalog
+   * @param arguments converted function arguments
    * @param outputType result type of the invocation
-   * @return aggregate function invocation
+   * @return aggregate function invocation with all necessary configuration including distribution
+   *     options for statistical functions
    */
   @Override
   protected AggregateFunctionInvocation generateBinding(
@@ -100,13 +115,28 @@ public class AggregateFunctionConverter
         agg.isDistinct()
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
-    return ExpressionCreator.aggregateFunction(
-        function,
-        outputType,
-        Expression.AggregationPhase.INITIAL_TO_RESULT,
-        sorts,
-        invocation,
-        arguments);
+
+    ImmutableAggregateFunctionInvocation.Builder builder =
+        AggregateFunctionInvocation.builder()
+            .declaration(function)
+            .outputType(outputType)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .sort(sorts)
+            .invocation(invocation)
+            .addAllArguments(arguments);
+
+    // Add distribution option for statistical functions based on SqlKind.
+    // For STDDEV_SAMP/VAR_SAMP, use "SAMPLE" distribution (n-1 denominator).
+    // For STDDEV_POP/VAR_POP, use "POPULATION" distribution (n denominator).
+    SqlKind kind = agg.getAggregation().getKind();
+    if (kind == SqlKind.STDDEV_SAMP || kind == SqlKind.VAR_SAMP) {
+      builder.addOptions(FunctionOption.builder().name("distribution").addValues("SAMPLE").build());
+    } else if (kind == SqlKind.STDDEV_POP || kind == SqlKind.VAR_POP) {
+      builder.addOptions(
+          FunctionOption.builder().name("distribution").addValues("POPULATION").build());
+    }
+
+    return builder.build();
   }
 
   /**

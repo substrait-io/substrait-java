@@ -155,7 +155,19 @@ public class FunctionMappings {
               s(AggregateFunctions.SUM0, "sum0"),
               s(SqlStdOperatorTable.COUNT, "count"),
               s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
-              s(AggregateFunctions.AVG, "avg"))
+              s(AggregateFunctions.AVG, "avg"),
+              /*
+               * Substrait std_dev and variance functions use a 'distribution' option
+               * (SAMPLE or POPULATION) to distinguish between population and sample variants.
+               * The function invocation logic must set this option based on the SqlKind.
+               *
+               * Note: Standard Calcite operators (SqlStdOperatorTable.STDDEV_SAMP, etc.) are
+               * automatically converted to these Substrait variants via toSubstraitAggVariant().
+               */
+              s(AggregateFunctions.STDDEV_POP, "std_dev"),
+              s(AggregateFunctions.STDDEV_SAMP, "std_dev"),
+              s(AggregateFunctions.VAR_POP, "variance"),
+              s(AggregateFunctions.VAR_SAMP, "variance"))
           .build();
 
   /** Window function signatures (including supported aggregates) mapped to Substrait names. */
