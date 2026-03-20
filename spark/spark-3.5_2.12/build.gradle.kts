@@ -11,7 +11,7 @@ plugins {
 
 // Spark 3.5 with Scala 2.12 variant configuration
 val sparkVersion = "3.5.4"
-val scalaVersion = "2.12.20"
+val scalaVersion = "2.12.21"
 val sparkMajorMinor = "3.5"
 val scalaBinary = "2.12"
 val classifier = "spark35_2.12"
