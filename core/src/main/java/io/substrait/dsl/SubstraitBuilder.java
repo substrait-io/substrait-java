@@ -50,12 +50,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A builder class for constructing Substrait query plans using a fluent API.
+ * A helper class for constructing Substrait query plans.
  *
- * <p>This class provides factory methods for creating various Substrait relation operators (e.g.,
- * aggregate, join, filter, project) and expressions (e.g., literals, function invocations, field
- * references). It simplifies the construction of complex query plans by providing a type-safe,
- * builder-style interface.
+ * <p>This class provides convenience methods for creating various Substrait relation operators
+ * (e.g., aggregate, join, filter, project) and expressions (e.g., literals, function invocations,
+ * field references). It simplifies the construction of complex query plans.
  *
  * <p>The builder requires an {@link SimpleExtension.ExtensionCollection} to resolve function
  * declarations and other extension metadata.
