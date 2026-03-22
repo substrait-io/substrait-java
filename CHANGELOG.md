@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.86.1](https://github.com/substrait-io/substrait-java/compare/v0.86.0...v0.86.1) (2026-03-22)
+
+### Bug Fixes
+
+* **javadoc:** partial isthmus ([#759](https://github.com/substrait-io/substrait-java/issues/759)) ([8ffa3b3](https://github.com/substrait-io/substrait-java/commit/8ffa3b32ab6d5359575a531c3e0911958eb43713))
+
 ## [0.86.0](https://github.com/substrait-io/substrait-java/compare/v0.85.0...v0.86.0) (2026-03-19)
 
 ### Features
