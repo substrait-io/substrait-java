@@ -22,6 +22,8 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for converting Substrait {@link SimpleExtension} function definitions (scalar and
@@ -39,6 +41,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
  * <p>Currently supports scalar and aggregate functions; window functions are not yet implemented.
  */
 public final class SimpleExtensionToSqlOperator {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtensionToSqlOperator.class);
 
   private static final RelDataTypeFactory DEFAULT_TYPE_FACTORY =
       new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM);
@@ -85,9 +89,47 @@ public final class SimpleExtensionToSqlOperator {
       SimpleExtension.ExtensionCollection collection,
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
-    // TODO: add support for windows functions
-    return Stream.concat(
-            collection.scalarFunctions().stream(), collection.aggregateFunctions().stream())
+    List<? extends SimpleExtension.Function> functions =
+        Stream.of(
+                collection.scalarFunctions(),
+                collection.aggregateFunctions(),
+                collection.windowFunctions())
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+    return from(functions, typeFactory, typeConverter);
+  }
+
+  /**
+   * Converts a list of functions to SqlOperators. Handles scalar, aggregate, and window functions.
+   *
+   * @param functions list of functions to convert
+   * @param typeFactory the Calcite type factory
+   * @return list of SqlOperators
+   */
+  public static List<SqlOperator> from(
+      List<? extends SimpleExtension.Function> functions, RelDataTypeFactory typeFactory) {
+    return from(functions, typeFactory, TypeConverter.DEFAULT);
+  }
+
+  /**
+   * Converts a list of functions to SqlOperators. Handles scalar, aggregate, and window functions.
+   *
+   * <p>Each function variant is converted to a separate SqlOperator. Functions with the same base
+   * name but different type signatures (e.g., strftime:ts_str, strftime:ts_string) are ALL added to
+   * the operator table. Calcite will try to match the function call arguments against all available
+   * operators and select the one that matches. This allows functions with multiple signatures to be
+   * used correctly without explicit deduplication.
+   *
+   * @param functions list of functions to convert
+   * @param typeFactory the Calcite type factory
+   * @param typeConverter the type converter
+   * @return list of SqlOperators
+   */
+  public static List<SqlOperator> from(
+      List<? extends SimpleExtension.Function> functions,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+    return functions.stream()
         .map(function -> toSqlFunction(function, typeFactory, typeConverter))
         .collect(Collectors.toList());
   }
@@ -375,7 +417,8 @@ public final class SimpleExtensionToSqlOperator {
           if (type.startsWith("LIST")) {
             return SqlTypeName.ARRAY;
           }
-          return super.visit(expr);
+          LOGGER.warn("Unsupported type literal for Calcite conversion: {}", type);
+          return SqlTypeName.ANY;
       }
     }
   }

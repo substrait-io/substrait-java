@@ -14,6 +14,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ToTypeString;
+import io.substrait.function.TypeExpression;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.expression.FunctionMappings.Sig;
@@ -238,16 +239,40 @@ public abstract class FunctionConverter<
 
     private Optional<F> signatureMatch(List<Type> inputTypes, Type outputType) {
       for (F function : functions) {
-        List<SimpleExtension.Argument> args = function.requiredArguments();
         // Make sure that arguments & return are within bounds and match the types
-        if (function.returnType() instanceof ParameterizedType
-            && isMatch(outputType, (ParameterizedType) function.returnType())
-            && inputTypesMatchDefinedArguments(inputTypes, args)) {
+        TypeExpression funcReturnType = function.returnType();
+        boolean returnTypeMatches = isReturnTypeMatch(outputType, funcReturnType);
+
+        List<SimpleExtension.Argument> args = function.requiredArguments();
+
+        if (returnTypeMatches && inputTypesMatchDefinedArguments(inputTypes, args)) {
           return Optional.of(function);
         }
       }
 
       return Optional.empty();
+    }
+
+    private boolean isReturnTypeMatch(final Type outputType, final TypeExpression funcReturnType) {
+      if (funcReturnType instanceof ParameterizedType) {
+        return isMatch(outputType, (ParameterizedType) funcReturnType);
+      }
+
+      if (funcReturnType instanceof Type) {
+        // For non-parameterized return types, check if they match
+        Type targetType = (Type) funcReturnType;
+
+        if (outputType instanceof ParameterizedType) {
+          // outputType is parameterized but targetType is not - use visitor pattern
+          return ((ParameterizedType) outputType)
+              .accept(new IgnoreNullableAndParameters(targetType));
+        }
+
+        // Both are non-parameterized types - compare them directly
+        return outputType.getClass().equals(targetType.getClass());
+      }
+
+      return false;
     }
 
     /**
@@ -467,16 +492,17 @@ public abstract class FunctionConverter<
         }
       }
 
-      if (singularInputType.isPresent()) {
-        Optional<T> coerced = matchCoerced(call, outputType, operands);
-        if (coerced.isPresent()) {
-          return coerced;
-        }
-        Optional<T> leastRestrictive = matchByLeastRestrictive(call, outputType, operands);
-        if (leastRestrictive.isPresent()) {
-          return leastRestrictive;
-        }
+      // Try matchCoerced even if singularInputType is empty.
+      // This handles functions with mixed argument types like strftime(timestamp, string)
+      Optional<T> coerced = matchCoerced(call, outputType, operands);
+      if (coerced.isPresent()) {
+        return coerced;
       }
+
+      if (singularInputType.isPresent()) {
+        return matchByLeastRestrictive(call, outputType, operands);
+      }
+
       return Optional.empty();
     }
 
@@ -564,5 +590,26 @@ public abstract class FunctionConverter<
       return true;
     }
     return actualType.accept(new IgnoreNullableAndParameters(targetType));
+  }
+
+  /**
+   * Identifies functions that are not mapped in the provided Sig list.
+   *
+   * @param functions the list of function variants to check
+   * @param sigs the list of mapped Sig signatures
+   * @return a list of functions that are not found in the Sig mappings (case-insensitive name
+   *     comparison)
+   */
+  public static <F extends SimpleExtension.Function> List<F> getUnmappedFunctions(
+      List<F> functions, ImmutableList<FunctionMappings.Sig> sigs) {
+    Set<String> mappedNames =
+        sigs.stream()
+            .map(FunctionMappings.Sig::name)
+            .map(name -> name.toLowerCase(Locale.ROOT))
+            .collect(Collectors.toSet());
+
+    return functions.stream()
+        .filter(fn -> !mappedNames.contains(fn.name().toLowerCase(Locale.ROOT)))
+        .collect(Collectors.toList());
   }
 }
