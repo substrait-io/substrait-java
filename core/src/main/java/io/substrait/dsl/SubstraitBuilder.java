@@ -920,11 +920,11 @@ public class SubstraitBuilder {
   /**
    * Creates a 32-bit integer literal expression.
    *
-   * @param value the integer value
+   * @param v the integer value
    * @return a new {@link Expression.I32Literal}
    */
-  public Expression.I32Literal i32(final int value) {
-    return Expression.I32Literal.builder().value(value).build();
+  public Expression.I32Literal i32(int v) {
+    return Expression.I32Literal.builder().value(v).build();
   }
 
   /**
@@ -950,11 +950,11 @@ public class SubstraitBuilder {
   /**
    * Creates a 64-bit floating point literal expression.
    *
-   * @param value the double value
+   * @param v the double value
    * @return a new {@link Expression.FP64Literal}
    */
-  public Expression.FP64Literal fp64(final double value) {
-    return Expression.FP64Literal.builder().value(value).build();
+  public Expression.FP64Literal fp64(double v) {
+    return Expression.FP64Literal.builder().value(v).build();
   }
 
   /**
