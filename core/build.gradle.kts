@@ -9,6 +9,7 @@ plugins {
   id("java-library")
   id("idea")
   id("antlr")
+  id("eclipse")
   alias(libs.plugins.protobuf)
   alias(libs.plugins.spotless)
   alias(libs.plugins.shadow)
@@ -387,4 +388,22 @@ tasks.named<Jar>("javadocJar") {
 
   // Handle duplicate files (e.g., allclasses-index.html) from multiple javadoc tasks
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// workaround for Eclipse/VS Code bug handling annotationProcessor sources
+// https://github.com/redhat-developer/vscode-java/issues/2981
+eclipse {
+  classpath {
+    containers("org.eclipse.buildship.core.gradleclasspathcontainer")
+    file.whenMerged {
+      if (this is org.gradle.plugins.ide.eclipse.model.Classpath) {
+        entries.add(
+          org.gradle.plugins.ide.eclipse.model.SourceFolder(
+            "build/generated/sources/annotationProcessor/java/main",
+            null,
+          )
+        )
+      }
+    }
+  }
 }

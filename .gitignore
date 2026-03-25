@@ -7,10 +7,11 @@ gen
 *.iml
 out/**
 *.iws
-.vscode
 .pmdCache
 
-*/bin
+# VS Code ignores
+.vscode
+bin
 .metals
 .bloop
 .project
