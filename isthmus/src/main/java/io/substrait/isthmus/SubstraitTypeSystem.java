@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
@@ -58,9 +59,11 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   }
 
   /**
-   * Returns the maximum numeric scale supported by this type system.
+   * Returns default precision for this type if supported, otherwise {@link
+   * RelDataType#PRECISION_NOT_SPECIFIED} if precision is either unsupported or must be specified
+   * explicitly.
    *
-   * @return Maximum numeric scale (38).
+   * @return Default precision
    */
   @Override
   public int getDefaultPrecision(final SqlTypeName typeName) {
@@ -73,9 +76,12 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   }
 
   /**
-   * Returns the maximum numeric precision supported by this type system.
+   * Returns the maximum scale allowed for this type, or {@link RelDataType#SCALE_NOT_SPECIFIED} if
+   * scale is not applicable for this type.
    *
-   * @return Maximum numeric precision (38).
+   * <p>The maximum scale for the decimal type is 38.
+   *
+   * @return Maximum allowed scale
    */
   @Override
   public int getMaxScale(final SqlTypeName typeName) {

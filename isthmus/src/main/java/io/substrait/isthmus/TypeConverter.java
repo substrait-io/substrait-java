@@ -34,7 +34,6 @@ public class TypeConverter {
 
   private final UserTypeMapper userTypeMapper;
 
-  // DEFAULT TypeConverter which does not handle user-defined types
   /**
    * Default {@link TypeConverter} instance that does not handle user-defined types.
    *
