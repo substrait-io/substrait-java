@@ -97,12 +97,9 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Gets the default extension collection used by this builder.
+   * Gets the extension collection used by this builder.
    *
-   * <p>This collection includes standard Substrait functions for strings, arithmetic, comparison,
-   * datetime, and other operations from {@link DefaultExtensionCatalog#DEFAULT_COLLECTION}.
-   *
-   * @return the ExtensionCollection containing standard Substrait functions
+   * @return the ExtensionCollection used with this builder
    */
   public SimpleExtension.ExtensionCollection getExtensions() {
     return extensions;
@@ -149,25 +146,6 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates an aggregate relation with a single grouping and output field remapping.
-   *
-   * @param groupingFn function to derive the grouping from the input relation
-   * @param measuresFn function to derive the measures from the input relation
-   * @param remap the output field remapping specification
-   * @param input the input relation to aggregate
-   * @return a new {@link Aggregate} relation
-   */
-  public Aggregate aggregate(
-      Function<Rel, Aggregate.Grouping> groupingFn,
-      Function<Rel, List<Aggregate.Measure>> measuresFn,
-      Rel.Remap remap,
-      Rel input) {
-    Function<Rel, List<Aggregate.Grouping>> groupingsFn =
-        groupingFn.andThen(g -> Stream.of(g).collect(Collectors.toList()));
-    return aggregate(groupingsFn, measuresFn, Optional.of(remap), input);
-  }
-
-  /**
    * Creates an aggregate relation that groups and aggregates data from an input relation.
    *
    * <p>This method constructs a Substrait aggregate operation by applying grouping and measure
@@ -187,12 +165,12 @@ public class SubstraitBuilder {
    * @return an Aggregate relation representing the grouping and aggregation operation
    */
   public Aggregate aggregate(
-      final Function<Rel, List<Aggregate.Grouping>> groupingsFn,
-      final Function<Rel, List<Aggregate.Measure>> measuresFn,
-      final Optional<Rel.Remap> remap,
-      final Rel input) {
-    final List<Aggregate.Grouping> groupings = groupingsFn.apply(input);
-    final List<Aggregate.Measure> measures = measuresFn.apply(input);
+      Function<Rel, List<Aggregate.Grouping>> groupingsFn,
+      Function<Rel, List<Aggregate.Measure>> measuresFn,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    List<Aggregate.Grouping> groupings = groupingsFn.apply(input);
+    List<Aggregate.Measure> measures = measuresFn.apply(input);
     return Aggregate.builder()
         .groupings(groupings)
         .measures(measures)
@@ -903,7 +881,7 @@ public class SubstraitBuilder {
    * @param value value to create
    * @return i16 instance
    */
-  public Expression.I8Literal i8(final int value) {
+  public Expression.I8Literal i8(int value) {
     return Expression.I8Literal.builder().value(value).build();
   }
 
@@ -913,7 +891,7 @@ public class SubstraitBuilder {
    * @param value value to create
    * @return i16 instance
    */
-  public Expression.I16Literal i16(final int value) {
+  public Expression.I16Literal i16(int value) {
     return Expression.I16Literal.builder().value(value).build();
   }
 
@@ -933,7 +911,7 @@ public class SubstraitBuilder {
    * @param value value to create
    * @return i64 instance
    */
-  public Expression.I64Literal i64(final long value) {
+  public Expression.I64Literal i64(long value) {
     return Expression.I64Literal.builder().value(value).build();
   }
 
@@ -943,7 +921,7 @@ public class SubstraitBuilder {
    * @param value the float value
    * @return a new {@link Expression.FP32Literal}
    */
-  public Expression.FP32Literal fp32(final float value) {
+  public Expression.FP32Literal fp32(float value) {
     return Expression.FP32Literal.builder().value(value).build();
   }
 
@@ -1532,7 +1510,7 @@ public class SubstraitBuilder {
    * @param expression the boolean expression to negate
    * @return a scalar function invocation representing the logical NOT of the input expression
    */
-  public Expression not(final Expression expression) {
+  public Expression not(Expression expression) {
     return this.scalarFn(
         DefaultExtensionCatalog.FUNCTIONS_BOOLEAN,
         "not:bool",
@@ -1554,7 +1532,7 @@ public class SubstraitBuilder {
    * @return a scalar function invocation that returns true if the expression is null, false
    *     otherwise
    */
-  public Expression isNull(final Expression expression) {
+  public Expression isNull(Expression expression) {
 
     final List<Expression> args = new ArrayList<>();
     args.add(expression);
@@ -1581,12 +1559,12 @@ public class SubstraitBuilder {
    * @return a scalar function invocation expression
    */
   public Expression scalarFn(
-      final String urn,
-      final String key,
-      final Type returnType,
-      final List<? extends FunctionArg> args,
-      final List<FunctionOption> optionsList) {
-    final SimpleExtension.ScalarFunctionVariant declaration =
+      String urn,
+      String key,
+      Type returnType,
+      List<? extends FunctionArg> args,
+      List<FunctionOption> optionsList) {
+    SimpleExtension.ScalarFunctionVariant declaration =
         extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
@@ -1626,11 +1604,8 @@ public class SubstraitBuilder {
    * @return a scalar function invocation expression
    */
   public Expression scalarFn(
-      final String urn,
-      final String key,
-      final Type returnType,
-      final List<? extends FunctionArg> args) {
-    final SimpleExtension.ScalarFunctionVariant declaration =
+      String urn, String key, Type returnType, List<? extends FunctionArg> args) {
+    SimpleExtension.ScalarFunctionVariant declaration =
         extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.ScalarFunctionInvocation.builder()
         .declaration(declaration)
