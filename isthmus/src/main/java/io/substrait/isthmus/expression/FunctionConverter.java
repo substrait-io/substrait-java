@@ -49,8 +49,16 @@ import org.slf4j.LoggerFactory;
  * Abstract base class for converting between Calcite {@link SqlOperator}s and Substrait function
  * invocations.
  *
- * <p>Supports Calcite → Substrait conversion via signature matching/coercion and Substrait →
- * Calcite lookup via function keys.
+ * <ul>
+ *   <li><b>Calcite → Substrait:</b> Subclasses implement {@code convert()} methods to convert
+ *       Calcite calls to Substrait function invocations
+ *   <li><b>Substrait → Calcite:</b> {@link #getSqlOperatorFromSubstraitFunc} converts Substrait
+ *       function keys to Calcite {@link SqlOperator}s
+ * </ul>
+ *
+ * <p>When multiple functions with the same name and signature are passed into the constructor, a
+ * <b>last-wins precedence strategy</b> is used for resolution. The last function in the input list
+ * takes precedence during Calcite to Substrait conversion.
  *
  * @param <F> function variant type (e.g., ScalarFunctionVariant, AggregateFunctionVariant)
  * @param <T> return type produced when binding Substrait invocations
@@ -88,7 +96,9 @@ public abstract class FunctionConverter<
   /**
    * Creates a converter with the given functions.
    *
-   * <p>Last-wins precedence applies when multiple variants share the same name/signature.
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
    *
    * @param functions function variants to register
    * @param typeFactory Calcite type factory
@@ -100,7 +110,9 @@ public abstract class FunctionConverter<
   /**
    * Creates a converter with functions and additional operator signatures.
    *
-   * <p>Last-wins precedence applies when multiple variants share the same name/signature.
+   * <p>If there are multiple functions provided with the same name and signature (e.g., from
+   * different extension URNs), the last one in the list will be given precedence during Calcite to
+   * Substrait conversion.
    *
    * @param functions function variants to register
    * @param additionalSignatures extra Calcite operator signatures to map

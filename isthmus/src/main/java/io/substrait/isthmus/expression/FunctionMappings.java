@@ -220,7 +220,7 @@ public class FunctionMappings {
     /** SqlOperator. */
     public final SqlOperator operator;
 
-    /** Name. */
+    /** Substrait Function Name. */
     public final String name;
 
     /**
@@ -270,7 +270,7 @@ public class FunctionMappings {
     /** SqlOperator. */
     public final SqlOperator operator;
 
-    /** Types. */
+    /** Allowed output types. */
     public final Set<String> types;
 
     /**
