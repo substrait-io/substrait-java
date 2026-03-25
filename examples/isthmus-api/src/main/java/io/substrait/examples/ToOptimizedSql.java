@@ -1,10 +1,16 @@
 package io.substrait.examples;
 
+import io.substrait.examples.IsthmusAppExamples.Action;
+import io.substrait.isthmus.ConverterProvider;
+import io.substrait.isthmus.SubstraitToCalcite;
+import io.substrait.isthmus.SubstraitToSql;
+import io.substrait.plan.Plan;
+import io.substrait.plan.Plan.Root;
+import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.hep.HepMatchOrder;
@@ -14,45 +20,35 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.sql.SqlDialect;
 
-import io.substrait.examples.IsthmusAppExamples.Action;
-import io.substrait.isthmus.ConverterProvider;
-import io.substrait.isthmus.SubstraitToCalcite;
-import io.substrait.isthmus.SubstraitToSql;
-import io.substrait.plan.Plan;
-import io.substrait.plan.Plan.Root;
-import io.substrait.plan.ProtoPlanConverter;
-
 /**
- * Substrait to SQL conversions.
+ * Substrait to SQL conversions using Calcite Optimization.
  *
- * <p>
- * The conversion process involves three steps:
+ * <p>This example follows the same structure as the "ToSql" example but shows how the
+ * ConverterProvider can be subclassed to update the Calcite configuration.
  *
- * <p>
- * 1. Load the plan into the protobuf object and create an in-memory POJO
- * representation.
- *
- * <p>
- * 2. Create a Converter to map the Substrait plan to Calcite relations. This
- * requires the type
- * system to use and the collection of extensions from the substrait plan.
- *
- * <p>
- * 3. Convert the Calcite relational nodes to SQL statements using the specified
- * SQL dialect
- * configuration.
- *
- * <p>
- * It is possible to get multiple SQL statements from a single Substrait plan.
+ * <p>This case how the HepPlanner can be used to optimize the plan before it's conversion to SQL.
  */
 public class ToOptimizedSql implements Action {
 
+  /**
+   * Custom ConverterProvider.
+   *
+   * <p>Specifically overrides the SubstraitToCalcite to allow the plan to be optimised
+   */
   static final class OptimizingConverterProvider extends ConverterProvider {
+
+    /**
+     * Set of calcite rules to use.
+     *
+     * <p>Can be configured as you wish.
+     *
+     * @return List of rules
+     */
     public static List<RelOptRule> simplificationRules() {
-      return List.of(
-          CoreRules.FILTER_INTO_JOIN, CoreRules.FILTER_PROJECT_TRANSPOSE);
+      return List.of(CoreRules.FILTER_INTO_JOIN, CoreRules.FILTER_PROJECT_TRANSPOSE);
     }
 
+    /** Returns a subclass of the SubstraitToCalcite class. */
     @Override
     protected SubstraitToCalcite getSubstraitToCalcite() {
 
@@ -61,23 +57,20 @@ public class ToOptimizedSql implements Action {
         @Override
         public RelRoot convert(Root root) {
           final HepProgramBuilder programBuilder = new HepProgramBuilder();
-          // For safety, in case we land in a loop
-          programBuilder.addMatchLimit(5000);
-          programBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP)
+          programBuilder
+              .addMatchOrder(HepMatchOrder.BOTTOM_UP)
               .addRuleCollection(simplificationRules());
-          final RelOptPlanner hepPlanner = new HepPlanner(programBuilder.build());
 
+          final RelOptPlanner hepPlanner = new HepPlanner(programBuilder.build());
+          // convert the substrait to the calcite relation tree
           final RelRoot convertedRoot = super.convert(root);
           hepPlanner.setRoot(convertedRoot.project());
 
-          System.out.println("Optimizing the output");
+          // and then call the optimizer and return the result
           return convertedRoot.withRel(hepPlanner.findBestExp());
-
         }
-
       };
     }
-
   }
 
   @Override
@@ -96,6 +89,7 @@ public class ToOptimizedSql implements Action {
       // Determine which SQL Dialect we want the converted queries to be in
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();
 
+      // Use a custom ConverterProvider
       final SubstraitToSql substraitToSql = new SubstraitToSql(new OptimizingConverterProvider());
 
       // Convert each of the Substrait plan roots to SQL
