@@ -86,8 +86,7 @@ public final class MaskExpressionProtoConverter {
             MaskExpression.ListSlice.of(proto.getSlice().getStart(), proto.getSlice().getEnd()));
         break;
       default:
-        throw new IllegalArgumentException(
-            "Unknown ListSelectItem type: " + proto.getTypeCase());
+        throw new IllegalArgumentException("Unknown ListSelectItem type: " + proto.getTypeCase());
     }
     return builder.build();
   }
@@ -103,8 +102,7 @@ public final class MaskExpressionProtoConverter {
             MaskExpression.MapKeyExpression.of(proto.getExpression().getMapKeyExpression()));
         break;
       default:
-        throw new IllegalArgumentException(
-            "Unknown MapSelect type: " + proto.getSelectCase());
+        throw new IllegalArgumentException("Unknown MapSelect type: " + proto.getSelectCase());
     }
     if (proto.hasChild()) {
       builder.child(fromProtoSelect(proto.getChild()));

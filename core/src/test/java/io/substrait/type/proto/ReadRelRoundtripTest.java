@@ -91,8 +91,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void namedScanWithSimpleProjection() {
     List<String> tableName = Stream.of("my_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select columns 0 and 2
@@ -117,8 +116,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void namedScanWithNestedProjection() {
     List<String> tableName = Stream.of("nested_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("outer_struct", "simple_col").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("outer_struct", "simple_col").collect(Collectors.toList());
     List<Type> columnTypes =
         Stream.of(R.struct(R.I32, R.STRING, R.I64), R.I32).collect(Collectors.toList());
 
@@ -189,8 +187,7 @@ class ReadRelRoundtripTest extends TestBase {
   void namedScanWithMapProjection() {
     List<String> tableName = Stream.of("map_table").collect(Collectors.toList());
     List<String> columnNames = Stream.of("map_col", "id").collect(Collectors.toList());
-    List<Type> columnTypes =
-        Stream.of(R.map(R.STRING, R.I32), R.I64).collect(Collectors.toList());
+    List<Type> columnTypes = Stream.of(R.map(R.STRING, R.I32), R.I64).collect(Collectors.toList());
 
     // Select field 0 with map key selection, and field 1
     MaskExpression.MaskExpr projection =
@@ -352,10 +349,8 @@ class ReadRelRoundtripTest extends TestBase {
                                     .child(
                                         MaskExpression.Select.ofStruct(
                                             MaskExpression.StructSelect.builder()
-                                                .addStructItems(
-                                                    MaskExpression.StructItem.of(0))
-                                                .addStructItems(
-                                                    MaskExpression.StructItem.of(2))
+                                                .addStructItems(MaskExpression.StructItem.of(0))
+                                                .addStructItems(MaskExpression.StructItem.of(2))
                                                 .build()))
                                     .build())))
                     .addStructItems(MaskExpression.StructItem.of(1))
@@ -392,8 +387,7 @@ class ReadRelRoundtripTest extends TestBase {
                                     .child(
                                         MaskExpression.Select.ofStruct(
                                             MaskExpression.StructSelect.builder()
-                                                .addStructItems(
-                                                    MaskExpression.StructItem.of(1))
+                                                .addStructItems(MaskExpression.StructItem.of(1))
                                                 .build()))
                                     .build())))
                     .addStructItems(MaskExpression.StructItem.of(1))
@@ -426,13 +420,11 @@ class ReadRelRoundtripTest extends TestBase {
                             0,
                             MaskExpression.Select.ofMap(
                                 MaskExpression.MapSelect.builder()
-                                    .expression(
-                                        MaskExpression.MapKeyExpression.of("user_*"))
+                                    .expression(MaskExpression.MapKeyExpression.of("user_*"))
                                     .child(
                                         MaskExpression.Select.ofStruct(
                                             MaskExpression.StructSelect.builder()
-                                                .addStructItems(
-                                                    MaskExpression.StructItem.of(0))
+                                                .addStructItems(MaskExpression.StructItem.of(0))
                                                 .build()))
                                     .build())))
                     .build())
