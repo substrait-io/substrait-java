@@ -17,6 +17,19 @@ import io.substrait.util.VisitationContext;
  */
 public interface FunctionArg {
 
+  /**
+   * Accepts a visitor for this function argument.
+   *
+   * @param <R> the return type
+   * @param <C> the visitation context type
+   * @param <E> the exception type that may be thrown
+   * @param fnDef the function definition
+   * @param argIdx the argument index
+   * @param fnArgVisitor the visitor
+   * @param context the visitation context
+   * @return the result of the visit
+   * @throws E if the visit fails
+   */
   <R, C extends VisitationContext, E extends Throwable> R accept(
       SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
       throws E;

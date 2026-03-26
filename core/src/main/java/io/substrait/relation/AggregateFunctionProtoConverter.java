@@ -22,12 +22,23 @@ public class AggregateFunctionProtoConverter {
   private final TypeProtoConverter typeProtoConverter;
   private final ExtensionCollector functionCollector;
 
+  /**
+   * Constructs a converter with the specified extension collector.
+   *
+   * @param functionCollector the extension collector for tracking function references
+   */
   public AggregateFunctionProtoConverter(ExtensionCollector functionCollector) {
     this.functionCollector = functionCollector;
     this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, null);
     this.typeProtoConverter = new TypeProtoConverter(functionCollector);
   }
 
+  /**
+   * Converts an aggregate measure to its protobuf representation.
+   *
+   * @param measure the aggregate measure to convert
+   * @return the protobuf aggregate function
+   */
   public AggregateFunction toProto(Aggregate.Measure measure) {
     FunctionArg.FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException>
         argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);

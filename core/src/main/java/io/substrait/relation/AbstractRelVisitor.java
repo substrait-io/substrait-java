@@ -10,8 +10,23 @@ import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.util.VisitationContext;
 
+/**
+ * Abstract base class for relation visitors that provides default implementations delegating all
+ * visit methods to a fallback method.
+ *
+ * @param <O> the return type of visit methods
+ * @param <C> the visitation context type
+ * @param <E> the exception type that may be thrown
+ */
 public abstract class AbstractRelVisitor<O, C extends VisitationContext, E extends Exception>
     implements RelVisitor<O, C, E> {
+  /**
+   * Fallback method called by default implementations of all visit methods.
+   *
+   * @param rel the relation to visit
+   * @param context the visitation context
+   * @return the result of the visit
+   */
   public abstract O visitFallback(Rel rel, C context);
 
   @Override

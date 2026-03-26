@@ -19,8 +19,18 @@ public interface Rel {
    */
   Optional<AdvancedExtension> getCommonExtension();
 
+  /**
+   * Returns the record type (schema) produced by this relation.
+   *
+   * @return the struct type representing the output schema
+   */
   Type.Struct getRecordType();
 
+  /**
+   * Returns the input relations for this relation.
+   *
+   * @return list of input relations (empty for leaf relations)
+   */
   List<Rel> getInputs();
 
   Optional<Hint> getHint();
@@ -46,6 +56,17 @@ public interface Rel {
     }
   }
 
+  /**
+   * Accepts a visitor for this relation.
+   *
+   * @param <O> the return type
+   * @param <C> the visitation context type
+   * @param <E> the exception type that may be thrown
+   * @param visitor the visitor
+   * @param context the visitation context
+   * @return the result of the visit
+   * @throws E if the visit fails
+   */
   <O, C extends VisitationContext, E extends Exception> O accept(
       RelVisitor<O, C, E> visitor, C context) throws E;
 }

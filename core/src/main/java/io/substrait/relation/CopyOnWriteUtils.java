@@ -37,6 +37,13 @@ public class CopyOnWriteUtils {
     }
   }
 
+  /**
+   * Functional interface for transforming values during copy-on-write operations.
+   *
+   * @param <T> the type of value to transform
+   * @param <C> the visitation context type
+   * @param <E> the exception type that may be thrown
+   */
   @FunctionalInterface
   public interface TransformFunction<T, C extends VisitationContext, E extends Exception> {
 

@@ -12,11 +12,25 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
+/**
+ * Represents an aggregate relation that groups input rows and computes aggregate functions.
+ * Supports multiple grouping sets and measures.
+ */
 @Value.Immutable
 public abstract class Aggregate extends SingleInputRel implements HasExtension {
 
+  /**
+   * Returns the list of grouping sets for this aggregate.
+   *
+   * @return list of grouping sets
+   */
   public abstract List<Grouping> getGroupings();
 
+  /**
+   * Returns the list of aggregate measures to compute.
+   *
+   * @return list of measures
+   */
   public abstract List<Measure> getMeasures();
 
   @Override
@@ -71,26 +85,58 @@ public abstract class Aggregate extends SingleInputRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /** Represents a grouping set - a set of expressions to group by. */
   @Value.Immutable
   public abstract static class Grouping {
+    /**
+     * Returns the list of expressions in this grouping set.
+     *
+     * @return list of grouping expressions
+     */
     public abstract List<Expression> getExpressions();
 
+    /**
+     * Creates a new builder for constructing a Grouping.
+     *
+     * @return a new builder instance
+     */
     public static ImmutableGrouping.Builder builder() {
       return ImmutableGrouping.builder();
     }
   }
 
+  /** Represents an aggregate measure - an aggregate function to compute. */
   @Value.Immutable
   public abstract static class Measure {
+    /**
+     * Returns the aggregate function invocation for this measure.
+     *
+     * @return the aggregate function
+     */
     public abstract AggregateFunctionInvocation getFunction();
 
+    /**
+     * Returns an optional filter to apply before computing the aggregate.
+     *
+     * @return the pre-measure filter, if present
+     */
     public abstract Optional<Expression> getPreMeasureFilter();
 
+    /**
+     * Creates a new builder for constructing a Measure.
+     *
+     * @return a new builder instance
+     */
     public static ImmutableMeasure.Builder builder() {
       return ImmutableMeasure.builder();
     }
   }
 
+  /**
+   * Creates a new builder for constructing an Aggregate relation.
+   *
+   * @return a new builder instance
+   */
   public static ImmutableAggregate.Builder builder() {
     return ImmutableAggregate.builder();
   }
