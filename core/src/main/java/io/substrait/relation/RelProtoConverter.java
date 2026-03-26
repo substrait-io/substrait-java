@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
+import io.substrait.expression.proto.MaskExpressionProtoConverter;
 import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
@@ -297,6 +298,7 @@ public class RelProtoConverter
 
     namedScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     namedScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
+    namedScan.getProjection().ifPresent(p -> builder.setProjection(MaskExpressionProtoConverter.toProto(p)));
 
     namedScan
         .getExtension()
@@ -319,6 +321,7 @@ public class RelProtoConverter
             .setBaseSchema(localFiles.getInitialSchema().toProto(typeProtoConverter));
     localFiles.getFilter().ifPresent(t -> builder.setFilter(toProto(t)));
     localFiles.getBestEffortFilter().ifPresent(t -> builder.setBestEffortFilter(toProto(t)));
+    localFiles.getProjection().ifPresent(p -> builder.setProjection(MaskExpressionProtoConverter.toProto(p)));
 
     localFiles
         .getExtension()
@@ -336,6 +339,8 @@ public class RelProtoConverter
             .setCommon(common(extensionTable))
             .setBaseSchema(extensionTable.getInitialSchema().toProto(typeProtoConverter))
             .setExtensionTable(extensionTableBuilder);
+
+    extensionTable.getProjection().ifPresent(p -> builder.setProjection(MaskExpressionProtoConverter.toProto(p)));
 
     extensionTable
         .getExtension()
@@ -770,6 +775,7 @@ public class RelProtoConverter
 
     virtualTableScan.getFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     virtualTableScan.getBestEffortFilter().ifPresent(f -> builder.setBestEffortFilter(toProto(f)));
+    virtualTableScan.getProjection().ifPresent(p -> builder.setProjection(MaskExpressionProtoConverter.toProto(p)));
 
     virtualTableScan
         .getExtension()
