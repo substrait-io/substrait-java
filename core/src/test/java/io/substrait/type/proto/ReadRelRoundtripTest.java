@@ -328,4 +328,122 @@ class ReadRelRoundtripTest extends TestBase {
 
     verifyRoundTrip(namedScan);
   }
+
+  @Test
+  void namedScanWithListSelectWithChild() {
+    // list<struct<i32, string, i64>> - select list elements, then pick struct subfields
+    List<String> tableName = Stream.of("nested_list_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("items", "id").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.list(R.struct(R.I32, R.STRING, R.I64)), R.I64).collect(Collectors.toList());
+
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofList(
+                                MaskExpression.ListSelect.builder()
+                                    .addSelection(
+                                        MaskExpression.ListSelectItem.ofSlice(
+                                            MaskExpression.ListSlice.of(0, 5)))
+                                    .child(
+                                        MaskExpression.Select.ofStruct(
+                                            MaskExpression.StructSelect.builder()
+                                                .addStructItems(
+                                                    MaskExpression.StructItem.of(0))
+                                                .addStructItems(
+                                                    MaskExpression.StructItem.of(2))
+                                                .build()))
+                                    .build())))
+                    .addStructItems(MaskExpression.StructItem.of(1))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    verifyRoundTrip(namedScan);
+  }
+
+  @Test
+  void namedScanWithMapSelectWithChild() {
+    // map<string, struct<i32, string>> - select by key, then pick struct subfields
+    List<String> tableName = Stream.of("nested_map_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("entries", "id").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING)), R.I64).collect(Collectors.toList());
+
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofMap(
+                                MaskExpression.MapSelect.builder()
+                                    .key(MaskExpression.MapKey.of("user_info"))
+                                    .child(
+                                        MaskExpression.Select.ofStruct(
+                                            MaskExpression.StructSelect.builder()
+                                                .addStructItems(
+                                                    MaskExpression.StructItem.of(1))
+                                                .build()))
+                                    .build())))
+                    .addStructItems(MaskExpression.StructItem.of(1))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    verifyRoundTrip(namedScan);
+  }
+
+  @Test
+  void namedScanWithMapKeyExpressionAndChild() {
+    // map<string, struct<i32, string>> - select by key expression, then pick struct subfield
+    List<String> tableName = Stream.of("map_expr_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("data").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING))).collect(Collectors.toList());
+
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofMap(
+                                MaskExpression.MapSelect.builder()
+                                    .expression(
+                                        MaskExpression.MapKeyExpression.of("user_*"))
+                                    .child(
+                                        MaskExpression.Select.ofStruct(
+                                            MaskExpression.StructSelect.builder()
+                                                .addStructItems(
+                                                    MaskExpression.StructItem.of(0))
+                                                .build()))
+                                    .build())))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    verifyRoundTrip(namedScan);
+  }
 }
