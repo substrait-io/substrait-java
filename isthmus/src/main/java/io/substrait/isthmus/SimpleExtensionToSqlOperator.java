@@ -5,7 +5,6 @@ import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeVisitor;
 import io.substrait.function.TypeExpression;
 import io.substrait.type.Type;
-import io.substrait.type.TypeExpressionEvaluator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,15 +12,18 @@ import java.util.stream.Stream;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Optionality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,25 +154,61 @@ public final class SimpleExtensionToSqlOperator {
       }
     }
 
-    SqlReturnTypeInference returnTypeInference =
-        new SubstraitReturnTypeInference(function, typeFactory, typeConverter);
-
-    return new SqlFunction(
-        function.name(),
-        SqlKind.OTHER_FUNCTION,
-        returnTypeInference,
-        null,
-        OperandTypes.family(argFamilies),
-        SqlFunctionCategory.USER_DEFINED_FUNCTION);
+    // Create appropriate return type inference based on function type
+    SqlReturnTypeInference returnTypeInference;
+    if (function instanceof SimpleExtension.AggregateFunctionVariant) {
+      returnTypeInference = new AggregateReturnTypeInference(function, typeFactory, typeConverter);
+      return new DynamicSqlAggFunction(
+          function.name(), returnTypeInference, OperandTypes.family(argFamilies));
+    } else if (function instanceof SimpleExtension.WindowFunctionVariant) {
+      returnTypeInference = new WindowReturnTypeInference(function, typeFactory, typeConverter);
+      return new SqlFunction(
+          function.name(),
+          SqlKind.OTHER_FUNCTION,
+          returnTypeInference,
+          null,
+          OperandTypes.family(argFamilies),
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+    } else {
+      // Scalar function
+      returnTypeInference = new ScalarReturnTypeInference(function, typeFactory, typeConverter);
+      return new SqlFunction(
+          function.name(),
+          SqlKind.OTHER_FUNCTION,
+          returnTypeInference,
+          null,
+          OperandTypes.family(argFamilies),
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+    }
   }
 
-  private static class SubstraitReturnTypeInference implements SqlReturnTypeInference {
+  /** Concrete SqlAggFunction implementation for dynamically mapped aggregate functions. */
+  private static class DynamicSqlAggFunction extends SqlAggFunction {
+    public DynamicSqlAggFunction(
+        String name,
+        SqlReturnTypeInference returnTypeInference,
+        SqlOperandTypeChecker operandTypeChecker) {
+      super(
+          name,
+          null,
+          SqlKind.OTHER_FUNCTION,
+          returnTypeInference,
+          null,
+          operandTypeChecker,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION,
+          false,
+          false,
+          Optionality.FORBIDDEN);
+    }
+  }
 
-    private final SimpleExtension.Function function;
-    private final RelDataTypeFactory typeFactory;
-    private final TypeConverter typeConverter;
+  /** Base class for return type inference with common logic for handling concrete types. */
+  private abstract static class BaseReturnTypeInference implements SqlReturnTypeInference {
+    protected final SimpleExtension.Function function;
+    protected final RelDataTypeFactory typeFactory;
+    protected final TypeConverter typeConverter;
 
-    private SubstraitReturnTypeInference(
+    protected BaseReturnTypeInference(
         SimpleExtension.Function function,
         RelDataTypeFactory typeFactory,
         TypeConverter typeConverter) {
@@ -181,34 +219,177 @@ public final class SimpleExtensionToSqlOperator {
 
     @Override
     public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-      List<Type> substraitArgTypes =
-          opBinding.collectOperandTypes().stream()
-              .map(typeConverter::toSubstrait)
-              .collect(Collectors.toList());
-
       TypeExpression returnExpression = function.returnType();
-      Type resolvedSubstraitType =
-          TypeExpressionEvaluator.evaluateExpression(
-              returnExpression, function.args(), substraitArgTypes);
 
-      boolean finalIsNullable;
-      switch (function.nullability()) {
-        case MIRROR:
-          // If any input is nullable, the output is nullable.
-          finalIsNullable =
-              opBinding.collectOperandTypes().stream().anyMatch(RelDataType::isNullable);
-          break;
-        case DISCRETE:
-        case DECLARED_OUTPUT:
-        default:
-          // Use the nullability declared on the resolved Substrait type.
-          finalIsNullable = resolvedSubstraitType.nullable();
-          break;
+      // If return type is a concrete Type, use it directly
+      if (returnExpression instanceof Type) {
+        return inferConcreteReturnType((Type) returnExpression, opBinding);
       }
 
-      RelDataType baseCalciteType = typeConverter.toCalcite(typeFactory, resolvedSubstraitType);
+      // For parameterized types, delegate to subclass
+      return inferParameterizedReturnType(opBinding);
+    }
 
+    /**
+     * Infers return type for concrete (non-parameterized) type expressions.
+     *
+     * @param resolvedSubstraitType the concrete Substrait type
+     * @param opBinding the operator binding with operand information
+     * @return the inferred Calcite return type
+     */
+    private RelDataType inferConcreteReturnType(
+        Type resolvedSubstraitType, SqlOperatorBinding opBinding) {
+      boolean finalIsNullable = determineNullability(resolvedSubstraitType, opBinding);
+      RelDataType baseCalciteType = typeConverter.toCalcite(typeFactory, resolvedSubstraitType);
       return typeFactory.createTypeWithNullability(baseCalciteType, finalIsNullable);
+    }
+
+    /**
+     * Determines the nullability of the return type based on function nullability rules.
+     *
+     * @param resolvedSubstraitType the resolved Substrait type
+     * @param opBinding the operator binding with operand information
+     * @return true if the return type should be nullable
+     */
+    private boolean determineNullability(Type resolvedSubstraitType, SqlOperatorBinding opBinding) {
+      switch (function.nullability()) {
+        case MIRROR:
+          // If any input is nullable, the output is nullable
+          return opBinding.collectOperandTypes().stream().anyMatch(RelDataType::isNullable);
+        case DISCRETE:
+        case DECLARED_OUTPUT:
+          // Use the nullability declared on the resolved Substrait type
+          return resolvedSubstraitType.nullable();
+        default:
+          return resolvedSubstraitType.nullable();
+      }
+    }
+
+    /**
+     * Infer return type for parameterized type expressions (e.g., any1, T). Each function type
+     * implements its own logic.
+     */
+    protected abstract RelDataType inferParameterizedReturnType(SqlOperatorBinding opBinding);
+  }
+
+  /**
+   * Return type inference for scalar functions. Scalar functions typically return the same type as
+   * their first argument.
+   */
+  private static final class ScalarReturnTypeInference extends BaseReturnTypeInference {
+    private ScalarReturnTypeInference(
+        SimpleExtension.Function function,
+        RelDataTypeFactory typeFactory,
+        TypeConverter typeConverter) {
+      super(function, typeFactory, typeConverter);
+    }
+
+    @Override
+    protected RelDataType inferParameterizedReturnType(SqlOperatorBinding opBinding) {
+      List<RelDataType> operandTypes = opBinding.collectOperandTypes();
+      if (operandTypes.isEmpty()) {
+        throw new IllegalStateException(
+            String.format(
+                "Scalar function '%s' has parameterized return type but no arguments to infer from",
+                function.name()));
+      }
+
+      RelDataType firstArgType = operandTypes.get(0);
+      return applyNullabilityRules(firstArgType);
+    }
+
+    private RelDataType applyNullabilityRules(RelDataType baseType) {
+      if (function.nullability() == SimpleExtension.Nullability.DECLARED_OUTPUT) {
+        return typeFactory.createTypeWithNullability(baseType, true);
+      }
+      // MIRROR and other cases: keep original nullability
+      return baseType;
+    }
+  }
+
+  /**
+   * Return type inference for aggregate functions. Aggregate functions often return nullable types
+   * and may differ from input type.
+   */
+  private static final class AggregateReturnTypeInference extends BaseReturnTypeInference {
+    private AggregateReturnTypeInference(
+        SimpleExtension.Function function,
+        RelDataTypeFactory typeFactory,
+        TypeConverter typeConverter) {
+      super(function, typeFactory, typeConverter);
+    }
+
+    @Override
+    protected RelDataType inferParameterizedReturnType(SqlOperatorBinding opBinding) {
+      List<RelDataType> operandTypes = opBinding.collectOperandTypes();
+      if (operandTypes.isEmpty()) {
+        // Fallback for aggregates without arguments (e.g., COUNT(*))
+        return createNullableBigInt();
+      }
+
+      RelDataType firstArgType = operandTypes.get(0);
+      return applyAggregateNullabilityRules(firstArgType);
+    }
+
+    private RelDataType applyAggregateNullabilityRules(RelDataType baseType) {
+      // Aggregates typically return nullable types
+      if (function.nullability() == SimpleExtension.Nullability.MIRROR) {
+        return baseType; // Keep original nullability
+      }
+      // DECLARED_OUTPUT and other cases: always nullable
+      return typeFactory.createTypeWithNullability(baseType, true);
+    }
+
+    private RelDataType createNullableBigInt() {
+      return typeFactory.createTypeWithNullability(
+          typeFactory.createSqlType(SqlTypeName.BIGINT), true);
+    }
+  }
+
+  /**
+   * Return type inference for window functions. Window functions have diverse return types
+   * depending on their category.
+   */
+  private static final class WindowReturnTypeInference extends BaseReturnTypeInference {
+    private WindowReturnTypeInference(
+        SimpleExtension.Function function,
+        RelDataTypeFactory typeFactory,
+        TypeConverter typeConverter) {
+      super(function, typeFactory, typeConverter);
+    }
+
+    @Override
+    protected RelDataType inferParameterizedReturnType(SqlOperatorBinding opBinding) {
+      if (isRankingFunction()) {
+        return typeFactory.createSqlType(SqlTypeName.BIGINT);
+      }
+
+      List<RelDataType> operandTypes = opBinding.collectOperandTypes();
+      if (operandTypes.isEmpty()) {
+        // Fallback for window functions without arguments
+        return createNullableBigInt();
+      }
+
+      RelDataType firstArgType = operandTypes.get(0);
+      return applyWindowNullabilityRules(firstArgType);
+    }
+
+    private boolean isRankingFunction() {
+      String funcName = function.name().toLowerCase();
+      return funcName.contains("rank") || "row_number".equals(funcName) || "ntile".equals(funcName);
+    }
+
+    private RelDataType applyWindowNullabilityRules(RelDataType baseType) {
+      if (function.nullability() == SimpleExtension.Nullability.MIRROR) {
+        return baseType; // Keep original nullability
+      }
+      // DECLARED_OUTPUT and other cases: always nullable
+      return typeFactory.createTypeWithNullability(baseType, true);
+    }
+
+    private RelDataType createNullableBigInt() {
+      return typeFactory.createTypeWithNullability(
+          typeFactory.createSqlType(SqlTypeName.BIGINT), true);
     }
   }
 
