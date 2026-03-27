@@ -12,18 +12,17 @@ import java.util.stream.Stream;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.fun.SqlBasicAggFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Optionality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,6 +140,67 @@ public final class SimpleExtensionToSqlOperator {
       RelDataTypeFactory typeFactory,
       TypeConverter typeConverter) {
 
+    if (function instanceof SimpleExtension.AggregateFunctionVariant) {
+      return toAggregateSqlFunction(function, typeFactory, typeConverter);
+    }
+
+    if (function instanceof SimpleExtension.WindowFunctionVariant) {
+      return toWindowSqlFunction(function, typeFactory, typeConverter);
+    }
+
+    return toScalarSqlFunction(function, typeFactory, typeConverter);
+  }
+
+  private static SqlFunction toAggregateSqlFunction(
+      SimpleExtension.Function function,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+
+    SqlReturnTypeInference returnTypeInference =
+        new AggregateReturnTypeInference(function, typeFactory, typeConverter);
+
+    return SqlBasicAggFunction.create(
+        function.name(),
+        SqlKind.OTHER_FUNCTION,
+        returnTypeInference,
+        createOperandTypeChecker(function));
+  }
+
+  private static SqlFunction toWindowSqlFunction(
+      SimpleExtension.Function function,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+
+    SqlReturnTypeInference returnTypeInference =
+        new WindowReturnTypeInference(function, typeFactory, typeConverter);
+
+    return new SqlFunction(
+        function.name(),
+        SqlKind.OTHER_FUNCTION,
+        returnTypeInference,
+        null,
+        createOperandTypeChecker(function),
+        SqlFunctionCategory.USER_DEFINED_FUNCTION);
+  }
+
+  private static SqlFunction toScalarSqlFunction(
+      SimpleExtension.Function function,
+      RelDataTypeFactory typeFactory,
+      TypeConverter typeConverter) {
+
+    SqlReturnTypeInference returnTypeInference =
+        new ScalarReturnTypeInference(function, typeFactory, typeConverter);
+
+    return new SqlFunction(
+        function.name(),
+        SqlKind.OTHER_FUNCTION,
+        returnTypeInference,
+        null,
+        createOperandTypeChecker(function),
+        SqlFunctionCategory.USER_DEFINED_FUNCTION);
+  }
+
+  private static SqlOperandTypeChecker createOperandTypeChecker(SimpleExtension.Function function) {
     List<SqlTypeFamily> argFamilies = new ArrayList<>();
 
     for (SimpleExtension.Argument arg : function.requiredArguments()) {
@@ -154,52 +214,7 @@ public final class SimpleExtensionToSqlOperator {
       }
     }
 
-    // Create appropriate return type inference based on function type
-    SqlReturnTypeInference returnTypeInference;
-    if (function instanceof SimpleExtension.AggregateFunctionVariant) {
-      returnTypeInference = new AggregateReturnTypeInference(function, typeFactory, typeConverter);
-      return new DynamicSqlAggFunction(
-          function.name(), returnTypeInference, OperandTypes.family(argFamilies));
-    } else if (function instanceof SimpleExtension.WindowFunctionVariant) {
-      returnTypeInference = new WindowReturnTypeInference(function, typeFactory, typeConverter);
-      return new SqlFunction(
-          function.name(),
-          SqlKind.OTHER_FUNCTION,
-          returnTypeInference,
-          null,
-          OperandTypes.family(argFamilies),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION);
-    } else {
-      // Scalar function
-      returnTypeInference = new ScalarReturnTypeInference(function, typeFactory, typeConverter);
-      return new SqlFunction(
-          function.name(),
-          SqlKind.OTHER_FUNCTION,
-          returnTypeInference,
-          null,
-          OperandTypes.family(argFamilies),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION);
-    }
-  }
-
-  /** Concrete SqlAggFunction implementation for dynamically mapped aggregate functions. */
-  private static class DynamicSqlAggFunction extends SqlAggFunction {
-    public DynamicSqlAggFunction(
-        String name,
-        SqlReturnTypeInference returnTypeInference,
-        SqlOperandTypeChecker operandTypeChecker) {
-      super(
-          name,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          returnTypeInference,
-          null,
-          operandTypeChecker,
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
-          false,
-          false,
-          Optionality.FORBIDDEN);
-    }
+    return OperandTypes.family(argFamilies);
   }
 
   /** Base class for return type inference with common logic for handling concrete types. */
