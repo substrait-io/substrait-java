@@ -42,15 +42,37 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
 
   private final SqlOperatorTable operatorTable;
 
+  /**
+   * Creates a new provider with default extension collection and type factory.
+   *
+   * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} for extensions and {@link
+   * SubstraitTypeSystem#TYPE_FACTORY} for type operations.
+   */
   public AutomaticDynamicFunctionMappingConverterProvider() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
+  /**
+   * Creates a new provider with the specified extension collection.
+   *
+   * <p>Uses {@link SubstraitTypeSystem#TYPE_FACTORY} for type operations.
+   *
+   * @param extensions the extension collection containing function definitions
+   */
   public AutomaticDynamicFunctionMappingConverterProvider(
       SimpleExtension.ExtensionCollection extensions) {
     this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
+  /**
+   * Creates a new provider with the specified extension collection and type factory.
+   *
+   * <p>This constructor allows full customization of both the extension collection and the type
+   * factory used for type operations.
+   *
+   * @param extensions the extension collection containing function definitions
+   * @param typeFactory the type factory for creating and managing Calcite data types
+   */
   public AutomaticDynamicFunctionMappingConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     super(extensions, typeFactory);
@@ -71,6 +93,14 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
     this.operatorTable = buildOperatorTable(allOperators);
   }
 
+  /**
+   * Returns the SQL operator table containing both base and dynamically mapped operators.
+   *
+   * <p>The returned table includes all operators from the parent provider plus any dynamically
+   * generated operators for unmapped extension functions.
+   *
+   * @return the combined SQL operator table
+   */
   @Override
   public SqlOperatorTable getSqlOperatorTable() {
     return operatorTable;
