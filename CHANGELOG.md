@@ -1,6 +1,16 @@
 Release Notes
 ---
 
+## [0.87.0](https://github.com/substrait-io/substrait-java/compare/v0.86.1...v0.87.0) (2026-03-29)
+
+### Features
+
+* **isthmus:** configurable fallback to dynamic function mapping ([#647](https://github.com/substrait-io/substrait-java/issues/647)) ([2370661](https://github.com/substrait-io/substrait-java/commit/237066110230c1be7fb76d0698dcf6f8b0e01604))
+
+### Bug Fixes
+
+* **isthmus:** assertFullRoundTrip for any_value ([#783](https://github.com/substrait-io/substrait-java/issues/783)) ([73c3ac3](https://github.com/substrait-io/substrait-java/commit/73c3ac3b72a5891161c492e62081d7837199942b))
+
 ## [0.86.1](https://github.com/substrait-io/substrait-java/compare/v0.86.0...v0.86.1) (2026-03-22)
 
 ### Bug Fixes
