@@ -12,6 +12,8 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.SqlArrayValueConstructorCallConverter;
 import io.substrait.isthmus.expression.SqlMapValueConstructorCallConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.plan.ImmutableExecutionBehavior;
+import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +66,8 @@ public class ConverterProvider {
   /** Converter for Substrait types to Calcite types and vice versa. */
   protected TypeConverter typeConverter;
 
+  protected final Plan.ExecutionBehavior executionBehavior;
+
   /**
    * Creates a ConverterProvider with default extension collection and type factory. Uses {@link
    * DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link SubstraitTypeSystem#TYPE_FACTORY}.
@@ -115,12 +119,36 @@ public class ConverterProvider {
       AggregateFunctionConverter afc,
       WindowFunctionConverter wfc,
       TypeConverter tc) {
+    this(typeFactory, extensions, sfc, afc, wfc, tc, createDefaultExecutionBehavior());
+  }
+
+  public ConverterProvider(
+      RelDataTypeFactory typeFactory,
+      SimpleExtension.ExtensionCollection extensions,
+      ScalarFunctionConverter sfc,
+      AggregateFunctionConverter afc,
+      WindowFunctionConverter wfc,
+      TypeConverter tc,
+      Plan.ExecutionBehavior executionBehavior) {
     this.typeFactory = typeFactory;
     this.extensions = extensions;
     this.scalarFunctionConverter = sfc;
     this.aggregateFunctionConverter = afc;
     this.windowFunctionConverter = wfc;
     this.typeConverter = tc;
+    this.executionBehavior = executionBehavior;
+  }
+
+  /**
+   * Creates the default execution behavior with PER_PLAN variable evaluation mode.
+   *
+   * @return the default execution behavior
+   */
+  private static Plan.ExecutionBehavior createDefaultExecutionBehavior() {
+    return ImmutableExecutionBehavior.builder()
+        .variableEvaluationMode(
+            Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+        .build();
   }
 
   // SQL to Calcite Processing
@@ -350,5 +378,19 @@ public class ConverterProvider {
    */
   public TypeConverter getTypeConverter() {
     return typeConverter;
+  }
+
+  /**
+   * Returns the execution behavior for plans created by this converter.
+   *
+   * <p>The default execution behavior uses {@link
+   * Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}, which
+   * evaluates variables once per plan execution. This can be customized by providing a different
+   * execution behavior through the constructor.
+   *
+   * @return the execution behavior to use when creating plans
+   */
+  public Plan.ExecutionBehavior getExecutionBehavior() {
+    return executionBehavior;
   }
 }

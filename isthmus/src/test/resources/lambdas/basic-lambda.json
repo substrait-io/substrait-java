@@ -1,7 +1,9 @@
 {
   "version": {
-    "majorNumber": 0,
-    "minorNumber": 79
+    "minorNumber": 87
+  },
+  "executionBehavior": {
+    "variableEvalMode": "VARIABLE_EVALUATION_MODE_PER_PLAN"
   },
   "extensionUrns": [
     {
