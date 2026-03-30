@@ -16,7 +16,9 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
+import io.substrait.plan.ImmutableExecutionBehavior;
 import io.substrait.plan.Plan;
+import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Aggregate.Measure;
@@ -1540,13 +1542,54 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a plan from a plan root.
+   * Creates a plan from a plan root with default execution behavior.
+   *
+   * <p>The plan is created with {@link VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN} as
+   * the default variable evaluation mode. To specify a custom execution behavior, use {@link
+   * #plan(Plan.ExecutionBehavior, Plan.Root)} instead.
    *
    * @param root the plan root
    * @return a new {@link Plan}
    */
   public Plan plan(Plan.Root root) {
-    return Plan.builder().addRoots(root).build();
+    return plan(
+        ImmutableExecutionBehavior.builder()
+            .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .build(),
+        root);
+  }
+
+  /**
+   * Creates a plan from a plan root with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param root the plan root
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Plan.Root root) {
+    return Plan.builder().executionBehavior(executionBehavior).addRoots(root).build();
+  }
+
+  /**
+   * Creates a plan from multiple plan roots with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param roots the plan roots
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Plan.Root... roots) {
+    return Plan.builder().executionBehavior(executionBehavior).roots(Arrays.asList(roots)).build();
+  }
+
+  /**
+   * Creates a plan from multiple plan roots with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param roots the plan roots as an iterable
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Iterable<Plan.Root> roots) {
+    return Plan.builder().executionBehavior(executionBehavior).roots(roots).build();
   }
 
   /**

@@ -4,6 +4,8 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension.ExtensionCollection;
+import io.substrait.proto.ExecutionBehavior;
+import io.substrait.proto.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
@@ -61,6 +63,26 @@ public class PlanProtoConverter {
     this.extensionProtoConverter = extensionProtoConverter;
   }
 
+  /**
+   * Converts a {@link io.substrait.plan.Plan} object to its protobuf representation.
+   *
+   * <p>This method performs a complete conversion of the Plan object, including:
+   *
+   * <ul>
+   *   <li>All plan roots and their associated relations
+   *   <li>Extension functions and types used in the plan
+   *   <li>Version information
+   *   <li>Advanced extensions if present
+   *   <li>Execution behavior configuration if present
+   * </ul>
+   *
+   * <p>The execution behavior is optional. If present, it will be converted using {@link
+   * #toProtoExecutionBehavior(io.substrait.plan.Plan.ExecutionBehavior)}.
+   *
+   * @param plan the Plan object to convert, must not be null
+   * @return the protobuf Plan representation
+   * @throws IllegalArgumentException if the plan contains invalid data
+   */
   public Plan toProto(final io.substrait.plan.Plan plan) {
     final List<PlanRel> planRels = new ArrayList<>();
     final ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
@@ -97,6 +119,65 @@ public class PlanProtoConverter {
 
     builder.setVersion(versionBuilder);
 
+    // Set execution behavior if present
+    if (plan.getExecutionBehavior().isPresent()) {
+      builder.setExecutionBehavior(toProtoExecutionBehavior(plan.getExecutionBehavior().get()));
+    }
+
     return builder.build();
+  }
+
+  /**
+   * Converts an {@link io.substrait.plan.Plan.ExecutionBehavior} to its protobuf representation.
+   *
+   * <p>This method converts the execution behavior configuration, including the variable evaluation
+   * mode, from the POJO representation to the protobuf format.
+   *
+   * @param executionBehavior the ExecutionBehavior to convert, must not be null
+   * @return the protobuf ExecutionBehavior representation
+   * @throws IllegalArgumentException if the variable evaluation mode is unknown
+   */
+  private ExecutionBehavior toProtoExecutionBehavior(
+      final io.substrait.plan.Plan.ExecutionBehavior executionBehavior) {
+    return ExecutionBehavior.newBuilder()
+        .setVariableEvalMode(
+            toProtoVariableEvaluationMode(executionBehavior.getVariableEvaluationMode()))
+        .build();
+  }
+
+  /**
+   * Converts a {@link io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode} to its
+   * protobuf representation.
+   *
+   * <p>Supported modes:
+   *
+   * <ul>
+   *   <li>{@link
+   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
+   *       - Unspecified mode (should be avoided in valid plans)
+   *   <li>{@link
+   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}
+   *       - Variables are evaluated once per plan execution
+   *   <li>{@link
+   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_RECORD}
+   *       - Variables are evaluated for each record
+   * </ul>
+   *
+   * @param mode the VariableEvaluationMode to convert, must not be null
+   * @return the protobuf VariableEvaluationMode representation
+   * @throws IllegalArgumentException if the mode is unknown or not supported
+   */
+  private VariableEvaluationMode toProtoVariableEvaluationMode(
+      final io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode mode) {
+    switch (mode) {
+      case VARIABLE_EVALUATION_MODE_UNSPECIFIED:
+        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED;
+      case VARIABLE_EVALUATION_MODE_PER_PLAN:
+        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN;
+      case VARIABLE_EVALUATION_MODE_PER_RECORD:
+        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD;
+      default:
+        throw new IllegalArgumentException("Unknown VariableEvaluationMode: " + mode);
+    }
   }
 }
