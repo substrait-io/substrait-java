@@ -1,11 +1,14 @@
 package io.substrait.type.proto;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.MaskExpression;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
@@ -437,5 +440,189 @@ class ReadRelRoundtripTest extends TestBase {
             .build();
 
     verifyRoundTrip(namedScan);
+  }
+
+  @Test
+  void recordTypeReflectsSimpleProjection() {
+    List<String> tableName = Stream.of("my_table").collect(Collectors.toList());
+    List<String> columnNames =
+        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
+
+    // Select fields 0 (I32) and 2 (I64), skipping field 1 (STRING)
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(MaskExpression.StructItem.of(0))
+                    .addStructItems(MaskExpression.StructItem.of(2))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    Type.Struct expected = R.struct(R.I32, R.I64);
+    assertEquals(expected, namedScan.getRecordType());
+  }
+
+  @Test
+  void recordTypeReflectsNestedStructProjection() {
+    List<String> tableName = Stream.of("nested_table").collect(Collectors.toList());
+    List<String> columnNames =
+        Stream.of("outer_struct", "simple_col").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.struct(R.I32, R.STRING, R.I64), R.I32).collect(Collectors.toList());
+
+    // Select field 0 with child struct selecting subfields 0 (I32) and 2 (I64), plus field 1 (I32)
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofStruct(
+                                MaskExpression.StructSelect.builder()
+                                    .addStructItems(MaskExpression.StructItem.of(0))
+                                    .addStructItems(MaskExpression.StructItem.of(2))
+                                    .build())))
+                    .addStructItems(MaskExpression.StructItem.of(1))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    Type.Struct expected = R.struct(R.struct(R.I32, R.I64), R.I32);
+    assertEquals(expected, namedScan.getRecordType());
+  }
+
+  @Test
+  void recordTypeReflectsListWithChildProjection() {
+    List<String> tableName = Stream.of("nested_list_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("items", "id").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.list(R.struct(R.I32, R.STRING, R.I64)), R.I64).collect(Collectors.toList());
+
+    // Select field 0 with list child selecting struct subfields 0 (I32) and 2 (I64), plus field 1
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofList(
+                                MaskExpression.ListSelect.builder()
+                                    .addSelection(
+                                        MaskExpression.ListSelectItem.ofSlice(
+                                            MaskExpression.ListSlice.of(0, 5)))
+                                    .child(
+                                        MaskExpression.Select.ofStruct(
+                                            MaskExpression.StructSelect.builder()
+                                                .addStructItems(MaskExpression.StructItem.of(0))
+                                                .addStructItems(MaskExpression.StructItem.of(2))
+                                                .build()))
+                                    .build())))
+                    .addStructItems(MaskExpression.StructItem.of(1))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    Type.Struct expected = R.struct(R.list(R.struct(R.I32, R.I64)), R.I64);
+    assertEquals(expected, namedScan.getRecordType());
+  }
+
+  @Test
+  void recordTypeReflectsMapWithChildProjection() {
+    List<String> tableName = Stream.of("nested_map_table").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("entries", "id").collect(Collectors.toList());
+    List<Type> columnTypes =
+        Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING)), R.I64).collect(Collectors.toList());
+
+    // Select field 0 with map child selecting struct subfield 1 (STRING), plus field 1
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(
+                        MaskExpression.StructItem.of(
+                            0,
+                            MaskExpression.Select.ofMap(
+                                MaskExpression.MapSelect.builder()
+                                    .key(MaskExpression.MapKey.of("any_key"))
+                                    .child(
+                                        MaskExpression.Select.ofStruct(
+                                            MaskExpression.StructSelect.builder()
+                                                .addStructItems(MaskExpression.StructItem.of(1))
+                                                .build()))
+                                    .build())))
+                    .addStructItems(MaskExpression.StructItem.of(1))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .build();
+
+    Type.Struct expected = R.struct(R.map(R.STRING, R.struct(R.STRING)), R.I64);
+    assertEquals(expected, namedScan.getRecordType());
+  }
+
+  @Test
+  void recordTypeWithoutProjection() {
+    List<String> tableName = Stream.of("full_table").collect(Collectors.toList());
+    List<String> columnNames =
+        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
+
+    NamedScan namedScan = sb.namedScan(tableName, columnNames, columnTypes);
+
+    // Without projection, getRecordType() should return the full base schema
+    Type.Struct expected = R.struct(R.I32, R.STRING, R.I64);
+    assertEquals(expected, namedScan.getRecordType());
+  }
+
+  @Test
+  void recordTypeWithProjectionAndRemap() {
+    List<String> tableName = Stream.of("remap_table").collect(Collectors.toList());
+    List<String> columnNames =
+        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
+
+    // Select fields 0 (I32) and 2 (I64), then remap to reverse order: [1, 0] -> (I64, I32)
+    MaskExpression.MaskExpr projection =
+        MaskExpression.MaskExpr.builder()
+            .select(
+                MaskExpression.StructSelect.builder()
+                    .addStructItems(MaskExpression.StructItem.of(0))
+                    .addStructItems(MaskExpression.StructItem.of(2))
+                    .build())
+            .build();
+
+    NamedScan namedScan =
+        NamedScan.builder()
+            .from(sb.namedScan(tableName, columnNames, columnTypes))
+            .projection(projection)
+            .remap(Rel.Remap.of(Stream.of(1, 0).collect(Collectors.toList())))
+            .build();
+
+    // Projection yields struct(I32, I64), remap [1, 0] reorders to struct(I64, I32)
+    Type.Struct expected = R.struct(R.I64, R.I32);
+    assertEquals(expected, namedScan.getRecordType());
   }
 }
