@@ -21,6 +21,38 @@ public abstract class Plan {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
+  public abstract Optional<ExecutionBehavior> getExecutionBehavior();
+
+  /**
+   * Validates that the execution behavior is properly configured.
+   *
+   * <p>This validation method ensures that:
+   *
+   * <ul>
+   *   <li>The {@link ExecutionBehavior} field is present (not null or empty) - ExecutionBehavior is
+   *       a required field
+   *   <li>The {@link ExecutionBehavior.VariableEvaluationMode} is set to a valid value (not {@link
+   *       ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED})
+   * </ul>
+   *
+   * @throws IllegalArgumentException if the execution behavior is not present, or if the variable
+   *     evaluation mode is set to {@link
+   *     ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
+   */
+  @Value.Check
+  protected void check() {
+    if (!getExecutionBehavior().isPresent()) {
+      throw new IllegalArgumentException("ExecutionBehavior is required but was not set");
+    }
+    ExecutionBehavior behavior = getExecutionBehavior().get();
+    if (behavior.getVariableEvaluationMode()
+        == ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED) {
+      throw new IllegalArgumentException(
+          "ExecutionBehavior requires a specified VariableEvaluationMode, but got: "
+              + behavior.getVariableEvaluationMode());
+    }
+  }
+
   public static ImmutablePlan.Builder builder() {
     return ImmutablePlan.builder();
   }
@@ -67,6 +99,21 @@ public abstract class Plan {
 
     public static ImmutableRoot.Builder builder() {
       return ImmutableRoot.builder();
+    }
+  }
+
+  @Value.Immutable
+  public abstract static class ExecutionBehavior {
+    public abstract VariableEvaluationMode getVariableEvaluationMode();
+
+    public static ImmutableExecutionBehavior.Builder builder() {
+      return ImmutableExecutionBehavior.builder();
+    }
+
+    public enum VariableEvaluationMode {
+      VARIABLE_EVALUATION_MODE_UNSPECIFIED,
+      VARIABLE_EVALUATION_MODE_PER_PLAN,
+      VARIABLE_EVALUATION_MODE_PER_RECORD
     }
   }
 }
