@@ -303,7 +303,8 @@ tasks.register<Javadoc>("javadocProto") {
   dependsOn("generateProto")
 
   // Suppress warnings/doclint for protobuf pass
-  (options as StandardJavadocDocletOptions).apply {
+  options {
+    require(this is StandardJavadocDocletOptions)
     // Disable doclint entirely
     addBooleanOption("Xdoclint:none", true)
     // Be quiet
@@ -336,7 +337,8 @@ tasks.register<Javadoc>("javadocImmutable") {
   setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile)
 
   // Suppress warnings/doclint for protobuf pass
-  (options as StandardJavadocDocletOptions).apply {
+  options {
+    require(this is StandardJavadocDocletOptions)
     // Disable doclint entirely
     addBooleanOption("Xdoclint:none", true)
     // Be quiet
@@ -366,7 +368,9 @@ tasks.named<Javadoc>("javadoc") {
   source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
-  (options as StandardJavadocDocletOptions).apply {
+  options {
+    require(this is StandardJavadocDocletOptions)
+    addBooleanOption("Xdoclint:all", true)
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")

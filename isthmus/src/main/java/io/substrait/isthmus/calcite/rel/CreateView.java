@@ -7,6 +7,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
 
+/** Represents a CREATE VIEW DDL operation in Calcite's relational algebra. */
 public class CreateView extends SingleRel {
   private final List<String> viewName;
 
@@ -16,6 +17,12 @@ public class CreateView extends SingleRel {
     this.viewName = viewName;
   }
 
+  /**
+   * CreateView Constructor.
+   *
+   * @param viewName view name components
+   * @param input RelNode input
+   */
   public CreateView(List<String> viewName, RelNode input) {
     this(input.getCluster(), input.getTraitSet(), viewName, input);
   }

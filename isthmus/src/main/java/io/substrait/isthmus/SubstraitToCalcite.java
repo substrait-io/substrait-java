@@ -25,10 +25,20 @@ import org.apache.calcite.util.Pair;
  */
 public class SubstraitToCalcite {
 
+  /** The Calcite type factory for creating relational data types. */
   protected final RelDataTypeFactory typeFactory;
+
+  /** The Calcite catalog reader for schema resolution. */
   protected final Prepare.CatalogReader catalogReader;
+
+  /** The converter provider containing configuration. */
   protected ConverterProvider converterProvider;
 
+  /**
+   * Creates a Substrait-to-Calcite converter using configuration from the provider.
+   *
+   * @param converterProvider the converter provider containing configuration and converters
+   */
   public SubstraitToCalcite(ConverterProvider converterProvider) {
     this(converterProvider, null);
   }

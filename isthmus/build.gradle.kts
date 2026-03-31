@@ -155,10 +155,13 @@ tasks.named<Javadoc>("javadoc") {
   description = "Generate Javadoc for main sources."
 
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
-  (options as StandardJavadocDocletOptions).apply {
+  options {
+    require(this is StandardJavadocDocletOptions)
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/isthmus").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/isthmus/src/main/javadoc/overview.html")
+    addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
     links("../core-proto/")
     links("../core/")
     links("https://calcite.apache.org/javadocAggregate/")

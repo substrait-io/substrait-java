@@ -738,6 +738,7 @@ public abstract class FunctionConverter<
   /**
    * Identifies functions that are not mapped in the provided Sig list.
    *
+   * @param <F> the type of function extending SimpleExtension.Function
    * @param functions the list of function variants to check
    * @param sigs the list of mapped Sig signatures
    * @return a list of functions that are not found in the Sig mappings (case-insensitive name

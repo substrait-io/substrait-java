@@ -82,7 +82,7 @@ public class SubstraitCreateStatementParser {
    *
    * @param createStatements List of SQL strings containing only CREATE statements, must not be null
    * @return a {@link CalciteCatalogReader} generated from the CREATE statements
-   * @throws SqlParseException
+   * @throws SqlParseException if there is an error parsing the SQL statements
    */
   public static CalciteCatalogReader processCreateStatementsToCatalog(
       @NonNull final List<String> createStatements) throws SqlParseException {

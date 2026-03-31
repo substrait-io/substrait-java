@@ -252,6 +252,23 @@ public class ExpressionRexConverter
         createTimeString(expr.value(), expr.precision()), expr.precision());
   }
 
+  /**
+   * Creates a TimeString from a time value with the specified precision.
+   *
+   * <p>The time unit for the value is dictated by the supplied precision, with the following valid
+   * values:
+   *
+   * <ul>
+   *   <li>0 - seconds
+   *   <li>3 - milliseconds
+   *   <li>6 - microseconds
+   *   <li>9 - nanoseconds
+   * </ul>
+   *
+   * @param value the time value in the appropriate unit based on precision
+   * @param precision the precision level
+   * @return a TimeString representing the time value
+   */
   protected TimeString createTimeString(long value, int precision) {
     switch (precision) {
       case 0:

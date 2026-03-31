@@ -12,6 +12,11 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 public final class StrptimeTimeFunctionMapper extends AbstractStrptimeFunctionMapper {
   private static final String STRPTIME_TIME_FUNCTION_NAME = "strptime_time";
 
+  /**
+   * Constructor.
+   *
+   * @param functions the list of scalar function variants
+   */
   public StrptimeTimeFunctionMapper(List<ScalarFunctionVariant> functions) {
     super(STRPTIME_TIME_FUNCTION_NAME, SqlLibraryOperators.PARSE_TIME, functions);
   }
