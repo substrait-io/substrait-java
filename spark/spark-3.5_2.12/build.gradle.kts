@@ -119,8 +119,8 @@ dependencies {
 
   // Scala dependencies
   implementation("org.scala-lang:scala-library:$scalaVersion")
-  testImplementation("org.scalatest:scalatest_$scalaBinary:3.2.19")
-  testRuntimeOnly("org.scalatestplus:junit-5-12_$scalaBinary:3.2.19.0")
+  testImplementation("org.scalatest:scalatest_$scalaBinary:3.2.20")
+  testRuntimeOnly("org.scalatestplus:junit-5-12_$scalaBinary:3.2.20.0")
 
   // Spark dependencies
   api("org.apache.spark:spark-core_$scalaBinary:$sparkVersion")
