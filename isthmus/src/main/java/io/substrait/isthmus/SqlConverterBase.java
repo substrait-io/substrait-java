@@ -22,6 +22,7 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
  * shared setup.
  */
 public class SqlConverterBase {
+  /** The converter provider containing configuration. */
   protected final ConverterProvider converterProvider;
 
   /** Default Calcite connection config (case-insensitive). */

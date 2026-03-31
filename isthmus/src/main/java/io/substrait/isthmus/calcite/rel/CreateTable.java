@@ -7,6 +7,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
 
+/** Represents a CREATE TABLE DDL operation in Calcite's relational algebra. */
 public class CreateTable extends SingleRel {
 
   private final List<String> tableName;

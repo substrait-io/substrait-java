@@ -104,6 +104,11 @@ tasks.named<Javadoc>("javadoc") {
 
   val isthmusVersionClass = layout.buildDirectory.file("generated/sources").get().getAsFile()
   exclude { spec -> spec.file.toPath().startsWith(isthmusVersionClass.toPath()) }
+  options {
+    require(this is StandardJavadocDocletOptions)
+    addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
+  }
 }
 
 // workaround for Eclipse/VS Code bug handling annotationProcessor sources
