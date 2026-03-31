@@ -13,9 +13,18 @@ import java.util.Map;
 import java.util.UUID;
 import org.immutables.value.Value;
 
+/**
+ * Represents a Substrait expression that can be evaluated to produce a value. Expressions include
+ * literals, field references, function invocations, and more complex constructs.
+ */
 @Value.Enclosing
 public interface Expression extends FunctionArg {
 
+  /**
+   * Returns the type of this expression.
+   *
+   * @return a type
+   */
   Type getType();
 
   @Override
@@ -25,6 +34,7 @@ public interface Expression extends FunctionArg {
     return fnArgVisitor.visitExpr(fnDef, argIdx, this, context);
   }
 
+  /** Marker interface for literal expressions that represent constant values. */
   interface Literal extends Expression {
     @Value.Default
     default boolean nullable() {
@@ -35,10 +45,14 @@ public interface Expression extends FunctionArg {
      * Returns a copy of this literal with the specified nullability.
      *
      * <p>This method is implemented by all concrete Literal classes via Immutables code generation.
+     *
+     * @param nullable whether the literal should be nullable
+     * @return a copy of this literal with the specified nullability
      */
     Literal withNullable(boolean nullable);
   }
 
+  /** Marker interface for nested expressions that contain other expressions. */
   interface Nested extends Expression {
     @Value.Default
     default boolean nullable() {
@@ -46,6 +60,17 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Accepts a visitor to traverse this expression.
+   *
+   * @param <R> the return type of the visitor
+   * @param <C> the context type
+   * @param <E> the exception type that may be thrown
+   * @param visitor the visitor to accept
+   * @param context the visitation context
+   * @return the result of the visitation
+   * @throws E if an error occurs during visitation
+   */
   <R, C extends VisitationContext, E extends Throwable> R accept(
       ExpressionVisitor<R, C, E> visitor, C context) throws E;
 
@@ -91,6 +116,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a boolean literal value. */
   @Value.Immutable
   abstract class BoolLiteral implements Literal {
     public abstract Boolean value();
@@ -111,6 +137,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an 8-bit signed integer literal. */
   @Value.Immutable
   abstract class I8Literal implements Literal {
     public abstract int value();
@@ -131,6 +158,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a 16-bit signed integer literal. */
   @Value.Immutable
   abstract class I16Literal implements Literal {
     public abstract int value();
@@ -151,6 +179,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a 32-bit signed integer literal. */
   @Value.Immutable
   abstract class I32Literal implements Literal {
     public abstract int value();
@@ -171,6 +200,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a 64-bit signed integer literal. */
   @Value.Immutable
   abstract class I64Literal implements Literal {
     public abstract long value();
@@ -191,6 +221,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a 32-bit floating point literal. */
   @Value.Immutable
   abstract class FP32Literal implements Literal {
     public abstract float value();
@@ -211,6 +242,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a 64-bit floating point literal. */
   @Value.Immutable
   abstract class FP64Literal implements Literal {
     public abstract double value();
@@ -231,6 +263,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a string literal value. */
   @Value.Immutable
   abstract class StrLiteral implements Literal {
     public abstract String value();
@@ -251,6 +284,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a binary (byte array) literal value. */
   @Value.Immutable
   abstract class BinaryLiteral implements Literal {
     public abstract ByteString value();
@@ -320,6 +354,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a time literal with configurable precision. */
   @Value.Immutable
   abstract class PrecisionTimeLiteral implements Literal {
     public abstract long value();
@@ -342,6 +377,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a date literal value. */
   @Value.Immutable
   abstract class DateLiteral implements Literal {
     public abstract int value();
@@ -387,6 +423,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a timestamp literal with configurable precision. */
   @Value.Immutable
   abstract class PrecisionTimestampLiteral implements Literal {
     public abstract long value();
@@ -409,6 +446,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a timestamp with timezone literal with configurable precision. */
   @Value.Immutable
   abstract class PrecisionTimestampTZLiteral implements Literal {
     public abstract long value();
@@ -431,6 +469,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an interval literal measured in years and months. */
   @Value.Immutable
   abstract class IntervalYearLiteral implements Literal {
     public abstract int years();
@@ -453,6 +492,10 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Represents an interval literal measured in days, seconds, and subseconds with configurable
+   * precision.
+   */
   @Value.Immutable
   abstract class IntervalDayLiteral implements Literal {
     public abstract int days();
@@ -479,6 +522,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a compound interval literal combining year-month and day-time components. */
   @Value.Immutable
   abstract class IntervalCompoundLiteral implements Literal {
     // Flattened IntervalYearLiteral
@@ -511,6 +555,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a UUID (Universally Unique Identifier) literal value. */
   @Value.Immutable
   abstract class UUIDLiteral implements Literal {
     public abstract UUID value();
@@ -539,6 +584,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a fixed-length character string literal. */
   @Value.Immutable
   abstract class FixedCharLiteral implements Literal {
     public abstract String value();
@@ -559,6 +605,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a variable-length character string literal with a maximum length. */
   @Value.Immutable
   abstract class VarCharLiteral implements Literal {
     public abstract String value();
@@ -581,6 +628,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a fixed-length binary literal. */
   @Value.Immutable
   abstract class FixedBinaryLiteral implements Literal {
     public abstract ByteString value();
@@ -601,6 +649,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a decimal literal with configurable precision and scale. */
   @Value.Immutable
   abstract class DecimalLiteral implements Literal {
     public abstract ByteString value();
@@ -625,6 +674,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a map literal with key-value pairs. */
   @Value.Immutable
   abstract class MapLiteral implements Literal {
     public abstract Map<Literal, Literal> values();
@@ -648,6 +698,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an empty map literal with specified key and value types. */
   @Value.Immutable
   abstract class EmptyMapLiteral implements Literal {
     public abstract Type keyType();
@@ -670,6 +721,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a list literal containing multiple values. */
   @Value.Immutable
   abstract class ListLiteral implements Literal {
     public abstract List<Literal> values();
@@ -690,6 +742,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an empty list literal with a specified element type. */
   @Value.Immutable
   abstract class EmptyListLiteral implements Literal {
     public abstract Type elementType();
@@ -710,6 +763,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a struct literal with multiple field values. */
   @Value.Immutable
   abstract class StructLiteral implements Literal {
     public abstract List<Literal> fields();
@@ -734,6 +788,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a nested struct expression with multiple field expressions. */
   @Value.Immutable
   abstract class NestedStruct implements Nested {
     public abstract List<Expression> fields();
@@ -758,6 +813,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a lambda expression with parameters and a body. */
   @Value.Immutable
   abstract class Lambda implements Expression {
     public abstract Type.Struct parameters();
@@ -879,6 +935,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a switch expression that evaluates different cases based on a match value. */
   @Value.Immutable
   abstract class Switch implements Expression {
     public abstract Expression match();
@@ -903,6 +960,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a single case clause in a switch expression. */
   @Value.Immutable
   abstract class SwitchClause {
     public abstract Literal condition();
@@ -914,6 +972,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an if-then-else conditional expression with multiple if clauses. */
   @Value.Immutable
   abstract class IfThen implements Expression {
     public abstract List<IfClause> ifClauses();
@@ -942,6 +1001,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a single if-then clause in a conditional expression. */
   @Value.Immutable
   abstract class IfClause {
     public abstract Expression condition();
@@ -953,6 +1013,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a type cast expression that converts a value from one type to another. */
   @Value.Immutable
   abstract class Cast implements Expression {
     public abstract Type type();
@@ -977,6 +1038,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an invocation of a scalar function that returns a single value. */
   @Value.Immutable
   abstract class ScalarFunctionInvocation implements Expression {
     public abstract SimpleExtension.ScalarFunctionVariant declaration();
@@ -1013,6 +1075,9 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Represents an invocation of a window function with partitioning, ordering, and frame bounds.
+   */
   @Value.Immutable
   abstract class WindowFunctionInvocation implements Expression {
 
@@ -1064,6 +1129,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines the type of window bounds (rows or range) for window functions. */
   enum WindowBoundsType {
     UNSPECIFIED(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_UNSPECIFIED),
     ROWS(io.substrait.proto.Expression.WindowFunction.BoundsType.BOUNDS_TYPE_ROWS),
@@ -1091,6 +1157,9 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Represents a single-or-list expression that checks if a condition matches any option in a list.
+   */
   @Value.Immutable
   abstract class SingleOrList implements Expression {
     public abstract Expression condition();
@@ -1113,6 +1182,10 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Represents a multi-or-list expression that checks multiple conditions against combinations of
+   * options.
+   */
   @Value.Immutable
   abstract class MultiOrList implements Expression {
     public abstract List<Expression> conditions();
@@ -1169,6 +1242,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a single record (combination of values) in a multi-or-list expression. */
   @Value.Immutable
   abstract class MultiOrListRecord {
     public abstract List<Expression> values();
@@ -1178,6 +1252,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a sort field with an expression and sort direction. */
   @Value.Immutable
   abstract class SortField {
     public abstract Expression expr();
@@ -1189,8 +1264,10 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Base interface for subquery expressions. */
   interface Subquery extends Expression {}
 
+  /** Represents a set predicate subquery. */
   @Value.Immutable
   abstract class SetPredicate implements Subquery {
     public abstract PredicateOp predicateOp();
@@ -1213,6 +1290,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a scalar subquery that returns a single value. */
   @Value.Immutable
   abstract class ScalarSubquery implements Subquery {
     public abstract Rel input();
@@ -1228,6 +1306,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents an IN predicate that checks if values exist in a subquery result. */
   @Value.Immutable
   abstract class InPredicate implements Subquery {
     public abstract Rel haystack();
@@ -1250,6 +1329,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines the operation type for set predicates (EXISTS, UNIQUE). */
   enum PredicateOp {
     PREDICATE_OP_UNSPECIFIED(
         io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp.PREDICATE_OP_UNSPECIFIED),
@@ -1280,6 +1360,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines how aggregation functions are invoked (ALL, DISTINCT). */
   enum AggregationInvocation {
     UNSPECIFIED(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_UNSPECIFIED),
     ALL(AggregateFunction.AggregationInvocation.AGGREGATION_INVOCATION_ALL),
@@ -1306,6 +1387,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines the phase of aggregation execution (initial, intermediate, or result). */
   enum AggregationPhase {
     UNSPECIFIED(io.substrait.proto.AggregationPhase.AGGREGATION_PHASE_UNSPECIFIED),
     INITIAL_TO_INTERMEDIATE(
@@ -1337,6 +1419,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines the sort direction and null handling for sort operations. */
   enum SortDirection {
     ASC_NULLS_FIRST(io.substrait.proto.SortField.SortDirection.SORT_DIRECTION_ASC_NULLS_FIRST),
     ASC_NULLS_LAST(io.substrait.proto.SortField.SortDirection.SORT_DIRECTION_ASC_NULLS_LAST),
@@ -1365,6 +1448,7 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Defines the behavior when a cast operation fails. */
   enum FailureBehavior {
     UNSPECIFIED(io.substrait.proto.Expression.Cast.FailureBehavior.FAILURE_BEHAVIOR_UNSPECIFIED),
     RETURN_NULL(io.substrait.proto.Expression.Cast.FailureBehavior.FAILURE_BEHAVIOR_RETURN_NULL),
