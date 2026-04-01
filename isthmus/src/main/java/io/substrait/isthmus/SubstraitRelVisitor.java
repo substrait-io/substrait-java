@@ -36,6 +36,7 @@ import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,11 +53,14 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
@@ -84,6 +88,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
+  /** Rex builder for creating Rex expressions during conversion. */
+  protected RexBuilder rexBuilder;
+
   /**
    * Creates a new SubstraitRelVisitor with the specified type factory and extensions.
    *
@@ -106,6 +113,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.typeConverter = converterProvider.getTypeConverter();
     this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
     this.rexExpressionConverter = converterProvider.getRexExpressionConverter(this);
+    this.rexBuilder = new RexBuilder(converterProvider.getTypeFactory());
   }
 
   /**
@@ -411,7 +419,35 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Aggregate.Grouping.builder().addAllExpressions(references).build();
   }
 
+  /**
+   * Converts a Calcite {@link AggregateCall} to a Substrait {@link Aggregate.Measure}.
+   *
+   * <p>This method handles the conversion of aggregate function calls from Calcite's representation
+   * to Substrait's format. For statistical aggregate functions (STDDEV_POP, STDDEV_SAMP, VAR_POP,
+   * VAR_SAMP), it automatically transforms the input relation by inserting a projection that casts
+   * the aggregate function's argument fields to DOUBLE (FP64) type, ensuring type compatibility
+   * with Substrait's statistical function requirements. Fields not referenced by the aggregate
+   * function are passed through unchanged.
+   *
+   * <p>The method also processes optional filter arguments (FILTER clauses) by converting them to
+   * Substrait's preMeasureFilter representation.
+   *
+   * @param input the input relational node providing data to the aggregate operation
+   * @param inputType the Substrait struct type representing the schema of the input relation
+   * @param call the Calcite aggregate call to convert, containing the aggregate function,
+   *     arguments, and optional filter
+   * @return a Substrait {@link Aggregate.Measure} representing the aggregate function invocation
+   *     with its configuration
+   * @throws UnsupportedOperationException if the aggregate function cannot be converted to a
+   *     Substrait representation (no matching function binding found)
+   */
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {
+    SqlKind kind = call.getAggregation().getKind();
+    if (java.util.Set.of(SqlKind.STDDEV_POP, SqlKind.STDDEV_SAMP, SqlKind.VAR_POP, SqlKind.VAR_SAMP)
+        .contains(kind)) {
+      input = transformInputForStdDevVariance(input, call);
+    }
+
     Optional<AggregateFunctionInvocation> invocation =
         aggregateFunctionConverter.convert(
             input, inputType, call, t -> t.accept(rexExpressionConverter));
@@ -425,6 +461,92 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // TODO: handle the collation on the AggregateCall
     //   https://github.com/substrait-io/substrait-java/issues/215
     return builder.build();
+  }
+
+  /**
+   * Transforms the input relation by conditionally casting aggregate argument fields to DOUBLE
+   * (FP64) type for statistical aggregate functions like STDDEV_SAMP, STDDEV_POP, VAR_SAMP, and
+   * VAR_POP.
+   *
+   * <p>This transformation is necessary because statistical aggregate functions require numeric
+   * inputs to be in a consistent floating-point format for accurate computation.
+   *
+   * <p><b>Optimization:</b> If all fields referenced by the aggregate call's argument list are
+   * already of a single floating-point type (FP32 or FP64), the input relation is returned
+   * unchanged without creating a projection. This avoids unnecessary casting when the data is
+   * already in an acceptable floating-point format.
+   *
+   * <p><b>Transformation logic:</b> When casting is required, the method creates a LogicalProject
+   * that processes all fields in the input relation:
+   *
+   * <ul>
+   *   <li><b>Fields referenced by the aggregate call:</b> Fields whose indices are in {@code
+   *       call.getArgList()} are conditionally cast:
+   *       <ul>
+   *         <li>Fields already matching FP64 (ignoring nullability) are passed through unchanged
+   *         <li>All other fields are cast to DOUBLE (FP64) using {@code makeCast}
+   *       </ul>
+   *   <li><b>Fields not referenced by the aggregate call:</b> All other fields are passed through
+   *       unchanged using {@code makeInputRef}, regardless of their type
+   * </ul>
+   *
+   * <p><b>Implementation details:</b>
+   *
+   * <ul>
+   *   <li>The returned LogicalProject preserves the original field names from the input relation
+   *   <li>Empty hints are used ({@code Collections.emptyList()})
+   *   <li>Empty variable substitutions are used ({@code Collections.emptySet()})
+   *   <li>Type checking uses {@code TypeCreator.NULLABLE.FP64.equalsIgnoringNullability()} on
+   *       Substrait types converted from Calcite field types
+   * </ul>
+   *
+   * @param input the input relational node to transform
+   * @param call the aggregate call containing the argument list that identifies which fields need
+   *     potential casting
+   * @return the original input if optimization applies, or a LogicalProject that conditionally
+   *     casts aggregate argument fields to DOUBLE (FP64) while preserving all field names
+   */
+  protected RelNode transformInputForStdDevVariance(RelNode input, AggregateCall call) {
+    List<RelDataType> distinctTypes =
+        input.getRowType().getFieldList().stream()
+            .filter(f -> call.getArgList().contains(f.getIndex()))
+            .map(f -> f.getType())
+            .distinct()
+            .collect(Collectors.toList());
+
+    // we do not need to cast if all referenced fields are already FP32 or FP64
+    if (distinctTypes.size() == 1
+        && (TypeCreator.NULLABLE.FP32.equalsIgnoringNullability(
+                typeConverter.toSubstrait(distinctTypes.get(0)))
+            || TypeCreator.NULLABLE.FP64.equalsIgnoringNullability(
+                typeConverter.toSubstrait(distinctTypes.get(0))))) {
+      return input;
+    }
+
+    List<RexNode> castProjects =
+        input.getRowType().getFieldList().stream()
+            .map(
+                f ->
+                    (call.getArgList().contains(f.getIndex())
+                            && !TypeCreator.NULLABLE.FP64.equalsIgnoringNullability(
+                                typeConverter.toSubstrait(f.getType())))
+                        ? rexBuilder.makeCast(
+                            typeConverter.toCalcite(
+                                rexBuilder.getTypeFactory(),
+                                Type.withNullability(f.getType().isNullable()).FP64),
+                            rexBuilder.makeInputRef(input, f.getIndex()))
+                        // passthrough all fields that do not need to be casted
+                        : rexBuilder.makeInputRef(input, f.getIndex()))
+            .collect(Collectors.toList());
+    RelDataType projectedRowType =
+        rexBuilder
+            .getTypeFactory()
+            .createStructType(
+                castProjects.stream().map(RexNode::getType).collect(Collectors.toList()),
+                input.getRowType().getFieldNames());
+
+    return LogicalProject.create(
+        input, Collections.emptyList(), castProjects, projectedRowType, Collections.emptySet());
   }
 
   /**

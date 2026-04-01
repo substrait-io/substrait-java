@@ -12,6 +12,7 @@ import io.substrait.expression.Expression.Switch;
 import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.FunctionOption;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -1298,6 +1299,190 @@ public class SubstraitBuilder {
         "sum0",
         // sum0 output is always NOT NULL I64
         R.I64);
+  }
+
+  /**
+   * Creates a population standard deviation aggregate measure for a specific field.
+   *
+   * <p>Computes the standard deviation using the population formula (n denominator), which
+   * considers all values in the dataset as the entire population. This is equivalent to SQL's
+   * STDDEV_POP function.
+   *
+   * @param input the input relation containing the field
+   * @param field the zero-based index of the field to aggregate
+   * @return an aggregate measure computing population standard deviation with
+   *     distribution=POPULATION option
+   */
+  public Aggregate.Measure stddevPopulation(Rel input, int field) {
+    return stddevPopulation(fieldReference(input, field));
+  }
+
+  /**
+   * Creates a population standard deviation aggregate measure for an expression.
+   *
+   * <p>Computes the standard deviation using the population formula (n denominator), which
+   * considers all values in the dataset as the entire population. This is equivalent to SQL's
+   * STDDEV_POP function.
+   *
+   * <p>The measure is created with:
+   *
+   * <ul>
+   *   <li>Function: Substrait's "std_dev" from the arithmetic extension
+   *   <li>Option: distribution=POPULATION
+   *   <li>Output type: nullable version of the input expression type
+   *   <li>Aggregation phase: INITIAL_TO_RESULT
+   *   <li>Invocation: ALL (processes all rows)
+   * </ul>
+   *
+   * @param expr the expression to aggregate (typically a numeric field reference)
+   * @return an aggregate measure computing population standard deviation
+   */
+  public Aggregate.Measure stddevPopulation(Expression expr) {
+    return statisticalAggregate(expr, "std_dev", "POPULATION");
+  }
+
+  /**
+   * Creates a sample standard deviation aggregate measure for a specific field.
+   *
+   * <p>Computes the standard deviation using the sample formula (n-1 denominator), which applies
+   * Bessel's correction for sample data. This is equivalent to SQL's STDDEV_SAMP or STDDEV
+   * function.
+   *
+   * @param input the input relation containing the field
+   * @param field the zero-based index of the field to aggregate
+   * @return an aggregate measure computing sample standard deviation with distribution=SAMPLE
+   *     option
+   */
+  public Aggregate.Measure stddevSample(Rel input, int field) {
+    return stddevSample(fieldReference(input, field));
+  }
+
+  /**
+   * Creates a sample standard deviation aggregate measure for an expression.
+   *
+   * <p>Computes the standard deviation using the sample formula (n-1 denominator), which applies
+   * Bessel's correction for sample data. This is equivalent to SQL's STDDEV_SAMP or STDDEV
+   * function.
+   *
+   * <p>The measure is created with:
+   *
+   * <ul>
+   *   <li>Function: Substrait's "std_dev" from the arithmetic extension
+   *   <li>Option: distribution=SAMPLE
+   *   <li>Output type: nullable version of the input expression type
+   *   <li>Aggregation phase: INITIAL_TO_RESULT
+   *   <li>Invocation: ALL (processes all rows)
+   * </ul>
+   *
+   * @param expr the expression to aggregate (typically a numeric field reference)
+   * @return an aggregate measure computing sample standard deviation
+   */
+  public Aggregate.Measure stddevSample(Expression expr) {
+    return statisticalAggregate(expr, "std_dev", "SAMPLE");
+  }
+
+  /**
+   * Creates a population variance aggregate measure for a specific field.
+   *
+   * <p>Computes the variance using the population formula (n denominator), which considers all
+   * values in the dataset as the entire population. This is equivalent to SQL's VAR_POP function.
+   *
+   * @param input the input relation containing the field
+   * @param field the zero-based index of the field to aggregate
+   * @return an aggregate measure computing population variance with distribution=POPULATION option
+   */
+  public Aggregate.Measure variancePopulation(Rel input, int field) {
+    return variancePopulation(fieldReference(input, field));
+  }
+
+  /**
+   * Creates a population variance aggregate measure for an expression.
+   *
+   * <p>Computes the variance using the population formula (n denominator), which considers all
+   * values in the dataset as the entire population. This is equivalent to SQL's VAR_POP function.
+   *
+   * <p>The measure is created with:
+   *
+   * <ul>
+   *   <li>Function: Substrait's "variance" from the arithmetic extension
+   *   <li>Option: distribution=POPULATION
+   *   <li>Output type: nullable version of the input expression type
+   *   <li>Aggregation phase: INITIAL_TO_RESULT
+   *   <li>Invocation: ALL (processes all rows)
+   * </ul>
+   *
+   * @param expr the expression to aggregate (typically a numeric field reference)
+   * @return an aggregate measure computing population variance
+   */
+  public Aggregate.Measure variancePopulation(Expression expr) {
+    return statisticalAggregate(expr, "variance", "POPULATION");
+  }
+
+  /**
+   * Creates a sample variance aggregate measure for a specific field.
+   *
+   * <p>Computes the variance using the sample formula (n-1 denominator), which applies Bessel's
+   * correction for sample data. This is equivalent to SQL's VAR_SAMP or VARIANCE function.
+   *
+   * @param input the input relation containing the field
+   * @param field the zero-based index of the field to aggregate
+   * @return an aggregate measure computing sample variance with distribution=SAMPLE option
+   */
+  public Aggregate.Measure varianceSample(Rel input, int field) {
+    return varianceSample(fieldReference(input, field));
+  }
+
+  /**
+   * Creates a sample variance aggregate measure for an expression.
+   *
+   * <p>Computes the variance using the sample formula (n-1 denominator), which applies Bessel's
+   * correction for sample data. This is equivalent to SQL's VAR_SAMP or VARIANCE function.
+   *
+   * <p>The measure is created with:
+   *
+   * <ul>
+   *   <li>Function: Substrait's "variance" from the arithmetic extension
+   *   <li>Option: distribution=SAMPLE
+   *   <li>Output type: nullable version of the input expression type
+   *   <li>Aggregation phase: INITIAL_TO_RESULT
+   *   <li>Invocation: ALL (processes all rows)
+   * </ul>
+   *
+   * @param expr the expression to aggregate (typically a numeric field reference)
+   * @return an aggregate measure computing sample variance
+   */
+  public Aggregate.Measure varianceSample(Expression expr) {
+    return statisticalAggregate(expr, "variance", "SAMPLE");
+  }
+
+  /**
+   * Helper method to create statistical aggregate measures (std_dev, variance) with distribution
+   * option.
+   *
+   * @param expr the expression to aggregate
+   * @param functionName the Substrait function name ("std_dev" or "variance")
+   * @param distribution the distribution type ("SAMPLE" or "POPULATION")
+   * @return an aggregate measure with the specified distribution option
+   */
+  private Aggregate.Measure statisticalAggregate(
+      Expression expr, String functionName, String distribution) {
+    String typeString = ToTypeString.apply(expr.getType());
+    SimpleExtension.AggregateFunctionVariant declaration =
+        extensions.getAggregateFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+                String.format("%s:%s", functionName, typeString)));
+    FunctionOption distributionOption =
+        FunctionOption.builder().name("distribution").addValues(distribution).build();
+    return measure(
+        AggregateFunctionInvocation.builder()
+            .arguments(Arrays.asList(expr))
+            .outputType(TypeCreator.asNullable(expr.getType()))
+            .declaration(declaration)
+            .addOptions(distributionOption)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
   }
 
   private Aggregate.Measure singleArgumentArithmeticAggregate(

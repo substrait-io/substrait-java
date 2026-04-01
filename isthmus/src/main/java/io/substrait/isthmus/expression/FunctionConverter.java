@@ -41,6 +41,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,6 +182,26 @@ public abstract class FunctionConverter<
    * @return matching {@link SqlOperator}, or empty if none
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
+    return getSqlOperatorFromSubstraitFunc(key, outputType, java.util.Collections.emptyList());
+  }
+
+  /**
+   * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
+   *
+   * <p>Given a Substrait function key (e.g., "std_dev:fp64"), output type, and function options
+   * (e.g., distribution: SAMPLE), this method finds the corresponding Calcite {@link SqlOperator}.
+   * When multiple operators match, the output type and function options are used to disambiguate.
+   *
+   * <p>For example, both STDDEV_POP and STDDEV_SAMP map to "std_dev:fp64", but differ in the
+   * "distribution" option (POPULATION vs SAMPLE).
+   *
+   * @param key the Substrait function key (function name with type signature)
+   * @param outputType the expected output type
+   * @param options the function options (e.g., distribution, rounding)
+   * @return the matching {@link SqlOperator}, or empty if no match found
+   */
+  public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+      String key, Type outputType, List<io.substrait.expression.FunctionOption> options) {
     Map<SqlOperator, FunctionMappings.TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
     if (operators.isEmpty()) {
@@ -192,15 +213,35 @@ public abstract class FunctionConverter<
       return Optional.of(operators.iterator().next());
     }
 
-    // at least 2 operators. Use output type to resolve SqlOperator.
+    // First, filter by output type to ensure type compatibility
     String outputTypeStr = outputType.accept(ToTypeString.INSTANCE);
-    List<SqlOperator> resolvedOperators =
+    List<SqlOperator> typeFilteredOperators =
         operators.stream()
             .filter(
                 operator ->
                     resolver.containsKey(operator)
                         && resolver.get(operator).types().contains(outputTypeStr))
             .collect(Collectors.toList());
+
+    // If type filtering resolved to a single operator, return it
+    if (typeFilteredOperators.size() == 1) {
+      return Optional.of(typeFilteredOperators.get(0));
+    }
+
+    // Determine which operators to use for further filtering
+    List<SqlOperator> resolvedOperators;
+    if (typeFilteredOperators.isEmpty() && !options.isEmpty()) {
+      // If type filtering failed but we have options, try option-based filtering on all operators
+      // This handles cases where type resolver doesn't have entries for certain functions
+      resolvedOperators = filterByFunctionOptions(List.copyOf(operators), options);
+    } else if (typeFilteredOperators.size() > 1 && !options.isEmpty()) {
+      // If multiple operators remain after type filtering, apply option-based filtering
+      resolvedOperators = filterByFunctionOptions(typeFilteredOperators, options);
+    } else {
+      // Use type-filtered results (may be empty, single, or multiple)
+      resolvedOperators = typeFilteredOperators;
+    }
+
     // only one SqlOperator is possible
     if (resolvedOperators.size() == 1) {
       return Optional.of(resolvedOperators.get(0));
@@ -211,6 +252,56 @@ public abstract class FunctionConverter<
               resolvedOperators.size(), resolvedOperators, key));
     }
     return Optional.empty();
+  }
+
+  /**
+   * Filters SqlOperators based on function options.
+   *
+   * <p>For statistical functions like STDDEV and VAR, the "distribution" option determines whether
+   * to use the population or sample variant:
+   *
+   * <ul>
+   *   <li>distribution=POPULATION → STDDEV_POP, VAR_POP
+   *   <li>distribution=SAMPLE → STDDEV_SAMP, VAR_SAMP
+   * </ul>
+   *
+   * @param operators the list of candidate SqlOperators
+   * @param options the function options from Substrait
+   * @return filtered list of SqlOperators matching the options
+   */
+  private List<SqlOperator> filterByFunctionOptions(
+      List<SqlOperator> operators, List<io.substrait.expression.FunctionOption> options) {
+    if (options == null || options.isEmpty()) {
+      return operators;
+    }
+
+    // Extract distribution option if present
+    Optional<String> distribution =
+        options.stream()
+            .filter(opt -> "distribution".equals(opt.getName()))
+            .flatMap(opt -> opt.values().stream())
+            .findFirst();
+
+    if (!distribution.isPresent()) {
+      return operators;
+    }
+
+    String distributionValue = distribution.get();
+    return operators.stream()
+        .filter(
+            operator -> {
+              SqlKind kind = operator.getKind();
+              // Match distribution option to SqlKind
+              if ("POPULATION".equals(distributionValue)) {
+                return kind == SqlKind.STDDEV_POP || kind == SqlKind.VAR_POP;
+              } else if ("SAMPLE".equals(distributionValue)) {
+                return kind == SqlKind.STDDEV_SAMP || kind == SqlKind.VAR_SAMP;
+              }
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Unknown distribution value '%s' for operator %s", distributionValue, kind));
+            })
+        .collect(Collectors.toList());
   }
 
   /**
