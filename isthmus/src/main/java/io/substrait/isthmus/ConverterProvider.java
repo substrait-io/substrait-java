@@ -46,24 +46,47 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class ConverterProvider {
 
+  /** The Calcite type factory used for creating and managing data types. */
   protected RelDataTypeFactory typeFactory;
 
+  /** The collection of Substrait extensions (functions and types) available for conversion. */
   protected final SimpleExtension.ExtensionCollection extensions;
 
+  /** Converter for Substrait scalar functions. */
   protected ScalarFunctionConverter scalarFunctionConverter;
+
+  /** Converter for Substrait aggregate functions. */
   protected AggregateFunctionConverter aggregateFunctionConverter;
+
+  /** Converter for Substrait window functions. */
   protected WindowFunctionConverter windowFunctionConverter;
 
+  /** Converter for Substrait types to Calcite types and vice versa. */
   protected TypeConverter typeConverter;
 
+  /**
+   * Creates a ConverterProvider with default extension collection and type factory. Uses {@link
+   * DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link SubstraitTypeSystem#TYPE_FACTORY}.
+   */
   public ConverterProvider() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
+  /**
+   * Creates a ConverterProvider with the specified extension collection and default type factory.
+   *
+   * @param extensions the Substrait extension collection to use
+   */
   public ConverterProvider(SimpleExtension.ExtensionCollection extensions) {
     this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
   }
 
+  /**
+   * Creates a ConverterProvider with the specified extension collection and type factory.
+   *
+   * @param extensions the Substrait extension collection to use
+   * @param typeFactory the Calcite type factory to use
+   */
   public ConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     this(
@@ -75,6 +98,16 @@ public class ConverterProvider {
         TypeConverter.DEFAULT);
   }
 
+  /**
+   * Creates a ConverterProvider with full customization of all components.
+   *
+   * @param typeFactory the Calcite type factory to use
+   * @param extensions the Substrait extension collection to use
+   * @param sfc the scalar function converter to use
+   * @param afc the aggregate function converter to use
+   * @param wfc the window function converter to use
+   * @param tc the type converter to use
+   */
   public ConverterProvider(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
@@ -95,6 +128,8 @@ public class ConverterProvider {
   /**
    * {@link SqlParser.Config} is a Calcite class which controls SQL parsing behaviour like
    * identifier casing.
+   *
+   * @return the SQL parser configuration
    */
   public SqlParser.Config getSqlParserConfig() {
     return SqlParser.Config.DEFAULT
@@ -106,6 +141,8 @@ public class ConverterProvider {
   /**
    * {@link CalciteConnectionConfig} is a Calcite class which controls SQL processing behaviour like
    * table name case-sensitivity.
+   *
+   * @return the Calcite connection configuration
    */
   public CalciteConnectionConfig getCalciteConnectionConfig() {
     return CalciteConnectionConfig.DEFAULT.set(CalciteConnectionProperty.CASE_SENSITIVE, "false");
@@ -114,6 +151,8 @@ public class ConverterProvider {
   /**
    * {@link SqlToRelConverter.Config} is a Calcite class which controls SQL processing behaviour
    * like field-trimming.
+   *
+   * @return the SQL to Rel converter configuration
    */
   public SqlToRelConverter.Config getSqlToRelConverterConfig() {
     return SqlToRelConverter.config().withTrimUnusedFields(true).withExpand(false);
@@ -123,6 +162,8 @@ public class ConverterProvider {
    * {@link SqlOperatorTable} is a Calcite class which stores the {@link
    * org.apache.calcite.sql.SqlOperator}s available and controls valid identifiers during SQL
    * processing.
+   *
+   * @return the SQL operator table
    */
   public SqlOperatorTable getSqlOperatorTable() {
     return SubstraitOperatorTable.INSTANCE;
@@ -134,6 +175,8 @@ public class ConverterProvider {
    * {@link SubstraitToCalcite} is an Isthmus class for converting a Substrait {@link Rel} or {@link
    * io.substrait.plan.Plan.Root} to a Calcite {@link org.apache.calcite.rel.RelNode} or {@link
    * org.apache.calcite.rel.RelRoot}
+   *
+   * @return a new SubstraitToCalcite converter instance
    */
   protected SubstraitToCalcite getSubstraitToCalcite() {
     return new SubstraitToCalcite(this);
@@ -146,6 +189,7 @@ public class ConverterProvider {
    *
    * @param catalogReader a Calcite {@link Prepare.CatalogReader} used to construct a {@link
    *     RelBuilder} for use in creating Calcite {@link org.apache.calcite.rel.RelNode}s
+   * @return a new SubstraitToCalcite converter instance
    */
   protected SubstraitToCalcite getSubstraitToCalcite(Prepare.CatalogReader catalogReader) {
     return new SubstraitToCalcite(this, catalogReader);
@@ -156,6 +200,8 @@ public class ConverterProvider {
   /**
    * A {@link SubstraitRelVisitor} converts Calcite {@link org.apache.calcite.rel.RelNode}s to
    * Substrait {@link Rel}s
+   *
+   * @return a new SubstraitRelVisitor instance
    */
   public SubstraitRelVisitor getSubstraitRelVisitor() {
     return new SubstraitRelVisitor(this);
@@ -164,6 +210,9 @@ public class ConverterProvider {
   /**
    * A {@link RexExpressionConverter} converts Calcite {@link org.apache.calcite.rex.RexNode}s to
    * Substrait equivalents.
+   *
+   * @param srv the SubstraitRelVisitor to use for nested relation conversions
+   * @return a new RexExpressionConverter instance
    */
   public RexExpressionConverter getRexExpressionConverter(SubstraitRelVisitor srv) {
     return new RexExpressionConverter(
@@ -173,6 +222,8 @@ public class ConverterProvider {
   /**
    * {@link CallConverter}s are used to convert Calcite {@link org.apache.calcite.rex.RexCall}s to
    * Substrait equivalents.
+   *
+   * @return a list of CallConverter instances
    */
   public List<CallConverter> getCallConverters() {
     ArrayList<CallConverter> callConverters = new ArrayList<>();
@@ -196,6 +247,8 @@ public class ConverterProvider {
    * based on the leaf nodes of a Substrait plan.
    *
    * <p>Override to customize the schema generation behaviour
+   *
+   * @return a function that resolves a Rel to a CalciteSchema
    */
   public Function<Rel, CalciteSchema> getSchemaResolver() {
     SchemaCollector schemaCollector = new SchemaCollector(this);
@@ -205,6 +258,9 @@ public class ConverterProvider {
   /**
    * A {@link SubstraitRelNodeConverter} is used when converting from Substrait {@link Rel}s to
    * Calcite {@link org.apache.calcite.rel.RelNode}s.
+   *
+   * @param relBuilder the RelBuilder to use for creating Calcite RelNodes
+   * @return a new SubstraitRelNodeConverter instance
    */
   public SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
     return new SubstraitRelNodeConverter(relBuilder, this);
@@ -213,6 +269,9 @@ public class ConverterProvider {
   /**
    * A {@link ExpressionRexConverter} converts Substrait {@link io.substrait.expression.Expression}
    * to Calcite equivalents
+   *
+   * @param relNodeConverter the SubstraitRelNodeConverter to use for nested relation conversions
+   * @return a new ExpressionRexConverter instance
    */
   public ExpressionRexConverter getExpressionRexConverter(
       SubstraitRelNodeConverter relNodeConverter) {
@@ -227,8 +286,11 @@ public class ConverterProvider {
   }
 
   /**
-   * A {@link RelBuilder} is a Calcite class used as a factory for creating {@link
+   * A {@link RelBuilder} is a Calcite class used for creating {@link
    * org.apache.calcite.rel.RelNode}s.
+   *
+   * @param schema the CalciteSchema to use as the default schema
+   * @return a new RelBuilder instance
    */
   public RelBuilder getRelBuilder(CalciteSchema schema) {
     return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
@@ -236,26 +298,56 @@ public class ConverterProvider {
 
   // Utility Getters
 
+  /**
+   * Returns the Calcite type factory used by this converter provider.
+   *
+   * @return the type factory
+   */
   public RelDataTypeFactory getTypeFactory() {
     return typeFactory;
   }
 
+  /**
+   * Returns the Substrait extension collection used by this converter provider.
+   *
+   * @return the extension collection
+   */
   public SimpleExtension.ExtensionCollection getExtensions() {
     return extensions;
   }
 
+  /**
+   * Returns the scalar function converter used by this converter provider.
+   *
+   * @return the scalar function converter
+   */
   public ScalarFunctionConverter getScalarFunctionConverter() {
     return scalarFunctionConverter;
   }
 
+  /**
+   * Returns the aggregate function converter used by this converter provider.
+   *
+   * @return the aggregate function converter
+   */
   public AggregateFunctionConverter getAggregateFunctionConverter() {
     return aggregateFunctionConverter;
   }
 
+  /**
+   * Returns the window function converter used by this converter provider.
+   *
+   * @return the window function converter
+   */
   public WindowFunctionConverter getWindowFunctionConverter() {
     return windowFunctionConverter;
   }
 
+  /**
+   * Returns the type converter used by this converter provider.
+   *
+   * @return the type converter
+   */
   public TypeConverter getTypeConverter() {
     return typeConverter;
   }

@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: gradle/actions/wrapper-validation@v5
+      - uses: gradle/actions/wrapper-validation@v6
   osv-scanner:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -40,7 +40,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
       - name: Scan
         run: make component=${{ matrix.project }} scan
   java:
@@ -56,7 +56,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
       - name: Build with Gradle
         run: |
           # fetch submodule tags since actions/checkout@v6 does not
@@ -79,7 +79,7 @@ jobs:
         java-version: 25
         distribution: graalvm
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v5
+      uses: gradle/actions/setup-gradle@v6
     - name: Report Java Version
       run: java -version
     - name: Build with Gradle
