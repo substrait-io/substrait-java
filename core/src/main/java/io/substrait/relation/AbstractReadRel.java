@@ -1,6 +1,8 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.MaskExpression;
+import io.substrait.expression.MaskExpressionTypeProjector;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.util.Optional;
@@ -33,11 +35,13 @@ public abstract class AbstractReadRel extends ZeroInputRel implements HasExtensi
    */
   public abstract Optional<Expression> getBestEffortFilter();
 
-  // TODO:
-  // public abstract Optional<MaskExpression>
+  public abstract Optional<MaskExpression> getProjection();
 
   @Override
   protected final Type.Struct deriveRecordType() {
-    return getInitialSchema().struct();
+    Type.Struct base = getInitialSchema().struct();
+    return getProjection()
+        .map(projection -> MaskExpressionTypeProjector.project(projection, base))
+        .orElse(base);
   }
 }

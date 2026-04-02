@@ -2,7 +2,9 @@ package io.substrait.relation;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.MaskExpression;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.expression.proto.ProtoMaskExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
@@ -455,7 +457,8 @@ public class ProtoRelConverter {
                         ? new ProtoExpressionConverter(
                                 lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
-                        : null));
+                        : null))
+            .projection(optionalMaskExpression(rel));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -475,6 +478,7 @@ public class ProtoRelConverter {
         ExtensionTable.from(detail).initialSchema(namedStruct);
 
     builder
+        .projection(optionalMaskExpression(rel))
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()));
@@ -507,7 +511,8 @@ public class ProtoRelConverter {
                         ? new ProtoExpressionConverter(
                                 lookup, extensions, namedStruct.struct(), this)
                             .from(rel.getFilter())
-                        : null));
+                        : null))
+            .projection(optionalMaskExpression(rel));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -614,7 +619,8 @@ public class ProtoRelConverter {
                     rel.hasBestEffortFilter() ? converter.from(rel.getBestEffortFilter()) : null))
             .filter(Optional.ofNullable(rel.hasFilter() ? converter.from(rel.getFilter()) : null))
             .initialSchema(NamedStruct.fromProto(rel.getBaseSchema(), protoTypeConverter))
-            .rows(expressions);
+            .rows(expressions)
+            .projection(optionalMaskExpression(rel));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
@@ -1208,6 +1214,11 @@ public class ProtoRelConverter {
         relCommon.hasAdvancedExtension()
             ? protoExtensionConverter.fromProto(relCommon.getAdvancedExtension())
             : null);
+  }
+
+  protected Optional<MaskExpression> optionalMaskExpression(ReadRel rel) {
+    return Optional.ofNullable(
+        rel.hasProjection() ? ProtoMaskExpressionConverter.fromProto(rel.getProjection()) : null);
   }
 
   /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */
