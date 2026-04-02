@@ -2,10 +2,23 @@ package io.substrait.extension;
 
 import java.util.Map;
 
+/**
+ * Abstract base class for {@link ExtensionLookup} implementations that use maps to resolve
+ * extension references to their corresponding function and type anchors.
+ */
 public abstract class AbstractExtensionLookup implements ExtensionLookup {
+  /** Map of function reference IDs to their corresponding function anchors. */
   protected final Map<Integer, SimpleExtension.FunctionAnchor> functionAnchorMap;
+
+  /** Map of type reference IDs to their corresponding type anchors. */
   protected final Map<Integer, SimpleExtension.TypeAnchor> typeAnchorMap;
 
+  /**
+   * Constructs an AbstractExtensionLookup with the provided anchor maps.
+   *
+   * @param functionAnchorMap map of function reference IDs to function anchors
+   * @param typeAnchorMap map of type reference IDs to type anchors
+   */
   public AbstractExtensionLookup(
       Map<Integer, SimpleExtension.FunctionAnchor> functionAnchorMap,
       Map<Integer, SimpleExtension.TypeAnchor> typeAnchorMap) {

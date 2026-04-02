@@ -3,6 +3,7 @@ plugins {
   signing
   id("java-library")
   id("idea")
+  id("eclipse")
   alias(libs.plugins.shadow)
   alias(libs.plugins.spotless)
   alias(libs.plugins.protobuf)
@@ -154,10 +155,13 @@ tasks.named<Javadoc>("javadoc") {
   description = "Generate Javadoc for main sources."
 
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
-  (options as StandardJavadocDocletOptions).apply {
+  options {
+    require(this is StandardJavadocDocletOptions)
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/isthmus").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/isthmus/src/main/javadoc/overview.html")
+    addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
     links("../core-proto/")
     links("../core/")
     links("https://calcite.apache.org/javadocAggregate/")
@@ -174,4 +178,22 @@ tasks.named<Jar>("javadocJar") {
   // Ensure javadoc tasks have produced output
   // Handle duplicate files (e.g., allclasses-index.html) from multiple javadoc tasks
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// workaround for Eclipse/VS Code bug handling annotationProcessor sources
+// https://github.com/redhat-developer/vscode-java/issues/2981
+eclipse {
+  classpath {
+    containers("org.eclipse.buildship.core.gradleclasspathcontainer")
+    file.whenMerged {
+      if (this is org.gradle.plugins.ide.eclipse.model.Classpath) {
+        entries.add(
+          org.gradle.plugins.ide.eclipse.model.SourceFolder(
+            "build/generated/sources/annotationProcessor/java/main",
+            null,
+          )
+        )
+      }
+    }
+  }
 }

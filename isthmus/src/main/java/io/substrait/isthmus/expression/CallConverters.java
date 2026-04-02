@@ -16,12 +16,29 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Collection of small, composable {@link CallConverter}s for common Calcite {@link RexCall}s (e.g.,
+ * CAST, CASE, REINTERPRET, SEARCH). Each converter returns a Substrait {@link Expression} or {@code
+ * null} when the call is not handled.
+ *
+ * <p>Use {@link #defaults(TypeConverter)} to get a standard set.
+ */
 public class CallConverters {
 
+  /**
+   * Converter for {@link SqlKind#CAST} and {@link SqlKind#SAFE_CAST} to Substrait {@link
+   * Expression.Cast}.
+   *
+   * <p>On SAFE_CAST, sets {@link Expression.FailureBehavior#RETURN_NULL}; otherwise
+   * THROW_EXCEPTION.
+   *
+   * @see ExpressionCreator#cast(Type, Expression, Expression.FailureBehavior)
+   */
   public static Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->
           (call, visitor) -> {
@@ -149,7 +166,28 @@ public class CallConverters {
         return ExpressionCreator.struct(false, literals);
       };
 
-  /** */
+  /**
+   * Converter for {@link SqlKind#CASE} expressions to a Substrait {@link Expression.IfThen}.
+   *
+   * <p>The Calcite {@code CASE} call is expected to have an odd number of operands, arranged as
+   * alternating {@code WHEN}/{@code THEN} pairs followed by a final {@code ELSE} expression:
+   *
+   * <pre>
+   *   CASE
+   *     WHEN cond1 THEN result1
+   *     WHEN cond2 THEN result2
+   *     ...
+   *     ELSE defaultResult
+   *   END
+   * </pre>
+   *
+   * <p>Each {@code WHEN}/{@code THEN} pair is converted into an {@link Expression.IfClause}, and
+   * the final operand becomes the default (else) expression. The order of conditions is preserved
+   * to maintain Calcite evaluation semantics.
+   *
+   * <p>This converter assumes that operand expressions have already been converted by the provided
+   * top-level visitor.
+   */
   public static SimpleCallConverter CASE =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.CASE) {
@@ -182,6 +220,9 @@ public class CallConverters {
    * Expand {@link org.apache.calcite.util.Sarg} values in a calcite `SqlSearchOperator` into
    * simpler expressions. The expansion logic is encoded in {@link RexUtil#expandSearch(RexBuilder,
    * RexProgram, RexNode)}
+   *
+   * <p>Returns a {@link SimpleCallConverter} that expands SEARCH calls using the provided {@link
+   * RexBuilder}
    */
   public static Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
       (RexBuilder rexBuilder) ->
@@ -195,6 +236,12 @@ public class CallConverters {
             }
           };
 
+  /**
+   * Returns the default set of converters for common calls.
+   *
+   * @param typeConverter type mapper between Substrait and Calcite types
+   * @return list of default {@link CallConverter}s
+   */
   public static List<CallConverter> defaults(TypeConverter typeConverter) {
     return ImmutableList.of(
         new FieldSelectionConverter(typeConverter),
@@ -206,10 +253,26 @@ public class CallConverters {
         new SqlMapValueConstructorCallConverter());
   }
 
+  /** Minimal interface for single-call converters used by {@link CallConverter}. */
   public interface SimpleCallConverter extends CallConverter {
 
+    /**
+     * Converts a given {@link RexCall} to a Substrait {@link Expression}, or returns {@code null}
+     * if not handled.
+     *
+     * @param call the Calcite call to convert
+     * @param topLevelConverter converter for nested {@link RexNode} operands
+     * @return converted expression, or {@code null} if not applicable
+     */
     @Nullable Expression apply(RexCall call, Function<RexNode, Expression> topLevelConverter);
 
+    /**
+     * Default adapter to CallConverter#apply(RexCall, Function).
+     *
+     * @param call the Calcite call to convert
+     * @param topLevelConverter converter for nested {@link RexNode} operands
+     * @return optional converted expression
+     */
     @Override
     default Optional<Expression> convert(
         RexCall call, Function<RexNode, Expression> topLevelConverter) {

@@ -83,13 +83,34 @@ public class ExpressionRexConverter
 
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
 
+  /** Calcite {@link RelDataTypeFactory} used for creating and managing relational types. */
   protected final RelDataTypeFactory typeFactory;
+
+  /** Converter for mapping between Substrait and Calcite types. */
   protected final TypeConverter typeConverter;
+
+  /** Calcite {@link RexBuilder} for constructing {@link org.apache.calcite.rex.RexNode}s. */
   protected final RexBuilder rexBuilder;
+
+  /** Converter for Substrait scalar function invocations to Calcite {@link SqlOperator}s. */
   protected final ScalarFunctionConverter scalarFunctionConverter;
+
+  /** Converter for Substrait window function invocations to Calcite {@link SqlOperator}s. */
   protected final WindowFunctionConverter windowFunctionConverter;
+
+  /** Converter for Substrait relational nodes to Calcite {@link RelNode}s, used for subqueries. */
   protected SubstraitRelNodeConverter relNodeConverter;
 
+  /**
+   * Creates an {@code ExpressionRexConverter} for converting Substrait expressions to Calcite Rex
+   * nodes.
+   *
+   * @param typeFactory Calcite {@link org.apache.calcite.rel.type.RelDataTypeFactory} for type
+   *     creation
+   * @param scalarFunctionConverter converter for scalar function invocations
+   * @param windowFunctionConverter converter for window function invocations
+   * @param typeConverter converter for Substrait ↔ Calcite type mappings
+   */
   public ExpressionRexConverter(
       RelDataTypeFactory typeFactory,
       ScalarFunctionConverter scalarFunctionConverter,
@@ -102,6 +123,11 @@ public class ExpressionRexConverter
     this.windowFunctionConverter = windowFunctionConverter;
   }
 
+  /**
+   * Sets the {@link SubstraitRelNodeConverter} used for converting subqueries.
+   *
+   * @param substraitRelNodeConverter converter for Substrait relational nodes
+   */
   public void setRelNodeConverter(final SubstraitRelNodeConverter substraitRelNodeConverter) {
     this.relNodeConverter = substraitRelNodeConverter;
   }
@@ -226,6 +252,23 @@ public class ExpressionRexConverter
         createTimeString(expr.value(), expr.precision()), expr.precision());
   }
 
+  /**
+   * Creates a TimeString from a time value with the specified precision.
+   *
+   * <p>The time unit for the value is dictated by the supplied precision, with the following valid
+   * values:
+   *
+   * <ul>
+   *   <li>0 - seconds
+   *   <li>3 - milliseconds
+   *   <li>6 - microseconds
+   *   <li>9 - nanoseconds
+   * </ul>
+   *
+   * @param value the time value in the appropriate unit based on precision
+   * @param precision the precision level
+   * @return a TimeString representing the time value
+   */
   protected TimeString createTimeString(long value, int precision) {
     switch (precision) {
       case 0:

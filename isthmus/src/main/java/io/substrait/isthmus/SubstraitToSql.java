@@ -18,18 +18,31 @@ import org.apache.calcite.sql.SqlDialect;
  */
 public class SubstraitToSql extends SqlConverterBase {
 
+  /** The Substrait-to-Calcite converter. */
   protected SubstraitToCalcite substraitToCalcite;
 
+  /** Creates a SubstraitToSql converter with default configuration and extensions. */
   public SubstraitToSql() {
     this(new ConverterProvider());
   }
 
-  /** Deprecated, use {@link #SubstraitToSql(ConverterProvider)} instead */
+  /**
+   * Creates a SubstraitToSql converter with default configuration and the specified extensions.
+   *
+   * @param extensions the extension collection to use
+   * @deprecated use {@link #SubstraitToSql(ConverterProvider)} instead
+   */
   @Deprecated
   public SubstraitToSql(SimpleExtension.ExtensionCollection extensions) {
     this(new ConverterProvider(extensions));
   }
 
+  /**
+   * Creates a SubstraitToSql converter with configuration and extensions specified by the converter
+   * provider.
+   *
+   * @param converterProvider the converter provider containing configuration
+   */
   public SubstraitToSql(ConverterProvider converterProvider) {
     super(converterProvider);
     substraitToCalcite = converterProvider.getSubstraitToCalcite();

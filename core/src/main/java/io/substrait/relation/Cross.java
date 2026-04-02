@@ -6,6 +6,10 @@ import io.substrait.util.VisitationContext;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
+/**
+ * Represents a cross product (Cartesian product) relation that combines all rows from the left
+ * input with all rows from the right input.
+ */
 @Value.Immutable
 public abstract class Cross extends BiRel implements HasExtension {
 
@@ -23,6 +27,11 @@ public abstract class Cross extends BiRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a new builder for constructing a Cross relation.
+   *
+   * @return a new builder instance
+   */
   public static ImmutableCross.Builder builder() {
     return ImmutableCross.builder();
   }

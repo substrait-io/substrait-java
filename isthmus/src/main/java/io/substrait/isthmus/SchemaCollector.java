@@ -37,6 +37,11 @@ public class SchemaCollector {
     this.typeConverter = typeConverter;
   }
 
+  /**
+   * Creates a SchemaCollector using configuration from the provider.
+   *
+   * @param converterProvider the converter provider containing type factory and type converter
+   */
   public SchemaCollector(ConverterProvider converterProvider) {
     this.typeFactory = converterProvider.getTypeFactory();
     this.typeConverter = converterProvider.getTypeConverter();
