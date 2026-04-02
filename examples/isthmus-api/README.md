@@ -22,6 +22,8 @@ The examples:
 - [ToSql](./src/main/java/io/substrait/examples/ToSQL.java) - reads a plan and creates the SQL
 - [DynamicFnToSql](./src/main/java/io/substrait/examples/DynamicFnToSql.java) - uses the `substrait-java` API to create a plan using a Dynamic Function
 - [CustomDialectDynamicFnToSql](./src/main/java/io/substrait/examples/CustomDialectDynamicFnToSql.java) - using the same approach with a dynamic function but using a custom SQL dialect to make it applicable to SparkSQL
+- [ToOptimizedSql](./src/main/java/io/substrait/examples/ToOptimizedSql.java) - using a subclass of `ConverterProivder` to allow use of the Calcite optimizer ahead of conversion to SQL.
+
 ### Requirements
 
 To run these you will need Java 17 or greater, and this repository cloned to your local system.
