@@ -4,7 +4,9 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 
-/** Applies a {@link MaskExpression} projection to a {@link Type.Struct}, returning a pruned struct. */
+/**
+ * Applies a {@link MaskExpression} projection to a {@link Type.Struct}, returning a pruned struct.
+ */
 public final class MaskExpressionTypeProjector {
 
   private MaskExpressionTypeProjector() {}
@@ -57,15 +59,15 @@ public final class MaskExpressionTypeProjector {
     Type elementType = listType.elementType();
 
     if (childSelect.getStruct().isPresent() && elementType instanceof Type.Struct) {
-      Type.Struct prunedElement = projectStruct(childSelect.getStruct().get(), (Type.Struct) elementType);
+      Type.Struct prunedElement =
+          projectStruct(childSelect.getStruct().get(), (Type.Struct) elementType);
       return TypeCreator.of(listType.nullable()).list(prunedElement);
     }
 
     return listType;
   }
 
-  private static Type.Map projectMap(
-      MaskExpression.MapSelect mapSelect, Type.Map mapType) {
+  private static Type.Map projectMap(MaskExpression.MapSelect mapSelect, Type.Map mapType) {
     if (!mapSelect.getChild().isPresent()) {
       return mapType;
     }
@@ -74,7 +76,8 @@ public final class MaskExpressionTypeProjector {
     Type valueType = mapType.value();
 
     if (childSelect.getStruct().isPresent() && valueType instanceof Type.Struct) {
-      Type.Struct prunedValue = projectStruct(childSelect.getStruct().get(), (Type.Struct) valueType);
+      Type.Struct prunedValue =
+          projectStruct(childSelect.getStruct().get(), (Type.Struct) valueType);
       return TypeCreator.of(mapType.nullable()).map(mapType.key(), prunedValue);
     }
 

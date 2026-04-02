@@ -445,8 +445,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void recordTypeReflectsSimpleProjection() {
     List<String> tableName = Stream.of("my_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select fields 0 (I32) and 2 (I64), skipping field 1 (STRING)
@@ -472,8 +471,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void recordTypeReflectsNestedStructProjection() {
     List<String> tableName = Stream.of("nested_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("outer_struct", "simple_col").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("outer_struct", "simple_col").collect(Collectors.toList());
     List<Type> columnTypes =
         Stream.of(R.struct(R.I32, R.STRING, R.I64), R.I32).collect(Collectors.toList());
 
@@ -586,8 +584,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void recordTypeWithoutProjection() {
     List<String> tableName = Stream.of("full_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     NamedScan namedScan = sb.namedScan(tableName, columnNames, columnTypes);
@@ -600,8 +597,7 @@ class ReadRelRoundtripTest extends TestBase {
   @Test
   void recordTypeWithProjectionAndRemap() {
     List<String> tableName = Stream.of("remap_table").collect(Collectors.toList());
-    List<String> columnNames =
-        Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("col_a", "col_b", "col_c").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select fields 0 (I32) and 2 (I64), then remap to reverse order: [1, 0] -> (I64, I32)
