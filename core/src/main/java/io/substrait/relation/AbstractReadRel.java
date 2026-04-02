@@ -15,7 +15,7 @@ public abstract class AbstractReadRel extends ZeroInputRel implements HasExtensi
 
   public abstract Optional<Expression> getBestEffortFilter();
 
-  public abstract Optional<MaskExpression.MaskExpr> getProjection();
+  public abstract Optional<MaskExpression> getProjection();
 
   @Override
   protected final Type.Struct deriveRecordType() {

@@ -1216,7 +1216,7 @@ public class ProtoRelConverter {
             : null);
   }
 
-  protected Optional<MaskExpression.MaskExpr> optionalMaskExpression(ReadRel rel) {
+  protected Optional<MaskExpression> optionalMaskExpression(ReadRel rel) {
     return Optional.ofNullable(
         rel.hasProjection() ? ProtoMaskExpressionConverter.fromProto(rel.getProjection()) : null);
   }

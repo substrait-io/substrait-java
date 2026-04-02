@@ -5,7 +5,6 @@ import io.substrait.expression.MaskExpression;
 import io.substrait.expression.MaskExpression.ListSelect;
 import io.substrait.expression.MaskExpression.ListSelectItem;
 import io.substrait.expression.MaskExpression.MapSelect;
-import io.substrait.expression.MaskExpression.MaskExpr;
 import io.substrait.expression.MaskExpression.Select;
 import io.substrait.expression.MaskExpression.StructItem;
 import io.substrait.expression.MaskExpression.StructSelect;
@@ -16,8 +15,8 @@ public final class ProtoMaskExpressionConverter {
 
   private ProtoMaskExpressionConverter() {}
 
-  public static MaskExpr fromProto(Expression.MaskExpression proto) {
-    return MaskExpr.builder()
+  public static MaskExpression.Mask fromProto(Expression.MaskExpression proto) {
+    return MaskExpression.Mask.builder()
         .select(fromProto(proto.getSelect()))
         .maintainSingularStruct(proto.getMaintainSingularStruct())
         .build();

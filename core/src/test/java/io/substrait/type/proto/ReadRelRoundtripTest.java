@@ -98,8 +98,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select columns 0 and 2
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(0))
@@ -124,8 +124,8 @@ class ReadRelRoundtripTest extends TestBase {
         Stream.of(R.struct(R.I32, R.STRING, R.I64), R.I32).collect(Collectors.toList());
 
     // Select field 0, but within it only subfields 0 and 2
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -156,8 +156,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes = Stream.of(R.list(R.I32), R.I64).collect(Collectors.toList());
 
     // Select field 0 with list element and slice selection, and field 1
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -191,8 +191,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes = Stream.of(R.map(R.STRING, R.I32), R.I64).collect(Collectors.toList());
 
     // Select field 0 with map key selection, and field 1
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -217,8 +217,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<String> columnNames = Stream.of("map_col").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.map(R.STRING, R.I32)).collect(Collectors.toList());
 
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -240,8 +240,8 @@ class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void virtualTableWithProjection() {
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(0))
@@ -267,8 +267,8 @@ class ReadRelRoundtripTest extends TestBase {
 
   @Test
   void localFilesWithProjection() {
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(1))
@@ -302,8 +302,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<String> columnNames = Stream.of("col_a", "col_b").collect(Collectors.toList());
     List<Type> columnTypes = Stream.of(R.I64, R.I64).collect(Collectors.toList());
 
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(0))
@@ -331,8 +331,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes =
         Stream.of(R.list(R.struct(R.I32, R.STRING, R.I64)), R.I64).collect(Collectors.toList());
 
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -369,8 +369,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes =
         Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING)), R.I64).collect(Collectors.toList());
 
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -404,8 +404,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes =
         Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING))).collect(Collectors.toList());
 
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -437,8 +437,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select fields 0 (I32) and 2 (I64), skipping field 1 (STRING)
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(0))
@@ -464,8 +464,8 @@ class ReadRelRoundtripTest extends TestBase {
         Stream.of(R.struct(R.I32, R.STRING, R.I64), R.I32).collect(Collectors.toList());
 
     // Select field 0 with child struct selecting subfields 0 (I32) and 2 (I64), plus field 1 (I32)
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -497,8 +497,8 @@ class ReadRelRoundtripTest extends TestBase {
         Stream.of(R.list(R.struct(R.I32, R.STRING, R.I64)), R.I64).collect(Collectors.toList());
 
     // Select field 0 with list child selecting struct subfields 0 (I32) and 2 (I64), plus field 1
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -536,8 +536,8 @@ class ReadRelRoundtripTest extends TestBase {
         Stream.of(R.map(R.STRING, R.struct(R.I32, R.STRING)), R.I64).collect(Collectors.toList());
 
     // Select field 0 with map child selecting struct subfield 1 (STRING), plus field 1
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
@@ -584,8 +584,8 @@ class ReadRelRoundtripTest extends TestBase {
     List<Type> columnTypes = Stream.of(R.I32, R.STRING, R.I64).collect(Collectors.toList());
 
     // Select fields 0 (I32) and 2 (I64), then remap to reverse order: [1, 0] -> (I64, I32)
-    MaskExpression.MaskExpr projection =
-        MaskExpression.MaskExpr.builder()
+    MaskExpression projection =
+        MaskExpression.builder()
             .select(
                 MaskExpression.StructSelect.builder()
                     .addStructItems(MaskExpression.StructItem.of(0))

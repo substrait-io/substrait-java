@@ -17,27 +17,31 @@ import org.immutables.value.Value;
 @Value.Enclosing
 public interface MaskExpression {
 
+  /** The top-level struct selection describing which fields to include. */
+  StructSelect getSelect();
+
+  /**
+   * When {@code true}, a struct that has only a single selected field will <em>not</em> be
+   * unwrapped into its child type.
+   */
+  @Value.Default
+  default boolean getMaintainSingularStruct() {
+    return false;
+  }
+
+  static ImmutableMaskExpression.Mask.Builder builder() {
+    return ImmutableMaskExpression.Mask.builder();
+  }
+
   // ---------------------------------------------------------------------------
   // Top-level MaskExpression value
   // ---------------------------------------------------------------------------
 
   /** The concrete mask expression value holding the top-level struct selection and options. */
   @Value.Immutable
-  interface MaskExpr {
-    /** The top-level struct selection describing which fields to include. */
-    StructSelect getSelect();
-
-    /**
-     * When {@code true}, a struct that has only a single selected field will <em>not</em> be
-     * unwrapped into its child type.
-     */
-    @Value.Default
-    default boolean getMaintainSingularStruct() {
-      return false;
-    }
-
-    static ImmutableMaskExpression.MaskExpr.Builder builder() {
-      return ImmutableMaskExpression.MaskExpr.builder();
+  interface Mask extends MaskExpression {
+    static ImmutableMaskExpression.Mask.Builder builder() {
+      return ImmutableMaskExpression.Mask.builder();
     }
   }
 

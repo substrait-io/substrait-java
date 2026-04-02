@@ -11,7 +11,7 @@ public final class MaskExpressionTypeProjector {
 
   private MaskExpressionTypeProjector() {}
 
-  public static Type.Struct project(MaskExpression.MaskExpr projection, Type.Struct baseStruct) {
+  public static Type.Struct project(MaskExpression projection, Type.Struct baseStruct) {
     return projectStruct(projection.getSelect(), baseStruct);
   }
 
