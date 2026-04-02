@@ -3,8 +3,8 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.MaskExpression;
-import io.substrait.expression.proto.MaskExpressionProtoConverter;
 import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.expression.proto.ProtoMaskExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
@@ -1218,7 +1218,7 @@ public class ProtoRelConverter {
 
   protected Optional<MaskExpression.MaskExpr> optionalMaskExpression(ReadRel rel) {
     return Optional.ofNullable(
-        rel.hasProjection() ? MaskExpressionProtoConverter.fromProto(rel.getProjection()) : null);
+        rel.hasProjection() ? ProtoMaskExpressionConverter.fromProto(rel.getProjection()) : null);
   }
 
   /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */
