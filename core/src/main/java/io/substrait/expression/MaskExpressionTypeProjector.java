@@ -31,19 +31,16 @@ public final class MaskExpressionTypeProjector {
 
     MaskExpression.Select select = item.getChild().get();
 
-    if (select.getStruct().isPresent()) {
-      Type.Struct structField = (Type.Struct) fieldType;
-      return projectStruct(select.getStruct().get(), structField);
+    if (select instanceof MaskExpression.StructSelect) {
+      return projectStruct((MaskExpression.StructSelect) select, (Type.Struct) fieldType);
     }
 
-    if (select.getList().isPresent()) {
-      Type.ListType listField = (Type.ListType) fieldType;
-      return projectList(select.getList().get(), listField);
+    if (select instanceof MaskExpression.ListSelect) {
+      return projectList((MaskExpression.ListSelect) select, (Type.ListType) fieldType);
     }
 
-    if (select.getMap().isPresent()) {
-      Type.Map mapField = (Type.Map) fieldType;
-      return projectMap(select.getMap().get(), mapField);
+    if (select instanceof MaskExpression.MapSelect) {
+      return projectMap((MaskExpression.MapSelect) select, (Type.Map) fieldType);
     }
 
     return fieldType;
@@ -58,9 +55,9 @@ public final class MaskExpressionTypeProjector {
     MaskExpression.Select childSelect = listSelect.getChild().get();
     Type elementType = listType.elementType();
 
-    if (childSelect.getStruct().isPresent() && elementType instanceof Type.Struct) {
+    if (childSelect instanceof MaskExpression.StructSelect && elementType instanceof Type.Struct) {
       Type.Struct prunedElement =
-          projectStruct(childSelect.getStruct().get(), (Type.Struct) elementType);
+          projectStruct((MaskExpression.StructSelect) childSelect, (Type.Struct) elementType);
       return TypeCreator.of(listType.nullable()).list(prunedElement);
     }
 
@@ -75,9 +72,9 @@ public final class MaskExpressionTypeProjector {
     MaskExpression.Select childSelect = mapSelect.getChild().get();
     Type valueType = mapType.value();
 
-    if (childSelect.getStruct().isPresent() && valueType instanceof Type.Struct) {
+    if (childSelect instanceof MaskExpression.StructSelect && valueType instanceof Type.Struct) {
       Type.Struct prunedValue =
-          projectStruct(childSelect.getStruct().get(), (Type.Struct) valueType);
+          projectStruct((MaskExpression.StructSelect) childSelect, (Type.Struct) valueType);
       return TypeCreator.of(mapType.nullable()).map(mapType.key(), prunedValue);
     }
 

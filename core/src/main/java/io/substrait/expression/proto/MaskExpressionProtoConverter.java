@@ -45,22 +45,17 @@ public final class MaskExpressionProtoConverter {
   }
 
   private static Select fromProtoSelect(Expression.MaskExpression.Select proto) {
-    ImmutableMaskExpression.Select.Builder builder = Select.builder();
     switch (proto.getTypeCase()) {
       case STRUCT:
-        builder.struct(fromProto(proto.getStruct()));
-        break;
+        return fromProto(proto.getStruct());
       case LIST:
-        builder.list(fromProtoListSelect(proto.getList()));
-        break;
+        return fromProtoListSelect(proto.getList());
       case MAP:
-        builder.map(fromProtoMapSelect(proto.getMap()));
-        break;
+        return fromProtoMapSelect(proto.getMap());
       default:
         throw new IllegalArgumentException(
             "Unknown MaskExpression.Select type: " + proto.getTypeCase());
     }
-    return builder.build();
   }
 
   private static ListSelect fromProtoListSelect(Expression.MaskExpression.ListSelect proto) {
@@ -140,9 +135,13 @@ public final class MaskExpressionProtoConverter {
   private static Expression.MaskExpression.Select toProtoSelect(Select select) {
     Expression.MaskExpression.Select.Builder builder =
         Expression.MaskExpression.Select.newBuilder();
-    select.getStruct().ifPresent(s -> builder.setStruct(toProto(s)));
-    select.getList().ifPresent(l -> builder.setList(toProtoListSelect(l)));
-    select.getMap().ifPresent(m -> builder.setMap(toProtoMapSelect(m)));
+    if (select instanceof MaskExpression.StructSelect) {
+      builder.setStruct(toProto((MaskExpression.StructSelect) select));
+    } else if (select instanceof MaskExpression.ListSelect) {
+      builder.setList(toProtoListSelect((MaskExpression.ListSelect) select));
+    } else if (select instanceof MaskExpression.MapSelect) {
+      builder.setMap(toProtoMapSelect((MaskExpression.MapSelect) select));
+    }
     return builder.build();
   }
 

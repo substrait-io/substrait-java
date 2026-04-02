@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import io.substrait.util.VisitationContext;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
@@ -44,30 +45,10 @@ public interface MaskExpression {
   // Select – a union of StructSelect | ListSelect | MapSelect
   // ---------------------------------------------------------------------------
 
-  /** A selection on a complex type – exactly one of struct, list, or map must be set. */
-  @Value.Immutable
+  /** A selection on a complex type – one of StructSelect, ListSelect, or MapSelect. */
   interface Select {
-    Optional<StructSelect> getStruct();
-
-    Optional<ListSelect> getList();
-
-    Optional<MapSelect> getMap();
-
-    static ImmutableMaskExpression.Select.Builder builder() {
-      return ImmutableMaskExpression.Select.builder();
-    }
-
-    static Select ofStruct(StructSelect structSelect) {
-      return builder().struct(structSelect).build();
-    }
-
-    static Select ofList(ListSelect listSelect) {
-      return builder().list(listSelect).build();
-    }
-
-    static Select ofMap(MapSelect mapSelect) {
-      return builder().map(mapSelect).build();
-    }
+    <R, C extends VisitationContext, E extends Throwable> R accept(
+        MaskExpressionVisitor<R, C, E> visitor, C context) throws E;
   }
 
   // ---------------------------------------------------------------------------
@@ -76,11 +57,17 @@ public interface MaskExpression {
 
   /** Selects a subset of fields from a struct type. */
   @Value.Immutable
-  interface StructSelect {
+  interface StructSelect extends Select {
     List<StructItem> getStructItems();
 
     static ImmutableMaskExpression.StructSelect.Builder builder() {
       return ImmutableMaskExpression.StructSelect.builder();
+    }
+
+    @Override
+    default <R, C extends VisitationContext, E extends Throwable> R accept(
+        MaskExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -112,7 +99,7 @@ public interface MaskExpression {
 
   /** Selects elements from a list type by index or slice. */
   @Value.Immutable
-  interface ListSelect {
+  interface ListSelect extends Select {
     List<ListSelectItem> getSelection();
 
     /** Optional child selection applied to each selected element. */
@@ -120,6 +107,12 @@ public interface MaskExpression {
 
     static ImmutableMaskExpression.ListSelect.Builder builder() {
       return ImmutableMaskExpression.ListSelect.builder();
+    }
+
+    @Override
+    default <R, C extends VisitationContext, E extends Throwable> R accept(
+        MaskExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
     }
   }
 
@@ -179,7 +172,7 @@ public interface MaskExpression {
 
   /** Selects entries from a map type by exact key or key expression. */
   @Value.Immutable
-  interface MapSelect {
+  interface MapSelect extends Select {
     Optional<MapKey> getKey();
 
     Optional<MapKeyExpression> getExpression();
@@ -197,6 +190,12 @@ public interface MaskExpression {
 
     static MapSelect ofExpression(MapKeyExpression expression) {
       return builder().expression(expression).build();
+    }
+
+    @Override
+    default <R, C extends VisitationContext, E extends Throwable> R accept(
+        MaskExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
     }
   }
 

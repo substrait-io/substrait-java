@@ -131,11 +131,10 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofStruct(
-                                MaskExpression.StructSelect.builder()
-                                    .addStructItems(MaskExpression.StructItem.of(0))
-                                    .addStructItems(MaskExpression.StructItem.of(2))
-                                    .build())))
+                            MaskExpression.StructSelect.builder()
+                                .addStructItems(MaskExpression.StructItem.of(0))
+                                .addStructItems(MaskExpression.StructItem.of(2))
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .maintainSingularStruct(true)
@@ -164,15 +163,14 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofList(
-                                MaskExpression.ListSelect.builder()
-                                    .addSelection(
-                                        MaskExpression.ListSelectItem.ofItem(
-                                            MaskExpression.ListElement.of(0)))
-                                    .addSelection(
-                                        MaskExpression.ListSelectItem.ofSlice(
-                                            MaskExpression.ListSlice.of(2, 5)))
-                                    .build())))
+                            MaskExpression.ListSelect.builder()
+                                .addSelection(
+                                    MaskExpression.ListSelectItem.ofItem(
+                                        MaskExpression.ListElement.of(0)))
+                                .addSelection(
+                                    MaskExpression.ListSelectItem.ofSlice(
+                                        MaskExpression.ListSlice.of(2, 5)))
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -199,10 +197,7 @@ class ReadRelRoundtripTest extends TestBase {
                 MaskExpression.StructSelect.builder()
                     .addStructItems(
                         MaskExpression.StructItem.of(
-                            0,
-                            MaskExpression.Select.ofMap(
-                                MaskExpression.MapSelect.ofKey(
-                                    MaskExpression.MapKey.of("my_key")))))
+                            0, MaskExpression.MapSelect.ofKey(MaskExpression.MapKey.of("my_key"))))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -229,9 +224,8 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofMap(
-                                MaskExpression.MapSelect.ofExpression(
-                                    MaskExpression.MapKeyExpression.of("prefix_*")))))
+                            MaskExpression.MapSelect.ofExpression(
+                                MaskExpression.MapKeyExpression.of("prefix_*"))))
                     .build())
             .build();
 
@@ -344,18 +338,16 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofList(
-                                MaskExpression.ListSelect.builder()
-                                    .addSelection(
-                                        MaskExpression.ListSelectItem.ofSlice(
-                                            MaskExpression.ListSlice.of(0, 5)))
-                                    .child(
-                                        MaskExpression.Select.ofStruct(
-                                            MaskExpression.StructSelect.builder()
-                                                .addStructItems(MaskExpression.StructItem.of(0))
-                                                .addStructItems(MaskExpression.StructItem.of(2))
-                                                .build()))
-                                    .build())))
+                            MaskExpression.ListSelect.builder()
+                                .addSelection(
+                                    MaskExpression.ListSelectItem.ofSlice(
+                                        MaskExpression.ListSlice.of(0, 5)))
+                                .child(
+                                    MaskExpression.StructSelect.builder()
+                                        .addStructItems(MaskExpression.StructItem.of(0))
+                                        .addStructItems(MaskExpression.StructItem.of(2))
+                                        .build())
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -384,15 +376,13 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofMap(
-                                MaskExpression.MapSelect.builder()
-                                    .key(MaskExpression.MapKey.of("user_info"))
-                                    .child(
-                                        MaskExpression.Select.ofStruct(
-                                            MaskExpression.StructSelect.builder()
-                                                .addStructItems(MaskExpression.StructItem.of(1))
-                                                .build()))
-                                    .build())))
+                            MaskExpression.MapSelect.builder()
+                                .key(MaskExpression.MapKey.of("user_info"))
+                                .child(
+                                    MaskExpression.StructSelect.builder()
+                                        .addStructItems(MaskExpression.StructItem.of(1))
+                                        .build())
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -421,15 +411,13 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofMap(
-                                MaskExpression.MapSelect.builder()
-                                    .expression(MaskExpression.MapKeyExpression.of("user_*"))
-                                    .child(
-                                        MaskExpression.Select.ofStruct(
-                                            MaskExpression.StructSelect.builder()
-                                                .addStructItems(MaskExpression.StructItem.of(0))
-                                                .build()))
-                                    .build())))
+                            MaskExpression.MapSelect.builder()
+                                .expression(MaskExpression.MapKeyExpression.of("user_*"))
+                                .child(
+                                    MaskExpression.StructSelect.builder()
+                                        .addStructItems(MaskExpression.StructItem.of(0))
+                                        .build())
+                                .build()))
                     .build())
             .build();
 
@@ -483,11 +471,10 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofStruct(
-                                MaskExpression.StructSelect.builder()
-                                    .addStructItems(MaskExpression.StructItem.of(0))
-                                    .addStructItems(MaskExpression.StructItem.of(2))
-                                    .build())))
+                            MaskExpression.StructSelect.builder()
+                                .addStructItems(MaskExpression.StructItem.of(0))
+                                .addStructItems(MaskExpression.StructItem.of(2))
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -517,18 +504,16 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofList(
-                                MaskExpression.ListSelect.builder()
-                                    .addSelection(
-                                        MaskExpression.ListSelectItem.ofSlice(
-                                            MaskExpression.ListSlice.of(0, 5)))
-                                    .child(
-                                        MaskExpression.Select.ofStruct(
-                                            MaskExpression.StructSelect.builder()
-                                                .addStructItems(MaskExpression.StructItem.of(0))
-                                                .addStructItems(MaskExpression.StructItem.of(2))
-                                                .build()))
-                                    .build())))
+                            MaskExpression.ListSelect.builder()
+                                .addSelection(
+                                    MaskExpression.ListSelectItem.ofSlice(
+                                        MaskExpression.ListSlice.of(0, 5)))
+                                .child(
+                                    MaskExpression.StructSelect.builder()
+                                        .addStructItems(MaskExpression.StructItem.of(0))
+                                        .addStructItems(MaskExpression.StructItem.of(2))
+                                        .build())
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
@@ -558,15 +543,13 @@ class ReadRelRoundtripTest extends TestBase {
                     .addStructItems(
                         MaskExpression.StructItem.of(
                             0,
-                            MaskExpression.Select.ofMap(
-                                MaskExpression.MapSelect.builder()
-                                    .key(MaskExpression.MapKey.of("any_key"))
-                                    .child(
-                                        MaskExpression.Select.ofStruct(
-                                            MaskExpression.StructSelect.builder()
-                                                .addStructItems(MaskExpression.StructItem.of(1))
-                                                .build()))
-                                    .build())))
+                            MaskExpression.MapSelect.builder()
+                                .key(MaskExpression.MapKey.of("any_key"))
+                                .child(
+                                    MaskExpression.StructSelect.builder()
+                                        .addStructItems(MaskExpression.StructItem.of(1))
+                                        .build())
+                                .build()))
                     .addStructItems(MaskExpression.StructItem.of(1))
                     .build())
             .build();
