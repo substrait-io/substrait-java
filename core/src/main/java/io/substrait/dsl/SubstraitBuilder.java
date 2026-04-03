@@ -1510,6 +1510,23 @@ public class SubstraitBuilder {
     return Type.UserDefined.builder().urn(urn).name(typeName).nullable(false).build();
   }
 
+  /**
+   * Creates a user-defined type with the specified URN, type name, and type variation.
+   *
+   * @param urn the URN of the extension containing the type
+   * @param typeName the name of the user-defined type
+   * @param typeVariationReference the type variation reference
+   * @return a new {@link Type.UserDefined}
+   */
+  public Type.UserDefined userDefinedType(String urn, String typeName, int typeVariationReference) {
+    return Type.UserDefined.builder()
+        .urn(urn)
+        .name(typeName)
+        .nullable(false)
+        .typeVariationReference(typeVariationReference)
+        .build();
+  }
+
   // Misc
 
   /**

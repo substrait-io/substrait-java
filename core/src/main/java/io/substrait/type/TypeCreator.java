@@ -115,6 +115,15 @@ public class TypeCreator {
     return Type.UserDefined.builder().nullable(nullable).urn(urn).name(name).build();
   }
 
+  public Type userDefined(String urn, String name, int typeVariationReference) {
+    return Type.UserDefined.builder()
+        .nullable(nullable)
+        .urn(urn)
+        .name(name)
+        .typeVariationReference(typeVariationReference)
+        .build();
+  }
+
   public static TypeCreator of(boolean nullability) {
     return nullability ? NULLABLE : REQUIRED;
   }

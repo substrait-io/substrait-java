@@ -441,8 +441,21 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
       return java.util.Collections.emptyList();
     }
 
+    /**
+     * Returns the type variation reference for this user-defined type.
+     *
+     * <p>Type variations allow different physical representations or semantics for the same logical
+     * type. The reference value maps to an {@code ExtensionTypeVariation} declaration in the plan.
+     *
+     * @return the type variation reference, or {@code 0} if using the default variation
+     */
+    // Note: Cannot use @Value.Default here due to an Immutables bug with @Value.Enclosing
+    // and multiple @Value.Default fields in the same class (generates broken InitShim code).
+    // The default value (0) is set in the builder() factory method below.
+    public abstract int typeVariationReference();
+
     public static ImmutableType.UserDefined.Builder builder() {
-      return ImmutableType.UserDefined.builder();
+      return ImmutableType.UserDefined.builder().typeVariationReference(0);
     }
 
     @Override
