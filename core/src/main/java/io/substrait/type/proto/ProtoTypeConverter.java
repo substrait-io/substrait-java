@@ -107,6 +107,7 @@ public class ProtoTypeConverter {
                   userDefined.getTypeParametersList().stream()
                       .map(this::from)
                       .collect(java.util.stream.Collectors.toList()))
+              .typeVariationReference(userDefined.getTypeVariationReference())
               .build();
         }
       case USER_DEFINED_TYPE_REFERENCE:

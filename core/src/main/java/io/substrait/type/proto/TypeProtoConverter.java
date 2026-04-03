@@ -181,17 +181,24 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type userDefined(int ref) {
+    public Type userDefined(int ref, int typeVariationReference) {
       return wrap(
-          Type.UserDefined.newBuilder().setTypeReference(ref).setNullability(nullability).build());
+          Type.UserDefined.newBuilder()
+              .setTypeReference(ref)
+              .setTypeVariationReference(typeVariationReference)
+              .setNullability(nullability)
+              .build());
     }
 
     @Override
     public Type userDefined(
-        int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
+        int ref,
+        int typeVariationReference,
+        java.util.List<io.substrait.type.Type.Parameter> typeParameters) {
       return wrap(
           Type.UserDefined.newBuilder()
               .setTypeReference(ref)
+              .setTypeVariationReference(typeVariationReference)
               .setNullability(nullability)
               .addAllTypeParameters(
                   typeParameters.stream()
