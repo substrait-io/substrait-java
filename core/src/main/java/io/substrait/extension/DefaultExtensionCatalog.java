@@ -76,14 +76,12 @@ public class DefaultExtensionCatalog {
     List<String> defaultFiles =
         Arrays.asList(
                 "boolean",
-                "aggregate_decimal_output",
                 "aggregate_generic",
                 "aggregate_approx",
                 "arithmetic_decimal",
                 "arithmetic",
                 "comparison",
                 "datetime",
-                "geometry",
                 "list",
                 "logarithmic",
                 "rounding",
@@ -91,10 +89,10 @@ public class DefaultExtensionCatalog {
                 "set",
                 "string")
             .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
+            .map(c -> String.format("/substrait/extensions/functions_%s.yaml", c))
             .collect(Collectors.toList());
 
-    defaultFiles.add("/extension_types.yaml");
+    defaultFiles.add("/substrait/extensions/extension_types.yaml");
 
     return SimpleExtension.load(defaultFiles);
   }

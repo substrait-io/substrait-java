@@ -12,6 +12,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,6 +34,14 @@ class DefaultExtensionCatalogTest {
    */
   private static final Set<String> UNSUPPORTED_FILES =
       Set.of(
+          // aggregate_decimal_output defines count and approx_count_distinct with decimal<38,0>
+          // return types instead of i64. When loaded alongside aggregate_generic, the same
+          // function key (e.g. count:any) maps to the same Calcite operator twice, which breaks
+          // the reverse lookup in FunctionConverter.getSqlOperatorFromSubstraitFunc.
+          "functions_aggregate_decimal_output.yaml",
+          // functions_geometry.yaml defines user-defined types (u!geometry) that are not
+          // supported by Calcite's type conversion in isthmus.
+          "functions_geometry.yaml",
           // type_variations.yaml only defines type variations, which are not tracked by
           // ExtensionCollection (no functions or types), so containsUrn cannot verify it.
           "type_variations.yaml",
@@ -69,9 +78,10 @@ class DefaultExtensionCatalogTest {
   }
 
   private static String parseUrn(String resourceName) throws IOException {
+    String resourcePath = "substrait/extensions/" + resourceName;
     try (InputStream is =
-        DefaultExtensionCatalogTest.class.getClassLoader().getResourceAsStream(resourceName)) {
-      assertNotNull(is, "Resource not found on classpath: " + resourceName);
+        DefaultExtensionCatalogTest.class.getClassLoader().getResourceAsStream(resourcePath)) {
+      assertNotNull(is, "Resource not found on classpath: " + resourcePath);
       JsonNode doc = YAML_MAPPER.readTree(is);
       JsonNode urnNode = doc.get("urn");
       return urnNode == null ? null : urnNode.asText();
@@ -80,8 +90,10 @@ class DefaultExtensionCatalogTest {
 
   /** Discovers extension YAML files on the classpath by locating a known resource. */
   private static List<String> getExtensionYamlFiles() throws URISyntaxException, IOException {
-    var knownResource =
-        DefaultExtensionCatalogTest.class.getClassLoader().getResource("functions_boolean.yaml");
+    URL knownResource =
+        DefaultExtensionCatalogTest.class
+            .getClassLoader()
+            .getResource("substrait/extensions/functions_boolean.yaml");
     if (knownResource == null) {
       fail("Could not locate functions_boolean.yaml on classpath");
     }
