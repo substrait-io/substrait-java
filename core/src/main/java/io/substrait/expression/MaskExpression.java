@@ -100,10 +100,18 @@ public interface MaskExpression {
   /** Selects a single field from a struct, with an optional nested child selection. */
   @Value.Immutable
   interface StructItem {
-    /** Zero-based field index within the struct. */
+    /**
+     * Returns the zero-based field index within the struct.
+     *
+     * @return the field index
+     */
     int getField();
 
-    /** Optional child selection for nested complex types. */
+    /**
+     * Returns the optional child selection for nested complex types.
+     *
+     * @return the optional child selection
+     */
     Optional<Select> getChild();
 
     /**
@@ -151,7 +159,11 @@ public interface MaskExpression {
      */
     List<ListSelectItem> getSelection();
 
-    /** Optional child selection applied to each selected element. */
+    /**
+     * Returns the optional child selection applied to each selected element.
+     *
+     * @return the optional child selection
+     */
     Optional<Select> getChild();
 
     /**
@@ -306,7 +318,11 @@ public interface MaskExpression {
      */
     Optional<MapKeyExpression> getExpression();
 
-    /** Optional child selection applied to each selected map value. */
+    /**
+     * Returns the optional child selection applied to each selected map value.
+     *
+     * @return the optional child selection
+     */
     Optional<Select> getChild();
 
     /**

@@ -17,7 +17,12 @@ public final class ProtoMaskExpressionConverter {
 
   private ProtoMaskExpressionConverter() {}
 
-  /** Converts a proto {@link Expression.MaskExpression} to its POJO representation. */
+  /**
+   * Converts a proto {@link Expression.MaskExpression} to its POJO representation.
+   *
+   * @param proto the proto {@link Expression.MaskExpression}
+   * @return the POJO {@link MaskExpression.Mask}
+   */
   public static MaskExpression.Mask fromProto(Expression.MaskExpression proto) {
     return MaskExpression.builder()
         .select(fromProto(proto.getSelect()))
