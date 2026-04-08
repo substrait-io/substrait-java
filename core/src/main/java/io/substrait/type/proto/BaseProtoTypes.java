@@ -131,10 +131,14 @@ abstract class BaseProtoTypes<T, I> {
 
   public abstract T map(T key, T value);
 
-  public abstract T userDefined(int ref);
+  public T userDefined(int ref, int typeVariationReference) {
+    return userDefined(ref, typeVariationReference, java.util.Collections.emptyList());
+  }
 
   public abstract T userDefined(
-      int ref, java.util.List<io.substrait.type.Type.Parameter> typeParameters);
+      int ref,
+      int typeVariationReference,
+      java.util.List<io.substrait.type.Type.Parameter> typeParameters);
 
   protected abstract T wrap(Object o);
 
