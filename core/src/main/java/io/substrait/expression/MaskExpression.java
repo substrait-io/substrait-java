@@ -39,11 +39,7 @@ public interface MaskExpression {
 
   /** The concrete mask expression value holding the top-level struct selection and options. */
   @Value.Immutable
-  interface Mask extends MaskExpression {
-    static ImmutableMaskExpression.Mask.Builder builder() {
-      return ImmutableMaskExpression.Mask.builder();
-    }
-  }
+  interface Mask extends MaskExpression {}
 
   // ---------------------------------------------------------------------------
   // Select – a union of StructSelect | ListSelect | MapSelect

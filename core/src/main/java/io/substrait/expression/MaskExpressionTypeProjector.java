@@ -2,6 +2,7 @@ package io.substrait.expression;
 
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 
 /**
@@ -31,19 +32,25 @@ public final class MaskExpressionTypeProjector {
 
     MaskExpression.Select select = item.getChild().get();
 
-    if (select instanceof MaskExpression.StructSelect) {
-      return projectStruct((MaskExpression.StructSelect) select, (Type.Struct) fieldType);
-    }
+    return select.accept(
+        new MaskExpressionVisitor<Type, EmptyVisitationContext, RuntimeException>() {
+          @Override
+          public Type visit(
+              MaskExpression.StructSelect structSelect, EmptyVisitationContext context) {
+            return projectStruct(structSelect, (Type.Struct) fieldType);
+          }
 
-    if (select instanceof MaskExpression.ListSelect) {
-      return projectList((MaskExpression.ListSelect) select, (Type.ListType) fieldType);
-    }
+          @Override
+          public Type visit(MaskExpression.ListSelect listSelect, EmptyVisitationContext context) {
+            return projectList(listSelect, (Type.ListType) fieldType);
+          }
 
-    if (select instanceof MaskExpression.MapSelect) {
-      return projectMap((MaskExpression.MapSelect) select, (Type.Map) fieldType);
-    }
-
-    return fieldType;
+          @Override
+          public Type visit(MaskExpression.MapSelect mapSelect, EmptyVisitationContext context) {
+            return projectMap(mapSelect, (Type.Map) fieldType);
+          }
+        },
+        EmptyVisitationContext.INSTANCE);
   }
 
   private static Type.ListType projectList(
@@ -55,13 +62,31 @@ public final class MaskExpressionTypeProjector {
     MaskExpression.Select childSelect = listSelect.getChild().get();
     Type elementType = listType.elementType();
 
-    if (childSelect instanceof MaskExpression.StructSelect && elementType instanceof Type.Struct) {
-      Type.Struct prunedElement =
-          projectStruct((MaskExpression.StructSelect) childSelect, (Type.Struct) elementType);
-      return TypeCreator.of(listType.nullable()).list(prunedElement);
-    }
+    return childSelect.accept(
+        new MaskExpressionVisitor<Type.ListType, EmptyVisitationContext, RuntimeException>() {
+          @Override
+          public Type.ListType visit(
+              MaskExpression.StructSelect structSelect, EmptyVisitationContext context) {
+            if (elementType instanceof Type.Struct) {
+              Type.Struct prunedElement = projectStruct(structSelect, (Type.Struct) elementType);
+              return TypeCreator.of(listType.nullable()).list(prunedElement);
+            }
+            return listType;
+          }
 
-    return listType;
+          @Override
+          public Type.ListType visit(
+              MaskExpression.ListSelect listSelect, EmptyVisitationContext context) {
+            return listType;
+          }
+
+          @Override
+          public Type.ListType visit(
+              MaskExpression.MapSelect mapSelect, EmptyVisitationContext context) {
+            return listType;
+          }
+        },
+        EmptyVisitationContext.INSTANCE);
   }
 
   private static Type.Map projectMap(MaskExpression.MapSelect mapSelect, Type.Map mapType) {
@@ -72,12 +97,30 @@ public final class MaskExpressionTypeProjector {
     MaskExpression.Select childSelect = mapSelect.getChild().get();
     Type valueType = mapType.value();
 
-    if (childSelect instanceof MaskExpression.StructSelect && valueType instanceof Type.Struct) {
-      Type.Struct prunedValue =
-          projectStruct((MaskExpression.StructSelect) childSelect, (Type.Struct) valueType);
-      return TypeCreator.of(mapType.nullable()).map(mapType.key(), prunedValue);
-    }
+    return childSelect.accept(
+        new MaskExpressionVisitor<Type.Map, EmptyVisitationContext, RuntimeException>() {
+          @Override
+          public Type.Map visit(
+              MaskExpression.StructSelect structSelect, EmptyVisitationContext context) {
+            if (valueType instanceof Type.Struct) {
+              Type.Struct prunedValue = projectStruct(structSelect, (Type.Struct) valueType);
+              return TypeCreator.of(mapType.nullable()).map(mapType.key(), prunedValue);
+            }
+            return mapType;
+          }
 
-    return mapType;
+          @Override
+          public Type.Map visit(
+              MaskExpression.ListSelect listSelect, EmptyVisitationContext context) {
+            return mapType;
+          }
+
+          @Override
+          public Type.Map visit(
+              MaskExpression.MapSelect mapSelect, EmptyVisitationContext context) {
+            return mapType;
+          }
+        },
+        EmptyVisitationContext.INSTANCE);
   }
 }

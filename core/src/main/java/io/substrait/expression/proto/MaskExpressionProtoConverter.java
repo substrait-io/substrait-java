@@ -7,7 +7,9 @@ import io.substrait.expression.MaskExpression.MapSelect;
 import io.substrait.expression.MaskExpression.Select;
 import io.substrait.expression.MaskExpression.StructItem;
 import io.substrait.expression.MaskExpression.StructSelect;
+import io.substrait.expression.MaskExpressionVisitor;
 import io.substrait.proto.Expression;
+import io.substrait.util.EmptyVisitationContext;
 
 /**
  * Converts from {@link io.substrait.expression.MaskExpression} to {@link Expression.MaskExpression}
@@ -15,6 +17,36 @@ import io.substrait.proto.Expression;
 public final class MaskExpressionProtoConverter {
 
   private MaskExpressionProtoConverter() {}
+
+  private static final MaskExpressionVisitor<
+          Expression.MaskExpression.Select, EmptyVisitationContext, RuntimeException>
+      SELECT_TO_PROTO_VISITOR =
+          new MaskExpressionVisitor<
+              Expression.MaskExpression.Select, EmptyVisitationContext, RuntimeException>() {
+            @Override
+            public Expression.MaskExpression.Select visit(
+                MaskExpression.StructSelect structSelect, EmptyVisitationContext context) {
+              return Expression.MaskExpression.Select.newBuilder()
+                  .setStruct(toProto(structSelect))
+                  .build();
+            }
+
+            @Override
+            public Expression.MaskExpression.Select visit(
+                MaskExpression.ListSelect listSelect, EmptyVisitationContext context) {
+              return Expression.MaskExpression.Select.newBuilder()
+                  .setList(toProtoListSelect(listSelect))
+                  .build();
+            }
+
+            @Override
+            public Expression.MaskExpression.Select visit(
+                MaskExpression.MapSelect mapSelect, EmptyVisitationContext context) {
+              return Expression.MaskExpression.Select.newBuilder()
+                  .setMap(toProtoMapSelect(mapSelect))
+                  .build();
+            }
+          };
 
   /** Converts a POJO {@link MaskExpression} to its proto representation. */
   public static Expression.MaskExpression toProto(MaskExpression mask) {
@@ -41,16 +73,7 @@ public final class MaskExpressionProtoConverter {
   }
 
   private static Expression.MaskExpression.Select toProtoSelect(Select select) {
-    Expression.MaskExpression.Select.Builder builder =
-        Expression.MaskExpression.Select.newBuilder();
-    if (select instanceof MaskExpression.StructSelect) {
-      builder.setStruct(toProto((MaskExpression.StructSelect) select));
-    } else if (select instanceof MaskExpression.ListSelect) {
-      builder.setList(toProtoListSelect((MaskExpression.ListSelect) select));
-    } else if (select instanceof MaskExpression.MapSelect) {
-      builder.setMap(toProtoMapSelect((MaskExpression.MapSelect) select));
-    }
-    return builder.build();
+    return select.accept(SELECT_TO_PROTO_VISITOR, EmptyVisitationContext.INSTANCE);
   }
 
   private static Expression.MaskExpression.ListSelect toProtoListSelect(ListSelect listSelect) {
@@ -67,21 +90,20 @@ public final class MaskExpressionProtoConverter {
       ListSelectItem item) {
     Expression.MaskExpression.ListSelect.ListSelectItem.Builder builder =
         Expression.MaskExpression.ListSelect.ListSelectItem.newBuilder();
-    item.getItem()
-        .ifPresent(
-            element ->
-                builder.setItem(
-                    Expression.MaskExpression.ListSelect.ListSelectItem.ListElement.newBuilder()
-                        .setField(element.getField())
-                        .build()));
-    item.getSlice()
-        .ifPresent(
-            slice ->
-                builder.setSlice(
-                    Expression.MaskExpression.ListSelect.ListSelectItem.ListSlice.newBuilder()
-                        .setStart(slice.getStart())
-                        .setEnd(slice.getEnd())
-                        .build()));
+    if (item.getItem().isPresent()) {
+      builder.setItem(
+          Expression.MaskExpression.ListSelect.ListSelectItem.ListElement.newBuilder()
+              .setField(item.getItem().get().getField())
+              .build());
+    } else if (item.getSlice().isPresent()) {
+      builder.setSlice(
+          Expression.MaskExpression.ListSelect.ListSelectItem.ListSlice.newBuilder()
+              .setStart(item.getSlice().get().getStart())
+              .setEnd(item.getSlice().get().getEnd())
+              .build());
+    } else {
+      throw new IllegalArgumentException("ListSelectItem must have either item or slice set");
+    }
     return builder.build();
   }
 

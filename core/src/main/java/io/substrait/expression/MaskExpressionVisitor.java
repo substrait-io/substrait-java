@@ -11,9 +11,33 @@ import io.substrait.util.VisitationContext;
  */
 public interface MaskExpressionVisitor<R, C extends VisitationContext, E extends Throwable> {
 
+  /**
+   * Visit a struct select.
+   *
+   * @param structSelect the struct select
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
   R visit(MaskExpression.StructSelect structSelect, C context) throws E;
 
+  /**
+   * Visit a list select.
+   *
+   * @param listSelect the list select
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
   R visit(MaskExpression.ListSelect listSelect, C context) throws E;
 
+  /**
+   * Visit a map select.
+   *
+   * @param mapSelect the map select
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
   R visit(MaskExpression.MapSelect mapSelect, C context) throws E;
 }
