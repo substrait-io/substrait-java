@@ -16,11 +16,11 @@ public final class MaskExpressionTypeProjector {
    * Applies the given projection to a struct type, returning a pruned struct.
    *
    * @param projection the mask expression projection
-   * @param baseStruct the base struct type to project
+   * @param structType the struct type to project
    * @return a pruned struct containing only the selected fields
    */
-  public static Type.Struct project(MaskExpression projection, Type.Struct baseStruct) {
-    return projectStruct(projection.getSelect(), baseStruct);
+  public static Type.Struct project(MaskExpression projection, Type.Struct structType) {
+    return projectStruct(projection.getSelect(), structType);
   }
 
   private static Type.Struct projectStruct(

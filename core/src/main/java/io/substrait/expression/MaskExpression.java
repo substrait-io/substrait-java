@@ -23,6 +23,8 @@ public interface MaskExpression {
   /**
    * When {@code true}, a struct that has only a single selected field will <em>not</em> be
    * unwrapped into its child type.
+   *
+   * @return {@code true} if singular structs should be maintained, {@code false} otherwise
    */
   @Value.Default
   default boolean getMaintainSingularStruct() {
