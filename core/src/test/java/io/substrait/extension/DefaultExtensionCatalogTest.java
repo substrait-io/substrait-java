@@ -1,6 +1,7 @@
 package io.substrait.extension;
 
 import static io.substrait.extension.DefaultExtensionCatalog.DEFAULT_COLLECTION;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -26,19 +27,18 @@ import org.junit.jupiter.api.Test;
  */
 class DefaultExtensionCatalogTest {
 
+  /**
+   * Extension YAML files that are intentionally not loaded by {@link DefaultExtensionCatalog}.
+   * Adding a file here requires a comment explaining why it cannot be loaded.
+   */
   private static final Set<String> UNSUPPORTED_FILES =
       Set.of(
-          // TODO: aggregate_decimal_output defines count and approx_count_distinct with
-          //  decimal<38,0> return types instead of i64. When loaded alongside aggregate_generic,
-          //  the same function key (e.g. count:any) maps to the same Calcite operator twice,
-          //  which breaks the reverse lookup in FunctionConverter.getSqlOperatorFromSubstraitFunc.
-          //  Fixing this requires either deduplicating the operator map or adding type-based
-          //  disambiguation for aggregate functions.
-          "functions_aggregate_decimal_output.yaml",
-          "functions_list.yaml", // TODO(#688): remove once lambda types are supported
-          "type_variations.yaml", // type variations not yet supported by extension loader
-          "unknown.yaml" // unknown type extension not yet loaded
-          );
+          // type_variations.yaml only defines type variations, which are not tracked by
+          // ExtensionCollection (no functions or types), so containsUrn cannot verify it.
+          "type_variations.yaml",
+          // unknown.yaml uses an "unknown" type that is not a recognized type literal or
+          // parameterized type, causing Function.constructKey to fail at load time.
+          "unknown.yaml");
 
   private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
@@ -48,18 +48,23 @@ class DefaultExtensionCatalogTest {
   }
 
   @Test
-  void allExtensionYamlFilesAreLoaded() throws IOException, URISyntaxException {
+  void allExtensionYamlFilesAccountedFor() throws IOException, URISyntaxException {
     List<String> yamlFiles = getExtensionYamlFiles();
 
     for (String fileName : yamlFiles) {
-      if (UNSUPPORTED_FILES.contains(fileName)) {
-        continue;
-      }
       String urn = parseUrn(fileName);
       assertNotNull(urn, fileName + " does not contain a URN field");
-      assertTrue(
-          DEFAULT_COLLECTION.containsUrn(urn),
-          fileName + " not loaded by DefaultExtensionCatalog (urn: " + urn + ")");
+      if (UNSUPPORTED_FILES.contains(fileName)) {
+        assertFalse(
+            DEFAULT_COLLECTION.containsUrn(urn),
+            fileName
+                + " is in UNSUPPORTED_FILES but is loaded by DefaultExtensionCatalog"
+                + " — remove it from UNSUPPORTED_FILES");
+      } else {
+        assertTrue(
+            DEFAULT_COLLECTION.containsUrn(urn),
+            fileName + " not loaded by DefaultExtensionCatalog (urn: " + urn + ")");
+      }
     }
   }
 

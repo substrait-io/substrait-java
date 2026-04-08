@@ -57,9 +57,6 @@ public class DefaultExtensionCatalog {
   /** Extension identifier for set functions. */
   public static final String FUNCTIONS_SET = "extension:io.substrait:functions_set";
 
-  /** Extension identifier for list functions. */
-  public static final String FUNCTIONS_LIST = "extension:io.substrait:functions_list";
-
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
 
@@ -79,6 +76,7 @@ public class DefaultExtensionCatalog {
     List<String> defaultFiles =
         Arrays.asList(
                 "boolean",
+                "aggregate_decimal_output",
                 "aggregate_generic",
                 "aggregate_approx",
                 "arithmetic_decimal",
@@ -92,8 +90,6 @@ public class DefaultExtensionCatalog {
                 "rounding_decimal",
                 "set",
                 "string")
-            // TODO(#688): functions_list.yaml is not loaded here because it uses lambda type
-            // expressions (e.g. func<any1 -> any2>) that are not yet supported by the type parser.
             .stream()
             .map(c -> String.format("/functions_%s.yaml", c))
             .collect(Collectors.toList());
