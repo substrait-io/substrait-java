@@ -15,6 +15,7 @@ import org.immutables.value.Value;
  * @see <a href="https://substrait.io/expressions/field_references/">Substrait Field References</a>
  */
 @Value.Enclosing
+@Value.Immutable
 public interface MaskExpression {
 
   /** The top-level struct selection describing which fields to include. */
@@ -36,17 +37,9 @@ public interface MaskExpression {
    *
    * @return a new builder instance
    */
-  static ImmutableMaskExpression.Mask.Builder builder() {
-    return ImmutableMaskExpression.Mask.builder();
+  static ImmutableMaskExpression.Builder builder() {
+    return ImmutableMaskExpression.builder();
   }
-
-  // ---------------------------------------------------------------------------
-  // Top-level MaskExpression value
-  // ---------------------------------------------------------------------------
-
-  /** The concrete mask expression value holding the top-level struct selection and options. */
-  @Value.Immutable
-  interface Mask extends MaskExpression {}
 
   // ---------------------------------------------------------------------------
   // Select – a union of StructSelect | ListSelect | MapSelect
