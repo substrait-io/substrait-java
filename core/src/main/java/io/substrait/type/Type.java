@@ -422,11 +422,11 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract class UserDefined implements Type {
+  interface UserDefined extends Type {
 
-    public abstract String urn();
+    String urn();
 
-    public abstract String name();
+    String name();
 
     /**
      * Returns the type parameters for this user-defined type.
@@ -437,7 +437,7 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
      * @return a list of type parameters, or an empty list if this type is not parameterized
      */
     @Value.Default
-    public java.util.List<Parameter> typeParameters() {
+    default java.util.List<Parameter> typeParameters() {
       return java.util.Collections.emptyList();
     }
 
@@ -449,17 +449,17 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
      *
      * @return the type variation reference, or {@code 0} if using the default variation
      */
-    // Note: Cannot use @Value.Default here due to an Immutables bug with @Value.Enclosing
-    // and multiple @Value.Default fields in the same class (generates broken InitShim code).
-    // The default value (0) is set in the builder() factory method below.
-    public abstract int typeVariationReference();
+    @Value.Default
+    default int typeVariationReference() {
+      return 0;
+    }
 
-    public static ImmutableType.UserDefined.Builder builder() {
-      return ImmutableType.UserDefined.builder().typeVariationReference(0);
+    static ImmutableType.UserDefined.Builder builder() {
+      return ImmutableType.UserDefined.builder();
     }
 
     @Override
-    public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
+    default <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
       return typeVisitor.visit(this);
     }
   }

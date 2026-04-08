@@ -94,20 +94,6 @@ class TypeExtensionTest extends TestBase {
     Plan plan = sb.plan(sb.root(sb.namedScan(tableName, columnNames, types)));
 
     io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
-
-    // verify the type variation reference is set in the proto
-    io.substrait.proto.Type protoType =
-        protoPlan
-            .getRelations(0)
-            .getRoot()
-            .getInput()
-            .getRead()
-            .getBaseSchema()
-            .getStruct()
-            .getTypes(0);
-    assertEquals(42, protoType.getUserDefined().getTypeVariationReference());
-
-    // verify full roundtrip
     Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
   }

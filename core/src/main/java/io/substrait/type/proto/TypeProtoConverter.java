@@ -181,16 +181,6 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
     }
 
     @Override
-    public Type userDefined(int ref, int typeVariationReference) {
-      return wrap(
-          Type.UserDefined.newBuilder()
-              .setTypeReference(ref)
-              .setTypeVariationReference(typeVariationReference)
-              .setNullability(nullability)
-              .build());
-    }
-
-    @Override
     public Type userDefined(
         int ref,
         int typeVariationReference,

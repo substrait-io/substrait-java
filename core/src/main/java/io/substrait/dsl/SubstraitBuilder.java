@@ -1507,7 +1507,7 @@ public class SubstraitBuilder {
    * @return a new {@link Type.UserDefined}
    */
   public Type.UserDefined userDefinedType(String urn, String typeName) {
-    return Type.UserDefined.builder().urn(urn).name(typeName).nullable(false).build();
+    return userDefinedType(urn, typeName, 0);
   }
 
   /**
