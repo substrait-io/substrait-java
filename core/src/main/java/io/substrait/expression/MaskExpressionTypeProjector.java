@@ -24,11 +24,11 @@ public final class MaskExpressionTypeProjector {
   }
 
   private static Type.Struct projectStruct(
-      MaskExpression.StructSelect structSelect, Type.Struct baseStruct) {
-    List<Type> fields = baseStruct.fields();
+      MaskExpression.StructSelect structSelect, Type.Struct structType) {
+    List<Type> fields = structType.fields();
     List<MaskExpression.StructItem> items = structSelect.getStructItems();
 
-    return TypeCreator.of(baseStruct.nullable())
+    return TypeCreator.of(structType.nullable())
         .struct(items.stream().map(item -> projectItem(item, fields.get(item.getField()))));
   }
 
