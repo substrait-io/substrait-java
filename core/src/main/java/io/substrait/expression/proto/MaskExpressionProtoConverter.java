@@ -9,11 +9,14 @@ import io.substrait.expression.MaskExpression.StructItem;
 import io.substrait.expression.MaskExpression.StructSelect;
 import io.substrait.proto.Expression;
 
-/** Converts from POJO {@link MaskExpression} to proto {@link Expression.MaskExpression}. */
+/**
+ * Converts from {@link io.substrait.expression.MaskExpression} to {@link Expression.MaskExpression}
+ */
 public final class MaskExpressionProtoConverter {
 
   private MaskExpressionProtoConverter() {}
 
+  /** Converts a POJO {@link MaskExpression} to its proto representation. */
   public static Expression.MaskExpression toProto(MaskExpression mask) {
     return Expression.MaskExpression.newBuilder()
         .setSelect(toProto(mask.getSelect()))
