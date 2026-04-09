@@ -14,6 +14,10 @@ public class DefaultExtensionCatalog {
   public static final String FUNCTIONS_AGGREGATE_APPROX =
       "extension:io.substrait:functions_aggregate_approx";
 
+  /** Extension identifier for aggregate functions with decimal output. */
+  public static final String FUNCTIONS_AGGREGATE_DECIMAL_OUTPUT =
+      "extension:io.substrait:functions_aggregate_decimal_output";
+
   /** Extension identifier for generic aggregate functions. */
   public static final String FUNCTIONS_AGGREGATE_GENERIC =
       "extension:io.substrait:functions_aggregate_generic";
@@ -82,12 +86,13 @@ public class DefaultExtensionCatalog {
                 "logarithmic",
                 "rounding",
                 "rounding_decimal",
+                "set",
                 "string")
             .stream()
-            .map(c -> String.format("/functions_%s.yaml", c))
+            .map(c -> String.format("/substrait/extensions/functions_%s.yaml", c))
             .collect(Collectors.toList());
 
-    defaultFiles.add("/extension_types.yaml");
+    defaultFiles.add("/substrait/extensions/extension_types.yaml");
 
     return SimpleExtension.load(defaultFiles);
   }

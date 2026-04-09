@@ -88,6 +88,8 @@ dependencies {
   testImplementation(platform(libs.junit.bom))
   testImplementation(libs.protobuf.java.util)
   testImplementation(libs.guava)
+  testImplementation(libs.bundles.jackson)
+  testImplementation(libs.classgraph)
 
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
@@ -229,11 +231,16 @@ sourceSets {
   main {
     antlr { setSrcDirs(listOf(file("${rootProject.projectDir}/substrait/grammar"))) }
     proto.srcDir("../substrait/proto")
-    resources.srcDir("../substrait/extensions")
+    // Extension YAMLs are relocated into substrait/extensions/ on the classpath
+    // via processResources below, rather than landing at the classpath root.
     resources.srcDir("build/generated/sources/manifest/")
     java.srcDir(file("build/generated/sources/antlr/main/java/"))
     java.srcDir("build/generated/sources/version/")
   }
+}
+
+tasks.named<ProcessResources>("processResources") {
+  from("../substrait/extensions") { into("substrait/extensions") }
 }
 
 project.configure<IdeaModel> {
