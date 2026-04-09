@@ -41,9 +41,6 @@ public class DefaultExtensionCatalog {
   /** Extension identifier for geometry functions. */
   public static final String FUNCTIONS_GEOMETRY = "extension:io.substrait:functions_geometry";
 
-  /** Extension identifier for list functions. */
-  public static final String FUNCTIONS_LIST = "extension:io.substrait:functions_list";
-
   /** Extension identifier for logarithmic functions. */
   public static final String FUNCTIONS_LOGARITHMIC = "extension:io.substrait:functions_logarithmic";
 
@@ -56,6 +53,9 @@ public class DefaultExtensionCatalog {
 
   /** Extension identifier for set functions. */
   public static final String FUNCTIONS_SET = "extension:io.substrait:functions_set";
+
+  /** Extension identifier for list functions. */
+  public static final String FUNCTIONS_LIST = "extension:io.substrait:functions_list";
 
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
