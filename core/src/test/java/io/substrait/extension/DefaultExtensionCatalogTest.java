@@ -4,22 +4,17 @@ import static io.substrait.extension.DefaultExtensionCatalog.DEFAULT_COLLECTION;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ResourceList;
+import io.github.classgraph.ScanResult;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -57,8 +52,9 @@ class DefaultExtensionCatalogTest {
   }
 
   @Test
-  void allExtensionYamlFilesAccountedFor() throws IOException, URISyntaxException {
+  void allExtensionYamlFilesAccountedFor() throws IOException {
     List<String> yamlFiles = getExtensionYamlFiles();
+    assertFalse(yamlFiles.isEmpty(), "No YAML files found in substrait/extensions/");
 
     for (String fileName : yamlFiles) {
       String urn = parseUrn(fileName);
@@ -88,22 +84,14 @@ class DefaultExtensionCatalogTest {
     }
   }
 
-  /** Discovers extension YAML files on the classpath by locating a known resource. */
-  private static List<String> getExtensionYamlFiles() throws URISyntaxException, IOException {
-    URL knownResource =
-        DefaultExtensionCatalogTest.class
-            .getClassLoader()
-            .getResource("substrait/extensions/functions_boolean.yaml");
-    if (knownResource == null) {
-      fail("Could not locate functions_boolean.yaml on classpath");
-    }
-    Path resourceDir = Paths.get(knownResource.toURI()).getParent();
-    try (Stream<Path> files = Files.list(resourceDir)) {
-      return files
-          .filter(p -> p.toString().endsWith(".yaml"))
-          .map(p -> p.getFileName().toString())
+  private static List<String> getExtensionYamlFiles() {
+    try (ScanResult scan =
+        new ClassGraph().acceptPathsNonRecursive("substrait/extensions").scan()) {
+      ResourceList resources = scan.getResourcesWithExtension(".yaml");
+      return resources.stream()
+          .map(r -> r.getPath().substring("substrait/extensions/".length()))
           .sorted()
-          .collect(Collectors.toList());
+          .toList();
     }
   }
 }

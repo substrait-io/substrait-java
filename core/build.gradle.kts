@@ -89,6 +89,7 @@ dependencies {
   testImplementation(libs.protobuf.java.util)
   testImplementation(libs.guava)
   testImplementation(libs.bundles.jackson)
+  testImplementation(libs.classgraph)
 
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
