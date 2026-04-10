@@ -19,10 +19,10 @@ import org.immutables.value.Value;
 public interface MaskExpression {
 
   /**
-    * The top-level struct selection describing which fields to include.
-    *
-    * @return the top-level struct selection
-    */
+   * The top-level struct selection describing which fields to include.
+   *
+   * @return the top-level struct selection
+   */
   StructSelect getSelect();
 
   /**
