@@ -1,6 +1,14 @@
 Release Notes
 ---
 
+## [0.88.0](https://github.com/substrait-io/substrait-java/compare/v0.87.0...v0.88.0) (2026-04-12)
+
+### Features
+
+* add missing extension YAMLs and test for completeness ([#723](https://github.com/substrait-io/substrait-java/issues/723)) ([c14f3e3](https://github.com/substrait-io/substrait-java/commit/c14f3e31b0c482e361131fe5417034030d15f478))
+* **core:** add MaskExpression POJO and ReadRel projection support ([#782](https://github.com/substrait-io/substrait-java/issues/782)) ([6f79ac8](https://github.com/substrait-io/substrait-java/commit/6f79ac861c120596f6d65dbe3b864226af23ed8e))
+* **core:** add typeVariationReference to UserDefined type ([#794](https://github.com/substrait-io/substrait-java/issues/794)) ([a7ad40a](https://github.com/substrait-io/substrait-java/commit/a7ad40ad1dcb1dcd5f5260f952a65e52d9199e62))
+
 ## [0.87.0](https://github.com/substrait-io/substrait-java/compare/v0.86.1...v0.87.0) (2026-03-29)
 
 ### Features
