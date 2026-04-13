@@ -8,6 +8,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan.Root;
+import io.substrait.relation.NamedScan;
 import io.substrait.relation.ImmutableVirtualTableScan;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
@@ -18,9 +19,27 @@ import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
 import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class PlanConverterTest {
+  @Test
+  void rootNamesMustMatchInputFieldCount() {
+    final NamedScan scan =
+        NamedScan.builder()
+            .addNames("test_table")
+            .initialSchema(
+                NamedStruct.builder()
+                    .addNames("only_column")
+                    .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I32))
+                    .build())
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Root.builder().input(scan).names(List.of("col1", "col2")).build());
+  }
+
   @Test
   void emptyAdvancedExtensionTest() {
     final Plan plan = Plan.builder().advancedExtension(AdvancedExtension.builder().build()).build();
@@ -304,7 +323,14 @@ class PlanConverterTest {
                     false, nullablePointLiteral, pointLiteral, vectorOfPointLiteral))
             .build();
 
-    Plan plan = Plan.builder().addRoots(Root.builder().input(virtualTable).build()).build();
+    Plan plan =
+        Plan.builder()
+            .addRoots(
+                Root.builder()
+                    .input(virtualTable)
+                    .names(List.of("nullable_point_col", "point_col", "vector_col"))
+                    .build())
+            .build();
 
     PlanProtoConverter toProtoConverter = new PlanProtoConverter();
     io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);

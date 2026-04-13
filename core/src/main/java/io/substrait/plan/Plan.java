@@ -65,6 +65,18 @@ public abstract class Plan {
 
     public abstract List<String> getNames();
 
+    @Value.Check
+    protected void check() {
+      final int expectedFieldCount = getInput().getRecordType().fields().size();
+      final int actualNameCount = getNames().size();
+      if (actualNameCount != expectedFieldCount) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Plan.Root names count (%d) must match input record type field count (%d)",
+                actualNameCount, expectedFieldCount));
+      }
+    }
+
     public static ImmutableRoot.Builder builder() {
       return ImmutableRoot.builder();
     }
