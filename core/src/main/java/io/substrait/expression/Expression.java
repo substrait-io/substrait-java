@@ -363,7 +363,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class StrLiteral implements Literal {
     /**
-     * Returns the string value.
+     * Returns the string value of this literal.
      *
      * @return the string value
      */
