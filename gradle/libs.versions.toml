@@ -19,10 +19,10 @@ protobuf-plugin = "0.9.6"
 protobuf = "3.25.8"
 scala-2-12 = "2.12.20"
 scala-2-13 = "2.13.18"
-scalatest-2-12 = "3.2.19"
-scalatest-2-13 = "3.2.19"
-scalatestplus-junit5-2-12 = "3.2.19.0"
-scalatestplus-junit5-2-13 = "3.2.19.0"
+scalatest-2-12 = "3.2.20"
+scalatest-2-13 = "3.2.20"
+scalatestplus-junit5-2-12 = "3.2.20.0"
+scalatestplus-junit5-2-13 = "3.2.20.0"
 shadow = "9.4.1"
 slf4j = "2.0.17"
 spark-3-4 = "3.4.4"
@@ -68,8 +68,8 @@ scala-library-2-12 = { module = "org.scala-lang:scala-library", version.ref = "s
 scala-library-2-13 = { module = "org.scala-lang:scala-library", version.ref = "scala-2-13" }
 scalatest-2-12 = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest-2-12" }
 scalatest-2-13 = { module = "org.scalatest:scalatest_2.13", version.ref = "scalatest-2-13" }
-scalatestplus-junit5-2-12 = { module = "org.scalatestplus:junit-5-12_2.12", version.ref = "scalatestplus-junit5-2-12" }
-scalatestplus-junit5-2-13 = { module = "org.scalatestplus:junit-5-13_2.13", version.ref = "scalatestplus-junit5-2-13" }
+scalatestplus-junit5-2-12 = { module = "org.scalatestplus:junit-5-14_2.12", version.ref = "scalatestplus-junit5-2-12" }
+scalatestplus-junit5-2-13 = { module = "org.scalatestplus:junit-5-14_2.13", version.ref = "scalatestplus-junit5-2-13" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 spark-catalyst-3-4-2-12 = { module = "org.apache.spark:spark-catalyst_2.12", version.ref = "spark-3-4" }
