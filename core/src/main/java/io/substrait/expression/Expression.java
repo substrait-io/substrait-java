@@ -429,7 +429,7 @@ public interface Expression extends FunctionArg {
   @Deprecated
   abstract class TimestampLiteral implements Literal {
     /**
-     * Returns the timestamp value in microseconds since epoch.
+     * Returns the timestamp value of this literal in microseconds since epoch.
      *
      * @return the timestamp value
      */
@@ -463,7 +463,7 @@ public interface Expression extends FunctionArg {
   @Deprecated
   abstract class TimeLiteral implements Literal {
     /**
-     * Returns the time value in microseconds since midnight.
+     * Returns the time value of this literal in microseconds since midnight.
      *
      * @return the time value
      */
@@ -494,7 +494,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class PrecisionTimeLiteral implements Literal {
     /**
-     * Returns the time value since midnight.
+     * Returns the time value of this literal since midnight.
      *
      * @return the time value
      */
@@ -532,7 +532,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class DateLiteral implements Literal {
     /**
-     * Returns the date value as days since epoch.
+     * Returns the date value of this literal as days since epoch.
      *
      * @return the date value
      */
@@ -567,7 +567,7 @@ public interface Expression extends FunctionArg {
   @Deprecated
   abstract class TimestampTZLiteral implements Literal {
     /**
-     * Returns the timestamp with timezone value in microseconds since epoch.
+     * Returns the timestamp with timezone value of this literal in microseconds since epoch.
      *
      * @return the timestamp value
      */
@@ -598,7 +598,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class PrecisionTimestampLiteral implements Literal {
     /**
-     * Returns the timestamp value since epoch.
+     * Returns the timestamp value of this literal since epoch.
      *
      * @return the timestamp value
      */
@@ -636,7 +636,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class PrecisionTimestampTZLiteral implements Literal {
     /**
-     * Returns the timestamp with timezone value since epoch.
+     * Returns the timestamp with timezone value of this literal since epoch.
      *
      * @return the timestamp value
      */
@@ -736,7 +736,7 @@ public interface Expression extends FunctionArg {
     public abstract long subseconds();
 
     /**
-     * Returns the precision of the subseconds component.
+     * Returns the precision of the subseconds component of this interval.
      *
      * @return the precision value
      */
@@ -804,7 +804,7 @@ public interface Expression extends FunctionArg {
     public abstract long subseconds();
 
     /**
-     * Returns the precision of the subseconds component.
+     * Returns the precision of the subseconds component of this interval.
      *
      * @return the precision value
      */
@@ -835,7 +835,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class UUIDLiteral implements Literal {
     /**
-     * Returns the UUID value.
+     * Returns the UUID value of this literal.
      *
      * @return the UUID value
      */
@@ -879,7 +879,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class FixedCharLiteral implements Literal {
     /**
-     * Returns the fixed-length character string value.
+     * Returns the fixed-length character string value of this literal.
      *
      * @return the string value
      */
@@ -910,14 +910,14 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class VarCharLiteral implements Literal {
     /**
-     * Returns the variable-length character string value.
+     * Returns the variable-length character string value of this literal.
      *
      * @return the string value
      */
     public abstract String value();
 
     /**
-     * Returns the maximum length of the string.
+     * Returns the maximum length of the string value of this literal.
      *
      * @return the maximum length
      */
@@ -948,7 +948,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class FixedBinaryLiteral implements Literal {
     /**
-     * Returns the fixed-length binary value.
+     * Returns the fixed-length binary value of this literal.
      *
      * @return the binary value as a ByteString
      */
@@ -979,21 +979,21 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class DecimalLiteral implements Literal {
     /**
-     * Returns the decimal value as a ByteString.
+     * Returns the decimal value as a ByteString of this literal.
      *
      * @return the decimal value
      */
     public abstract ByteString value();
 
     /**
-     * Returns the precision of this decimal.
+     * Returns the precision of this decimal literal.
      *
      * @return the precision value
      */
     public abstract int precision();
 
     /**
-     * Returns the scale of this decimal.
+     * Returns the scale of this decimal literal.
      *
      * @return the scale value
      */
@@ -1024,7 +1024,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class MapLiteral implements Literal {
     /**
-     * Returns the map of key-value pairs.
+     * Returns the map of key-value pairs of this literal.
      *
      * @return the map values
      */
@@ -1058,14 +1058,14 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class EmptyMapLiteral implements Literal {
     /**
-     * Returns the type of keys in this empty map.
+     * Returns the type of keys in this empty map literal.
      *
      * @return the key type
      */
     public abstract Type keyType();
 
     /**
-     * Returns the type of values in this empty map.
+     * Returns the type of values in this empty map literal.
      *
      * @return the value type
      */
@@ -1096,7 +1096,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class ListLiteral implements Literal {
     /**
-     * Returns the list of literal values.
+     * Returns the list of literal values of this list literal.
      *
      * @return the list values
      */
@@ -1127,7 +1127,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class EmptyListLiteral implements Literal {
     /**
-     * Returns the type of elements in this empty list.
+     * Returns the type of elements in this empty list literal.
      *
      * @return the element type
      */
@@ -1158,7 +1158,7 @@ public interface Expression extends FunctionArg {
   @Value.Immutable
   abstract class StructLiteral implements Literal {
     /**
-     * Returns the list of field literals in this struct.
+     * Returns the list of field literals in this struct literal.
      *
      * @return the field literals
      */
@@ -1271,21 +1271,21 @@ public interface Expression extends FunctionArg {
    */
   interface UserDefinedLiteral extends Literal {
     /**
-     * Returns the URN (Uniform Resource Name) identifying the user-defined type.
+     * Returns the URN (Uniform Resource Name) identifying the user-defined type of this literal.
      *
      * @return the URN
      */
     String urn();
 
     /**
-     * Returns the name of the user-defined type.
+     * Returns the name of the user-defined type of this literal.
      *
      * @return the type name
      */
     String name();
 
     /**
-     * Returns the list of type parameters for this user-defined type.
+     * Returns the list of type parameters for this user-defined type literal.
      *
      * @return the type parameters
      */
@@ -1309,7 +1309,7 @@ public interface Expression extends FunctionArg {
     public abstract List<io.substrait.type.Type.Parameter> typeParameters();
 
     /**
-     * Returns the value encoded as a protobuf Any.
+     * Returns the value of this literal encoded as a protobuf Any.
      *
      * @return the encoded value
      */
@@ -1359,7 +1359,7 @@ public interface Expression extends FunctionArg {
     public abstract List<io.substrait.type.Type.Parameter> typeParameters();
 
     /**
-     * Returns the list of field literals in this user-defined struct.
+     * Returns the list of field literals in this user-defined struct literal.
      *
      * @return the field literals
      */
