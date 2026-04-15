@@ -136,6 +136,7 @@ dependencies {
   implementation(platform(libs.jackson.bom))
   implementation(libs.bundles.jackson)
   implementation(libs.json.schema.validator)
+  testImplementation(libs.protobuf.java.util)
 
   testImplementation(platform(libs.junit.bom))
   testRuntimeOnly(libs.junit.platform.engine)

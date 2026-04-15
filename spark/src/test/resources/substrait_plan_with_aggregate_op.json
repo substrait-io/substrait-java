@@ -1,0 +1,893 @@
+{
+  "extensions": [
+    {
+      "extensionFunction": {
+        "functionAnchor": 277,
+        "name": "equal:any_any",
+        "extensionUrnReference": 7
+      }
+    },
+    {
+      "extensionFunction": {
+        "functionAnchor": 415,
+        "name": "sum:i32",
+        "extensionUrnReference": 9
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "project": {
+            "common": {
+              "direct": {}
+            },
+            "input": {
+              "aggregate": {
+                "input": {
+                  "project": {
+                    "common": {
+                      "emit": {
+                        "outputMapping": [
+                          20,
+                          21,
+                          22,
+                          23,
+                          24,
+                          25,
+                          26,
+                          27,
+                          28,
+                          29,
+                          30,
+                          31,
+                          32,
+                          33,
+                          34,
+                          35,
+                          36,
+                          37,
+                          38,
+                          39
+                        ]
+                      }
+                    },
+                    "input": {
+                      "join": {
+                        "left": {
+                          "project": {
+                            "common": {
+                              "emit": {
+                                "outputMapping": [
+                                  11,
+                                  12,
+                                  13,
+                                  14,
+                                  15,
+                                  16,
+                                  17,
+                                  18,
+                                  19,
+                                  20,
+                                  21
+                                ]
+                              }
+                            },
+                            "input": {
+                              "project": {
+                                "common": {
+                                  "direct": {}
+                                },
+                                "input": {
+                                  "read": {
+                                    "common": {
+                                      "direct": {}
+                                    },
+                                    "baseSchema": {
+                                      "names": [
+                                        "test_id",
+                                        "vehicle_id",
+                                        "test_date",
+                                        "test_class",
+                                        "test_type",
+                                        "test_result",
+                                        "test_mileage",
+                                        "postcode_area"
+                                      ],
+                                      "struct": {
+                                        "types": [
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "date": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          }
+                                        ],
+                                        "nullability": "NULLABILITY_REQUIRED"
+                                      }
+                                    },
+                                    "namedTable": {
+                                      "names": [
+                                        "test1",
+                                        "tests"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "expressions": [
+                                  {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {
+                                          "field": 1
+                                        }
+                                      },
+                                      "rootReference": {}
+                                    }
+                                  },
+                                  {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {
+                                          "field": 6
+                                        }
+                                      },
+                                      "rootReference": {}
+                                    }
+                                  },
+                                  {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {
+                                          "field": 7
+                                        }
+                                      },
+                                      "rootReference": {}
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "expressions": [
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {}
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 1
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 2
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 3
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 4
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 5
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 6
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 7
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 8
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 6
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 7
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "right": {
+                          "project": {
+                            "common": {
+                              "emit": {
+                                "outputMapping": [
+                                  9,
+                                  10,
+                                  11,
+                                  12,
+                                  13,
+                                  14,
+                                  15,
+                                  16,
+                                  17
+                                ]
+                              }
+                            },
+                            "input": {
+                              "project": {
+                                "common": {
+                                  "direct": {}
+                                },
+                                "input": {
+                                  "read": {
+                                    "common": {
+                                      "direct": {}
+                                    },
+                                    "baseSchema": {
+                                      "names": [
+                                        "vehicle_id",
+                                        "make",
+                                        "model",
+                                        "colour",
+                                        "fuel_type",
+                                        "cylinder_capacity",
+                                        "first_use_date"
+                                      ],
+                                      "struct": {
+                                        "types": [
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "varchar": {
+                                              "length": 256,
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "i32": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          },
+                                          {
+                                            "date": {
+                                              "nullability": "NULLABILITY_NULLABLE"
+                                            }
+                                          }
+                                        ],
+                                        "nullability": "NULLABILITY_REQUIRED"
+                                      }
+                                    },
+                                    "namedTable": {
+                                      "names": [
+                                        "test1",
+                                        "vehicles"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "expressions": [
+                                  {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {}
+                                      },
+                                      "rootReference": {}
+                                    }
+                                  },
+                                  {
+                                    "selection": {
+                                      "directReference": {
+                                        "structField": {
+                                          "field": 4
+                                        }
+                                      },
+                                      "rootReference": {}
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "expressions": [
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {}
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 1
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 2
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 3
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 4
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 5
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 6
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 7
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              },
+                              {
+                                "selection": {
+                                  "directReference": {
+                                    "structField": {
+                                      "field": 4
+                                    }
+                                  },
+                                  "rootReference": {}
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "expression": {
+                          "scalarFunction": {
+                            "functionReference": 277,
+                            "outputType": {
+                              "bool": {
+                                "nullability": "NULLABILITY_NULLABLE"
+                              }
+                            },
+                            "arguments": [
+                              {
+                                "value": {
+                                  "selection": {
+                                    "directReference": {
+                                      "structField": {
+                                        "field": 8
+                                      }
+                                    },
+                                    "rootReference": {}
+                                  }
+                                }
+                              },
+                              {
+                                "value": {
+                                  "selection": {
+                                    "directReference": {
+                                      "structField": {
+                                        "field": 18
+                                      }
+                                    },
+                                    "rootReference": {}
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "type": "JOIN_TYPE_INNER"
+                      }
+                    },
+                    "expressions": [
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {}
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 1
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 2
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 3
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 4
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 5
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 6
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 7
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 8
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 6
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 7
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 11
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 12
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 13
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 14
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 15
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 16
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 17
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 18
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 15
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      }
+                    ]
+                  }
+                },
+                "groupings": [
+                  {
+                    "groupingExpressions": [
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 15
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      },
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 7
+                            }
+                          },
+                          "rootReference": {}
+                        }
+                      }
+                    ],
+                    "expressionReferences": [
+                      0,
+                      1
+                    ]
+                  }
+                ],
+                "measures": [
+                  {
+                    "measure": {
+                      "functionReference": 415,
+                      "outputType": {
+                        "i64": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      "arguments": [
+                        {
+                          "value": {
+                            "selection": {
+                              "directReference": {
+                                "structField": {
+                                  "field": 6
+                                }
+                              },
+                              "rootReference": {}
+                            }
+                          }
+                        }
+                      ],
+                      "phase": "AGGREGATION_PHASE_INITIAL_TO_RESULT"
+                    }
+                  }
+                ],
+                "groupingExpressions": [
+                  {
+                    "selection": {
+                      "directReference": {
+                        "structField": {
+                          "field": 15
+                        }
+                      },
+                      "rootReference": {}
+                    }
+                  },
+                  {
+                    "selection": {
+                      "directReference": {
+                        "structField": {
+                          "field": 7
+                        }
+                      },
+                      "rootReference": {}
+                    }
+                  }
+                ]
+              }
+            },
+            "expressions": [
+              {
+                "selection": {
+                  "directReference": {
+                    "structField": {}
+                  },
+                  "rootReference": {}
+                }
+              },
+              {
+                "selection": {
+                  "directReference": {
+                    "structField": {
+                      "field": 1
+                    }
+                  },
+                  "rootReference": {}
+                }
+              },
+              {
+                "cast": {
+                  "type": {
+                    "i64": {
+                      "nullability": "NULLABILITY_REQUIRED"
+                    }
+                  },
+                  "input": {
+                    "selection": {
+                      "directReference": {
+                        "structField": {
+                          "field": 2
+                        }
+                      },
+                      "rootReference": {}
+                    }
+                  },
+                  "failureBehavior": "FAILURE_BEHAVIOR_RETURN_NULL"
+                }
+              }
+            ]
+          }
+        },
+        "names": [
+          "fuel_type",
+          "postcode_area",
+          "total_miles_i32",
+          "fuel_type",
+          "postcode_area",
+          "total_miles"
+        ]
+      }
+    }
+  ],
+  "version": {
+    "minorNumber": 79
+  },
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 7,
+      "urn": "extension:io.substrait:functions_comparison"
+    },
+    {
+      "extensionUrnAnchor": 9,
+      "urn": "extension:io.substrait:functions_arithmetic"
+    }
+  ]
+}
