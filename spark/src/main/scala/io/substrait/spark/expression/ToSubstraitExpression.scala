@@ -69,15 +69,16 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
                 }
                 val filteredAggExprs = agg.aggregateExpressions.filter(ae => used == ae.exprId.id)
                 Some(
-                  SparkCompat.instance.createScalarSubquery(
-                    SparkCompat.instance
-                      .createAggregate(agg.groupingExpressions, filteredAggExprs, agg.child)
+                  ScalarSubquery(
+                    Aggregate(agg.groupingExpressions, filteredAggExprs, agg.child),
+                    exprId = NamedExpression.newExprId
                   )
                 )
               case _ =>
                 Some(
-                  SparkCompat.instance.createScalarSubquery(
-                    Project(Seq(Alias(value, name.toString())()), child)
+                  ScalarSubquery(
+                    Project(Seq(Alias(value, name.toString())()), child),
+                    exprId = NamedExpression.newExprId
                   )
                 )
             }

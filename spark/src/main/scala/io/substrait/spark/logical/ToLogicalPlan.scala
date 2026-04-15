@@ -141,7 +141,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       val outputs = groupBy.map(toNamedExpression)
       val aggregateExpressions =
         aggregate.getMeasures.asScala.map(fromMeasure).map(toNamedExpression).toSeq
-      SparkCompat.instance.createAggregate(groupBy, outputs ++ aggregateExpressions, child)
+      Aggregate(groupBy, outputs ++ aggregateExpressions, child)
     }
   }
 
@@ -669,7 +669,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       // This is helps a bit with round-trip testing and plan readability
       case project: Project => Project(renameAndCastExprs(project.projectList), project.child)
       case aggregate: Aggregate =>
-        SparkCompat.instance.createAggregate(
+        Aggregate(
           aggregate.groupingExpressions,
           renameAndCastExprs(aggregate.aggregateExpressions),
           aggregate.child)

@@ -231,7 +231,7 @@ class ToSparkExpression(
         relConverter => {
           val plan = rel.accept(relConverter, context)
           require(plan.resolved)
-          val result = SparkCompat.instance.createScalarSubquery(plan)
+          val result = ScalarSubquery(plan, exprId = NamedExpression.newExprId)
           SparkTypeUtil.sameType(result.dataType, dataType)
           result
         })

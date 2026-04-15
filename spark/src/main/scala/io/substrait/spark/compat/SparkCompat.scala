@@ -10,16 +10,6 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
  */
 trait SparkCompat {
 
-  /** Create a ScalarSubquery with version-appropriate constructor */
-  def createScalarSubquery(plan: LogicalPlan): ScalarSubquery
-
-  /** Create an Aggregate with version-appropriate constructor */
-  def createAggregate(
-      groupingExpressions: Seq[Expression],
-      aggregateExpressions: Seq[NamedExpression],
-      child: LogicalPlan
-  ): Aggregate
-
   /** Create a LogicalRelation with version-appropriate constructor */
   def createLogicalRelation(
       relation: HadoopFsRelation,
