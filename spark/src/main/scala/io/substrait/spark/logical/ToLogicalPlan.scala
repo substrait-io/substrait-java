@@ -319,7 +319,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     withOutput(output) {
       val projectExprs = {
         project.getExpressions.asScala
-          .map(expr => expr.accept(expressionConverter, context))
+          .map(_.accept(expressionConverter, context))
           .toSeq
       }
       val projectList = if (names.size == projectExprs.size) {
@@ -328,11 +328,11 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         projectExprs.map(toNamedExpression)
       }
       if (createProject) {
-        val ps = output.map(_.toAttribute) ++ projectList
+        val allExpressions = output.map(_.toAttribute) ++ projectList
         val remapped = if (project.getRemap.isPresent) {
-          project.getRemap.get().indices().asScala.map(i => ps(i)).toSeq
+          project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
         } else {
-          ps
+          allExpressions
         }
         Project(remapped, child)
       } else {
