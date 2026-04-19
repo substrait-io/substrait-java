@@ -1,6 +1,20 @@
 Release Notes
 ---
 
+## [0.89.0](https://github.com/substrait-io/substrait-java/compare/v0.88.0...v0.89.0) (2026-04-19)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** bump to substrait v0.87.0 (#797)
+
+### Features
+
+* **core:** bump to substrait v0.87.0 ([#797](https://github.com/substrait-io/substrait-java/issues/797)) ([98009e1](https://github.com/substrait-io/substrait-java/commit/98009e10400b174cdfa64b089ec7177d330493b2))
+
+### Bug Fixes
+
+* **core:** correct mark join output schema ([#814](https://github.com/substrait-io/substrait-java/issues/814)) ([e7abfad](https://github.com/substrait-io/substrait-java/commit/e7abfad935791f73bad11ef3cff0326ba0e7a4d9))
+
 ## [0.88.0](https://github.com/substrait-io/substrait-java/compare/v0.87.0...v0.88.0) (2026-04-12)
 
 ### Features
