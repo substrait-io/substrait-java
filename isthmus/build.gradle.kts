@@ -88,14 +88,9 @@ dependencies {
       )
   }
   constraints {
-    // calcite-core:1.39.0 has dependencies that contain vulnerabilities:
-    // - CVE-2025-27820 (org.apache.httpcomponents.client5:httpclient5 < 5.4.3)
+    // calcite-core:1.41.0 has dependencies that contain vulnerabilities:
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
-    implementation(libs.httpclient5)
     implementation(libs.json.smart)
-    // calcite-core:1.40.0 has dependencies that contain vulnerabilities:
-    // - CVE-2025-48924 (org.apache.commons:commons-lang3 < 3.18.0)
-    implementation(libs.commons.lang3)
   }
   implementation(libs.calcite.server) {
     exclude(group = "commons-lang", module = "commons-lang")

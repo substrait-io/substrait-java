@@ -2,15 +2,13 @@
 antlr = "4.13.2"
 calcite = "1.41.0"
 classgraph = "4.8.184"
-commons-lang3 = "[3.18.0,)"
 graal = "25.0.2"
 graal-plugin = "1.0.0"
 gradle-extensions = "3.0.1"
 guava = "33.5.0-jre"
-httpclient5 = "5.6"
 immutables = "2.12.1"
 jackson = "2.21.2"
-json-smart = "2.6.0"
+json-smart = "[2.5.2,)"
 jspecify = "1.0.0"
 junit = "6.0.3"
 nmcp = "1.4.4"
@@ -39,10 +37,8 @@ calcite-core = { module = "org.apache.calcite:calcite-core", version.ref = "calc
 calcite-plus = { module = "org.apache.calcite:calcite-plus", version.ref = "calcite" }
 calcite-server = { module = "org.apache.calcite:calcite-server", version.ref = "calcite" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 graal-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graal" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
 immutables-value = { module = "org.immutables:value", version.ref = "immutables" }
 immutables-annotations = { module = "org.immutables:value-annotations", version.ref = "immutables" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
