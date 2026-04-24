@@ -126,6 +126,7 @@
           }
         },
         "names": [
+          "dummy",
           "result",
           "product"
         ]
