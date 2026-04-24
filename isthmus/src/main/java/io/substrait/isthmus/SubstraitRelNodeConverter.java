@@ -398,7 +398,9 @@ public class SubstraitRelNodeConverter
             .collect(java.util.stream.Collectors.toList());
     Optional<SqlOperator> operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
-            measure.getFunction().declaration().key(), measure.getFunction().outputType());
+            measure.getFunction().declaration().key(),
+            measure.getFunction().outputType(),
+            measure.getFunction().options());
     if (!operator.isPresent()) {
       throw new IllegalArgumentException(
           String.format(
