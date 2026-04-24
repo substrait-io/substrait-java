@@ -54,6 +54,7 @@ import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
 import java.net.URI
+import java.util.Optional
 
 import scala.annotation.nowarn
 import scala.collection.mutable.ArrayBuffer
@@ -141,7 +142,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       val outputs = groupBy.map(toNamedExpression)
       val aggregateExpressions =
         aggregate.getMeasures.asScala.map(fromMeasure).map(toNamedExpression).toSeq
-      Aggregate(groupBy, outputs ++ aggregateExpressions, child)
+      val plan = Aggregate(groupBy, outputs ++ aggregateExpressions, child)
+      remap(plan, aggregate.getRemap)
     }
   }
 
@@ -199,7 +201,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
           })
         .map(toNamedExpression(_))
         .toSeq
-      Window(windowExpressions, partitions, sortOrders, child)
+      val plan = Window(windowExpressions, partitions, sortOrders, child)
+      remap(plan, window.getRemap)
     }
   }
 
@@ -225,7 +228,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         case other =>
           throw new UnsupportedOperationException(s"Unsupported join type $other")
       }
-      Join(left, right, joinType, condition, hint = JoinHint.NONE)
+      val plan = Join(left, right, joinType, condition, hint = JoinHint.NONE)
+      remap(plan, join.getRemap)
     }
   }
 
@@ -235,7 +239,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     withChild(left, right) {
       // TODO: Support different join types here when join types are added to cross rel for BNLJ
       // Currently, this will change both cross and inner join types to inner join
-      Join(left, right, Inner, Option(null), hint = JoinHint.NONE)
+      val plan = Join(left, right, Inner, Option(null), hint = JoinHint.NONE)
+      remap(plan, join.getRemap)
     }
   }
 
@@ -258,7 +263,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val limit = fetch.getCount.orElse(-1).intValue() // -1 means unassigned here
     val offset = fetch.getOffset.intValue()
     val toLiteral = (i: Int) => Literal(i, IntegerType)
-    if (limit >= 0) {
+    val plan = if (limit >= 0) {
       val limitExpr = toLiteral(limit)
       if (offset > 0) {
         GlobalLimit(
@@ -270,13 +275,15 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     } else {
       Offset(toLiteral(offset), child)
     }
+    remap(plan, fetch.getRemap)
   }
 
   override def visit(sort: relation.Sort, context: EmptyVisitationContext): LogicalPlan = {
     val child = sort.getInput.accept(this, context)
     withChild(child) {
       val sortOrders = sort.getSortFields.asScala.map(toSortOrder).toSeq
-      Sort(sortOrders, global = true, child)
+      val plan = Sort(sortOrders, global = true, child)
+      remap(plan, sort.getRemap)
     }
   }
 
@@ -310,17 +317,24 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val names = fieldNames(project).getOrElse(List.empty)
 
     withOutput(output) {
-      val projectExprs =
+      val projectExprs = {
         project.getExpressions.asScala
-          .map(expr => expr.accept(expressionConverter, context))
+          .map(_.accept(expressionConverter, context))
           .toSeq
+      }
       val projectList = if (names.size == projectExprs.size) {
         projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
       } else {
         projectExprs.map(toNamedExpression)
       }
       if (createProject) {
-        Project(projectList, child)
+        val allExpressions = output.map(_.toAttribute) ++ projectList
+        val remapped = if (project.getRemap.isPresent) {
+          project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
+        } else {
+          allExpressions
+        }
+        Project(remapped, child)
       } else {
         val aggregate: Aggregate = child.asInstanceOf[Aggregate]
         aggregate.copy(aggregateExpressions = projectList)
@@ -352,7 +366,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         .map { case (t, name) => StructField(name, t._1, t._2) }
         .map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
-      Expand(projections.transpose, output, child)
+      val plan = Expand(projections.transpose, output, child)
+      remap(plan, expand.getRemap)
     }
   }
 
@@ -360,18 +375,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val child = filter.getInput.accept(this, context)
     withChild(child) {
       val condition = filter.getCondition.accept(expressionConverter, context)
-      Filter(condition, child)
+      val plan = Filter(condition, child)
+      remap(plan, filter.getRemap)
     }
   }
 
   override def visit(set: relation.Set, context: EmptyVisitationContext): LogicalPlan = {
     val children = set.getInputs.asScala.map(_.accept(this, context)).toSeq
     withOutput(children.flatMap(_.output)) {
-      set.getSetOp match {
+      val plan = set.getSetOp match {
         case SetOp.UNION_ALL => Union(children, byName = false, allowMissingCol = false)
         case op =>
           throw new UnsupportedOperationException(s"Operation not currently supported: $op")
       }
+      remap(plan, set.getRemap)
     }
   }
 
@@ -386,21 +403,23 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
             .toSeq
         )
     }.toSeq
-    virtualTableScan.getInitialSchema match {
+    val plan = virtualTableScan.getInitialSchema match {
       case ns: NamedStruct if ns.names().isEmpty && rows.length == 1 =>
         OneRowRelation()
       case _ =>
         LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
     }
+    remap(plan, virtualTableScan.getRemap)
   }
 
   override def visit(
       namedScan: relation.NamedScan,
       context: EmptyVisitationContext): LogicalPlan = {
-    resolve(UnresolvedRelation(namedScan.getNames.asScala.toSeq)) match {
+    val plan = resolve(UnresolvedRelation(namedScan.getNames.asScala.toSeq)) match {
       case m: MultiInstanceRelation => m.newInstance()
       case other => other
     }
+    remap(plan, namedScan.getRemap)
   }
 
   override def visit(localFiles: LocalFiles, context: EmptyVisitationContext): LogicalPlan = {
@@ -427,12 +446,13 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       format,
       options
     )
-    SparkCompat.instance.createLogicalRelation(
+    val plan = SparkCompat.instance.createLogicalRelation(
       relation = hadoopFsRelation,
       output = output,
       catalogTable = None,
       isStreaming = false
     )
+    remap(plan, localFiles.getRemap)
   }
 
   def convertFileFormat(fileFormat: FileFormat): (SparkFileFormat, Map[String, String]) = {
@@ -467,7 +487,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         case "hive" => true
         case _ => false
       }
-    write.getOperation match {
+    val plan = write.getOperation match {
       case WriteOp.CTAS =>
         withChild(child) {
           if (isHive) {
@@ -501,7 +521,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         }
       case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
     }
-
+    remap(plan, write.getRemap)
   }
 
   override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
@@ -529,7 +549,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val name = file.getPath.get.split('/').reverse.head
     val table = catalogTable(Seq(name))
 
-    withChild(child) {
+    val plan = withChild(child) {
       V1Writes.apply(
         InsertIntoHadoopFsRelationCommand(
           outputPath = new Path(file.getPath.get),
@@ -546,19 +566,21 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
           outputColumnNames = write.getTableSchema.names.asScala.toSeq
         ))
     }
+    remap(plan, write.getRemap)
   }
 
   override def visit(ddl: NamedDdl, context: EmptyVisitationContext): LogicalPlan = {
     val table =
       catalogTable(ddl.getNames.asScala.toSeq, ToSparkType.toStructType(ddl.getTableSchema))
 
-    (ddl.getOperation, ddl.getObject) match {
+    val plan = (ddl.getOperation, ddl.getObject) match {
       case (DdlOp.CREATE, DdlObject.TABLE) => CreateTableCommand(table, false)
       case (DdlOp.DROP, DdlObject.TABLE) => DropTableCommand(table.identifier, false, false, false)
       case (DdlOp.DROP_IF_EXIST, DdlObject.TABLE) =>
         DropTableCommand(table.identifier, true, false, false)
       case op => throw new UnsupportedOperationException(s"Ddl operation $op not supported")
     }
+    remap(plan, ddl.getRemap)
   }
 
   private def catalogTable(
@@ -613,6 +635,15 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       expressionConverter.popOutput()
     }
   }
+
+  private def remap(plan: LogicalPlan, remap: Optional[relation.Rel.Remap]): LogicalPlan = {
+    if (remap.isEmpty) {
+      return plan
+    }
+    val projectExprs = plan.output.map { case ne: NamedExpression => ne.toAttribute }.map(toNamedExpression)
+    Project(remap.get().indices().asScala.map(i => projectExprs(i)).toSeq, plan)
+  }
+
   private def resolve(plan: LogicalPlan): LogicalPlan = {
     val qe = SparkCompat.instance.createQueryExecution(spark, plan)
     qe.analyzed match {
