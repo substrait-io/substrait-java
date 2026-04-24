@@ -1,4 +1,10 @@
 {
+  "version": {
+    "minorNumber": 87
+  },
+  "executionBehavior": {
+    "variableEvalMode": "VARIABLE_EVALUATION_MODE_PER_PLAN"
+  },
   "extensionUrns": [
     {
       "extensionUrnAnchor": 1,

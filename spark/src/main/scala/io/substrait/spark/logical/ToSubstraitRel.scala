@@ -47,7 +47,8 @@ import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.expression.Expression.StructLiteral
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
-import io.substrait.plan.Plan
+import io.substrait.plan.{ImmutableExecutionBehavior, Plan}
+import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.RelProtoConverter
@@ -706,6 +707,10 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .builder()
           .from(Plan.Version.DEFAULT_VERSION)
           .producer("substrait-spark")
+          .build())
+      .executionBehavior(
+        ImmutableExecutionBehavior.builder()
+          .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
           .build())
       .roots(
         Collections.singletonList(
