@@ -27,7 +27,7 @@ spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
 spotless = "8.4.0"
-validator = "3.0.1"
+validator = "3.0.2"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
