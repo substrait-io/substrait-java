@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.89.1](https://github.com/substrait-io/substrait-java/compare/v0.89.0...v0.89.1) (2026-04-26)
+
+### Bug Fixes
+
+* **spark:** correct handling of ‘remap’ property ([#818](https://github.com/substrait-io/substrait-java/issues/818)) ([2b7e89f](https://github.com/substrait-io/substrait-java/commit/2b7e89f976edd4288219042de3f5cf92b6b881c6))
+
 ## [0.89.0](https://github.com/substrait-io/substrait-java/compare/v0.88.0...v0.89.0) (2026-04-19)
 
 ### ⚠ BREAKING CHANGES
