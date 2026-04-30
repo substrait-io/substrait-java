@@ -57,7 +57,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.Binary expr) {
-    return "binary";
+    return "vbin";
   }
 
   @Override
@@ -112,7 +112,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.FixedBinary expr) {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
@@ -172,7 +172,7 @@ public class ToTypeString
 
   @Override
   public String visit(ParameterizedType.FixedBinary expr) throws RuntimeException {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
