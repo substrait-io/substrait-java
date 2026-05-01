@@ -2,6 +2,10 @@ package io.substrait.function;
 
 import io.substrait.type.Type;
 
+/**
+ * Converts types to their short name string representations as defined by the Substrait <a
+ * href="https://substrait.io/extensions/#type-short-names">specification</a>
+ */
 public class ToTypeString
     extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
@@ -57,7 +61,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.Binary expr) {
-    return "binary";
+    return "vbin";
   }
 
   @Override
@@ -112,7 +116,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.FixedBinary expr) {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
@@ -172,7 +176,7 @@ public class ToTypeString
 
   @Override
   public String visit(ParameterizedType.FixedBinary expr) throws RuntimeException {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
