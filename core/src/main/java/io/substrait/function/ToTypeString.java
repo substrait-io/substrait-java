@@ -2,6 +2,10 @@ package io.substrait.function;
 
 import io.substrait.type.Type;
 
+/**
+ * Converts types to their short name string representations as defined by the Substrait <a
+ * href="https://substrait.io/extensions/#type-short-names">specification</a>
+ */
 public class ToTypeString
     extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
