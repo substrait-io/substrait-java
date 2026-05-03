@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.89.2](https://github.com/substrait-io/substrait-java/compare/v0.89.1...v0.89.2) (2026-05-03)
+
+### Bug Fixes
+
+* **core:** correct type short names for binary and fixedbinary ([#826](https://github.com/substrait-io/substrait-java/issues/826)) ([48dcd3f](https://github.com/substrait-io/substrait-java/commit/48dcd3feeeb7012f82a7f78263fee3e6931e5e8f))
+
 ## [0.89.1](https://github.com/substrait-io/substrait-java/compare/v0.89.0...v0.89.1) (2026-04-26)
 
 ### Bug Fixes
