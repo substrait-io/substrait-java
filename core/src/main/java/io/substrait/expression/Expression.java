@@ -2075,6 +2075,44 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /** Represents a runtime parameter placeholder with a declared type and parameter reference. */
+  @Value.Immutable
+  abstract class DynamicParameter implements Expression {
+    /**
+     * Returns the declared type of the parameter value.
+     *
+     * @return the parameter type
+     */
+    public abstract Type type();
+
+    /**
+     * Returns the zero-based parameter reference.
+     *
+     * @return the parameter reference
+     */
+    public abstract int parameterReference();
+
+    @Override
+    public Type getType() {
+      return type();
+    }
+
+    /**
+     * Creates a new builder for constructing a DynamicParameter.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.DynamicParameter.Builder builder() {
+      return ImmutableExpression.DynamicParameter.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
   /** Defines the operation type for set predicates (EXISTS, UNIQUE). */
   enum PredicateOp {
     /** Unspecified predicate operation. */
