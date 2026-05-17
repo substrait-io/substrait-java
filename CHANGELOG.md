@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.90.0](https://github.com/substrait-io/substrait-java/compare/v0.89.2...v0.90.0) (2026-05-17)
+
+### Features
+
+* **core,isthmus:** add DynamicParameter expression support ([#752](https://github.com/substrait-io/substrait-java/issues/752)) ([1770fa4](https://github.com/substrait-io/substrait-java/commit/1770fa4c49990732564dfff76ef35eec1664ddee))
+
 ## [0.89.2](https://github.com/substrait-io/substrait-java/compare/v0.89.1...v0.89.2) (2026-05-03)
 
 ### Bug Fixes
