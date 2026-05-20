@@ -22,7 +22,7 @@ import io.substrait.spark.logical.ToLogicalPlan
 import io.substrait.spark.utils.Util
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.{CaseWhen, Cast, Expression, In, InSubquery, ListQuery, Literal, MakeDecimal, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{And, CaseWhen, Cast, Expression, In, InSubquery, ListQuery, Literal, MakeDecimal, NamedExpression, Or, ScalarSubquery}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.Decimal
 import org.apache.spark.substrait.SparkTypeUtil
@@ -271,22 +271,28 @@ class ToSparkExpression(
         arg.accept(expr.declaration(), i, this, context)
     }.toList
 
-    scalarFunctionConverter
-      .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
-      .getOrElse({
-        val msg = String.format(
-          "Unable to convert scalar function %s(%s).",
-          expr.declaration.name,
-          expr.arguments.asScala
-            .map {
-              case ea: exp.EnumArg => ea.value.toString
-              case e: SExpression => e.getType.accept(new StringTypeVisitor)
-              case t: Type => t.accept(new StringTypeVisitor)
-              case a => throw new IllegalStateException("Unexpected value: " + a)
-            }
-            .mkString(", ")
-        )
-        throw new IllegalArgumentException(msg)
-      })
+    expr.declaration().name() match {
+      // Special handling for multi-variate AND/OR operators
+      case "and" if args.size > 2 => args.reduceLeft { (left, right) => And(left, right) }
+      case "or" if args.size > 2 => args.reduceLeft { (left, right) => Or(left, right) }
+      case _ =>
+        scalarFunctionConverter
+          .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
+          .getOrElse({
+            val msg = String.format(
+              "Unable to convert scalar function %s(%s).",
+              expr.declaration.name,
+              expr.arguments.asScala
+                .map {
+                  case ea: exp.EnumArg => ea.value.toString
+                  case e: SExpression => e.getType.accept(new StringTypeVisitor)
+                  case t: Type => t.accept(new StringTypeVisitor)
+                  case a => throw new IllegalStateException("Unexpected value: " + a)
+                }
+                .mkString(", ")
+            )
+            throw new IllegalArgumentException(msg)
+          })
+    }
   }
 }
