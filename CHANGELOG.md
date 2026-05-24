@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.91.0](https://github.com/substrait-io/substrait-java/compare/v0.90.0...v0.91.0) (2026-05-24)
+
+### Features
+
+* **spark:** support multivariate AND/OR ([#837](https://github.com/substrait-io/substrait-java/issues/837)) ([19ca6aa](https://github.com/substrait-io/substrait-java/commit/19ca6aa64e470c932f24fc10d519aa9eadcb760d))
+
 ## [0.90.0](https://github.com/substrait-io/substrait-java/compare/v0.89.2...v0.90.0) (2026-05-17)
 
 ### Features
