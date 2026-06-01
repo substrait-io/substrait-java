@@ -1,6 +1,6 @@
 [versions]
 antlr = "4.13.2"
-calcite = "1.41.0"
+calcite = "1.42.0"
 classgraph = "4.8.184"
 graal = "25.0.2"
 graal-plugin = "1.1.0"
