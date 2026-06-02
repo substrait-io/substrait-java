@@ -66,6 +66,7 @@ public class ConverterProvider {
   /** Converter for Substrait types to Calcite types and vice versa. */
   protected TypeConverter typeConverter;
 
+  /** The execution behavior configuration for plans created by this converter. */
   protected final Plan.ExecutionBehavior executionBehavior;
 
   /**
@@ -122,6 +123,17 @@ public class ConverterProvider {
     this(typeFactory, extensions, sfc, afc, wfc, tc, createDefaultExecutionBehavior());
   }
 
+  /**
+   * Creates a ConverterProvider with full customization including execution behavior.
+   *
+   * @param typeFactory the Calcite type factory to use
+   * @param extensions the Substrait extension collection to use
+   * @param sfc the scalar function converter to use
+   * @param afc the aggregate function converter to use
+   * @param wfc the window function converter to use
+   * @param tc the type converter to use
+   * @param executionBehavior the execution behavior to use for plans
+   */
   public ConverterProvider(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
