@@ -17,9 +17,28 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class HashJoin extends BiRel implements HasExtension {
 
-  public abstract List<FieldReference> getLeftKeys();
+  public abstract List<ComparisonJoinKey> getKeys();
 
-  public abstract List<FieldReference> getRightKeys();
+  /**
+   * @deprecated the left-hand sides of the join {@link #getKeys()}; use {@link #getKeys()} instead.
+   */
+  @Deprecated
+  public List<FieldReference> getLeftKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getLeft)
+        .collect(java.util.stream.Collectors.toList());
+  }
+
+  /**
+   * @deprecated the right-hand sides of the join {@link #getKeys()}; use {@link #getKeys()}
+   *     instead.
+   */
+  @Deprecated
+  public List<FieldReference> getRightKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getRight)
+        .collect(java.util.stream.Collectors.toList());
+  }
 
   public abstract JoinType getJoinType();
 

@@ -47,6 +47,7 @@ import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.MultiBucketExchange;
@@ -152,6 +153,35 @@ public class RelProtoConverter
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
     return toProto((Expression) fieldReference).getSelection();
+  }
+
+  private io.substrait.proto.ComparisonJoinKey toProto(ComparisonJoinKey key) {
+    io.substrait.proto.ComparisonJoinKey.ComparisonType comparison =
+        key.getComparison()
+            .accept(
+                new ComparisonJoinKey.ComparisonTypeVisitor<
+                    io.substrait.proto.ComparisonJoinKey.ComparisonType, RuntimeException>() {
+                  @Override
+                  public io.substrait.proto.ComparisonJoinKey.ComparisonType visit(
+                      ComparisonJoinKey.SimpleComparison simpleComparison) {
+                    return io.substrait.proto.ComparisonJoinKey.ComparisonType.newBuilder()
+                        .setSimple(simpleComparison.getType().toProto())
+                        .build();
+                  }
+
+                  @Override
+                  public io.substrait.proto.ComparisonJoinKey.ComparisonType visit(
+                      ComparisonJoinKey.CustomComparison customComparison) {
+                    return io.substrait.proto.ComparisonJoinKey.ComparisonType.newBuilder()
+                        .setCustomFunctionReference(customComparison.getCustomFunctionReference())
+                        .build();
+                  }
+                });
+    return io.substrait.proto.ComparisonJoinKey.newBuilder()
+        .setLeft(toProto(key.getLeft()))
+        .setRight(toProto(key.getRight()))
+        .setComparison(comparison)
+        .build();
   }
 
   @Override
@@ -363,15 +393,7 @@ public class RelProtoConverter
             .setRight(toProto(hashJoin.getRight()))
             .setType(hashJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = hashJoin.getLeftKeys();
-    List<FieldReference> rightKeys = hashJoin.getRightKeys();
-
-    if (leftKeys.size() != rightKeys.size()) {
-      throw new IllegalArgumentException("Number of left and right keys must be equal.");
-    }
-
-    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
-    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
+    builder.addAllKeys(hashJoin.getKeys().stream().map(this::toProto).collect(Collectors.toList()));
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
@@ -390,15 +412,8 @@ public class RelProtoConverter
             .setRight(toProto(mergeJoin.getRight()))
             .setType(mergeJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = mergeJoin.getLeftKeys();
-    List<FieldReference> rightKeys = mergeJoin.getRightKeys();
-
-    if (leftKeys.size() != rightKeys.size()) {
-      throw new IllegalArgumentException("Number of left and right keys must be equal.");
-    }
-
-    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
-    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
+    builder.addAllKeys(
+        mergeJoin.getKeys().stream().map(this::toProto).collect(Collectors.toList()));
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
