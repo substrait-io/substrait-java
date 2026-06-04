@@ -274,6 +274,19 @@ public class SimpleExtension {
       return "";
     }
 
+    /**
+     * Resolves the effective description for this implementation. An implementation-level
+     * description (parsed into {@link #description()}) documents overload-specific behavior and
+     * takes precedence over the parent function's description when present. See <a
+     * href="https://github.com/substrait-io/substrait/pull/1013">substrait#1013</a>.
+     */
+    String resolveDescription(String functionDescription) {
+      String implDescription = description();
+      return implDescription == null || implDescription.isEmpty()
+          ? functionDescription
+          : implDescription;
+    }
+
     public abstract List<Argument> args();
 
     public abstract Map<String, Option> options();
@@ -403,7 +416,7 @@ public class SimpleExtension {
       return ImmutableSimpleExtension.ScalarFunctionVariant.builder()
           .urn(urn)
           .name(name)
-          .description(description)
+          .description(resolveDescription(description))
           .nullability(nullability())
           .args(args())
           .options(options())
@@ -480,7 +493,7 @@ public class SimpleExtension {
       return ImmutableSimpleExtension.AggregateFunctionVariant.builder()
           .urn(urn)
           .name(name)
-          .description(description)
+          .description(resolveDescription(description))
           .nullability(nullability())
           .args(args())
           .options(options())
@@ -524,7 +537,7 @@ public class SimpleExtension {
       return ImmutableSimpleExtension.WindowFunctionVariant.builder()
           .urn(urn)
           .name(name)
-          .description(description)
+          .description(resolveDescription(description))
           .nullability(nullability())
           .args(args())
           .options(options())
