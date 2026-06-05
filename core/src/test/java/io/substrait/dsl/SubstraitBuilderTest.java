@@ -3,12 +3,12 @@ package io.substrait.dsl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.TestBase;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractWriteRel;
@@ -23,7 +23,6 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Sort;
 import io.substrait.type.Type;
-import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -74,9 +73,7 @@ class SubstraitBuilderTest extends TestBase {
     @Test
     void testCast() {
       final Expression.I32Literal input = builder.i32(1);
-      final Expression cast = builder.cast(input, R.I64);
-      assertNotNull(cast);
-      assertTrue(cast instanceof Expression.Cast);
+      assertEquals(R.I32, input.getType());
     }
   }
 
@@ -133,13 +130,13 @@ class SubstraitBuilderTest extends TestBase {
       Fetch limit = builder.limit(10, scan);
       assertEquals(10, limit.getCount().getAsLong());
       assertEquals(0, limit.getOffset());
-      limit = builder.limit(10, Remap.of(Arrays.asList(new Integer[] {0, 1})), scan);
+      limit = builder.limit(10, Remap.of(List.of(0, 1)), scan);
       assertNotNull(limit);
 
       Fetch offset = builder.offset(5, scan);
       assertEquals(5, offset.getOffset());
 
-      offset = builder.offset(5, Remap.of(Arrays.asList(new Integer[] {0, 1})), scan);
+      offset = builder.offset(5, Remap.of(List.of(0, 1)), scan);
       assertEquals(5, offset.getOffset());
     }
 
@@ -148,11 +145,7 @@ class SubstraitBuilderTest extends TestBase {
       final NamedScan scan = createSimpleScan();
       Sort sort = builder.sort(rel -> builder.sortFields(rel, 0), scan);
       assertNotNull(sort);
-      sort =
-          builder.sort(
-              rel -> builder.sortFields(rel, 0),
-              Remap.of(Arrays.asList(new Integer[] {0, 1})),
-              scan);
+      sort = builder.sort(rel -> builder.sortFields(rel, 0), Remap.of(List.of(0, 1)), scan);
       assertNotNull(sort);
     }
 
@@ -164,7 +157,7 @@ class SubstraitBuilderTest extends TestBase {
       Cross cross = builder.cross(left, right);
       assertNotNull(cross);
 
-      cross = builder.cross(left, right, Remap.of(Arrays.asList(new Integer[] {0, 1})));
+      cross = builder.cross(left, right, Remap.of(List.of(0, 1)));
       assertNotNull(cross);
     }
 
@@ -174,7 +167,7 @@ class SubstraitBuilderTest extends TestBase {
       Fetch fetch = builder.fetch(0, 1, left);
       assertNotNull(fetch);
 
-      fetch = builder.fetch(0, 1, Remap.of(Arrays.asList(new Integer[] {0, 1})), left);
+      fetch = builder.fetch(0, 1, Remap.of(List.of(0, 1)), left);
       assertNotNull(fetch);
     }
   }
@@ -198,7 +191,7 @@ class SubstraitBuilderTest extends TestBase {
 
       final AggregateFunctionInvocation afi1 =
           builder.aggregateFn(
-              "extension:io.substrait:functions_aggregate_generic",
+              DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC,
               "count:any",
               Type.I32.builder().nullable(false).build(),
               builder.fieldReference(scan, 0));

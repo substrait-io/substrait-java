@@ -868,7 +868,7 @@ public class SubstraitBuilder {
   /**
    * Creates a boolean literal expression.
    *
-   * @param v the boolean value
+   * @param v the boolean v
    * @return a new {@link Expression.BoolLiteral}
    */
   public Expression.BoolLiteral bool(boolean v) {
@@ -876,29 +876,29 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Create i16 literal.
+   * Create i8 literal.
    *
-   * @param value value to create
-   * @return i16 instance
+   * @param v v to create
+   * @return i8 instance
    */
-  public Expression.I8Literal i8(int value) {
-    return Expression.I8Literal.builder().value(value).build();
+  public Expression.I8Literal i8(int v) {
+    return Expression.I8Literal.builder().value(v).build();
   }
 
   /**
    * Create i16 literal.
    *
-   * @param value value to create
+   * @param v v to create
    * @return i16 instance
    */
-  public Expression.I16Literal i16(int value) {
-    return Expression.I16Literal.builder().value(value).build();
+  public Expression.I16Literal i16(int v) {
+    return Expression.I16Literal.builder().value(v).build();
   }
 
   /**
    * Creates a 32-bit integer literal expression.
    *
-   * @param v the integer value
+   * @param v the integer v
    * @return a new {@link Expression.I32Literal}
    */
   public Expression.I32Literal i32(int v) {
@@ -908,27 +908,27 @@ public class SubstraitBuilder {
   /**
    * Creates a 64-bit integer literal expression.
    *
-   * @param value value to create
+   * @param v v to create
    * @return i64 instance
    */
-  public Expression.I64Literal i64(long value) {
-    return Expression.I64Literal.builder().value(value).build();
+  public Expression.I64Literal i64(long v) {
+    return Expression.I64Literal.builder().value(v).build();
   }
 
   /**
    * Creates a 32-bit floating point literal expression.
    *
-   * @param value the float value
+   * @param v the float v
    * @return a new {@link Expression.FP32Literal}
    */
-  public Expression.FP32Literal fp32(float value) {
-    return Expression.FP32Literal.builder().value(value).build();
+  public Expression.FP32Literal fp32(float v) {
+    return Expression.FP32Literal.builder().value(v).build();
   }
 
   /**
    * Creates a 64-bit floating point literal expression.
    *
-   * @param v the double value
+   * @param v the double v
    * @return a new {@link Expression.FP64Literal}
    */
   public Expression.FP64Literal fp64(double v) {
@@ -938,7 +938,7 @@ public class SubstraitBuilder {
   /**
    * Creates a string literal expression.
    *
-   * @param s the string value
+   * @param s the string v
    * @return a new {@link Expression.StrLiteral}
    */
   public Expression.StrLiteral str(String s) {
@@ -1070,7 +1070,7 @@ public class SubstraitBuilder {
    * options.
    *
    * @param condition the expression to match against
-   * @param options the list of possible values to match
+   * @param options the list of possible vs to match
    * @return a new {@link SingleOrList} expression
    */
   public Expression singleOrList(Expression condition, Expression... options) {
@@ -1078,11 +1078,10 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates an IN predicate expression that checks if any needle values exist in the haystack
-   * relation.
+   * Creates an IN predicate expression that checks if any needle vs exist in the haystack relation.
    *
    * @param haystack the relation to search within
-   * @param needles the values to search for
+   * @param needles the vs to search for
    * @return a new {@link Expression.InPredicate}
    */
   public Expression.InPredicate inPredicate(Rel haystack, Expression... needles) {
@@ -1125,7 +1124,7 @@ public class SubstraitBuilder {
   /**
    * Creates a switch clause that pairs a literal condition with a result expression.
    *
-   * @param condition the literal value to match against
+   * @param condition the literal v to match against
    * @param then the expression to return if the condition matches
    * @return a new {@link SwitchClause}
    */
@@ -1134,7 +1133,7 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a switch expression that matches a value against multiple cases.
+   * Creates a switch expression that matches a v against multiple cases.
    *
    * @param match the expression to match against
    * @param clauses the list of switch clauses to evaluate
@@ -1241,7 +1240,7 @@ public class SubstraitBuilder {
    * Creates a MIN aggregate measure for a specific field.
    *
    * @param input the input relation
-   * @param field the zero-based index of the field to find the minimum value
+   * @param field the zero-based index of the field to find the minimum v
    * @return a new {@link Aggregate.Measure} representing MIN
    */
   public Aggregate.Measure min(Rel input, int field) {
@@ -1251,7 +1250,7 @@ public class SubstraitBuilder {
   /**
    * Creates a MIN aggregate measure for an expression.
    *
-   * @param expr the expression to find the minimum value
+   * @param expr the expression to find the minimum v
    * @return a new {@link Aggregate.Measure} representing MIN
    */
   public Aggregate.Measure min(Expression expr) {
@@ -1266,7 +1265,7 @@ public class SubstraitBuilder {
    * Creates a MAX aggregate measure for a specific field.
    *
    * @param input the input relation
-   * @param field the zero-based index of the field to find the maximum value
+   * @param field the zero-based index of the field to find the maximum v
    * @return a new {@link Aggregate.Measure} representing MAX
    */
   public Aggregate.Measure max(Rel input, int field) {
@@ -1276,7 +1275,7 @@ public class SubstraitBuilder {
   /**
    * Creates a MAX aggregate measure for an expression.
    *
-   * @param expr the expression to find the maximum value
+   * @param expr the expression to find the maximum v
    * @return a new {@link Aggregate.Measure} representing MAX
    */
   public Aggregate.Measure max(Expression expr) {
@@ -1505,17 +1504,16 @@ public class SubstraitBuilder {
    * Creates a logical NOT expression that negates a boolean expression.
    *
    * <p>This is a convenience method that wraps the boolean NOT function from the Substrait standard
-   * library. The result is nullable to handle NULL input values according to three-valued logic.
+   * library. The result is nullable to handle NULL input vs according to three-vd logic.
    *
    * @param expression the boolean expression to negate
    * @return a scalar function invocation representing the logical NOT of the input expression
    */
-  public Expression not(Expression expression) {
+  public Expression.ScalarFunctionInvocation not(Expression expression) {
+    Type outputType = expression.getType().nullable() ? N.BOOLEAN : R.BOOLEAN;
+
     return this.scalarFn(
-        DefaultExtensionCatalog.FUNCTIONS_BOOLEAN,
-        "not:bool",
-        TypeCreator.NULLABLE.BOOLEAN,
-        expression);
+        DefaultExtensionCatalog.FUNCTIONS_BOOLEAN, "not:bool", outputType, expression);
   }
 
   /**
@@ -1534,14 +1532,11 @@ public class SubstraitBuilder {
    */
   public Expression isNull(Expression expression) {
 
-    final List<Expression> args = new ArrayList<>();
-    args.add(expression);
-
     return this.scalarFn(
         DefaultExtensionCatalog.FUNCTIONS_COMPARISON,
         "is_null:any",
         TypeCreator.REQUIRED.BOOLEAN,
-        args,
+        Collections.singletonList(expression),
         new ArrayList<FunctionOption>());
   }
 
@@ -1558,7 +1553,7 @@ public class SubstraitBuilder {
    * @param optionsList the function options controlling behavior
    * @return a scalar function invocation expression
    */
-  public Expression scalarFn(
+  public Expression.ScalarFunctionInvocation scalarFn(
       String urn,
       String key,
       Type returnType,
@@ -1591,26 +1586,6 @@ public class SubstraitBuilder {
         .declaration(declaration)
         .outputType(outputType)
         .arguments(Arrays.stream(args).collect(java.util.stream.Collectors.toList()))
-        .build();
-  }
-
-  /**
-   * Creates a scalar function invocation with function options.
-   *
-   * @param urn the extension URI (e.g., {@link DefaultExtensionCatalog#FUNCTIONS_STRING})
-   * @param key the function signature (e.g., "substring:str_i32_i32")
-   * @param returnType the return type of the function
-   * @param args the function arguments
-   * @return a scalar function invocation expression
-   */
-  public Expression scalarFn(
-      String urn, String key, Type returnType, List<? extends FunctionArg> args) {
-    SimpleExtension.ScalarFunctionVariant declaration =
-        extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
-    return Expression.ScalarFunctionInvocation.builder()
-        .declaration(declaration)
-        .outputType(returnType)
-        .arguments(args)
         .build();
   }
 
@@ -1698,7 +1673,7 @@ public class SubstraitBuilder {
    * Creates a plan from a plan root.
    *
    * @param root the plan root
-   * @return a new {@link Plan}
+   * @return a new {@link Plan.Root}
    */
   public Plan plan(Plan.Root root) {
     return Plan.builder().addRoots(root).build();
@@ -1731,10 +1706,10 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a scalar subquery expression that returns a single value from a relation.
+   * Creates a scalar subquery expression that returns a single v from a relation.
    *
    * @param input the input relation that must return exactly one row and one column
-   * @param type the type of the scalar value
+   * @param type the type of the scalar v
    * @return a new {@link Expression.ScalarSubquery}
    */
   public Expression scalarSubquery(Rel input, Type type) {
