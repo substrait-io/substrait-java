@@ -62,7 +62,7 @@ public class ToOptimizedSql implements Action {
               .addRuleCollection(simplificationRules());
 
           final RelOptPlanner hepPlanner = new HepPlanner(programBuilder.build());
-          // convert the substrait to the calcite relation tree
+          // convert the Substrait to the Calcite relation tree
           final RelRoot convertedRoot = super.convert(root);
           hepPlanner.setRoot(convertedRoot.project());
 
