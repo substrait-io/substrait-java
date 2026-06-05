@@ -26,7 +26,7 @@ import org.apache.calcite.sql.SqlDialect;
  * <p>This example follows the same structure as the "ToSql" example but shows how the
  * ConverterProvider can be subclassed to update the Calcite configuration.
  *
- * <p>This case how the HepPlanner can be used to optimize the plan before it's conversion to SQL.
+ * <p>This shows how the HepPlanner can be used to optimize the plan before it's conversion to SQL.
  */
 public class ToOptimizedSql implements Action {
 
