@@ -84,9 +84,6 @@ public class PlanProtoConverter {
    * @throws IllegalArgumentException if the plan contains invalid data
    */
   public Plan toProto(final io.substrait.plan.Plan plan) {
-    // validate Plan is valid with current specification
-    plan.validate();
-
     final List<PlanRel> planRels = new ArrayList<>();
     final ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
     for (final io.substrait.plan.Plan.Root root : plan.getRoots()) {

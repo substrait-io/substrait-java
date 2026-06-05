@@ -475,33 +475,30 @@ class PlanConverterTest {
   /**
    * Conversion from protobuf Plan without ExecutionBehavior.
    *
-   * <p>Verifies that converting a protobuf Plan without ExecutionBehavior to POJO succeeds, but
-   * serializing that POJO via
-   * [`PlanProtoConverter.toProto()`](core/src/main/java/io/substrait/plan/PlanProtoConverter.java:86)
-   * fails validation because ExecutionBehavior is required.
+   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan that fails
+   * validation (since ExecutionBehavior is required).
    */
   @Test
   void testFromProtoWithoutExecutionBehaviorFailsValidation() {
+    // Create a protobuf Plan without ExecutionBehavior
     io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
 
-    Plan plan = fromProtoConverter.from(protoPlan);
-
+    // Attempt to convert to POJO - should fail validation
     assertThrows(
         IllegalArgumentException.class,
-        () -> toProtoConverter.toProto(plan),
-        "Serialization should fail when ExecutionBehavior is not set");
+        () -> fromProtoConverter.from(protoPlan),
+        "Conversion should fail when ExecutionBehavior is not set");
   }
 
   /**
    * Test case 6: Conversion from protobuf Plan with UNSPECIFIED mode fails validation.
    *
-   * <p>Verifies that converting a protobuf Plan with VARIABLE_EVALUATION_MODE_UNSPECIFIED to POJO
-   * succeeds, but serializing that POJO via
-   * [`PlanProtoConverter.toProto()`](core/src/main/java/io/substrait/plan/PlanProtoConverter.java:86)
-   * fails validation.
+   * <p>Verifies that a protobuf Plan with VARIABLE_EVALUATION_MODE_UNSPECIFIED results in a
+   * validation failure when converted to POJO.
    */
   @Test
   void testFromProtoWithUnspecifiedModeFailsValidation() {
+    // Create a protobuf Plan with UNSPECIFIED mode
     io.substrait.proto.Plan protoPlan =
         io.substrait.proto.Plan.newBuilder()
             .setExecutionBehavior(
@@ -512,13 +509,12 @@ class PlanConverterTest {
                     .build())
             .build();
 
-    Plan plan = fromProtoConverter.from(protoPlan);
-
+    // Attempt to convert to POJO - should fail validation
     IllegalArgumentException exception =
         assertThrows(
             IllegalArgumentException.class,
-            () -> toProtoConverter.toProto(plan),
-            "Serialization should fail when VariableEvaluationMode is UNSPECIFIED");
+            () -> fromProtoConverter.from(protoPlan),
+            "Conversion should fail when VariableEvaluationMode is UNSPECIFIED");
 
     assertTrue(
         exception.getMessage().contains("VariableEvaluationMode"),
@@ -641,22 +637,21 @@ class PlanConverterTest {
    * Verify that protobuf without execution behavior field is handled.
    *
    * <p>Tests the edge case where a protobuf Plan doesn't have the execution behavior field set at
-   * all. Conversion to POJO should succeed, but serialization via
-   * [`PlanProtoConverter.toProto()`](core/src/main/java/io/substrait/plan/PlanProtoConverter.java:86)
-   * should fail.
+   * all.
    */
   @Test
   void testFromProtoMissingExecutionBehaviorField() {
+    // Create protobuf Plan without setting execution behavior
     io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
 
+    // Verify hasExecutionBehavior returns false
     assertFalse(
         protoPlan.hasExecutionBehavior(), "Protobuf Plan should not have execution behavior field");
 
-    Plan plan = fromProtoConverter.from(protoPlan);
-
+    // Conversion should fail validation
     assertThrows(
         IllegalArgumentException.class,
-        () -> toProtoConverter.toProto(plan),
-        "Serialization should fail when execution behavior is missing");
+        () -> fromProtoConverter.from(protoPlan),
+        "Conversion should fail when execution behavior is missing");
   }
 }

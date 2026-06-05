@@ -61,22 +61,24 @@ class PlanValidationTest {
   /**
    * Test case 2: Missing execution behavior (empty Optional).
    *
-   * <p>This test verifies that a Plan can be built without ExecutionBehavior, but serialization via
-   * [`PlanProtoConverter.toProto()`](core/src/main/java/io/substrait/plan/PlanProtoConverter.java:86)
-   * fails with an IllegalArgumentException indicating that ExecutionBehavior is required.
+   * <p>This test verifies that attempting to create a Plan without setting the ExecutionBehavior
+   * field throws an IllegalArgumentException with an appropriate error message indicating that
+   * ExecutionBehavior is required.
    */
   @Test
   void testMissingExecutionBehavior() {
-    Plan plan = ImmutablePlan.builder().build();
-
+    // Attempt to create a Plan without ExecutionBehavior
     IllegalArgumentException exception =
         assertThrows(
             IllegalArgumentException.class,
-            () -> new PlanProtoConverter().toProto(plan),
-            "Plan serialization should fail when ExecutionBehavior is not set");
+            () -> {
+              ImmutablePlan.builder().build();
+            },
+            "Plan creation should fail when ExecutionBehavior is not set");
 
+    // Verify the error message
     assertEquals(
-        "ExecutionBehavior is required since Substrait v0.87.0 but was not set",
+        "ExecutionBehavior is required but was not set",
         exception.getMessage(),
         "Error message should indicate ExecutionBehavior is required");
   }
@@ -84,27 +86,29 @@ class PlanValidationTest {
   /**
    * Test case 3: Execution behavior with unspecified variable evaluation mode.
    *
-   * <p>This test verifies that a Plan can be built with an ExecutionBehavior whose
-   * VariableEvaluationMode is VARIABLE_EVALUATION_MODE_UNSPECIFIED, but serialization via
-   * [`PlanProtoConverter.toProto()`](core/src/main/java/io/substrait/plan/PlanProtoConverter.java:86)
-   * fails with an IllegalArgumentException.
+   * <p>This test verifies that attempting to create a Plan with an ExecutionBehavior that has its
+   * VariableEvaluationMode set to VARIABLE_EVALUATION_MODE_UNSPECIFIED throws an
+   * IllegalArgumentException with an appropriate error message.
    */
   @Test
   void testUnspecifiedVariableEvaluationMode() {
+    // Create an ExecutionBehavior with VARIABLE_EVALUATION_MODE_UNSPECIFIED
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
             .variableEvaluationMode(
                 Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED)
             .build();
 
-    Plan plan = ImmutablePlan.builder().executionBehavior(executionBehavior).build();
-
+    // Attempt to create a Plan with the invalid ExecutionBehavior
     IllegalArgumentException exception =
         assertThrows(
             IllegalArgumentException.class,
-            () -> new PlanProtoConverter().toProto(plan),
-            "Plan serialization should fail when VariableEvaluationMode is UNSPECIFIED");
+            () -> {
+              ImmutablePlan.builder().executionBehavior(executionBehavior).build();
+            },
+            "Plan creation should fail when VariableEvaluationMode is UNSPECIFIED");
 
+    // Verify the error message contains the expected information
     String expectedMessage =
         "ExecutionBehavior requires a specified VariableEvaluationMode, but got: "
             + "VARIABLE_EVALUATION_MODE_UNSPECIFIED";

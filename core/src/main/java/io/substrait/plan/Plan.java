@@ -35,22 +35,14 @@ public abstract class Plan {
    *       ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED})
    * </ul>
    *
-   * <p>The validation is currently triggered when the Plan gets serialized into protobuf in {@link
-   * PlanProtoConverter#toProto(Plan)}.
-   *
-   * <p>TODO: After the grace period of introducing this breaking change is over, the validation
-   * should also be triggered when the Plan gets deserialized from protobuf by adding the {@link
-   * Value.Check} annotation to this method and removing the call from {@link
-   * PlanProtoConverter#toProto(Plan)}.
-   *
    * @throws IllegalArgumentException if the execution behavior is not present, or if the variable
    *     evaluation mode is set to {@link
    *     ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
    */
-  protected void validate() {
+  @Value.Check
+  protected void check() {
     if (!getExecutionBehavior().isPresent()) {
-      throw new IllegalArgumentException(
-          "ExecutionBehavior is required since Substrait v0.87.0 but was not set");
+      throw new IllegalArgumentException("ExecutionBehavior is required but was not set");
     }
     ExecutionBehavior behavior = getExecutionBehavior().get();
     if (behavior.getVariableEvaluationMode()
