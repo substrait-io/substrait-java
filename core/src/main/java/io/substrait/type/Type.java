@@ -422,11 +422,11 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   @Value.Immutable
-  abstract class UserDefined implements Type {
+  interface UserDefined extends Type {
 
-    public abstract String urn();
+    String urn();
 
-    public abstract String name();
+    String name();
 
     /**
      * Returns the type parameters for this user-defined type.
@@ -437,16 +437,29 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
      * @return a list of type parameters, or an empty list if this type is not parameterized
      */
     @Value.Default
-    public java.util.List<Parameter> typeParameters() {
+    default java.util.List<Parameter> typeParameters() {
       return java.util.Collections.emptyList();
     }
 
-    public static ImmutableType.UserDefined.Builder builder() {
+    /**
+     * Returns the type variation reference for this user-defined type.
+     *
+     * <p>Type variations allow different physical representations or semantics for the same logical
+     * type. The reference value maps to an {@code ExtensionTypeVariation} declaration in the plan.
+     *
+     * @return the type variation reference, or {@code 0} if using the default variation
+     */
+    @Value.Default
+    default int typeVariationReference() {
+      return 0;
+    }
+
+    static ImmutableType.UserDefined.Builder builder() {
       return ImmutableType.UserDefined.builder();
     }
 
     @Override
-    public <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
+    default <R, E extends Throwable> R accept(TypeVisitor<R, E> typeVisitor) throws E {
       return typeVisitor.visit(this);
     }
   }

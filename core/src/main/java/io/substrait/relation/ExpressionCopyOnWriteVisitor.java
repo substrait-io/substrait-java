@@ -455,6 +455,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  @Override
+  public Optional<Expression> visit(
+      Expression.DynamicParameter expr, EmptyVisitationContext context) throws E {
+    return Optional.empty();
+  }
+
   // utilities
 
   protected Optional<List<Expression>> visitExprList(

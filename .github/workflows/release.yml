@@ -57,7 +57,7 @@ jobs:
       - uses: actions/create-github-app-token@v3
         id: app-token
         with:
-          app-id: ${{ secrets.RELEASER_ID }}
+          client-id: ${{ secrets.RELEASER_ID }}
           private-key: ${{ secrets.RELEASER_KEY }}
       - name: Checkout code
         uses: actions/checkout@v6

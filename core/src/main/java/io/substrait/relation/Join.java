@@ -65,7 +65,8 @@ public abstract class Join extends BiRel implements HasExtension {
   protected Type.Struct deriveRecordType() {
     Stream<Type> leftTypes = getLeftTypes();
     Stream<Type> rightTypes = getRightTypes();
-    return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
+    Stream<Type> markType = getMarkType();
+    return TypeCreator.REQUIRED.struct(Stream.of(leftTypes, rightTypes, markType).flatMap(s -> s));
   }
 
   private Stream<Type> getLeftTypes() {
@@ -76,11 +77,9 @@ public abstract class Join extends BiRel implements HasExtension {
         return getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
       case RIGHT_SEMI:
       case RIGHT_ANTI:
-        // these are right joins which ignore left side columns
-        return Stream.of();
       case RIGHT_MARK:
-        // right mark join keeps all fields from right and adds a boolean mark field
-        return Stream.of(TypeCreator.REQUIRED.BOOLEAN);
+        // these joins ignore left side columns
+        return Stream.of();
       default:
         return getLeft().getRecordType().fields().stream();
     }
@@ -96,13 +95,26 @@ public abstract class Join extends BiRel implements HasExtension {
       case ANTI:
       case LEFT_SEMI:
       case LEFT_ANTI:
-        // these are left joins which ignore right side columns
-        return Stream.of();
       case LEFT_MARK:
-        // left mark join keeps all fields from left and adds a boolean mark field
-        return Stream.of(TypeCreator.REQUIRED.BOOLEAN);
+        // these joins ignore right side columns
+        return Stream.of();
       default:
         return getRight().getRecordType().fields().stream();
+    }
+  }
+
+  private Stream<Type> getMarkType() {
+    // Mark joins append a nullable boolean "mark" column at the end of the
+    // emitted side. The column is nullable because the match state is 3-valued:
+    //  - true  : at least one partner matched
+    //  - false : no partner, and no NULL-producing comparisons
+    //  - NULL  : no partner, but some comparison produced NULL
+    switch (getJoinType()) {
+      case LEFT_MARK:
+      case RIGHT_MARK:
+        return Stream.of(TypeCreator.NULLABLE.BOOLEAN);
+      default:
+        return Stream.of();
     }
   }
 

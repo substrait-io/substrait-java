@@ -6,20 +6,6 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
 
 class SparkCompatImpl extends SparkCompat {
 
-  override def createScalarSubquery(plan: LogicalPlan): ScalarSubquery = {
-    // Spark 4.0 simplified constructor - no exprId needed
-    ScalarSubquery(plan)
-  }
-
-  override def createAggregate(
-      groupingExpressions: Seq[Expression],
-      aggregateExpressions: Seq[NamedExpression],
-      child: LogicalPlan
-  ): Aggregate = {
-    // Spark 4.0 simplified constructor - no aggregateAttributes needed
-    Aggregate(groupingExpressions, aggregateExpressions, child)
-  }
-
   override def createLogicalRelation(
       relation: HadoopFsRelation,
       output: Seq[AttributeReference],

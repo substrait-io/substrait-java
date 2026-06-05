@@ -1,35 +1,33 @@
 [versions]
 antlr = "4.13.2"
-calcite = "1.41.0"
+calcite = "1.42.0"
 classgraph = "4.8.184"
-commons-lang3 = "[3.18.0,)"
-graal = "25.0.0"
-graal-plugin = "0.11.5"
-gradle-extensions = "3.0.1"
-guava = "33.5.0-jre"
-httpclient5 = "5.6"
-immutables = "2.12.1"
-jackson = "2.21.2"
-json-smart = "2.6.0"
+graal = "25.0.2"
+graal-plugin = "1.1.1"
+gradle-extensions = "3.0.2"
+guava = "33.6.0-jre"
+immutables = "2.12.2"
+jackson = "2.21.3"
+json-smart = "[2.5.2,)"
 jspecify = "1.0.0"
-junit = "6.0.3"
-nmcp = "1.4.4"
+junit = "6.1.0"
+nmcp = "1.5.0"
 picocli = "4.7.7"
-protobuf-plugin = "0.9.6"
-protobuf = "3.25.8"
+protobuf-plugin = "0.10.0"
+protobuf = "3.25.9"
 scala-2-12 = "2.12.20"
 scala-2-13 = "2.13.18"
-scalatest-2-12 = "3.2.19"
-scalatest-2-13 = "3.2.19"
-scalatestplus-junit5-2-12 = "3.2.19.0"
-scalatestplus-junit5-2-13 = "3.2.19.0"
+scalatest-2-12 = "3.2.20"
+scalatest-2-13 = "3.2.20"
+scalatestplus-junit5-2-12 = "3.2.20.0"
+scalatestplus-junit5-2-13 = "3.2.20.0"
 shadow = "9.4.1"
-slf4j = "2.0.17"
+slf4j = "2.0.18"
 spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
-spotless = "8.4.0"
-validator = "3.0.1"
+spotless = "8.6.0"
+validator = "3.0.3"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
@@ -39,10 +37,8 @@ calcite-core = { module = "org.apache.calcite:calcite-core", version.ref = "calc
 calcite-plus = { module = "org.apache.calcite:calcite-plus", version.ref = "calcite" }
 calcite-server = { module = "org.apache.calcite:calcite-server", version.ref = "calcite" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 graal-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graal" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
 immutables-value = { module = "org.immutables:value", version.ref = "immutables" }
 immutables-annotations = { module = "org.immutables:value-annotations", version.ref = "immutables" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
@@ -68,8 +64,8 @@ scala-library-2-12 = { module = "org.scala-lang:scala-library", version.ref = "s
 scala-library-2-13 = { module = "org.scala-lang:scala-library", version.ref = "scala-2-13" }
 scalatest-2-12 = { module = "org.scalatest:scalatest_2.12", version.ref = "scalatest-2-12" }
 scalatest-2-13 = { module = "org.scalatest:scalatest_2.13", version.ref = "scalatest-2-13" }
-scalatestplus-junit5-2-12 = { module = "org.scalatestplus:junit-5-12_2.12", version.ref = "scalatestplus-junit5-2-12" }
-scalatestplus-junit5-2-13 = { module = "org.scalatestplus:junit-5-13_2.13", version.ref = "scalatestplus-junit5-2-13" }
+scalatestplus-junit5-2-12 = { module = "org.scalatestplus:junit-5-14_2.12", version.ref = "scalatestplus-junit5-2-12" }
+scalatestplus-junit5-2-13 = { module = "org.scalatestplus:junit-5-14_2.13", version.ref = "scalatestplus-junit5-2-13" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 spark-catalyst-3-4-2-12 = { module = "org.apache.spark:spark-catalyst_2.12", version.ref = "spark-3-4" }

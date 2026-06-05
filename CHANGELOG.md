@@ -1,6 +1,52 @@
 Release Notes
 ---
 
+## [0.91.0](https://github.com/substrait-io/substrait-java/compare/v0.90.0...v0.91.0) (2026-05-24)
+
+### Features
+
+* **spark:** support multivariate AND/OR ([#837](https://github.com/substrait-io/substrait-java/issues/837)) ([19ca6aa](https://github.com/substrait-io/substrait-java/commit/19ca6aa64e470c932f24fc10d519aa9eadcb760d))
+
+## [0.90.0](https://github.com/substrait-io/substrait-java/compare/v0.89.2...v0.90.0) (2026-05-17)
+
+### Features
+
+* **core,isthmus:** add DynamicParameter expression support ([#752](https://github.com/substrait-io/substrait-java/issues/752)) ([1770fa4](https://github.com/substrait-io/substrait-java/commit/1770fa4c49990732564dfff76ef35eec1664ddee))
+
+## [0.89.2](https://github.com/substrait-io/substrait-java/compare/v0.89.1...v0.89.2) (2026-05-03)
+
+### Bug Fixes
+
+* **core:** correct type short names for binary and fixedbinary ([#826](https://github.com/substrait-io/substrait-java/issues/826)) ([48dcd3f](https://github.com/substrait-io/substrait-java/commit/48dcd3feeeb7012f82a7f78263fee3e6931e5e8f))
+
+## [0.89.1](https://github.com/substrait-io/substrait-java/compare/v0.89.0...v0.89.1) (2026-04-26)
+
+### Bug Fixes
+
+* **spark:** correct handling of ‘remap’ property ([#818](https://github.com/substrait-io/substrait-java/issues/818)) ([2b7e89f](https://github.com/substrait-io/substrait-java/commit/2b7e89f976edd4288219042de3f5cf92b6b881c6))
+
+## [0.89.0](https://github.com/substrait-io/substrait-java/compare/v0.88.0...v0.89.0) (2026-04-19)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** bump to substrait v0.87.0 (#797)
+
+### Features
+
+* **core:** bump to substrait v0.87.0 ([#797](https://github.com/substrait-io/substrait-java/issues/797)) ([98009e1](https://github.com/substrait-io/substrait-java/commit/98009e10400b174cdfa64b089ec7177d330493b2))
+
+### Bug Fixes
+
+* **core:** correct mark join output schema ([#814](https://github.com/substrait-io/substrait-java/issues/814)) ([e7abfad](https://github.com/substrait-io/substrait-java/commit/e7abfad935791f73bad11ef3cff0326ba0e7a4d9))
+
+## [0.88.0](https://github.com/substrait-io/substrait-java/compare/v0.87.0...v0.88.0) (2026-04-12)
+
+### Features
+
+* add missing extension YAMLs and test for completeness ([#723](https://github.com/substrait-io/substrait-java/issues/723)) ([c14f3e3](https://github.com/substrait-io/substrait-java/commit/c14f3e31b0c482e361131fe5417034030d15f478))
+* **core:** add MaskExpression POJO and ReadRel projection support ([#782](https://github.com/substrait-io/substrait-java/issues/782)) ([6f79ac8](https://github.com/substrait-io/substrait-java/commit/6f79ac861c120596f6d65dbe3b864226af23ed8e))
+* **core:** add typeVariationReference to UserDefined type ([#794](https://github.com/substrait-io/substrait-java/issues/794)) ([a7ad40a](https://github.com/substrait-io/substrait-java/commit/a7ad40ad1dcb1dcd5f5260f952a65e52d9199e62))
+
 ## [0.87.0](https://github.com/substrait-io/substrait-java/compare/v0.86.1...v0.87.0) (2026-03-29)
 
 ### Features

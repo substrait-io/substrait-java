@@ -78,6 +78,24 @@ class TypeExtensionTest extends TestBase {
     io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
     Plan planReturned = protoPlanConverter.from(protoPlan);
     assertEquals(plan, planReturned);
+
+    // verify default typeVariationReference is 0
+    assertEquals(0, ((Type.UserDefined) customType1).typeVariationReference());
+  }
+
+  @Test
+  void roundtripCustomTypeWithVariationReference() {
+    Type customTypeWithVariation = sb.userDefinedType(URN, "customType1", 42);
+
+    List<String> tableName = Stream.of("example").collect(Collectors.toList());
+    List<String> columnNames = Stream.of("custom_type_column").collect(Collectors.toList());
+    List<Type> types = Stream.of(customTypeWithVariation).collect(Collectors.toList());
+
+    Plan plan = sb.plan(sb.root(sb.namedScan(tableName, columnNames, types)));
+
+    io.substrait.proto.Plan protoPlan = planProtoConverter.toProto(plan);
+    Plan planReturned = protoPlanConverter.from(protoPlan);
+    assertEquals(plan, planReturned);
   }
 
   @Test
