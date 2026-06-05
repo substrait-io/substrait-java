@@ -66,18 +66,6 @@ public class PlanProtoConverter {
   /**
    * Converts a {@link io.substrait.plan.Plan} object to its protobuf representation.
    *
-   * <p>This method performs a complete conversion of the Plan object, including:
-   *
-   * <ul>
-   *   <li>All plan roots and their associated relations
-   *   <li>Extension functions and types used in the plan
-   *   <li>Version information
-   *   <li>Advanced extensions if present
-   *   <li>Execution behavior configuration if present
-   * </ul>
-   *
-   * <p>The execution behavior is optional. If present, it will be converted using {@link
-   * #toProtoExecutionBehavior(io.substrait.plan.Plan.ExecutionBehavior)}.
    *
    * @param plan the Plan object to convert, must not be null
    * @return the protobuf Plan representation

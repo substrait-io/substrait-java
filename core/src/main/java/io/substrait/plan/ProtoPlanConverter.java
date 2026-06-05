@@ -69,15 +69,6 @@ public class ProtoPlanConverter {
   /**
    * Converts a protobuf {@link io.substrait.proto.Plan} to a {@link Plan} POJO.
    *
-   * <p>This method performs a complete conversion from the protobuf representation, including:
-   *
-   * <ul>
-   *   <li>All plan relations and their roots
-   *   <li>Extension functions and types lookup
-   *   <li>Version information (major, minor, patch, git hash, producer)
-   *   <li>Advanced extensions if present
-   *   <li>Execution behavior configuration if present
-   * </ul>
    *
    * <p><b>Note:</b> While execution behavior is optional in the protobuf message, the Plan
    * validation will still fail if ExecutionBehavior is not set or if it contains
