@@ -3,6 +3,7 @@ package io.substrait.plan;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,16 @@ import org.junit.jupiter.api.Test;
  * Test cases for the Plan validation method that ensures ExecutionBehavior is properly configured.
  */
 class PlanValidationTest {
+
+  private final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
+
+  private static io.substrait.proto.Version protoVersion(int major, int minor, int patch) {
+    return io.substrait.proto.Version.newBuilder()
+        .setMajorNumber(major)
+        .setMinorNumber(minor)
+        .setPatchNumber(patch)
+        .build();
+  }
 
   /**
    * Test case 1: Valid execution behavior with proper variable evaluation mode.
@@ -116,5 +127,108 @@ class PlanValidationTest {
         expectedMessage,
         exception.getMessage(),
         "Error message should indicate VariableEvaluationMode cannot be UNSPECIFIED");
+  }
+
+  /**
+   * Test case 4: Missing execution behavior on a pre-0.87.0 plan defaults to PER_PLAN.
+   *
+   * <p>ExecutionBehavior did not exist before Substrait 0.87.0, so converting a protobuf Plan that
+   * explicitly declares an older version and omits execution behavior should default the variable
+   * evaluation mode to PER_PLAN rather than failing validation.
+   */
+  @Test
+  void testMissingExecutionBehaviorOnOldVersionDefaultsToPerPlan() {
+    io.substrait.proto.Plan protoPlan =
+        io.substrait.proto.Plan.newBuilder().setVersion(protoVersion(0, 86, 0)).build();
+
+    Plan plan = assertDoesNotThrow(() -> fromProtoConverter.from(protoPlan));
+
+    assertTrue(
+        plan.getExecutionBehavior().isPresent(),
+        "Pre-0.87.0 plan should have a defaulted ExecutionBehavior");
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        "Pre-0.87.0 plan should default to PER_PLAN");
+  }
+
+  /**
+   * Test case 5: Missing execution behavior at exactly 0.87.0 still fails validation.
+   *
+   * <p>ExecutionBehavior is required from Substrait 0.87.0 onward, so a plan at that version with
+   * no execution behavior must fail validation rather than being defaulted.
+   */
+  @Test
+  void testMissingExecutionBehaviorAtCutoffVersionFails() {
+    io.substrait.proto.Plan protoPlan =
+        io.substrait.proto.Plan.newBuilder().setVersion(protoVersion(0, 87, 0)).build();
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> fromProtoConverter.from(protoPlan));
+    assertEquals(
+        "ExecutionBehavior is required but was not set",
+        exception.getMessage(),
+        "Plans at or after 0.87.0 require ExecutionBehavior");
+  }
+
+  /**
+   * Test case 6: Missing execution behavior on a newer plan still fails validation.
+   *
+   * <p>Verifies the requirement also holds for versions beyond the 0.87.0 cutoff.
+   */
+  @Test
+  void testMissingExecutionBehaviorOnNewerVersionFails() {
+    io.substrait.proto.Plan protoPlan =
+        io.substrait.proto.Plan.newBuilder().setVersion(protoVersion(1, 0, 0)).build();
+
+    assertThrows(IllegalArgumentException.class, () -> fromProtoConverter.from(protoPlan));
+  }
+
+  /**
+   * Test case 7: A version-less plan reads as the protobuf default 0.0.0.
+   *
+   * <p>A protobuf Plan that does not declare a version at all has the default version 0.0.0, which
+   * is older than 0.87.0, so a missing execution behavior is defaulted to PER_PLAN.
+   */
+  @Test
+  void testMissingExecutionBehaviorWithoutVersionDefaultsToPerPlan() {
+    io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
+
+    Plan plan = assertDoesNotThrow(() -> fromProtoConverter.from(protoPlan));
+
+    assertTrue(
+        plan.getExecutionBehavior().isPresent(),
+        "Version-less plan (0.0.0) should have a defaulted ExecutionBehavior");
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        "Version-less plan (0.0.0) should default to PER_PLAN");
+  }
+
+  /**
+   * Test case 8: An explicit execution behavior on an old plan is not overridden.
+   *
+   * <p>When a pre-0.87.0 plan does provide an execution behavior, the provided value must be used
+   * instead of the PER_PLAN default.
+   */
+  @Test
+  void testExplicitExecutionBehaviorOnOldVersionIsPreserved() {
+    io.substrait.proto.Plan protoPlan =
+        io.substrait.proto.Plan.newBuilder()
+            .setVersion(protoVersion(0, 86, 0))
+            .setExecutionBehavior(
+                io.substrait.proto.ExecutionBehavior.newBuilder()
+                    .setVariableEvalMode(
+                        io.substrait.proto.ExecutionBehavior.VariableEvaluationMode
+                            .VARIABLE_EVALUATION_MODE_PER_RECORD)
+                    .build())
+            .build();
+
+    Plan plan = fromProtoConverter.from(protoPlan);
+
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD,
+        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        "Explicit execution behavior should not be overridden by the default");
   }
 }
