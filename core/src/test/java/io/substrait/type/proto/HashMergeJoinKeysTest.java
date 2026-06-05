@@ -16,8 +16,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that {@link HashJoin}/{@link MergeJoin} consume both the deprecated {@code
- * left_keys}/{@code right_keys} proto fields and the new {@code keys} field, but only ever produce
- * the new {@code keys} field.
+ * left_keys}/{@code right_keys} proto fields and the new {@code keys} field, always produce the new
+ * {@code keys} field, and additionally produce the deprecated fields when (and only when) every key
+ * is a plain {@code EQ} comparison they can represent without loss.
  */
 class HashMergeJoinKeysTest extends TestBase {
 
@@ -66,16 +67,74 @@ class HashMergeJoinKeysTest extends TestBase {
         hashJoin.getRightKeys());
   }
 
-  // Producing a join must only populate the new keys field, never the deprecated ones.
+  // A plain EQ join must populate the new keys field and, for backwards compatibility with
+  // consumers that have not yet adopted it, the deprecated left_keys/right_keys as well.
   @Test
-  void producesOnlyNewKeys() {
+  void producesBothKeysForEqJoins() {
     io.substrait.proto.HashJoinRel proto = relProtoConverter.toProto(hashJoin).getHashJoin();
+    assertEquals(2, proto.getKeysCount());
+    assertEquals(
+        proto.getKeysList().stream()
+            .map(io.substrait.proto.ComparisonJoinKey::getLeft)
+            .collect(Collectors.toList()),
+        proto.getLeftKeysList());
+    assertEquals(
+        proto.getKeysList().stream()
+            .map(io.substrait.proto.ComparisonJoinKey::getRight)
+            .collect(Collectors.toList()),
+        proto.getRightKeysList());
+
+    io.substrait.proto.MergeJoinRel mergeProto =
+        relProtoConverter.toProto(mergeJoin).getMergeJoin();
+    assertEquals(2, mergeProto.getKeysCount());
+    assertEquals(
+        mergeProto.getKeysList().stream()
+            .map(io.substrait.proto.ComparisonJoinKey::getLeft)
+            .collect(Collectors.toList()),
+        mergeProto.getLeftKeysList());
+    assertEquals(
+        mergeProto.getKeysList().stream()
+            .map(io.substrait.proto.ComparisonJoinKey::getRight)
+            .collect(Collectors.toList()),
+        mergeProto.getRightKeysList());
+  }
+
+  // The deprecated fields cannot represent IS_NOT_DISTINCT_FROM, MIGHT_EQUAL or custom comparisons,
+  // so a join containing any such key must only populate the new keys field. Otherwise an old
+  // consumer would silently misinterpret those keys as plain equality.
+  @Test
+  void producesOnlyNewKeysForLossyComparisons() {
+    List<ComparisonJoinKey> keys =
+        Arrays.asList(
+            ComparisonJoinKey.of(
+                sb.fieldReference(leftTable, 0),
+                sb.fieldReference(rightTable, 2),
+                SimpleComparisonType.EQ),
+            ComparisonJoinKey.of(
+                sb.fieldReference(leftTable, 1),
+                sb.fieldReference(rightTable, 0),
+                SimpleComparisonType.IS_NOT_DISTINCT_FROM));
+
+    HashJoin hash =
+        HashJoin.builder()
+            .left(leftTable)
+            .right(rightTable)
+            .keys(keys)
+            .joinType(HashJoin.JoinType.INNER)
+            .build();
+    io.substrait.proto.HashJoinRel proto = relProtoConverter.toProto(hash).getHashJoin();
     assertEquals(2, proto.getKeysCount());
     assertTrue(proto.getLeftKeysList().isEmpty());
     assertTrue(proto.getRightKeysList().isEmpty());
 
-    io.substrait.proto.MergeJoinRel mergeProto =
-        relProtoConverter.toProto(mergeJoin).getMergeJoin();
+    MergeJoin merge =
+        MergeJoin.builder()
+            .left(leftTable)
+            .right(rightTable)
+            .keys(keys)
+            .joinType(MergeJoin.JoinType.INNER)
+            .build();
+    io.substrait.proto.MergeJoinRel mergeProto = relProtoConverter.toProto(merge).getMergeJoin();
     assertEquals(2, mergeProto.getKeysCount());
     assertTrue(mergeProto.getLeftKeysList().isEmpty());
     assertTrue(mergeProto.getRightKeysList().isEmpty());
@@ -88,6 +147,8 @@ class HashMergeJoinKeysTest extends TestBase {
     io.substrait.proto.HashJoinRel legacy =
         modern.toBuilder()
             .clearKeys()
+            .clearLeftKeys()
+            .clearRightKeys()
             .addAllLeftKeys(
                 modern.getKeysList().stream()
                     .map(io.substrait.proto.ComparisonJoinKey::getLeft)
@@ -117,6 +178,8 @@ class HashMergeJoinKeysTest extends TestBase {
     io.substrait.proto.MergeJoinRel legacy =
         modern.toBuilder()
             .clearKeys()
+            .clearLeftKeys()
+            .clearRightKeys()
             .addAllLeftKeys(
                 modern.getKeysList().stream()
                     .map(io.substrait.proto.ComparisonJoinKey::getLeft)
