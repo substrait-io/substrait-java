@@ -17,6 +17,19 @@ To build the Isthmus executable that enables Substrait plans to be generated for
 ./gradlew nativeCompile
 ```
 
+### Integration Tests
+
+Integration tests in this module are tagged with `@Tag("integration")` and are **skipped by default** during normal test runs. This is because they:
+- Require Docker to be running.
+- May take longer to execute.
+- Use external resources (PostgreSQL containers, test data generation).
+
+To run **only** the integration tests:
+
+```bash
+./gradlew integrationTest
+```
+
 ## Getting Started
 A good way to get started is to experiment with building Substrait plans for your own SQL. To do that, you can use the isthmus executable as described [here](https://github.com/substrait-io/substrait-java/blob/main/isthmus/README.md).
 

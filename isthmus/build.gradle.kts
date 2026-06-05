@@ -145,6 +145,23 @@ tasks {
 
   // Only set the compile release since JUnit 6 requires Java 17 to run tests.
   compileJava { options.release = 11 }
+
+  test {
+    // Exclude integration tests by default
+    useJUnitPlatform { excludeTags("integration") }
+  }
+}
+
+// Register a separate task to run integration tests
+val test by testing.suites.existing(JvmTestSuite::class)
+
+tasks.register<Test>("integrationTest") {
+  description = "Run integration tests"
+  group = "verification"
+  testClassesDirs = files(test.map { it.sources.output.classesDirs })
+  classpath = files(test.map { it.sources.runtimeClasspath })
+  useJUnitPlatform { includeTags("integration") }
+  shouldRunAfter(tasks.test)
 }
 
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }

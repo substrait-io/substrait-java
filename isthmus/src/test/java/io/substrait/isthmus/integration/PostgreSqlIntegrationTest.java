@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.PlanTestBase;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.SubstraitToSql;
@@ -13,32 +14,71 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.JdbcDatabaseContainer.NoDriverFoundException;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers(disabledWithoutDocker = true)
+@Tag("integration")
+@Testcontainers
 class PostgreSqlIntegrationTest extends PlanTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(PostgreSqlIntegrationTest.class);
 
+  // TODO: These queries produce different results when generated from Substrait
+  private static final List<Integer> EXCLUDED_QUERIES = List.of(14);
+
+  private static final DockerImageName UV_IMAGE =
+      DockerImageName.parse("ghcr.io/astral-sh/uv:python3.14-trixie-slim");
+  private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:18");
+
+  private static final String TPCH_DATA_HOST_PATH = "tpch/data";
+  private static final String TPCH_DATA_CONTAINER_PATH = "/tmp/tpc-h";
+  private static final String TPCH_INIT_HOST_PATH = "tpch/postgresql/tpch_init.sql";
+
+  private static final List<String> TPCHGEN_ARGS =
+      List.of(
+          "--scale-factor", "0.001", "--format", "csv", "--output-dir", TPCH_DATA_CONTAINER_PATH);
+
+  private static final List<String> TPCHGEN_CMD =
+      Stream.concat(
+              Stream.of("uvx", "--from", "tpchgen-cli == 2.*", "tpchgen-cli"),
+              TPCHGEN_ARGS.stream())
+          .collect(Collectors.toList());
+
+  /** Create TPC-H test data. */
+  @Container
+  @SuppressWarnings("resource")
+  private static final GenericContainer<?> tpchgen =
+      new GenericContainer<>(UV_IMAGE)
+          .withClasspathResourceMapping(
+              TPCH_DATA_HOST_PATH, TPCH_DATA_CONTAINER_PATH, BindMode.READ_WRITE)
+          .withCommand(TPCHGEN_CMD.toArray(new String[0]))
+          .withStartupCheckStrategy(new SuccessfulExitCheckStrategy());
+
   /** PostgreSQL instance shared across all test methods in this class. */
   @Container
+  @SuppressWarnings("resource")
   private static final PostgreSQLContainer postgres =
-      new PostgreSQLContainer("postgres:18")
-          .withClasspathResourceMapping("tpch/data", "/tmp/tpc-h", BindMode.READ_ONLY)
+      new PostgreSQLContainer(POSTGRES_IMAGE)
+          .dependsOn(tpchgen)
           .withClasspathResourceMapping(
-              "tpch/postgresql/tpch_init.sql",
-              "/docker-entrypoint-initdb.d/tpch_init.sql",
-              BindMode.READ_ONLY);
+              TPCH_DATA_HOST_PATH, TPCH_DATA_CONTAINER_PATH, BindMode.READ_ONLY)
+          .withClasspathResourceMapping(
+              TPCH_INIT_HOST_PATH, "/docker-entrypoint-initdb.d/tpch_init.sql", BindMode.READ_ONLY);
 
   private static final String COMPARE_RESULTS_SQL_TEMPLATE =
       """
@@ -52,8 +92,7 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
       """;
 
   static IntStream tpcHTestCases() {
-    // TODO: query 21 currently does not produce the same result when run through Substrait
-    return IntStream.rangeClosed(1, 22).filter(i -> i != 21);
+    return IntStream.rangeClosed(1, 22).filter(i -> !EXCLUDED_QUERIES.contains(i));
   }
 
   @ParameterizedTest
@@ -65,7 +104,8 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
     final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
     final Plan plan = sqlToSubstrait.convert(inputSql, TPCH_CATALOG);
 
-    final SubstraitToSql substraitToSql = new SubstraitToSql(extensions);
+    final ConverterProvider provider = new ConverterProvider(extensions);
+    final SubstraitToSql substraitToSql = new SubstraitToSql(provider);
 
     final String generatedSql = substraitToSql.convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
 
