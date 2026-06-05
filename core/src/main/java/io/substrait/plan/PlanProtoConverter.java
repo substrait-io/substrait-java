@@ -66,7 +66,6 @@ public class PlanProtoConverter {
   /**
    * Converts a {@link io.substrait.plan.Plan} object to its protobuf representation.
    *
-   *
    * @param plan the Plan object to convert, must not be null
    * @return the protobuf Plan representation
    * @throws IllegalArgumentException if the plan contains invalid data
