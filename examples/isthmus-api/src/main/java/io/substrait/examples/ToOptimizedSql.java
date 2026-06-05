@@ -38,7 +38,7 @@ public class ToOptimizedSql implements Action {
   static final class OptimizingConverterProvider extends ConverterProvider {
 
     /**
-     * Set of calcite rules to use.
+     * Set of Calcite rules to use.
      *
      * <p>Can be configured as you wish.
      *
