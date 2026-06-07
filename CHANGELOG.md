@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.92.0](https://github.com/substrait-io/substrait-java/compare/v0.91.0...v0.92.0) (2026-06-07)
+
+### Features
+
+* **examples:** demonstrate Calcite optimization ([#776](https://github.com/substrait-io/substrait-java/issues/776)) ([a6a3b79](https://github.com/substrait-io/substrait-java/commit/a6a3b79ecae2431e2c781bfaef28b7bd35f3df11))
+
 ## [0.91.0](https://github.com/substrait-io/substrait-java/compare/v0.90.0...v0.91.0) (2026-05-24)
 
 ### Features
