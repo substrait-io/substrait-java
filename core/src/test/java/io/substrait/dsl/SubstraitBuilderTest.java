@@ -74,7 +74,7 @@ class SubstraitBuilderTest extends TestBase {
     void testCast() {
       final Expression.I32Literal input = builder.i32(1);
       assertEquals(R.I32, input.getType());
-      
+
       final Expression cast = builder.cast(input, R.I64);
       assertEquals(R.I64, cast.getType());
       assertInstanceOf(Expression.Cast.class, cast);
