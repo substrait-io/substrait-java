@@ -873,7 +873,7 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Create i8 literal.
+   * Creates an 8-bit integer literal expression.
    *
    * @param v value to create
    * @return i8 instance
