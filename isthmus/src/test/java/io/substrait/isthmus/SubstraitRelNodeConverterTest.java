@@ -6,6 +6,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelNode;
@@ -42,9 +43,9 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       Plan.Root root =
           sb.root(
               sb.aggregate(
-                  input -> sb.grouping(input, 0, 2),
+                  input -> List.of(sb.grouping(input, 0, 2)),
                   input -> List.of(sb.count(input, 0)),
-                  sb.remap(1, 2),
+                  Optional.of(sb.remap(1, 2)),
                   commonTable));
 
       RelNode relNode = substraitToCalcite.convert(root.getInput());
