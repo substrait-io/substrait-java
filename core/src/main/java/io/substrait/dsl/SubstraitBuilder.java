@@ -153,16 +153,13 @@ public class SubstraitBuilder {
    * while the measure function defines the aggregate computations (e.g., SUM, COUNT, AVG) to
    * perform on each group.
    *
-   * <p>The optional remap parameter allows reordering or filtering of output columns, which is
-   * useful for controlling the final schema of the aggregate result.
-   *
    * @param groupingsFn a function that takes the input relation and returns a list of grouping
    *     expressions defining how to partition the data
    * @param measuresFn a function that takes the input relation and returns a list of aggregate
    *     measures to compute for each group
    * @param remap an optional remapping specification to reorder or filter output columns
    * @param input the input relation to aggregate
-   * @return an Aggregate relation representing the grouping and aggregation operation
+   * @return an {@link Aggregate} relation representing the grouping and aggregation operation
    */
   public Aggregate aggregate(
       Function<Rel, List<Aggregate.Grouping>> groupingsFn,
@@ -868,7 +865,7 @@ public class SubstraitBuilder {
   /**
    * Creates a boolean literal expression.
    *
-   * @param v the boolean v
+   * @param v the boolean value
    * @return a new {@link Expression.BoolLiteral}
    */
   public Expression.BoolLiteral bool(boolean v) {
@@ -878,7 +875,7 @@ public class SubstraitBuilder {
   /**
    * Create i8 literal.
    *
-   * @param v v to create
+   * @param v value to create
    * @return i8 instance
    */
   public Expression.I8Literal i8(int v) {
@@ -888,7 +885,7 @@ public class SubstraitBuilder {
   /**
    * Create i16 literal.
    *
-   * @param v v to create
+   * @param v value to create
    * @return i16 instance
    */
   public Expression.I16Literal i16(int v) {
@@ -898,7 +895,7 @@ public class SubstraitBuilder {
   /**
    * Creates a 32-bit integer literal expression.
    *
-   * @param v the integer v
+   * @param v the integer value
    * @return a new {@link Expression.I32Literal}
    */
   public Expression.I32Literal i32(int v) {
@@ -908,7 +905,7 @@ public class SubstraitBuilder {
   /**
    * Creates a 64-bit integer literal expression.
    *
-   * @param v v to create
+   * @param v value to create
    * @return i64 instance
    */
   public Expression.I64Literal i64(long v) {
@@ -918,7 +915,7 @@ public class SubstraitBuilder {
   /**
    * Creates a 32-bit floating point literal expression.
    *
-   * @param v the float v
+   * @param v the float value
    * @return a new {@link Expression.FP32Literal}
    */
   public Expression.FP32Literal fp32(float v) {
@@ -928,7 +925,7 @@ public class SubstraitBuilder {
   /**
    * Creates a 64-bit floating point literal expression.
    *
-   * @param v the double v
+   * @param v the double value
    * @return a new {@link Expression.FP64Literal}
    */
   public Expression.FP64Literal fp64(double v) {
@@ -938,7 +935,7 @@ public class SubstraitBuilder {
   /**
    * Creates a string literal expression.
    *
-   * @param s the string v
+   * @param s the string value
    * @return a new {@link Expression.StrLiteral}
    */
   public Expression.StrLiteral str(String s) {
@@ -1124,7 +1121,7 @@ public class SubstraitBuilder {
   /**
    * Creates a switch clause that pairs a literal condition with a result expression.
    *
-   * @param condition the literal v to match against
+   * @param condition the literal value to match against
    * @param then the expression to return if the condition matches
    * @return a new {@link SwitchClause}
    */
@@ -1133,7 +1130,7 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a switch expression that matches a v against multiple cases.
+   * Creates a switch expression that matches a value against multiple cases.
    *
    * @param match the expression to match against
    * @param clauses the list of switch clauses to evaluate
@@ -1240,7 +1237,7 @@ public class SubstraitBuilder {
    * Creates a MIN aggregate measure for a specific field.
    *
    * @param input the input relation
-   * @param field the zero-based index of the field to find the minimum v
+   * @param field the zero-based index of the field to find the minimum value
    * @return a new {@link Aggregate.Measure} representing MIN
    */
   public Aggregate.Measure min(Rel input, int field) {
@@ -1250,7 +1247,7 @@ public class SubstraitBuilder {
   /**
    * Creates a MIN aggregate measure for an expression.
    *
-   * @param expr the expression to find the minimum v
+   * @param expr the expression to find the minimum value
    * @return a new {@link Aggregate.Measure} representing MIN
    */
   public Aggregate.Measure min(Expression expr) {
@@ -1265,7 +1262,7 @@ public class SubstraitBuilder {
    * Creates a MAX aggregate measure for a specific field.
    *
    * @param input the input relation
-   * @param field the zero-based index of the field to find the maximum v
+   * @param field the zero-based index of the field to find the maximum value
    * @return a new {@link Aggregate.Measure} representing MAX
    */
   public Aggregate.Measure max(Rel input, int field) {
@@ -1275,7 +1272,7 @@ public class SubstraitBuilder {
   /**
    * Creates a MAX aggregate measure for an expression.
    *
-   * @param expr the expression to find the maximum v
+   * @param expr the expression to find the maximum value
    * @return a new {@link Aggregate.Measure} representing MAX
    */
   public Aggregate.Measure max(Expression expr) {
@@ -1519,10 +1516,6 @@ public class SubstraitBuilder {
   /**
    * Creates a null-check expression that tests whether an expression is null.
    *
-   * <p>This is a convenience method that wraps the is_null function from the Substrait comparison
-   * function library. The function evaluates the input expression and returns true if it is null,
-   * false otherwise. This is commonly used in conditional logic and filtering operations.
-   *
    * <p>The return type is always a required (non-nullable) boolean, as the null check itself always
    * produces a definite true/false result.
    *
@@ -1706,10 +1699,10 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a scalar subquery expression that returns a single v from a relation.
+   * Creates a scalar subquery expression that returns a single value from a relation.
    *
    * @param input the input relation that must return exactly one row and one column
-   * @param type the type of the scalar v
+   * @param type the type of the scalar value
    * @return a new {@link Expression.ScalarSubquery}
    */
   public Expression scalarSubquery(Rel input, Type type) {
