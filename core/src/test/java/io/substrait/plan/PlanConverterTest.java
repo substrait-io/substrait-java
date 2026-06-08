@@ -475,19 +475,24 @@ class PlanConverterTest {
   /**
    * Conversion from protobuf Plan without ExecutionBehavior.
    *
-   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan that fails
-   * validation (since ExecutionBehavior is required).
+   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan with a default
+   * ExecutionBehavior of PER_PLAN, supporting older plans that predate the field.
    */
   @Test
-  void testFromProtoWithoutExecutionBehaviorFailsValidation() {
+  void testFromProtoWithoutExecutionBehaviorUsesDefault() {
     // Create a protobuf Plan without ExecutionBehavior
     io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
 
-    // Attempt to convert to POJO - should fail validation
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> fromProtoConverter.from(protoPlan),
-        "Conversion should fail when ExecutionBehavior is not set");
+    // Convert to POJO - should succeed with a default ExecutionBehavior
+    Plan plan = fromProtoConverter.from(protoPlan);
+
+    assertTrue(
+        plan.getExecutionBehavior().isPresent(),
+        "Plan should have a default ExecutionBehavior present");
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        "Default variable evaluation mode should be PER_PLAN");
   }
 
   /**
@@ -637,7 +642,7 @@ class PlanConverterTest {
    * Verify that protobuf without execution behavior field is handled.
    *
    * <p>Tests the edge case where a protobuf Plan doesn't have the execution behavior field set at
-   * all.
+   * all. Such older plans receive a default ExecutionBehavior of PER_PLAN.
    */
   @Test
   void testFromProtoMissingExecutionBehaviorField() {
@@ -648,10 +653,15 @@ class PlanConverterTest {
     assertFalse(
         protoPlan.hasExecutionBehavior(), "Protobuf Plan should not have execution behavior field");
 
-    // Conversion should fail validation
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> fromProtoConverter.from(protoPlan),
-        "Conversion should fail when execution behavior is missing");
+    // Conversion should succeed with a default ExecutionBehavior of PER_PLAN
+    Plan plan = fromProtoConverter.from(protoPlan);
+
+    assertTrue(
+        plan.getExecutionBehavior().isPresent(),
+        "Plan should have a default ExecutionBehavior present");
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        "Default variable evaluation mode should be PER_PLAN");
   }
 }

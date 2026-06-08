@@ -5,6 +5,8 @@ import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.ProtoExtensionConverter;
 import io.substrait.extension.SimpleExtension.ExtensionCollection;
+import io.substrait.plan.Plan.ExecutionBehavior;
+import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
@@ -128,6 +130,12 @@ public class ProtoPlanConverter {
     // Set execution behavior if present
     if (plan.hasExecutionBehavior()) {
       planBuilder.executionBehavior(fromProtoExecutionBehavior(plan.getExecutionBehavior()));
+    } else {
+      // set default ExecutionBehavior for older plans
+      planBuilder.executionBehavior(
+          ExecutionBehavior.builder()
+              .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+              .build());
     }
 
     return planBuilder.build();
