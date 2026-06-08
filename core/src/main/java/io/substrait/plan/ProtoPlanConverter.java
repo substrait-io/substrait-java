@@ -125,41 +125,12 @@ public class ProtoPlanConverter {
                         : null))
             .version(versionBuilder.build());
 
-    // Set execution behavior if present. For plans produced before Substrait 0.87.0 the
-    // execution behavior did not exist, so default it to per-plan variable evaluation.
+    // Set execution behavior if present
     if (plan.hasExecutionBehavior()) {
       planBuilder.executionBehavior(fromProtoExecutionBehavior(plan.getExecutionBehavior()));
-    } else if (isOlderThan(plan.getVersion(), 0, 87, 0)) {
-      planBuilder.executionBehavior(
-          io.substrait.plan.Plan.ExecutionBehavior.builder()
-              .variableEvaluationMode(
-                  io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
-                      .VARIABLE_EVALUATION_MODE_PER_PLAN)
-              .build());
     }
 
     return planBuilder.build();
-  }
-
-  /**
-   * Determines whether the given protobuf {@link io.substrait.proto.Version} is older than the
-   * provided major/minor/patch version.
-   *
-   * @param version the protobuf Version to check
-   * @param major the major version to compare against
-   * @param minor the minor version to compare against
-   * @param patch the patch version to compare against
-   * @return {@code true} if {@code version} is strictly older than {@code major.minor.patch}
-   */
-  private static boolean isOlderThan(
-      final io.substrait.proto.Version version, final int major, final int minor, final int patch) {
-    if (version.getMajorNumber() != major) {
-      return version.getMajorNumber() < major;
-    }
-    if (version.getMinorNumber() != minor) {
-      return version.getMinorNumber() < minor;
-    }
-    return version.getPatchNumber() < patch;
   }
 
   /**

@@ -480,11 +480,8 @@ class PlanConverterTest {
    */
   @Test
   void testFromProtoWithoutExecutionBehaviorFailsValidation() {
-    // Create a protobuf Plan without ExecutionBehavior at a version that requires it (>= 0.87.0)
-    io.substrait.proto.Plan protoPlan =
-        io.substrait.proto.Plan.newBuilder()
-            .setVersion(io.substrait.proto.Version.newBuilder().setMinorNumber(87).build())
-            .build();
+    // Create a protobuf Plan without ExecutionBehavior
+    io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
 
     // Attempt to convert to POJO - should fail validation
     assertThrows(
@@ -644,11 +641,8 @@ class PlanConverterTest {
    */
   @Test
   void testFromProtoMissingExecutionBehaviorField() {
-    // Create protobuf Plan without setting execution behavior at a version that requires it
-    io.substrait.proto.Plan protoPlan =
-        io.substrait.proto.Plan.newBuilder()
-            .setVersion(io.substrait.proto.Version.newBuilder().setMinorNumber(87).build())
-            .build();
+    // Create protobuf Plan without setting execution behavior
+    io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
 
     // Verify hasExecutionBehavior returns false
     assertFalse(
