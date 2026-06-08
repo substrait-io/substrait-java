@@ -475,8 +475,8 @@ class PlanConverterTest {
   /**
    * Conversion from protobuf Plan without ExecutionBehavior.
    *
-   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan with a default
-   * ExecutionBehavior of PER_PLAN, supporting older plans that predate the field.
+   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan with a
+   * default ExecutionBehavior of PER_PLAN, supporting older plans that predate the field.
    */
   @Test
   void testFromProtoWithoutExecutionBehaviorUsesDefault() {
