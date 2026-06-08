@@ -1075,7 +1075,8 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates an IN predicate expression that checks if any needle values exist in the haystack relation.
+   * Creates an IN predicate expression that checks if any needle values exist in the haystack
+   * relation.
    *
    * @param haystack the relation to search within
    * @param needles the values to search for
@@ -1666,7 +1667,7 @@ public class SubstraitBuilder {
    * Creates a plan from a plan root.
    *
    * @param root the plan root
-   * @return a new {@link Plan.Root}
+   * @return a new {@link Plan}
    */
   public Plan plan(Plan.Root root) {
     return Plan.builder().addRoots(root).build();
@@ -1682,7 +1683,7 @@ public class SubstraitBuilder {
    * @param input the root relational expression of the query plan
    * @param names the ordered list of output column names corresponding to the input relation's
    *     output schema
-   * @return a new {@link Plan}
+   * @return a new {@link Plan.Root}
    */
   public Plan.Root root(final Rel input, final List<String> names) {
     return Plan.Root.builder().input(input).names(names).build();
