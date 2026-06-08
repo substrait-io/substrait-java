@@ -883,7 +883,7 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Create i16 literal.
+   * Create a 16-bit integer literal expression.
    *
    * @param v value to create
    * @return i16 instance
@@ -1067,7 +1067,7 @@ public class SubstraitBuilder {
    * options.
    *
    * @param condition the expression to match against
-   * @param options the list of possible vs to match
+   * @param options the list of possible values to match
    * @return a new {@link SingleOrList} expression
    */
   public Expression singleOrList(Expression condition, Expression... options) {
@@ -1075,10 +1075,10 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates an IN predicate expression that checks if any needle vs exist in the haystack relation.
+   * Creates an IN predicate expression that checks if any needle values exist in the haystack relation.
    *
    * @param haystack the relation to search within
-   * @param needles the vs to search for
+   * @param needles the values to search for
    * @return a new {@link Expression.InPredicate}
    */
   public Expression.InPredicate inPredicate(Rel haystack, Expression... needles) {
@@ -1501,7 +1501,7 @@ public class SubstraitBuilder {
    * Creates a logical NOT expression that negates a boolean expression.
    *
    * <p>This is a convenience method that wraps the boolean NOT function from the Substrait standard
-   * library. The result is nullable to handle NULL input vs according to three-vd logic.
+   * library. The result is nullable to handle NULL input values according to three-valued logic.
    *
    * @param expression the boolean expression to negate
    * @return a scalar function invocation representing the logical NOT of the input expression
