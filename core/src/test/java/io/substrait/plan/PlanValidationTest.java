@@ -3,6 +3,7 @@ package io.substrait.plan;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -59,28 +60,27 @@ class PlanValidationTest {
   }
 
   /**
-   * Test case 2: Missing execution behavior (empty Optional).
+   * Test case 2: Missing execution behavior.
    *
    * <p>This test verifies that attempting to create a Plan without setting the ExecutionBehavior
-   * field throws an IllegalArgumentException with an appropriate error message indicating that
-   * ExecutionBehavior is required.
+   * field throws an IllegalStateException (from Immutables) with an appropriate error message
+   * indicating that ExecutionBehavior is required.
    */
   @Test
   void testMissingExecutionBehavior() {
     // Attempt to create a Plan without ExecutionBehavior
-    IllegalArgumentException exception =
+    IllegalStateException exception =
         assertThrows(
-            IllegalArgumentException.class,
+            IllegalStateException.class,
             () -> {
               ImmutablePlan.builder().build();
             },
             "Plan creation should fail when ExecutionBehavior is not set");
 
-    // Verify the error message
-    assertEquals(
-        "ExecutionBehavior is required but was not set",
-        exception.getMessage(),
-        "Error message should indicate ExecutionBehavior is required");
+    // Verify the error message mentions the required field
+    assertTrue(
+        exception.getMessage().contains("executionBehavior"),
+        "Error message should mention executionBehavior field");
   }
 
   /**

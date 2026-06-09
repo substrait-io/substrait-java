@@ -434,11 +434,10 @@ class PlanConverterTest {
     Plan plan = fromProtoConverter.from(protoPlan);
 
     // Verify the POJO has execution behavior
-    assertTrue(
-        plan.getExecutionBehavior().isPresent(), "Plan should have ExecutionBehavior present");
+    assertNotNull(plan.getExecutionBehavior(), "Plan should have ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
-        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be PER_PLAN");
   }
 
@@ -464,11 +463,10 @@ class PlanConverterTest {
     Plan plan = fromProtoConverter.from(protoPlan);
 
     // Verify the POJO has execution behavior
-    assertTrue(
-        plan.getExecutionBehavior().isPresent(), "Plan should have ExecutionBehavior present");
+    assertNotNull(plan.getExecutionBehavior(), "Plan should have ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD,
-        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be PER_RECORD");
   }
 
@@ -486,12 +484,10 @@ class PlanConverterTest {
     // Convert to POJO - should succeed with a default ExecutionBehavior
     Plan plan = fromProtoConverter.from(protoPlan);
 
-    assertTrue(
-        plan.getExecutionBehavior().isPresent(),
-        "Plan should have a default ExecutionBehavior present");
+    assertNotNull(plan.getExecutionBehavior(), "Plan should have a default ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
-        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Default variable evaluation mode should be PER_PLAN");
   }
 
@@ -553,12 +549,12 @@ class PlanConverterTest {
     Plan roundTrippedPlan = fromProtoConverter.from(protoPlan);
 
     // Verify data integrity
-    assertTrue(
-        roundTrippedPlan.getExecutionBehavior().isPresent(),
+    assertNotNull(
+        roundTrippedPlan.getExecutionBehavior(),
         "Round-tripped Plan should have ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
-        roundTrippedPlan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        roundTrippedPlan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be preserved");
     assertEquals(
         originalPlan.getRoots().size(),
@@ -597,12 +593,12 @@ class PlanConverterTest {
     Plan roundTrippedPlan = fromProtoConverter.from(protoPlan);
 
     // Verify data integrity
-    assertTrue(
-        roundTrippedPlan.getExecutionBehavior().isPresent(),
+    assertNotNull(
+        roundTrippedPlan.getExecutionBehavior(),
         "Round-tripped Plan should have ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD,
-        roundTrippedPlan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        roundTrippedPlan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be preserved");
   }
 
@@ -656,12 +652,10 @@ class PlanConverterTest {
     // Conversion should succeed with a default ExecutionBehavior of PER_PLAN
     Plan plan = fromProtoConverter.from(protoPlan);
 
-    assertTrue(
-        plan.getExecutionBehavior().isPresent(),
-        "Plan should have a default ExecutionBehavior present");
+    assertNotNull(plan.getExecutionBehavior(), "Plan should have a default ExecutionBehavior");
     assertEquals(
         Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
-        plan.getExecutionBehavior().get().getVariableEvaluationMode(),
+        plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Default variable evaluation mode should be PER_PLAN");
   }
 }

@@ -21,7 +21,7 @@ public abstract class Plan {
 
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
-  public abstract Optional<ExecutionBehavior> getExecutionBehavior();
+  public abstract ExecutionBehavior getExecutionBehavior();
 
   /**
    * Validates that the execution behavior is properly configured.
@@ -41,10 +41,7 @@ public abstract class Plan {
    */
   @Value.Check
   protected void check() {
-    if (!getExecutionBehavior().isPresent()) {
-      throw new IllegalArgumentException("ExecutionBehavior is required but was not set");
-    }
-    ExecutionBehavior behavior = getExecutionBehavior().get();
+    ExecutionBehavior behavior = getExecutionBehavior();
     if (behavior.getVariableEvaluationMode()
         == ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED) {
       throw new IllegalArgumentException(

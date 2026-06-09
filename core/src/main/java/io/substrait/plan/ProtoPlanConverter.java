@@ -74,16 +74,9 @@ public class ProtoPlanConverter {
    * <p><b>Note:</b> Execution behavior is optional in the protobuf message, but the {@link Plan}
    * POJO requires it. Conversion handles a missing execution behavior based on the plan version:
    *
-   * <ul>
-   *   <li>For plans older than Substrait 0.87.0 (the version that introduced execution behavior), a
-   *       missing execution behavior is defaulted to {@link
-   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}.
-   *       Note that a plan without a version is treated as version 0.0.0, and therefore as older
-   *       than 0.87.0.
-   *   <li>For plans at or after 0.87.0, a missing execution behavior is left unset and Plan
-   *       validation will fail. The validation also fails if the execution behavior is present but
-   *       contains {@code VARIABLE_EVALUATION_MODE_UNSPECIFIED}.
-   * </ul>
+   * <p><b>Note:</b> If {@Code Plan.ExecutionBehavior.VariableEvaluationMode} is not set, it will be
+   * defaulted to {@code VARIABLE_EVALUATION_MODE_PER_PLAN}. Once other producers populate this
+   * field correctly, this compatibility workaround will be removed.
    *
    * @param plan the protobuf Plan to convert, must not be null
    * @return the converted Plan POJO
@@ -127,11 +120,11 @@ public class ProtoPlanConverter {
                         : null))
             .version(versionBuilder.build());
 
-    // Set execution behavior if present
+    // Set execution behavior (required field)
     if (plan.hasExecutionBehavior()) {
       planBuilder.executionBehavior(fromProtoExecutionBehavior(plan.getExecutionBehavior()));
     } else {
-      // set default ExecutionBehavior for older plans
+      // Set default ExecutionBehavior for older plans that don't have it
       planBuilder.executionBehavior(
           ExecutionBehavior.builder()
               .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)

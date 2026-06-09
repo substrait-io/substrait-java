@@ -106,10 +106,8 @@ public class PlanProtoConverter {
 
     builder.setVersion(versionBuilder);
 
-    // Set execution behavior if present
-    if (plan.getExecutionBehavior().isPresent()) {
-      builder.setExecutionBehavior(toProtoExecutionBehavior(plan.getExecutionBehavior().get()));
-    }
+    // Set execution behavior
+    builder.setExecutionBehavior(toProtoExecutionBehavior(plan.getExecutionBehavior()));
 
     return builder.build();
   }
