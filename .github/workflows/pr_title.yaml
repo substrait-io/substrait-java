@@ -12,6 +12,10 @@ jobs:
         with:
           node-version: "24"
       - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            .commitlintrc.js
+          sparse-checkout-cone-mode: false
       - run: npm install @commitlint/config-conventional
       - run: npx commitlint --verbose <<< $COMMIT_MSG
         env:
