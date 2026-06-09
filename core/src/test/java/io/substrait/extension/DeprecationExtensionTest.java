@@ -18,8 +18,6 @@ import org.junit.jupiter.api.Test;
  *   <li>Function-level deprecation (scalar, aggregate, window)
  *   <li>Function-implementation-level deprecation (individual overloads)
  * </ul>
- *
- * See <a href="https://github.com/substrait-io/substrait/pull/1014">substrait#1014</a>.
  */
 class DeprecationExtensionTest extends TestBase {
 
