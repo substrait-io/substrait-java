@@ -124,7 +124,6 @@ public class SimpleExtension {
 
   /**
    * Deprecation information for an extension entry (type, function, or function implementation).
-   * See <a href="https://github.com/substrait-io/substrait/pull/1014">substrait#1014</a>.
    *
    * <p>Consumers of extension files are not required to understand or validate deprecation fields;
    * the information is provided so tooling can surface deprecation warnings.
