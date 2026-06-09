@@ -7,8 +7,8 @@ import org.testcontainers.utility.DockerStatus;
 
 /**
  * A {@link StartupCheckStrategy} that checks if the container has exited with a successful exit
- * code. This allows use of a container tht is launched purely to execute a command prior to startup
- * of dependent containers.
+ * code. This allows use of a container that is launched purely to execute a command prior to
+ * startup of dependent containers.
  */
 public class SuccessfulExitCheckStrategy extends StartupCheckStrategy {
   @Override
