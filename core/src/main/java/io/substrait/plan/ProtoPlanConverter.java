@@ -74,7 +74,7 @@ public class ProtoPlanConverter {
    * <p><b>Note:</b> Execution behavior is optional in the protobuf message, but the {@link Plan}
    * POJO requires it. Conversion handles a missing execution behavior based on the plan version:
    *
-   * <p><b>Note:</b> If {@Code Plan.ExecutionBehavior.VariableEvaluationMode} is not set, it will be
+   * <p><b>Note:</b> If {@code Plan.ExecutionBehavior.VariableEvaluationMode} is not set, it will be
    * defaulted to {@code VARIABLE_EVALUATION_MODE_PER_PLAN}. Once other producers populate this
    * field correctly, this compatibility workaround will be removed.
    *
