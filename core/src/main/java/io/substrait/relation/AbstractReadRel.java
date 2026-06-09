@@ -35,6 +35,12 @@ public abstract class AbstractReadRel extends ZeroInputRel implements HasExtensi
    */
   public abstract Optional<Expression> getBestEffortFilter();
 
+  /**
+   * Returns the projection mask expression for this read relation.
+   *
+   * @return an Optional containing the MaskExpression if present, or empty if no projection is
+   *     specified
+   */
   public abstract Optional<MaskExpression> getProjection();
 
   @Override
