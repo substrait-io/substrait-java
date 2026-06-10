@@ -90,6 +90,7 @@ dependencies {
   testImplementation(libs.guava)
   testImplementation(libs.bundles.jackson)
   testImplementation(libs.classgraph)
+  testImplementation(libs.json.schema.validator)
 
   testImplementation(libs.junit.jupiter)
   testRuntimeOnly(libs.junit.platform.launcher)
@@ -241,6 +242,15 @@ sourceSets {
 
 tasks.named<ProcessResources>("processResources") {
   from("../substrait/extensions") { into("substrait/extensions") }
+}
+
+tasks.named<ProcessResources>("processTestResources") {
+  // Dialect schema, used to validate dialects produced by the Dialect model in tests.
+  from("../substrait/text") { into("substrait/text") }
+  // A real-world dialect to exercise parsing against.
+  from("../spark/spark_dialect.yaml") { into("dialect") }
+  // Per-section dialect fixtures published by the substrait spec.
+  from("../substrait/dialects/tests") { into("dialect/tests") }
 }
 
 project.configure<IdeaModel> {
