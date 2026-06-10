@@ -123,7 +123,13 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
       assertTrue(result.next());
 
       // the count should be zero if both the reference and generated SQL produce the same results
-      assertEquals(0, result.getInt(1));
+      int differenceCount = result.getInt(1);
+      assertEquals(
+          0,
+          differenceCount,
+          String.format(
+              "Reference and generated SQL produce %d different results.\n\nReference SQL:\n%s\n\nGenerated SQL:\n%s",
+              differenceCount, referenceSql, generatedSql));
 
       // we expect exactly one row
       assertFalse(result.next());
