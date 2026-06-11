@@ -2,6 +2,7 @@ package io.substrait.isthmus.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.ConverterProvider;
@@ -39,7 +40,7 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(PostgreSqlIntegrationTest.class);
 
   // TODO: These queries produce different results when generated from Substrait
-  private static final List<Integer> EXCLUDED_QUERIES = List.of(14);
+  private static final List<Integer> EXPECTED_FAILURES = List.of(8, 14);
 
   private static final DockerImageName UV_IMAGE =
       DockerImageName.parse("ghcr.io/astral-sh/uv:python3.14-trixie-slim");
@@ -51,7 +52,7 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
 
   private static final List<String> TPCHGEN_ARGS =
       List.of(
-          "--scale-factor", "0.001", "--format", "csv", "--output-dir", TPCH_DATA_CONTAINER_PATH);
+          "--scale-factor", "0.01", "--format", "csv", "--output-dir", TPCH_DATA_CONTAINER_PATH);
 
   private static final List<String> TPCHGEN_CMD =
       Stream.concat(
@@ -92,7 +93,7 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
       """;
 
   static IntStream tpcHTestCases() {
-    return IntStream.rangeClosed(1, 22).filter(i -> !EXCLUDED_QUERIES.contains(i));
+    return IntStream.rangeClosed(1, 22);
   }
 
   @ParameterizedTest
@@ -111,10 +112,11 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
 
     final String referenceSql = asString(String.format("tpch/postgresql/%02d.sql", queryNo));
 
+    LOG.atDebug().log("Reference SQL:\n%s", referenceSql);
+    LOG.atDebug().log("Generated SQL:\n%s", generatedSql);
+
     final String compareSql =
         String.format(COMPARE_RESULTS_SQL_TEMPLATE, referenceSql, generatedSql);
-
-    LOG.atDebug().log(compareSql);
 
     try (Connection conn = postgres.createConnection("");
         Statement stmt = conn.createStatement();
@@ -124,12 +126,20 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
 
       // the count should be zero if both the reference and generated SQL produce the same results
       int differenceCount = result.getInt(1);
-      assertEquals(
-          0,
-          differenceCount,
-          String.format(
-              "Reference and generated SQL produce %d different results.\n\nReference SQL:\n%s\n\nGenerated SQL:\n%s",
-              differenceCount, referenceSql, generatedSql));
+      if (EXPECTED_FAILURES.contains(queryNo)) {
+        assertNotEquals(
+            0,
+            differenceCount,
+            String.format(
+                "Expected query %d to fail but it matched the reference results", queryNo));
+      } else {
+        assertEquals(
+            0,
+            differenceCount,
+            String.format(
+                "Reference and generated SQL produce %d different results.\n\nReference SQL:\n%s\n\nGenerated SQL:\n%s",
+                differenceCount, referenceSql, generatedSql));
+      }
 
       // we expect exactly one row
       assertFalse(result.next());
