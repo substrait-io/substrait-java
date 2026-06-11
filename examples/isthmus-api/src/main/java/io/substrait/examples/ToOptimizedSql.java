@@ -27,9 +27,8 @@ import org.apache.calcite.sql.SqlDialect;
  */
 public class ToOptimizedSql implements Action {
 
-  private static List<RelOptRule> simplificationRules() {
-    return List.of(CoreRules.FILTER_INTO_JOIN, CoreRules.FILTER_PROJECT_TRANSPOSE);
-  }
+  private static final List<RelOptRule> SIMPLIFICATION_RULES =
+      List.of(CoreRules.FILTER_INTO_JOIN, CoreRules.FILTER_PROJECT_TRANSPOSE);
 
   @Override
   public void run(String[] args) {
@@ -47,9 +46,7 @@ public class ToOptimizedSql implements Action {
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();
       final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
       final HepProgramBuilder programBuilder = new HepProgramBuilder();
-      programBuilder
-          .addMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .addRuleCollection(simplificationRules());
+      programBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP).addRuleCollection(SIMPLIFICATION_RULES);
       final HepPlanner planner = new HepPlanner(programBuilder.build());
 
       // Convert Substrait to SQL
