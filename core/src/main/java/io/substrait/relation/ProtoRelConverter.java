@@ -719,33 +719,20 @@ public class ProtoRelConverter {
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
 
-    // Groupings are set using the AggregateRel grouping_expression mechanism
-    if (!rel.getGroupingExpressionsList().isEmpty()) {
-      List<Expression> allGroupingExpressions =
-          rel.getGroupingExpressionsList().stream()
-              .map(protoExprConverter::from)
-              .collect(java.util.stream.Collectors.toList());
+    // Convert grouping expressions from the aggregate-level grouping_expressions list
+    // Each grouping references expressions by index into this list
+    List<Expression> allGroupingExpressions =
+        rel.getGroupingExpressionsList().stream()
+            .map(protoExprConverter::from)
+            .collect(java.util.stream.Collectors.toList());
 
-      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-        List<Integer> references = grouping.getExpressionReferencesList();
-        List<Expression> groupExpressions = new ArrayList<>();
-        for (int ref : references) {
-          groupExpressions.add(allGroupingExpressions.get(ref));
-        }
-        groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
+    for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+      List<Integer> references = grouping.getExpressionReferencesList();
+      List<Expression> groupExpressions = new ArrayList<>();
+      for (int ref : references) {
+        groupExpressions.add(allGroupingExpressions.get(ref));
       }
-
-    } else {
-      // Groupings are set using the deprecated Grouping grouping_expressions mechanism
-      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-        groupings.add(
-            Aggregate.Grouping.builder()
-                .expressions(
-                    grouping.getGroupingExpressionsList().stream()
-                        .map(protoExprConverter::from)
-                        .collect(java.util.stream.Collectors.toList()))
-                .build());
-      }
+      groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
     }
 
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
