@@ -428,7 +428,7 @@ public class SimpleExtension {
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @Value.Immutable
   public abstract static class ScalarFunctionVariant extends Function {
-    public ScalarFunctionVariant resolve(
+    ScalarFunctionVariant resolve(
         String urn,
         String name,
         String description,
