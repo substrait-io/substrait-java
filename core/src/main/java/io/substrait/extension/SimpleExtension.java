@@ -122,6 +122,31 @@ public class SimpleExtension {
     List<String> getValues();
   }
 
+  /**
+   * Deprecation information for an extension entry (type, function, or function implementation).
+   *
+   * <p>Consumers of extension files are not required to understand or validate deprecation fields;
+   * the information is provided so tooling can surface deprecation warnings.
+   */
+  @JsonDeserialize(as = ImmutableSimpleExtension.DeprecationStatus.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.DeprecationStatus.class)
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @Value.Immutable
+  public interface DeprecationStatus {
+    /**
+     * The version at which the entry was deprecated, as a core semantic version string (e.g. {@code
+     * "1.2.0"}).
+     */
+    @JsonProperty(required = true)
+    String since();
+
+    /** Optional human-readable description of why the entry was deprecated. */
+    Optional<String> reason();
+
+    /** Optional arbitrary data provided by the extension author. */
+    Optional<Map<String, Object>> metadata();
+  }
+
   @JsonSerialize(as = ImmutableSimpleExtension.ValueArgument.class)
   @JsonDeserialize(as = ImmutableSimpleExtension.ValueArgument.class)
   @Value.Immutable
@@ -280,6 +305,8 @@ public class SimpleExtension {
 
     public abstract Optional<Map<String, Object>> metadata();
 
+    public abstract Optional<DeprecationStatus> deprecated();
+
     public List<Argument> requiredArguments() {
       return requiredArgsSupplier.get();
     }
@@ -387,10 +414,13 @@ public class SimpleExtension {
 
     public abstract Optional<Map<String, Object>> metadata();
 
+    public abstract Optional<DeprecationStatus> deprecated();
+
     public abstract List<ScalarFunctionVariant> impls();
 
     public Stream<ScalarFunctionVariant> resolve(String urn) {
-      return impls().stream().map(f -> f.resolve(urn, name(), description(), metadata()));
+      return impls().stream()
+          .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
   }
 
@@ -398,8 +428,12 @@ public class SimpleExtension {
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @Value.Immutable
   public abstract static class ScalarFunctionVariant extends Function {
-    public ScalarFunctionVariant resolve(
-        String urn, String name, String description, Optional<Map<String, Object>> metadata) {
+    ScalarFunctionVariant resolve(
+        String urn,
+        String name,
+        String description,
+        Optional<Map<String, Object>> metadata,
+        Optional<DeprecationStatus> deprecated) {
       return ImmutableSimpleExtension.ScalarFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -408,6 +442,7 @@ public class SimpleExtension {
           .args(args())
           .options(options())
           .metadata(metadata)
+          .deprecated(deprecated().isPresent() ? deprecated() : deprecated)
           .ordered(ordered())
           .variadic(variadic())
           .returnType(returnType())
@@ -427,10 +462,13 @@ public class SimpleExtension {
 
     public abstract Optional<Map<String, Object>> metadata();
 
+    public abstract Optional<DeprecationStatus> deprecated();
+
     public abstract List<AggregateFunctionVariant> impls();
 
     public Stream<AggregateFunctionVariant> resolve(String urn) {
-      return impls().stream().map(f -> f.resolve(urn, name(), description(), metadata()));
+      return impls().stream()
+          .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
   }
 
@@ -446,10 +484,13 @@ public class SimpleExtension {
 
     public abstract Optional<Map<String, Object>> metadata();
 
+    public abstract Optional<DeprecationStatus> deprecated();
+
     public abstract List<WindowFunctionVariant> impls();
 
     public Stream<WindowFunctionVariant> resolve(String urn) {
-      return impls().stream().map(f -> f.resolve(urn, name(), description(), metadata()));
+      return impls().stream()
+          .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
 
     public static ImmutableSimpleExtension.WindowFunction.Builder builder() {
@@ -476,7 +517,11 @@ public class SimpleExtension {
     public abstract TypeExpression intermediate();
 
     AggregateFunctionVariant resolve(
-        String urn, String name, String description, Optional<Map<String, Object>> metadata) {
+        String urn,
+        String name,
+        String description,
+        Optional<Map<String, Object>> metadata,
+        Optional<DeprecationStatus> deprecated) {
       return ImmutableSimpleExtension.AggregateFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -485,6 +530,7 @@ public class SimpleExtension {
           .args(args())
           .options(options())
           .metadata(metadata)
+          .deprecated(deprecated().isPresent() ? deprecated() : deprecated)
           .ordered(ordered())
           .variadic(variadic())
           .decomposability(decomposability())
@@ -520,7 +566,11 @@ public class SimpleExtension {
     }
 
     WindowFunctionVariant resolve(
-        String urn, String name, String description, Optional<Map<String, Object>> metadata) {
+        String urn,
+        String name,
+        String description,
+        Optional<Map<String, Object>> metadata,
+        Optional<DeprecationStatus> deprecated) {
       return ImmutableSimpleExtension.WindowFunctionVariant.builder()
           .urn(urn)
           .name(name)
@@ -529,6 +579,7 @@ public class SimpleExtension {
           .args(args())
           .options(options())
           .metadata(metadata)
+          .deprecated(deprecated().isPresent() ? deprecated() : deprecated)
           .ordered(ordered())
           .variadic(variadic())
           .decomposability(decomposability())
@@ -566,6 +617,8 @@ public class SimpleExtension {
     protected abstract Optional<Boolean> variadic();
 
     public abstract Optional<Map<String, Object>> metadata();
+
+    public abstract Optional<DeprecationStatus> deprecated();
 
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
