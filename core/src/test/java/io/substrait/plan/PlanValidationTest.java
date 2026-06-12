@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * Test cases for the Plan validation method that ensures ExecutionBehavior is properly configured.
@@ -13,19 +15,20 @@ import org.junit.jupiter.api.Test;
 class PlanValidationTest {
 
   /**
-   * Test case 1: Valid execution behavior with proper variable evaluation mode.
+   * Valid execution behavior with a specified variable evaluation mode.
    *
    * <p>This test verifies that a Plan with a properly configured ExecutionBehavior (with
    * VariableEvaluationMode set to a valid value other than UNSPECIFIED) is successfully created
    * without throwing any exceptions.
    */
-  @Test
-  void testValidExecutionBehavior_PerPlan() {
-    // Create a valid ExecutionBehavior with VARIABLE_EVALUATION_MODE_PER_PLAN
+  @ParameterizedTest
+  @EnumSource(
+      value = Plan.ExecutionBehavior.VariableEvaluationMode.class,
+      names = {"PER_PLAN", "PER_RECORD"})
+  void testValidExecutionBehavior(Plan.ExecutionBehavior.VariableEvaluationMode mode) {
+    // Create a valid ExecutionBehavior
     Plan.ExecutionBehavior executionBehavior =
-        ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
-            .build();
+        ImmutableExecutionBehavior.builder().variableEvaluationMode(mode).build();
 
     // Create a Plan with the valid ExecutionBehavior
     assertDoesNotThrow(
@@ -36,29 +39,7 @@ class PlanValidationTest {
   }
 
   /**
-   * Test case 1b: Valid execution behavior with VARIABLE_EVALUATION_MODE_PER_RECORD.
-   *
-   * <p>This test verifies that a Plan with ExecutionBehavior set to
-   * VARIABLE_EVALUATION_MODE_PER_RECORD is also valid.
-   */
-  @Test
-  void testValidExecutionBehavior_PerRecord() {
-    // Create a valid ExecutionBehavior with VARIABLE_EVALUATION_MODE_PER_RECORD
-    Plan.ExecutionBehavior executionBehavior =
-        ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD)
-            .build();
-
-    // Create a Plan with the valid ExecutionBehavior
-    assertDoesNotThrow(
-        () -> {
-          ImmutablePlan.builder().executionBehavior(executionBehavior).build();
-        },
-        "Plan creation should succeed with valid ExecutionBehavior");
-  }
-
-  /**
-   * Test case 2: Missing execution behavior.
+   * Missing execution behavior.
    *
    * <p>This test verifies that attempting to create a Plan without setting the ExecutionBehavior
    * field throws an IllegalStateException (from Immutables) with an appropriate error message
@@ -82,7 +63,7 @@ class PlanValidationTest {
   }
 
   /**
-   * Test case 3: Execution behavior with unspecified variable evaluation mode.
+   * Execution behavior with unspecified variable evaluation mode.
    *
    * <p>This test verifies that attempting to create a Plan with an ExecutionBehavior that has its
    * VariableEvaluationMode set to VARIABLE_EVALUATION_MODE_UNSPECIFIED throws an
