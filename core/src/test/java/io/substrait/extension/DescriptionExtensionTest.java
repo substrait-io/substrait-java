@@ -12,8 +12,6 @@ import org.junit.jupiter.api.Test;
  * the function-implementation level. An implementation-level description documents
  * overload-specific behavior and takes precedence over the parent function's description when both
  * are present.
- *
- * <p>See <a href="https://github.com/substrait-io/substrait/pull/1013">substrait#1013</a>.
  */
 class DescriptionExtensionTest extends TestBase {
 
