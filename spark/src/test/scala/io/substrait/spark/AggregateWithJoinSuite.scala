@@ -244,7 +244,7 @@ class AggregateWithJoinSuite extends SparkFunSuite with SharedSparkSession with 
       .addRoots(root)
       .executionBehavior(
         Plan.ExecutionBehavior.builder()
-          .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+          .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
           .build()
       )
       .build()

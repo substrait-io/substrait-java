@@ -107,8 +107,7 @@ class PlanValidationTest {
 
     // Verify the error message contains the expected information
     String expectedMessage =
-        "ExecutionBehavior requires a specified VariableEvaluationMode, but got: "
-            + "VARIABLE_EVALUATION_MODE_UNSPECIFIED";
+        "ExecutionBehavior requires a specified VariableEvaluationMode, but got: " + "UNSPECIFIED";
     assertEquals(
         expectedMessage,
         exception.getMessage(),

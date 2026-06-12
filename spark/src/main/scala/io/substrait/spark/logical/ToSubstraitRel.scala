@@ -710,7 +710,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .build())
       .executionBehavior(
         ImmutableExecutionBehavior.builder()
-          .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+          .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
           .build())
       .roots(
         Collections.singletonList(
