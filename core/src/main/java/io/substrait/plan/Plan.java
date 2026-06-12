@@ -32,18 +32,17 @@ public abstract class Plan {
    *   <li>The {@link ExecutionBehavior} field is present (not null or empty) - ExecutionBehavior is
    *       a required field
    *   <li>The {@link ExecutionBehavior.VariableEvaluationMode} is set to a valid value (not {@link
-   *       ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED})
+   *       ExecutionBehavior.VariableEvaluationMode#UNSPECIFIED})
    * </ul>
    *
    * @throws IllegalArgumentException if the execution behavior is not present, or if the variable
-   *     evaluation mode is set to {@link
-   *     ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
+   *     evaluation mode is set to {@link ExecutionBehavior.VariableEvaluationMode#UNSPECIFIED}
    */
   @Value.Check
   protected void check() {
     ExecutionBehavior behavior = getExecutionBehavior();
     if (behavior.getVariableEvaluationMode()
-        == ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED) {
+        == ExecutionBehavior.VariableEvaluationMode.UNSPECIFIED) {
       throw new IllegalArgumentException(
           "ExecutionBehavior requires a specified VariableEvaluationMode, but got: "
               + behavior.getVariableEvaluationMode());
@@ -108,9 +107,30 @@ public abstract class Plan {
     }
 
     public enum VariableEvaluationMode {
-      VARIABLE_EVALUATION_MODE_UNSPECIFIED,
-      VARIABLE_EVALUATION_MODE_PER_PLAN,
-      VARIABLE_EVALUATION_MODE_PER_RECORD
+      UNSPECIFIED(
+          io.substrait.proto.ExecutionBehavior.VariableEvaluationMode
+              .VARIABLE_EVALUATION_MODE_UNSPECIFIED),
+      PER_PLAN(
+          io.substrait.proto.ExecutionBehavior.VariableEvaluationMode
+              .VARIABLE_EVALUATION_MODE_PER_PLAN),
+      PER_RECORD(
+          io.substrait.proto.ExecutionBehavior.VariableEvaluationMode
+              .VARIABLE_EVALUATION_MODE_PER_RECORD);
+
+      private final io.substrait.proto.ExecutionBehavior.VariableEvaluationMode proto;
+
+      VariableEvaluationMode(io.substrait.proto.ExecutionBehavior.VariableEvaluationMode proto) {
+        this.proto = proto;
+      }
+
+      /**
+       * Converts this variable evaluation mode to its protobuf representation.
+       *
+       * @return the protobuf representation
+       */
+      public io.substrait.proto.ExecutionBehavior.VariableEvaluationMode toProto() {
+        return proto;
+      }
     }
   }
 }

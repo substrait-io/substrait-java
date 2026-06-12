@@ -24,8 +24,7 @@ class PlanValidationTest {
     // Create a valid ExecutionBehavior with VARIABLE_EVALUATION_MODE_PER_PLAN
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
             .build();
 
     // Create a Plan with the valid ExecutionBehavior
@@ -47,8 +46,7 @@ class PlanValidationTest {
     // Create a valid ExecutionBehavior with VARIABLE_EVALUATION_MODE_PER_RECORD
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD)
             .build();
 
     // Create a Plan with the valid ExecutionBehavior
@@ -95,8 +93,7 @@ class PlanValidationTest {
     // Create an ExecutionBehavior with VARIABLE_EVALUATION_MODE_UNSPECIFIED
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.UNSPECIFIED)
             .build();
 
     // Attempt to create a Plan with the invalid ExecutionBehavior

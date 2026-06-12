@@ -30,8 +30,7 @@ class PlanConverterTest {
 
   private static Plan.ExecutionBehavior defaultExecutionBehavior() {
     return ImmutableExecutionBehavior.builder()
-        .variableEvaluationMode(
-            Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+        .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
         .build();
   }
 
@@ -354,8 +353,7 @@ class PlanConverterTest {
     // Create a Plan with ExecutionBehavior set to PER_PLAN
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
             .build();
 
     Plan plan =
@@ -388,8 +386,7 @@ class PlanConverterTest {
     // Create a Plan with ExecutionBehavior set to PER_RECORD
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD)
             .build();
 
     Plan plan =
@@ -436,7 +433,7 @@ class PlanConverterTest {
     // Verify the POJO has execution behavior
     assertNotNull(plan.getExecutionBehavior(), "Plan should have ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN,
         plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be PER_PLAN");
   }
@@ -465,7 +462,7 @@ class PlanConverterTest {
     // Verify the POJO has execution behavior
     assertNotNull(plan.getExecutionBehavior(), "Plan should have ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD,
         plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be PER_RECORD");
   }
@@ -486,7 +483,7 @@ class PlanConverterTest {
 
     assertNotNull(plan.getExecutionBehavior(), "Plan should have a default ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN,
         plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Default variable evaluation mode should be PER_PLAN");
   }
@@ -533,8 +530,7 @@ class PlanConverterTest {
     // Create original Plan
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
             .build();
 
     Plan originalPlan =
@@ -553,7 +549,7 @@ class PlanConverterTest {
         roundTrippedPlan.getExecutionBehavior(),
         "Round-tripped Plan should have ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN,
         roundTrippedPlan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be preserved");
     assertEquals(
@@ -577,8 +573,7 @@ class PlanConverterTest {
     // Create original Plan
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD)
             .build();
 
     Plan originalPlan =
@@ -597,7 +592,7 @@ class PlanConverterTest {
         roundTrippedPlan.getExecutionBehavior(),
         "Round-tripped Plan should have ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD,
         roundTrippedPlan.getExecutionBehavior().getVariableEvaluationMode(),
         "Variable evaluation mode should be preserved");
   }
@@ -613,8 +608,7 @@ class PlanConverterTest {
     // Create minimal Plan
     Plan.ExecutionBehavior executionBehavior =
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(
-                Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
             .build();
 
     Plan originalPlan =
@@ -654,7 +648,7 @@ class PlanConverterTest {
 
     assertNotNull(plan.getExecutionBehavior(), "Plan should have a default ExecutionBehavior");
     assertEquals(
-        Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN,
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN,
         plan.getExecutionBehavior().getVariableEvaluationMode(),
         "Default variable evaluation mode should be PER_PLAN");
   }

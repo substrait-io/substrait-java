@@ -127,7 +127,7 @@ public class ProtoPlanConverter {
       // Set default ExecutionBehavior for older plans that don't have it
       planBuilder.executionBehavior(
           ExecutionBehavior.builder()
-              .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+              .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
               .build());
     }
 
@@ -179,14 +179,11 @@ public class ProtoPlanConverter {
           final io.substrait.proto.ExecutionBehavior.VariableEvaluationMode mode) {
     switch (mode) {
       case VARIABLE_EVALUATION_MODE_UNSPECIFIED:
-        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
-            .VARIABLE_EVALUATION_MODE_UNSPECIFIED;
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.UNSPECIFIED;
       case VARIABLE_EVALUATION_MODE_PER_PLAN:
-        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
-            .VARIABLE_EVALUATION_MODE_PER_PLAN;
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN;
       case VARIABLE_EVALUATION_MODE_PER_RECORD:
-        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
-            .VARIABLE_EVALUATION_MODE_PER_RECORD;
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD;
       case UNRECOGNIZED:
       default:
         throw new IllegalArgumentException("Unknown VariableEvaluationMode: " + mode);

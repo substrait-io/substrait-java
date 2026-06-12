@@ -158,8 +158,7 @@ public class ConverterProvider {
    */
   private static Plan.ExecutionBehavior createDefaultExecutionBehavior() {
     return ImmutableExecutionBehavior.builder()
-        .variableEvaluationMode(
-            Plan.ExecutionBehavior.VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+        .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
         .build();
   }
 
@@ -396,9 +395,9 @@ public class ConverterProvider {
    * Returns the execution behavior for plans created by this converter.
    *
    * <p>The default execution behavior uses {@link
-   * Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}, which
-   * evaluates variables once per plan execution. This can be customized by providing a different
-   * execution behavior through the constructor.
+   * Plan.ExecutionBehavior.VariableEvaluationMode#PER_PLAN}, which evaluates variables once per
+   * plan execution. This can be customized by providing a different execution behavior through the
+   * constructor.
    *
    * @return the execution behavior to use when creating plans
    */

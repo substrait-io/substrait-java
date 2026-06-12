@@ -1544,8 +1544,8 @@ public class SubstraitBuilder {
   /**
    * Creates a plan from a plan root with default execution behavior.
    *
-   * <p>The plan is created with {@link VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN} as
-   * the default variable evaluation mode. To specify a custom execution behavior, use {@link
+   * <p>The plan is created with {@link VariableEvaluationMode#PER_PLAN} as the default variable
+   * evaluation mode. To specify a custom execution behavior, use {@link
    * #plan(Plan.ExecutionBehavior, Plan.Root)} instead.
    *
    * @param root the plan root
@@ -1554,7 +1554,7 @@ public class SubstraitBuilder {
   public Plan plan(Plan.Root root) {
     return plan(
         ImmutableExecutionBehavior.builder()
-            .variableEvaluationMode(VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN)
+            .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
             .build(),
         root);
   }

@@ -5,7 +5,6 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension.ExtensionCollection;
 import io.substrait.proto.ExecutionBehavior;
-import io.substrait.proto.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
@@ -125,44 +124,7 @@ public class PlanProtoConverter {
   private ExecutionBehavior toProtoExecutionBehavior(
       final io.substrait.plan.Plan.ExecutionBehavior executionBehavior) {
     return ExecutionBehavior.newBuilder()
-        .setVariableEvalMode(
-            toProtoVariableEvaluationMode(executionBehavior.getVariableEvaluationMode()))
+        .setVariableEvalMode(executionBehavior.getVariableEvaluationMode().toProto())
         .build();
-  }
-
-  /**
-   * Converts a {@link io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode} to its
-   * protobuf representation.
-   *
-   * <p>Supported modes:
-   *
-   * <ul>
-   *   <li>{@link
-   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
-   *       - Unspecified mode (should be avoided in valid plans)
-   *   <li>{@link
-   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}
-   *       - Variables are evaluated once per plan execution
-   *   <li>{@link
-   *       io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_RECORD}
-   *       - Variables are evaluated for each record
-   * </ul>
-   *
-   * @param mode the VariableEvaluationMode to convert, must not be null
-   * @return the protobuf VariableEvaluationMode representation
-   * @throws IllegalArgumentException if the mode is unknown or not supported
-   */
-  private VariableEvaluationMode toProtoVariableEvaluationMode(
-      final io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode mode) {
-    switch (mode) {
-      case VARIABLE_EVALUATION_MODE_UNSPECIFIED:
-        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_UNSPECIFIED;
-      case VARIABLE_EVALUATION_MODE_PER_PLAN:
-        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_PLAN;
-      case VARIABLE_EVALUATION_MODE_PER_RECORD:
-        return VariableEvaluationMode.VARIABLE_EVALUATION_MODE_PER_RECORD;
-      default:
-        throw new IllegalArgumentException("Unknown VariableEvaluationMode: " + mode);
-    }
   }
 }
