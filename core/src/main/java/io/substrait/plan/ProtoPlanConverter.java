@@ -5,6 +5,8 @@ import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.ProtoExtensionConverter;
 import io.substrait.extension.SimpleExtension.ExtensionCollection;
+import io.substrait.plan.Plan.ExecutionBehavior;
+import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
@@ -66,6 +68,21 @@ public class ProtoPlanConverter {
     return new ProtoRelConverter(functionLookup, this.extensionCollection, protoExtensionConverter);
   }
 
+  /**
+   * Converts a protobuf {@link io.substrait.proto.Plan} to a {@link Plan} POJO.
+   *
+   * <p><b>Note:</b> Execution behavior is optional in the protobuf message, but the {@link Plan}
+   * POJO requires it. Conversion handles a missing execution behavior based on the plan version:
+   *
+   * <p><b>Note:</b> If {@code Plan.ExecutionBehavior.VariableEvaluationMode} is not set, it will be
+   * defaulted to {@code VARIABLE_EVALUATION_MODE_PER_PLAN}. Once other producers populate this
+   * field correctly, this compatibility workaround will be removed.
+   *
+   * @param plan the protobuf Plan to convert, must not be null
+   * @return the converted Plan POJO
+   * @throws IllegalArgumentException if the plan contains invalid data or if the execution behavior
+   *     validation fails
+   */
   public Plan from(io.substrait.proto.Plan plan) {
     ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
@@ -92,15 +109,84 @@ public class ProtoPlanConverter {
       versionBuilder.producer(Optional.of(plan.getVersion().getProducer()));
     }
 
-    return Plan.builder()
-        .roots(roots)
-        .expectedTypeUrls(plan.getExpectedTypeUrlsList())
-        .advancedExtension(
-            Optional.ofNullable(
-                plan.hasAdvancedExtensions()
-                    ? protoExtensionConverter.fromProto(plan.getAdvancedExtensions())
-                    : null))
-        .version(versionBuilder.build())
+    ImmutablePlan.Builder planBuilder =
+        Plan.builder()
+            .roots(roots)
+            .expectedTypeUrls(plan.getExpectedTypeUrlsList())
+            .advancedExtension(
+                Optional.ofNullable(
+                    plan.hasAdvancedExtensions()
+                        ? protoExtensionConverter.fromProto(plan.getAdvancedExtensions())
+                        : null))
+            .version(versionBuilder.build());
+
+    // Set execution behavior (required field)
+    if (plan.hasExecutionBehavior()) {
+      planBuilder.executionBehavior(fromProtoExecutionBehavior(plan.getExecutionBehavior()));
+    } else {
+      // Set default ExecutionBehavior for older plans that don't have it
+      planBuilder.executionBehavior(
+          ExecutionBehavior.builder()
+              .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
+              .build());
+    }
+
+    return planBuilder.build();
+  }
+
+  /**
+   * Converts a protobuf {@link io.substrait.proto.ExecutionBehavior} to its POJO representation.
+   *
+   * <p>This method converts the execution behavior configuration from the protobuf format to the
+   * POJO representation, including the variable evaluation mode.
+   *
+   * @param executionBehavior the protobuf ExecutionBehavior to convert, must not be null
+   * @return the POJO ExecutionBehavior representation
+   * @throws IllegalArgumentException if the variable evaluation mode is unknown or UNRECOGNIZED
+   */
+  private io.substrait.plan.Plan.ExecutionBehavior fromProtoExecutionBehavior(
+      final io.substrait.proto.ExecutionBehavior executionBehavior) {
+    return io.substrait.plan.Plan.ExecutionBehavior.builder()
+        .variableEvaluationMode(
+            fromProtoVariableEvaluationMode(executionBehavior.getVariableEvalMode()))
         .build();
+  }
+
+  /**
+   * Converts a protobuf {@link io.substrait.proto.ExecutionBehavior.VariableEvaluationMode} to its
+   * POJO representation.
+   *
+   * <p>Supported modes:
+   *
+   * <ul>
+   *   <li>{@link
+   *       io.substrait.proto.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_UNSPECIFIED}
+   *       - Unspecified mode (will cause validation failure in Plan)
+   *   <li>{@link
+   *       io.substrait.proto.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_PLAN}
+   *       - Variables are evaluated once per plan execution
+   *   <li>{@link
+   *       io.substrait.proto.ExecutionBehavior.VariableEvaluationMode#VARIABLE_EVALUATION_MODE_PER_RECORD}
+   *       - Variables are evaluated for each record
+   * </ul>
+   *
+   * @param mode the protobuf VariableEvaluationMode to convert, must not be null
+   * @return the POJO VariableEvaluationMode representation
+   * @throws IllegalArgumentException if the mode is UNRECOGNIZED or not supported
+   */
+  private io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
+      fromProtoVariableEvaluationMode(
+          final io.substrait.proto.ExecutionBehavior.VariableEvaluationMode mode) {
+    switch (mode) {
+      case VARIABLE_EVALUATION_MODE_UNSPECIFIED:
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.UNSPECIFIED;
+      case VARIABLE_EVALUATION_MODE_PER_PLAN:
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN;
+      case VARIABLE_EVALUATION_MODE_PER_RECORD:
+        return io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode.PER_RECORD;
+      case UNRECOGNIZED:
+      default:
+        throw new IllegalArgumentException("Unknown VariableEvaluationMode: " + mode);
+    }
   }
 }

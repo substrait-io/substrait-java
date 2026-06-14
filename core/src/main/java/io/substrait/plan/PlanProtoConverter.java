@@ -4,6 +4,7 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension.ExtensionCollection;
+import io.substrait.proto.ExecutionBehavior;
 import io.substrait.proto.Plan;
 import io.substrait.proto.PlanRel;
 import io.substrait.proto.Rel;
@@ -61,6 +62,13 @@ public class PlanProtoConverter {
     this.extensionProtoConverter = extensionProtoConverter;
   }
 
+  /**
+   * Converts a {@link io.substrait.plan.Plan} object to its protobuf representation.
+   *
+   * @param plan the Plan object to convert, must not be null
+   * @return the protobuf Plan representation
+   * @throws IllegalArgumentException if the plan contains invalid data
+   */
   public Plan toProto(final io.substrait.plan.Plan plan) {
     final List<PlanRel> planRels = new ArrayList<>();
     final ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
@@ -97,6 +105,26 @@ public class PlanProtoConverter {
 
     builder.setVersion(versionBuilder);
 
+    // Set execution behavior
+    builder.setExecutionBehavior(toProtoExecutionBehavior(plan.getExecutionBehavior()));
+
     return builder.build();
+  }
+
+  /**
+   * Converts an {@link io.substrait.plan.Plan.ExecutionBehavior} to its protobuf representation.
+   *
+   * <p>This method converts the execution behavior configuration, including the variable evaluation
+   * mode, from the POJO representation to the protobuf format.
+   *
+   * @param executionBehavior the ExecutionBehavior to convert, must not be null
+   * @return the protobuf ExecutionBehavior representation
+   * @throws IllegalArgumentException if the variable evaluation mode is unknown
+   */
+  private ExecutionBehavior toProtoExecutionBehavior(
+      final io.substrait.plan.Plan.ExecutionBehavior executionBehavior) {
+    return ExecutionBehavior.newBuilder()
+        .setVariableEvalMode(executionBehavior.getVariableEvaluationMode().toProto())
+        .build();
   }
 }
