@@ -230,20 +230,15 @@ public abstract class FunctionConverter<
       return Optional.of(typeFilteredOperators.get(0));
     }
 
-    // Determine which operators to use for further filtering
+    // If still ambiguous and a distribution enum argument is present, disambiguate by it.
+    // Both the population and sample operators share one key (e.g. variance:req_fp32), since the
+    // SAMPLE/POPULATION value lives in the argument, not the signature.
     Optional<String> distribution = distributionArgument(arguments);
-    List<SqlOperator> resolvedOperators;
-    if (typeFilteredOperators.isEmpty() && distribution.isPresent()) {
-      // If type filtering failed but we have a distribution argument, try distribution-based
-      // filtering on all operators. This handles functions (e.g. std_dev/variance) that the type
-      // resolver has no entries for.
-      resolvedOperators = filterByDistribution(List.copyOf(operators), distribution.get());
-    } else if (typeFilteredOperators.size() > 1 && distribution.isPresent()) {
-      // If multiple operators remain after type filtering, apply distribution-based filtering
-      resolvedOperators = filterByDistribution(typeFilteredOperators, distribution.get());
-    } else {
-      // Use type-filtered results (may be empty, single, or multiple)
-      resolvedOperators = typeFilteredOperators;
+    List<SqlOperator> resolvedOperators = typeFilteredOperators;
+    if (distribution.isPresent()) {
+      List<SqlOperator> candidates =
+          typeFilteredOperators.isEmpty() ? List.copyOf(operators) : typeFilteredOperators;
+      resolvedOperators = filterByDistribution(candidates, distribution.get());
     }
 
     // only one SqlOperator is possible
