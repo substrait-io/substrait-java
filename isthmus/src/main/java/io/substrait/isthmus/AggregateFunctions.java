@@ -31,25 +31,25 @@ public class AggregateFunctions {
 
   /**
    * Standard deviation (population) aggregate function. Maps to Substrait's std_dev function with
-   * distribution=POPULATION option.
+   * distribution=POPULATION enum argument.
    */
   public static SqlAggFunction STDDEV_POP = new SubstraitAvgAggFunction(SqlKind.STDDEV_POP);
 
   /**
    * Standard deviation (sample) aggregate function. Maps to Substrait's std_dev function with
-   * distribution=SAMPLE option.
+   * distribution=SAMPLE enum argument.
    */
   public static SqlAggFunction STDDEV_SAMP = new SubstraitAvgAggFunction(SqlKind.STDDEV_SAMP);
 
   /**
    * Variance (population) aggregate function. Maps to Substrait's variance function with
-   * distribution=POPULATION option.
+   * distribution=POPULATION enum argument.
    */
   public static SqlAggFunction VAR_POP = new SubstraitAvgAggFunction(SqlKind.VAR_POP);
 
   /**
    * Variance (sample) aggregate function. Maps to Substrait's variance function with
-   * distribution=SAMPLE option.
+   * distribution=SAMPLE enum argument.
    */
   public static SqlAggFunction VAR_SAMP = new SubstraitAvgAggFunction(SqlKind.VAR_SAMP);
 

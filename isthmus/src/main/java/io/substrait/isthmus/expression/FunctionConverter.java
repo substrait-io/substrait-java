@@ -10,6 +10,7 @@ import com.google.common.collect.Streams;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.StatisticalDistribution;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
@@ -188,20 +189,21 @@ public abstract class FunctionConverter<
   /**
    * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
    *
-   * <p>Given a Substrait function key (e.g., "std_dev:fp64"), output type, and function options
-   * (e.g., distribution: SAMPLE), this method finds the corresponding Calcite {@link SqlOperator}.
-   * When multiple operators match, the output type and function options are used to disambiguate.
+   * <p>Given a Substrait function key (e.g., "std_dev:req_fp64"), output type, and function
+   * arguments (which may include a {@code distribution} {@link io.substrait.expression.EnumArg}),
+   * this method finds the corresponding Calcite {@link SqlOperator}. When multiple operators match,
+   * the output type and the {@code distribution} enum argument are used to disambiguate.
    *
-   * <p>For example, both STDDEV_POP and STDDEV_SAMP map to "std_dev:fp64", but differ in the
-   * "distribution" option (POPULATION vs SAMPLE).
+   * <p>For example, both STDDEV_POP and STDDEV_SAMP map to "std_dev:req_fp64", but differ in the
+   * {@code distribution} enum argument (POPULATION vs SAMPLE).
    *
    * @param key the Substrait function key (function name with type signature)
    * @param outputType the expected output type
-   * @param options the function options (e.g., distribution, rounding)
+   * @param arguments the function arguments (used to read the {@code distribution} enum argument)
    * @return the matching {@link SqlOperator}, or empty if no match found
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
-      String key, Type outputType, List<io.substrait.expression.FunctionOption> options) {
+      String key, Type outputType, List<FunctionArg> arguments) {
     Map<SqlOperator, FunctionMappings.TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
     if (operators.isEmpty()) {
@@ -229,14 +231,16 @@ public abstract class FunctionConverter<
     }
 
     // Determine which operators to use for further filtering
+    Optional<String> distribution = distributionArgument(arguments);
     List<SqlOperator> resolvedOperators;
-    if (typeFilteredOperators.isEmpty() && !options.isEmpty()) {
-      // If type filtering failed but we have options, try option-based filtering on all operators
-      // This handles cases where type resolver doesn't have entries for certain functions
-      resolvedOperators = filterByFunctionOptions(List.copyOf(operators), options);
-    } else if (typeFilteredOperators.size() > 1 && !options.isEmpty()) {
-      // If multiple operators remain after type filtering, apply option-based filtering
-      resolvedOperators = filterByFunctionOptions(typeFilteredOperators, options);
+    if (typeFilteredOperators.isEmpty() && distribution.isPresent()) {
+      // If type filtering failed but we have a distribution argument, try distribution-based
+      // filtering on all operators. This handles functions (e.g. std_dev/variance) that the type
+      // resolver has no entries for.
+      resolvedOperators = filterByDistribution(List.copyOf(operators), distribution.get());
+    } else if (typeFilteredOperators.size() > 1 && distribution.isPresent()) {
+      // If multiple operators remain after type filtering, apply distribution-based filtering
+      resolvedOperators = filterByDistribution(typeFilteredOperators, distribution.get());
     } else {
       // Use type-filtered results (may be empty, single, or multiple)
       resolvedOperators = typeFilteredOperators;
@@ -255,10 +259,28 @@ public abstract class FunctionConverter<
   }
 
   /**
-   * Filters SqlOperators based on function options.
+   * Extracts the value of the {@code distribution} enum argument, if present.
    *
-   * <p>For statistical functions like STDDEV and VAR, the "distribution" option determines whether
-   * to use the population or sample variant:
+   * @param arguments the Substrait function arguments
+   * @return the distribution value (e.g. {@code SAMPLE} / {@code POPULATION}) if a {@code
+   *     distribution} {@link io.substrait.expression.EnumArg} is present
+   */
+  private static Optional<String> distributionArgument(List<FunctionArg> arguments) {
+    if (arguments == null) {
+      return Optional.empty();
+    }
+    return arguments.stream()
+        .filter(arg -> arg instanceof io.substrait.expression.EnumArg)
+        .map(arg -> (io.substrait.expression.EnumArg) arg)
+        .flatMap(arg -> arg.value().stream())
+        .findFirst();
+  }
+
+  /**
+   * Filters SqlOperators based on the {@code distribution} enum argument.
+   *
+   * <p>For statistical functions like STDDEV and VAR, the {@code distribution} argument determines
+   * whether to use the population or sample variant:
    *
    * <ul>
    *   <li>distribution=POPULATION → STDDEV_POP, VAR_POP
@@ -266,35 +288,19 @@ public abstract class FunctionConverter<
    * </ul>
    *
    * @param operators the list of candidate SqlOperators
-   * @param options the function options from Substrait
-   * @return filtered list of SqlOperators matching the options
+   * @param distributionValue the distribution value from the Substrait enum argument
+   * @return filtered list of SqlOperators matching the distribution
    */
-  private List<SqlOperator> filterByFunctionOptions(
-      List<SqlOperator> operators, List<io.substrait.expression.FunctionOption> options) {
-    if (options == null || options.isEmpty()) {
-      return operators;
-    }
-
-    // Extract distribution option if present
-    Optional<String> distribution =
-        options.stream()
-            .filter(opt -> "distribution".equals(opt.getName()))
-            .flatMap(opt -> opt.values().stream())
-            .findFirst();
-
-    if (!distribution.isPresent()) {
-      return operators;
-    }
-
-    String distributionValue = distribution.get();
+  private List<SqlOperator> filterByDistribution(
+      List<SqlOperator> operators, String distributionValue) {
     return operators.stream()
         .filter(
             operator -> {
               SqlKind kind = operator.getKind();
-              // Match distribution option to SqlKind
-              if ("POPULATION".equals(distributionValue)) {
+              // Match distribution value to SqlKind
+              if (StatisticalDistribution.POPULATION.name().equals(distributionValue)) {
                 return kind == SqlKind.STDDEV_POP || kind == SqlKind.VAR_POP;
-              } else if ("SAMPLE".equals(distributionValue)) {
+              } else if (StatisticalDistribution.SAMPLE.name().equals(distributionValue)) {
                 return kind == SqlKind.STDDEV_SAMP || kind == SqlKind.VAR_SAMP;
               }
               throw new IllegalArgumentException(

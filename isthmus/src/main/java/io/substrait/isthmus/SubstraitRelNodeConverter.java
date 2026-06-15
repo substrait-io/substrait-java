@@ -384,8 +384,11 @@ public class SubstraitRelNodeConverter
 
   private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
     List<FunctionArg> eArgs = measure.getFunction().arguments();
+    // Only value (Expression) arguments map to Calcite aggregate operands. Enum arguments such as
+    // the std_dev/variance "distribution" are used to disambiguate the operator, not as operands.
     List<RexNode> arguments =
-        IntStream.range(0, measure.getFunction().arguments().size())
+        IntStream.range(0, eArgs.size())
+            .filter(i -> eArgs.get(i) instanceof Expression)
             .mapToObj(
                 i ->
                     eArgs
@@ -400,7 +403,7 @@ public class SubstraitRelNodeConverter
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
             measure.getFunction().declaration().key(),
             measure.getFunction().outputType(),
-            measure.getFunction().options());
+            measure.getFunction().arguments());
     if (!operator.isPresent()) {
       throw new IllegalArgumentException(
           String.format(

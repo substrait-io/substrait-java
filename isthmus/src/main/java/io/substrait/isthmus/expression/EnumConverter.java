@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import io.substrait.expression.EnumArg;
+import io.substrait.expression.StatisticalDistribution;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
@@ -78,6 +79,20 @@ public class EnumConverter {
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_req_date", 1),
         ExtractIndexing.class);
+
+    // std_dev and variance carry the SAMPLE/POPULATION distinction as a leading enum argument.
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "std_dev:req_fp32", 0),
+        StatisticalDistribution.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "std_dev:req_fp64", 0),
+        StatisticalDistribution.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "variance:req_fp32", 0),
+        StatisticalDistribution.class);
+    calciteEnumMap.put(
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "variance:req_fp64", 0),
+        StatisticalDistribution.class);
   }
 
   private static Optional<Enum<?>> constructValue(
@@ -88,6 +103,10 @@ public class EnumConverter {
 
     if (cls.isAssignableFrom(SqlTrimFunction.Flag.class)) {
       return option.get().map(SqlTrimFunction.Flag::valueOf);
+    }
+
+    if (cls.isAssignableFrom(StatisticalDistribution.class)) {
+      return option.get().map(StatisticalDistribution::valueOf);
     }
 
     // ExtractIndexing does not need to be converted here. Calcite

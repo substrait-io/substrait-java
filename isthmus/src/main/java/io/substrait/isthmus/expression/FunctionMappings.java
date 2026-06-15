@@ -157,9 +157,9 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
               s(AggregateFunctions.AVG, "avg"),
               /*
-               * Substrait std_dev and variance functions use a 'distribution' option
-               * (SAMPLE or POPULATION) to distinguish between population and sample variants.
-               * The function invocation logic must set this option based on the SqlKind.
+               * Substrait std_dev and variance functions use a leading 'distribution' enum
+               * argument (SAMPLE or POPULATION) to distinguish between population and sample
+               * variants. AggregateFunctionConverter synthesizes that argument based on the SqlKind.
                *
                * Note: Standard Calcite operators (SqlStdOperatorTable.STDDEV_SAMP, etc.) are
                * automatically converted to these Substrait variants via toSubstraitAggVariant().

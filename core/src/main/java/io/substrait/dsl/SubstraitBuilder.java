@@ -1,6 +1,7 @@
 package io.substrait.dsl;
 
 import io.substrait.expression.AggregateFunctionInvocation;
+import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.Cast;
 import io.substrait.expression.Expression.FailureBehavior;
@@ -13,6 +14,7 @@ import io.substrait.expression.Expression.SwitchClause;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
+import io.substrait.expression.StatisticalDistribution;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -1371,7 +1373,7 @@ public class SubstraitBuilder {
    * @param input the input relation containing the field
    * @param field the zero-based index of the field to aggregate
    * @return an aggregate measure computing population standard deviation with
-   *     distribution=POPULATION option
+   *     distribution=POPULATION enum argument
    */
   public Aggregate.Measure stddevPopulation(Rel input, int field) {
     return stddevPopulation(fieldReference(input, field));
@@ -1388,7 +1390,7 @@ public class SubstraitBuilder {
    *
    * <ul>
    *   <li>Function: Substrait's "std_dev" from the arithmetic extension
-   *   <li>Option: distribution=POPULATION
+   *   <li>Argument: distribution=POPULATION (enum argument)
    *   <li>Output type: nullable version of the input expression type
    *   <li>Aggregation phase: INITIAL_TO_RESULT
    *   <li>Invocation: ALL (processes all rows)
@@ -1398,7 +1400,7 @@ public class SubstraitBuilder {
    * @return an aggregate measure computing population standard deviation
    */
   public Aggregate.Measure stddevPopulation(Expression expr) {
-    return statisticalAggregate(expr, "std_dev", "POPULATION");
+    return statisticalAggregate(expr, "std_dev", StatisticalDistribution.POPULATION);
   }
 
   /**
@@ -1410,8 +1412,8 @@ public class SubstraitBuilder {
    *
    * @param input the input relation containing the field
    * @param field the zero-based index of the field to aggregate
-   * @return an aggregate measure computing sample standard deviation with distribution=SAMPLE
-   *     option
+   * @return an aggregate measure computing sample standard deviation with distribution=SAMPLE enum
+   *     argument
    */
   public Aggregate.Measure stddevSample(Rel input, int field) {
     return stddevSample(fieldReference(input, field));
@@ -1428,7 +1430,7 @@ public class SubstraitBuilder {
    *
    * <ul>
    *   <li>Function: Substrait's "std_dev" from the arithmetic extension
-   *   <li>Option: distribution=SAMPLE
+   *   <li>Argument: distribution=SAMPLE (enum argument)
    *   <li>Output type: nullable version of the input expression type
    *   <li>Aggregation phase: INITIAL_TO_RESULT
    *   <li>Invocation: ALL (processes all rows)
@@ -1438,7 +1440,7 @@ public class SubstraitBuilder {
    * @return an aggregate measure computing sample standard deviation
    */
   public Aggregate.Measure stddevSample(Expression expr) {
-    return statisticalAggregate(expr, "std_dev", "SAMPLE");
+    return statisticalAggregate(expr, "std_dev", StatisticalDistribution.SAMPLE);
   }
 
   /**
@@ -1449,7 +1451,8 @@ public class SubstraitBuilder {
    *
    * @param input the input relation containing the field
    * @param field the zero-based index of the field to aggregate
-   * @return an aggregate measure computing population variance with distribution=POPULATION option
+   * @return an aggregate measure computing population variance with distribution=POPULATION enum
+   *     argument
    */
   public Aggregate.Measure variancePopulation(Rel input, int field) {
     return variancePopulation(fieldReference(input, field));
@@ -1465,7 +1468,7 @@ public class SubstraitBuilder {
    *
    * <ul>
    *   <li>Function: Substrait's "variance" from the arithmetic extension
-   *   <li>Option: distribution=POPULATION
+   *   <li>Argument: distribution=POPULATION (enum argument)
    *   <li>Output type: nullable version of the input expression type
    *   <li>Aggregation phase: INITIAL_TO_RESULT
    *   <li>Invocation: ALL (processes all rows)
@@ -1475,7 +1478,7 @@ public class SubstraitBuilder {
    * @return an aggregate measure computing population variance
    */
   public Aggregate.Measure variancePopulation(Expression expr) {
-    return statisticalAggregate(expr, "variance", "POPULATION");
+    return statisticalAggregate(expr, "variance", StatisticalDistribution.POPULATION);
   }
 
   /**
@@ -1486,7 +1489,7 @@ public class SubstraitBuilder {
    *
    * @param input the input relation containing the field
    * @param field the zero-based index of the field to aggregate
-   * @return an aggregate measure computing sample variance with distribution=SAMPLE option
+   * @return an aggregate measure computing sample variance with distribution=SAMPLE enum argument
    */
   public Aggregate.Measure varianceSample(Rel input, int field) {
     return varianceSample(fieldReference(input, field));
@@ -1502,7 +1505,7 @@ public class SubstraitBuilder {
    *
    * <ul>
    *   <li>Function: Substrait's "variance" from the arithmetic extension
-   *   <li>Option: distribution=SAMPLE
+   *   <li>Argument: distribution=SAMPLE (enum argument)
    *   <li>Output type: nullable version of the input expression type
    *   <li>Aggregation phase: INITIAL_TO_RESULT
    *   <li>Invocation: ALL (processes all rows)
@@ -1512,34 +1515,36 @@ public class SubstraitBuilder {
    * @return an aggregate measure computing sample variance
    */
   public Aggregate.Measure varianceSample(Expression expr) {
-    return statisticalAggregate(expr, "variance", "SAMPLE");
+    return statisticalAggregate(expr, "variance", StatisticalDistribution.SAMPLE);
   }
 
   /**
-   * Helper method to create statistical aggregate measures (std_dev, variance) with distribution
-   * option.
+   * Helper method to create statistical aggregate measures (std_dev, variance) with a {@code
+   * distribution} enum argument.
+   *
+   * <p>Uses the non-deprecated function signatures that carry the population/sample distinction as
+   * a leading {@code distribution} {@link EnumArg} (e.g. {@code std_dev:req_fp64}).
    *
    * @param expr the expression to aggregate
    * @param functionName the Substrait function name ("std_dev" or "variance")
-   * @param distribution the distribution type ("SAMPLE" or "POPULATION")
-   * @return an aggregate measure with the specified distribution option
+   * @param distribution the distribution type (SAMPLE or POPULATION)
+   * @return an aggregate measure with the specified distribution argument
    */
   private Aggregate.Measure statisticalAggregate(
-      Expression expr, String functionName, String distribution) {
+      Expression expr, String functionName, StatisticalDistribution distribution) {
     String typeString = ToTypeString.apply(expr.getType());
     SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
-                String.format("%s:%s", functionName, typeString)));
-    FunctionOption distributionOption =
-        FunctionOption.builder().name("distribution").addValues(distribution).build();
+                String.format("%s:req_%s", functionName, typeString)));
+    EnumArg distributionArg =
+        EnumArg.of((SimpleExtension.EnumArgument) declaration.args().get(0), distribution.name());
     return measure(
         AggregateFunctionInvocation.builder()
-            .arguments(Arrays.asList(expr))
+            .arguments(Arrays.asList(distributionArg, expr))
             .outputType(TypeCreator.asNullable(expr.getType()))
             .declaration(declaration)
-            .addOptions(distributionOption)
             .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
             .invocation(Expression.AggregationInvocation.ALL)
             .build());
