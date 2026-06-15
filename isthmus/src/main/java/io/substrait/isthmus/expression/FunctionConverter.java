@@ -7,6 +7,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
+import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
@@ -247,7 +248,7 @@ public abstract class FunctionConverter<
     } else if (resolvedOperators.size() > 1) {
       throw new IllegalStateException(
           String.format(
-              "Found %d SqlOperators: %s for ScalarFunction %s: ",
+              "Found %d SqlOperators: %s for function %s",
               resolvedOperators.size(), resolvedOperators, key));
     }
     return Optional.empty();
@@ -256,17 +257,22 @@ public abstract class FunctionConverter<
   /**
    * Extracts the value of the {@code distribution} enum argument, if present.
    *
+   * <p>This returns the value of the first {@link EnumArg} in the argument list. It assumes the
+   * only enum argument that disambiguates between operators sharing a key is the {@code
+   * distribution} argument of {@code std_dev}/{@code variance} — the only enum-argument aggregate
+   * functions currently mapped. {@link #filterByDistribution} rejects values it does not recognize.
+   *
    * @param arguments the Substrait function arguments
-   * @return the distribution value (e.g. {@code SAMPLE} / {@code POPULATION}) if a {@code
-   *     distribution} {@link io.substrait.expression.EnumArg} is present
+   * @return the distribution value (e.g. {@code SAMPLE} / {@code POPULATION}) if an {@link EnumArg}
+   *     is present
    */
   private static Optional<String> distributionArgument(List<FunctionArg> arguments) {
     if (arguments == null) {
       return Optional.empty();
     }
     return arguments.stream()
-        .filter(arg -> arg instanceof io.substrait.expression.EnumArg)
-        .map(arg -> (io.substrait.expression.EnumArg) arg)
+        .filter(arg -> arg instanceof EnumArg)
+        .map(arg -> (EnumArg) arg)
         .flatMap(arg -> arg.value().stream())
         .findFirst();
   }

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -33,6 +34,35 @@ class StatisticalFunctionTest extends PlanTestBase {
   @CsvSource({"STDDEV_POP", "STDDEV_SAMP", "VAR_POP", "VAR_SAMP"})
   void roundTrip(String fn) throws Exception {
     assertFullRoundTrip(String.format("SELECT %s(fp32), %s(fp64) FROM numbers", fn, fn), CREATES);
+  }
+
+  // Integer arguments are cast to fp64 (and the result cast back) since std_dev/variance only have
+  // fp32/fp64 signatures. This rewrite (castStatisticalAggregatesToFloatingPoint) inserts a cast
+  // projection that Calcite normalizes (project merge/column pruning) on the first round trip, so
+  // these use the identity-projection workaround, which asserts stability after normalization.
+
+  @ParameterizedTest
+  @CsvSource({"STDDEV_POP", "STDDEV_SAMP", "VAR_POP", "VAR_SAMP"})
+  void roundTripIntegerInput(String fn) throws Exception {
+    assertFullRoundTripWithIdentityProjectionWorkaround(
+        String.format("SELECT %s(i32) FROM numbers", fn),
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
+  }
+
+  @Test
+  void roundTripIntegerInputSharedWithOtherAggregate() throws Exception {
+    // The integer column is shared by SUM (which must keep operating on the integer) and STDDEV_POP
+    // (which is cast to fp64); the cast must be appended, not applied in place.
+    assertFullRoundTripWithIdentityProjectionWorkaround(
+        "SELECT SUM(i32), STDDEV_POP(i32) FROM numbers",
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
+  }
+
+  @Test
+  void roundTripIntegerInputWithGrouping() throws Exception {
+    assertFullRoundTripWithIdentityProjectionWorkaround(
+        "SELECT i8, VAR_POP(i32) FROM numbers GROUP BY i8",
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
   }
 
   @ParameterizedTest
