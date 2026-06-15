@@ -795,6 +795,39 @@ public class ExpressionProtoConverter
         .build();
   }
 
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.CurrentTimestamp expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setExecutionContextVariable(
+            Expression.ExecutionContextVariable.newBuilder()
+                .setCurrentTimestamp(toProto(expr.getType()).getPrecisionTimestampTz()))
+        .build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.CurrentTimezone expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setExecutionContextVariable(
+            Expression.ExecutionContextVariable.newBuilder()
+                .setCurrentTimezone(toProto(expr.getType()).getString()))
+        .build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.CurrentDate expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return Expression.newBuilder()
+        .setExecutionContextVariable(
+            Expression.ExecutionContextVariable.newBuilder()
+                .setCurrentDate(toProto(expr.getType()).getDate()))
+        .build();
+  }
+
   /** Converts a {@link WindowBound} to its protobuf {@link Expression.WindowFunction.Bound}. */
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {

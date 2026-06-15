@@ -480,4 +480,34 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
    * @throws E on visit failure
    */
   R visit(Expression.DynamicParameter expr, C context) throws E;
+
+  /**
+   * Visit a current timestamp execution context variable expression.
+   *
+   * @param expr the current timestamp expression
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.CurrentTimestamp expr, C context) throws E;
+
+  /**
+   * Visit a current timezone execution context variable expression.
+   *
+   * @param expr the current timezone expression
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.CurrentTimezone expr, C context) throws E;
+
+  /**
+   * Visit a current date execution context variable expression.
+   *
+   * @param expr the current date expression
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.CurrentDate expr, C context) throws E;
 }
