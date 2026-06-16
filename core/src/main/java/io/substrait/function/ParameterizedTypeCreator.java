@@ -2,12 +2,21 @@ package io.substrait.function;
 
 import io.substrait.type.TypeCreator;
 
+/** Creates {@link ParameterizedType}s whose parameters are named string-literal placeholders. */
 public class ParameterizedTypeCreator extends TypeCreator
     implements ExtendedTypeCreator<ParameterizedType, String> {
 
+  /** Creator producing non-nullable parameterized types. */
   public static final ParameterizedTypeCreator REQUIRED = new ParameterizedTypeCreator(false);
+
+  /** Creator producing nullable parameterized types. */
   public static final ParameterizedTypeCreator NULLABLE = new ParameterizedTypeCreator(true);
 
+  /**
+   * Creates a parameterized-type creator.
+   *
+   * @param nullable whether produced types are nullable
+   */
   protected ParameterizedTypeCreator(boolean nullable) {
     super(nullable);
   }
@@ -16,6 +25,12 @@ public class ParameterizedTypeCreator extends TypeCreator
     return ParameterizedType.StringLiteral.builder().nullable(nullable).value(literal).build();
   }
 
+  /**
+   * Creates a string-literal parameter placeholder with this creator's nullability.
+   *
+   * @param literal the parameter name
+   * @return the string-literal parameter
+   */
   public ParameterizedType.StringLiteral parameter(String literal) {
     return parameter(literal, nullable);
   }
@@ -53,6 +68,12 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  /**
+   * Creates an interval-day type with a parameterized precision.
+   *
+   * @param precision the precision parameter
+   * @return the interval-day type
+   */
   public ParameterizedType intervalDayE(String precision) {
     return ParameterizedType.IntervalDay.builder()
         .nullable(nullable)
@@ -60,6 +81,12 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  /**
+   * Creates an interval-compound type with a parameterized precision.
+   *
+   * @param precision the precision parameter
+   * @return the interval-compound type
+   */
   public ParameterizedType intervalCompoundE(String precision) {
     return ParameterizedType.IntervalCompound.builder()
         .nullable(nullable)
@@ -67,6 +94,12 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  /**
+   * Creates a precision-time type with a parameterized precision.
+   *
+   * @param precision the precision parameter
+   * @return the precision-time type
+   */
   public ParameterizedType precisionTimeE(String precision) {
     return ParameterizedType.PrecisionTime.builder()
         .nullable(nullable)
@@ -74,6 +107,12 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  /**
+   * Creates a precision-timestamp type with a parameterized precision.
+   *
+   * @param precision the precision parameter
+   * @return the precision-timestamp type
+   */
   public ParameterizedType precisionTimestampE(String precision) {
     return ParameterizedType.PrecisionTimestamp.builder()
         .nullable(nullable)
@@ -81,6 +120,12 @@ public class ParameterizedTypeCreator extends TypeCreator
         .build();
   }
 
+  /**
+   * Creates a precision-timestamp-with-timezone type with a parameterized precision.
+   *
+   * @param precision the precision parameter
+   * @return the precision-timestamp-tz type
+   */
   public ParameterizedType precisionTimestampTZE(String precision) {
     return ParameterizedType.PrecisionTimestampTZ.builder()
         .nullable(nullable)
