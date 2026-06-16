@@ -48,6 +48,7 @@ public class Deserializers {
 
     private static final long serialVersionUID = 2105956703553161270L;
 
+    /** Converts a parsed type expression into the target type {@code T}. */
     private final BiFunction<String, SubstraitTypeParser.StartRuleContext, T> converter;
 
     /**
