@@ -23,10 +23,17 @@ public class ProtoExtendedExpressionConverter {
       new ProtoTypeConverter(
           new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
 
+  /** Creates a converter using the default extension collection. */
   public ProtoExtendedExpressionConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
+  /**
+   * Creates a converter using the given extension collection.
+   *
+   * @param extensionCollection the extension collection to resolve functions and types against,
+   *     must not be null
+   */
   public ProtoExtendedExpressionConverter(SimpleExtension.ExtensionCollection extensionCollection) {
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
@@ -34,6 +41,13 @@ public class ProtoExtendedExpressionConverter {
     this.extensionCollection = extensionCollection;
   }
 
+  /**
+   * Converts a proto {@link io.substrait.proto.ExtendedExpression} into its POJO {@link
+   * ExtendedExpression}.
+   *
+   * @param extendedExpression the proto extended expression to convert
+   * @return the converted extended expression
+   */
   public ExtendedExpression from(io.substrait.proto.ExtendedExpression extendedExpression) {
     // fill in simple extension information through a discovery in the current proto-extended
     // expression
