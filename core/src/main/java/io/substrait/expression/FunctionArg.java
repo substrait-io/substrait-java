@@ -34,14 +34,59 @@ public interface FunctionArg {
       SimpleExtension.Function fnDef, int argIdx, FuncArgVisitor<R, C, E> fnArgVisitor, C context)
       throws E;
 
+  /**
+   * Visitor over the concrete {@link FunctionArg} kinds (expression, type and enum argument).
+   *
+   * @param <R> the return type
+   * @param <C> the visitation context type
+   * @param <E> the exception type that may be thrown
+   */
   interface FuncArgVisitor<R, C extends VisitationContext, E extends Throwable> {
+    /**
+     * Visits an {@link Expression} argument.
+     *
+     * @param fnDef the function definition
+     * @param argIdx the argument index
+     * @param e the expression argument
+     * @param context the visitation context
+     * @return the result of the visit
+     * @throws E if the visit fails
+     */
     R visitExpr(SimpleExtension.Function fnDef, int argIdx, Expression e, C context) throws E;
 
+    /**
+     * Visits a {@link Type} argument.
+     *
+     * @param fnDef the function definition
+     * @param argIdx the argument index
+     * @param t the type argument
+     * @param context the visitation context
+     * @return the result of the visit
+     * @throws E if the visit fails
+     */
     R visitType(SimpleExtension.Function fnDef, int argIdx, Type t, C context) throws E;
 
+    /**
+     * Visits an {@link EnumArg} argument.
+     *
+     * @param fnDef the function definition
+     * @param argIdx the argument index
+     * @param e the enum argument
+     * @param context the visitation context
+     * @return the result of the visit
+     * @throws E if the visit fails
+     */
     R visitEnumArg(SimpleExtension.Function fnDef, int argIdx, EnumArg e, C context) throws E;
   }
 
+  /**
+   * Creates a visitor that converts function arguments to their protobuf {@link FunctionArgument}
+   * representation.
+   *
+   * @param typeVisitor visitor used to convert type arguments to proto
+   * @param expressionVisitor visitor used to convert expression arguments to proto
+   * @return a visitor producing proto function arguments
+   */
   static FuncArgVisitor<FunctionArgument, EmptyVisitationContext, RuntimeException> toProto(
       TypeExpressionVisitor<io.substrait.proto.Type, RuntimeException> typeVisitor,
       ExpressionVisitor<io.substrait.proto.Expression, EmptyVisitationContext, RuntimeException>
@@ -87,12 +132,26 @@ public interface FunctionArg {
     private final ProtoExpressionConverter protoExprConverter;
     private final ProtoTypeConverter protoTypeConverter;
 
+    /**
+     * Creates a converter using the given expression and type converters.
+     *
+     * @param protoExprConverter converter for proto expression arguments
+     * @param protoTypeConverter converter for proto type arguments
+     */
     public ProtoFrom(
         ProtoExpressionConverter protoExprConverter, ProtoTypeConverter protoTypeConverter) {
       this.protoExprConverter = protoExprConverter;
       this.protoTypeConverter = protoTypeConverter;
     }
 
+    /**
+     * Converts a proto {@link FunctionArgument} into its POJO {@link FunctionArg}.
+     *
+     * @param funcDef the function definition the argument belongs to
+     * @param argIdx the argument index
+     * @param fArg the proto function argument to convert
+     * @return the converted function argument
+     */
     public FunctionArg convert(
         SimpleExtension.Function funcDef, int argIdx, FunctionArgument fArg) {
       switch (fArg.getArgTypeCase()) {
