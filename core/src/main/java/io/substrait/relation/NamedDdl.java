@@ -4,8 +4,14 @@ import io.substrait.util.VisitationContext;
 import java.util.List;
 import org.immutables.value.Value;
 
+/** A DDL relation that targets an object identified by a multi-part name. */
 @Value.Immutable
 public abstract class NamedDdl extends AbstractDdlRel {
+  /**
+   * Returns the multi-part (namespaced) name identifying the target object.
+   *
+   * @return the object name components
+   */
   public abstract List<String> getNames();
 
   @Override
@@ -14,6 +20,11 @@ public abstract class NamedDdl extends AbstractDdlRel {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link NamedDdl}.
+   *
+   * @return a new builder
+   */
   public static ImmutableNamedDdl.Builder builder() {
     return ImmutableNamedDdl.builder();
   }
