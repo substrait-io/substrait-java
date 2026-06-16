@@ -12,16 +12,34 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
   private final BaseProtoTypes<Type, Integer> NULLABLE;
   private final BaseProtoTypes<Type, Integer> REQUIRED;
 
+  /**
+   * Creates a converter that registers any encountered extensions with the given collector.
+   *
+   * @param extensionCollector collector used to assign references to user-defined types
+   */
   public TypeProtoConverter(ExtensionCollector extensionCollector) {
     super(extensionCollector, "Type literals cannot contain parameters or expressions.");
     NULLABLE = new Types(Type.Nullability.NULLABILITY_NULLABLE);
     REQUIRED = new Types(Type.Nullability.NULLABILITY_REQUIRED);
   }
 
+  /**
+   * Converts a {@link io.substrait.type.Type} to its protobuf representation.
+   *
+   * @param type the type to convert
+   * @return the protobuf {@link io.substrait.proto.Type} representation
+   */
   public io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return type.accept(this);
   }
 
+  /**
+   * Converts a {@link io.substrait.type.Type.Parameter} to its protobuf representation.
+   *
+   * @param parameter the type parameter to convert
+   * @return the protobuf {@link io.substrait.proto.Type.Parameter} representation
+   * @throws UnsupportedOperationException if the parameter kind is not supported
+   */
   public io.substrait.proto.Type.Parameter toProto(io.substrait.type.Type.Parameter parameter) {
     if (parameter instanceof io.substrait.type.Type.ParameterNull) {
       return Type.Parameter.newBuilder()
