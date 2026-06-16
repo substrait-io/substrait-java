@@ -47,6 +47,7 @@ public class SimpleExtension {
   private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExtension.class);
 
   // Key for looking up URN in InjectableValues
+  /** Metadata key identifying the extension URN. */
   public static final String URN_LOCATOR_KEY = "urn";
 
   private static final Predicate<String> URN_CHECKER =
@@ -76,25 +77,37 @@ public class SimpleExtension {
         .setInjectableValues(iv);
   }
 
+  /** Enumerates the supported nullability values. */
   public enum Nullability {
+    /** The MIRROR value. */
     MIRROR,
+    /** The DECLARED_OUTPUT value. */
     DECLARED_OUTPUT,
+    /** The DISCRETE value. */
     DISCRETE
   }
 
+  /** Enumerates the supported decomposability values. */
   public enum Decomposability {
+    /** The NONE value. */
     NONE,
+    /** The ONE value. */
     ONE,
+    /** The MANY value. */
     MANY
   }
 
+  /** Enumerates the supported window type values. */
   public enum WindowType {
+    /** The PARTITION value. */
     PARTITION,
+    /** The STREAMING value. */
     STREAMING
   }
 
   private SimpleExtension() {}
 
+  /** Describes an argument provided by a simple extension. */
   @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
   @JsonSubTypes({
     @JsonSubTypes.Type(ValueArgument.class),
@@ -102,23 +115,54 @@ public class SimpleExtension {
     @JsonSubTypes.Type(EnumArgument.class)
   })
   public interface Argument {
+    /**
+     * Returns the to Type String.
+     *
+     * @return the to Type String
+     */
     String toTypeString();
 
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     @JsonProperty()
     @Nullable String name();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     @JsonProperty()
     @Nullable String description();
 
+    /**
+     * Returns the required.
+     *
+     * @return the required
+     */
     boolean required();
   }
 
+  /** Describes an option provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.Option.class)
   @JsonSerialize(as = ImmutableSimpleExtension.Option.class)
   @Value.Immutable
   public interface Option {
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     Optional<String> getDescription();
 
+    /**
+     * Returns the values.
+     *
+     * @return the values
+     */
     List<String> getValues();
   }
 
@@ -137,24 +181,50 @@ public class SimpleExtension {
      * The version at which the entry was deprecated, as a core semantic version string (e.g. {@code
      * "1.2.0"}).
      */
+    /**
+     * Returns the since.
+     *
+     * @return the since
+     */
     @JsonProperty(required = true)
     String since();
 
     /** Optional human-readable description of why the entry was deprecated. */
+    /**
+     * Returns the reason.
+     *
+     * @return the reason
+     */
     Optional<String> reason();
 
     /** Optional arbitrary data provided by the extension author. */
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     Optional<Map<String, Object>> metadata();
   }
 
+  /** Describes a value argument provided by a simple extension. */
   @JsonSerialize(as = ImmutableSimpleExtension.ValueArgument.class)
   @JsonDeserialize(as = ImmutableSimpleExtension.ValueArgument.class)
   @Value.Immutable
   public abstract static class ValueArgument implements Argument {
 
+    /**
+     * Returns the value.
+     *
+     * @return the value
+     */
     @JsonProperty(required = true)
     public abstract ParameterizedType value();
 
+    /**
+     * Returns the constant.
+     *
+     * @return the constant
+     */
     @JsonProperty()
     @Nullable
     public abstract Boolean constant();
@@ -169,16 +239,27 @@ public class SimpleExtension {
       return true;
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.ValueArgument.Builder builder() {
       return ImmutableSimpleExtension.ValueArgument.builder();
     }
   }
 
+  /** Describes a type argument provided by a simple extension. */
   @JsonSerialize(as = ImmutableSimpleExtension.TypeArgument.class)
   @JsonDeserialize(as = ImmutableSimpleExtension.TypeArgument.class)
   @Value.Immutable
   public abstract static class TypeArgument implements Argument {
 
+    /**
+     * Returns the type.
+     *
+     * @return the type
+     */
     @JsonProperty(required = true)
     public abstract ParameterizedType type();
 
@@ -192,6 +273,11 @@ public class SimpleExtension {
       return true;
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.TypeArgument.Builder builder() {
       return ImmutableSimpleExtension.TypeArgument.builder();
     }
@@ -211,6 +297,11 @@ public class SimpleExtension {
   @Value.Immutable
   public abstract static class EnumArgument implements Argument {
 
+    /**
+     * Returns the options.
+     *
+     * @return the options
+     */
     @JsonProperty(required = true)
     public abstract List<String> options();
 
@@ -224,50 +315,102 @@ public class SimpleExtension {
       return "req";
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.EnumArgument.Builder builder() {
       return ImmutableSimpleExtension.EnumArgument.builder();
     }
   }
 
+  /** Describes an anchor provided by a simple extension. */
   public interface Anchor {
+    /**
+     * Returns the urn.
+     *
+     * @return the urn
+     */
     String urn();
 
+    /**
+     * Returns the key.
+     *
+     * @return the key
+     */
     String key();
   }
 
+  /** Describes a function anchor provided by a simple extension. */
   @Value.Immutable
   public interface FunctionAnchor extends Anchor {
+    /**
+     * Creates the corresponding of instance.
+     *
+     * @param urn the urn
+     * @param key the key
+     * @return the of
+     */
     static FunctionAnchor of(String urn, String key) {
       return ImmutableSimpleExtension.FunctionAnchor.builder().urn(urn).key(key).build();
     }
   }
 
+  /** Describes a type anchor provided by a simple extension. */
   @Value.Immutable
   public interface TypeAnchor extends Anchor {
+    /**
+     * Creates the corresponding of instance.
+     *
+     * @param urn the urn
+     * @param name the name
+     * @return the of
+     */
     static TypeAnchor of(String urn, String name) {
       return ImmutableSimpleExtension.TypeAnchor.builder().urn(urn).key(name).build();
     }
   }
 
+  /** Describes a variadic behavior provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.VariadicBehavior.class)
   @JsonSerialize(as = ImmutableSimpleExtension.VariadicBehavior.class)
   @Value.Immutable
   public interface VariadicBehavior {
+    /**
+     * Returns the min.
+     *
+     * @return the min
+     */
     int getMin();
 
+    /**
+     * Returns the max.
+     *
+     * @return the max
+     */
     OptionalInt getMax();
 
+    /** Enumerates the supported parameter consistency values. */
     enum ParameterConsistency {
+      /** The CONSISTENT value. */
       CONSISTENT,
+      /** The INCONSISTENT value. */
       INCONSISTENT
     }
 
+    /**
+     * Returns the parameter Consistency.
+     *
+     * @return the parameter Consistency
+     */
     @Value.Default
     default ParameterConsistency parameterConsistency() {
       return ParameterConsistency.CONSISTENT;
     }
   }
 
+  /** Describes a function provided by a simple extension. */
   public abstract static class Function {
     private final Supplier<FunctionAnchor> anchorSupplier =
         Util.memoize(() -> FunctionAnchor.of(urn(), key()));
@@ -278,12 +421,22 @@ public class SimpleExtension {
               return args().stream().filter(Argument::required).collect(Collectors.toList());
             });
 
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     @Value.Default
     public String name() {
       // we can't use null detection here since we initially construct this with a parent name.
       return "";
     }
 
+    /**
+     * Returns the urn.
+     *
+     * @return the urn
+     */
     @Value.Default
     public String urn() {
       // we can't use null detection here since we initially construct this without a urn, then
@@ -291,8 +444,18 @@ public class SimpleExtension {
       return "";
     }
 
+    /**
+     * Returns the variadic.
+     *
+     * @return the variadic
+     */
     public abstract Optional<VariadicBehavior> variadic();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     @Value.Default
     @Nullable
     public String description() {
@@ -311,14 +474,39 @@ public class SimpleExtension {
           : implDescription;
     }
 
+    /**
+     * Returns the args.
+     *
+     * @return the args
+     */
     public abstract List<Argument> args();
 
+    /**
+     * Returns the options.
+     *
+     * @return the options
+     */
     public abstract Map<String, Option> options();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
     public abstract Optional<DeprecationStatus> deprecated();
 
+    /**
+     * Returns the required Arguments.
+     *
+     * @return the required Arguments
+     */
     public List<Argument> requiredArguments() {
       return requiredArgsSupplier.get();
     }
@@ -328,21 +516,48 @@ public class SimpleExtension {
       return key();
     }
 
+    /**
+     * Returns the nullability.
+     *
+     * @return the nullability
+     */
     @Value.Default
     public Nullability nullability() {
       return Nullability.MIRROR;
     }
 
+    /**
+     * Returns the ordered.
+     *
+     * @return the ordered
+     */
     @Nullable
     public abstract Boolean ordered();
 
+    /**
+     * Returns the anchor.
+     *
+     * @return the anchor
+     */
     public FunctionAnchor getAnchor() {
       return anchorSupplier.get();
     }
 
+    /**
+     * Returns the return Type.
+     *
+     * @return the return Type
+     */
     @JsonProperty(value = "return")
     public abstract TypeExpression returnType();
 
+    /**
+     * Returns the construct Key From Types for the given arguments.
+     *
+     * @param name the name
+     * @param arguments the arguments
+     * @return the construct Key From Types
+     */
     public static String constructKeyFromTypes(
         String name, List<io.substrait.type.Type> arguments) {
       try {
@@ -357,6 +572,13 @@ public class SimpleExtension {
       }
     }
 
+    /**
+     * Returns the construct Key for the given arguments.
+     *
+     * @param name the name
+     * @param arguments the arguments
+     * @return the construct Key
+     */
     public static String constructKey(String name, List<Argument> arguments) {
       try {
         return name
@@ -368,6 +590,11 @@ public class SimpleExtension {
       }
     }
 
+    /**
+     * Returns the range.
+     *
+     * @return the range
+     */
     public Util.IntRange getRange() {
       // end range is exclusive so add one to size.
       int max =
@@ -390,6 +617,12 @@ public class SimpleExtension {
       return Util.IntRange.of(min, max);
     }
 
+    /**
+     * Returns the validate Output Type for the given arguments.
+     *
+     * @param argumentExpressions the argument Expressions
+     * @param outputType the output Type
+     */
     public void validateOutputType(
         List<Expression> argumentExpressions, io.substrait.type.Type outputType) {
       // TODO: support advanced output type validation using return expressions, parameters, etc.
@@ -406,36 +639,80 @@ public class SimpleExtension {
       //      }
     }
 
+    /**
+     * Returns the key.
+     *
+     * @return the key
+     */
     public String key() {
       return keySupplier.get();
     }
 
+    /**
+     * Returns the resolve Type for the given arguments.
+     *
+     * @param argumentTypes the argument Types
+     * @return the resolve Type
+     */
     public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
       return TypeExpressionEvaluator.evaluateExpression(returnType(), args(), argumentTypes);
     }
   }
 
+  /** Describes a scalar function provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.ScalarFunction.class)
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunction.class)
   @Value.Immutable
   public abstract static class ScalarFunction {
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     public abstract String name();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     @Nullable
     public abstract String description();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
     public abstract Optional<DeprecationStatus> deprecated();
 
+    /**
+     * Returns the impls.
+     *
+     * @return the impls
+     */
     public abstract List<ScalarFunctionVariant> impls();
 
+    /**
+     * Returns the resolve for the given arguments.
+     *
+     * @param urn the urn
+     * @return the resolve
+     */
     public Stream<ScalarFunctionVariant> resolve(String urn) {
       return impls().stream()
           .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
   }
 
+  /** Describes a scalar function variant provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @JsonSerialize(as = ImmutableSimpleExtension.ScalarFunctionVariant.class)
   @Value.Immutable
@@ -462,58 +739,133 @@ public class SimpleExtension {
     }
   }
 
+  /** Describes an aggregate function provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.AggregateFunction.class)
   @JsonSerialize(as = ImmutableSimpleExtension.AggregateFunction.class)
   @Value.Immutable
   public abstract static class AggregateFunction {
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     @Nullable
     public abstract String name();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     @Nullable
     public abstract String description();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
     public abstract Optional<DeprecationStatus> deprecated();
 
+    /**
+     * Returns the impls.
+     *
+     * @return the impls
+     */
     public abstract List<AggregateFunctionVariant> impls();
 
+    /**
+     * Returns the resolve for the given arguments.
+     *
+     * @param urn the urn
+     * @return the resolve
+     */
     public Stream<AggregateFunctionVariant> resolve(String urn) {
       return impls().stream()
           .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
   }
 
+  /** Describes a window function provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.WindowFunction.class)
   @JsonSerialize(as = ImmutableSimpleExtension.WindowFunction.class)
   @Value.Immutable
   public abstract static class WindowFunction {
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     @Nullable
     public abstract String name();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     @Nullable
     public abstract String description();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
     public abstract Optional<DeprecationStatus> deprecated();
 
+    /**
+     * Returns the impls.
+     *
+     * @return the impls
+     */
     public abstract List<WindowFunctionVariant> impls();
 
+    /**
+     * Returns the resolve for the given arguments.
+     *
+     * @param urn the urn
+     * @return the resolve
+     */
     public Stream<WindowFunctionVariant> resolve(String urn) {
       return impls().stream()
           .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.WindowFunction.Builder builder() {
       return ImmutableSimpleExtension.WindowFunction.builder();
     }
   }
 
+  /** Describes an aggregate function variant provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.AggregateFunctionVariant.class)
   @JsonSerialize(as = ImmutableSimpleExtension.AggregateFunctionVariant.class)
   @Value.Immutable
   public abstract static class AggregateFunctionVariant extends Function {
+    /**
+     * Returns the decomposability.
+     *
+     * @return the decomposability
+     */
     @Value.Default
     @JsonProperty("decomposable")
     public Decomposability decomposability() {
@@ -525,6 +877,11 @@ public class SimpleExtension {
       return super.toString();
     }
 
+    /**
+     * Returns the intermediate.
+     *
+     * @return the intermediate
+     */
     @Nullable
     public abstract TypeExpression intermediate();
 
@@ -552,20 +909,36 @@ public class SimpleExtension {
     }
   }
 
+  /** Describes a window function variant provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.WindowFunctionVariant.class)
   @JsonSerialize(as = ImmutableSimpleExtension.WindowFunctionVariant.class)
   @Value.Immutable
   public abstract static class WindowFunctionVariant extends Function {
 
+    /**
+     * Returns the decomposability.
+     *
+     * @return the decomposability
+     */
     @Value.Default
     @JsonProperty("decomposable")
     public Decomposability decomposability() {
       return Decomposability.NONE;
     }
 
+    /**
+     * Returns the intermediate.
+     *
+     * @return the intermediate
+     */
     @Nullable
     public abstract TypeExpression intermediate();
 
+    /**
+     * Returns the window Type.
+     *
+     * @return the window Type
+     */
     @Value.Default
     @JsonProperty("window_type")
     public WindowType windowType() {
@@ -601,11 +974,17 @@ public class SimpleExtension {
           .build();
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.WindowFunctionVariant.Builder builder() {
       return ImmutableSimpleExtension.WindowFunctionVariant.builder();
     }
   }
 
+  /** Describes a type provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.Type.class)
   @JsonSerialize(as = ImmutableSimpleExtension.Type.class)
   @Value.Immutable
@@ -613,53 +992,134 @@ public class SimpleExtension {
     private final Supplier<TypeAnchor> anchorSupplier =
         Util.memoize(() -> TypeAnchor.of(urn(), name()));
 
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
     public abstract String name();
 
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
     public abstract Optional<String> description();
 
+    /**
+     * Returns the urn.
+     *
+     * @return the urn
+     */
     @JacksonInject(SimpleExtension.URN_LOCATOR_KEY)
     public abstract String urn();
 
     // TODO: Handle conversion of structure object to Named Struct representation
+    /**
+     * Returns the structure.
+     *
+     * @return the structure
+     */
     protected abstract Optional<Object> structure();
 
     // TODO: Properly handle parameters
+    /**
+     * Returns the parameters.
+     *
+     * @return the parameters
+     */
     protected abstract Optional<List<Object>> parameters();
 
+    /**
+     * Returns the variadic.
+     *
+     * @return the variadic
+     */
     protected abstract Optional<Boolean> variadic();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
     public abstract Optional<DeprecationStatus> deprecated();
 
+    /**
+     * Returns the anchor.
+     *
+     * @return the anchor
+     */
     public TypeAnchor getAnchor() {
       return anchorSupplier.get();
     }
   }
 
+  /** Describes an extension signatures provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @JsonSerialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @JsonIgnoreProperties(ignoreUnknown = true)
   @Value.Immutable
   public abstract static class ExtensionSignatures {
+    /**
+     * Returns the types.
+     *
+     * @return the types
+     */
     @JsonProperty("types")
     public abstract List<Type> types();
 
+    /**
+     * Returns the urn.
+     *
+     * @return the urn
+     */
     @JsonProperty("urn")
     public abstract String urn();
 
+    /**
+     * Returns the scalars.
+     *
+     * @return the scalars
+     */
     @JsonProperty("scalar_functions")
     public abstract List<ScalarFunction> scalars();
 
+    /**
+     * Returns the aggregates.
+     *
+     * @return the aggregates
+     */
     @JsonProperty("aggregate_functions")
     public abstract List<AggregateFunction> aggregates();
 
+    /**
+     * Returns the windows.
+     *
+     * @return the windows
+     */
     @JsonProperty("window_functions")
     public abstract List<WindowFunction> windows();
 
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
     @JsonProperty("metadata")
     public abstract Optional<Map<String, Object>> metadata();
 
+    /**
+     * Returns the size.
+     *
+     * @return the size
+     */
     public int size() {
       return (types() == null ? 0 : types().size())
           + (scalars() == null ? 0 : scalars().size())
@@ -667,6 +1127,12 @@ public class SimpleExtension {
           + (windows() == null ? 0 : windows().size());
     }
 
+    /**
+     * Returns the resolve for the given arguments.
+     *
+     * @param urn the urn
+     * @return the resolve
+     */
     public Stream<SimpleExtension.Function> resolve(String urn) {
       return Stream.concat(
           Stream.concat(
@@ -731,19 +1197,49 @@ public class SimpleExtension {
                           Function::getAnchor, java.util.function.Function.identity()));
             });
 
+    /**
+     * Returns the extension Metadata.
+     *
+     * @return the extension Metadata
+     */
     @Value.Default
     public Map<String, Map<String, Object>> extensionMetadata() {
       return Collections.emptyMap();
     }
 
+    /**
+     * Returns the types.
+     *
+     * @return the types
+     */
     public abstract List<Type> types();
 
+    /**
+     * Returns the scalar Functions.
+     *
+     * @return the scalar Functions
+     */
     public abstract List<ScalarFunctionVariant> scalarFunctions();
 
+    /**
+     * Returns the aggregate Functions.
+     *
+     * @return the aggregate Functions
+     */
     public abstract List<AggregateFunctionVariant> aggregateFunctions();
 
+    /**
+     * Returns the window Functions.
+     *
+     * @return the window Functions
+     */
     public abstract List<WindowFunctionVariant> windowFunctions();
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     public static ImmutableSimpleExtension.ExtensionCollection.Builder builder() {
       return ImmutableSimpleExtension.ExtensionCollection.builder();
     }
@@ -758,6 +1254,12 @@ public class SimpleExtension {
       return Optional.ofNullable(extensionMetadata().get(urn));
     }
 
+    /**
+     * Returns the type for the given arguments.
+     *
+     * @param anchor the anchor
+     * @return the type
+     */
     public Type getType(TypeAnchor anchor) {
       Type type = typeLookup.get().get(anchor);
       if (type != null) {
@@ -770,6 +1272,12 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
+    /**
+     * Returns the scalar Function for the given arguments.
+     *
+     * @param anchor the anchor
+     * @return the scalar Function
+     */
     public ScalarFunctionVariant getScalarFunction(FunctionAnchor anchor) {
       ScalarFunctionVariant variant = scalarFunctionsLookup.get().get(anchor);
       if (variant != null) {
@@ -784,6 +1292,12 @@ public class SimpleExtension {
     }
 
     /** Returns true if the given URN has any functions or types loaded in this collection. */
+    /**
+     * Returns the contains Urn for the given arguments.
+     *
+     * @param urn the urn
+     * @return the contains Urn
+     */
     public boolean containsUrn(String urn) {
       return urnSupplier.get().contains(urn) || types().stream().anyMatch(t -> t.urn().equals(urn));
     }
@@ -800,6 +1314,12 @@ public class SimpleExtension {
               name));
     }
 
+    /**
+     * Returns the aggregate Function for the given arguments.
+     *
+     * @param anchor the anchor
+     * @return the aggregate Function
+     */
     public AggregateFunctionVariant getAggregateFunction(FunctionAnchor anchor) {
       AggregateFunctionVariant variant = aggregateFunctionsLookup.get().get(anchor);
       if (variant != null) {
@@ -814,6 +1334,12 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
+    /**
+     * Returns the window Function for the given arguments.
+     *
+     * @param anchor the anchor
+     * @return the window Function
+     */
     public WindowFunctionVariant getWindowFunction(FunctionAnchor anchor) {
       WindowFunctionVariant variant = windowFunctionsLookup.get().get(anchor);
       if (variant != null) {
@@ -827,6 +1353,12 @@ public class SimpleExtension {
               anchor.key(), anchor.urn()));
     }
 
+    /**
+     * Creates the corresponding merge instance.
+     *
+     * @param extensionCollection the extension Collection
+     * @return the merge
+     */
     public ExtensionCollection merge(ExtensionCollection extensionCollection) {
 
       Map<String, Map<String, Object>> mergedExtensionMetadata = new HashMap<>();
@@ -847,6 +1379,12 @@ public class SimpleExtension {
     }
   }
 
+  /**
+   * Creates the corresponding load instance.
+   *
+   * @param resourcePaths the resource Paths
+   * @return the load
+   */
   public static ExtensionCollection load(List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {
       throw new IllegalArgumentException("Require at least one resource path.");
@@ -870,6 +1408,12 @@ public class SimpleExtension {
     return complete;
   }
 
+  /**
+   * Creates the corresponding load instance.
+   *
+   * @param content the content
+   * @return the load
+   */
   public static ExtensionCollection load(String content) {
     try {
       // Parse with basic YAML mapper first to extract URN
@@ -890,6 +1434,12 @@ public class SimpleExtension {
     }
   }
 
+  /**
+   * Creates the corresponding load instance.
+   *
+   * @param stream the stream
+   * @return the load
+   */
   public static ExtensionCollection load(InputStream stream) {
     try (Scanner scanner = new Scanner(stream)) {
       scanner.useDelimiter(READ_WHOLE_FILE);
@@ -898,6 +1448,12 @@ public class SimpleExtension {
     }
   }
 
+  /**
+   * Creates the corresponding build Extension Collection instance.
+   *
+   * @param extensionSignatures the extension Signatures
+   * @return the build Extension Collection
+   */
   public static ExtensionCollection buildExtensionCollection(
       ExtensionSignatures extensionSignatures) {
     String urn = extensionSignatures.urn();
