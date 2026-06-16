@@ -23,11 +23,24 @@ public class ProtoAggregateFunctionConverter {
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoExpressionConverter protoExpressionConverter;
 
+  /**
+   * Creates a converter using the default extension collection.
+   *
+   * @param lookup used to resolve function references to their declarations
+   * @param protoExpressionConverter converter for nested proto expressions
+   */
   public ProtoAggregateFunctionConverter(
       ExtensionLookup lookup, ProtoExpressionConverter protoExpressionConverter) {
     this(lookup, DefaultExtensionCatalog.DEFAULT_COLLECTION, protoExpressionConverter);
   }
 
+  /**
+   * Creates a converter using the given extension collection.
+   *
+   * @param lookup used to resolve function references to their declarations
+   * @param extensions the extension collection providing function definitions
+   * @param protoExpressionConverter converter for nested proto expressions
+   */
   public ProtoAggregateFunctionConverter(
       ExtensionLookup lookup,
       SimpleExtension.ExtensionCollection extensions,
@@ -38,6 +51,13 @@ public class ProtoAggregateFunctionConverter {
     this.protoExpressionConverter = protoExpressionConverter;
   }
 
+  /**
+   * Converts a proto {@link io.substrait.proto.AggregateFunction} into its POJO {@link
+   * AggregateFunctionInvocation}.
+   *
+   * @param measure the proto aggregate function to convert
+   * @return the converted aggregate function invocation
+   */
   public io.substrait.expression.AggregateFunctionInvocation from(
       io.substrait.proto.AggregateFunction measure) {
     FunctionArg.ProtoFrom protoFrom =
