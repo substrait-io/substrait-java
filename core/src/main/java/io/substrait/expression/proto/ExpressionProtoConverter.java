@@ -24,11 +24,21 @@ import java.util.stream.Collectors;
 public class ExpressionProtoConverter
     implements ExpressionVisitor<Expression, EmptyVisitationContext, RuntimeException> {
 
+  /** Converts nested relations (e.g. subqueries) to their proto representation. */
   protected final RelProtoConverter relProtoConverter;
+
+  /** Converts types to their proto representation. */
   protected final TypeProtoConverter typeProtoConverter;
 
+  /** Collects function and type references encountered during conversion. */
   protected final ExtensionCollector extensionCollector;
 
+  /**
+   * Creates a converter that registers references with the given collector.
+   *
+   * @param extensionCollector collector used to assign function and type references
+   * @param relProtoConverter converter for nested relations
+   */
   public ExpressionProtoConverter(
       ExtensionCollector extensionCollector, RelProtoConverter relProtoConverter) {
     this.extensionCollector = extensionCollector;
@@ -36,27 +46,61 @@ public class ExpressionProtoConverter
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
   }
 
+  /**
+   * Returns the relation converter used by this expression converter.
+   *
+   * @return the relation proto converter
+   */
   public RelProtoConverter getRelProtoConverter() {
     return this.relProtoConverter;
   }
 
+  /**
+   * Returns the type converter used by this expression converter.
+   *
+   * @return the type proto converter
+   */
   public TypeProtoConverter getTypeProtoConverter() {
     return this.typeProtoConverter;
   }
 
+  /**
+   * Converts an expression to its protobuf representation.
+   *
+   * @param expression the expression to convert
+   * @return the proto expression
+   */
   public io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
     return expression.accept(this, EmptyVisitationContext.INSTANCE);
   }
 
+  /**
+   * Converts a list of expressions to their protobuf representations.
+   *
+   * @param expressions the expressions to convert
+   * @return the proto expressions
+   */
   public List<io.substrait.proto.Expression> toProto(
       List<io.substrait.expression.Expression> expressions) {
     return expressions.stream().map(this::toProto).collect(Collectors.toList());
   }
 
+  /**
+   * Converts a relation to its protobuf representation.
+   *
+   * @param rel the relation to convert
+   * @return the proto relation
+   */
   protected io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
     return relProtoConverter.toProto(rel);
   }
 
+  /**
+   * Converts a type to its protobuf representation.
+   *
+   * @param type the type to convert
+   * @return the proto type
+   */
   protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return typeProtoConverter.toProto(type);
   }
@@ -518,6 +562,12 @@ public class ExpressionProtoConverter
         .build();
   }
 
+  /**
+   * Converts a POJO function option to its protobuf representation.
+   *
+   * @param option the function option to convert
+   * @return the proto function option
+   */
   public static FunctionOption from(io.substrait.expression.FunctionOption option) {
     return FunctionOption.newBuilder()
         .setName(option.getName())
@@ -745,10 +795,17 @@ public class ExpressionProtoConverter
         .build();
   }
 
+  /** Converts a {@link WindowBound} to its protobuf {@link Expression.WindowFunction.Bound}. */
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
     private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
 
+    /**
+     * Converts the given window bound to its protobuf representation.
+     *
+     * @param bound the window bound to convert
+     * @return the proto window bound
+     */
     public static Expression.WindowFunction.Bound convert(WindowBound bound) {
       return bound.accept(TO_BOUND_VISITOR);
     }
