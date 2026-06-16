@@ -9,8 +9,15 @@ import io.substrait.type.Type;
 public class ToTypeString
     extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
+  /** Shared, stateless instance of this visitor. */
   public static final ToTypeString INSTANCE = new ToTypeString();
 
+  /**
+   * Returns the Substrait short-name string representation of the given type.
+   *
+   * @param type the type to render
+   * @return the type's short-name string
+   */
   public static String apply(Type type) {
     return type.accept(INSTANCE);
   }
@@ -242,6 +249,7 @@ public class ToTypeString
    */
   public static class ToTypeLiteralStringLossless extends ToTypeString {
 
+    /** Shared, stateless instance of this lossless variant. */
     public static final ToTypeLiteralStringLossless INSTANCE = new ToTypeLiteralStringLossless();
 
     private ToTypeLiteralStringLossless() {}
