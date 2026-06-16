@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
  * Converts from {@link io.substrait.proto.Expression} to {@link io.substrait.expression.Expression}
  */
 public class ProtoExpressionConverter {
+  /** An empty, non-nullable struct type used as a default root type. */
   public static final Type.Struct EMPTY_TYPE = Type.Struct.builder().nullable(false).build();
 
   private final ExtensionLookup lookup;
@@ -40,6 +41,14 @@ public class ProtoExpressionConverter {
   private final ProtoRelConverter protoRelConverter;
   private final LambdaBuilder lambdaBuilder = new LambdaBuilder();
 
+  /**
+   * Creates a converter resolving functions and types against the given extensions.
+   *
+   * @param lookup used to resolve function and type references
+   * @param extensions the extension collection providing definitions
+   * @param rootType the root struct type that field references are resolved against
+   * @param relConverter converter for nested relations (e.g. subqueries)
+   */
   public ProtoExpressionConverter(
       ExtensionLookup lookup,
       SimpleExtension.ExtensionCollection extensions,
@@ -52,6 +61,12 @@ public class ProtoExpressionConverter {
     this.protoRelConverter = relConverter;
   }
 
+  /**
+   * Converts a proto field reference into its POJO {@link FieldReference}.
+   *
+   * @param reference the proto field reference to convert
+   * @return the converted field reference
+   */
   public FieldReference from(io.substrait.proto.Expression.FieldReference reference) {
     io.substrait.proto.Expression.FieldReference.ReferenceTypeCase refTypeCase =
         reference.getReferenceTypeCase();
@@ -135,6 +150,12 @@ public class ProtoExpressionConverter {
     return results;
   }
 
+  /**
+   * Converts a proto {@link io.substrait.proto.Expression} into its POJO {@link Expression}.
+   *
+   * @param expr the proto expression to convert
+   * @return the converted expression
+   */
   public Expression from(io.substrait.proto.Expression expr) {
     switch (expr.getRexTypeCase()) {
       case LITERAL:
@@ -305,6 +326,12 @@ public class ProtoExpressionConverter {
     }
   }
 
+  /**
+   * Converts a proto window function into its POJO {@link Expression.WindowFunctionInvocation}.
+   *
+   * @param windowFunction the proto window function to convert
+   * @return the converted window function invocation
+   */
   public Expression.WindowFunctionInvocation fromWindowFunction(
       io.substrait.proto.Expression.WindowFunction windowFunction) {
     int functionReference = windowFunction.getFunctionReference();
@@ -347,6 +374,13 @@ public class ProtoExpressionConverter {
         .build();
   }
 
+  /**
+   * Converts a proto window relation function into its POJO {@link
+   * ConsistentPartitionWindow.WindowRelFunctionInvocation}.
+   *
+   * @param windowRelFunction the proto window relation function to convert
+   * @return the converted window relation function invocation
+   */
   public ConsistentPartitionWindow.WindowRelFunctionInvocation fromWindowRelFunction(
       ConsistentPartitionWindowRel.WindowRelFunction windowRelFunction) {
     int functionReference = windowRelFunction.getFunctionReference();
@@ -400,6 +434,12 @@ public class ProtoExpressionConverter {
     }
   }
 
+  /**
+   * Converts a proto nested expression into its POJO {@link Expression.Nested}.
+   *
+   * @param nested the proto nested expression to convert
+   * @return the converted nested expression
+   */
   public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
     switch (nested.getNestedTypeCase()) {
       case LIST:
@@ -412,6 +452,12 @@ public class ProtoExpressionConverter {
     }
   }
 
+  /**
+   * Converts a proto literal into its POJO {@link Expression.Literal}.
+   *
+   * @param literal the proto literal to convert
+   * @return the converted literal
+   */
   public Expression.Literal from(io.substrait.proto.Expression.Literal literal) {
     switch (literal.getLiteralTypeCase()) {
       case BOOLEAN:
@@ -584,12 +630,24 @@ public class ProtoExpressionConverter {
     }
   }
 
+  /**
+   * Converts a proto struct literal into its POJO {@link Expression.StructLiteral}.
+   *
+   * @param struct the proto struct literal to convert
+   * @return the converted struct literal
+   */
   public Expression.StructLiteral from(io.substrait.proto.Expression.Literal.Struct struct) {
     return Expression.StructLiteral.builder()
         .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
         .build();
   }
 
+  /**
+   * Converts a proto nested struct into its POJO {@link Expression.NestedStruct}.
+   *
+   * @param struct the proto nested struct to convert
+   * @return the converted nested struct
+   */
   public Expression.NestedStruct from(io.substrait.proto.Expression.Nested.Struct struct) {
     return Expression.NestedStruct.builder()
         .fields(struct.getFieldsList().stream().map(this::from).collect(Collectors.toList()))
@@ -606,6 +664,12 @@ public class ProtoExpressionConverter {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Converts a proto sort field into its POJO {@link Expression.SortField}.
+   *
+   * @param s the proto sort field to convert
+   * @return the converted sort field
+   */
   public Expression.SortField fromSortField(SortField s) {
     return Expression.SortField.builder()
         .direction(Expression.SortDirection.fromProto(s.getDirection()))
@@ -613,6 +677,12 @@ public class ProtoExpressionConverter {
         .build();
   }
 
+  /**
+   * Converts a proto function option into its POJO {@link FunctionOption}.
+   *
+   * @param o the proto function option to convert
+   * @return the converted function option
+   */
   public static FunctionOption fromFunctionOption(io.substrait.proto.FunctionOption o) {
     return FunctionOption.builder().name(o.getName()).addAllValues(o.getPreferenceList()).build();
   }
