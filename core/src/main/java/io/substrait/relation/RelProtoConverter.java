@@ -68,10 +68,16 @@ import org.jspecify.annotations.NonNull;
 public class RelProtoConverter
     implements RelVisitor<Rel, EmptyVisitationContext, RuntimeException> {
 
+  /** Converts nested expressions to their proto representation. */
   @NonNull protected final ExpressionProtoConverter exprProtoConverter;
+
+  /** Converts types to their proto representation. */
   @NonNull protected final TypeProtoConverter typeProtoConverter;
+
+  /** Converts advanced extension information to its proto representation. */
   @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
+  /** Collects function and type references encountered during conversion. */
   @NonNull protected final ExtensionCollector extensionCollector;
 
   /**
@@ -106,14 +112,30 @@ public class RelProtoConverter
     this.extensionProtoConverter = extensionProtoConverter;
   }
 
+  /**
+   * Returns the expression converter used by this relation converter.
+   *
+   * @return the expression proto converter
+   */
   public ExpressionProtoConverter getExpressionProtoConverter() {
     return this.exprProtoConverter;
   }
 
+  /**
+   * Returns the type converter used by this relation converter.
+   *
+   * @return the type proto converter
+   */
   public TypeProtoConverter getTypeProtoConverter() {
     return this.typeProtoConverter;
   }
 
+  /**
+   * Converts a {@link Plan.Root} to its protobuf {@link io.substrait.proto.RelRoot}.
+   *
+   * @param relRoot the plan root to convert
+   * @return the proto relation root
+   */
   public io.substrait.proto.RelRoot toProto(Plan.Root relRoot) {
     return RelRoot.newBuilder()
         .setInput(toProto(relRoot.getInput()))
@@ -121,19 +143,43 @@ public class RelProtoConverter
         .build();
   }
 
+  /**
+   * Converts a {@link io.substrait.relation.Rel} to its protobuf representation.
+   *
+   * @param rel the relation to convert
+   * @return the proto relation
+   */
   public io.substrait.proto.Rel toProto(io.substrait.relation.Rel rel) {
     return rel.accept(this, EmptyVisitationContext.INSTANCE);
   }
 
+  /**
+   * Converts an expression to its protobuf representation.
+   *
+   * @param expression the expression to convert
+   * @return the proto expression
+   */
   protected io.substrait.proto.Expression toProto(io.substrait.expression.Expression expression) {
     return exprProtoConverter.toProto(expression);
   }
 
+  /**
+   * Converts a list of expressions to their protobuf representations.
+   *
+   * @param expression the expressions to convert
+   * @return the proto expressions
+   */
   protected List<io.substrait.proto.Expression> toProto(
       List<io.substrait.expression.Expression> expression) {
     return exprProtoConverter.toProto(expression);
   }
 
+  /**
+   * Converts a type to its protobuf representation.
+   *
+   * @param type the type to convert
+   * @return the proto type
+   */
   protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return typeProtoConverter.toProto(type);
   }
