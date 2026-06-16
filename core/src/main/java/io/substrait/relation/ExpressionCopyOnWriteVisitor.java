@@ -13,20 +13,43 @@ import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * A copy-on-write visitor for expressions that creates modified copies only when changes are made.
+ *
+ * <p>This visitor traverses expression trees and returns Optional.empty() when no changes are
+ * needed, or Optional containing a modified expression when changes are made.
+ *
+ * @param <E> the exception type that may be thrown during visitation
+ */
 public class ExpressionCopyOnWriteVisitor<E extends Exception>
     implements ExpressionVisitor<Optional<Expression>, EmptyVisitationContext, E> {
 
   private final RelCopyOnWriteVisitor<E> relCopyOnWriteVisitor;
 
+  /**
+   * Constructs an ExpressionCopyOnWriteVisitor.
+   *
+   * @param relCopyOnWriteVisitor the relation visitor to use for visiting relation nodes
+   */
   public ExpressionCopyOnWriteVisitor(RelCopyOnWriteVisitor<E> relCopyOnWriteVisitor) {
     this.relCopyOnWriteVisitor = relCopyOnWriteVisitor;
   }
 
+  /**
+   * Gets the relation copy-on-write visitor.
+   *
+   * @return the RelCopyOnWriteVisitor instance
+   */
   protected final RelCopyOnWriteVisitor<E> getRelCopyOnWriteVisitor() {
     return this.relCopyOnWriteVisitor;
   }
 
-  /** Utility method for visiting literals. By default, visits to literal types call this. */
+  /**
+   * Utility method for visiting literals. By default, visits to literal types call this.
+   *
+   * @param literal the literal expression to visit
+   * @return Optional.empty() as literals are not modified by default
+   */
   public Optional<Expression> visitLiteral(Expression.Literal literal) {
     return Optional.empty();
   }
@@ -252,6 +275,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  /**
+   * Visits a switch clause.
+   *
+   * @param switchClause the switch clause to visit
+   * @param context the visitation context
+   * @return Optional containing modified switch clause, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<Expression.SwitchClause> visitSwitchClause(
       Expression.SwitchClause switchClause, EmptyVisitationContext context) throws E {
     // This code does not visit the condition on the switch clause as that MUST be a Literal and the
@@ -281,6 +312,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  /**
+   * Visits an if clause.
+   *
+   * @param ifClause the if clause to visit
+   * @param context the visitation context
+   * @return Optional containing modified if clause, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<Expression.IfClause> visitIfClause(
       Expression.IfClause ifClause, EmptyVisitationContext context) throws E {
     Optional<Expression> condition = ifClause.condition().accept(this, context);
@@ -381,6 +420,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             Expression.NestedList.builder().from(expr).values(expressionList).build());
   }
 
+  /**
+   * Visits a multi-or-list record.
+   *
+   * @param multiOrListRecord the multi-or-list record to visit
+   * @param context the visitation context
+   * @return Optional containing modified record, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<Expression.MultiOrListRecord> visitMultiOrListRecord(
       Expression.MultiOrListRecord multiOrListRecord, EmptyVisitationContext context) throws E {
     return visitExprList(multiOrListRecord.values(), context)
@@ -463,6 +510,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
 
   // utilities
 
+  /**
+   * Visits a list of expressions.
+   *
+   * @param exprs the list of expressions to visit
+   * @param context the visitation context
+   * @return Optional containing modified list, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<List<Expression>> visitExprList(
       List<Expression> exprs, EmptyVisitationContext context) throws E {
     return transformList(exprs, context, (e, c) -> e.accept(this, c));
@@ -477,6 +532,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     return Optional.empty();
   }
 
+  /**
+   * Visits a list of function arguments.
+   *
+   * @param funcArgs the list of function arguments to visit
+   * @param context the visitation context
+   * @return Optional containing modified list, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<List<FunctionArg>> visitFunctionArguments(
       List<FunctionArg> funcArgs, EmptyVisitationContext context) throws E {
     return CopyOnWriteUtils.<FunctionArg, EmptyVisitationContext, E>transformList(
@@ -491,6 +554,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
         });
   }
 
+  /**
+   * Visits a sort field.
+   *
+   * @param sortField the sort field to visit
+   * @param context the visitation context
+   * @return Optional containing modified sort field, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
   protected Optional<Expression.SortField> visitSortField(
       Expression.SortField sortField, EmptyVisitationContext context) throws E {
     return sortField
