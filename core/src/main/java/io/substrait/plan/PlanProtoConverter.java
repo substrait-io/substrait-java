@@ -16,6 +16,7 @@ import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.plan.Plan} to {@link io.substrait.proto.Plan} */
 public class PlanProtoConverter {
+  /** Converts gathered function and type extensions into their proto representation. */
   @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
   @NonNull private final ExtensionCollection extensionCollection;
