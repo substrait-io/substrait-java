@@ -17,8 +17,10 @@ import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Plan} to {@link io.substrait.plan.Plan} */
 public class ProtoPlanConverter {
+  /** Collection of extensions used to resolve function and type references. */
   @NonNull protected final ExtensionCollection extensionCollection;
 
+  /** Converts advanced extension and extension URN information from proto. */
   @NonNull protected final ProtoExtensionConverter protoExtensionConverter;
 
   /** Default constructor. */
@@ -63,7 +65,12 @@ public class ProtoPlanConverter {
     this.protoExtensionConverter = protoExtensionConverter;
   }
 
-  /** Override hook for providing custom {@link ProtoRelConverter} implementations */
+  /**
+   * Override hook for providing custom {@link ProtoRelConverter} implementations.
+   *
+   * @param functionLookup lookup used to resolve function references while converting relations
+   * @return the {@link ProtoRelConverter} to use
+   */
   protected ProtoRelConverter getProtoRelConverter(final ExtensionLookup functionLookup) {
     return new ProtoRelConverter(functionLookup, this.extensionCollection, protoExtensionConverter);
   }
