@@ -14,7 +14,7 @@ class SortRelRoundtripTest extends TestBase {
       sb.namedScan(
           Collections.singletonList("test_table"),
           Arrays.asList("id", "amount", "name", "category", "timestamp"),
-          Arrays.asList(R.I64, R.FP64, R.STRING, R.STRING, R.TIMESTAMP));
+          Arrays.asList(R.I64, R.FP64, R.STRING, R.STRING, R.precisionTimestamp(6)));
 
   @Test
   void simpleSortAscending() {

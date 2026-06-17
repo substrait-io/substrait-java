@@ -50,12 +50,8 @@ public class ProtoTypeConverter {
         return n(type.getString().getNullability()).STRING;
       case BINARY:
         return n(type.getBinary().getNullability()).BINARY;
-      case TIMESTAMP:
-        return n(type.getTimestamp().getNullability()).TIMESTAMP;
       case DATE:
         return n(type.getDate().getNullability()).DATE;
-      case TIME:
-        return n(type.getTime().getNullability()).TIME;
       case INTERVAL_YEAR:
         return n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
       case INTERVAL_DAY:
@@ -66,8 +62,6 @@ public class ProtoTypeConverter {
       case INTERVAL_COMPOUND:
         return n(type.getIntervalCompound().getNullability())
             .intervalCompound(type.getIntervalCompound().getPrecision());
-      case TIMESTAMP_TZ:
-        return n(type.getTimestampTz().getNullability()).TIMESTAMP_TZ;
       case UUID:
         return n(type.getUuid().getNullability()).UUID;
       case FIXED_CHAR:

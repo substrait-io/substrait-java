@@ -98,39 +98,6 @@ public interface TypeVisitor<R, E extends Throwable> {
   R visit(Type.Date type) throws E;
 
   /**
-   * Visits a time type.
-   *
-   * @param type the type being visited
-   * @return the visit result
-   * @throws E if the visit fails
-   * @deprecated use {@link #visit(Type.PrecisionTime)} instead
-   */
-  @Deprecated
-  R visit(Type.Time type) throws E;
-
-  /**
-   * Visits a timestamp with timezone type.
-   *
-   * @param type the type being visited
-   * @return the visit result
-   * @throws E if the visit fails
-   * @deprecated use {@link #visit(Type.PrecisionTimestampTZ)} instead
-   */
-  @Deprecated
-  R visit(Type.TimestampTZ type) throws E;
-
-  /**
-   * Visits a timestamp (without timezone) type.
-   *
-   * @param type the type being visited
-   * @return the visit result
-   * @throws E if the visit fails
-   * @deprecated use {@link #visit(Type.PrecisionTimestamp)} instead
-   */
-  @Deprecated
-  R visit(Type.Timestamp type) throws E;
-
-  /**
    * Visits a precision-time type.
    *
    * @param type the type being visited
@@ -350,21 +317,6 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.Date type) throws E {
-      throw t();
-    }
-
-    @Override
-    public R visit(Type.Time type) throws E {
-      throw t();
-    }
-
-    @Override
-    public R visit(Type.TimestampTZ type) throws E {
-      throw t();
-    }
-
-    @Override
-    public R visit(Type.Timestamp type) throws E {
       throw t();
     }
 

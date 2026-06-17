@@ -44,15 +44,6 @@ class IgnoreNullableAndParameters(val typeToMatch: ParameterizedType)
 
   override def visit(`type`: Type.Date): Boolean = typeToMatch.isInstanceOf[Type.Date]
 
-  @nowarn
-  override def visit(`type`: Type.Time): Boolean = typeToMatch.isInstanceOf[Type.Time]
-
-  @nowarn
-  override def visit(`type`: Type.TimestampTZ): Boolean = typeToMatch.isInstanceOf[Type.TimestampTZ]
-
-  @nowarn
-  override def visit(`type`: Type.Timestamp): Boolean = typeToMatch.isInstanceOf[Type.Timestamp]
-
   override def visit(`type`: Type.IntervalYear): Boolean =
     typeToMatch.isInstanceOf[Type.IntervalYear]
 

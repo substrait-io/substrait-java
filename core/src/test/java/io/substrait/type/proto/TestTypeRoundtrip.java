@@ -33,10 +33,7 @@ class TestTypeRoundtrip {
                     creator.FP64,
                     creator.STRING,
                     creator.BINARY,
-                    creator.TIME,
                     creator.DATE,
-                    creator.TIMESTAMP,
-                    creator.TIMESTAMP_TZ,
                     creator.INTERVAL_YEAR,
                     creator.UUID,
                     creator.fixedChar(25),
@@ -49,8 +46,11 @@ class TestTypeRoundtrip {
                     creator.precisionTimestamp(1),
                     creator.precisionTimestampTZ(2),
                     creator.map(creator.I8, creator.I16),
-                    creator.list(creator.TIME),
-                    creator.struct(creator.TIME, creator.TIMESTAMP, creator.TIMESTAMP_TZ)));
+                    creator.list(creator.DATE),
+                    creator.struct(
+                        creator.DATE,
+                        creator.precisionTimestamp(6),
+                        creator.precisionTimestampTZ(6))));
   }
 
   @ParameterizedTest

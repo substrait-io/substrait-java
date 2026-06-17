@@ -98,11 +98,11 @@ class DynamicParameterRoundtripTest extends TestBase {
   void dynamicParameterTimestamp() {
     Expression.DynamicParameter dp =
         Expression.DynamicParameter.builder()
-            .type(TypeCreator.NULLABLE.TIMESTAMP)
+            .type(TypeCreator.NULLABLE.precisionTimestamp(6))
             .parameterReference(7)
             .build();
 
-    assertDynamicParameter(dp, TypeCreator.NULLABLE.TIMESTAMP, 7);
+    assertDynamicParameter(dp, TypeCreator.NULLABLE.precisionTimestamp(6), 7);
     verifyRoundTrip(dp);
   }
 

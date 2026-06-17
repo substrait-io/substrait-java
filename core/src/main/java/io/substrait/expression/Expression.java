@@ -421,75 +421,6 @@ public interface Expression extends FunctionArg {
     }
   }
 
-  /**
-   * @deprecated {@link TimestampLiteral} is deprecated in favor of {@link
-   *     PrecisionTimestampLiteral}
-   */
-  @Value.Immutable
-  @Deprecated
-  abstract class TimestampLiteral implements Literal {
-    /**
-     * Returns the timestamp value of this literal in microseconds since epoch.
-     *
-     * @return the timestamp value
-     */
-    public abstract long value();
-
-    @Override
-    public Type getType() {
-      return Type.withNullability(nullable()).TIMESTAMP;
-    }
-
-    /**
-     * Creates a new builder for constructing a TimestampLiteral.
-     *
-     * @return a new builder instance
-     */
-    public static ImmutableExpression.TimestampLiteral.Builder builder() {
-      return ImmutableExpression.TimestampLiteral.builder();
-    }
-
-    @Override
-    public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
-      return visitor.visit(this, context);
-    }
-  }
-
-  /**
-   * @deprecated {@link TimeLiteral} is deprecated in favor of {@link PrecisionTimeLiteral}
-   */
-  @Value.Immutable
-  @Deprecated
-  abstract class TimeLiteral implements Literal {
-    /**
-     * Returns the time value of this literal in microseconds since midnight.
-     *
-     * @return the time value
-     */
-    public abstract long value();
-
-    @Override
-    public Type getType() {
-      return Type.withNullability(nullable()).TIME;
-    }
-
-    /**
-     * Creates a new builder for constructing a TimeLiteral.
-     *
-     * @return a new builder instance
-     */
-    public static ImmutableExpression.TimeLiteral.Builder builder() {
-      return ImmutableExpression.TimeLiteral.builder();
-    }
-
-    @Override
-    public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
-      return visitor.visit(this, context);
-    }
-  }
-
   /** Represents a time literal with configurable precision. */
   @Value.Immutable
   abstract class PrecisionTimeLiteral implements Literal {
@@ -550,41 +481,6 @@ public interface Expression extends FunctionArg {
      */
     public static ImmutableExpression.DateLiteral.Builder builder() {
       return ImmutableExpression.DateLiteral.builder();
-    }
-
-    @Override
-    public <R, C extends VisitationContext, E extends Throwable> R accept(
-        ExpressionVisitor<R, C, E> visitor, C context) throws E {
-      return visitor.visit(this, context);
-    }
-  }
-
-  /**
-   * @deprecated {@link TimestampTZLiteral} is deprecated in favor of {@link
-   *     PrecisionTimestampTZLiteral}
-   */
-  @Value.Immutable
-  @Deprecated
-  abstract class TimestampTZLiteral implements Literal {
-    /**
-     * Returns the timestamp with timezone value of this literal in microseconds since epoch.
-     *
-     * @return the timestamp value
-     */
-    public abstract long value();
-
-    @Override
-    public Type getType() {
-      return Type.withNullability(nullable()).TIMESTAMP_TZ;
-    }
-
-    /**
-     * Creates a new builder for constructing a TimestampTZLiteral.
-     *
-     * @return a new builder instance
-     */
-    public static ImmutableExpression.TimestampTZLiteral.Builder builder() {
-      return ImmutableExpression.TimestampTZLiteral.builder();
     }
 
     @Override

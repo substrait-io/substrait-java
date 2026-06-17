@@ -21,9 +21,6 @@ import io.substrait.type.Type.Map;
 import io.substrait.type.Type.PrecisionTime;
 import io.substrait.type.Type.Str;
 import io.substrait.type.Type.Struct;
-import io.substrait.type.Type.Time;
-import io.substrait.type.Type.Timestamp;
-import io.substrait.type.Type.TimestampTZ;
 import io.substrait.type.Type.UUID;
 import io.substrait.type.Type.UserDefined;
 import io.substrait.type.Type.VarChar;
@@ -89,23 +86,6 @@ public class TypeStringify extends ParentStringify
 
   @Override
   public String visit(Date type) throws RuntimeException {
-    return type.getClass().getSimpleName();
-  }
-
-  @Override
-  public String visit(Time type) throws RuntimeException {
-    return type.getClass().getSimpleName();
-  }
-
-  @Override
-  @Deprecated
-  public String visit(TimestampTZ type) throws RuntimeException {
-    return type.getClass().getSimpleName();
-  }
-
-  @Override
-  @Deprecated
-  public String visit(Timestamp type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }
 

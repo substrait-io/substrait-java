@@ -467,21 +467,6 @@ public final class SimpleExtensionToSqlOperator {
     }
 
     @Override
-    public SqlTypeName visit(Type.Time expr) {
-      return SqlTypeName.TIME;
-    }
-
-    @Override
-    public SqlTypeName visit(Type.TimestampTZ expr) {
-      return SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE;
-    }
-
-    @Override
-    public SqlTypeName visit(Type.Timestamp expr) {
-      return SqlTypeName.TIMESTAMP;
-    }
-
-    @Override
     public SqlTypeName visit(Type.IntervalYear year) {
       return SqlTypeName.INTERVAL_YEAR_MONTH;
     }

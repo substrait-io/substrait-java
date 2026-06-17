@@ -115,12 +115,6 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
-  public Optional<Expression> visit(Expression.TimeLiteral expr, EmptyVisitationContext context)
-      throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
   public Optional<Expression> visit(PrecisionTimeLiteral expr, EmptyVisitationContext context)
       throws E {
     return visitLiteral(expr);
@@ -129,18 +123,6 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(Expression.DateLiteral expr, EmptyVisitationContext context)
       throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.TimestampLiteral expr, EmptyVisitationContext context) throws E {
-    return visitLiteral(expr);
-  }
-
-  @Override
-  public Optional<Expression> visit(
-      Expression.TimestampTZLiteral expr, EmptyVisitationContext context) throws E {
     return visitLiteral(expr);
   }
 

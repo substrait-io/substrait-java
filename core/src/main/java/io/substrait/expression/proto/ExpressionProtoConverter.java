@@ -179,12 +179,6 @@ public class ExpressionProtoConverter
 
   @Override
   public Expression visit(
-      io.substrait.expression.Expression.TimeLiteral expr, EmptyVisitationContext context) {
-    return lit(bldr -> bldr.setNullable(expr.nullable()).setTime(expr.value()));
-  }
-
-  @Override
-  public Expression visit(
       io.substrait.expression.Expression.PrecisionTimeLiteral expr,
       EmptyVisitationContext context) {
     return lit(
@@ -201,18 +195,6 @@ public class ExpressionProtoConverter
   public Expression visit(
       io.substrait.expression.Expression.DateLiteral expr, EmptyVisitationContext context) {
     return lit(bldr -> bldr.setNullable(expr.nullable()).setDate(expr.value()));
-  }
-
-  @Override
-  public Expression visit(
-      io.substrait.expression.Expression.TimestampLiteral expr, EmptyVisitationContext context) {
-    return lit(bldr -> bldr.setNullable(expr.nullable()).setTimestamp(expr.value()));
-  }
-
-  @Override
-  public Expression visit(
-      io.substrait.expression.Expression.TimestampTZLiteral expr, EmptyVisitationContext context) {
-    return lit(bldr -> bldr.setNullable(expr.nullable()).setTimestampTz(expr.value()));
   }
 
   @Override
