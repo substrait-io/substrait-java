@@ -337,8 +337,10 @@ tasks.register<Javadoc>("javadocImmutable") {
   // Only the generated proto sources
   setSource(fileTree(immuteableJavaDir) { include("**/*.java") })
 
-  // Use the main source set classpath to resolve types referenced by the generated code
-  classpath = sourceSets["main"].compileClasspath
+  // Use the main source set classpath + compiled output to resolve types referenced by the
+  // generated code (the Immutables-generated sources import the hand-written enclosing types,
+  // which live in the project's own output, not in external dependency JARs).
+  classpath = sourceSets["main"].compileClasspath + sourceSets["main"].output.classesDirs
 
   // Destination separate from main Javadoc
   setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile)
