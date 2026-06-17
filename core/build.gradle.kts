@@ -381,10 +381,11 @@ tasks.named<Javadoc>("javadoc") {
   exclude { spec -> generatedDirs.any { spec.file.toPath().startsWith(it) } }
   source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
-  // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
+  // Fail the build if Javadoc linting finds any issues in the hand-written sources.
   options {
     require(this is StandardJavadocDocletOptions)
     addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")
