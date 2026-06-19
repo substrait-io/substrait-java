@@ -242,6 +242,11 @@ class AggregateWithJoinSuite extends SparkFunSuite with SharedSparkSession with 
 
     val plan = Plan.builder()
       .addRoots(root)
+      .executionBehavior(
+        Plan.ExecutionBehavior.builder()
+          .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
+          .build()
+      )
       .build()
 
     val converter = new ToLogicalPlan(spark)

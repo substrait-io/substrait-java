@@ -5,9 +5,15 @@ import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
 import org.immutables.value.Value;
 
+/** A relation that retains only the input rows for which a boolean condition evaluates to true. */
 @Value.Immutable
 public abstract class Filter extends SingleInputRel implements HasExtension {
 
+  /**
+   * Returns the boolean condition used to filter input rows.
+   *
+   * @return the filter condition
+   */
   public abstract Expression getCondition();
 
   @Override
@@ -21,6 +27,11 @@ public abstract class Filter extends SingleInputRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link Filter}.
+   *
+   * @return a new builder
+   */
   public static ImmutableFilter.Builder builder() {
     return ImmutableFilter.builder();
   }

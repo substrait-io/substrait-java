@@ -2113,6 +2113,112 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * Marker interface for execution-context-dependent variables such as {@code CURRENT_TIMESTAMP},
+   * {@code CURRENT_TIMEZONE}, and {@code CURRENT_DATE}.
+   *
+   * <p>The Substrait spec models these as expressions rather than functions because they take no
+   * input arguments, depend on the execution context rather than input data, and require evaluation
+   * mode control (see {@link io.substrait.plan.Plan.ExecutionBehavior}). The result type of an
+   * execution context variable always has {@code NULLABILITY_REQUIRED} nullability.
+   */
+  interface ExecutionContextVariable extends Expression {}
+
+  /**
+   * Execution context variable holding the current timestamp in the current session timezone.
+   *
+   * <p>Its result type is a {@code precision_timestamp_tz} with the configured {@link #precision()}
+   * and required nullability.
+   */
+  @Value.Immutable
+  abstract class CurrentTimestamp implements ExecutionContextVariable {
+    /**
+     * Returns the fractional-second precision of the current timestamp, expressed as the number of
+     * digits after the decimal point (e.g. {@code 6} for microseconds).
+     *
+     * @return the timestamp precision
+     */
+    public abstract int precision();
+
+    @Override
+    public Type getType() {
+      return TypeCreator.REQUIRED.precisionTimestampTZ(precision());
+    }
+
+    /**
+     * Creates a new builder for constructing a CurrentTimestamp.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.CurrentTimestamp.Builder builder() {
+      return ImmutableExpression.CurrentTimestamp.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  /**
+   * Execution context variable holding the current session timezone as a string defined by the IANA
+   * timezone database (<a
+   * href="https://www.iana.org/time-zones">https://www.iana.org/time-zones</a>).
+   *
+   * <p>Its result type is a {@code string} with required nullability.
+   */
+  @Value.Immutable
+  abstract class CurrentTimezone implements ExecutionContextVariable {
+    @Override
+    public Type getType() {
+      return TypeCreator.REQUIRED.STRING;
+    }
+
+    /**
+     * Creates a new builder for constructing a CurrentTimezone.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.CurrentTimezone.Builder builder() {
+      return ImmutableExpression.CurrentTimezone.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
+  /**
+   * Execution context variable holding the current date.
+   *
+   * <p>Its result type is a {@code date} with required nullability.
+   */
+  @Value.Immutable
+  abstract class CurrentDate implements ExecutionContextVariable {
+    @Override
+    public Type getType() {
+      return TypeCreator.REQUIRED.DATE;
+    }
+
+    /**
+     * Creates a new builder for constructing a CurrentDate.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.CurrentDate.Builder builder() {
+      return ImmutableExpression.CurrentDate.builder();
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+  }
+
   /** Defines the operation type for set predicates (EXISTS, UNIQUE). */
   enum PredicateOp {
     /** Unspecified predicate operation. */

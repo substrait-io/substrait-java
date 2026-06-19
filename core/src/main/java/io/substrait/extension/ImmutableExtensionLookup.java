@@ -21,10 +21,16 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
     super(functionMap, typeMap);
   }
 
+  /**
+   * Creates a builder for {@link ImmutableExtensionLookup}.
+   *
+   * @return a new builder
+   */
   public static Builder builder() {
     return new Builder();
   }
 
+  /** Builder that collects function and type anchors from a plan or extended expression. */
   public static class Builder {
     private final Map<Integer, SimpleExtension.FunctionAnchor> functionMap = new HashMap<>();
     private final Map<Integer, SimpleExtension.TypeAnchor> typeMap = new HashMap<>();
@@ -55,10 +61,22 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       return SimpleExtension.TypeAnchor.of(urn, type.getName());
     }
 
+    /**
+     * Registers the extension URNs and declarations contained in the given plan.
+     *
+     * @param plan the plan to read extensions from
+     * @return this builder
+     */
     public Builder from(Plan plan) {
       return from(plan.getExtensionUrnsList(), plan.getExtensionsList());
     }
 
+    /**
+     * Registers the extension URNs and declarations contained in the given extended expression.
+     *
+     * @param extendedExpression the extended expression to read extensions from
+     * @return this builder
+     */
     public Builder from(ExtendedExpression extendedExpression) {
       return from(
           extendedExpression.getExtensionUrnsList(), extendedExpression.getExtensionsList());
@@ -93,6 +111,11 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
       return this;
     }
 
+    /**
+     * Builds an {@link ImmutableExtensionLookup} from the collected anchors.
+     *
+     * @return the constructed lookup
+     */
     public ImmutableExtensionLookup build() {
       return new ImmutableExtensionLookup(
           Collections.unmodifiableMap(functionMap), Collections.unmodifiableMap(typeMap));

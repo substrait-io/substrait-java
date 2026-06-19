@@ -1,0 +1,5 @@
+# TPC-H test data is generated to this directory.
+
+*.tbl
+*.csv
+*.parquet
