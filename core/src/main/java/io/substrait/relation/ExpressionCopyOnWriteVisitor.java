@@ -508,6 +508,24 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     return Optional.empty();
   }
 
+  @Override
+  public Optional<Expression> visit(
+      Expression.CurrentTimestamp expr, EmptyVisitationContext context) throws E {
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<Expression> visit(Expression.CurrentTimezone expr, EmptyVisitationContext context)
+      throws E {
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<Expression> visit(Expression.CurrentDate expr, EmptyVisitationContext context)
+      throws E {
+    return Optional.empty();
+  }
+
   // utilities
 
   /**

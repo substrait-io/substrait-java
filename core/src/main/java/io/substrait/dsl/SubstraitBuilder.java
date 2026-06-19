@@ -945,6 +945,34 @@ public class SubstraitBuilder {
   }
 
   /**
+   * Creates a {@code CURRENT_TIMESTAMP} execution context variable expression.
+   *
+   * @param precision the fractional-second precision of the timestamp
+   * @return a new {@link Expression.CurrentTimestamp}
+   */
+  public Expression.CurrentTimestamp currentTimestamp(int precision) {
+    return Expression.CurrentTimestamp.builder().precision(precision).build();
+  }
+
+  /**
+   * Creates a {@code CURRENT_TIMEZONE} execution context variable expression.
+   *
+   * @return a new {@link Expression.CurrentTimezone}
+   */
+  public Expression.CurrentTimezone currentTimezone() {
+    return Expression.CurrentTimezone.builder().build();
+  }
+
+  /**
+   * Creates a {@code CURRENT_DATE} execution context variable expression.
+   *
+   * @return a new {@link Expression.CurrentDate}
+   */
+  public Expression.CurrentDate currentDate() {
+    return Expression.CurrentDate.builder().build();
+  }
+
+  /**
    * Creates a cast expression that converts an expression to a different type.
    *
    * @param input the expression to cast

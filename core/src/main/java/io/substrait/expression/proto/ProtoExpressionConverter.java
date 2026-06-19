@@ -318,6 +318,25 @@ public class ProtoExpressionConverter {
               .parameterReference(dp.getParameterReference())
               .build();
         }
+      case EXECUTION_CONTEXT_VARIABLE:
+        {
+          io.substrait.proto.Expression.ExecutionContextVariable ecv =
+              expr.getExecutionContextVariable();
+          switch (ecv.getExecutionContextVariableTypeCase()) {
+            case CURRENT_TIMESTAMP:
+              return Expression.CurrentTimestamp.builder()
+                  .precision(ecv.getCurrentTimestamp().getPrecision())
+                  .build();
+            case CURRENT_TIMEZONE:
+              return Expression.CurrentTimezone.builder().build();
+            case CURRENT_DATE:
+              return Expression.CurrentDate.builder().build();
+            default:
+              throw new IllegalArgumentException(
+                  "Unknown execution context variable type: "
+                      + ecv.getExecutionContextVariableTypeCase());
+          }
+        }
       // TODO enum.
       case ENUM:
         throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
