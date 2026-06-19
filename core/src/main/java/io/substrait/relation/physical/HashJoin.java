@@ -19,18 +19,38 @@ import org.immutables.value.Value;
 public abstract class HashJoin extends BiRel implements HasExtension {
 
   /**
+   * Returns the comparison join keys matching left and right key fields.
+   *
+   * @return the join keys
+   */
+  public abstract List<ComparisonJoinKey> getKeys();
+
+  /**
    * Returns the left-side key fields used to build the hash table.
    *
    * @return the left join keys
+   * @deprecated the left-hand sides of the join {@link #getKeys()}; use {@link #getKeys()} instead.
    */
-  public abstract List<FieldReference> getLeftKeys();
+  @Deprecated
+  public List<FieldReference> getLeftKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getLeft)
+        .collect(java.util.stream.Collectors.toList());
+  }
 
   /**
    * Returns the right-side key fields probed against the hash table.
    *
    * @return the right join keys
+   * @deprecated the right-hand sides of the join {@link #getKeys()}; use {@link #getKeys()}
+   *     instead.
    */
-  public abstract List<FieldReference> getRightKeys();
+  @Deprecated
+  public List<FieldReference> getRightKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getRight)
+        .collect(java.util.stream.Collectors.toList());
+  }
 
   /**
    * Returns the type of join to perform.

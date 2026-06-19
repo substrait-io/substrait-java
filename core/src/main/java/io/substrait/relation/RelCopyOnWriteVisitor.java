@@ -9,6 +9,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.MultiBucketExchange;
@@ -486,14 +487,12 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(HashJoin hashJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = hashJoin.getLeft().accept(this, context);
     Optional<Rel> right = hashJoin.getRight().accept(this, context);
-    Optional<List<FieldReference>> leftKeys =
-        transformList(hashJoin.getLeftKeys(), context, this::visitFieldReference);
-    Optional<List<FieldReference>> rightKeys =
-        transformList(hashJoin.getRightKeys(), context, this::visitFieldReference);
+    Optional<List<ComparisonJoinKey>> keys =
+        transformList(hashJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
 
-    if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -501,8 +500,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .from(hashJoin)
             .left(left.orElse(hashJoin.getLeft()))
             .right(right.orElse(hashJoin.getRight()))
-            .leftKeys(leftKeys.orElse(hashJoin.getLeftKeys()))
-            .rightKeys(rightKeys.orElse(hashJoin.getRightKeys()))
+            .keys(keys.orElse(hashJoin.getKeys()))
             .postJoinFilter(or(postFilter, hashJoin::getPostJoinFilter))
             .build());
   }
@@ -511,14 +509,12 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = mergeJoin.getLeft().accept(this, context);
     Optional<Rel> right = mergeJoin.getRight().accept(this, context);
-    Optional<List<FieldReference>> leftKeys =
-        transformList(mergeJoin.getLeftKeys(), context, this::visitFieldReference);
-    Optional<List<FieldReference>> rightKeys =
-        transformList(mergeJoin.getRightKeys(), context, this::visitFieldReference);
+    Optional<List<ComparisonJoinKey>> keys =
+        transformList(mergeJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
 
-    if (allEmpty(left, right, leftKeys, rightKeys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -526,8 +522,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .from(mergeJoin)
             .left(left.orElse(mergeJoin.getLeft()))
             .right(right.orElse(mergeJoin.getRight()))
-            .leftKeys(leftKeys.orElse(mergeJoin.getLeftKeys()))
-            .rightKeys(rightKeys.orElse(mergeJoin.getRightKeys()))
+            .keys(keys.orElse(mergeJoin.getKeys()))
             .postJoinFilter(or(postFilter, mergeJoin::getPostJoinFilter))
             .build());
   }
@@ -639,6 +634,29 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     }
 
     return Optional.of(FieldReference.builder().inputExpression(inputExpression).build());
+  }
+
+  /**
+   * Rewrites a comparison join key, returning a new one if either side changed.
+   *
+   * @param key the comparison join key to rewrite
+   * @param context the visitation context
+   * @return the rewritten comparison join key, or empty if unchanged
+   * @throws E if the visit fails
+   */
+  public Optional<ComparisonJoinKey> visitComparisonJoinKey(
+      ComparisonJoinKey key, EmptyVisitationContext context) throws E {
+    Optional<FieldReference> left = visitFieldReference(key.getLeft(), context);
+    Optional<FieldReference> right = visitFieldReference(key.getRight(), context);
+    if (allEmpty(left, right)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ComparisonJoinKey.builder()
+            .from(key)
+            .left(left.orElse(key.getLeft()))
+            .right(right.orElse(key.getRight()))
+            .build());
   }
 
   /**

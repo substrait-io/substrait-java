@@ -43,6 +43,7 @@ import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.ImmutableBroadcastExchange;
 import io.substrait.relation.physical.ImmutableExchangeTarget;
@@ -64,6 +65,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
@@ -1054,8 +1056,6 @@ public class ProtoRelConverter {
   protected Rel newHashJoin(HashJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
-    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
@@ -1070,8 +1070,13 @@ public class ProtoRelConverter {
         HashJoin.builder()
             .left(left)
             .right(right)
-            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
-            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .keys(
+                comparisonJoinKeys(
+                    rel.getKeysList(),
+                    rel.getLeftKeysList(),
+                    rel.getRightKeysList(),
+                    leftConverter,
+                    rightConverter))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -1095,8 +1100,6 @@ public class ProtoRelConverter {
   protected Rel newMergeJoin(MergeJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
-    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
@@ -1111,8 +1114,13 @@ public class ProtoRelConverter {
         MergeJoin.builder()
             .left(left)
             .right(right)
-            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
-            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .keys(
+                comparisonJoinKeys(
+                    rel.getKeysList(),
+                    rel.getLeftKeysList(),
+                    rel.getRightKeysList(),
+                    leftConverter,
+                    rightConverter))
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -1126,6 +1134,63 @@ public class ProtoRelConverter {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
     return builder.build();
+  }
+
+  /**
+   * Builds the {@link ComparisonJoinKey} list for a hash/merge join, preferring the {@code keys}
+   * field. The deprecated {@code left_keys}/{@code right_keys} fields are only consulted when
+   * {@code keys} is empty, in which case they are paired up with a {@link
+   * ComparisonJoinKey.SimpleComparisonType#EQ} comparison.
+   */
+  private List<ComparisonJoinKey> comparisonJoinKeys(
+      List<io.substrait.proto.ComparisonJoinKey> keys,
+      List<io.substrait.proto.Expression.FieldReference> leftKeys,
+      List<io.substrait.proto.Expression.FieldReference> rightKeys,
+      ProtoExpressionConverter leftConverter,
+      ProtoExpressionConverter rightConverter) {
+    if (!keys.isEmpty()) {
+      return keys.stream()
+          .map(key -> comparisonJoinKey(key, leftConverter, rightConverter))
+          .collect(Collectors.toList());
+    }
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    }
+    return IntStream.range(0, leftKeys.size())
+        .mapToObj(
+            i ->
+                ComparisonJoinKey.of(
+                    leftConverter.from(leftKeys.get(i)),
+                    rightConverter.from(rightKeys.get(i)),
+                    ComparisonJoinKey.SimpleComparisonType.EQ))
+        .collect(Collectors.toList());
+  }
+
+  private ComparisonJoinKey comparisonJoinKey(
+      io.substrait.proto.ComparisonJoinKey key,
+      ProtoExpressionConverter leftConverter,
+      ProtoExpressionConverter rightConverter) {
+    io.substrait.proto.ComparisonJoinKey.ComparisonType comparison = key.getComparison();
+    final ComparisonJoinKey.ComparisonType comparisonType;
+    switch (comparison.getInnerTypeCase()) {
+      case SIMPLE:
+        comparisonType =
+            ComparisonJoinKey.SimpleComparison.of(
+                ComparisonJoinKey.SimpleComparisonType.fromProto(comparison.getSimple()));
+        break;
+      case CUSTOM_FUNCTION_REFERENCE:
+        comparisonType =
+            ComparisonJoinKey.CustomComparison.of(comparison.getCustomFunctionReference());
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "Unsupported comparison type: " + comparison.getInnerTypeCase());
+    }
+    return ComparisonJoinKey.builder()
+        .left(leftConverter.from(key.getLeft()))
+        .right(rightConverter.from(key.getRight()))
+        .comparison(comparisonType)
+        .build();
   }
 
   /**

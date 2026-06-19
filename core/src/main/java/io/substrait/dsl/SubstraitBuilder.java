@@ -36,6 +36,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -461,10 +462,7 @@ public class SubstraitBuilder {
     return HashJoin.builder()
         .left(left)
         .right(right)
-        .leftKeys(
-            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
-        .rightKeys(
-            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .keys(this.comparisonJoinKeys(left, right, leftKeys, rightKeys))
         .joinType(joinType)
         .remap(remap)
         .build();
@@ -511,13 +509,36 @@ public class SubstraitBuilder {
     return MergeJoin.builder()
         .left(left)
         .right(right)
-        .leftKeys(
-            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
-        .rightKeys(
-            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .keys(this.comparisonJoinKeys(left, right, leftKeys, rightKeys))
         .joinType(joinType)
         .remap(remap)
         .build();
+  }
+
+  /**
+   * Builds a list of {@link ComparisonJoinKey}s pairing the given left/right field indexes with an
+   * {@link ComparisonJoinKey.SimpleComparisonType#EQ} comparison.
+   *
+   * @param left the left input relation
+   * @param right the right input relation
+   * @param leftKeys field indexes from the left relation
+   * @param rightKeys field indexes from the right relation
+   * @return the list of equality join keys
+   */
+  public List<ComparisonJoinKey> comparisonJoinKeys(
+      Rel left, Rel right, List<Integer> leftKeys, List<Integer> rightKeys) {
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    }
+    List<ComparisonJoinKey> keys = new java.util.ArrayList<>(leftKeys.size());
+    for (int i = 0; i < leftKeys.size(); i++) {
+      keys.add(
+          ComparisonJoinKey.of(
+              this.fieldReference(left, leftKeys.get(i)),
+              this.fieldReference(right, rightKeys.get(i)),
+              ComparisonJoinKey.SimpleComparisonType.EQ));
+    }
+    return keys;
   }
 
   /**

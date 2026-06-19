@@ -47,6 +47,7 @@ import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.MultiBucketExchange;
@@ -198,6 +199,64 @@ public class RelProtoConverter
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
     return toProto((Expression) fieldReference).getSelection();
+  }
+
+  private io.substrait.proto.ComparisonJoinKey toProto(ComparisonJoinKey key) {
+    io.substrait.proto.ComparisonJoinKey.ComparisonType comparison =
+        key.getComparison()
+            .accept(
+                new ComparisonJoinKey.ComparisonTypeVisitor<
+                    io.substrait.proto.ComparisonJoinKey.ComparisonType, RuntimeException>() {
+                  @Override
+                  public io.substrait.proto.ComparisonJoinKey.ComparisonType visit(
+                      ComparisonJoinKey.SimpleComparison simpleComparison) {
+                    return io.substrait.proto.ComparisonJoinKey.ComparisonType.newBuilder()
+                        .setSimple(simpleComparison.getType().toProto())
+                        .build();
+                  }
+
+                  @Override
+                  public io.substrait.proto.ComparisonJoinKey.ComparisonType visit(
+                      ComparisonJoinKey.CustomComparison customComparison) {
+                    return io.substrait.proto.ComparisonJoinKey.ComparisonType.newBuilder()
+                        .setCustomFunctionReference(customComparison.getCustomFunctionReference())
+                        .build();
+                  }
+                });
+    return io.substrait.proto.ComparisonJoinKey.newBuilder()
+        .setLeft(toProto(key.getLeft()))
+        .setRight(toProto(key.getRight()))
+        .setComparison(comparison)
+        .build();
+  }
+
+  /**
+   * Returns {@code true} when every key is a plain {@link
+   * ComparisonJoinKey.SimpleComparisonType#EQ} comparison, i.e. the only case the deprecated {@code
+   * left_keys}/{@code right_keys} fields can represent without losing information. {@code
+   * IS_NOT_DISTINCT_FROM}, {@code MIGHT_EQUAL} and custom comparisons cannot be expressed by the
+   * deprecated fields, where an old consumer would silently interpret them as equality.
+   */
+  private boolean isLosslessAsDeprecatedKeys(List<ComparisonJoinKey> keys) {
+    return keys.stream()
+        .allMatch(
+            key ->
+                key.getComparison()
+                    .accept(
+                        new ComparisonJoinKey.ComparisonTypeVisitor<Boolean, RuntimeException>() {
+                          @Override
+                          public Boolean visit(
+                              ComparisonJoinKey.SimpleComparison simpleComparison) {
+                            return simpleComparison.getType()
+                                == ComparisonJoinKey.SimpleComparisonType.EQ;
+                          }
+
+                          @Override
+                          public Boolean visit(
+                              ComparisonJoinKey.CustomComparison customComparison) {
+                            return false;
+                          }
+                        }));
   }
 
   @Override
@@ -399,6 +458,7 @@ public class RelProtoConverter
   }
 
   @Override
+  @SuppressWarnings("deprecation") // intentionally also writes the deprecated left_keys/right_keys
   public Rel visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
     HashJoinRel.Builder builder =
         HashJoinRel.newBuilder()
@@ -407,15 +467,18 @@ public class RelProtoConverter
             .setRight(toProto(hashJoin.getRight()))
             .setType(hashJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = hashJoin.getLeftKeys();
-    List<FieldReference> rightKeys = hashJoin.getRightKeys();
+    List<ComparisonJoinKey> keys = hashJoin.getKeys();
+    builder.addAllKeys(keys.stream().map(this::toProto).collect(Collectors.toList()));
 
-    if (leftKeys.size() != rightKeys.size()) {
-      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    // Also populate the deprecated left_keys/right_keys when every key is a plain EQ comparison so
+    // that consumers which have not yet adopted the new keys field keep working. Lossy comparison
+    // types are intentionally left out of the deprecated fields.
+    if (isLosslessAsDeprecatedKeys(keys)) {
+      builder.addAllLeftKeys(
+          keys.stream().map(k -> toProto(k.getLeft())).collect(Collectors.toList()));
+      builder.addAllRightKeys(
+          keys.stream().map(k -> toProto(k.getRight())).collect(Collectors.toList()));
     }
-
-    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
-    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
@@ -426,6 +489,7 @@ public class RelProtoConverter
   }
 
   @Override
+  @SuppressWarnings("deprecation") // intentionally also writes the deprecated left_keys/right_keys
   public Rel visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws RuntimeException {
     MergeJoinRel.Builder builder =
         MergeJoinRel.newBuilder()
@@ -434,15 +498,18 @@ public class RelProtoConverter
             .setRight(toProto(mergeJoin.getRight()))
             .setType(mergeJoin.getJoinType().toProto());
 
-    List<FieldReference> leftKeys = mergeJoin.getLeftKeys();
-    List<FieldReference> rightKeys = mergeJoin.getRightKeys();
+    List<ComparisonJoinKey> keys = mergeJoin.getKeys();
+    builder.addAllKeys(keys.stream().map(this::toProto).collect(Collectors.toList()));
 
-    if (leftKeys.size() != rightKeys.size()) {
-      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    // Also populate the deprecated left_keys/right_keys when every key is a plain EQ comparison so
+    // that consumers which have not yet adopted the new keys field keep working. Lossy comparison
+    // types are intentionally left out of the deprecated fields.
+    if (isLosslessAsDeprecatedKeys(keys)) {
+      builder.addAllLeftKeys(
+          keys.stream().map(k -> toProto(k.getLeft())).collect(Collectors.toList()));
+      builder.addAllRightKeys(
+          keys.stream().map(k -> toProto(k.getRight())).collect(Collectors.toList()));
     }
-
-    builder.addAllLeftKeys(leftKeys.stream().map(this::toProto).collect(Collectors.toList()));
-    builder.addAllRightKeys(rightKeys.stream().map(this::toProto).collect(Collectors.toList()));
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
