@@ -4,9 +4,9 @@ on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
 
-# Most recent PR change superseeds previous changes.
+# Most recent PR change supersedes previous changes.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # Default to the minimum read-only token for all jobs.
