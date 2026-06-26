@@ -219,5 +219,4 @@ class Substrait2SqlTest extends PlanTestBase {
     assertSqlSubstraitRelRoundTrip(
         "select extract(month from o_orderdate),extract(year from o_orderdate),extract(day from o_orderdate) from orders");
   }
-
 }

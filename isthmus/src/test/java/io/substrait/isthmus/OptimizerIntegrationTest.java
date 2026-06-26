@@ -1,8 +1,8 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -81,9 +81,7 @@ class OptimizerIntegrationTest extends PlanTestBase {
 
     // Step 1 — SubQueryRemoveRule: rewrites RexSubQuery → LogicalCorrelate + LITERAL_AGG.
     HepProgram subQueryProgram =
-        new HepProgramBuilder()
-            .addRuleInstance(CoreRules.FILTER_SUB_QUERY_TO_CORRELATE)
-            .build();
+        new HepProgramBuilder().addRuleInstance(CoreRules.FILTER_SUB_QUERY_TO_CORRELATE).build();
     HepPlanner hepPlanner = new HepPlanner(subQueryProgram);
     hepPlanner.setRoot(relRoot.rel);
     RelNode afterSubQueryRemove = hepPlanner.findBestExp();
