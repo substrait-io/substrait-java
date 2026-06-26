@@ -57,6 +57,8 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import com.google.common.collect.Iterables;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
@@ -348,10 +350,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
             .collect(Collectors.toList());
 
+    // get LITERAL_AGG() function calls — injected by SubQueryRemoveRule (CALCITE-6945) as a
+    // null-presence indicator; they carry a RexLiteral in rexList and have no Substrait binding.
+    List<AggregateCall> literalAggCalls =
+        aggregate.getAggCallList().stream()
+            .filter(c -> c.getAggregation().getKind() == SqlKind.LITERAL_AGG)
+            .collect(Collectors.toList());
+
     List<AggregateCall> filteredAggCalls =
         aggregate.getAggCallList().stream()
-            // remove GROUP_ID() function calls
-            .filter(c -> !groupIdCalls.contains(c))
+            // remove GROUP_ID() and LITERAL_AGG() function calls
+            .filter(c -> !groupIdCalls.contains(c) && !literalAggCalls.contains(c))
             .collect(Collectors.toList());
 
     List<Measure> aggCalls =
@@ -388,6 +397,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                 i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
           } else if (groupIdCalls.contains(aggCall)) {
             remap.add(i + groupingFieldCount, groupingSetIndex);
+          } else if (literalAggCalls.contains(aggCall)) {
+            // LITERAL_AGG handled below via Project wrapper — skip remap slot for now
           } else {
             // this should never get triggered
             throw new IllegalStateException(
@@ -400,7 +411,58 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       }
     }
 
-    return builder.build();
+    Rel aggRel = builder.build();
+
+    if (literalAggCalls.isEmpty()) {
+      return aggRel;
+    }
+
+    if (groupings.size() > 1) {
+      throw new UnsupportedOperationException(
+          "LITERAL_AGG combined with GROUPING SETS / CUBE / ROLLUP is not supported");
+    }
+
+    // Wrap the aggregate in a Project that replaces LITERAL_AGG output positions with their
+    // literal values and passes through all other fields via FieldReference.
+    //
+    // The aggregate output schema is: [grouping fields..., real agg measures...]
+    // The full output schema requested is: [grouping fields..., all agg calls (in original order)]
+    // For each position in the original agg call list:
+    //   - real measure  → FieldReference into the aggregate output
+    //   - LITERAL_AGG   → the literal value from aggCall.rexList
+    final int groupingFieldCount =
+        Math.toIntExact(
+            groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
+    final int realAggCount = aggCalls.size();
+    final int totalAggOutputFields = groupingFieldCount + realAggCount;
+
+    // Build the project expression list: grouping fields first, then one expression per original
+    // agg call in declaration order.
+    List<Expression> projectExprs = new ArrayList<>();
+    for (int i = 0; i < groupingFieldCount; i++) {
+      projectExprs.add(FieldReference.newRootStructReference(i, aggRel.getRecordType()));
+    }
+    int realAggIndex = groupingFieldCount; // tracks next real-measure field index in aggRel output
+    for (AggregateCall aggCall : aggregate.getAggCallList()) {
+      if (literalAggCalls.contains(aggCall)) {
+        // Convert the RexLiteral stored in rexList to a Substrait literal expression
+        RexNode rexLiteral = Iterables.getOnlyElement(aggCall.rexList);
+        projectExprs.add(toExpression(rexLiteral));
+      } else if (!groupIdCalls.contains(aggCall)) {
+        // real measure: pass through by reference
+        projectExprs.add(
+            FieldReference.newRootStructReference(realAggIndex, aggRel.getRecordType()));
+        realAggIndex++;
+      }
+      // GROUP_ID calls are not present in the outer schema here (groupings.size() <= 1 branch);
+      // if groupings.size() > 1 they are handled by the remap above and should not appear here
+    }
+
+    return Project.builder()
+        .remap(Remap.offset(totalAggOutputFields, projectExprs.size()))
+        .expressions(projectExprs)
+        .input(aggRel)
+        .build();
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {
