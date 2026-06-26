@@ -1,8 +1,7 @@
 package io.substrait.isthmus.cli;
 
 import com.google.protobuf.Empty;
-import com.google.protobuf.GeneratedMessageV3;
-import com.google.protobuf.MessageLite;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.ProtocolMessageEnum;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfoList;
@@ -61,8 +60,8 @@ public final class RegisterAtRuntime implements Feature {
 
       try (PackageScanner substrait = new PackageScanner("io.substrait")) {
         // protobuf items
-        substrait.registerByParent(GeneratedMessageV3.class);
-        substrait.registerByParent(MessageLite.Builder.class);
+        substrait.registerByParent(GeneratedMessage.class);
+        substrait.registerByParent(GeneratedMessage.Builder.class);
         substrait.registerByParent(ProtocolMessageEnum.class);
 
         // Substrait immutables.
