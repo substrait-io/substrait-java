@@ -4,30 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.networknt.schema.Error;
-import io.substrait.dialect.Dialect.CastFailureOption;
-import io.substrait.dialect.Dialect.DdlWriteType;
-import io.substrait.dialect.Dialect.DialectDocument;
-import io.substrait.dialect.Dialect.DialectFunction;
-import io.substrait.dialect.Dialect.ExchangeKind;
-import io.substrait.dialect.Dialect.ExecutionBehavior;
-import io.substrait.dialect.Dialect.ExpandFieldType;
-import io.substrait.dialect.Dialect.ExpressionKind;
-import io.substrait.dialect.Dialect.JoinType;
-import io.substrait.dialect.Dialect.NestedType;
-import io.substrait.dialect.Dialect.Notation;
-import io.substrait.dialect.Dialect.ReadType;
-import io.substrait.dialect.Dialect.RelationKind;
-import io.substrait.dialect.Dialect.SetOperation;
-import io.substrait.dialect.Dialect.SubqueryType;
-import io.substrait.dialect.Dialect.SupportedExpression;
-import io.substrait.dialect.Dialect.SupportedRelation;
-import io.substrait.dialect.Dialect.SupportedType;
-import io.substrait.dialect.Dialect.SystemFunctionMetadata;
-import io.substrait.dialect.Dialect.SystemTypeMetadata;
-import io.substrait.dialect.Dialect.TypeKind;
-import io.substrait.dialect.Dialect.VariableEvaluationMode;
-import io.substrait.dialect.Dialect.VariableType;
-import io.substrait.dialect.Dialect.WriteType;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -37,8 +13,8 @@ import org.junit.jupiter.api.Test;
  */
 class DialectRoundTripTest {
 
-  private static DialectDocument sampleDialect() {
-    return DialectDocument.builder()
+  private static Dialect sampleDialect() {
+    return Dialect.builder()
         .name("Round Trip Dialect")
         .putDependencies("arithmetic", "extension:io.substrait:functions_arithmetic")
         .putDependencies("spark", "extension:substrait:spark")
@@ -154,14 +130,14 @@ class DialectRoundTripTest {
 
   @Test
   void roundTripThroughYamlAndSchema() {
-    DialectDocument original = sampleDialect();
+    Dialect original = sampleDialect();
 
     String yaml = Dialect.toYaml(original);
 
     List<Error> errors = SchemaValidator.validate(yaml);
     assertTrue(errors.isEmpty(), () -> "Generated dialect failed schema validation: " + errors);
 
-    DialectDocument parsed = Dialect.load(yaml);
+    Dialect parsed = Dialect.load(yaml);
     assertEquals(original, parsed);
   }
 }

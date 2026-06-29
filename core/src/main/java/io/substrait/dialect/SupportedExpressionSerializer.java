@@ -3,15 +3,13 @@ package io.substrait.dialect;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import io.substrait.dialect.Dialect.ExpressionKind;
-import io.substrait.dialect.Dialect.SupportedExpression;
 import java.io.IOException;
 
 /**
  * Serializes a {@code supported_expressions} entry as a bare enum string when it carries no
  * configuration, or as a configuration object otherwise.
  */
-public class SupportedExpressionSerializer extends JsonSerializer<SupportedExpression> {
+class SupportedExpressionSerializer extends JsonSerializer<SupportedExpression> {
 
   @Override
   public void serialize(SupportedExpression value, JsonGenerator gen, SerializerProvider provider)
@@ -35,9 +33,8 @@ public class SupportedExpressionSerializer extends JsonSerializer<SupportedExpre
     if (!value.variableTypes().isEmpty()) {
       DialectJsonSupport.writeEnumArray(gen, "variable_types", value.variableTypes());
     }
-    // The schema forbids `metadata` on EXECUTION_CONTEXT_VARIABLE, so only emit it for others.
-    if (value.metadata().isPresent()
-        && value.expression() != ExpressionKind.EXECUTION_CONTEXT_VARIABLE) {
+    // EXECUTION_CONTEXT_VARIABLE cannot carry metadata (enforced by SupportedExpression).
+    if (value.metadata().isPresent()) {
       DialectJsonSupport.writeMetadata(gen, provider, value.metadata().get());
     }
     gen.writeEndObject();

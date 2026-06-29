@@ -3,14 +3,13 @@ package io.substrait.dialect;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import io.substrait.dialect.Dialect.SupportedRelation;
 import java.io.IOException;
 
 /**
  * Serializes a {@code supported_relations} entry as a bare enum string when it carries no
  * configuration, or as a configuration object otherwise.
  */
-public class SupportedRelationSerializer extends JsonSerializer<SupportedRelation> {
+class SupportedRelationSerializer extends JsonSerializer<SupportedRelation> {
 
   @Override
   public void serialize(SupportedRelation value, JsonGenerator gen, SerializerProvider provider)
@@ -31,6 +30,7 @@ public class SupportedRelationSerializer extends JsonSerializer<SupportedRelatio
     if (!value.operations().isEmpty()) {
       DialectJsonSupport.writeEnumArray(gen, "operations", value.operations());
     }
+    // WRITE and DDL share the `write_types` field; SupportedRelation forbids populating both.
     if (!value.writeTypes().isEmpty()) {
       DialectJsonSupport.writeEnumArray(gen, "write_types", value.writeTypes());
     }

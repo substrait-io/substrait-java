@@ -4,10 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.substrait.dialect.Dialect.DialectDocument;
-import io.substrait.dialect.Dialect.JoinType;
-import io.substrait.dialect.Dialect.RelationKind;
-import io.substrait.dialect.Dialect.SupportedRelation;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -18,10 +14,8 @@ class DialectBareStringCollapseTest {
 
   @Test
   void configFreeRelationSerializesAsBareString() {
-    DialectDocument dialect =
-        DialectDocument.builder()
-            .addSupportedRelations(SupportedRelation.of(RelationKind.FILTER))
-            .build();
+    Dialect dialect =
+        Dialect.builder().addSupportedRelations(SupportedRelation.of(RelationKind.FILTER)).build();
 
     String yaml = Dialect.toYaml(dialect);
 
@@ -34,8 +28,8 @@ class DialectBareStringCollapseTest {
 
   @Test
   void configuredRelationSerializesAsObject() {
-    DialectDocument dialect =
-        DialectDocument.builder()
+    Dialect dialect =
+        Dialect.builder()
             .addSupportedRelations(
                 SupportedRelation.builder()
                     .relation(RelationKind.JOIN)
@@ -57,8 +51,7 @@ class DialectBareStringCollapseTest {
         SupportedRelation.builder().relation(RelationKind.EXTENSION_LEAF).build();
     assertFalse(extension.isBare());
 
-    String yaml =
-        Dialect.toYaml(DialectDocument.builder().addSupportedRelations(extension).build());
+    String yaml = Dialect.toYaml(Dialect.builder().addSupportedRelations(extension).build());
     assertTrue(
         yaml.contains("relation: \"EXTENSION_LEAF\"") || yaml.contains("relation: EXTENSION_LEAF"),
         yaml);

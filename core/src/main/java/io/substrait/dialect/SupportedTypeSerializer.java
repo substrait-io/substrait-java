@@ -3,14 +3,13 @@ package io.substrait.dialect;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import io.substrait.dialect.Dialect.SupportedType;
 import java.io.IOException;
 
 /**
  * Serializes a {@code supported_types} entry as a bare enum string when it carries no
  * configuration, or as a configuration object otherwise.
  */
-public class SupportedTypeSerializer extends JsonSerializer<SupportedType> {
+class SupportedTypeSerializer extends JsonSerializer<SupportedType> {
 
   @Override
   public void serialize(SupportedType value, JsonGenerator gen, SerializerProvider provider)

@@ -4,14 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.networknt.schema.Error;
-import io.substrait.dialect.Dialect.DialectDocument;
-import io.substrait.dialect.Dialect.ExpressionKind;
-import io.substrait.dialect.Dialect.RelationKind;
-import io.substrait.dialect.Dialect.SubqueryType;
-import io.substrait.dialect.Dialect.SupportedExpression;
-import io.substrait.dialect.Dialect.SupportedRelation;
-import io.substrait.dialect.Dialect.SupportedType;
-import io.substrait.dialect.Dialect.TypeKind;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +13,7 @@ import org.junit.jupiter.api.Test;
  */
 class SparkDialectParseTest {
 
-  private static final DialectDocument SPARK = Dialect.loadResource("/dialect/spark_dialect.yaml");
+  private static final Dialect SPARK = Dialect.loadResource("/dialect/spark_dialect.yaml");
 
   @Test
   void parsesTopLevelFields() {
@@ -37,7 +29,7 @@ class SparkDialectParseTest {
             .filter(r -> r.relation() == RelationKind.JOIN)
             .findFirst()
             .orElseThrow();
-    assertTrue(join.joinTypes().contains(Dialect.JoinType.INNER));
+    assertTrue(join.joinTypes().contains(JoinType.INNER));
 
     SupportedExpression subquery =
         SPARK.supportedExpressions().stream()
