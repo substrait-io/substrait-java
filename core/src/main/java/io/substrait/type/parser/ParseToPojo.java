@@ -22,35 +22,76 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+/** Converts the ANTLR parse tree of a Substrait type string into the corresponding POJO. */
 public class ParseToPojo {
 
+  /**
+   * Converts a parsed type string into a simple {@link Type}.
+   *
+   * @param urn the extension URN used to resolve user-defined types
+   * @param ctx the parse tree to convert
+   * @return the parsed type
+   */
   public static Type type(String urn, SubstraitTypeParser.StartRuleContext ctx) {
     Visitor visitor = Visitor.simple(urn);
     return (Type) ctx.accept(visitor);
   }
 
+  /**
+   * Converts a parsed type string into a {@link ParameterizedType}.
+   *
+   * @param urn the extension URN used to resolve user-defined types
+   * @param ctx the parse tree to convert
+   * @return the parsed parameterized type
+   */
   public static ParameterizedType parameterizedType(
       String urn, SubstraitTypeParser.StartRuleContext ctx) {
     return (ParameterizedType) ctx.accept(Visitor.parameterized(urn));
   }
 
+  /**
+   * Converts a parsed type string into a {@link TypeExpression}.
+   *
+   * @param urn the extension URN used to resolve user-defined types
+   * @param ctx the parse tree to convert
+   * @return the parsed type expression
+   */
   public static TypeExpression typeExpression(
       String urn, SubstraitTypeParser.StartRuleContext ctx) {
     return ctx.accept(Visitor.expression(urn));
   }
 
+  /** Parse-tree visitor that builds type POJOs at a configurable level of generality. */
   public static class Visitor implements SubstraitTypeVisitor<TypeExpression> {
     private final VisitorType expressionType;
     private final String urn;
 
+    /**
+     * Creates a visitor that only accepts concrete types.
+     *
+     * @param urn the extension URN used to resolve user-defined types
+     * @return the visitor
+     */
     public static Visitor simple(String urn) {
       return new Visitor(VisitorType.SIMPLE, urn);
     }
 
+    /**
+     * Creates a visitor that accepts parameterized types.
+     *
+     * @param urn the extension URN used to resolve user-defined types
+     * @return the visitor
+     */
     public static Visitor parameterized(String urn) {
       return new Visitor(VisitorType.PARAMETERIZED, urn);
     }
 
+    /**
+     * Creates a visitor that accepts full type expressions.
+     *
+     * @param urn the extension URN used to resolve user-defined types
+     * @return the visitor
+     */
     public static Visitor expression(String urn) {
       return new Visitor(VisitorType.EXPRESSION, urn);
     }
@@ -694,6 +735,12 @@ public class ParseToPojo {
       return i(Integer.parseInt(ctx.getText()));
     }
 
+    /**
+     * Creates an integer literal type expression.
+     *
+     * @param val the integer value
+     * @return the integer literal
+     */
     protected TypeExpression i(int val) {
       return TypeExpression.IntegerLiteral.builder().value(val).build();
     }

@@ -1,6 +1,28 @@
 Release Notes
 ---
 
+## [0.94.0](https://github.com/substrait-io/substrait-java/compare/v0.93.0...v0.94.0) (2026-06-21)
+
+### Features
+
+* **core:** support ExecutionContextVariable ([#867](https://github.com/substrait-io/substrait-java/issues/867)) ([a649e0d](https://github.com/substrait-io/substrait-java/commit/a649e0da9951b62d1462a0f86601076af6e0f6e9))
+* support new ComparisonJoinKey field in HashJoin/MergeJoin ([#845](https://github.com/substrait-io/substrait-java/issues/845)) ([9c2c750](https://github.com/substrait-io/substrait-java/commit/9c2c7507be1734243e1b43520256676769b499ec))
+
+## [0.93.0](https://github.com/substrait-io/substrait-java/compare/v0.92.0...v0.93.0) (2026-06-14)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** protobuf Aggregate.Grouping.grouping_expressions field is no longer supported
+* **extensions:** changes the visibility of the `ScalarFunctionVariant.resolve()` function from public to package-private
+
+### Features
+
+* **core:** remove AggregateRel.Grouping.grouping_expressions ([#857](https://github.com/substrait-io/substrait-java/issues/857)) ([b38ca00](https://github.com/substrait-io/substrait-java/commit/b38ca005a132f1d100a4368ac4ee7e839bf10524))
+* extend substrait builder api ([#773](https://github.com/substrait-io/substrait-java/issues/773)) ([594a168](https://github.com/substrait-io/substrait-java/commit/594a1683bfea0f4175e3a10df8d40c8379ca4aa1))
+* **extensions:** support deprecation info in extensions ([#846](https://github.com/substrait-io/substrait-java/issues/846)) ([f7768d9](https://github.com/substrait-io/substrait-java/commit/f7768d914c89f6f2bbb4ffc7dd0da9e112bad6be))
+* **extensions:** support impl-level description in extensions ([#848](https://github.com/substrait-io/substrait-java/issues/848)) ([eb453f2](https://github.com/substrait-io/substrait-java/commit/eb453f2ccbe1752de971f682738e718eaec8ff75))
+* **pojo:** support plan execution behavior ([#791](https://github.com/substrait-io/substrait-java/issues/791)) ([50acd03](https://github.com/substrait-io/substrait-java/commit/50acd03fbda11b52cae24558b407dceea89a363a))
+
 ## [0.92.0](https://github.com/substrait-io/substrait-java/compare/v0.91.0...v0.92.0) (2026-06-07)
 
 ### Features

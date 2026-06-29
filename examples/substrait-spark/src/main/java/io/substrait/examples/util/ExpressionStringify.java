@@ -369,4 +369,22 @@ public class ExpressionStringify extends ParentStringify
       throws RuntimeException {
     return "<DynamicParameter " + expr.parameterReference() + " " + expr.type() + ">";
   }
+
+  @Override
+  public String visit(Expression.CurrentTimestamp expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<CurrentTimestamp precision=" + expr.precision() + ">";
+  }
+
+  @Override
+  public String visit(Expression.CurrentTimezone expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<CurrentTimezone>";
+  }
+
+  @Override
+  public String visit(Expression.CurrentDate expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return "<CurrentDate>";
+  }
 }

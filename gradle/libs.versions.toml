@@ -3,7 +3,7 @@ antlr = "4.13.2"
 calcite = "1.42.0"
 classgraph = "4.8.184"
 graal = "25.0.2"
-graal-plugin = "1.1.1"
+graal-plugin = "1.1.2"
 gradle-extensions = "3.0.2"
 guava = "33.6.0-jre"
 immutables = "2.12.2"
@@ -11,8 +11,9 @@ jackson = "2.22.0"
 json-smart = "[2.5.2,)"
 jspecify = "1.0.0"
 junit = "6.1.0"
-nmcp = "1.5.0"
+nmcp = "1.6.0"
 picocli = "4.7.7"
+postgresql = "42.7.11"
 protobuf-plugin = "0.10.0"
 protobuf = "3.25.9"
 scala-2-12 = "2.12.20"
@@ -26,8 +27,9 @@ slf4j = "2.0.18"
 spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
-spotless = "8.6.0"
-validator = "3.0.3"
+spotless = "8.7.0"
+testcontainers = "2.0.5"
+validator = "3.0.5"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
@@ -57,6 +59,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 junit-platform-engine = { module = "org.junit.platform:junit-platform-engine" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
+postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
@@ -80,9 +83,13 @@ spark-catalyst-4-0-2-13 = { module = "org.apache.spark:spark-catalyst_2.13", ver
 spark-core-4-0-2-13 = { module = "org.apache.spark:spark-core_2.13", version.ref = "spark-4-0" }
 spark-hive-4-0-2-13 = { module = "org.apache.spark:spark-hive_2.13", version.ref = "spark-4-0" }
 spark-sql-4-0-2-13 = { module = "org.apache.spark:spark-sql_2.13", version.ref = "spark-4-0" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-junit5 = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgres = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 
 [bundles]
 jackson = [ "jackson-databind", "jackson-annotations", "jackson-datatype-jdk8", "jackson-dataformat-yaml" ]
+testcontainers = [ "testcontainers", "testcontainers-junit5", "testcontainers-postgres" ]
 
 [plugins]
 graal = { id = "org.graalvm.buildtools.native", version.ref = "graal-plugin" }

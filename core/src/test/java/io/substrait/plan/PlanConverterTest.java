@@ -1,7 +1,10 @@
 package io.substrait.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -19,15 +22,28 @@ import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class PlanConverterTest {
+  private final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
+  private final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
+
+  private static Plan.ExecutionBehavior defaultExecutionBehavior() {
+    return ImmutableExecutionBehavior.builder()
+        .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
+        .build();
+  }
+
   @Test
   void emptyAdvancedExtensionTest() {
-    final Plan plan = Plan.builder().advancedExtension(AdvancedExtension.builder().build()).build();
-    final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
+    final Plan plan =
+        Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
+            .advancedExtension(AdvancedExtension.builder().build())
+            .build();
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
     final Plan plan2 = fromProtoConverter.from(protoPlan);
 
     assertEquals(plan, plan2);
@@ -39,9 +55,9 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
             .build();
-    final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
 
     assertThrows(
         UnsupportedOperationException.class,
@@ -55,13 +71,13 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
             .build();
     final PlanProtoConverter toProtoConverter =
         new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
     assertThrows(
         UnsupportedOperationException.class,
         () -> fromProtoConverter.from(protoPlan),
@@ -74,6 +90,7 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().enhancement(enhanced).build())
             .build();
     final PlanProtoConverter toProtoConverter =
@@ -93,9 +110,9 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
             .build();
-    final PlanProtoConverter toProtoConverter = new PlanProtoConverter();
 
     assertThrows(
         UnsupportedOperationException.class,
@@ -109,13 +126,13 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
             .build();
     final PlanProtoConverter toProtoConverter =
         new PlanProtoConverter(new StringHolderHandlingExtensionProtoConverter());
     final io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
-    final ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter();
     assertThrows(
         UnsupportedOperationException.class,
         () -> fromProtoConverter.from(protoPlan),
@@ -128,6 +145,7 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(AdvancedExtension.builder().addOptimizations(optimized).build())
             .build();
     final PlanProtoConverter toProtoConverter =
@@ -148,6 +166,7 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .advancedExtension(
                 AdvancedExtension.builder()
                     .enhancement(enhanced)
@@ -172,6 +191,7 @@ class PlanConverterTest {
 
     final Plan plan =
         Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
             .addRoots(
                 Root.builder()
                     .input(
@@ -304,9 +324,12 @@ class PlanConverterTest {
                     false, nullablePointLiteral, pointLiteral, vectorOfPointLiteral))
             .build();
 
-    Plan plan = Plan.builder().addRoots(Root.builder().input(virtualTable).build()).build();
+    Plan plan =
+        Plan.builder()
+            .executionBehavior(defaultExecutionBehavior())
+            .addRoots(Root.builder().input(virtualTable).build())
+            .build();
 
-    PlanProtoConverter toProtoConverter = new PlanProtoConverter();
     io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(plan);
 
     assertEquals(1, protoPlan.getExtensionUrnsCount(), "Should have exactly 1 extension URN");
@@ -318,5 +341,103 @@ class PlanConverterTest {
     ProtoPlanConverter fromProtoConverter = new ProtoPlanConverter(extensions);
     Plan roundTrippedPlan = fromProtoConverter.from(protoPlan);
     assertEquals(plan, roundTrippedPlan, "Plan should roundtrip correctly");
+  }
+
+  /**
+   * Conversion from protobuf Plan without ExecutionBehavior.
+   *
+   * <p>Verifies that a protobuf Plan without ExecutionBehavior results in a POJO Plan with a
+   * default ExecutionBehavior of PER_PLAN, supporting older plans that predate the field.
+   */
+  @Test
+  void testFromProtoWithoutExecutionBehaviorUsesDefault() {
+    // Create a protobuf Plan without ExecutionBehavior
+    io.substrait.proto.Plan protoPlan = io.substrait.proto.Plan.newBuilder().build();
+    assertFalse(
+        protoPlan.hasExecutionBehavior(), "Protobuf Plan should not have execution behavior field");
+
+    // Convert to POJO - should succeed with a default ExecutionBehavior
+    Plan plan = fromProtoConverter.from(protoPlan);
+
+    assertNotNull(plan.getExecutionBehavior(), "Plan should have a default ExecutionBehavior");
+    assertEquals(
+        Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN,
+        plan.getExecutionBehavior().getVariableEvaluationMode(),
+        "Default variable evaluation mode should be PER_PLAN");
+  }
+
+  /**
+   * Conversion from protobuf Plan with UNSPECIFIED mode fails validation.
+   *
+   * <p>Verifies that a protobuf Plan with VARIABLE_EVALUATION_MODE_UNSPECIFIED results in a
+   * validation failure when converted to POJO.
+   */
+  @Test
+  void testFromProtoWithUnspecifiedModeFailsValidation() {
+    // Create a protobuf Plan with UNSPECIFIED mode
+    io.substrait.proto.Plan protoPlan =
+        io.substrait.proto.Plan.newBuilder()
+            .setExecutionBehavior(
+                io.substrait.proto.ExecutionBehavior.newBuilder()
+                    .setVariableEvalMode(
+                        io.substrait.proto.ExecutionBehavior.VariableEvaluationMode
+                            .VARIABLE_EVALUATION_MODE_UNSPECIFIED)
+                    .build())
+            .build();
+
+    // Attempt to convert to POJO - should fail validation
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> fromProtoConverter.from(protoPlan),
+            "Conversion should fail when VariableEvaluationMode is UNSPECIFIED");
+
+    assertTrue(
+        exception.getMessage().contains("VariableEvaluationMode"),
+        "Error message should mention VariableEvaluationMode");
+  }
+
+  /**
+   * Round-trip conversion preserves the execution behavior.
+   *
+   * <p>Verifies that converting a Plan to protobuf and back preserves all data, including the
+   * execution behavior, for every valid {@link Plan.ExecutionBehavior.VariableEvaluationMode}.
+   */
+  @ParameterizedTest
+  @EnumSource(
+      value = Plan.ExecutionBehavior.VariableEvaluationMode.class,
+      names = {"PER_PLAN", "PER_RECORD"})
+  void testRoundTripWithExecutionBehavior(Plan.ExecutionBehavior.VariableEvaluationMode mode) {
+    // Create original Plan
+    Plan.ExecutionBehavior executionBehavior =
+        ImmutableExecutionBehavior.builder().variableEvaluationMode(mode).build();
+
+    Plan originalPlan =
+        ImmutablePlan.builder()
+            .executionBehavior(executionBehavior)
+            .roots(Collections.emptyList())
+            .expectedTypeUrls(Collections.emptyList())
+            .build();
+
+    // Convert to protobuf and back
+    io.substrait.proto.Plan protoPlan = toProtoConverter.toProto(originalPlan);
+    Plan roundTrippedPlan = fromProtoConverter.from(protoPlan);
+
+    // Verify data integrity
+    assertNotNull(
+        roundTrippedPlan.getExecutionBehavior(),
+        "Round-tripped Plan should have ExecutionBehavior");
+    assertEquals(
+        mode,
+        roundTrippedPlan.getExecutionBehavior().getVariableEvaluationMode(),
+        "Variable evaluation mode should be preserved");
+    assertEquals(
+        originalPlan.getRoots().size(),
+        roundTrippedPlan.getRoots().size(),
+        "Number of roots should be preserved");
+    assertEquals(
+        originalPlan.getExpectedTypeUrls().size(),
+        roundTrippedPlan.getExpectedTypeUrls().size(),
+        "Number of expected type URLs should be preserved");
   }
 }

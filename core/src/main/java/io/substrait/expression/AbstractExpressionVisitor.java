@@ -616,4 +616,43 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   public O visit(Expression.DynamicParameter expr, C context) throws E {
     return visitFallback(expr, context);
   }
+
+  /**
+   * Visits a current timestamp execution context variable expression.
+   *
+   * @param expr the current timestamp expression
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.CurrentTimestamp expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  /**
+   * Visits a current timezone execution context variable expression.
+   *
+   * @param expr the current timezone expression
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.CurrentTimezone expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  /**
+   * Visits a current date execution context variable expression.
+   *
+   * @param expr the current date expression
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.CurrentDate expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
 }

@@ -6,9 +6,15 @@ import io.substrait.util.VisitationContext;
 import java.util.List;
 import org.immutables.value.Value;
 
+/** A relation that orders its input rows according to a list of sort fields. */
 @Value.Immutable
 public abstract class Sort extends SingleInputRel implements HasExtension {
 
+  /**
+   * Returns the sort fields defining the ordering, applied in order of precedence.
+   *
+   * @return the sort fields
+   */
   public abstract List<Expression.SortField> getSortFields();
 
   @Override
@@ -22,6 +28,11 @@ public abstract class Sort extends SingleInputRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link Sort}.
+   *
+   * @return a new builder
+   */
   public static ImmutableSort.Builder builder() {
     return ImmutableSort.builder();
   }

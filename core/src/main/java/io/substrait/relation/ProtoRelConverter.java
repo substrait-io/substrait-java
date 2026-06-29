@@ -43,6 +43,7 @@ import io.substrait.relation.files.FileFormat;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.ImmutableBroadcastExchange;
 import io.substrait.relation.physical.ImmutableExchangeTarget;
@@ -64,14 +65,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
 public class ProtoRelConverter {
 
+  /** Resolves function and type references to their declarations. */
   @NonNull protected final ExtensionLookup lookup;
+
+  /** The extension collection providing function and type definitions. */
   @NonNull protected final ExtensionCollection extensions;
+
+  /** Converts proto types to their POJO representation. */
   @NonNull protected final ProtoTypeConverter protoTypeConverter;
+
+  /** Converts advanced extension information from proto. */
   @NonNull protected final ProtoExtensionConverter protoExtensionConverter;
 
   /**
@@ -133,10 +142,22 @@ public class ProtoRelConverter {
     this.protoExtensionConverter = protoExtensionConverter;
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   public Plan.Root from(io.substrait.proto.RelRoot rel) {
     return Plan.Root.builder().input(from(rel.getInput())).addAllNames(rel.getNamesList()).build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   public Rel from(io.substrait.proto.Rel rel) {
     io.substrait.proto.Rel.RelTypeCase relType = rel.getRelTypeCase();
     switch (relType) {
@@ -187,6 +208,12 @@ public class ProtoRelConverter {
     }
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newRead(ReadRel rel) {
     if (rel.hasVirtualTable()) {
       return newVirtualTable(rel);
@@ -201,6 +228,12 @@ public class ProtoRelConverter {
         "ReadRel must have one of: NamedTable, LocalFiles, ExtensionTable, or VirtualTable");
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newWrite(final WriteRel rel) {
     final WriteRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
@@ -213,6 +246,12 @@ public class ProtoRelConverter {
     }
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected NamedWrite newNamedWrite(final WriteRel rel) {
     final Rel input = from(rel.getInput());
     final ImmutableNamedWrite.Builder builder =
@@ -235,6 +274,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newExtensionWrite(final WriteRel rel) {
     final Rel input = from(rel.getInput());
     final Extension.WriteExtensionObject detail =
@@ -259,6 +304,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newDdl(final DdlRel rel) {
     final DdlRel.WriteTypeCase relType = rel.getWriteTypeCase();
     switch (relType) {
@@ -271,6 +322,12 @@ public class ProtoRelConverter {
     }
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected NamedDdl newNamedDdl(final DdlRel rel) {
     final NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     final ImmutableNamedDdl.Builder builder =
@@ -292,6 +349,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ExtensionDdl newExtensionDdl(final DdlRel rel) {
     final Extension.DdlExtensionObject detail =
         detailFromDdlExtensionObject(rel.getExtensionObject().getDetail());
@@ -315,10 +378,23 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Optional<Rel> optionalViewDefinition(DdlRel rel) {
     return Optional.ofNullable(rel.hasViewDefinition() ? from(rel.getViewDefinition()) : null);
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param struct the protobuf value to convert
+   * @param tableSchema the protobuf value to convert
+   * @return the converted result
+   */
   protected Expression.StructLiteral tableDefaults(
       io.substrait.proto.Expression.Literal.Struct struct, NamedStruct tableSchema) {
     ProtoExpressionConverter converter =
@@ -331,6 +407,12 @@ public class ProtoRelConverter {
         .build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newUpdate(UpdateRel rel) {
     UpdateRel.UpdateTypeCase relType = rel.getUpdateTypeCase();
     switch (relType) {
@@ -341,6 +423,12 @@ public class ProtoRelConverter {
     }
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newNamedUpdate(UpdateRel rel) {
     NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     ProtoExpressionConverter converter =
@@ -366,6 +454,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Filter newFilter(FilterRel rel) {
     Rel input = from(rel.getInput());
     ImmutableFilter.Builder builder =
@@ -384,10 +478,22 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected NamedStruct newNamedStruct(ReadRel rel) {
     return newNamedStruct(rel.getBaseSchema());
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param namedStruct the protobuf value to convert
+   * @return the converted result
+   */
   protected NamedStruct newNamedStruct(io.substrait.proto.NamedStruct namedStruct) {
     io.substrait.proto.Type.Struct struct = namedStruct.getStruct();
     return NamedStruct.builder()
@@ -403,6 +509,12 @@ public class ProtoRelConverter {
         .build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ExtensionLeaf newExtensionLeaf(ExtensionLeafRel rel) {
     Extension.LeafRelDetail detail = detailFromExtensionLeafRel(rel.getDetail());
     ImmutableExtensionLeaf.Builder builder =
@@ -413,6 +525,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ExtensionSingle newExtensionSingle(ExtensionSingleRel rel) {
     Extension.SingleRelDetail detail = detailFromExtensionSingleRel(rel.getDetail());
     Rel input = from(rel.getInput());
@@ -424,6 +542,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ExtensionMulti newExtensionMulti(ExtensionMultiRel rel) {
     Extension.MultiRelDetail detail = detailFromExtensionMultiRel(rel.getDetail());
     List<Rel> inputs = rel.getInputsList().stream().map(this::from).collect(Collectors.toList());
@@ -438,6 +562,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected NamedScan newNamedScan(ReadRel rel) {
     NamedStruct namedStruct = newNamedStruct(rel);
     ImmutableNamedScan.Builder builder =
@@ -470,6 +600,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ExtensionTable newExtensionTable(final ReadRel rel) {
     final NamedStruct namedStruct = newNamedStruct(rel);
     final Extension.ExtensionTableDetail detail =
@@ -488,6 +624,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected LocalFiles newLocalFiles(ReadRel rel) {
     NamedStruct namedStruct = newNamedStruct(rel);
 
@@ -524,6 +666,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param file the protobuf value to convert
+   * @return the converted result
+   */
   protected FileOrFiles newFileOrFiles(ReadRel.LocalFiles.FileOrFiles file) {
     io.substrait.relation.files.ImmutableFileOrFiles.Builder builder =
         FileOrFiles.builder()
@@ -588,6 +736,12 @@ public class ProtoRelConverter {
     return nestedStructs;
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
     // If both values and expressions are set, raise an error
@@ -632,6 +786,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Fetch newFetch(FetchRel rel) {
     Rel input = from(rel.getInput());
     ImmutableFetch.Builder builder = Fetch.builder().input(input).offset(rel.getOffset());
@@ -651,6 +811,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Project newProject(ProjectRel rel) {
     Rel input = from(rel.getInput());
     ProtoExpressionConverter converter =
@@ -673,6 +839,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Expand newExpand(ExpandRel rel) {
     Rel input = from(rel.getInput());
     ProtoExpressionConverter converter =
@@ -710,6 +882,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Aggregate newAggregate(AggregateRel rel) {
     Rel input = from(rel.getInput());
     ProtoExpressionConverter protoExprConverter =
@@ -719,33 +897,20 @@ public class ProtoRelConverter {
 
     List<Aggregate.Grouping> groupings = new ArrayList<>(rel.getGroupingsCount());
 
-    // Groupings are set using the AggregateRel grouping_expression mechanism
-    if (!rel.getGroupingExpressionsList().isEmpty()) {
-      List<Expression> allGroupingExpressions =
-          rel.getGroupingExpressionsList().stream()
-              .map(protoExprConverter::from)
-              .collect(java.util.stream.Collectors.toList());
+    // Convert grouping expressions from the aggregate-level grouping_expressions list
+    // Each grouping references expressions by index into this list
+    List<Expression> allGroupingExpressions =
+        rel.getGroupingExpressionsList().stream()
+            .map(protoExprConverter::from)
+            .collect(java.util.stream.Collectors.toList());
 
-      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-        List<Integer> references = grouping.getExpressionReferencesList();
-        List<Expression> groupExpressions = new ArrayList<>();
-        for (int ref : references) {
-          groupExpressions.add(allGroupingExpressions.get(ref));
-        }
-        groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
+    for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
+      List<Integer> references = grouping.getExpressionReferencesList();
+      List<Expression> groupExpressions = new ArrayList<>();
+      for (int ref : references) {
+        groupExpressions.add(allGroupingExpressions.get(ref));
       }
-
-    } else {
-      // Groupings are set using the deprecated Grouping grouping_expressions mechanism
-      for (AggregateRel.Grouping grouping : rel.getGroupingsList()) {
-        groupings.add(
-            Aggregate.Grouping.builder()
-                .expressions(
-                    grouping.getGroupingExpressionsList().stream()
-                        .map(protoExprConverter::from)
-                        .collect(java.util.stream.Collectors.toList()))
-                .build());
-      }
+      groupings.add(Aggregate.Grouping.builder().addAllExpressions(groupExpressions).build());
     }
 
     List<Aggregate.Measure> measures = new ArrayList<>(rel.getMeasuresCount());
@@ -771,6 +936,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Sort newSort(SortRel rel) {
     Rel input = from(rel.getInput());
     ProtoExpressionConverter converter =
@@ -798,6 +969,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Join newJoin(JoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
@@ -826,6 +1003,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newCross(CrossRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
@@ -840,6 +1023,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Set newSet(SetRel rel) {
     List<Rel> inputs =
         rel.getInputsList().stream()
@@ -858,11 +1047,15 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newHashJoin(HashJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
-    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
@@ -877,8 +1070,13 @@ public class ProtoRelConverter {
         HashJoin.builder()
             .left(left)
             .right(right)
-            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
-            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .keys(
+                comparisonJoinKeys(
+                    rel.getKeysList(),
+                    rel.getLeftKeysList(),
+                    rel.getRightKeysList(),
+                    leftConverter,
+                    rightConverter))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -893,11 +1091,15 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Rel newMergeJoin(MergeJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
-    List<io.substrait.proto.Expression.FieldReference> leftKeys = rel.getLeftKeysList();
-    List<io.substrait.proto.Expression.FieldReference> rightKeys = rel.getRightKeysList();
 
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
@@ -912,8 +1114,13 @@ public class ProtoRelConverter {
         MergeJoin.builder()
             .left(left)
             .right(right)
-            .leftKeys(leftKeys.stream().map(leftConverter::from).collect(Collectors.toList()))
-            .rightKeys(rightKeys.stream().map(rightConverter::from).collect(Collectors.toList()))
+            .keys(
+                comparisonJoinKeys(
+                    rel.getKeysList(),
+                    rel.getLeftKeysList(),
+                    rel.getRightKeysList(),
+                    leftConverter,
+                    rightConverter))
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -929,6 +1136,69 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Builds the {@link ComparisonJoinKey} list for a hash/merge join, preferring the {@code keys}
+   * field. The deprecated {@code left_keys}/{@code right_keys} fields are only consulted when
+   * {@code keys} is empty, in which case they are paired up with a {@link
+   * ComparisonJoinKey.SimpleComparisonType#EQ} comparison.
+   */
+  private List<ComparisonJoinKey> comparisonJoinKeys(
+      List<io.substrait.proto.ComparisonJoinKey> keys,
+      List<io.substrait.proto.Expression.FieldReference> leftKeys,
+      List<io.substrait.proto.Expression.FieldReference> rightKeys,
+      ProtoExpressionConverter leftConverter,
+      ProtoExpressionConverter rightConverter) {
+    if (!keys.isEmpty()) {
+      return keys.stream()
+          .map(key -> comparisonJoinKey(key, leftConverter, rightConverter))
+          .collect(Collectors.toList());
+    }
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    }
+    return IntStream.range(0, leftKeys.size())
+        .mapToObj(
+            i ->
+                ComparisonJoinKey.of(
+                    leftConverter.from(leftKeys.get(i)),
+                    rightConverter.from(rightKeys.get(i)),
+                    ComparisonJoinKey.SimpleComparisonType.EQ))
+        .collect(Collectors.toList());
+  }
+
+  private ComparisonJoinKey comparisonJoinKey(
+      io.substrait.proto.ComparisonJoinKey key,
+      ProtoExpressionConverter leftConverter,
+      ProtoExpressionConverter rightConverter) {
+    io.substrait.proto.ComparisonJoinKey.ComparisonType comparison = key.getComparison();
+    final ComparisonJoinKey.ComparisonType comparisonType;
+    switch (comparison.getInnerTypeCase()) {
+      case SIMPLE:
+        comparisonType =
+            ComparisonJoinKey.SimpleComparison.of(
+                ComparisonJoinKey.SimpleComparisonType.fromProto(comparison.getSimple()));
+        break;
+      case CUSTOM_FUNCTION_REFERENCE:
+        comparisonType =
+            ComparisonJoinKey.CustomComparison.of(comparison.getCustomFunctionReference());
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "Unsupported comparison type: " + comparison.getInnerTypeCase());
+    }
+    return ComparisonJoinKey.builder()
+        .left(leftConverter.from(key.getLeft()))
+        .right(rightConverter.from(key.getRight()))
+        .comparison(comparisonType)
+        .build();
+  }
+
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected NestedLoopJoin newNestedLoopJoin(NestedLoopJoinRel rel) {
     Rel left = from(rel.getLeft());
     Rel right = from(rel.getRight());
@@ -958,6 +1228,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ConsistentPartitionWindow newConsistentPartitionWindow(
       ConsistentPartitionWindowRel rel) {
 
@@ -995,6 +1271,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected AbstractExchangeRel newExchange(ExchangeRel rel) {
     ExchangeRel.ExchangeKindCase exchangeKind = rel.getExchangeKindCase();
     switch (exchangeKind) {
@@ -1013,6 +1295,12 @@ public class ProtoRelConverter {
     }
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected ScatterExchange newScatterExchange(ExchangeRel rel) {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
@@ -1042,6 +1330,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected SingleBucketExchange newSingleBucketExchange(ExchangeRel rel) {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
@@ -1066,6 +1360,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected MultiBucketExchange newMultiBucketExchange(ExchangeRel rel) {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
@@ -1091,6 +1391,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected RoundRobinExchange newRoundRobinExchange(ExchangeRel rel) {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
@@ -1113,6 +1419,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected BroadcastExchange newBroadcastExchange(ExchangeRel rel) {
     Rel input = from(rel.getInput());
     List<AbstractExchangeRel.ExchangeTarget> targets =
@@ -1134,6 +1446,12 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param target the protobuf value to convert
+   * @return the converted result
+   */
   protected AbstractExchangeRel.ExchangeTarget newExchangeTarget(
       ExchangeRel.ExchangeTarget target) {
     ImmutableExchangeTarget.Builder builder = AbstractExchangeRel.ExchangeTarget.builder();
@@ -1152,11 +1470,23 @@ public class ProtoRelConverter {
     return builder.build();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param relCommon the protobuf value to convert
+   * @return the converted result
+   */
   protected static Optional<Rel.Remap> optionalRelmap(io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
         relCommon.hasEmit() ? Rel.Remap.of(relCommon.getEmit().getOutputMappingList()) : null);
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param relCommon the protobuf value to convert
+   * @return the converted result
+   */
   protected Optional<Hint> optionalHint(io.substrait.proto.RelCommon relCommon) {
     if (!relCommon.hasHint()) return Optional.empty();
     io.substrait.proto.RelCommon.Hint hint = relCommon.getHint();
@@ -1208,6 +1538,12 @@ public class ProtoRelConverter {
     return Optional.of(builder.build());
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param relCommon the protobuf value to convert
+   * @return the converted result
+   */
   protected Optional<AdvancedExtension> optionalAdvancedExtension(
       io.substrait.proto.RelCommon relCommon) {
     return Optional.ofNullable(
@@ -1216,22 +1552,46 @@ public class ProtoRelConverter {
             : null);
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
   protected Optional<MaskExpression> optionalMaskExpression(ReadRel rel) {
     return Optional.ofNullable(
         rel.hasProjection() ? ProtoMaskExpressionConverter.fromProto(rel.getProjection()) : null);
   }
 
   /** Override to provide a custom converter for {@link ExtensionLeafRel#getDetail()} data */
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.LeafRelDetail detailFromExtensionLeafRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
   /** Override to provide a custom converter for {@link ExtensionSingleRel#getDetail()} data */
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.SingleRelDetail detailFromExtensionSingleRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
   /** Override to provide a custom converter for {@link ExtensionMultiRel#getDetail()} data */
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.MultiRelDetail detailFromExtensionMultiRel(com.google.protobuf.Any any) {
     return emptyDetail();
   }
@@ -1240,15 +1600,33 @@ public class ProtoRelConverter {
    * Override to provide a custom converter for {@link
    * io.substrait.proto.ReadRel.ExtensionTable#getDetail()} data
    */
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.ExtensionTableDetail detailFromExtensionTable(com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.WriteExtensionObject detailFromWriteExtensionObject(
       com.google.protobuf.Any any) {
     return emptyDetail();
   }
 
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param any the protobuf value to convert
+   * @return the converted result
+   */
   protected Extension.DdlExtensionObject detailFromDdlExtensionObject(com.google.protobuf.Any any) {
     return emptyDetail();
   }

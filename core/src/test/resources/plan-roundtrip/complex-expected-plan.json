@@ -148,6 +148,9 @@
     }
   ],
   "version": {
-    "minorNumber": 75
+    "minorNumber": 87
+  },
+  "executionBehavior": {
+    "variableEvalMode": "VARIABLE_EVALUATION_MODE_PER_PLAN"
   }
 }

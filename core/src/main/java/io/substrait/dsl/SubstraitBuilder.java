@@ -17,7 +17,9 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
+import io.substrait.plan.ImmutableExecutionBehavior;
 import io.substrait.plan.Plan;
+import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Aggregate.Measure;
@@ -34,6 +36,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -459,10 +462,7 @@ public class SubstraitBuilder {
     return HashJoin.builder()
         .left(left)
         .right(right)
-        .leftKeys(
-            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
-        .rightKeys(
-            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .keys(this.comparisonJoinKeys(left, right, leftKeys, rightKeys))
         .joinType(joinType)
         .remap(remap)
         .build();
@@ -509,13 +509,36 @@ public class SubstraitBuilder {
     return MergeJoin.builder()
         .left(left)
         .right(right)
-        .leftKeys(
-            this.fieldReferences(left, leftKeys.stream().mapToInt(Integer::intValue).toArray()))
-        .rightKeys(
-            this.fieldReferences(right, rightKeys.stream().mapToInt(Integer::intValue).toArray()))
+        .keys(this.comparisonJoinKeys(left, right, leftKeys, rightKeys))
         .joinType(joinType)
         .remap(remap)
         .build();
+  }
+
+  /**
+   * Builds a list of {@link ComparisonJoinKey}s pairing the given left/right field indexes with an
+   * {@link ComparisonJoinKey.SimpleComparisonType#EQ} comparison.
+   *
+   * @param left the left input relation
+   * @param right the right input relation
+   * @param leftKeys field indexes from the left relation
+   * @param rightKeys field indexes from the right relation
+   * @return the list of equality join keys
+   */
+  public List<ComparisonJoinKey> comparisonJoinKeys(
+      Rel left, Rel right, List<Integer> leftKeys, List<Integer> rightKeys) {
+    if (leftKeys.size() != rightKeys.size()) {
+      throw new IllegalArgumentException("Number of left and right keys must be equal.");
+    }
+    List<ComparisonJoinKey> keys = new java.util.ArrayList<>(leftKeys.size());
+    for (int i = 0; i < leftKeys.size(); i++) {
+      keys.add(
+          ComparisonJoinKey.of(
+              this.fieldReference(left, leftKeys.get(i)),
+              this.fieldReference(right, rightKeys.get(i)),
+              ComparisonJoinKey.SimpleComparisonType.EQ));
+    }
+    return keys;
   }
 
   /**
@@ -940,6 +963,34 @@ public class SubstraitBuilder {
    */
   public Expression.StrLiteral str(String s) {
     return Expression.StrLiteral.builder().value(s).build();
+  }
+
+  /**
+   * Creates a {@code CURRENT_TIMESTAMP} execution context variable expression.
+   *
+   * @param precision the fractional-second precision of the timestamp
+   * @return a new {@link Expression.CurrentTimestamp}
+   */
+  public Expression.CurrentTimestamp currentTimestamp(int precision) {
+    return Expression.CurrentTimestamp.builder().precision(precision).build();
+  }
+
+  /**
+   * Creates a {@code CURRENT_TIMEZONE} execution context variable expression.
+   *
+   * @return a new {@link Expression.CurrentTimezone}
+   */
+  public Expression.CurrentTimezone currentTimezone() {
+    return Expression.CurrentTimezone.builder().build();
+  }
+
+  /**
+   * Creates a {@code CURRENT_DATE} execution context variable expression.
+   *
+   * @return a new {@link Expression.CurrentDate}
+   */
+  public Expression.CurrentDate currentDate() {
+    return Expression.CurrentDate.builder().build();
   }
 
   /**
@@ -1664,13 +1715,54 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a plan from a plan root.
+   * Creates a plan from a plan root with default execution behavior.
+   *
+   * <p>The plan is created with {@link VariableEvaluationMode#PER_PLAN} as the default variable
+   * evaluation mode. To specify a custom execution behavior, use {@link
+   * #plan(Plan.ExecutionBehavior, Plan.Root)} instead.
    *
    * @param root the plan root
    * @return a new {@link Plan}
    */
   public Plan plan(Plan.Root root) {
-    return Plan.builder().addRoots(root).build();
+    return plan(
+        ImmutableExecutionBehavior.builder()
+            .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
+            .build(),
+        root);
+  }
+
+  /**
+   * Creates a plan from a plan root with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param root the plan root
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Plan.Root root) {
+    return Plan.builder().executionBehavior(executionBehavior).addRoots(root).build();
+  }
+
+  /**
+   * Creates a plan from multiple plan roots with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param roots the plan roots
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Plan.Root... roots) {
+    return Plan.builder().executionBehavior(executionBehavior).roots(Arrays.asList(roots)).build();
+  }
+
+  /**
+   * Creates a plan from multiple plan roots with custom execution behavior.
+   *
+   * @param executionBehavior the execution behavior for the plan
+   * @param roots the plan roots as an iterable
+   * @return a new {@link Plan}
+   */
+  public Plan plan(Plan.ExecutionBehavior executionBehavior, Iterable<Plan.Root> roots) {
+    return Plan.builder().executionBehavior(executionBehavior).roots(roots).build();
   }
 
   /**

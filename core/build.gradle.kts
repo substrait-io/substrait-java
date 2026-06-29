@@ -379,15 +379,23 @@ tasks.named<Javadoc>("javadoc") {
   dependsOn("javadocProto")
   description = "Generate Javadoc for main sources (excludes protobuf-generated sources)."
 
-  // Exclude the protobuf-generated directory from the main pass
-  val protoDirFile = protoJavaDir.get().asFile
-  exclude { spec -> spec.file.toPath().startsWith(protoDirFile.toPath()) }
+  // Exclude the protobuf-, ANTLR- and version-generated directories from the main pass.
+  // These sources are regenerated on every build and cannot carry hand-written Javadoc.
+  val generatedDirs =
+    listOf(
+        protoJavaDir,
+        layout.buildDirectory.dir("generated/sources/antlr/main/java"),
+        layout.buildDirectory.dir("generated/sources/version"),
+      )
+      .map { it.get().asFile.toPath() }
+  exclude { spec -> generatedDirs.any { spec.file.toPath().startsWith(it) } }
   source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
-  // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
+  // Fail the build if Javadoc linting finds any issues in the hand-written sources.
   options {
     require(this is StandardJavadocDocletOptions)
     addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")

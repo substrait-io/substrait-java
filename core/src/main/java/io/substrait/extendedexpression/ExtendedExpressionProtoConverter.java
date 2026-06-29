@@ -14,6 +14,13 @@ import io.substrait.util.EmptyVisitationContext;
  */
 public class ExtendedExpressionProtoConverter {
 
+  /**
+   * Converts an {@link io.substrait.extendedexpression.ExtendedExpression} into its protobuf
+   * representation.
+   *
+   * @param extendedExpression the extended expression to convert
+   * @return the protobuf {@link ExtendedExpression} representation
+   */
   public ExtendedExpression toProto(
       io.substrait.extendedexpression.ExtendedExpression extendedExpression) {
 
