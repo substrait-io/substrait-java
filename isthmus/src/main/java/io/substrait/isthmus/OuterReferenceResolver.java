@@ -80,8 +80,7 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
               @Override
               public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
                 if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
-                  CorrelationId id =
-                      ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
+                  CorrelationId id = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
                   nestedDepth.putIfAbsent(id, 0);
                 }
                 return fieldAccess;

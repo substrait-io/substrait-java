@@ -159,8 +159,8 @@ class OuterReferenceResolverTest extends PlanTestBase {
    * found {@code !nestedDepth.containsKey(id)} and silently skipped the access, producing an empty
    * {@code fieldAccessDepthMap} instead of the expected entry.
    *
-   * <p>The fix pre-scans the Filter condition for {@link RexCorrelVariable} references and registers
-   * their IDs before delegating to the rex visitor.
+   * <p>The fix pre-scans the Filter condition for {@link RexCorrelVariable} references and
+   * registers their IDs before delegating to the rex visitor.
    */
   @Test
   void filterWithCorrelVariableButEmptyVariablesSet() throws SqlParseException {
@@ -185,8 +185,7 @@ class OuterReferenceResolverTest extends PlanTestBase {
     tpcDsRelBuilder.scan("tpcds", "ITEM");
     RexNode correlCondition =
         tpcDsRelBuilder.equals(
-            tpcDsRelBuilder.field("I_ITEM_SK"),
-            tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK"));
+            tpcDsRelBuilder.field("I_ITEM_SK"), tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK"));
 
     final RelNode calciteRel =
         tpcDsRelBuilder
