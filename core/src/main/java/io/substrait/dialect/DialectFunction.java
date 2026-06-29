@@ -13,26 +13,63 @@ import org.immutables.value.Value;
 @JsonSerialize(as = ImmutableDialectFunction.class)
 @Value.Immutable
 public abstract class DialectFunction {
-  /** Dependency (alias) in which the function is declared. */
+  /**
+   * Dependency (alias) in which the function is declared.
+   *
+   * @return the dependency alias
+   */
   public abstract String source();
 
-  /** The name of the function as declared in the extension it is defined in. */
+  /**
+   * The name of the function as declared in the extension it is defined in.
+   *
+   * @return the function name
+   */
   public abstract String name();
 
+  /**
+   * Free-form metadata associated with the function, if any.
+   *
+   * @return the optional metadata
+   */
   public abstract Optional<Map<String, Object>> metadata();
 
+  /**
+   * System-specific metadata for the function, if any.
+   *
+   * @return the optional system metadata
+   */
   @JsonProperty("system_metadata")
   public abstract Optional<SystemFunctionMetadata> systemMetadata();
 
+  /**
+   * The options required when invoking the function, if any.
+   *
+   * @return the optional required options
+   */
   @JsonProperty("required_options")
   public abstract Optional<Map<String, Object>> requiredOptions();
 
-  /** One or more implementations supported by this function, identified by argument signatures. */
+  /**
+   * One or more implementations supported by this function, identified by argument signatures.
+   *
+   * @return the supported implementation signatures
+   */
   @JsonProperty("supported_impls")
   public abstract List<String> supportedImpls();
 
+  /**
+   * The variadic argument bounds of the function, if any.
+   *
+   * @return the optional variadic bounds
+   */
   public abstract Optional<Variadic> variadic();
 
+  /**
+   * Creates a builder for {@link DialectFunction}.
+   *
+   * @return a new builder
+   */
   public static ImmutableDialectFunction.Builder builder() {
     return ImmutableDialectFunction.builder();
   }

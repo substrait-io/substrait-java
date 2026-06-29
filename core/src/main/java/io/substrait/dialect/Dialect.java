@@ -27,38 +27,98 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class Dialect {
 
+  /**
+   * The name of the dialect, if any.
+   *
+   * @return the optional dialect name
+   */
   public abstract Optional<String> name();
 
+  /**
+   * Free-form metadata associated with the dialect, if any.
+   *
+   * @return the optional metadata
+   */
   public abstract Optional<Map<String, Object>> metadata();
 
+  /**
+   * The dependencies referenced by the dialect, keyed by alias.
+   *
+   * @return the dependency aliases mapped to their URIs
+   */
   public abstract Map<String, String> dependencies();
 
+  /**
+   * The types supported by the dialect.
+   *
+   * @return the supported types
+   */
   @JsonProperty("supported_types")
   public abstract List<SupportedType> supportedTypes();
 
+  /**
+   * The relations supported by the dialect.
+   *
+   * @return the supported relations
+   */
   @JsonProperty("supported_relations")
   public abstract List<SupportedRelation> supportedRelations();
 
+  /**
+   * The expressions supported by the dialect.
+   *
+   * @return the supported expressions
+   */
   @JsonProperty("supported_expressions")
   public abstract List<SupportedExpression> supportedExpressions();
 
+  /**
+   * The scalar functions supported by the dialect.
+   *
+   * @return the supported scalar functions
+   */
   @JsonProperty("supported_scalar_functions")
   public abstract List<DialectFunction> supportedScalarFunctions();
 
+  /**
+   * The aggregate functions supported by the dialect.
+   *
+   * @return the supported aggregate functions
+   */
   @JsonProperty("supported_aggregate_functions")
   public abstract List<DialectFunction> supportedAggregateFunctions();
 
+  /**
+   * The window functions supported by the dialect.
+   *
+   * @return the supported window functions
+   */
   @JsonProperty("supported_window_functions")
   public abstract List<DialectFunction> supportedWindowFunctions();
 
+  /**
+   * The execution-behavior configuration of the dialect, if any.
+   *
+   * @return the optional execution behavior
+   */
   @JsonProperty("supported_execution_behavior")
   public abstract Optional<ExecutionBehavior> supportedExecutionBehavior();
 
+  /**
+   * Creates a builder for {@link Dialect}.
+   *
+   * @return a new builder
+   */
   public static ImmutableDialect.Builder builder() {
     return ImmutableDialect.builder();
   }
 
-  /** Parse a dialect from YAML content. */
+  /**
+   * Parse a dialect from YAML content.
+   *
+   * @param content the YAML content
+   * @return the parsed dialect
+   */
   public static Dialect load(String content) {
     try {
       return DialectJsonSupport.MAPPER.readValue(content, Dialect.class);
@@ -70,6 +130,9 @@ public abstract class Dialect {
   /**
    * Parse a dialect from a YAML stream. The caller retains ownership of the stream; it is not
    * closed by this method.
+   *
+   * @param stream the YAML input stream
+   * @return the parsed dialect
    */
   public static Dialect load(InputStream stream) {
     try {
@@ -82,7 +145,12 @@ public abstract class Dialect {
     }
   }
 
-  /** Parse a dialect from a YAML file on disk. */
+  /**
+   * Parse a dialect from a YAML file on disk.
+   *
+   * @param path the path to the YAML file
+   * @return the parsed dialect
+   */
   public static Dialect loadFromFile(Path path) {
     try {
       return DialectJsonSupport.MAPPER.readValue(path.toFile(), Dialect.class);
@@ -91,7 +159,12 @@ public abstract class Dialect {
     }
   }
 
-  /** Parse a dialect from a classpath resource. */
+  /**
+   * Parse a dialect from a classpath resource.
+   *
+   * @param resourcePath the classpath resource path
+   * @return the parsed dialect
+   */
   public static Dialect loadResource(String resourcePath) {
     try (InputStream stream = Dialect.class.getResourceAsStream(resourcePath)) {
       if (stream == null) {
@@ -103,7 +176,12 @@ public abstract class Dialect {
     }
   }
 
-  /** Serialize a dialect to YAML. */
+  /**
+   * Serialize a dialect to YAML.
+   *
+   * @param dialect the dialect to serialize
+   * @return the YAML representation
+   */
   public static String toYaml(Dialect dialect) {
     try {
       return DialectJsonSupport.MAPPER.writeValueAsString(dialect);

@@ -14,21 +14,53 @@ import org.immutables.value.Value;
 @JsonSerialize(using = SupportedTypeSerializer.class)
 @Value.Immutable
 public abstract class SupportedType {
+  /**
+   * The kind of type this entry describes.
+   *
+   * @return the type kind
+   */
   public abstract TypeKind type();
 
+  /**
+   * Free-form metadata associated with the type, if any.
+   *
+   * @return the optional metadata
+   */
   public abstract Optional<Map<String, Object>> metadata();
 
+  /**
+   * System-specific metadata for the type, if any.
+   *
+   * @return the optional system metadata
+   */
   public abstract Optional<SystemTypeMetadata> systemMetadata();
 
+  /**
+   * The maximum precision supported for the type, if constrained.
+   *
+   * @return the optional maximum precision
+   */
   public abstract Optional<Integer> maxPrecision();
 
-  /** Dependency (alias) where a {@code USER_DEFINED} type is declared. */
+  /**
+   * Dependency (alias) where a {@code USER_DEFINED} type is declared.
+   *
+   * @return the optional dependency alias
+   */
   public abstract Optional<String> source();
 
-  /** The name of a {@code USER_DEFINED} type as declared in the extension it is defined in. */
+  /**
+   * The name of a {@code USER_DEFINED} type as declared in the extension it is defined in.
+   *
+   * @return the optional type name
+   */
   public abstract Optional<String> name();
 
-  /** Whether this entry can be written as a bare enum string (no extra configuration). */
+  /**
+   * Whether this entry can be written as a bare enum string (no extra configuration).
+   *
+   * @return {@code true} if the entry carries no configuration
+   */
   public boolean isBare() {
     return type() != TypeKind.USER_DEFINED
         && !metadata().isPresent()
@@ -38,10 +70,21 @@ public abstract class SupportedType {
         && !name().isPresent();
   }
 
+  /**
+   * Creates a configuration-free entry for the given kind.
+   *
+   * @param type the type kind
+   * @return a new {@link SupportedType}
+   */
   public static SupportedType of(TypeKind type) {
     return builder().type(type).build();
   }
 
+  /**
+   * Creates a builder for {@link SupportedType}.
+   *
+   * @return a new builder
+   */
   public static ImmutableSupportedType.Builder builder() {
     return ImmutableSupportedType.builder();
   }

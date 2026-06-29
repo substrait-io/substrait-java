@@ -15,20 +15,46 @@ import org.immutables.value.Value;
 @JsonSerialize(using = SupportedExpressionSerializer.class)
 @Value.Immutable
 public abstract class SupportedExpression {
+  /**
+   * The kind of expression this entry describes.
+   *
+   * @return the expression kind
+   */
   public abstract ExpressionKind expression();
 
+  /**
+   * Free-form metadata associated with the expression, if any.
+   *
+   * @return the optional metadata
+   */
   public abstract Optional<Map<String, Object>> metadata();
 
-  /** Permissible failure options for {@code CAST}. */
+  /**
+   * Permissible failure options for {@code CAST}.
+   *
+   * @return the supported cast failure options
+   */
   public abstract List<CastFailureOption> failureOptions();
 
-  /** Subquery types for {@code SUBQUERY}. */
+  /**
+   * Subquery types for {@code SUBQUERY}.
+   *
+   * @return the supported subquery types
+   */
   public abstract List<SubqueryType> subqueryTypes();
 
-  /** Nested types for {@code NESTED}. */
+  /**
+   * Nested types for {@code NESTED}.
+   *
+   * @return the supported nested types
+   */
   public abstract List<NestedType> nestedTypes();
 
-  /** Variable types for {@code EXECUTION_CONTEXT_VARIABLE}. */
+  /**
+   * Variable types for {@code EXECUTION_CONTEXT_VARIABLE}.
+   *
+   * @return the supported variable types
+   */
   public abstract List<VariableType> variableTypes();
 
   /**
@@ -43,7 +69,11 @@ public abstract class SupportedExpression {
     }
   }
 
-  /** Whether this entry can be written as a bare enum string (no extra configuration). */
+  /**
+   * Whether this entry can be written as a bare enum string (no extra configuration).
+   *
+   * @return {@code true} if the entry carries no configuration
+   */
   public boolean isBare() {
     return !metadata().isPresent()
         && failureOptions().isEmpty()
@@ -52,10 +82,21 @@ public abstract class SupportedExpression {
         && variableTypes().isEmpty();
   }
 
+  /**
+   * Creates a configuration-free entry for the given kind.
+   *
+   * @param expression the expression kind
+   * @return a new {@link SupportedExpression}
+   */
   public static SupportedExpression of(ExpressionKind expression) {
     return builder().expression(expression).build();
   }
 
+  /**
+   * Creates a builder for {@link SupportedExpression}.
+   *
+   * @return a new builder
+   */
   public static ImmutableSupportedExpression.Builder builder() {
     return ImmutableSupportedExpression.builder();
   }
