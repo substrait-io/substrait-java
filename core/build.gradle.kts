@@ -312,10 +312,9 @@ tasks.register<Javadoc>("javadocProto") {
   // Suppress warnings/doclint for protobuf pass
   options {
     require(this is StandardJavadocDocletOptions)
-    // Disable doclint entirely
-    addBooleanOption("Xdoclint:none", true)
-    // Be quiet
-    addBooleanOption("quiet", true)
+    // Generated proto bindings are missing javadoc
+    addBooleanOption("Xdoclint:all,-missing", true)
+    addBooleanOption("Xwerror", true)
     // Encoding is good practice
     encoding = "UTF-8"
     addStringOption(
@@ -323,9 +322,6 @@ tasks.register<Javadoc>("javadocProto") {
       "${rootProject.projectDir}/core/src/main/javadoc/overview-proto.html",
     )
   }
-
-  // Do not fail the build if javadoc finds issues in generated sources
-  isFailOnError = false
 }
 
 tasks.register<Javadoc>("javadocImmutable") {
@@ -348,10 +344,8 @@ tasks.register<Javadoc>("javadocImmutable") {
   // Suppress warnings/doclint for protobuf pass
   options {
     require(this is StandardJavadocDocletOptions)
-    // Disable doclint entirely
-    addBooleanOption("Xdoclint:none", true)
-    // Be quiet
-    addBooleanOption("quiet", true)
+    addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Xwerror", true)
     // Encoding is good practice
     encoding = "UTF-8"
     addStringOption(
@@ -361,9 +355,6 @@ tasks.register<Javadoc>("javadocImmutable") {
     links("../core/")
     links("../core-proto/")
   }
-
-  // Do not fail the build if javadoc finds issues in generated sources
-  isFailOnError = false
 }
 
 // Second pass: Javadoc for main code, excluding the generated protobuf sources.
