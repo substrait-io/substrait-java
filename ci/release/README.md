@@ -6,7 +6,7 @@
   - Determining the next version number,
   - Generating the release notes,
   - Publishing the package.
-- New features and fixes are `immediately` available to users on the Staging repository.
+- Published releases are available to users on Maven Central.
 - Use formalized `commit message convention` to document changes in the codebase.
 
 ## Credentials
@@ -25,22 +25,27 @@ GPG keys are used to sign the release artifacts.
 ```shell
 $ gpg --full-gen-key
 $ gpg --list-keys
-$ gpg --keyserver keyserver.ubuntu.com --send-keys C8BA52B3
-$ gpg --export-secret-keys C8BA52B3 | base64
+$ gpg --keyserver keyserver.ubuntu.com --send-keys AAACACAB1674014619E139CC1E0BFFA5E9412929
+$ gpg --export-secret-keys AAACACAB1674014619E139CC1E0BFFA5E9412929 | base64
 ```
 
 Configure values for:
 ```properties
-SIGNING_KEY_ID = C8BA52B3
-SIGNING_PASSWORD = password
-SIGNING_KEY = gpg --export-secret-keys C8BA52B3 | base64
+M2_SIGNING_KEY_ID = AAACACAB1674014619E139CC1E0BFFA5E9412929
+M2_SIGNING_PASSWORD = password
+M2_SIGNING_KEY = gpg --export-secret-keys AAACACAB1674014619E139CC1E0BFFA5E9412929 | base64
 ```
 
 ### Actions Secrets
 
-Create these actions secrets used by release process:
+The release process uses the following organization-level secrets, shared across the
+`substrait-java` and `substrait-packaging` repositories:
 
-![actions_secrets](img/actions_secrets.png "title")
+- `M2_CENTRAL_USERNAME` — Sonatype Central Publisher Portal username
+- `M2_CENTRAL_PASSWORD` — Sonatype Central Publisher Portal password
+- `M2_SIGNING_KEY_ID` — GPG signing key ID
+- `M2_SIGNING_PASSWORD` — GPG signing key passphrase
+- `M2_SIGNING_KEY` — base64-encoded GPG private key
 
 ## Repository Manager
 
@@ -50,14 +55,15 @@ Documentation: https://central.sonatype.org/register/central-portal/
 
 ## Release Process
 
-- Every push to pre-release branches `beta` deploys an artifact to the `snapshots repository` and it's ready to be used.
-- Every push to release branches `main`, `maintenance` deploys an artifact to the `staging repository` and it's ready to be used.
-- If there are no restrictions/problems/impediments then the next step is to release the artifact to `maven central`.
-- There is a `manual release` process to send the libraries to `maven central`.
-- In case of issues/problems/errors there is also a `drop` option available to delete the release version.
-- Once a component has been released and published to the Central Repository, it cannot be altered.
-
-![release](img/release_process.png)
+- Releases are published automatically by `semantic-release` from the `main` branch.
+- The [release workflow](../../.github/workflows/release.yml) runs on a weekly schedule
+  (Sundays at 02:00 UTC) and can also be triggered manually via `workflow_dispatch`.
+- `semantic-release` analyzes the conventional commits since the last release to determine
+  the next version, updates `gradle.properties`, generates the changelog, then builds, signs,
+  and publishes the artifacts to the Sonatype Central Publisher Portal
+  (`./gradlew publishAggregationToCentralPortal`).
+- The Central Portal then publishes the deployment to Maven Central.
+- Once a component has been published to Maven Central, it cannot be altered.
 
 ## Artifacts
 
@@ -66,47 +72,20 @@ Once published, the artifacts can be downloaded from the following locations:
 - Github Artifacts:
   - https://github.com/substrait-io/substrait-java/releases
 
-- Sonatype OSSRH Artifacts:
-  - https://s01.oss.sonatype.org/content/repositories/{snapshots,staging,releases}/io/substrait/substrait-java/core/1.0.0/
+- Maven Central (releases):
+  - https://repo1.maven.org/maven2/io/substrait/
 
 ## Branches Configuration
 
-- Regular development of new features and functionality is done by creating PRs into the `main` branch
+- Regular development of new features and functionality is done by creating PRs into the `main` branch.
 
-  After your PR is merged to main branch, you could see the new libraries available in the Sonatype staging environment.
+  Releases are cut automatically from `main` on the weekly schedule described in
+  [Release Process](#release-process) — merging a PR does not by itself publish an artifact.
 
-
-- To create a maintenance release please create a branch name with this pattern `+([0-9])?(.{+([0-9]),x}).x`.
-  Example:
-  ```shell
-  # Current version on production: 2.5.7, version planned to use for maintenance: 2.1.7
-  $ git checkout -b 2.1.x v2.1.7 # for fix
-  $ git checkout -b 2.x v2.1.7 # for maintenance
-
-
-- In case you need to experiment with breaking changes for a new feature, you can use a pre-release branch.
-  Example:
-  ```shell
-  # Current version on production: 2.5.7, version planned to use for maintenance: 2.1.7
-  $ git checkout -b new_feature_lots_changes beta
-  ```
-  After your PR is merged to beta branch, you could see the new libraries available at Sonatype snapshots environment.
-
-
-Branches configuration:
+`main` is the only release branch configured in `.releaserc.json`:
 
 ```json
-  "branches": [
-    // maintenances (also generate release)
-    { "name": "+([0-9])?(.{+([0-9]),x}).x" },
-    // release
-    { "name": "main" },
-    { "name": "next" },
-    { "name": "next-major" },
-    // pre-release
-    { "name": "beta", "prerelease": true },
-    { "name": "alpha", "prerelease": true }
-  ],
+  "branches": ["main"],
 ```
 
 ## Release Validation
@@ -115,13 +94,13 @@ Branches configuration:
 
 #### Getting Signature
 
-The ID of the key used to sign the artifacts is C8BA52B3. The long-form ID is 0xF4A1E652C8BA52B3.
+The fingerprint of the key used to sign the artifacts is `AAACACAB1674014619E139CC1E0BFFA5E9412929`. The long-form ID is `0x1E0BFFA5E9412929`.
 
 You can download and import it with:
 
 ````shell
-$ gpg --keyserver keyserver.ubuntu.com --recv-keys C8BA52B3
-gpg: key F4A1E652C8BA52B3: public key "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>" imported
+$ gpg --keyserver keyserver.ubuntu.com --recv-keys AAACACAB1674014619E139CC1E0BFFA5E9412929
+gpg: key 1E0BFFA5E9412929: public key "Substrait (artifact signing key for the Substrait project) <security@substrait.io>" imported
 gpg: Total number processed: 1
 gpg:               imported: 1
 ````
@@ -131,161 +110,29 @@ gpg:               imported: 1
 Download Java JAR/POM files and validate the signature of them:
 
 ```shell
-# Staging Environment - 1.0.0 version
-# JAR
-$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.jar
-$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.jar.asc
-$ gpg --verify /Users/substrait/core-1.0.0.jar.asc
-gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
-gpg: Signature made Fri Nov 18 08:52:19 2022 -05
-gpg:                using RSA key F4A1E652C8BA52B3
-gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
-# POM
-$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom
-$ wget https://s01.oss.sonatype.org/content/repositories/staging/io/substrait/core/1.0.0/core-1.0.0.pom.asc
-$ gpg --verify /Users/substrait/core-1.0.0.pom.asc
-gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
-gpg: Signature made Fri Nov 18 08:52:18 2022 -05
-gpg:                using RSA key F4A1E652C8BA52B3
-gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
-
 # Maven Central - 1.0.0 version
 # JAR
-$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.jar
-$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.jar.asc
+$ wget https://repo1.maven.org/maven2/io/substrait/core/1.0.0/core-1.0.0.jar
+$ wget https://repo1.maven.org/maven2/io/substrait/core/1.0.0/core-1.0.0.jar.asc
 $ gpg --verify /Users/substrait/core-1.0.0.jar.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.jar'
 gpg: Signature made Fri Nov 18 08:52:19 2022 -05
-gpg:                using RSA key F4A1E652C8BA52B3
-gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
+gpg:                using EDDSA key 1E0BFFA5E9412929
+gpg: Good signature from "Substrait (artifact signing key for the Substrait project) <security@substrait.io>"
 # POM
-$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom
-$ wget https://s01.oss.sonatype.org/content/repositories/release/io/substrait/core/1.0.0/core-1.0.0.pom.asc
+$ wget https://repo1.maven.org/maven2/io/substrait/core/1.0.0/core-1.0.0.pom
+$ wget https://repo1.maven.org/maven2/io/substrait/core/1.0.0/core-1.0.0.pom.asc
 $ gpg --verify /Users/substrait/core-1.0.0.pom.asc
 gpg: assuming signed data in '/Users/substrait/core-1.0.0.pom'
 gpg: Signature made Fri Nov 18 08:52:18 2022 -05
-gpg:                using RSA key F4A1E652C8BA52B3
-gpg: Good signature from "Substrait Java Artifacts (Java artifact signing key for the Substrait project) <security@substrait.io>"
-```
-
-### How to use Artifacts
-
-#### Staging Environment
-
-Maven:
-```xml
-    <repositories>
-        <repository>
-            <id>sonatype-staging</id>
-            <url>https://s01.oss.sonatype.org/content/groups/staging</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-      ...
-      <dependency>
-          <groupId>io.substrait</groupId>
-          <artifactId>core</artifactId>
-          <version>1.0.0</version>
-      </dependency>
-      <dependency>
-          <groupId>io.substrait</groupId>
-          <artifactId>isthmus</artifactId>
-          <version>1.0.0</version>
-      </dependency>
-      ...
-    </dependencies>
-```
-
-Gradle
-```groovy
-repositories {
-    maven {
-        url = uri("https://s01.oss.sonatype.org/content/groups/staging")
-    }
-}
-dependencies {
-    ...
-    implementation 'io.substrait:core:1.0.0'
-    implementation 'io.substrait:isthmus:1.0.0'
-    ...
-}
-```
-
-#### Maven Central
-
-Maven:
-```xml
-    <dependencies>
-      ...
-      <dependency>
-          <groupId>io.substrait</groupId>
-          <artifactId>core</artifactId>
-          <version>1.0.0</version>
-      </dependency>
-      <dependency>
-          <groupId>io.substrait</groupId>
-          <artifactId>isthmus</artifactId>
-          <version>1.0.0</version>
-      </dependency>
-      ...
-    </dependencies>
-```
-
-Gradle
-```groovy
-dependencies {
-    ...
-    implementation 'io.substrait:core:1.0.0'
-    implementation 'io.substrait:isthmus:1.0.0'
-    ...
-}
-```
-#### Isthmus Binary Packages
-
-Download Isthmus binary packages from the Release/Github Assets.
-
-```shell
-$ ./isthmus-macOS-1.0.0  -c "CREATE TABLE Persons ( firstName VARCHAR, lastName VARCHAR, zip INT )" "SELECT lastName, firstName FROM Persons WHERE zip = 90210"
-
-{
-  "extensionUris": [{
-    "extensionUriAnchor": 1,
-    "uri": "/functions_comparison.yaml"
-  }],
-  "extensions": [{
-    "extensionFunction": {
-      "extensionUriReference": 1,
-      "functionAnchor": 0,
-      "name": "equal:any_any"
-    }
-  }],
-  "relations": [{
-    "root": {
-...
+gpg:                using EDDSA key 1E0BFFA5E9412929
+gpg: Good signature from "Substrait (artifact signing key for the Substrait project) <security@substrait.io>"
 ```
 
 ## Q&A
 
-#### 1. What will be happened if I merge something on main branch and for some reason the process has finished with errors or the Job has been completed with failures messages?
+#### 1. Is it possible to release a library with a custom version (i.e.: 3.2.9.RC1, 5.0.0.M1)?
 
-The CI process will automatically create a Github issue to track the failure.
-
-```shell
-[10:30:55 PM] [semantic-release] [@semantic-release/github] › ℹ  Created issue #3: https://github.com/substrait-io/substrait-java/issues/3.
-```
-
-![release_failing](img/automate_release_is_failing.png)
-
-#### 2. Is it possible to release a library with a custom version (i.e.: 3.2.9.RC1, 5.0.0.M1)?
-
-We are using Sonatype OSSRH, the destination repository (`snapshots / staging / release`) is based on the name of the artifacts:
-
-- For a library name as `1.4.3-XXXXX-SNAPSHOT` -> it is going to be deployed to Snapshots repository
-- For a library name as `1.4.3-XXXXX-SNAPSHOT.YYYY` -> it is going to be deployed to Staging/Releases repository
-- For a library name as `1.4.3-XXXXX` -> it is going to be deployed to Staging/Releases repository
-- For a library name as `1.4.3` -> it is going to be deployed to Staging/Releases repository
-
-#### 2. How many days do I have to approve the artifacts on the Staging repository?
-
-Please review [OSSRH-86341](https://issues.sonatype.org/browse/OSSRH-86341) and [OSSRH-24751](https://issues.sonatype.org/browse/OSSRH-24751).
+No. The version is determined automatically by `semantic-release` from the conventional commit
+history, so only standard semantic versions are published to Maven Central. Custom or manual
+version strings are not part of the release flow.
