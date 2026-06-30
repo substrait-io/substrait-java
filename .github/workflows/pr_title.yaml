@@ -45,6 +45,9 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      # The message below is prose inside the github-script template literal;
+      # wrapping it would change the rendered comment, so disable line-length here.
+      # yamllint disable rule:line-length
       - uses: actions/github-script@v9
         with:
           script: |
@@ -90,3 +93,4 @@ jobs:
             core.setFailed(
               "PR title and description do not follow the Conventional Commits specification."
             );
+      # yamllint enable rule:line-length
