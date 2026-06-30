@@ -32,8 +32,16 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   public static final SqlIntervalQualifier DAY_SECOND_INTERVAL =
       new SqlIntervalQualifier(TimeUnit.DAY, -1, TimeUnit.SECOND, 6, SqlParserPos.ZERO);
 
-  /** Private constructor to enforce singleton usage. */
-  private SubstraitTypeSystem() {}
+  /**
+   * Public no-argument constructor.
+   *
+   * <p>Prefer the shared {@link #TYPE_SYSTEM} singleton. This constructor exists because Calcite's
+   * {@link org.apache.calcite.tools.Frameworks}/Avatica machinery re-instantiates a type system
+   * from its class name (via a default constructor) when it is supplied to a {@link
+   * org.apache.calcite.tools.FrameworkConfig}. The type system is stateless, so additional
+   * instances are equivalent to the singleton.
+   */
+  public SubstraitTypeSystem() {}
 
   /**
    * Returns the maximum precision for the given SQL type.
