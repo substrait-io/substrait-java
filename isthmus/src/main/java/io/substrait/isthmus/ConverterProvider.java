@@ -24,6 +24,7 @@ import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -332,7 +333,11 @@ public class ConverterProvider {
    * @return a new RelBuilder instance
    */
   public RelBuilder getRelBuilder(CalciteSchema schema) {
-    return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
+    return RelBuilder.create(
+        Frameworks.newConfigBuilder()
+            .defaultSchema(schema.plus())
+            .typeSystem(getTypeSystem())
+            .build());
   }
 
   // Utility Getters
@@ -344,6 +349,19 @@ public class ConverterProvider {
    */
   public RelDataTypeFactory getTypeFactory() {
     return typeFactory;
+  }
+
+  /**
+   * Returns the Calcite {@link RelDataTypeSystem} used by this converter provider.
+   *
+   * <p>Derived from the {@link #getTypeFactory() type factory} so the two never disagree. This is
+   * the type system supplied to the {@link RelBuilder} used when converting Substrait to Calcite,
+   * ensuring its type derivation matches the types carried by converted expressions.
+   *
+   * @return the type system
+   */
+  public RelDataTypeSystem getTypeSystem() {
+    return typeFactory.getTypeSystem();
   }
 
   /**

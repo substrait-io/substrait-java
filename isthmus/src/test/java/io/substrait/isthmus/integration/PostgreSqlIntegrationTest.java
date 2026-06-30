@@ -2,7 +2,6 @@ package io.substrait.isthmus.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.ConverterProvider;
@@ -38,9 +37,6 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 class PostgreSqlIntegrationTest extends PlanTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(PostgreSqlIntegrationTest.class);
-
-  // TODO: These queries produce different results when generated from Substrait
-  private static final List<Integer> EXPECTED_FAILURES = List.of(8, 14);
 
   private static final DockerImageName UV_IMAGE =
       DockerImageName.parse("ghcr.io/astral-sh/uv:python3.14-trixie-slim");
@@ -126,20 +122,12 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
 
       // the count should be zero if both the reference and generated SQL produce the same results
       int differenceCount = result.getInt(1);
-      if (EXPECTED_FAILURES.contains(queryNo)) {
-        assertNotEquals(
-            0,
-            differenceCount,
-            String.format(
-                "Expected query %d to fail but it matched the reference results", queryNo));
-      } else {
-        assertEquals(
-            0,
-            differenceCount,
-            String.format(
-                "Reference and generated SQL produce %d different results.\n\nReference SQL:\n%s\n\nGenerated SQL:\n%s",
-                differenceCount, referenceSql, generatedSql));
-      }
+      assertEquals(
+          0,
+          differenceCount,
+          String.format(
+              "Reference and generated SQL produce %d different results.\n\nReference SQL:\n%s\n\nGenerated SQL:\n%s",
+              differenceCount, referenceSql, generatedSql));
 
       // we expect exactly one row
       assertFalse(result.next());
