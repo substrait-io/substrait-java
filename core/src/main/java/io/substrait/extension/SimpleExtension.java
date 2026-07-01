@@ -105,6 +105,18 @@ public class SimpleExtension {
     STREAMING
   }
 
+  /**
+   * Enumerates how functions supporting the system-preferred variation relate to a type variation.
+   */
+  public enum TypeVariationFunctionBehavior {
+    /**
+     * Functions that support the system-preferred variation implicitly also support this variation.
+     */
+    INHERITS,
+    /** Functions must be resolved independently for this variation. */
+    SEPARATE
+  }
+
   private SimpleExtension() {}
 
   /** Describes an argument provided by a simple extension. */
@@ -369,6 +381,21 @@ public class SimpleExtension {
      */
     static TypeAnchor of(String urn, String name) {
       return ImmutableSimpleExtension.TypeAnchor.builder().urn(urn).key(name).build();
+    }
+  }
+
+  /** Describes a type variation anchor provided by a simple extension. */
+  @Value.Immutable
+  public interface TypeVariationAnchor extends Anchor {
+    /**
+     * Creates the corresponding of instance.
+     *
+     * @param urn the urn
+     * @param name the name
+     * @return the of
+     */
+    static TypeVariationAnchor of(String urn, String name) {
+      return ImmutableSimpleExtension.TypeVariationAnchor.builder().urn(urn).key(name).build();
     }
   }
 
@@ -1061,6 +1088,82 @@ public class SimpleExtension {
     }
   }
 
+  /**
+   * Describes a type variation declared by a simple extension.
+   *
+   * <p>A type variation represents an alternative representation of a base type class (e.g. a
+   * dictionary-encoded string), as defined by the {@code type_variations} section of the simple
+   * extension schema.
+   */
+  @JsonDeserialize(as = ImmutableSimpleExtension.TypeVariation.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.TypeVariation.class)
+  @Value.Immutable
+  public abstract static class TypeVariation {
+    private final Supplier<TypeVariationAnchor> anchorSupplier =
+        Util.memoize(() -> TypeVariationAnchor.of(urn(), name()));
+
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
+    public abstract String name();
+
+    /**
+     * Returns the base type class of this variation as written in the extension file (e.g. {@code
+     * string} or {@code struct}).
+     *
+     * @return the parent type class
+     */
+    @JsonProperty("parent")
+    public abstract String parent();
+
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
+    public abstract Optional<String> description();
+
+    /**
+     * Returns the function behavior, i.e. whether functions supporting the system-preferred
+     * variation implicitly support this variation ({@link TypeVariationFunctionBehavior#INHERITS})
+     * or must be resolved independently ({@link TypeVariationFunctionBehavior#SEPARATE}). Defaults
+     * to {@link TypeVariationFunctionBehavior#INHERITS}.
+     *
+     * @return the function behavior
+     */
+    @Value.Default
+    @JsonProperty("functions")
+    public TypeVariationFunctionBehavior functions() {
+      return TypeVariationFunctionBehavior.INHERITS;
+    }
+
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
+    public abstract Optional<DeprecationStatus> deprecated();
+
+    /**
+     * Returns the urn.
+     *
+     * @return the urn
+     */
+    @JacksonInject(SimpleExtension.URN_LOCATOR_KEY)
+    public abstract String urn();
+
+    /**
+     * Returns the anchor.
+     *
+     * @return the anchor
+     */
+    public TypeVariationAnchor getAnchor() {
+      return anchorSupplier.get();
+    }
+  }
+
   /** Describes an extension signatures provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
   @JsonSerialize(as = ImmutableSimpleExtension.ExtensionSignatures.class)
@@ -1074,6 +1177,14 @@ public class SimpleExtension {
      */
     @JsonProperty("types")
     public abstract List<Type> types();
+
+    /**
+     * Returns the type variations.
+     *
+     * @return the type variations
+     */
+    @JsonProperty("type_variations")
+    public abstract List<TypeVariation> typeVariations();
 
     /**
      * Returns the urn.
@@ -1170,6 +1281,14 @@ public class SimpleExtension {
                 types().stream()
                     .collect(
                         Collectors.toMap(Type::getAnchor, java.util.function.Function.identity())));
+
+    private final Supplier<Map<TypeVariationAnchor, TypeVariation>> typeVariationLookup =
+        Util.memoize(
+            () ->
+                typeVariations().stream()
+                    .collect(
+                        Collectors.toMap(
+                            TypeVariation::getAnchor, java.util.function.Function.identity())));
     private final Supplier<Map<FunctionAnchor, ScalarFunctionVariant>> scalarFunctionsLookup =
         Util.memoize(
             () -> {
@@ -1213,6 +1332,13 @@ public class SimpleExtension {
      * @return the types
      */
     public abstract List<Type> types();
+
+    /**
+     * Returns the type variations.
+     *
+     * @return the type variations
+     */
+    public abstract List<TypeVariation> typeVariations();
 
     /**
      * Returns the scalar Functions.
@@ -1273,6 +1399,25 @@ public class SimpleExtension {
     }
 
     /**
+     * Returns the type variation for the given anchor.
+     *
+     * @param anchor the anchor
+     * @return the type variation
+     */
+    public TypeVariation getTypeVariation(TypeVariationAnchor anchor) {
+      TypeVariation typeVariation = typeVariationLookup.get().get(anchor);
+      if (typeVariation != null) {
+        return typeVariation;
+      }
+      checkUrn(anchor.urn());
+      throw new IllegalArgumentException(
+          String.format(
+              "Unexpected type variation with name %s. The URN %s is loaded but no type variation "
+                  + "with this name found.",
+              anchor.key(), anchor.urn()));
+    }
+
+    /**
      * Returns the scalar Function for the given arguments.
      *
      * @param anchor the anchor
@@ -1299,7 +1444,9 @@ public class SimpleExtension {
      * @return the contains Urn
      */
     public boolean containsUrn(String urn) {
-      return urnSupplier.get().contains(urn) || types().stream().anyMatch(t -> t.urn().equals(urn));
+      return urnSupplier.get().contains(urn)
+          || types().stream().anyMatch(t -> t.urn().equals(urn))
+          || typeVariations().stream().anyMatch(tv -> tv.urn().equals(urn));
     }
 
     private void checkUrn(String name) {
@@ -1374,6 +1521,8 @@ public class SimpleExtension {
           .addAllWindowFunctions(extensionCollection.windowFunctions())
           .addAllTypes(types())
           .addAllTypes(extensionCollection.types())
+          .addAllTypeVariations(typeVariations())
+          .addAllTypeVariations(extensionCollection.typeVariations())
           .extensionMetadata(mergedExtensionMetadata)
           .build();
     }
@@ -1499,6 +1648,7 @@ public class SimpleExtension {
             .aggregateFunctions(aggregateFunctionVariants)
             .windowFunctions(allWindowFunctionVariants)
             .addAllTypes(extensionSignatures.types())
+            .addAllTypeVariations(extensionSignatures.typeVariations())
             .extensionMetadata(extMetadata)
             .build();
 
