@@ -35,9 +35,6 @@ import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.StrLiteral;
 import io.substrait.expression.Expression.StructLiteral;
 import io.substrait.expression.Expression.Switch;
-import io.substrait.expression.Expression.TimeLiteral;
-import io.substrait.expression.Expression.TimestampLiteral;
-import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.Expression.UUIDLiteral;
 import io.substrait.expression.Expression.UserDefinedAnyLiteral;
 import io.substrait.expression.Expression.UserDefinedStructLiteral;
@@ -114,11 +111,6 @@ public class ExpressionStringify extends ParentStringify
   }
 
   @Override
-  public String visit(TimeLiteral expr, EmptyVisitationContext context) throws RuntimeException {
-    return "<TimeLiteral " + expr.value() + ">";
-  }
-
-  @Override
   public String visit(PrecisionTimeLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
     return "<PrecisionTimeLiteral " + expr.value() + ">";
@@ -127,18 +119,6 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(DateLiteral expr, EmptyVisitationContext context) throws RuntimeException {
     return "<DateLiteral " + expr.value() + ">";
-  }
-
-  @Override
-  public String visit(TimestampLiteral expr, EmptyVisitationContext context)
-      throws RuntimeException {
-    return "<TimestampLiteral " + expr.value() + ">";
-  }
-
-  @Override
-  public String visit(TimestampTZLiteral expr, EmptyVisitationContext context)
-      throws RuntimeException {
-    return "<TimestampTZLiteral " + expr.value() + ">";
   }
 
   @Override

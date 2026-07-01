@@ -236,14 +236,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setString((Type.String) o).build();
       } else if (o instanceof Type.Binary) {
         return bldr.setBinary((Type.Binary) o).build();
-      } else if (o instanceof Type.Timestamp) {
-        return bldr.setTimestamp((Type.Timestamp) o).build();
       } else if (o instanceof Type.Date) {
         return bldr.setDate((Type.Date) o).build();
-      } else if (o instanceof Type.Time) {
-        return bldr.setTime((Type.Time) o).build();
-      } else if (o instanceof Type.TimestampTZ) {
-        return bldr.setTimestampTz((Type.TimestampTZ) o).build();
       } else if (o instanceof Type.IntervalYear) {
         return bldr.setIntervalYear((Type.IntervalYear) o).build();
       } else if (o instanceof Type.IntervalDay) {

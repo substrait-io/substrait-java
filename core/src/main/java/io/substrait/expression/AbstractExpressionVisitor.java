@@ -153,19 +153,6 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   /**
-   * Visits a time literal.
-   *
-   * @param expr the time literal
-   * @param context the visitation context
-   * @return the visit result
-   * @throws E if visitation fails
-   */
-  @Override
-  public O visit(Expression.TimeLiteral expr, C context) throws E {
-    return visitFallback(expr, context);
-  }
-
-  /**
    * Visits a precision time literal.
    *
    * @param expr the precision time literal
@@ -188,32 +175,6 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
    */
   @Override
   public O visit(Expression.DateLiteral expr, C context) throws E {
-    return visitFallback(expr, context);
-  }
-
-  /**
-   * Visits a timestamp literal.
-   *
-   * @param expr the timestamp literal
-   * @param context the visitation context
-   * @return the visit result
-   * @throws E if visitation fails
-   */
-  @Override
-  public O visit(Expression.TimestampLiteral expr, C context) throws E {
-    return visitFallback(expr, context);
-  }
-
-  /**
-   * Visits a timestamp-with-time-zone literal.
-   *
-   * @param expr the timestamp TZ literal
-   * @param context the visitation context
-   * @return the visit result
-   * @throws E if visitation fails
-   */
-  @Override
-  public O visit(Expression.TimestampTZLiteral expr, C context) throws E {
     return visitFallback(expr, context);
   }
 

@@ -64,21 +64,6 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
   }
 
   @Override
-  public String visit(Type.Time type) throws RuntimeException {
-    return "time" + n(type);
-  }
-
-  @Override
-  public String visit(Type.TimestampTZ type) throws RuntimeException {
-    return "timestamp_tz" + n(type);
-  }
-
-  @Override
-  public String visit(Type.Timestamp type) throws RuntimeException {
-    return "timestamp" + n(type);
-  }
-
-  @Override
   public String visit(Type.IntervalYear type) throws RuntimeException {
     return "interval_year" + n(type);
   }

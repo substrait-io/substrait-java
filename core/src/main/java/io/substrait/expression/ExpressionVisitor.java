@@ -112,16 +112,6 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.BinaryLiteral expr, C context) throws E;
 
   /**
-   * Visit a time literal.
-   *
-   * @param expr the time literal
-   * @param context visitation context
-   * @return visit result
-   * @throws E on visit failure
-   */
-  R visit(Expression.TimeLiteral expr, C context) throws E;
-
-  /**
    * Visit a precision time literal.
    *
    * @param expr the precision time literal
@@ -140,26 +130,6 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
    * @throws E on visit failure
    */
   R visit(Expression.DateLiteral expr, C context) throws E;
-
-  /**
-   * Visit a timestamp literal.
-   *
-   * @param expr the timestamp literal
-   * @param context visitation context
-   * @return visit result
-   * @throws E on visit failure
-   */
-  R visit(Expression.TimestampLiteral expr, C context) throws E;
-
-  /**
-   * Visit a timestamp-with-timezone literal.
-   *
-   * @param expr the timestamp TZ literal
-   * @param context visitation context
-   * @return visit result
-   * @throws E on visit failure
-   */
-  R visit(Expression.TimestampTZLiteral expr, C context) throws E;
 
   /**
    * Visit a precision timestamp literal.
