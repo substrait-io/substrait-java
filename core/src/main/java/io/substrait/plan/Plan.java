@@ -172,6 +172,7 @@ public abstract class Plan {
      */
     public abstract List<String> getNames();
 
+    /** Validates that the root output names match the input record type. */
     @Value.Check
     protected void check() {
       final int actualNameCount = getNames().size();
