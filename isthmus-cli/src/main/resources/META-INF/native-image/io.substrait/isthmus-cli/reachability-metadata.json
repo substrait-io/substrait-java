@@ -1,0 +1,206 @@
+{
+  "comment": "GraalVM reachability metadata for the isthmus native image.",
+  "resources": [
+    {
+      "glob": "**/*.yaml"
+    }
+  ],
+  "reflection": [
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$AllPredicates$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Collation$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$ColumnOrigin$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$ColumnUniqueness$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$CumulativeCost$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$DistinctRowCount$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Distribution$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$ExplainVisibility$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$ExpressionLineage$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$FunctionalDependency$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$InputFieldsUsed$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$LowerBoundCost$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$MaxRowCount$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Measure$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Memory$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$MinRowCount$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$NodeTypes$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$NonCumulativeCost$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Parallelism$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$PercentageOriginalRows$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$PopulationSize$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Predicates$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$RowCount$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Selectivity$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$Size$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$TableReferences$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.rel.metadata.BuiltInMetadata$UniqueKeys$Handler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.apache.calcite.runtime.CalciteResource"
+        ]
+      }
+    }
+  ]
+}
