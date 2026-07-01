@@ -8,9 +8,15 @@ import java.util.List;
 import java.util.Objects;
 import org.immutables.value.Value;
 
+/** A read relation that produces an inline table from a fixed list of literal rows. */
 @Value.Immutable
 public abstract class VirtualTableScan extends AbstractReadRel {
 
+  /**
+   * Returns the rows of the inline table, each represented as a nested struct of field values.
+   *
+   * @return the literal rows
+   */
   public abstract List<Expression.NestedStruct> getRows();
 
   /**
@@ -87,6 +93,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link VirtualTableScan}.
+   *
+   * @return a new builder
+   */
   public static ImmutableVirtualTableScan.Builder builder() {
     return ImmutableVirtualTableScan.builder();
   }

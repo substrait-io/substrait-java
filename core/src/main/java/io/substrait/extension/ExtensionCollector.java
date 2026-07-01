@@ -23,10 +23,17 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   // start at 0 to make sure functionAnchors start with 1 according to spec
   private int counter = 0;
 
+  /** Creates a collector backed by the default extension collection. */
   public ExtensionCollector() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
   }
 
+  /**
+   * Creates a collector backed by the given extension collection.
+   *
+   * @param extensionCollection the extension collection to resolve declarations against, must not
+   *     be null
+   */
   public ExtensionCollector(SimpleExtension.ExtensionCollection extensionCollection) {
     super(new HashMap<>(), new HashMap<>());
     if (extensionCollection == null) {
@@ -36,6 +43,13 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     typeMap = new BidiMap<>(typeAnchorMap);
   }
 
+  /**
+   * Returns the reference for the given function declaration, allocating a new one if the function
+   * has not been seen before.
+   *
+   * @param declaration the function declaration to reference
+   * @return the function reference
+   */
   public int getFunctionReference(SimpleExtension.Function declaration) {
     Integer i = funcMap.reverseGet(declaration.getAnchor());
     if (i != null) {
@@ -46,6 +60,13 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     return counter;
   }
 
+  /**
+   * Returns the reference for the given type anchor, allocating a new one if the type has not been
+   * seen before.
+   *
+   * @param typeAnchor the type anchor to reference
+   * @return the type reference
+   */
   public int getTypeReference(SimpleExtension.TypeAnchor typeAnchor) {
     Integer i = typeMap.reverseGet(typeAnchor);
     if (i != null) {
@@ -56,6 +77,11 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     return counter;
   }
 
+  /**
+   * Adds the collected extension URNs and declarations to the given plan builder.
+   *
+   * @param builder the plan builder to populate
+   */
   public void addExtensionsToPlan(Plan.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 
@@ -63,6 +89,11 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     builder.addAllExtensions(simpleExtensions.extensionList);
   }
 
+  /**
+   * Adds the collected extension URNs and declarations to the given extended expression builder.
+   *
+   * @param builder the extended expression builder to populate
+   */
   public void addExtensionsToExtendedExpression(ExtendedExpression.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 

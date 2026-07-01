@@ -2,11 +2,22 @@ package io.substrait.function;
 
 import io.substrait.type.Type;
 
+/**
+ * Converts types to their short name string representations as defined by the Substrait <a
+ * href="https://substrait.io/extensions/#type-short-names">specification</a>
+ */
 public class ToTypeString
     extends ParameterizedTypeVisitor.ParameterizedTypeThrowsVisitor<String, RuntimeException> {
 
+  /** Shared, stateless instance of this visitor. */
   public static final ToTypeString INSTANCE = new ToTypeString();
 
+  /**
+   * Returns the Substrait short-name string representation of the given type.
+   *
+   * @param type the type to render
+   * @return the type's short-name string
+   */
   public static String apply(Type type) {
     return type.accept(INSTANCE);
   }
@@ -57,7 +68,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.Binary expr) {
-    return "binary";
+    return "vbin";
   }
 
   @Override
@@ -112,7 +123,7 @@ public class ToTypeString
 
   @Override
   public String visit(final Type.FixedBinary expr) {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
@@ -172,7 +183,7 @@ public class ToTypeString
 
   @Override
   public String visit(ParameterizedType.FixedBinary expr) throws RuntimeException {
-    return "fbinary";
+    return "fbin";
   }
 
   @Override
@@ -238,6 +249,7 @@ public class ToTypeString
    */
   public static class ToTypeLiteralStringLossless extends ToTypeString {
 
+    /** Shared, stateless instance of this lossless variant. */
     public static final ToTypeLiteralStringLossless INSTANCE = new ToTypeLiteralStringLossless();
 
     private ToTypeLiteralStringLossless() {}

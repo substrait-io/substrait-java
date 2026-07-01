@@ -12,12 +12,24 @@ public class ProtoTypeConverter {
   private final ExtensionLookup lookup;
   private final SimpleExtension.ExtensionCollection extensions;
 
+  /**
+   * Creates a converter that resolves user-defined types using the given lookup and extensions.
+   *
+   * @param lookup used to resolve type references to their declarations
+   * @param extensions the extension collection providing type definitions
+   */
   public ProtoTypeConverter(
       ExtensionLookup lookup, SimpleExtension.ExtensionCollection extensions) {
     this.lookup = lookup;
     this.extensions = extensions;
   }
 
+  /**
+   * Converts a proto {@link io.substrait.proto.Type} into its POJO {@link Type}.
+   *
+   * @param type the proto type to convert
+   * @return the converted type
+   */
   public Type from(io.substrait.proto.Type type) {
     switch (type.getKindCase()) {
       case BOOL:
@@ -119,14 +131,32 @@ public class ProtoTypeConverter {
     }
   }
 
+  /**
+   * Converts a proto list type into its POJO {@link Type.ListType}.
+   *
+   * @param list the proto list type to convert
+   * @return the converted list type
+   */
   public Type.ListType fromList(io.substrait.proto.Type.List list) {
     return n(list.getNullability()).list(from(list.getType()));
   }
 
+  /**
+   * Converts a proto map type into its POJO {@link Type.Map}.
+   *
+   * @param map the proto map type to convert
+   * @return the converted map type
+   */
   public Type.Map fromMap(io.substrait.proto.Type.Map map) {
     return n(map.getNullability()).map(from(map.getKey()), from(map.getValue()));
   }
 
+  /**
+   * Returns whether the given proto nullability denotes a nullable type.
+   *
+   * @param nullability the proto nullability value
+   * @return {@code true} if the value is {@code NULLABILITY_NULLABLE}
+   */
   public static boolean isNullable(io.substrait.proto.Type.Nullability nullability) {
     return io.substrait.proto.Type.Nullability.NULLABILITY_NULLABLE == nullability;
   }
@@ -137,6 +167,12 @@ public class ProtoTypeConverter {
         : TypeCreator.REQUIRED;
   }
 
+  /**
+   * Converts a proto type parameter into its POJO {@link io.substrait.type.Type.Parameter}.
+   *
+   * @param parameter the proto type parameter to convert
+   * @return the converted type parameter
+   */
   public io.substrait.type.Type.Parameter from(io.substrait.proto.Type.Parameter parameter) {
     switch (parameter.getParameterCase()) {
       case NULL:

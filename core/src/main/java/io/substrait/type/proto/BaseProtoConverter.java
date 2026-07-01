@@ -9,8 +9,16 @@ import io.substrait.type.Type;
 abstract class BaseProtoConverter<T, I>
     extends TypeExpressionVisitor.TypeExpressionThrowsVisitor<T, RuntimeException> {
 
+  /** Collector used to assign references to user-defined types encountered during conversion. */
   protected final ExtensionCollector extensionCollector;
 
+  /**
+   * Returns the type container providing the proto type constants and factories for the requested
+   * nullability.
+   *
+   * @param nullable whether the desired types are nullable
+   * @return the matching type container
+   */
   public abstract BaseProtoTypes<T, I> typeContainer(boolean nullable);
 
   public BaseProtoConverter(ExtensionCollector extensionCollector, String unsupportedMessage) {
@@ -18,6 +26,12 @@ abstract class BaseProtoConverter<T, I>
     this.extensionCollector = extensionCollector;
   }
 
+  /**
+   * Returns the type container matching the nullability of the given type.
+   *
+   * @param literal the type whose nullability selects the container
+   * @return the matching type container
+   */
   public final BaseProtoTypes<T, I> typeContainer(NullableType literal) {
     return typeContainer(literal.nullable());
   }

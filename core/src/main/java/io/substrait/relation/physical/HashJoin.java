@@ -14,26 +14,77 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
+/** A physical join relation that matches rows by equality of hashed key columns. */
 @Value.Immutable
 public abstract class HashJoin extends BiRel implements HasExtension {
 
-  public abstract List<FieldReference> getLeftKeys();
+  /**
+   * Returns the comparison join keys matching left and right key fields.
+   *
+   * @return the join keys
+   */
+  public abstract List<ComparisonJoinKey> getKeys();
 
-  public abstract List<FieldReference> getRightKeys();
+  /**
+   * Returns the left-side key fields used to build the hash table.
+   *
+   * @return the left join keys
+   * @deprecated the left-hand sides of the join {@link #getKeys()}; use {@link #getKeys()} instead.
+   */
+  @Deprecated
+  public List<FieldReference> getLeftKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getLeft)
+        .collect(java.util.stream.Collectors.toList());
+  }
 
+  /**
+   * Returns the right-side key fields probed against the hash table.
+   *
+   * @return the right join keys
+   * @deprecated the right-hand sides of the join {@link #getKeys()}; use {@link #getKeys()}
+   *     instead.
+   */
+  @Deprecated
+  public List<FieldReference> getRightKeys() {
+    return getKeys().stream()
+        .map(ComparisonJoinKey::getRight)
+        .collect(java.util.stream.Collectors.toList());
+  }
+
+  /**
+   * Returns the type of join to perform.
+   *
+   * @return the join type
+   */
   public abstract JoinType getJoinType();
 
+  /**
+   * Returns the filter applied to the join output after the join is performed, if any.
+   *
+   * @return the optional post-join filter
+   */
   public abstract Optional<Expression> getPostJoinFilter();
 
+  /** The kinds of join supported by a {@link HashJoin} relation. */
   public enum JoinType {
+    /** Unspecified or unknown join type. */
     UNKNOWN(HashJoinRel.JoinType.JOIN_TYPE_UNSPECIFIED),
+    /** Inner join: only matching left/right row pairs. */
     INNER(HashJoinRel.JoinType.JOIN_TYPE_INNER),
+    /** Full outer join: all rows from both sides, with non-matches padded with nulls. */
     OUTER(HashJoinRel.JoinType.JOIN_TYPE_OUTER),
+    /** Left outer join: all left rows, with non-matching right columns padded with nulls. */
     LEFT(HashJoinRel.JoinType.JOIN_TYPE_LEFT),
+    /** Right outer join: all right rows, with non-matching left columns padded with nulls. */
     RIGHT(HashJoinRel.JoinType.JOIN_TYPE_RIGHT),
+    /** Left semi join: left rows that have at least one match on the right. */
     LEFT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
+    /** Right semi join: right rows that have at least one match on the left. */
     RIGHT_SEMI(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_SEMI),
+    /** Left anti join: left rows that have no match on the right. */
     LEFT_ANTI(HashJoinRel.JoinType.JOIN_TYPE_LEFT_ANTI),
+    /** Right anti join: right rows that have no match on the left. */
     RIGHT_ANTI(HashJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI);
 
     private HashJoinRel.JoinType proto;
@@ -42,6 +93,13 @@ public abstract class HashJoin extends BiRel implements HasExtension {
       this.proto = proto;
     }
 
+    /**
+     * Returns the {@link JoinType} matching the given protobuf join type.
+     *
+     * @param proto the proto join type
+     * @return the matching join type
+     * @throws IllegalArgumentException if the type is not recognized
+     */
     public static JoinType fromProto(HashJoinRel.JoinType proto) {
       for (JoinType v : values()) {
         if (v.proto == proto) {
@@ -51,6 +109,11 @@ public abstract class HashJoin extends BiRel implements HasExtension {
       throw new IllegalArgumentException("Unknown type: " + proto);
     }
 
+    /**
+     * Returns the protobuf representation of this join type.
+     *
+     * @return the proto join type
+     */
     public HashJoinRel.JoinType toProto() {
       return proto;
     }
@@ -95,6 +158,11 @@ public abstract class HashJoin extends BiRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link HashJoin}.
+   *
+   * @return a new builder
+   */
   public static ImmutableHashJoin.Builder builder() {
     return ImmutableHashJoin.builder();
   }

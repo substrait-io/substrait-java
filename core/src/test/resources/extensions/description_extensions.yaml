@@ -1,0 +1,45 @@
+%YAML 1.2
+---
+urn: extension:test:description_extensions
+scalar_functions:
+  # Function-level description only; the single impl inherits it.
+  - name: "documentedScalar"
+    description: "Function-level scalar description"
+    impls:
+      - args:
+          - value: i64
+        return: i64
+  # The i64 overload documents itself and overrides the function-level
+  # description; the fp32 overload inherits the function-level description.
+  - name: "overloadDocumented"
+    description: "Shared function-level description"
+    impls:
+      - args:
+          - value: i64
+        description: "Overload-specific description for i64"
+        return: i64
+      - args:
+          - value: fp32
+        return: fp32
+  # Impl-level description with no function-level description.
+  - name: "implOnlyScalar"
+    impls:
+      - args:
+          - value: i64
+        description: "Only the impl is documented"
+        return: i64
+aggregate_functions:
+  - name: "documentedAggregate"
+    impls:
+      - args:
+          - value: i64
+        description: "Aggregate impl description"
+        return: i64
+window_functions:
+  - name: "documentedWindow"
+    description: "Window function-level description"
+    impls:
+      - args:
+          - value: i64
+        description: "Window impl description"
+        return: i64

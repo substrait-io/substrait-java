@@ -8,6 +8,8 @@ gen
 out/**
 *.iws
 .pmdCache
+gradle.lockfile
+settings-gradle.lockfile
 
 # VS Code ignores
 .vscode

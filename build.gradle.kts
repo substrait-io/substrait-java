@@ -62,9 +62,13 @@ allprojects {
       kotlinGradle { ktfmt("0.61").googleStyle() }
       java {
         target("src/*/java/**/*.java")
-        // since kfmt also brings in google-java-format we need to sync versions
-        // https://github.com/facebook/ktfmt/blob/v0.61/gradle/libs.versions.toml#L7
-        googleJavaFormat("1.23.0")
+        // google-java-format 1.28.0: earlier versions (e.g. 1.23.0, which ktfmt 0.61 bundles) call
+        // com.sun.tools.javac internals that changed in recent JDKs, so Spotless throws
+        // NoSuchMethodError/NoClassDefFoundError when the daemon runs on a newer JDK (e.g. 25).
+        // 1.28.0 is the newest release that still runs on JDK 17 (1.29.0+ requires JDK 21+),
+        // matching the daemon/CI toolchain. This Java step has its own formatter classpath,
+        // independent of ktfmt's bundled copy (used only for Kotlin), so they need not match.
+        googleJavaFormat("1.28.0")
         removeUnusedImports()
         trimTrailingWhitespace()
         forbidWildcardImports()

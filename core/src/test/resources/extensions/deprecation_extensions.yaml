@@ -1,0 +1,57 @@
+%YAML 1.2
+---
+urn: extension:test:deprecation_extensions
+types:
+  - name: "deprecatedType"
+    deprecated:
+      since: "0.50.0"
+      reason: "Replaced by newType"
+scalar_functions:
+  # Function-level deprecation
+  - name: "deprecatedScalar"
+    deprecated:
+      since: "0.1.1"
+      reason: "Use newScalar instead"
+    impls:
+      - args:
+          - value: i64
+        return: i64
+  # Function-level deprecation with reason and metadata
+  - name: "deprecatedScalarWithMetadata"
+    deprecated:
+      since: "2.0.0"
+      reason: "This function is deprecated for removal in a future version"
+      metadata:
+        alternative: "newScalar"
+    impls:
+      - args:
+          - value: i64
+        return: i64
+  # Only one overload (impl) is deprecated
+  - name: "evolvingScalar"
+    impls:
+      - args:
+          - value: fp32
+        return: fp32
+      - args:
+          - value: i64
+        deprecated:
+          since: "3.1.0"
+          reason: "Use the fp32 overload instead"
+        return: i64
+aggregate_functions:
+  - name: "deprecatedAggregate"
+    deprecated:
+      since: "1.2.0"
+    impls:
+      - args:
+          - value: i64
+        return: i64
+window_functions:
+  - name: "deprecatedWindow"
+    deprecated:
+      since: "1.3.0"
+    impls:
+      - args:
+          - value: i64
+        return: i64

@@ -161,6 +161,7 @@ public class SubstraitRelNodeConverter
                 .parserConfig(converterProvider.getSqlParserConfig())
                 .defaultSchema(catalogReader.getRootSchema().plus())
                 .traitDefs((List<RelTraitDef>) null)
+                .typeSystem(converterProvider.getTypeSystem())
                 .programs()
                 .build());
     return relRoot.accept(

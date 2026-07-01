@@ -47,6 +47,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
+    builder.executionBehavior(converterProvider.getExecutionBehavior());
 
     // TODO: consider case in which one sql passes conversion while others don't
     SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, operatorTable).stream()
@@ -73,6 +74,7 @@ public class SqlToSubstrait extends SqlConverterBase {
       throws SqlParseException {
     Builder builder = io.substrait.plan.Plan.builder();
     builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
+    builder.executionBehavior(converterProvider.getExecutionBehavior());
 
     final SqlParser.Config sqlParserConfig =
         sqlDialect.configureParser(

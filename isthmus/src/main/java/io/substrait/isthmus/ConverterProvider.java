@@ -12,6 +12,8 @@ import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.SqlArrayValueConstructorCallConverter;
 import io.substrait.isthmus.expression.SqlMapValueConstructorCallConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.plan.ImmutableExecutionBehavior;
+import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,7 @@ import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -63,6 +66,9 @@ public class ConverterProvider {
 
   /** Converter for Substrait types to Calcite types and vice versa. */
   protected TypeConverter typeConverter;
+
+  /** The execution behavior configuration for plans created by this converter. */
+  protected final Plan.ExecutionBehavior executionBehavior;
 
   /**
    * Creates a ConverterProvider with default extension collection and type factory. Uses {@link
@@ -115,12 +121,46 @@ public class ConverterProvider {
       AggregateFunctionConverter afc,
       WindowFunctionConverter wfc,
       TypeConverter tc) {
+    this(typeFactory, extensions, sfc, afc, wfc, tc, createDefaultExecutionBehavior());
+  }
+
+  /**
+   * Creates a ConverterProvider with full customization including execution behavior.
+   *
+   * @param typeFactory the Calcite type factory to use
+   * @param extensions the Substrait extension collection to use
+   * @param sfc the scalar function converter to use
+   * @param afc the aggregate function converter to use
+   * @param wfc the window function converter to use
+   * @param tc the type converter to use
+   * @param executionBehavior the execution behavior to use for plans
+   */
+  public ConverterProvider(
+      RelDataTypeFactory typeFactory,
+      SimpleExtension.ExtensionCollection extensions,
+      ScalarFunctionConverter sfc,
+      AggregateFunctionConverter afc,
+      WindowFunctionConverter wfc,
+      TypeConverter tc,
+      Plan.ExecutionBehavior executionBehavior) {
     this.typeFactory = typeFactory;
     this.extensions = extensions;
     this.scalarFunctionConverter = sfc;
     this.aggregateFunctionConverter = afc;
     this.windowFunctionConverter = wfc;
     this.typeConverter = tc;
+    this.executionBehavior = executionBehavior;
+  }
+
+  /**
+   * Creates the default execution behavior with PER_PLAN variable evaluation mode.
+   *
+   * @return the default execution behavior
+   */
+  private static Plan.ExecutionBehavior createDefaultExecutionBehavior() {
+    return ImmutableExecutionBehavior.builder()
+        .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
+        .build();
   }
 
   // SQL to Calcite Processing
@@ -293,7 +333,11 @@ public class ConverterProvider {
    * @return a new RelBuilder instance
    */
   public RelBuilder getRelBuilder(CalciteSchema schema) {
-    return RelBuilder.create(Frameworks.newConfigBuilder().defaultSchema(schema.plus()).build());
+    return RelBuilder.create(
+        Frameworks.newConfigBuilder()
+            .defaultSchema(schema.plus())
+            .typeSystem(getTypeSystem())
+            .build());
   }
 
   // Utility Getters
@@ -305,6 +349,19 @@ public class ConverterProvider {
    */
   public RelDataTypeFactory getTypeFactory() {
     return typeFactory;
+  }
+
+  /**
+   * Returns the Calcite {@link RelDataTypeSystem} used by this converter provider.
+   *
+   * <p>Derived from the {@link #getTypeFactory() type factory} so the two never disagree. This is
+   * the type system supplied to the {@link RelBuilder} used when converting Substrait to Calcite,
+   * ensuring its type derivation matches the types carried by converted expressions.
+   *
+   * @return the type system
+   */
+  public RelDataTypeSystem getTypeSystem() {
+    return typeFactory.getTypeSystem();
   }
 
   /**
@@ -350,5 +407,19 @@ public class ConverterProvider {
    */
   public TypeConverter getTypeConverter() {
     return typeConverter;
+  }
+
+  /**
+   * Returns the execution behavior for plans created by this converter.
+   *
+   * <p>The default execution behavior uses {@link
+   * Plan.ExecutionBehavior.VariableEvaluationMode#PER_PLAN}, which evaluates variables once per
+   * plan execution. This can be customized by providing a different execution behavior through the
+   * constructor.
+   *
+   * @return the execution behavior to use when creating plans
+   */
+  public Plan.ExecutionBehavior getExecutionBehavior() {
+    return executionBehavior;
   }
 }

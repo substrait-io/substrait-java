@@ -2,6 +2,11 @@ package io.substrait.type;
 
 import java.util.stream.Collectors;
 
+/**
+ * {@link TypeVisitor} that renders a {@link Type} as its human-readable string representation (for
+ * example {@code "boolean"}, {@code "i32"} or {@code "decimal<10,2>"}), appending a trailing {@code
+ * "?"} for nullable types.
+ */
 public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> {
 
   private String n(Type type) {

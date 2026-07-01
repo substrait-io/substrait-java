@@ -63,13 +63,9 @@ class AutomaticDynamicFunctionMappingRoundtripTest extends PlanTestBase {
             sb.remap(2, 3), // The inputs are indices 0, 1. The two scalarFn outputs are 2, 3.
             table);
 
-    // Build plan with output field names
+    // Build plan with output field names and default execution behavior
     Plan plan =
-        Plan.builder()
-            .roots(
-                List.of(
-                    Plan.Root.builder().input(project).names(List.of("ts_str", "dt_str")).build()))
-            .build();
+        sb.plan(Plan.Root.builder().input(project).names(List.of("ts_str", "dt_str")).build());
 
     // Use PlanTestBase helper method for comprehensive roundtrip testing
     assertFullRoundTrip(plan.getRoots().get(0));

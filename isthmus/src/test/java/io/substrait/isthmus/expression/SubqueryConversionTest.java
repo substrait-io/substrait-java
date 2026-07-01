@@ -80,10 +80,10 @@ class SubqueryConversionTest extends PlanTestBase {
         calciteRel.explain());
 
     assertEquals(
-        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (((SELECT \"c_nationkey\"\n"
+        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (SELECT \"c_nationkey\"\n"
             + "FROM \"customer\"\n"
-            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\"))) AS \"$f3\"\n"
-            + "FROM \"orders\"",
+            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\") AS \"$f3\"\n"
+            + "FROM \"orders\" AS \"orders\"",
         SubstraitSqlDialect.toSql(calciteRel).getSql());
   }
 
@@ -160,12 +160,12 @@ class SubqueryConversionTest extends PlanTestBase {
         calciteRel.explain());
 
     assertEquals(
-        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (((SELECT \"n_name\" AS \"n_name0\"\n"
+        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (SELECT \"n_name\" AS \"n_name0\"\n"
             + "FROM \"nation\"\n"
-            + "WHERE \"n_nationkey\" = (((SELECT \"c_nationkey\"\n"
+            + "WHERE \"n_nationkey\" = (SELECT \"c_nationkey\"\n"
             + "FROM \"customer\"\n"
-            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\")))))) AS \"$f3\"\n"
-            + "FROM \"orders\"",
+            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\")) AS \"$f3\"\n"
+            + "FROM \"orders\" AS \"orders\"",
         SubstraitSqlDialect.toSql(calciteRel).getSql());
   }
 
@@ -237,12 +237,12 @@ class SubqueryConversionTest extends PlanTestBase {
         calciteRel.explain());
 
     assertEquals(
-        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (((SELECT \"n_name\" AS \"n_name0\"\n"
+        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (SELECT \"n_name\" AS \"n_name0\"\n"
             + "FROM \"nation\"\n"
             + "WHERE \"n_nationkey\" IN (SELECT \"c_nationkey\"\n"
             + "FROM \"customer\"\n"
-            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\")))) AS \"$f3\"\n"
-            + "FROM \"orders\"",
+            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\")) AS \"$f3\"\n"
+            + "FROM \"orders\" AS \"orders\"",
         SubstraitSqlDialect.toSql(calciteRel).getSql());
   }
 
@@ -328,12 +328,12 @@ class SubqueryConversionTest extends PlanTestBase {
         calciteRel.explain());
 
     assertEquals(
-        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (((SELECT \"n_name\" AS \"n_name0\"\n"
+        "SELECT \"o_orderkey\" AS \"o_orderkey0\", (SELECT \"n_name\" AS \"n_name0\"\n"
             + "FROM \"nation\"\n"
             + "WHERE EXISTS (SELECT \"c_nationkey\"\n"
             + "FROM \"customer\"\n"
-            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\" AND \"c_nationkey\" = \"nation\".\"n_nationkey\")))) AS \"$f3\"\n"
-            + "FROM \"orders\"",
+            + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\" AND \"c_nationkey\" = \"nation\".\"n_nationkey\")) AS \"$f3\"\n"
+            + "FROM \"orders\" AS \"orders\"",
         SubstraitSqlDialect.toSql(calciteRel).getSql());
   }
 }

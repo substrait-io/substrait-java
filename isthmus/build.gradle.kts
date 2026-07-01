@@ -88,14 +88,9 @@ dependencies {
       )
   }
   constraints {
-    // calcite-core:1.39.0 has dependencies that contain vulnerabilities:
-    // - CVE-2025-27820 (org.apache.httpcomponents.client5:httpclient5 < 5.4.3)
+    // calcite-core:1.41.0 has dependencies that contain vulnerabilities:
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
-    implementation(libs.httpclient5)
     implementation(libs.json.smart)
-    // calcite-core:1.40.0 has dependencies that contain vulnerabilities:
-    // - CVE-2025-48924 (org.apache.commons:commons-lang3 < 3.18.0)
-    implementation(libs.commons.lang3)
   }
   implementation(libs.calcite.server) {
     exclude(group = "commons-lang", module = "commons-lang")
@@ -123,6 +118,12 @@ dependencies {
   }
   testImplementation(libs.protobuf.java)
   api(libs.jspecify)
+
+  testImplementation(libs.bundles.testcontainers)
+
+  testImplementation(libs.postgresql.jdbc)
+
+  testImplementation(libs.slf4j.jdk14)
 }
 
 tasks {
@@ -144,6 +145,23 @@ tasks {
 
   // Only set the compile release since JUnit 6 requires Java 17 to run tests.
   compileJava { options.release = 11 }
+
+  test {
+    // Exclude integration tests by default
+    useJUnitPlatform { excludeTags("integration") }
+  }
+}
+
+// Register a separate task to run integration tests
+val test by testing.suites.existing(JvmTestSuite::class)
+
+tasks.register<Test>("integrationTest") {
+  description = "Run integration tests"
+  group = "verification"
+  testClassesDirs = files(test.map { it.sources.output.classesDirs })
+  classpath = files(test.map { it.sources.runtimeClasspath })
+  useJUnitPlatform { includeTags("integration") }
+  shouldRunAfter(tasks.test)
 }
 
 sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }

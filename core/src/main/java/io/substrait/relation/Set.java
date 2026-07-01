@@ -9,19 +9,37 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.immutables.value.Value;
 
+/**
+ * A relation that combines its inputs using a set operation such as union, intersection or minus.
+ */
 @Value.Immutable
 public abstract class Set extends AbstractRel implements HasExtension {
+  /**
+   * Returns the set operation applied to the inputs.
+   *
+   * @return the set operation
+   */
   public abstract SetOp getSetOp();
 
+  /** The kinds of set operations supported by a {@link Set} relation. */
   public enum SetOp {
+    /** Unspecified or unknown set operation. */
     UNKNOWN(SetRel.SetOp.SET_OP_UNSPECIFIED),
+    /** Rows of the primary input not present in any other input, with duplicates removed. */
     MINUS_PRIMARY(SetRel.SetOp.SET_OP_MINUS_PRIMARY),
+    /** Rows of the primary input not present in any other input, retaining duplicates. */
     MINUS_PRIMARY_ALL(SetRel.SetOp.SET_OP_MINUS_PRIMARY_ALL),
+    /** Multiset difference of the primary input against the other inputs. */
     MINUS_MULTISET(SetRel.SetOp.SET_OP_MINUS_MULTISET),
+    /** Rows present in the primary input and at least one other input, with duplicates removed. */
     INTERSECTION_PRIMARY(SetRel.SetOp.SET_OP_INTERSECTION_PRIMARY),
+    /** Rows present in all inputs, with duplicates removed. */
     INTERSECTION_MULTISET(SetRel.SetOp.SET_OP_INTERSECTION_MULTISET),
+    /** Rows present in all inputs, retaining duplicates. */
     INTERSECTION_MULTISET_ALL(SetRel.SetOp.SET_OP_INTERSECTION_MULTISET_ALL),
+    /** Union of all inputs with duplicates removed. */
     UNION_DISTINCT(SetRel.SetOp.SET_OP_UNION_DISTINCT),
+    /** Union of all inputs retaining duplicates. */
     UNION_ALL(SetRel.SetOp.SET_OP_UNION_ALL);
 
     private SetRel.SetOp proto;
@@ -30,10 +48,22 @@ public abstract class Set extends AbstractRel implements HasExtension {
       this.proto = proto;
     }
 
+    /**
+     * Returns the protobuf representation of this set operation.
+     *
+     * @return the proto set operation
+     */
     public SetRel.SetOp toProto() {
       return proto;
     }
 
+    /**
+     * Returns the {@link SetOp} matching the given protobuf set operation.
+     *
+     * @param proto the proto set operation
+     * @return the matching set operation
+     * @throws IllegalArgumentException if the operation is not recognized
+     */
     public static SetOp fromProto(SetRel.SetOp proto) {
       for (SetOp v : values()) {
         if (v.proto == proto) {
@@ -147,6 +177,11 @@ public abstract class Set extends AbstractRel implements HasExtension {
     return visitor.visit(this, context);
   }
 
+  /**
+   * Creates a builder for {@link Set}.
+   *
+   * @return a new builder
+   */
   public static ImmutableSet.Builder builder() {
     return ImmutableSet.builder();
   }

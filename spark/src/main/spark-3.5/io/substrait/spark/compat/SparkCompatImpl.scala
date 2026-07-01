@@ -8,20 +8,6 @@ import io.substrait.relation
 
 class SparkCompatImpl extends SparkCompat {
 
-  override def createScalarSubquery(plan: LogicalPlan): ScalarSubquery = {
-    // Spark 3.5 requires exprId parameter
-    ScalarSubquery(plan, exprId = NamedExpression.newExprId)
-  }
-
-  override def createAggregate(
-      groupingExpressions: Seq[Expression],
-      aggregateExpressions: Seq[NamedExpression],
-      child: LogicalPlan
-  ): Aggregate = {
-    // Spark 3.5 uses 3-parameter constructor
-    Aggregate(groupingExpressions, aggregateExpressions, child)
-  }
-
   override def createLogicalRelation(
       relation: HadoopFsRelation,
       output: Seq[AttributeReference],

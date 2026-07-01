@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: actions/setup-java@v5
@@ -32,7 +32,7 @@ jobs:
         run: java -version
       - name: Build with Gradle
         run: |
-          # fetch submodule tags since actions/checkout@v6 does not
+          # fetch submodule tags since actions/checkout@v7 does not
           git submodule foreach 'git fetch --unshallow || true'
 
           ./gradlew nativeCompile
@@ -41,9 +41,8 @@ jobs:
           ./isthmus-cli/src/test/script/smoke.sh
           ./isthmus-cli/src/test/script/tpch_smoke.sh
       - name: Rename the artifact to OS-unique name
-        shell: bash
-        run: |
-          value=`mv isthmus-cli/build/native/nativeCompile/isthmus isthmus-cli/build/native/nativeCompile/isthmus-${{ matrix.os }}`
+        working-directory: isthmus-cli/build/native/nativeCompile
+        run: mv isthmus isthmus-${{ matrix.os }}
       - name: Publish artifact
         uses: actions/upload-artifact@v7
         with:
@@ -57,10 +56,10 @@ jobs:
       - uses: actions/create-github-app-token@v3
         id: app-token
         with:
-          app-id: ${{ secrets.RELEASER_ID }}
+          client-id: ${{ secrets.RELEASER_ID }}
           private-key: ${{ secrets.RELEASER_KEY }}
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
@@ -73,7 +72,7 @@ jobs:
           distribution: "temurin"
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Download isthmus-ubuntu-latest binary
@@ -86,18 +85,21 @@ jobs:
         with:
           name: isthmus-macOS-latest
           path: native/libs
-      - name: Get bot user ID
+      - name: Get bot user ID and email
         id: bot-user-id
         run: |
-          echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+          slug="${{ steps.app-token.outputs.app-slug }}"
+          user_id="$(gh api "/users/${slug}[bot]" --jq .id)"
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+          echo "email=${user_id}+${slug}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
       - name: Run semantic-release
         run: ./ci/release/run.sh
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GIT_AUTHOR_EMAIL: "${{ steps.bot-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
-          GIT_COMMITTER_EMAIL: "${{ steps.bot-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          GIT_AUTHOR_EMAIL: ${{ steps.bot-user-id.outputs.email }}
+          GIT_COMMITTER_EMAIL: ${{ steps.bot-user-id.outputs.email }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}

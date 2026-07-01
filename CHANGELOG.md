@@ -1,6 +1,72 @@
 Release Notes
 ---
 
+## [0.94.0](https://github.com/substrait-io/substrait-java/compare/v0.93.0...v0.94.0) (2026-06-21)
+
+### Features
+
+* **core:** support ExecutionContextVariable ([#867](https://github.com/substrait-io/substrait-java/issues/867)) ([a649e0d](https://github.com/substrait-io/substrait-java/commit/a649e0da9951b62d1462a0f86601076af6e0f6e9))
+* support new ComparisonJoinKey field in HashJoin/MergeJoin ([#845](https://github.com/substrait-io/substrait-java/issues/845)) ([9c2c750](https://github.com/substrait-io/substrait-java/commit/9c2c7507be1734243e1b43520256676769b499ec))
+
+## [0.93.0](https://github.com/substrait-io/substrait-java/compare/v0.92.0...v0.93.0) (2026-06-14)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** protobuf Aggregate.Grouping.grouping_expressions field is no longer supported
+* **extensions:** changes the visibility of the `ScalarFunctionVariant.resolve()` function from public to package-private
+
+### Features
+
+* **core:** remove AggregateRel.Grouping.grouping_expressions ([#857](https://github.com/substrait-io/substrait-java/issues/857)) ([b38ca00](https://github.com/substrait-io/substrait-java/commit/b38ca005a132f1d100a4368ac4ee7e839bf10524))
+* extend substrait builder api ([#773](https://github.com/substrait-io/substrait-java/issues/773)) ([594a168](https://github.com/substrait-io/substrait-java/commit/594a1683bfea0f4175e3a10df8d40c8379ca4aa1))
+* **extensions:** support deprecation info in extensions ([#846](https://github.com/substrait-io/substrait-java/issues/846)) ([f7768d9](https://github.com/substrait-io/substrait-java/commit/f7768d914c89f6f2bbb4ffc7dd0da9e112bad6be))
+* **extensions:** support impl-level description in extensions ([#848](https://github.com/substrait-io/substrait-java/issues/848)) ([eb453f2](https://github.com/substrait-io/substrait-java/commit/eb453f2ccbe1752de971f682738e718eaec8ff75))
+* **pojo:** support plan execution behavior ([#791](https://github.com/substrait-io/substrait-java/issues/791)) ([50acd03](https://github.com/substrait-io/substrait-java/commit/50acd03fbda11b52cae24558b407dceea89a363a))
+
+## [0.92.0](https://github.com/substrait-io/substrait-java/compare/v0.91.0...v0.92.0) (2026-06-07)
+
+### Features
+
+* **examples:** demonstrate Calcite optimization ([#776](https://github.com/substrait-io/substrait-java/issues/776)) ([a6a3b79](https://github.com/substrait-io/substrait-java/commit/a6a3b79ecae2431e2c781bfaef28b7bd35f3df11))
+
+## [0.91.0](https://github.com/substrait-io/substrait-java/compare/v0.90.0...v0.91.0) (2026-05-24)
+
+### Features
+
+* **spark:** support multivariate AND/OR ([#837](https://github.com/substrait-io/substrait-java/issues/837)) ([19ca6aa](https://github.com/substrait-io/substrait-java/commit/19ca6aa64e470c932f24fc10d519aa9eadcb760d))
+
+## [0.90.0](https://github.com/substrait-io/substrait-java/compare/v0.89.2...v0.90.0) (2026-05-17)
+
+### Features
+
+* **core,isthmus:** add DynamicParameter expression support ([#752](https://github.com/substrait-io/substrait-java/issues/752)) ([1770fa4](https://github.com/substrait-io/substrait-java/commit/1770fa4c49990732564dfff76ef35eec1664ddee))
+
+## [0.89.2](https://github.com/substrait-io/substrait-java/compare/v0.89.1...v0.89.2) (2026-05-03)
+
+### Bug Fixes
+
+* **core:** correct type short names for binary and fixedbinary ([#826](https://github.com/substrait-io/substrait-java/issues/826)) ([48dcd3f](https://github.com/substrait-io/substrait-java/commit/48dcd3feeeb7012f82a7f78263fee3e6931e5e8f))
+
+## [0.89.1](https://github.com/substrait-io/substrait-java/compare/v0.89.0...v0.89.1) (2026-04-26)
+
+### Bug Fixes
+
+* **spark:** correct handling of ‘remap’ property ([#818](https://github.com/substrait-io/substrait-java/issues/818)) ([2b7e89f](https://github.com/substrait-io/substrait-java/commit/2b7e89f976edd4288219042de3f5cf92b6b881c6))
+
+## [0.89.0](https://github.com/substrait-io/substrait-java/compare/v0.88.0...v0.89.0) (2026-04-19)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** bump to substrait v0.87.0 (#797)
+
+### Features
+
+* **core:** bump to substrait v0.87.0 ([#797](https://github.com/substrait-io/substrait-java/issues/797)) ([98009e1](https://github.com/substrait-io/substrait-java/commit/98009e10400b174cdfa64b089ec7177d330493b2))
+
+### Bug Fixes
+
+* **core:** correct mark join output schema ([#814](https://github.com/substrait-io/substrait-java/issues/814)) ([e7abfad](https://github.com/substrait-io/substrait-java/commit/e7abfad935791f73bad11ef3cff0326ba0e7a4d9))
+
 ## [0.88.0](https://github.com/substrait-io/substrait-java/compare/v0.87.0...v0.88.0) (2026-04-12)
 
 ### Features

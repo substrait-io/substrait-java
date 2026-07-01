@@ -1,8 +1,7 @@
 package io.substrait.isthmus.cli;
 
 import com.google.protobuf.Empty;
-import com.google.protobuf.GeneratedMessageV3;
-import com.google.protobuf.MessageLite;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.ProtocolMessageEnum;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfoList;
@@ -61,8 +60,8 @@ public final class RegisterAtRuntime implements Feature {
 
       try (PackageScanner substrait = new PackageScanner("io.substrait")) {
         // protobuf items
-        substrait.registerByParent(GeneratedMessageV3.class);
-        substrait.registerByParent(MessageLite.Builder.class);
+        substrait.registerByParent(GeneratedMessage.class);
+        substrait.registerByParent(GeneratedMessage.Builder.class);
         substrait.registerByParent(ProtocolMessageEnum.class);
 
         // Substrait immutables.
@@ -70,69 +69,82 @@ public final class RegisterAtRuntime implements Feature {
       }
 
       // Records
-      register(SimpleExtension.TypeArgument.class);
-      register(SimpleExtension.EnumArgument.class);
-      register(SimpleExtension.ValueArgument.class);
+      register(
+          SimpleExtension.TypeArgument.class,
+          SimpleExtension.EnumArgument.class,
+          SimpleExtension.ValueArgument.class);
 
-      register(BuiltInMetadata.class);
-      register(SqlValidatorException.class);
-      register(CalciteContextException.class);
-      register(SqlStdOperatorTable.class);
-      register(StandardConvertletTable.class);
+      registerForReflection(
+          Class.forName(
+              "io.substrait.extension.ImmutableSimpleExtension$ExtensionSignatures$Json"));
+
+      register(
+          BuiltInMetadata.class,
+          SqlValidatorException.class,
+          CalciteContextException.class,
+          SqlStdOperatorTable.class,
+          StandardConvertletTable.class);
+
       try (PackageScanner calcite = new PackageScanner("org.apache.calcite")) {
         calcite.registerByParent(Metadata.class);
         calcite.registerByParent(MetadataHandler.class);
         calcite.registerByParent(Resources.Element.class);
       }
 
-      Arrays.asList(
-              RelMdPercentageOriginalRows.class,
-              RelMdColumnOrigins.class,
-              RelMdExpressionLineage.class,
-              RelMdTableReferences.class,
-              RelMdNodeTypes.class,
-              RelMdRowCount.class,
-              RelMdMaxRowCount.class,
-              RelMdMinRowCount.class,
-              RelMdUniqueKeys.class,
-              RelMdColumnUniqueness.class,
-              RelMdPopulationSize.class,
-              RelMdSize.class,
-              RelMdParallelism.class,
-              RelMdDistribution.class,
-              RelMdLowerBoundCost.class,
-              RelMdMemory.class,
-              RelMdDistinctRowCount.class,
-              RelMdSelectivity.class,
-              RelMdExplainVisibility.class,
-              RelMdPredicates.class,
-              RelMdAllPredicates.class,
-              RelMdCollation.class)
-          .forEach(RegisterAtRuntime::register);
+      register(
+          RelMdPercentageOriginalRows.class,
+          RelMdColumnOrigins.class,
+          RelMdExpressionLineage.class,
+          RelMdTableReferences.class,
+          RelMdNodeTypes.class,
+          RelMdRowCount.class,
+          RelMdMaxRowCount.class,
+          RelMdMinRowCount.class,
+          RelMdUniqueKeys.class,
+          RelMdColumnUniqueness.class,
+          RelMdPopulationSize.class,
+          RelMdSize.class,
+          RelMdParallelism.class,
+          RelMdDistribution.class,
+          RelMdLowerBoundCost.class,
+          RelMdMemory.class,
+          RelMdDistinctRowCount.class,
+          RelMdSelectivity.class,
+          RelMdExplainVisibility.class,
+          RelMdPredicates.class,
+          RelMdAllPredicates.class,
+          RelMdCollation.class);
 
-      RuntimeReflection.register(Resources.class);
-      RuntimeReflection.register(SqlValidatorException.class);
+      register(Resources.class, SqlValidatorException.class);
 
-      Arrays.stream(BuiltInMethod.values())
-          .forEach(
-              c -> {
-                if (c.field != null) RuntimeReflection.register(c.field);
-                if (c.constructor != null) RuntimeReflection.register(c.constructor);
-                if (c.method != null) RuntimeReflection.register(c.method);
-              });
+      for (BuiltInMethod method : BuiltInMethod.values()) {
+        if (method.field != null) {
+          RuntimeReflection.register(method.field);
+        }
+        if (method.constructor != null) {
+          RuntimeReflection.register(method.constructor);
+        }
+        if (method.method != null) {
+          RuntimeReflection.register(method.method);
+        }
+      }
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
-  private static void register(Class<?> c) {
-    RuntimeReflection.register(c);
-    RuntimeReflection.register(c.getDeclaredConstructors());
-    RuntimeReflection.register(c.getDeclaredFields());
-    RuntimeReflection.register(c.getDeclaredMethods());
-    RuntimeReflection.register(c.getConstructors());
-    RuntimeReflection.register(c.getFields());
-    RuntimeReflection.register(c.getMethods());
+  private static void register(Class<?>... classes) {
+    for (Class<?> c : classes) {
+      RuntimeReflection.register(c);
+      RuntimeReflection.register(c.getDeclaredConstructors());
+      RuntimeReflection.register(c.getDeclaredFields());
+      RuntimeReflection.register(c.getDeclaredMethods());
+    }
+  }
+
+  private static void registerForReflection(Class<?>... classes) {
+    Arrays.stream(classes).forEach(RuntimeReflection::registerForReflectiveInstantiation);
+    register(classes);
   }
 
   private static final class PackageScanner implements AutoCloseable {

@@ -61,7 +61,8 @@ graalvmNative {
       buildArgs.add("-H:+ReportExceptionStackTraces")
       buildArgs.add("-H:DynamicProxyConfigurationFiles=${project.file("proxies.json")}")
       buildArgs.add("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
-      buildArgs.add("--future-defaults=all")
+      // Removed due to https://github.com/oracle/graal/issues/13316
+      // buildArgs.add("--future-defaults=all")
       jvmArgs.add("--sun-misc-unsafe-memory-access=allow")
 
       // Capture the classpath since native-compile erases it
