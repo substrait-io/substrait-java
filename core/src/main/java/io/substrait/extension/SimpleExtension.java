@@ -1127,9 +1127,8 @@ public class SimpleExtension {
 
     /**
      * Returns the function behavior, i.e. whether functions supporting the system-preferred
-     * variation implicitly support this variation ({@link TypeVariationFunctionBehavior#INHERITS})
-     * or must be resolved independently ({@link TypeVariationFunctionBehavior#SEPARATE}). Defaults
-     * to {@link TypeVariationFunctionBehavior#INHERITS}.
+     * variation implicitly support this variation ({@code INHERITS}) or must be resolved
+     * independently ({@code SEPARATE}). Defaults to {@code INHERITS}.
      *
      * @return the function behavior
      */
