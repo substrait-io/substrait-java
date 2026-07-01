@@ -440,7 +440,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // agg call in declaration order.
     List<Expression> projectExprs = new ArrayList<>();
     for (int i = 0; i < groupingFieldCount; i++) {
-      projectExprs.add(FieldReference.newRootStructReference(i, aggRel.getRecordType()));
+      projectExprs.add(FieldReference.newInputRelReference(i, aggRel));
     }
     int realAggIndex = groupingFieldCount; // tracks next real-measure field index in aggRel output
     for (AggregateCall aggCall : aggregate.getAggCallList()) {
@@ -450,8 +450,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         projectExprs.add(toExpression(rexLiteral));
       } else if (!groupIdCalls.contains(aggCall)) {
         // real measure: pass through by reference
-        projectExprs.add(
-            FieldReference.newRootStructReference(realAggIndex, aggRel.getRecordType()));
+        projectExprs.add(FieldReference.newInputRelReference(realAggIndex, aggRel));
         realAggIndex++;
       }
       // GROUP_ID calls are not present in the outer schema here (groupings.size() <= 1 branch);
