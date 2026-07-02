@@ -141,6 +141,7 @@
           }
         },
         "names": [
+          "dummy",
           "result",
           "product"
         ]

@@ -73,6 +73,8 @@
           }
         },
         "names": [
+          "a",
+          "b",
           "sum_result"
         ]
       }

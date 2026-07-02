@@ -3,9 +3,12 @@ package io.substrait.plan;
 import io.substrait.SubstraitVersion;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.Rel;
+import io.substrait.type.NamedFieldCountingTypeVisitor;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A complete Substrait plan: a set of root relations together with version and metadata. */
 @Value.Immutable
@@ -153,6 +156,8 @@ public abstract class Plan {
   /** A root relation of a plan together with the output field names it exposes. */
   @Value.Immutable
   public abstract static class Root {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Root.class);
+
     /**
      * Returns the relation producing this root's output.
      *
@@ -166,6 +171,26 @@ public abstract class Plan {
      * @return the output field names
      */
     public abstract List<String> getNames();
+
+    /** Validates that the root output names match the input record type. */
+    @Value.Check
+    protected void check() {
+      final int actualNameCount = getNames().size();
+      if (actualNameCount == 0) {
+        LOGGER.warn(
+            "Plan.Root built without output names; this will be an error in the next release");
+        return;
+      }
+
+      final int expectedFieldCount =
+          NamedFieldCountingTypeVisitor.countNames(getInput().getRecordType());
+      if (actualNameCount != expectedFieldCount) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Plan.Root names count (%d) must match input record type depth-first named-field count (%d)",
+                actualNameCount, expectedFieldCount));
+      }
+    }
 
     /**
      * Creates a builder for {@link Root}.

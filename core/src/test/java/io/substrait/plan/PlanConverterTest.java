@@ -12,6 +12,7 @@ import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan.Root;
 import io.substrait.relation.ImmutableVirtualTableScan;
+import io.substrait.relation.NamedScan;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -21,6 +22,7 @@ import io.substrait.utils.StringHolderHandlingExtensionProtoConverter;
 import io.substrait.utils.StringHolderHandlingProtoExtensionConverter;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -33,6 +35,23 @@ class PlanConverterTest {
     return ImmutableExecutionBehavior.builder()
         .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
         .build();
+  }
+
+  @Test
+  void rootNamesMustMatchInputFieldCount() {
+    final NamedScan scan =
+        NamedScan.builder()
+            .addNames("test_table")
+            .initialSchema(
+                NamedStruct.builder()
+                    .addNames("only_column")
+                    .struct(TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I32))
+                    .build())
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Root.builder().input(scan).names(List.of("col1", "col2")).build());
   }
 
   @Test

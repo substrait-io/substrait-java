@@ -99,6 +99,8 @@
           }
         },
         "names": [
+          "value1",
+          "value2",
           "sum_result"
         ]
       }
