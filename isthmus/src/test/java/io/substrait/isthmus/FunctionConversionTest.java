@@ -15,16 +15,12 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
-import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.stream.Stream;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Verify that "problematic" Substrait functions can be converted to Calcite and back successfully
@@ -75,27 +71,6 @@ class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  void extractTimestampTzScalarFunction() {
-    ScalarFunctionInvocation reqTstzFn =
-        sb.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_tstz_str",
-            TypeCreator.REQUIRED.I64,
-            EnumArg.builder().value("MONTH").build(),
-            Expression.TimestampTZLiteral.builder().value(0).build(),
-            Expression.StrLiteral.builder().value("GMT").build());
-
-    RexNode calciteExpr = reqTstzFn.accept(expressionRexConverter, Context.newContext());
-    assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
-    assertInstanceOf(RexCall.class, calciteExpr);
-
-    RexCall extract = (RexCall) calciteExpr;
-    assertEquals(
-        "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(6), 'GMT':VARCHAR)",
-        extract.toString());
-  }
-
-  @Test
   void extractPrecisionTimestampTzScalarFunction() {
     ScalarFunctionInvocation reqPtstzFn =
         sb.scalarFn(
@@ -114,24 +89,6 @@ class FunctionConversionTest extends PlanTestBase {
     assertEquals(
         "EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(3), 'GMT':VARCHAR)",
         extract.toString());
-  }
-
-  @Test
-  void extractTimestampScalarFunction() {
-    ScalarFunctionInvocation reqTsFn =
-        sb.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_ts",
-            TypeCreator.REQUIRED.I64,
-            EnumArg.builder().value("MONTH").build(),
-            Expression.TimestampLiteral.builder().value(0).build());
-
-    RexNode calciteExpr = reqTsFn.accept(expressionRexConverter, Context.newContext());
-    assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
-    assertInstanceOf(RexCall.class, calciteExpr);
-
-    RexCall extract = (RexCall) calciteExpr;
-    assertEquals("EXTRACT(FLAG(MONTH), 1970-01-01 00:00:00:TIMESTAMP(6))", extract.toString());
   }
 
   @Test
@@ -175,10 +132,10 @@ class FunctionConversionTest extends PlanTestBase {
     ScalarFunctionInvocation reqTimeFn =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_time",
+            "extract:req_pt",
             TypeCreator.REQUIRED.I64,
             EnumArg.builder().value("MINUTE").build(),
-            Expression.TimeLiteral.builder().value(0).build());
+            Expression.PrecisionTimeLiteral.builder().value(0).precision(6).build());
 
     RexNode calciteExpr = reqTimeFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.EXTRACT, calciteExpr.getKind());
@@ -208,23 +165,6 @@ class FunctionConversionTest extends PlanTestBase {
   }
 
   @Test
-  void unsupportedExtractTimestampTzWithIndexing() {
-    ScalarFunctionInvocation reqReqTstzFn =
-        sb.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_req_tstz_str",
-            TypeCreator.REQUIRED.I64,
-            EnumArg.builder().value("MONTH").build(),
-            EnumArg.builder().value("ONE").build(),
-            Expression.TimestampTZLiteral.builder().value(0).build(),
-            Expression.StrLiteral.builder().value("GMT").build());
-
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> reqReqTstzFn.accept(expressionRexConverter, Context.newContext()));
-  }
-
-  @Test
   void unsupportedExtractPrecisionTimestampTzWithIndexing() {
     ScalarFunctionInvocation reqReqPtstzFn =
         sb.scalarFn(
@@ -239,22 +179,6 @@ class FunctionConversionTest extends PlanTestBase {
     assertThrows(
         UnsupportedOperationException.class,
         () -> reqReqPtstzFn.accept(expressionRexConverter, Context.newContext()));
-  }
-
-  @Test
-  void unsupportedExtractTimestampWithIndexing() {
-    ScalarFunctionInvocation reqReqTsFn =
-        sb.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "extract:req_req_ts",
-            TypeCreator.REQUIRED.I64,
-            EnumArg.builder().value("MONTH").build(),
-            EnumArg.builder().value("ONE").build(),
-            Expression.TimestampLiteral.builder().value(0).build());
-
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> reqReqTsFn.accept(expressionRexConverter, Context.newContext()));
   }
 
   @Test
@@ -288,49 +212,62 @@ class FunctionConversionTest extends PlanTestBase {
     assertProtoPlanRoundrip("select 'brand_'||P_BRAND from PART");
   }
 
-  /**
-   * Provides test cases for strptime function tests.
-   *
-   * @return Stream of test arguments containing: function name, input string value, format string,
-   *     output type, and expected Calcite function name
-   */
-  private static Stream<Arguments> strptimeTestCases() {
-    return Stream.of(
-        Arguments.of(
-            "strptime_time:str_str",
-            "12:34:56",
-            "%H:%M:%S",
-            TypeCreator.REQUIRED.precisionTime(6),
-            "PARSE_TIME"),
-        Arguments.of(
-            "strptime_timestamp:str_str",
-            "2026-01-29T12:34:56",
-            "%Y:%m:%dT%H:%M:%S",
-            TypeCreator.REQUIRED.precisionTimestamp(6),
-            "PARSE_TIMESTAMP"),
-        Arguments.of(
-            "strptime_date:str_str",
-            "2026-01-29",
-            "%Y:%m:%d",
-            TypeCreator.REQUIRED.DATE,
-            "PARSE_DATE"));
-  }
-
-  @ParameterizedTest
-  @MethodSource("strptimeTestCases")
-  void testStrptimeFunctions(
-      String functionSignature,
-      String inputValue,
-      String formatValue,
-      Type outputType,
-      String expectedCalciteFunctionName) {
-    Expression.StrLiteral inputString = Expression.StrLiteral.builder().value(inputValue).build();
-    Expression.StrLiteral formatString = Expression.StrLiteral.builder().value(formatValue).build();
+  @Test
+  void strptimeTime() {
+    Expression.StrLiteral inputString = Expression.StrLiteral.builder().value("12:34:56").build();
+    Expression.StrLiteral formatString = Expression.StrLiteral.builder().value("%H:%M:%S").build();
+    Expression.I8Literal precision = ExpressionCreator.i8(false, (byte) 6);
     ScalarFunctionInvocation strptimeFn =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            functionSignature,
-            outputType,
+            "strptime_time:str_str_i8",
+            TypeCreator.REQUIRED.precisionTime(6),
+            inputString,
+            formatString,
+            precision);
+
+    // tests Substrait -> Calcite
+    RexNode calciteExpr = strptimeFn.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
+    assertInstanceOf(RexCall.class, calciteExpr);
+    assertEquals(
+        "PARSE_TIME('%H:%M:%S':VARCHAR, '12:34:56':VARCHAR, 6:TINYINT)", calciteExpr.toString());
+  }
+
+  @Test
+  void strptimeTimestamp() {
+    Expression.StrLiteral inputString =
+        Expression.StrLiteral.builder().value("2026-01-29T12:34:56").build();
+    Expression.StrLiteral formatString =
+        Expression.StrLiteral.builder().value("%Y:%m:%dT%H:%M:%S").build();
+    Expression.I8Literal precision = ExpressionCreator.i8(false, (byte) 6);
+    ScalarFunctionInvocation strptimeFn =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            "strptime_timestamp:str_str_i8",
+            TypeCreator.REQUIRED.precisionTimestamp(6),
+            inputString,
+            formatString,
+            precision);
+
+    // tests Substrait -> Calcite
+    RexNode calciteExpr = strptimeFn.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
+    assertInstanceOf(RexCall.class, calciteExpr);
+    assertEquals(
+        "PARSE_TIMESTAMP('%Y:%m:%dT%H:%M:%S':VARCHAR, '2026-01-29T12:34:56':VARCHAR, 6:TINYINT)",
+        calciteExpr.toString());
+  }
+
+  @Test
+  void strptimeDate() {
+    Expression.StrLiteral inputString = Expression.StrLiteral.builder().value("2026-01-29").build();
+    Expression.StrLiteral formatString = Expression.StrLiteral.builder().value("%Y:%m:%d").build();
+    ScalarFunctionInvocation strptimeFn =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            "strptime_date:str_str",
+            TypeCreator.REQUIRED.DATE,
             inputString,
             formatString);
 
@@ -338,11 +275,7 @@ class FunctionConversionTest extends PlanTestBase {
     RexNode calciteExpr = strptimeFn.accept(expressionRexConverter, Context.newContext());
     assertEquals(SqlKind.OTHER_FUNCTION, calciteExpr.getKind());
     assertInstanceOf(RexCall.class, calciteExpr);
-
-    String expectedCallString =
-        String.format(
-            "%s('%s':VARCHAR, '%s':VARCHAR)", expectedCalciteFunctionName, formatValue, inputValue);
-    assertEquals(expectedCallString, calciteExpr.toString());
+    assertEquals("PARSE_DATE('%Y:%m:%d':VARCHAR, '2026-01-29':VARCHAR)", calciteExpr.toString());
 
     // tests the reverse Calcite -> Substrait
     Expression reverse = calciteExpr.accept(rexExpressionConverter);

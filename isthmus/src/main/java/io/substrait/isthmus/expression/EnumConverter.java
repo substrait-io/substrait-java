@@ -32,15 +32,9 @@ public class EnumConverter {
   private static final Map<ArgAnchor, Class<? extends Enum<?>>> calciteEnumMap = new HashMap<>();
 
   static {
-    // deprecated {@link io.substrait.type.Type.Timestamp}
     calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_ts", 0),
+        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_pt", 0),
         TimeUnitRange.class);
-    // deprecated {@link io.substrait.type.Type.TimestampTZ}
-    calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_tstz_str", 0),
-        TimeUnitRange.class);
-
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_pts", 0),
         TimeUnitRange.class);
@@ -49,9 +43,6 @@ public class EnumConverter {
         TimeUnitRange.class);
     calciteEnumMap.put(
         argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_date", 0),
-        TimeUnitRange.class);
-    calciteEnumMap.put(
-        argAnchor(DefaultExtensionCatalog.FUNCTIONS_DATETIME, "extract:req_time", 0),
         TimeUnitRange.class);
 
     calciteEnumMap.put(

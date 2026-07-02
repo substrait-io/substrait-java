@@ -66,6 +66,26 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     for (CorrelationId id : filter.getVariablesSet()) {
       nestedDepth.putIfAbsent(id, 0);
     }
+    // Also register any CorrelationIds referenced directly in the condition expression.
+    // This covers partially-decorrelated plans where a Calcite optimizer (e.g. HepPlanner)
+    // rewrites correlated IN-subqueries into joins but leaves scalar-aggregate subquery
+    // correlations as RexFieldAccess($corN.col) inside a Filter condition without a
+    // surrounding Correlate node. In that case getVariablesSet() is empty but the condition
+    // still contains RexCorrelVariable references whose IDs must be in nestedDepth before
+    // rexVisitor.visitFieldAccess() is called.
+    filter
+        .getCondition()
+        .accept(
+            new RexShuttle() {
+              @Override
+              public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
+                if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
+                  CorrelationId id = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
+                  nestedDepth.putIfAbsent(id, 0);
+                }
+                return fieldAccess;
+              }
+            });
     filter.getCondition().accept(rexVisitor);
     return super.visit(filter);
   }

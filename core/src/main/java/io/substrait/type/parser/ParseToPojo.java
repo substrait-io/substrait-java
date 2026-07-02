@@ -183,23 +183,8 @@ public class ParseToPojo {
     }
 
     @Override
-    public Type visitTimestamp(final SubstraitTypeParser.TimestampContext ctx) {
-      return withNull(ctx).TIMESTAMP;
-    }
-
-    @Override
-    public Type visitTimestampTz(final SubstraitTypeParser.TimestampTzContext ctx) {
-      return withNull(ctx).TIMESTAMP_TZ;
-    }
-
-    @Override
     public Type visitDate(final SubstraitTypeParser.DateContext ctx) {
       return withNull(ctx).DATE;
-    }
-
-    @Override
-    public Type visitTime(final SubstraitTypeParser.TimeContext ctx) {
-      return withNull(ctx).TIME;
     }
 
     @Override
@@ -702,8 +687,22 @@ public class ParseToPojo {
     @Override
     public TypeExpression visitFunctionCall(final SubstraitTypeParser.FunctionCallContext ctx) {
       checkExpression();
+      String functionName = ctx.Identifier().getText();
+      if (functionName.equalsIgnoreCase("integer_parameter")) {
+        // integer_parameter(argName) coerces a value argument to an integer type parameter.
+        // Represent the result as a StringLiteral (parameter reference) of the argument name.
+        if (ctx.expr().size() != 1) {
+          throw new IllegalStateException(
+              "integer_parameter requires exactly one argument, got: " + ctx.expr().size());
+        }
+        return ctx.expr(0).accept(this);
+      }
       if (ctx.expr().size() != 2) {
-        throw new IllegalStateException("Only two argument functions exist for type expressions.");
+        throw new IllegalStateException(
+            "Only two argument functions exist for type expressions, got "
+                + ctx.expr().size()
+                + " for: "
+                + functionName);
       }
       TypeExpression.BinaryOperation.OpType type = getFunctionType(ctx.Identifier().getSymbol());
       return TypeExpression.BinaryOperation.builder()

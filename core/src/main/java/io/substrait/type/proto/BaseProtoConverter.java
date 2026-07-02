@@ -87,21 +87,6 @@ abstract class BaseProtoConverter<T, I>
   }
 
   @Override
-  public final T visit(final Type.Time expr) {
-    return typeContainer(expr).TIME;
-  }
-
-  @Override
-  public final T visit(final Type.TimestampTZ expr) {
-    return typeContainer(expr).TIMESTAMP_TZ;
-  }
-
-  @Override
-  public final T visit(final Type.Timestamp expr) {
-    return typeContainer(expr).TIMESTAMP;
-  }
-
-  @Override
   public final T visit(final Type.IntervalYear expr) {
     return typeContainer(expr).INTERVAL_YEAR;
   }

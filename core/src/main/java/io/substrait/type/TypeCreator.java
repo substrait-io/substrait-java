@@ -44,17 +44,8 @@ public class TypeCreator {
   /** The binary type. */
   public final Type BINARY;
 
-  /** The timestamp (without timezone) type. */
-  public final Type TIMESTAMP;
-
-  /** The timestamp with timezone type. */
-  public final Type TIMESTAMP_TZ;
-
   /** The date type. */
   public final Type DATE;
-
-  /** The time type. */
-  public final Type TIME;
 
   /** The year-month interval type. */
   public final Type INTERVAL_YEAR;
@@ -78,10 +69,7 @@ public class TypeCreator {
     FP64 = Type.FP64.builder().nullable(nullable).build();
     STRING = Type.Str.builder().nullable(nullable).build();
     BINARY = Type.Binary.builder().nullable(nullable).build();
-    TIMESTAMP = Type.Timestamp.builder().nullable(nullable).build();
-    TIMESTAMP_TZ = Type.TimestampTZ.builder().nullable(nullable).build();
     DATE = Type.Date.builder().nullable(nullable).build();
-    TIME = Type.Time.builder().nullable(nullable).build();
     INTERVAL_YEAR = Type.IntervalYear.builder().nullable(nullable).build();
     UUID = Type.UUID.builder().nullable(nullable).build();
   }
