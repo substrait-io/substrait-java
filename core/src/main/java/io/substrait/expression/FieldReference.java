@@ -40,9 +40,30 @@ public abstract class FieldReference implements Expression {
   /**
    * Returns the number of subquery levels stepped out of for an outer reference, if applicable.
    *
+   * <p>This offset-based mechanism is used for tree-shaped plans. For plans where a relation is
+   * shared via a {@code ReferenceRel} (making the reference target ambiguous), use {@link
+   * #outerReferenceRelReference()} instead. When both forms are set, conversion to protobuf prefers
+   * the id-based {@link #outerReferenceRelReference()}.
+   *
    * @return the optional number of steps out
    */
   public abstract Optional<Integer> outerReferenceStepsOut();
+
+  /**
+   * Returns the plan-wide unique {@code relAnchor} of the relation this outer reference is rooted
+   * on, if applicable.
+   *
+   * <p>This id-based mechanism resolves outer references unambiguously in DAG-shaped plans where a
+   * relation is shared via a {@code ReferenceRel} and the offset-based {@link
+   * #outerReferenceStepsOut()} would be ambiguous. The value must match a {@link
+   * io.substrait.relation.Rel#getRelAnchor()} defined elsewhere in the plan.
+   *
+   * <p>This is the preferred outer-reference form: when it is set, conversion to protobuf emits it
+   * in favour of {@link #outerReferenceStepsOut()}.
+   *
+   * @return the optional referenced {@code relAnchor}
+   */
+  public abstract Optional<Integer> outerReferenceRelReference();
 
   /**
    * Returns the number of lambda nesting levels stepped out of for a lambda parameter reference, if
@@ -73,16 +94,28 @@ public abstract class FieldReference implements Expression {
   }
 
   /**
-   * Validates that a field reference is not simultaneously an outer reference and a lambda
-   * parameter reference.
+   * Validates that this reference is not simultaneously an outer reference and a lambda parameter
+   * reference.
    *
-   * @throws IllegalArgumentException if both step-out values are set
+   * <p>The two outer-reference forms — the offset-based {@link #outerReferenceStepsOut()} and the
+   * id-based {@link #outerReferenceRelReference()} — <em>may</em> both be set at once. During the
+   * transition towards id-based resolution a producer can dual-populate both forms; conversion to
+   * protobuf then prefers the id-based form (see {@code ExpressionProtoConverter}). This mirrors
+   * the <a
+   * href="https://github.com/substrait-io/substrait/blob/main/site/docs/spec/breaking_change_policy.md">Substrait
+   * breaking change policy</a>, under which consumers prefer the new representation while the old
+   * one remains readable.
+   *
+   * @throws IllegalArgumentException if this is both an outer reference and a lambda parameter
+   *     reference
    */
   @Value.Check
   protected void check() {
-    if (outerReferenceStepsOut().isPresent() && lambdaParameterReferenceStepsOut().isPresent()) {
+    boolean isOuterReference =
+        outerReferenceStepsOut().isPresent() || outerReferenceRelReference().isPresent();
+    if (isOuterReference && lambdaParameterReferenceStepsOut().isPresent()) {
       throw new IllegalArgumentException(
-          "FieldReference cannot have both outerReferenceStepsOut and lambdaParameterReferenceStepsOut set");
+          "FieldReference cannot be both an outer reference and a lambda parameter reference");
     }
   }
 
@@ -95,16 +128,19 @@ public abstract class FieldReference implements Expression {
     return segments().size() == 1
         && !inputExpression().isPresent()
         && !outerReferenceStepsOut().isPresent()
+        && !outerReferenceRelReference().isPresent()
         && !lambdaParameterReferenceStepsOut().isPresent();
   }
 
   /**
-   * Returns whether this reference steps out into an enclosing (outer) query.
+   * Returns whether this reference steps out into an enclosing (outer) query, via either the
+   * offset-based ({@link #outerReferenceStepsOut()}) or id-based ({@link
+   * #outerReferenceRelReference()}) mechanism.
    *
    * @return {@code true} if this is an outer reference
    */
   public boolean isOuterReference() {
-    return outerReferenceStepsOut().orElse(0) > 0;
+    return outerReferenceStepsOut().orElse(0) > 0 || outerReferenceRelReference().isPresent();
   }
 
   /**
@@ -231,6 +267,24 @@ public abstract class FieldReference implements Expression {
         .addSegments(StructField.of(index))
         .type(knownType)
         .outerReferenceStepsOut(stepsOut)
+        .build();
+  }
+
+  /**
+   * Creates an id-based reference to a field of an enclosing (outer) query's root struct, resolved
+   * via the referenced relation's {@link Rel#getRelAnchor()} rather than a subquery-level offset.
+   *
+   * @param index the struct field index
+   * @param knownType the known type of the referenced field
+   * @param relReference the {@code relAnchor} of the relation this field reference is rooted on
+   * @return the field reference
+   */
+  public static FieldReference newRootStructOuterReferenceByRelReference(
+      int index, Type knownType, int relReference) {
+    return ImmutableFieldReference.builder()
+        .addSegments(StructField.of(index))
+        .type(knownType)
+        .outerReferenceRelReference(relReference)
         .build();
   }
 
