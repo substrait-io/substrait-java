@@ -27,7 +27,7 @@ slf4j = "2.0.18"
 spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
-spotless = "8.7.0"
+spotless = "8.8.0"
 testcontainers = "2.0.5"
 validator = "3.0.5"
 
