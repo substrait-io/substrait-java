@@ -111,6 +111,11 @@ class SubtraitRelVisitorExtensionTest {
     }
 
     @Override
+    public Optional<Integer> getRelAnchor() {
+      return input.getRelAnchor();
+    }
+
+    @Override
     public <O, C extends VisitationContext, E extends Exception> O accept(
         final RelVisitor<O, C, E> visitor, final C context) throws E {
       return null;

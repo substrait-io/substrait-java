@@ -657,6 +657,15 @@ public class ExpressionProtoConverter
 
     if (expr.inputExpression().isPresent()) {
       out.setExpression(toProto(expr.inputExpression().get()));
+    } else if (expr.outerReferenceRelReference().isPresent()) {
+      // Prefer the id-based outer reference when set: it resolves unambiguously in DAG-shaped plans
+      // and is the direction we are migrating towards. steps_out and rel_reference share a protobuf
+      // oneof, so at most one can be emitted; existing offset-only producers keep emitting
+      // steps_out
+      // and remain readable by older consumers.
+      out.setOuterReference(
+          io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
+              .setRelReference(expr.outerReferenceRelReference().get()));
     } else if (expr.outerReferenceStepsOut().isPresent()) {
       out.setOuterReference(
           io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
