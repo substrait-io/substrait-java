@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import com.google.common.collect.Iterables;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -57,6 +58,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
@@ -343,15 +345,35 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
     // get GROUP_ID() function calls
-    List<AggregateCall> groupIdCalls =
+    java.util.Set<AggregateCall> groupIdCalls =
         aggregate.getAggCallList().stream()
             .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
+
+    // get LITERAL_AGG() function calls — injected by SubQueryRemoveRule (CALCITE-6945) as a
+    // null-presence indicator; they carry a RexLiteral in rexList and have no Substrait binding.
+    java.util.Set<AggregateCall> literalAggCalls =
+        aggregate.getAggCallList().stream()
+            .filter(c -> c.getAggregation().getKind() == SqlKind.LITERAL_AGG)
+            .collect(Collectors.toSet());
+
+    if (!literalAggCalls.isEmpty() && groupings.size() > 1) {
+      throw new UnsupportedOperationException(
+          "LITERAL_AGG combined with GROUPING SETS / CUBE / ROLLUP is not supported");
+    }
+
+    // Number of distinct grouping-expression output fields produced by the aggregate.
+    // Used by the no-GROUP_ID remap and the LITERAL_AGG project wrapper below.
+    // The GROUP_ID remap branch intentionally uses a non-distinct count instead (see comment
+    // there).
+    final int groupingFieldCount =
+        Math.toIntExact(
+            groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
 
     List<AggregateCall> filteredAggCalls =
         aggregate.getAggCallList().stream()
-            // remove GROUP_ID() function calls
-            .filter(c -> !groupIdCalls.contains(c))
+            // remove GROUP_ID() and LITERAL_AGG() function calls
+            .filter(c -> !groupIdCalls.contains(c) && !literalAggCalls.contains(c))
             .collect(Collectors.toList());
 
     List<Measure> aggCalls =
@@ -365,19 +387,19 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (groupings.size() > 1) {
       // remove the grouping set index if there was no explicit GROUP_ID() function call
       if (groupIdCalls.isEmpty()) {
-        int groupingExprSize =
-            Math.toIntExact(
-                groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
-        builder.remap(Remap.offset(0, groupingExprSize + aggCalls.size()));
+        builder.remap(Remap.offset(0, groupingFieldCount + aggCalls.size()));
       } else {
-        // remap grouping set index at the field positions where the GROUP_ID() function calls were
-        final int groupingFieldCount =
+        // remap grouping set index at the field positions where the GROUP_ID() function calls were.
+        // Use the non-distinct total here: when grouping sets share expressions the aggregate
+        // output
+        // contains one slot per (groupingSet × expression) entry, not one per distinct expression.
+        final int groupingFieldCountWithDuplicates =
             Math.toIntExact(groupings.stream().flatMap(g -> g.getExpressions().stream()).count());
         final int filterAggCallCount = aggCalls.size();
-        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
+        final Integer groupingSetIndex = groupingFieldCountWithDuplicates + filterAggCallCount;
 
         final List<Integer> remap =
-            IntStream.range(0, groupingFieldCount)
+            IntStream.range(0, groupingFieldCountWithDuplicates)
                 .mapToObj(i -> i)
                 .collect(Collectors.toCollection(ArrayList::new));
 
@@ -385,9 +407,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           AggregateCall aggCall = aggregate.getAggCallList().get(i);
           if (filteredAggCalls.contains(aggCall)) {
             remap.add(
-                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
+                i + groupingFieldCountWithDuplicates,
+                filteredAggCalls.indexOf(aggCall) + groupingFieldCountWithDuplicates);
           } else if (groupIdCalls.contains(aggCall)) {
-            remap.add(i + groupingFieldCount, groupingSetIndex);
+            remap.add(i + groupingFieldCountWithDuplicates, groupingSetIndex);
           } else {
             // this should never get triggered
             throw new IllegalStateException(
@@ -400,7 +423,49 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       }
     }
 
-    return builder.build();
+    Rel aggRel = builder.build();
+
+    if (literalAggCalls.isEmpty()) {
+      return aggRel;
+    }
+
+    // Wrap the aggregate in a Project that replaces LITERAL_AGG output positions with their
+    // literal values and passes through all other fields via FieldReference.
+    //
+    // The aggregate output schema is: [grouping fields..., real agg measures...]
+    // The full output schema requested is: [grouping fields..., all agg calls (in original order)]
+    // For each position in the original agg call list:
+    //   - real measure  → FieldReference into the aggregate output
+    //   - LITERAL_AGG   → the literal value from aggCall.rexList
+    final int realAggCount = aggCalls.size();
+    final int totalAggOutputFields = groupingFieldCount + realAggCount;
+
+    // Build the project expression list: grouping fields first, then one expression per original
+    // agg call in declaration order.
+    List<Expression> projectExprs = new ArrayList<>();
+    for (int i = 0; i < groupingFieldCount; i++) {
+      projectExprs.add(FieldReference.newInputRelReference(i, aggRel));
+    }
+    int realAggIndex = groupingFieldCount; // tracks next real-measure field index in aggRel output
+    for (AggregateCall aggCall : aggregate.getAggCallList()) {
+      if (literalAggCalls.contains(aggCall)) {
+        // Convert the RexLiteral stored in rexList to a Substrait literal expression
+        RexNode rexLiteral = Iterables.getOnlyElement(aggCall.rexList);
+        projectExprs.add(toExpression(rexLiteral));
+      } else if (!groupIdCalls.contains(aggCall)) {
+        // real measure: pass through by reference
+        projectExprs.add(FieldReference.newInputRelReference(realAggIndex, aggRel));
+        realAggIndex++;
+      }
+      // GROUP_ID calls are not present in the outer schema here (groupings.size() <= 1 branch);
+      // if groupings.size() > 1 they are handled by the remap above and should not appear here
+    }
+
+    return Project.builder()
+        .remap(Remap.offset(totalAggOutputFields, projectExprs.size()))
+        .expressions(projectExprs)
+        .input(aggRel)
+        .build();
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {
