@@ -195,10 +195,17 @@ class OuterReferenceResolverTest extends PlanTestBase {
             .project(tpcDsRelBuilder.field("SS_SOLD_DATE_SK"))
             .build();
 
-    // Pre-fix: fieldAccessDepthMap would be empty because the CorrelationId was never registered.
-    // Post-fix: the Filter condition pre-scan registers $cor0, so the field access is recorded.
+    // Resolver registers the dangling correlation (no longer silently dropped → no NPE).
     final Map<RexFieldAccess, Integer> fieldAccessDepthMap = buildOuterFieldRefMap(calciteRel);
     Assertions.assertEquals(1, fieldAccessDepthMap.size());
     validateOuterRef(fieldAccessDepthMap, "$cor0", "SS_ITEM_SK", 0);
+
+    // steps_out=0 is not a valid Substrait outer reference (proto requires >= 1),
+    // so conversion must fail clearly rather than emit an invalid plan.
+    UnsupportedOperationException ex =
+        Assertions.assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(calciteRel, converterProvider));
+    Assertions.assertTrue(ex.getMessage().contains("steps_out"));
   }
 }

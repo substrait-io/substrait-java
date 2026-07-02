@@ -224,7 +224,23 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     switch (kind) {
       case CORREL_VARIABLE:
         {
-          int stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
+          Integer stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
+          // Substrait requires steps_out >= 1 for an outer reference
+          // (proto/substrait/algebra.proto, OuterReference.steps_out: "Must be >= 1.").
+          // A null or 0 depth means the correlation does not step out of any subquery,
+          // typically a plan that was only partially decorrelated (the owning Correlate
+          // was rewritten into a join but the $cor reference remains in this Filter).
+          // We can't represent that with steps_out, so fail clearly rather than emit
+          // an invalid steps_out=0 reference. Id-based resolution (substrait-io/substrait#1031)
+          // would handle this; tracked in #869.
+          if (stepsOut == null || stepsOut == 0) {
+            throw new UnsupportedOperationException(
+                String.format(
+                    "Cannot convert outer reference %s: it does not step out of any "
+                        + "subquery (steps_out=%s). This usually indicates a plan that was "
+                        + "only partially decorrelated; Substrait requires steps_out >= 1.",
+                    fieldAccess, stepsOut));
+          }
 
           return FieldReference.newRootStructOuterReference(
               fieldAccess.getField().getIndex(),
