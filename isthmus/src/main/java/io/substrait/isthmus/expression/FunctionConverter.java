@@ -7,9 +7,11 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
+import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.StatisticalDistribution;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
@@ -41,6 +43,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,6 +184,27 @@ public abstract class FunctionConverter<
    * @return matching {@link SqlOperator}, or empty if none
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
+    return getSqlOperatorFromSubstraitFunc(key, outputType, java.util.Collections.emptyList());
+  }
+
+  /**
+   * Converts a Substrait function to a Calcite {@link SqlOperator} (Substrait → Calcite direction).
+   *
+   * <p>Given a Substrait function key (e.g., "std_dev:req_fp64"), output type, and function
+   * arguments (which may include a {@code distribution} {@link io.substrait.expression.EnumArg}),
+   * this method finds the corresponding Calcite {@link SqlOperator}. When multiple operators match,
+   * the output type and the {@code distribution} enum argument are used to disambiguate.
+   *
+   * <p>For example, both STDDEV_POP and STDDEV_SAMP map to "std_dev:req_fp64", but differ in the
+   * {@code distribution} enum argument (POPULATION vs SAMPLE).
+   *
+   * @param key the Substrait function key (function name with type signature)
+   * @param outputType the expected output type
+   * @param arguments the function arguments (used to read the {@code distribution} enum argument)
+   * @return the matching {@link SqlOperator}, or empty if no match found
+   */
+  public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+      String key, Type outputType, List<FunctionArg> arguments) {
     Map<SqlOperator, FunctionMappings.TypeBasedResolver> resolver = getTypeBasedResolver();
     Collection<SqlOperator> operators = substraitFuncKeyToSqlOperatorMap.get(key);
     if (operators.isEmpty()) {
@@ -192,25 +216,99 @@ public abstract class FunctionConverter<
       return Optional.of(operators.iterator().next());
     }
 
-    // at least 2 operators. Use output type to resolve SqlOperator.
+    // First, filter by output type to ensure type compatibility
     String outputTypeStr = outputType.accept(ToTypeString.INSTANCE);
-    List<SqlOperator> resolvedOperators =
+    List<SqlOperator> typeFilteredOperators =
         operators.stream()
             .filter(
                 operator ->
                     resolver.containsKey(operator)
                         && resolver.get(operator).types().contains(outputTypeStr))
             .collect(Collectors.toList());
+
+    // If type filtering resolved to a single operator, return it
+    if (typeFilteredOperators.size() == 1) {
+      return Optional.of(typeFilteredOperators.get(0));
+    }
+
+    // If still ambiguous and a distribution enum argument is present, disambiguate by it.
+    // Both the population and sample operators share one key (e.g. variance:req_fp32), since the
+    // SAMPLE/POPULATION value lives in the argument, not the signature.
+    Optional<String> distribution = distributionArgument(arguments);
+    List<SqlOperator> resolvedOperators = typeFilteredOperators;
+    if (distribution.isPresent()) {
+      List<SqlOperator> candidates =
+          typeFilteredOperators.isEmpty() ? List.copyOf(operators) : typeFilteredOperators;
+      resolvedOperators = filterByDistribution(candidates, distribution.get());
+    }
+
     // only one SqlOperator is possible
     if (resolvedOperators.size() == 1) {
       return Optional.of(resolvedOperators.get(0));
     } else if (resolvedOperators.size() > 1) {
       throw new IllegalStateException(
           String.format(
-              "Found %d SqlOperators: %s for ScalarFunction %s: ",
+              "Found %d SqlOperators: %s for function %s",
               resolvedOperators.size(), resolvedOperators, key));
     }
     return Optional.empty();
+  }
+
+  /**
+   * Extracts the value of the {@code distribution} enum argument, if present.
+   *
+   * <p>This returns the value of the first {@link EnumArg} in the argument list. It assumes the
+   * only enum argument that disambiguates between operators sharing a key is the {@code
+   * distribution} argument of {@code std_dev}/{@code variance} — the only enum-argument aggregate
+   * functions currently mapped. {@link #filterByDistribution} rejects values it does not recognize.
+   *
+   * @param arguments the Substrait function arguments
+   * @return the distribution value (e.g. {@code SAMPLE} / {@code POPULATION}) if an {@link EnumArg}
+   *     is present
+   */
+  private static Optional<String> distributionArgument(List<FunctionArg> arguments) {
+    if (arguments == null) {
+      return Optional.empty();
+    }
+    return arguments.stream()
+        .filter(arg -> arg instanceof EnumArg)
+        .map(arg -> (EnumArg) arg)
+        .flatMap(arg -> arg.value().stream())
+        .findFirst();
+  }
+
+  /**
+   * Filters SqlOperators based on the {@code distribution} enum argument.
+   *
+   * <p>For statistical functions like STDDEV and VAR, the {@code distribution} argument determines
+   * whether to use the population or sample variant:
+   *
+   * <ul>
+   *   <li>distribution=POPULATION → STDDEV_POP, VAR_POP
+   *   <li>distribution=SAMPLE → STDDEV_SAMP, VAR_SAMP
+   * </ul>
+   *
+   * @param operators the list of candidate SqlOperators
+   * @param distributionValue the distribution value from the Substrait enum argument
+   * @return filtered list of SqlOperators matching the distribution
+   */
+  private List<SqlOperator> filterByDistribution(
+      List<SqlOperator> operators, String distributionValue) {
+    return operators.stream()
+        .filter(
+            operator -> {
+              SqlKind kind = operator.getKind();
+              // Match distribution value to SqlKind
+              if (StatisticalDistribution.POPULATION.name().equals(distributionValue)) {
+                return kind == SqlKind.STDDEV_POP || kind == SqlKind.VAR_POP;
+              } else if (StatisticalDistribution.SAMPLE.name().equals(distributionValue)) {
+                return kind == SqlKind.STDDEV_SAMP || kind == SqlKind.VAR_SAMP;
+              }
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Unknown distribution value '%s' for operator %s", distributionValue, kind));
+            })
+        .collect(Collectors.toList());
   }
 
   /**

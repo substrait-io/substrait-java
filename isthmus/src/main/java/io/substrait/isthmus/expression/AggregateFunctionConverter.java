@@ -5,11 +5,13 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.StatisticalDistribution;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.SubstraitRelVisitor;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /**
@@ -76,9 +79,19 @@ public class AggregateFunctionConverter
   /**
    * Builds a Substrait aggregate invocation from the matched call and arguments.
    *
-   * @param call wrapped aggregate call
-   * @param function matched Substrait function variant
-   * @param arguments converted arguments
+   * <p>This method constructs an {@link AggregateFunctionInvocation} with appropriate configuration
+   * including sort fields and invocation type (DISTINCT or ALL).
+   *
+   * <p><b>Statistical Functions:</b> For standard deviation and variance functions (STDDEV_POP,
+   * STDDEV_SAMP, VAR_POP, VAR_SAMP), the population/sample distinction is carried by a leading
+   * {@code distribution} {@link io.substrait.expression.EnumArg} argument. That argument is
+   * synthesized as an operand in {@link #convert} so that the generic matcher resolves the enum-arg
+   * function variant ({@code std_dev:req_*} / {@code variance:req_*}) and constructs the {@link
+   * io.substrait.expression.EnumArg}; no special handling is required here.
+   *
+   * @param call wrapped aggregate call containing the Calcite aggregate information
+   * @param function matched Substrait function variant from the extension catalog
+   * @param arguments converted function arguments
    * @param outputType result type of the invocation
    * @return aggregate function invocation
    */
@@ -100,6 +113,7 @@ public class AggregateFunctionConverter
         agg.isDistinct()
             ? Expression.AggregationInvocation.DISTINCT
             : Expression.AggregationInvocation.ALL;
+
     return ExpressionCreator.aggregateFunction(
         function,
         outputType,
@@ -128,12 +142,48 @@ public class AggregateFunctionConverter
     if (m == null) {
       return Optional.empty();
     }
-    if (!m.allowedArgCount(call.getArgList().size())) {
+
+    // For statistical aggregates (std_dev/variance) the SAMPLE/POPULATION distinction is carried
+    // by a leading "distribution" enum argument. Synthesize it as an operand so the generic matcher
+    // resolves the enum-arg function variant and builds the EnumArg.
+    List<RexNode> leadingArgs = leadingEnumArgs(call);
+    if (!m.allowedArgCount(call.getArgList().size() + leadingArgs.size())) {
       return Optional.empty();
     }
 
-    WrappedAggregateCall wrapped = new WrappedAggregateCall(call, input, rexBuilder, inputType);
+    WrappedAggregateCall wrapped =
+        new WrappedAggregateCall(call, leadingArgs, input, rexBuilder, inputType);
     return m.attemptMatch(wrapped, topLevelConverter);
+  }
+
+  /**
+   * Computes the synthetic leading operands to prepend to a Calcite aggregate call before matching.
+   *
+   * <p>For standard deviation and variance functions, Substrait carries the population/sample
+   * distinction as a leading {@code distribution} enum argument, whereas Calcite encodes it in the
+   * operator's {@link SqlKind}. This returns the matching {@link StatisticalDistribution} flag so
+   * the generic matcher selects the {@code std_dev:req_*} / {@code variance:req_*} variant and
+   * constructs the corresponding {@link io.substrait.expression.EnumArg}.
+   *
+   * @param call the Calcite aggregate call
+   * @return the leading enum operands (a single distribution flag for statistical functions, empty
+   *     otherwise)
+   */
+  private List<RexNode> leadingEnumArgs(AggregateCall call) {
+    List<RexNode> leadingArgs = new ArrayList<>();
+    switch (call.getAggregation().getKind()) {
+      case STDDEV_SAMP:
+      case VAR_SAMP:
+        leadingArgs.add(rexBuilder.makeFlag(StatisticalDistribution.SAMPLE));
+        break;
+      case STDDEV_POP:
+      case VAR_POP:
+        leadingArgs.add(rexBuilder.makeFlag(StatisticalDistribution.POPULATION));
+        break;
+      default:
+        break;
+    }
+    return leadingArgs;
   }
 
   /**
@@ -160,6 +210,7 @@ public class AggregateFunctionConverter
   /** Lightweight wrapper around {@link AggregateCall} providing operands and type access. */
   static class WrappedAggregateCall implements FunctionConverter.GenericCall {
     private final AggregateCall call;
+    private final List<RexNode> leadingArgs;
     private final RelNode input;
     private final RexBuilder rexBuilder;
     private final Type.Struct inputType;
@@ -168,26 +219,36 @@ public class AggregateFunctionConverter
      * Creates a new wrapped aggregate call.
      *
      * @param call underlying Calcite aggregate call
+     * @param leadingArgs synthetic operands (e.g. a {@code distribution} enum flag) prepended ahead
+     *     of the field arguments during matching
      * @param input input relational node
      * @param rexBuilder Rex builder for operand construction
      * @param inputType Substrait input struct type
      */
     private WrappedAggregateCall(
-        AggregateCall call, RelNode input, RexBuilder rexBuilder, Type.Struct inputType) {
+        AggregateCall call,
+        List<RexNode> leadingArgs,
+        RelNode input,
+        RexBuilder rexBuilder,
+        Type.Struct inputType) {
       this.call = call;
+      this.leadingArgs = leadingArgs;
       this.input = input;
       this.rexBuilder = rexBuilder;
       this.inputType = inputType;
     }
 
     /**
-     * Returns operands as input references over the argument list.
+     * Returns operands as the synthetic leading operands followed by input references over the
+     * argument list.
      *
      * @return stream of RexNode operands
      */
     @Override
     public Stream<RexNode> getOperands() {
-      return call.getArgList().stream().map(r -> rexBuilder.makeInputRef(input, r));
+      return Stream.concat(
+          leadingArgs.stream(),
+          call.getArgList().stream().map(r -> rexBuilder.makeInputRef(input, r)));
     }
 
     /**
