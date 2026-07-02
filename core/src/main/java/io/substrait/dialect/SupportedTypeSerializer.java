@@ -30,6 +30,12 @@ class SupportedTypeSerializer extends JsonSerializer<SupportedType> {
     if (value.maxPrecision().isPresent()) {
       gen.writeNumberField("max_precision", value.maxPrecision().get());
     }
+    if (value.maxScale().isPresent()) {
+      gen.writeNumberField("max_scale", value.maxScale().get());
+    }
+    if (value.maxLength().isPresent()) {
+      gen.writeNumberField("max_length", value.maxLength().get());
+    }
     if (value.systemMetadata().isPresent()) {
       provider.defaultSerializeField("system_metadata", value.systemMetadata().get(), gen);
     }
