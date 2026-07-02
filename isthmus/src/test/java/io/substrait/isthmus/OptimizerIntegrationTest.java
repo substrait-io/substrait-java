@@ -31,6 +31,7 @@ import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql2rel.RelDecorrelator;
@@ -159,6 +160,59 @@ class OptimizerIntegrationTest extends PlanTestBase {
     RelNode aggregate =
         LogicalAggregate.create(
             input, List.of(), g0.union(g1), List.of(g0, g1), List.of(literalAgg));
+
+    UnsupportedOperationException ex =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                SubstraitRelVisitor.convert(
+                    RelRoot.of(aggregate, org.apache.calcite.sql.SqlKind.SELECT),
+                    EXTENSION_COLLECTION));
+    assertTrue(ex.getMessage().contains("GROUPING SETS"), ex.getMessage());
+  }
+
+  /**
+   * Reproduces the crash from the review comment: LITERAL_AGG first in the agg-call list, followed
+   * by GROUP_ID, with multiple grouping sets. The remap loop used to leave a gap and throw
+   * IndexOutOfBoundsException; now it should throw the clean UnsupportedOperationException before
+   * reaching the remap work.
+   */
+  @Test
+  void literalAggBeforeGroupIdWithGroupingSetsIsRejected() {
+    RelNode input = builder.values(new String[] {"a", "b"}, 1, 2, 3, 4).build();
+    RexBuilder rexBuilder = creator.rex();
+    AggregateCall literalAgg =
+        AggregateCall.create(
+            SqlInternalOperators.LITERAL_AGG,
+            false,
+            false,
+            false,
+            List.of(rexBuilder.makeLiteral(true)),
+            List.of(),
+            -1,
+            null,
+            RelCollations.EMPTY,
+            typeFactory.createSqlType(SqlTypeName.BOOLEAN),
+            "li");
+    AggregateCall groupIdCall =
+        AggregateCall.create(
+            SqlStdOperatorTable.GROUP_ID,
+            false,
+            false,
+            false,
+            List.of(),
+            List.of(),
+            -1,
+            null,
+            RelCollations.EMPTY,
+            typeFactory.createSqlType(SqlTypeName.BIGINT),
+            "gid");
+    ImmutableBitSet g0 = ImmutableBitSet.of(0);
+    ImmutableBitSet g1 = ImmutableBitSet.of(1);
+    // LITERAL_AGG at index 0, GROUP_ID at index 1 — the ordering that triggered the crash
+    RelNode aggregate =
+        LogicalAggregate.create(
+            input, List.of(), g0.union(g1), List.of(g0, g1), List.of(literalAgg, groupIdCall));
 
     UnsupportedOperationException ex =
         assertThrows(

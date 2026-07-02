@@ -345,17 +345,30 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
     // get GROUP_ID() function calls
-    List<AggregateCall> groupIdCalls =
+    java.util.Set<AggregateCall> groupIdCalls =
         aggregate.getAggCallList().stream()
             .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
 
     // get LITERAL_AGG() function calls — injected by SubQueryRemoveRule (CALCITE-6945) as a
     // null-presence indicator; they carry a RexLiteral in rexList and have no Substrait binding.
-    List<AggregateCall> literalAggCalls =
+    java.util.Set<AggregateCall> literalAggCalls =
         aggregate.getAggCallList().stream()
             .filter(c -> c.getAggregation().getKind() == SqlKind.LITERAL_AGG)
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
+
+    if (!literalAggCalls.isEmpty() && groupings.size() > 1) {
+      throw new UnsupportedOperationException(
+          "LITERAL_AGG combined with GROUPING SETS / CUBE / ROLLUP is not supported");
+    }
+
+    // Number of distinct grouping-expression output fields produced by the aggregate.
+    // Used by the no-GROUP_ID remap and the LITERAL_AGG project wrapper below.
+    // The GROUP_ID remap branch intentionally uses a non-distinct count instead (see comment
+    // there).
+    final int groupingFieldCount =
+        Math.toIntExact(
+            groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
 
     List<AggregateCall> filteredAggCalls =
         aggregate.getAggCallList().stream()
@@ -374,19 +387,19 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (groupings.size() > 1) {
       // remove the grouping set index if there was no explicit GROUP_ID() function call
       if (groupIdCalls.isEmpty()) {
-        int groupingExprSize =
-            Math.toIntExact(
-                groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
-        builder.remap(Remap.offset(0, groupingExprSize + aggCalls.size()));
+        builder.remap(Remap.offset(0, groupingFieldCount + aggCalls.size()));
       } else {
-        // remap grouping set index at the field positions where the GROUP_ID() function calls were
-        final int groupingFieldCount =
+        // remap grouping set index at the field positions where the GROUP_ID() function calls were.
+        // Use the non-distinct total here: when grouping sets share expressions the aggregate
+        // output
+        // contains one slot per (groupingSet × expression) entry, not one per distinct expression.
+        final int groupingFieldCountWithDuplicates =
             Math.toIntExact(groupings.stream().flatMap(g -> g.getExpressions().stream()).count());
         final int filterAggCallCount = aggCalls.size();
-        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
+        final Integer groupingSetIndex = groupingFieldCountWithDuplicates + filterAggCallCount;
 
         final List<Integer> remap =
-            IntStream.range(0, groupingFieldCount)
+            IntStream.range(0, groupingFieldCountWithDuplicates)
                 .mapToObj(i -> i)
                 .collect(Collectors.toCollection(ArrayList::new));
 
@@ -394,11 +407,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           AggregateCall aggCall = aggregate.getAggCallList().get(i);
           if (filteredAggCalls.contains(aggCall)) {
             remap.add(
-                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
+                i + groupingFieldCountWithDuplicates,
+                filteredAggCalls.indexOf(aggCall) + groupingFieldCountWithDuplicates);
           } else if (groupIdCalls.contains(aggCall)) {
-            remap.add(i + groupingFieldCount, groupingSetIndex);
-          } else if (literalAggCalls.contains(aggCall)) {
-            // LITERAL_AGG handled below via Project wrapper — skip remap slot for now
+            remap.add(i + groupingFieldCountWithDuplicates, groupingSetIndex);
           } else {
             // this should never get triggered
             throw new IllegalStateException(
@@ -417,11 +429,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       return aggRel;
     }
 
-    if (groupings.size() > 1) {
-      throw new UnsupportedOperationException(
-          "LITERAL_AGG combined with GROUPING SETS / CUBE / ROLLUP is not supported");
-    }
-
     // Wrap the aggregate in a Project that replaces LITERAL_AGG output positions with their
     // literal values and passes through all other fields via FieldReference.
     //
@@ -430,9 +437,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // For each position in the original agg call list:
     //   - real measure  → FieldReference into the aggregate output
     //   - LITERAL_AGG   → the literal value from aggCall.rexList
-    final int groupingFieldCount =
-        Math.toIntExact(
-            groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
     final int realAggCount = aggCalls.size();
     final int totalAggOutputFields = groupingFieldCount + realAggCount;
 
