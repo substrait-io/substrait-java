@@ -50,7 +50,9 @@ public class SqlToSubstrait extends SqlConverterBase {
     builder.executionBehavior(converterProvider.getExecutionBehavior());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, operatorTable).stream()
+    SubstraitSqlToCalcite.convertQueries(
+            sqlStatements, catalogReader, converterProvider, operatorTable)
+        .stream()
         .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
         .forEach(root -> builder.addRoots(root));
 
