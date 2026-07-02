@@ -1,0 +1,7 @@
+[[IgnoredVulns]]
+id = "GHSA-5jmj-h7xm-6q6v"
+# CVE-2026-54515: case-insensitive deserialization bypasses per-property
+# @JsonIgnoreProperties. The fix is backported upstream but not yet in a
+# released jackson-databind version.
+ignoreUntil = 2026-08-15
+reason = "Awaiting jackson-databind release with the backported fix."
