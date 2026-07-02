@@ -8,7 +8,6 @@ import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import io.substrait.extension.SimpleExtension;
 import java.lang.annotation.Annotation;
-import java.util.Arrays;
 import org.apache.calcite.rel.metadata.BuiltInMetadata;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.MetadataHandler;
@@ -74,10 +73,6 @@ public final class RegisterAtRuntime implements Feature {
           SimpleExtension.EnumArgument.class,
           SimpleExtension.ValueArgument.class);
 
-      registerForReflection(
-          Class.forName(
-              "io.substrait.extension.ImmutableSimpleExtension$ExtensionSignatures$Json"));
-
       register(
           BuiltInMetadata.class,
           SqlValidatorException.class,
@@ -140,11 +135,6 @@ public final class RegisterAtRuntime implements Feature {
       RuntimeReflection.register(c.getDeclaredFields());
       RuntimeReflection.register(c.getDeclaredMethods());
     }
-  }
-
-  private static void registerForReflection(Class<?>... classes) {
-    Arrays.stream(classes).forEach(RuntimeReflection::registerForReflectiveInstantiation);
-    register(classes);
   }
 
   private static final class PackageScanner implements AutoCloseable {
