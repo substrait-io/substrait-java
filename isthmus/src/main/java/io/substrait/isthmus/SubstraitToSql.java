@@ -23,7 +23,7 @@ public class SubstraitToSql extends SqlConverterBase {
 
   /** Creates a SubstraitToSql converter with default configuration and extensions. */
   public SubstraitToSql() {
-    this(new ConverterProvider());
+    this(ConverterProvider.DEFAULT);
   }
 
   /**

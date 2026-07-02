@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.sql.parser.SqlParser;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -60,15 +59,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
   private Casing unquotedCasing = Casing.TO_UPPER;
 
-  private ConverterProvider converterProvider() {
-    return new ConverterProvider() {
-      @Override
-      public SqlParser.Config getSqlParserConfig() {
-        return super.getSqlParserConfig().withUnquotedCasing(unquotedCasing);
-      }
-    };
-  }
-
   /**
    * Standard Java Main method invoked by the isthmus CLI command.
    *
@@ -96,16 +86,17 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
+    ConverterProvider provider = new ConverterProvider(unquotedCasing);
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
-      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(converterProvider());
+      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(provider);
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(converterProvider());
+      SqlToSubstrait converter = new SqlToSubstrait(provider);
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-              createStatements.toArray(String[]::new));
+              provider, createStatements);
       Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
       printMessage(plan);
     }

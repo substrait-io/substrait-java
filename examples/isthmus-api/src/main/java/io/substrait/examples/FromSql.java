@@ -1,6 +1,7 @@
 package io.substrait.examples;
 
 import io.substrait.examples.IsthmusAppExamples.Action;
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SqlToSubstrait;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
@@ -10,8 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.CalciteCatalogReader;
-import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
 
 /**
@@ -22,7 +23,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
  * <p>1. Create a fully typed schema for the inputs. Within a SQL context this represents the CREATE
  * TABLE commands, which need to be converted to a Calcite Schema.
  *
- * <p>2. Parse the SQL query to convert (in the source SQL dialect).
+ * <p>2. Parse the SQL query to convert.
  *
  * <p>3. Convert the SQL query to Calcite Relations.
  *
@@ -49,22 +50,26 @@ public class FromSql implements Action {
                   "test_result" varchar(15),"test_mileage" int, "postcode_area" varchar(15));
               """);
 
-      final CalciteCatalogReader catalogReader =
-          SubstraitCreateStatementParser.processCreateStatementsToCatalog(createSqlStatements);
+      // The unquoted identifier casing applied while parsing is configurable via a
+      // ConverterProvider. The same provider is used for both the schema and the query so that
+      // identifier casing stays consistent end-to-end. Casing.UNCHANGED preserves identifiers as
+      // written, matching the lower-case names used in the CREATE TABLE statements above.
+      final ConverterProvider converterProvider = new ConverterProvider(Casing.UNCHANGED);
 
-      // Query that needs to be converted; again this could be in a variety of SQL
-      // dialects
+      final CalciteCatalogReader catalogReader =
+          SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+              converterProvider, createSqlStatements);
+
+      // Query that needs to be converted
       final String sqlQuery =
           """
           SELECT vehicles.colour, count(*) as colourcount FROM vehicles INNER JOIN tests
               ON vehicles.vehicle_id=tests.vehicle_id WHERE tests.test_result = 'P'
               GROUP BY vehicles.colour ORDER BY count(*)
           """;
-      final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
 
-      // choose DuckDB as an example dialect
-      final SqlDialect dialect = SqlDialect.DatabaseProduct.DUCKDB.getDialect();
-      final Plan substraitPlan = sqlToSubstrait.convert(sqlQuery, catalogReader, dialect);
+      final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait(converterProvider);
+      final Plan substraitPlan = sqlToSubstrait.convert(sqlQuery, catalogReader);
 
       // Create the proto plan to display to stdout - as it has a better format
       final PlanProtoConverter planToProto = new PlanProtoConverter();

@@ -49,11 +49,23 @@ import org.apache.calcite.tools.RelBuilder;
  */
 public class ConverterProvider {
 
+  /**
+   * A shared default {@link ConverterProvider} instance using all system defaults. Equivalent to
+   * {@code new ConverterProvider()} but avoids redundant construction at every call site.
+   *
+   * <p>This instance is safe to share because {@link ConverterProvider} is effectively immutable
+   * after construction — all fields are set only in constructors.
+   */
+  public static final ConverterProvider DEFAULT = new ConverterProvider();
+
   /** The Calcite type factory used for creating and managing data types. */
   protected RelDataTypeFactory typeFactory;
 
   /** The collection of Substrait extensions (functions and types) available for conversion. */
   protected final SimpleExtension.ExtensionCollection extensions;
+
+  /** The casing applied to unquoted SQL identifiers during parsing. */
+  protected final Casing unquotedCasing;
 
   /** Converter for Substrait scalar functions. */
   protected ScalarFunctionConverter scalarFunctionConverter;
@@ -79,6 +91,21 @@ public class ConverterProvider {
   }
 
   /**
+   * Creates a ConverterProvider with the specified unquoted identifier casing.
+   *
+   * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link
+   * SubstraitTypeSystem#TYPE_FACTORY}.
+   *
+   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+   */
+  public ConverterProvider(Casing unquotedCasing) {
+    this(
+        DefaultExtensionCatalog.DEFAULT_COLLECTION,
+        SubstraitTypeSystem.TYPE_FACTORY,
+        unquotedCasing);
+  }
+
+  /**
    * Creates a ConverterProvider with the specified extension collection and default type factory.
    *
    * @param extensions the Substrait extension collection to use
@@ -95,13 +122,30 @@ public class ConverterProvider {
    */
   public ConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
+    this(extensions, typeFactory, Casing.TO_UPPER);
+  }
+
+  /**
+   * Creates a ConverterProvider with the specified extension collection, type factory, and unquoted
+   * identifier casing.
+   *
+   * @param extensions the Substrait extension collection to use
+   * @param typeFactory the Calcite type factory to use
+   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+   */
+  public ConverterProvider(
+      SimpleExtension.ExtensionCollection extensions,
+      RelDataTypeFactory typeFactory,
+      Casing unquotedCasing) {
     this(
         typeFactory,
         extensions,
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
         new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
-        TypeConverter.DEFAULT);
+        TypeConverter.DEFAULT,
+        createDefaultExecutionBehavior(),
+        unquotedCasing);
   }
 
   /**
@@ -121,7 +165,15 @@ public class ConverterProvider {
       AggregateFunctionConverter afc,
       WindowFunctionConverter wfc,
       TypeConverter tc) {
-    this(typeFactory, extensions, sfc, afc, wfc, tc, createDefaultExecutionBehavior());
+    this(
+        typeFactory,
+        extensions,
+        sfc,
+        afc,
+        wfc,
+        tc,
+        createDefaultExecutionBehavior(),
+        Casing.TO_UPPER);
   }
 
   /**
@@ -143,6 +195,31 @@ public class ConverterProvider {
       WindowFunctionConverter wfc,
       TypeConverter tc,
       Plan.ExecutionBehavior executionBehavior) {
+    this(typeFactory, extensions, sfc, afc, wfc, tc, executionBehavior, Casing.TO_UPPER);
+  }
+
+  /**
+   * Creates a ConverterProvider with full customization including execution behavior and unquoted
+   * identifier casing.
+   *
+   * @param typeFactory the Calcite type factory to use
+   * @param extensions the Substrait extension collection to use
+   * @param sfc the scalar function converter to use
+   * @param afc the aggregate function converter to use
+   * @param wfc the window function converter to use
+   * @param tc the type converter to use
+   * @param executionBehavior the execution behavior to use for plans
+   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+   */
+  public ConverterProvider(
+      RelDataTypeFactory typeFactory,
+      SimpleExtension.ExtensionCollection extensions,
+      ScalarFunctionConverter sfc,
+      AggregateFunctionConverter afc,
+      WindowFunctionConverter wfc,
+      TypeConverter tc,
+      Plan.ExecutionBehavior executionBehavior,
+      Casing unquotedCasing) {
     this.typeFactory = typeFactory;
     this.extensions = extensions;
     this.scalarFunctionConverter = sfc;
@@ -150,6 +227,7 @@ public class ConverterProvider {
     this.windowFunctionConverter = wfc;
     this.typeConverter = tc;
     this.executionBehavior = executionBehavior;
+    this.unquotedCasing = unquotedCasing;
   }
 
   /**
@@ -166,6 +244,15 @@ public class ConverterProvider {
   // SQL to Calcite Processing
 
   /**
+   * Returns the casing applied to unquoted SQL identifiers during parsing.
+   *
+   * @return the unquoted identifier casing
+   */
+  public Casing getUnquotedCasing() {
+    return unquotedCasing;
+  }
+
+  /**
    * {@link SqlParser.Config} is a Calcite class which controls SQL parsing behaviour like
    * identifier casing.
    *
@@ -173,7 +260,7 @@ public class ConverterProvider {
    */
   public SqlParser.Config getSqlParserConfig() {
     return SqlParser.Config.DEFAULT
-        .withUnquotedCasing(Casing.TO_UPPER)
+        .withUnquotedCasing(unquotedCasing)
         .withParserFactory(SqlDdlParserImpl.FACTORY)
         .withConformance(SqlConformanceEnum.LENIENT);
   }
