@@ -231,8 +231,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
           // typically a plan that was only partially decorrelated (the owning Correlate
           // was rewritten into a join but the $cor reference remains in this Filter).
           // We can't represent that with steps_out, so fail clearly rather than emit
-          // an invalid steps_out=0 reference. Id-based resolution (substrait-io/substrait#1031)
-          // would handle this; tracked in #869.
+          // an invalid steps_out=0 reference. Id-based outer-reference resolution
+          // would handle this and is the proper long-term fix.
           if (stepsOut == null || stepsOut == 0) {
             throw new UnsupportedOperationException(
                 String.format(
