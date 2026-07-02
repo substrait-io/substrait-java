@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.sql.parser.SqlParser;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -61,12 +60,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
   private Casing unquotedCasing = Casing.TO_UPPER;
 
   private ConverterProvider converterProvider() {
-    return new ConverterProvider() {
-      @Override
-      public SqlParser.Config getSqlParserConfig() {
-        return super.getSqlParserConfig().withUnquotedCasing(unquotedCasing);
-      }
-    };
+    return new ConverterProvider(unquotedCasing);
   }
 
   /**
@@ -102,10 +96,11 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(converterProvider());
+      ConverterProvider provider = converterProvider();
+      SqlToSubstrait converter = new SqlToSubstrait(provider);
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-              createStatements.toArray(String[]::new));
+              provider, createStatements);
       Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
       printMessage(plan);
     }

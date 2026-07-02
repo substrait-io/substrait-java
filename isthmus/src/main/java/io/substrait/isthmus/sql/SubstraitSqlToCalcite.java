@@ -1,5 +1,6 @@
 package io.substrait.isthmus.sql;
 
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.calcite.rel.DdlSqlToRelConverter;
 import java.util.List;
@@ -107,6 +108,34 @@ public class SubstraitSqlToCalcite {
       throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
     return convertQueries(sqlStatements, catalogReader, validator, createDefaultRelOptCluster());
+  }
+
+  /**
+   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
+   * statement, using the parser configuration from the given {@link ConverterProvider}.
+   *
+   * @param sqlStatements a string containing one or more SQL statements
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statements
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings
+   * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
+   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
+   * @throws SqlParseException if there is an error while parsing the SQL statements
+   */
+  public static List<RelRoot> convertQueries(
+      String sqlStatements,
+      Prepare.CatalogReader catalogReader,
+      ConverterProvider converterProvider,
+      SqlOperatorTable operatorTable)
+      throws SqlParseException {
+    SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
+    return convertQueries(
+        sqlStatements,
+        catalogReader,
+        validator,
+        createDefaultRelOptCluster(),
+        converterProvider.getSqlParserConfig());
   }
 
   /**
