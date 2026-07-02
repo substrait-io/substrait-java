@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.plan.Plan;
@@ -36,6 +37,28 @@ class Substrait2SqlTest extends PlanTestBase {
     String query =
         "select l_partkey, l_discount from lineitem where l_orderkey > cast(100 as bigint)";
     assertFullRoundTrip(query);
+  }
+
+  @Test
+  void currentTimestamp() throws Exception {
+    assertFullRoundTrip("select current_timestamp from part");
+  }
+
+  @Test
+  void currentDate() throws Exception {
+    assertFullRoundTrip("select current_date from part");
+  }
+
+  @Test
+  void currentTimezone() throws Exception {
+    // CURRENT_TIMEZONE is a Substrait-specific niladic operator with no standard Calcite
+    // equivalent; it is registered in SubstraitOperatorTable so it parses without parentheses.
+    assertFullRoundTrip("select current_timezone from part");
+
+    // ...and it is emitted back as the bare niladic keyword (no dialect changes required).
+    Plan plan = toSubstraitPlan("select current_timezone from part", TPCH_CATALOG);
+    assertTrue(
+        toSql(plan).contains("CURRENT_TIMEZONE"), "expected CURRENT_TIMEZONE in emitted SQL");
   }
 
   @Test
