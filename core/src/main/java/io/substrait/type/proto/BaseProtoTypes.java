@@ -15,10 +15,7 @@ abstract class BaseProtoTypes<T, I> {
   public final T FP64;
   public final T STRING;
   public final T BINARY;
-  public final T TIMESTAMP;
-  public final T TIMESTAMP_TZ;
   public final T DATE;
-  public final T TIME;
   public final T INTERVAL_YEAR;
   public final T UUID;
 
@@ -33,10 +30,7 @@ abstract class BaseProtoTypes<T, I> {
     FP64 = wrap(Type.FP64.newBuilder().setNullability(nullability).build());
     STRING = wrap(Type.String.newBuilder().setNullability(nullability).build());
     BINARY = wrap(Type.Binary.newBuilder().setNullability(nullability).build());
-    TIMESTAMP = wrap(Type.Timestamp.newBuilder().setNullability(nullability).build());
-    TIMESTAMP_TZ = wrap(Type.TimestampTZ.newBuilder().setNullability(nullability).build());
     DATE = wrap(Type.Date.newBuilder().setNullability(nullability).build());
-    TIME = wrap(Type.Time.newBuilder().setNullability(nullability).build());
     INTERVAL_YEAR = wrap(Type.IntervalYear.newBuilder().setNullability(nullability).build());
     UUID = wrap(Type.UUID.newBuilder().setNullability(nullability).build());
   }

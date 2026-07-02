@@ -14,7 +14,6 @@ import io.substrait.expression.Expression.ScalarSubquery;
 import io.substrait.expression.Expression.SetPredicate;
 import io.substrait.expression.Expression.SingleOrList;
 import io.substrait.expression.Expression.Switch;
-import io.substrait.expression.Expression.TimestampTZLiteral;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
@@ -233,12 +232,6 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.TimeLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(
-        createTimeString(expr.value(), 6), typeConverter.toCalcite(typeFactory, expr.getType()));
-  }
-
-  @Override
   public RexNode visit(PrecisionTimeLiteral expr, Context context) throws RuntimeException {
     int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
     if (expr.precision() > maxPrecision) {
@@ -317,18 +310,6 @@ public class ExpressionRexConverter
   }
 
   @Override
-  public RexNode visit(Expression.TimestampLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(
-        getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
-  }
-
-  @Override
-  public RexNode visit(TimestampTZLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(
-        getTimestampString(expr.value()), typeConverter.toCalcite(typeFactory, expr.getType()));
-  }
-
-  @Override
   public RexNode visit(PrecisionTimestampLiteral expr, Context context) throws RuntimeException {
     int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
     if (expr.precision() > maxPrecision) {
@@ -355,10 +336,6 @@ public class ExpressionRexConverter
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
         typeConverter.toCalcite(typeFactory, expr.getType()));
-  }
-
-  private TimestampString getTimestampString(long microSec) {
-    return getTimestampString(microSec, 6);
   }
 
   private TimestampString getTimestampString(long value, int precision) {

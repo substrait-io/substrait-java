@@ -141,39 +141,6 @@ public class IgnoreNullableAndParameters
   }
 
   /**
-   * Compares {@link Type.Time} ignoring nullability.
-   *
-   * @param type time type
-   * @return {@code true} if {@code typeToMatch} is {@link Type.Time}
-   */
-  @Override
-  public Boolean visit(Type.Time type) {
-    return typeToMatch instanceof Type.Time;
-  }
-
-  /**
-   * Compares {@link Type.TimestampTZ} ignoring nullability.
-   *
-   * @param type timestamp-with-time-zone type
-   * @return {@code true} if {@code typeToMatch} is {@link Type.TimestampTZ}
-   */
-  @Override
-  public Boolean visit(Type.TimestampTZ type) {
-    return typeToMatch instanceof Type.TimestampTZ;
-  }
-
-  /**
-   * Compares {@link Type.Timestamp} ignoring nullability.
-   *
-   * @param type timestamp type
-   * @return {@code true} if {@code typeToMatch} is {@link Type.Timestamp}
-   */
-  @Override
-  public Boolean visit(Type.Timestamp type) {
-    return typeToMatch instanceof Type.Timestamp;
-  }
-
-  /**
    * Compares {@link Type.IntervalYear} ignoring nullability.
    *
    * @param type year-month interval type

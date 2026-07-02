@@ -497,10 +497,6 @@ public class ProtoExpressionConverter {
         return ExpressionCreator.string(literal.getNullable(), literal.getString());
       case BINARY:
         return ExpressionCreator.binary(literal.getNullable(), literal.getBinary());
-      case TIMESTAMP:
-        return ExpressionCreator.timestamp(literal.getNullable(), literal.getTimestamp());
-      case TIMESTAMP_TZ:
-        return ExpressionCreator.timestampTZ(literal.getNullable(), literal.getTimestampTz());
       case PRECISION_TIMESTAMP:
         return ExpressionCreator.precisionTimestamp(
             literal.getNullable(),
@@ -513,8 +509,6 @@ public class ProtoExpressionConverter {
             literal.getPrecisionTimestampTz().getPrecision());
       case DATE:
         return ExpressionCreator.date(literal.getNullable(), literal.getDate());
-      case TIME:
-        return ExpressionCreator.time(literal.getNullable(), literal.getTime());
       case PRECISION_TIME:
         return ExpressionCreator.precisionTime(
             literal.getNullable(),

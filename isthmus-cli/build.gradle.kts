@@ -56,10 +56,9 @@ graalvmNative {
     named("main") {
       imageName.set("isthmus")
       fallback.set(false)
-      buildArgs.add("-H:IncludeResources=.*yaml")
-      buildArgs.add("--report-unsupported-elements-at-runtime")
+      // Resource inclusion and dynamic-proxy configuration are declared in
+      // src/main/resources/META-INF/native-image/.../reachability-metadata.json.
       buildArgs.add("-H:+ReportExceptionStackTraces")
-      buildArgs.add("-H:DynamicProxyConfigurationFiles=${project.file("proxies.json")}")
       buildArgs.add("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
       // Removed due to https://github.com/oracle/graal/issues/13316
       // buildArgs.add("--future-defaults=all")
@@ -98,7 +97,20 @@ tasks.register("writeIsthmusVersion") {
   }
 }
 
-tasks.named("compileJava") { dependsOn("writeIsthmusVersion") }
+tasks.named<JavaCompile>("compileJava") {
+  dependsOn("writeIsthmusVersion")
+  // picocli-codegen emits an empty (`[]`) proxy-config.json because isthmus uses class-based
+  // @Command annotations and needs no JDK dynamic proxies. Its mere presence makes GraalVM emit a
+  // warning, so delete it after compile. reflect-config.json / resource-config.json (the real
+  // picocli metadata) are left untouched.
+  doLast {
+    destinationDirectory
+      .file("META-INF/native-image/picocli-generated/proxy-config.json")
+      .get()
+      .asFile
+      .delete()
+  }
+}
 
 tasks.named<Javadoc>("javadoc") {
   description = "Generate Javadoc for main source files (excludes generated)."

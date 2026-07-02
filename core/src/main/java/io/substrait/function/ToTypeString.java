@@ -77,21 +77,6 @@ public class ToTypeString
   }
 
   @Override
-  public String visit(final Type.Time expr) {
-    return "time";
-  }
-
-  @Override
-  public String visit(final Type.TimestampTZ expr) {
-    return "tstz";
-  }
-
-  @Override
-  public String visit(final Type.Timestamp expr) {
-    return "ts";
-  }
-
-  @Override
   public String visit(final Type.IntervalYear expr) {
     return "iyear";
   }
@@ -199,6 +184,11 @@ public class ToTypeString
   @Override
   public String visit(ParameterizedType.IntervalCompound expr) throws RuntimeException {
     return "icompound";
+  }
+
+  @Override
+  public String visit(ParameterizedType.PrecisionTime expr) throws RuntimeException {
+    return "pt";
   }
 
   @Override

@@ -486,8 +486,6 @@ supported_scalar_functions:
   - "iyear_iyear"
   - "pts_pts"
   - "ptstz_ptstz"
-  - "ts_ts"
-  - "tstz_tstz"
 - source: "datetime"
   name: "gte"
   system_metadata:
@@ -499,8 +497,6 @@ supported_scalar_functions:
   - "iyear_iyear"
   - "pts_pts"
   - "ptstz_ptstz"
-  - "ts_ts"
-  - "tstz_tstz"
 - source: "datetime"
   name: "lt"
   system_metadata:
@@ -512,8 +508,6 @@ supported_scalar_functions:
   - "iyear_iyear"
   - "pts_pts"
   - "ptstz_ptstz"
-  - "ts_ts"
-  - "tstz_tstz"
 - source: "datetime"
   name: "lte"
   system_metadata:
@@ -525,8 +519,6 @@ supported_scalar_functions:
   - "iyear_iyear"
   - "pts_pts"
   - "ptstz_ptstz"
-  - "ts_ts"
-  - "tstz_tstz"
 - source: "logarithmic"
   name: "ln"
   system_metadata:
@@ -798,11 +790,9 @@ supported_aggregate_functions:
   - "date"
   - "iday"
   - "iyear"
+  - "pt"
   - "pts"
   - "ptstz"
-  - "time"
-  - "ts"
-  - "tstz"
 - source: "datetime"
   name: "min"
   system_metadata:
@@ -812,11 +802,9 @@ supported_aggregate_functions:
   - "date"
   - "iday"
   - "iyear"
+  - "pt"
   - "pts"
   - "ptstz"
-  - "time"
-  - "ts"
-  - "tstz"
 supported_window_functions:
 - source: "arithmetic"
   name: "cume_dist"

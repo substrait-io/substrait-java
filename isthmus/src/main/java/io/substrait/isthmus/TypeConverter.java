@@ -298,21 +298,6 @@ public class TypeConverter {
     }
 
     @Override
-    public RelDataType visit(Type.Time expr) {
-      return t(n(expr), SqlTypeName.TIME, 6);
-    }
-
-    @Override
-    public RelDataType visit(Type.TimestampTZ expr) {
-      return t(n(expr), SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, 6);
-    }
-
-    @Override
-    public RelDataType visit(Type.Timestamp expr) {
-      return t(n(expr), SqlTypeName.TIMESTAMP, 6);
-    }
-
-    @Override
     public RelDataType visit(Type.PrecisionTime expr) {
       int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
       if (expr.precision() > maxPrecision) {

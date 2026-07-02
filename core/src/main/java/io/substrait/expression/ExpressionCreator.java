@@ -8,7 +8,6 @@ import io.substrait.type.Type;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
@@ -163,19 +162,6 @@ public class ExpressionCreator {
   }
 
   /**
-   * Creates a time literal expression.
-   *
-   * @param nullable whether the literal can be null
-   * @param value the time value in microseconds since midnight
-   * @return a TimeLiteral expression
-   * @deprecated Time is deprecated in favor of PrecisionTime
-   */
-  @Deprecated
-  public static Expression.TimeLiteral time(boolean nullable, long value) {
-    return Expression.TimeLiteral.builder().nullable(nullable).value(value).build();
-  }
-
-  /**
    * Creates a precision time literal expression.
    *
    * @param nullable whether the literal can be null
@@ -207,94 +193,6 @@ public class ExpressionCreator {
   public static Expression.PrecisionTimeLiteral precisionTime(boolean nullable, LocalTime value) {
     long epochNano = value.toNanoOfDay();
     return precisionTime(nullable, epochNano, 9);
-  }
-
-  /**
-   * Creates a timestamp literal expression.
-   *
-   * @param nullable whether the literal can be null
-   * @param value the timestamp value in microseconds since epoch
-   * @return a TimestampLiteral expression
-   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
-   */
-  @Deprecated
-  public static Expression.TimestampLiteral timestamp(boolean nullable, long value) {
-    return Expression.TimestampLiteral.builder().nullable(nullable).value(value).build();
-  }
-
-  /**
-   * Creates a timestamp literal expression from a LocalDateTime.
-   *
-   * @param nullable whether the literal can be null
-   * @param value the LocalDateTime value (interpreted as UTC)
-   * @return a TimestampLiteral expression
-   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
-   */
-  @Deprecated
-  public static Expression.TimestampLiteral timestamp(boolean nullable, LocalDateTime value) {
-    long epochMicro =
-        TimeUnit.SECONDS.toMicros(value.toEpochSecond(ZoneOffset.UTC))
-            + TimeUnit.NANOSECONDS.toMicros(value.getNano());
-    return timestamp(nullable, epochMicro);
-  }
-
-  /**
-   * Creates a timestamp literal expression from date/time components.
-   *
-   * @param nullable whether the literal can be null
-   * @param year the year
-   * @param month the month (1-12)
-   * @param dayOfMonth the day of month (1-31)
-   * @param hour the hour (0-23)
-   * @param minute the minute (0-59)
-   * @param second the second (0-59)
-   * @param micros the microseconds (0-999999)
-   * @return a TimestampLiteral expression
-   * @deprecated Timestamp is deprecated in favor of PrecisionTimestamp
-   */
-  @Deprecated
-  public static Expression.TimestampLiteral timestamp(
-      boolean nullable,
-      int year,
-      int month,
-      int dayOfMonth,
-      int hour,
-      int minute,
-      int second,
-      int micros) {
-    return timestamp(
-        nullable,
-        LocalDateTime.of(year, month, dayOfMonth, hour, minute, second)
-            .withNano((int) TimeUnit.MICROSECONDS.toNanos(micros)));
-  }
-
-  /**
-   * Creates a timestamp with timezone literal expression.
-   *
-   * @param nullable whether the literal can be null
-   * @param value the timestamp value in microseconds since epoch
-   * @return a TimestampTZLiteral expression
-   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
-   */
-  @Deprecated
-  public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, long value) {
-    return Expression.TimestampTZLiteral.builder().nullable(nullable).value(value).build();
-  }
-
-  /**
-   * Creates a timestamp with timezone literal expression from an Instant.
-   *
-   * @param nullable whether the literal can be null
-   * @param value the Instant value
-   * @return a TimestampTZLiteral expression
-   * @deprecated TimestampTZ is deprecated in favor of PrecisionTimestampTZ
-   */
-  @Deprecated
-  public static Expression.TimestampTZLiteral timestampTZ(boolean nullable, Instant value) {
-    long epochMicro =
-        TimeUnit.SECONDS.toMicros(value.getEpochSecond())
-            + TimeUnit.NANOSECONDS.toMicros(value.getNano());
-    return timestampTZ(nullable, epochMicro);
   }
 
   /**
