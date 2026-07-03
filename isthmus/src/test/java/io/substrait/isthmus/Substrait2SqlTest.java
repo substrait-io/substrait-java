@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,14 +52,23 @@ class Substrait2SqlTest extends PlanTestBase {
 
   @Test
   void currentTimezone() throws Exception {
-    // CURRENT_TIMEZONE is a Substrait-specific niladic operator with no standard Calcite
-    // equivalent; it is registered in SubstraitOperatorTable so it parses without parentheses.
     assertFullRoundTrip("select current_timezone from part");
+  }
 
-    // ...and it is emitted back as the bare niladic keyword (no dialect changes required).
+  @Test
+  void currentTimezoneEmittedAsBareKeyword() throws Exception {
+    // CURRENT_TIMEZONE is a Substrait-specific niladic operator with no standard Calcite
+    // equivalent; it is registered in SubstraitOperatorTable so it parses without parentheses and
+    // is emitted back as the bare keyword rather than as a function call CURRENT_TIMEZONE().
     Plan plan = toSubstraitPlan("select current_timezone from part", TPCH_CATALOG);
+    String sql = toSql(plan);
     assertTrue(
-        toSql(plan).contains("CURRENT_TIMEZONE"), "expected CURRENT_TIMEZONE in emitted SQL");
+        sql.contains("CURRENT_TIMEZONE"), () -> "expected CURRENT_TIMEZONE in emitted SQL: " + sql);
+    assertFalse(
+        sql.contains("CURRENT_TIMEZONE("),
+        () ->
+            "expected CURRENT_TIMEZONE as a bare keyword, not a function call, in emitted SQL: "
+                + sql);
   }
 
   @Test
