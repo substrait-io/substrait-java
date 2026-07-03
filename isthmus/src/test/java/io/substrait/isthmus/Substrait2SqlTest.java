@@ -2,7 +2,9 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.utils.SetUtils;
 import io.substrait.plan.Plan;
@@ -36,6 +38,37 @@ class Substrait2SqlTest extends PlanTestBase {
     String query =
         "select l_partkey, l_discount from lineitem where l_orderkey > cast(100 as bigint)";
     assertFullRoundTrip(query);
+  }
+
+  @Test
+  void currentTimestamp() throws Exception {
+    assertFullRoundTrip("select current_timestamp from part");
+  }
+
+  @Test
+  void currentDate() throws Exception {
+    assertFullRoundTrip("select current_date from part");
+  }
+
+  @Test
+  void currentTimezone() throws Exception {
+    assertFullRoundTrip("select current_timezone from part");
+  }
+
+  @Test
+  void currentTimezoneEmittedAsBareKeyword() throws Exception {
+    // CURRENT_TIMEZONE is a Substrait-specific niladic operator with no standard Calcite
+    // equivalent; it is registered in SubstraitOperatorTable so it parses without parentheses and
+    // is emitted back as the bare keyword rather than as a function call CURRENT_TIMEZONE().
+    Plan plan = toSubstraitPlan("select current_timezone from part", TPCH_CATALOG);
+    String sql = toSql(plan);
+    assertTrue(
+        sql.contains("CURRENT_TIMEZONE"), () -> "expected CURRENT_TIMEZONE in emitted SQL: " + sql);
+    assertFalse(
+        sql.contains("CURRENT_TIMEZONE("),
+        () ->
+            "expected CURRENT_TIMEZONE as a bare keyword, not a function call, in emitted SQL: "
+                + sql);
   }
 
   @Test

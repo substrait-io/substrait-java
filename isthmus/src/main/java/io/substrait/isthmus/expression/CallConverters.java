@@ -19,6 +19,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -237,6 +238,28 @@ public class CallConverters {
           };
 
   /**
+   * Converts Calcite's niladic execution-context operators to Substrait execution context variable
+   * {@link Expression}s: {@link SqlStdOperatorTable#CURRENT_TIMESTAMP} to {@link
+   * Expression.CurrentTimestamp} (with the precision taken from the call's result type), {@link
+   * SqlStdOperatorTable#CURRENT_DATE} to {@link Expression.CurrentDate}, and {@link
+   * CurrentTimezoneFunction} to {@link Expression.CurrentTimezone}.
+   *
+   * <p>Matching is done on operator identity (these are niladic {@link SqlKind#OTHER_FUNCTION}
+   * functions with no dedicated {@link SqlKind}).
+   */
+  public static SimpleCallConverter EXECUTION_CONTEXT_VARIABLE =
+      (call, visitor) -> {
+        if (call.getOperator() == SqlStdOperatorTable.CURRENT_TIMESTAMP) {
+          return ExpressionCreator.currentTimestamp(call.getType().getPrecision());
+        } else if (call.getOperator() == SqlStdOperatorTable.CURRENT_DATE) {
+          return ExpressionCreator.currentDate();
+        } else if (call.getOperator() == CurrentTimezoneFunction.INSTANCE) {
+          return ExpressionCreator.currentTimezone();
+        }
+        return null;
+      };
+
+  /**
    * Returns the default set of converters for common calls.
    *
    * @param typeConverter type mapper between Substrait and Calcite types
@@ -249,6 +272,7 @@ public class CallConverters {
         CallConverters.ROW,
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
+        CallConverters.EXECUTION_CONTEXT_VARIABLE,
         new SqlArrayValueConstructorCallConverter(typeConverter),
         new SqlMapValueConstructorCallConverter());
   }

@@ -272,6 +272,7 @@ public class ConverterProvider {
     callConverters.add(CallConverters.ROW);
     callConverters.add(CallConverters.CAST.apply(typeConverter));
     callConverters.add(CallConverters.REINTERPRET.apply(typeConverter));
+    callConverters.add(CallConverters.EXECUTION_CONTEXT_VARIABLE);
     callConverters.add(new SqlArrayValueConstructorCallConverter(typeConverter));
     callConverters.add(new SqlMapValueConstructorCallConverter());
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
