@@ -230,6 +230,13 @@ final class StringFunctionTest extends PlanTestBase {
   }
 
   @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32", "vc"})
+  void testRegexpExtract(String column) throws Exception {
+    String query = String.format("SELECT REGEXP_EXTRACT(%s, '[0-9]+') FROM strings", column);
+    assertSqlRoundTrip(query);
+  }
+
+  @ParameterizedTest
   @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
   void testPosition(String substring, String input) throws Exception {
     String query = String.format("SELECT POSITION(%s IN %s) FROM strings", substring, input);
