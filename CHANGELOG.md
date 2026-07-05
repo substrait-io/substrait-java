@@ -1,6 +1,8 @@
 Release Notes
 ---
 
+## [0.95.0](https://github.com/substrait-io/substrait-java/compare/v0.94.0...v0.95.0) (2026-07-05)
+
 ## [0.94.0](https://github.com/substrait-io/substrait-java/compare/v0.93.0...v0.94.0) (2026-06-21)
 
 ### Features
