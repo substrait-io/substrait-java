@@ -21,23 +21,19 @@ trap cleanup EXIT ERR
 cd "$worktree" || exit 1
 
 export GITHUB_REF="$branch"
+export RELEASE_DRY_RUN=true
 
 npx --yes \
-  -p semantic-release \
-  -p "@semantic-release/commit-analyzer" \
-  -p "@semantic-release/release-notes-generator" \
-  -p "@semantic-release/changelog" \
-  -p "@semantic-release/exec" \
-  -p "@semantic-release/git" \
-  -p "conventional-changelog-conventionalcommits" \
+  -p "semantic-release@25.0.5" \
+  -p "@semantic-release/commit-analyzer@13.0.1" \
+  -p "@semantic-release/release-notes-generator@14.1.1" \
+  -p "@semantic-release/changelog@7.0.0-beta.1" \
+  -p "@semantic-release/github@12.0.8" \
+  -p "@semantic-release/exec@7.1.0" \
+  -p "@semantic-release/git@10.0.1" \
+  -p "conventional-changelog-conventionalcommits@9.3.1" \
   semantic-release \
   --ci false \
   --dry-run \
-  --preset conventionalcommits \
-  --plugins \
-  --analyze-commits "@semantic-release/commit-analyzer" \
-  --generate-notes "@semantic-release/release-notes-generator" \
-  --verify-conditions "@semantic-release/changelog,@semantic-release/exec,@semantic-release/git" \
-  --prepare "@semantic-release/changelog,@semantic-release/exec" \
   --branches "$branch" \
   --repository-url "file://$PWD"
