@@ -1,9 +1,6 @@
 package io.substrait.isthmus;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeMap;
-import com.google.common.collect.TreeRangeMap;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
@@ -43,15 +40,18 @@ import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -165,21 +165,19 @@ public class SubstraitRelNodeConverter
                 .typeSystem(converterProvider.getTypeSystem())
                 .programs()
                 .build());
-    // Normalize id-based outer references (rel_reference) back to offset-based ones (steps_out) so
-    // the depth-based conversion below handles both encodings uniformly. Offset-based plans are
-    // left unchanged.
-    return OuterReferenceConverter.toStepsOut(relRoot)
+    // Normalize any offset-based outer references (steps_out) to the id-based form (rel_anchor /
+    // rel_reference) so the conversion below resolves correlations purely by anchor. Plans that are
+    // already id-based are left unchanged.
+    return OuterReferenceConverter.toIdBased(relRoot)
         .accept(converterProvider.getSubstraitRelNodeConverter(relBuilder), Context.newContext());
   }
 
   @Override
   public RelNode visit(Filter filter, Context context) throws RuntimeException {
     RelNode input = filter.getInput().accept(this, context);
-    context.pushOuterRowType(input.getRowType());
+    context.enterScope(AnchoredInput.of(filter.getInput().getRelAnchor(), input.getRowType()));
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
-    RelNode node =
-        relBuilder.push(input).filter(context.popCorrelationIds(), filterCondition).build();
-    context.popOuterRowType();
+    RelNode node = relBuilder.push(input).filter(context.exitScope(), filterCondition).build();
     return applyRemap(node, filter.getRemap());
   }
 
@@ -197,7 +195,7 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Project project, Context context) throws RuntimeException {
     RelNode child = project.getInput().accept(this, context);
-    context.pushOuterRowType(child.getRowType());
+    context.enterScope(AnchoredInput.of(project.getInput().getRelAnchor(), child.getRowType()));
 
     Stream<RexNode> directOutputs =
         IntStream.range(0, child.getRowType().getFieldCount())
@@ -210,11 +208,7 @@ public class SubstraitRelNodeConverter
         Stream.concat(directOutputs, exprs).collect(java.util.stream.Collectors.toList());
 
     RelNode node =
-        relBuilder
-            .push(child)
-            .project(rexExprs, List.of(), false, context.popCorrelationIds())
-            .build();
-    context.popOuterRowType();
+        relBuilder.push(child).project(rexExprs, List.of(), false, context.exitScope()).build();
     return applyRemap(node, project.getRemap());
   }
 
@@ -232,19 +226,16 @@ public class SubstraitRelNodeConverter
   public RelNode visit(Join join, Context context) throws RuntimeException {
     RelNode left = join.getLeft().accept(this, context);
     RelNode right = join.getRight().accept(this, context);
-    context.pushOuterRowType(left.getRowType(), right.getRowType());
+    context.enterScope(
+        AnchoredInput.of(join.getLeft().getRelAnchor(), left.getRowType()),
+        AnchoredInput.of(join.getRight().getRelAnchor(), right.getRowType()));
     RexNode condition =
         join.getCondition()
             .map(c -> c.accept(expressionRexConverter, context))
             .orElse(relBuilder.literal(true));
     JoinRelType joinType = asJoinRelType(join);
     RelNode node =
-        relBuilder
-            .push(left)
-            .push(right)
-            .join(joinType, condition, context.popCorrelationIds())
-            .build();
-    context.popOuterRowType();
+        relBuilder.push(left).push(right).join(joinType, condition, context.exitScope()).build();
     return applyRemap(node, join.getRemap());
   }
 
@@ -811,15 +802,55 @@ public class SubstraitRelNodeConverter
     return relBuilder.push(relNode).project(rexList).build();
   }
 
-  /** A shared context for the Substrait to RelNode conversion. */
+  /**
+   * A relational input paired with the {@code rel_anchor} it may carry, used by {@link Context}.
+   */
+  public static final class AnchoredInput {
+    final Optional<Integer> anchor;
+    final RelDataType rowType;
+
+    private AnchoredInput(Optional<Integer> anchor, RelDataType rowType) {
+      this.anchor = anchor;
+      this.rowType = rowType;
+    }
+
+    /**
+     * Creates an anchored input.
+     *
+     * @param anchor the input's {@code rel_anchor}, if any
+     * @param rowType the input's Calcite row type
+     * @return the anchored input
+     */
+    public static AnchoredInput of(Optional<Integer> anchor, RelDataType rowType) {
+      return new AnchoredInput(anchor, rowType);
+    }
+  }
+
+  /**
+   * A shared context for the Substrait to RelNode conversion.
+   *
+   * <p>Correlated (outer) references are resolved by id: a relation that binds an outer reference
+   * carries a {@code rel_anchor}, and each reference carries the matching {@code rel_reference}.
+   * When a relational operator is converted, it enters a scope recording the anchors of its inputs;
+   * a reference then resolves against the enclosing scope owning its anchor, and the {@link
+   * CorrelationId} minted for that anchor is attached to the operator that owns it.
+   */
   public static class Context implements VisitationContext {
-    /** Stack of outer row type range maps used to resolve correlated references. */
-    protected final Stack<RangeMap<Integer, RelDataType>> outerRowTypes = new Stack<>();
 
-    /** Stack of correlation ids collected while visiting subqueries. */
-    protected final Stack<java.util.Set<CorrelationId>> correlationIds = new Stack<>();
+    /** Stack of correlation scopes, innermost on top. */
+    private final Deque<Scope> scopes = new ArrayDeque<>();
 
-    private int subqueryDepth;
+    /** Maps an in-scope {@code rel_anchor} to the scope that owns it. */
+    private final Map<Integer, Scope> scopeByAnchor = new HashMap<>();
+
+    /** Maps a {@code rel_anchor} to the single {@link CorrelationId} minted for it. */
+    private final Map<Integer, CorrelationId> correlationIdByAnchor = new HashMap<>();
+
+    /** One correlation scope per enclosing relational operator. */
+    private static final class Scope {
+      final Map<Integer, RelDataType> rowTypeByAnchor = new HashMap<>();
+      final java.util.Set<CorrelationId> correlationIds = new HashSet<>();
+    }
 
     /**
      * Creates a new {@link Context} instance.
@@ -831,75 +862,74 @@ public class SubstraitRelNodeConverter
     }
 
     /**
-     * Adds the outer row types to the top of the stack of outer row types.
+     * Enters a correlation scope for a relational operator, recording the {@code rel_anchor} (if
+     * any) carried by each of its inputs.
      *
-     * <p>Row types are stored as a {@link RangeMap} with field indices as keys and the {@link
-     * RelDataType} row type containing the field at the field index by continuously numbering the
-     * field indices from 0 across all provided row types in the order the row types are passed as
-     * arguments.
-     *
-     * @param inputs the row types to add
+     * @param inputs the operator's inputs paired with their anchors
      */
-    public void pushOuterRowType(final RelDataType... inputs) {
-      final RangeMap<Integer, RelDataType> fieldRangeMap = TreeRangeMap.create();
-      int begin = 0;
-      for (final RelDataType parent : inputs) {
-        final int end = begin + parent.getFieldCount();
-        final Range<Integer> range = Range.closedOpen(begin, end);
-        fieldRangeMap.put(range, parent);
-        begin = end;
+    public void enterScope(final AnchoredInput... inputs) {
+      final Scope scope = new Scope();
+      for (final AnchoredInput input : inputs) {
+        if (input.anchor.isPresent()) {
+          final int anchor = input.anchor.get();
+          scope.rowTypeByAnchor.put(anchor, input.rowType);
+          scopeByAnchor.put(anchor, scope);
+        }
       }
-
-      outerRowTypes.push(fieldRangeMap);
-      this.correlationIds.push(new HashSet<>());
-    }
-
-    /** Pops the most recent outer row type from the stack. */
-    public void popOuterRowType() {
-      outerRowTypes.pop();
+      scopes.push(scope);
     }
 
     /**
-     * Returns the outer row type {@link RangeMap} walking up the given steps from the current
-     * subquery depth.
+     * Exits the innermost correlation scope, returning the correlation ids to attach to the
+     * operator that owns it.
      *
-     * @param stepsOut number of steps to walk up from the current subquery depth
-     * @return {@link RangeMap} with field indices as keys and the {@link RelDataType} row type
-     *     containing the field at the field index
+     * @return the correlation ids resolved against this operator's inputs
      */
-    public RangeMap<Integer, RelDataType> getOuterRowTypeRangeMap(final Integer stepsOut) {
-      return this.outerRowTypes.get(subqueryDepth - stepsOut);
+    public java.util.Set<CorrelationId> exitScope() {
+      final Scope scope = scopes.pop();
+      for (final Integer anchor : scope.rowTypeByAnchor.keySet()) {
+        scopeByAnchor.remove(anchor);
+      }
+      return scope.correlationIds;
     }
 
     /**
-     * Removes the correlation ids at the top of the stack.
+     * Returns the Calcite row type of the in-scope relation bearing the given {@code rel_anchor}.
      *
-     * @return the correlation ids removed from the top of the stack
+     * @param anchor the referenced {@code rel_anchor}
+     * @return the row type of the binding relation
      */
-    public java.util.Set<CorrelationId> popCorrelationIds() {
-      return correlationIds.pop();
+    public RelDataType getAnchorRowType(final int anchor) {
+      final Scope scope = requireScope(anchor);
+      return scope.rowTypeByAnchor.get(anchor);
     }
 
     /**
-     * Adds a {@link CorrelationId} to the subquery depth walking up the given steps from the
-     * current subquery depth.
+     * Returns the {@link CorrelationId} for the given {@code rel_anchor}, creating it on first use
+     * and attaching it to the scope that owns the anchor so the binding operator declares it.
      *
-     * @param stepsOut number of steps to walk up from the current subquery depth
-     * @param correlationId the {@link CorrelationId} to add
+     * @param anchor the referenced {@code rel_anchor}
+     * @param factory supplies a fresh correlation id when one has not yet been minted
+     * @return the correlation id for this anchor
      */
-    public void addCorrelationId(final int stepsOut, final CorrelationId correlationId) {
-      final int index = subqueryDepth - stepsOut;
-      this.correlationIds.get(index).add(correlationId);
+    public CorrelationId correlationIdForAnchor(
+        final int anchor, final java.util.function.Supplier<CorrelationId> factory) {
+      final Scope scope = requireScope(anchor);
+      final CorrelationId correlationId =
+          correlationIdByAnchor.computeIfAbsent(anchor, k -> factory.get());
+      scope.correlationIds.add(correlationId);
+      return correlationId;
     }
 
-    /** Increments the current subquery depth. */
-    public void incrementSubqueryDepth() {
-      this.subqueryDepth++;
-    }
-
-    /** Decrements the current subquery depth. */
-    public void decrementSubqueryDepth() {
-      this.subqueryDepth--;
+    private Scope requireScope(final int anchor) {
+      final Scope scope = scopeByAnchor.get(anchor);
+      if (scope == null) {
+        throw new IllegalStateException(
+            "Outer reference rel_reference="
+                + anchor
+                + " has no enclosing relation with that anchor");
+      }
+      return scope;
     }
   }
 

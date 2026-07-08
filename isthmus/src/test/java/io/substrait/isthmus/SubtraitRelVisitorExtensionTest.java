@@ -151,7 +151,7 @@ class SubtraitRelVisitorExtensionTest {
         final RelNode relNode, final SimpleExtension.ExtensionCollection extensions) {
       final SubstraitRelVisitorCustom visitor =
           new SubstraitRelVisitorCustom(relNode.getCluster().getTypeFactory(), extensions);
-      visitor.popFieldAccessDepthMap(relNode);
+      visitor.resolveOuterReferences(relNode);
       return visitor.apply(relNode);
     }
   }

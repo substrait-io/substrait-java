@@ -64,9 +64,10 @@ public class SubstraitToCalcite {
    * @return {@link RelNode}
    */
   public RelNode convert(Rel rel) {
-    // Normalize id-based outer references (rel_reference) into offset-based ones (steps_out) so the
-    // depth-based conversion handles both encodings uniformly. Offset-based plans are unchanged.
-    rel = OuterReferenceConverter.toStepsOut(rel);
+    // Normalize any offset-based outer references (steps_out) to the id-based form (rel_anchor /
+    // rel_reference) so the conversion resolves correlations purely by anchor. Plans that are
+    // already id-based are unchanged.
+    rel = OuterReferenceConverter.toIdBased(rel);
 
     RelBuilder relBuilder;
     if (catalogReader != null) {
