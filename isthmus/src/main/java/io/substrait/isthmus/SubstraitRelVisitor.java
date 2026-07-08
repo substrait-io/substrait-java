@@ -29,6 +29,7 @@ import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
+import io.substrait.relation.OuterReferenceConverter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
@@ -1015,7 +1016,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public static Plan.Root convert(RelRoot relRoot, ConverterProvider converterProvider) {
     SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
     visitor.popFieldAccessDepthMap(relRoot.rel);
-    Rel rel = visitor.apply(relRoot.project());
+    // Convert offset-based outer references (steps_out) into id-based ones (rel_anchor /
+    // rel_reference), the encoding Substrait is migrating towards.
+    Rel rel = OuterReferenceConverter.toIdBased(visitor.apply(relRoot.project()));
 
     // Avoid using the names from relRoot.validatedRowType because if there are
     // nested types (i.e ROW, MAP, etc) the typeConverter will pad names correctly
@@ -1049,6 +1052,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public static Rel convert(RelNode relNode, ConverterProvider converterProvider) {
     SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
     visitor.popFieldAccessDepthMap(relNode);
-    return visitor.apply(relNode);
+    return OuterReferenceConverter.toIdBased(visitor.apply(relNode));
   }
 }

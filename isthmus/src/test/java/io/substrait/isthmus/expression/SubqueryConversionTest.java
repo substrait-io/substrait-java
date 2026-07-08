@@ -88,6 +88,46 @@ class SubqueryConversionTest extends PlanTestBase {
   }
 
   @Test
+  void testOuterFieldReferenceOneStepIdBased() {
+    /*
+     * Same correlated scalar subquery as testOuterFieldReferenceOneStep, but the outer reference is
+     * expressed in the id-based form (rel_reference) binding to the orders scan's rel_anchor. The
+     * consumer must resolve it to the same Calcite $cor0 correlation as the steps_out form.
+     */
+    final Rel root =
+        sb.project(
+            input ->
+                List.of(
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
+                            Remap.of(List.of(1)),
+                            sb.filter(
+                                input2 ->
+                                    sb.equal(
+                                        sb.fieldReference(input2, 0),
+                                        FieldReference.newRootStructOuterReferenceByRelReference(
+                                            1, TypeCreator.REQUIRED.I64, 1)),
+                                customerTableScan)),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2, 3)),
+            // The orders scan is the binding relation for the id-based outer reference.
+            orderTableScan.withRelAnchor(1));
+
+    final RelNode calciteRel = substraitToCalcite.convert(root);
+
+    assertEquals(
+        "LogicalProject(variablesSet=[[$cor0]], o_orderkey0=[$0], $f3=[$SCALAR_QUERY({\n"
+            + "LogicalProject(c_nationkey=[$1])\n"
+            + "  LogicalFilter(condition=[=($0, $cor0.o_custkey)])\n"
+            + "    LogicalTableScan(table=[[customer]])\n"
+            + "})])\n"
+            + "  LogicalTableScan(table=[[orders]])\n",
+        calciteRel.explain());
+  }
+
+  @Test
   void testOuterFieldReferenceTwoSteps() {
     /*
      * SELECT

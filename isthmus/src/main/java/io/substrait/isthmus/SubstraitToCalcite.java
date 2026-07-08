@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.plan.Plan;
+import io.substrait.relation.OuterReferenceConverter;
 import io.substrait.relation.Rel;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
@@ -63,6 +64,10 @@ public class SubstraitToCalcite {
    * @return {@link RelNode}
    */
   public RelNode convert(Rel rel) {
+    // Normalize id-based outer references (rel_reference) into offset-based ones (steps_out) so the
+    // depth-based conversion handles both encodings uniformly. Offset-based plans are unchanged.
+    rel = OuterReferenceConverter.toStepsOut(rel);
+
     RelBuilder relBuilder;
     if (catalogReader != null) {
       relBuilder = converterProvider.getRelBuilder(catalogReader.getRootSchema());

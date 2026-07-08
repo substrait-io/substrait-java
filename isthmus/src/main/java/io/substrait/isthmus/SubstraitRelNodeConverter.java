@@ -28,6 +28,7 @@ import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.NamedWrite;
+import io.substrait.relation.OuterReferenceConverter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
@@ -164,8 +165,11 @@ public class SubstraitRelNodeConverter
                 .typeSystem(converterProvider.getTypeSystem())
                 .programs()
                 .build());
-    return relRoot.accept(
-        converterProvider.getSubstraitRelNodeConverter(relBuilder), Context.newContext());
+    // Normalize id-based outer references (rel_reference) back to offset-based ones (steps_out) so
+    // the depth-based conversion below handles both encodings uniformly. Offset-based plans are
+    // left unchanged.
+    return OuterReferenceConverter.toStepsOut(relRoot)
+        .accept(converterProvider.getSubstraitRelNodeConverter(relBuilder), Context.newContext());
   }
 
   @Override
