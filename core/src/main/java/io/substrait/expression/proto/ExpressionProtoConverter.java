@@ -657,6 +657,12 @@ public class ExpressionProtoConverter
 
     if (expr.inputExpression().isPresent()) {
       out.setExpression(toProto(expr.inputExpression().get()));
+    } else if (expr.outerReferenceRelReference().isPresent()) {
+      // steps_out and rel_reference are mutually exclusive (a single OuterReference oneof); a
+      // FieldReference carries at most one, enforced by FieldReference#check().
+      out.setOuterReference(
+          io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
+              .setRelReference(expr.outerReferenceRelReference().get()));
     } else if (expr.outerReferenceStepsOut().isPresent()) {
       out.setOuterReference(
           io.substrait.proto.Expression.FieldReference.OuterReference.newBuilder()
