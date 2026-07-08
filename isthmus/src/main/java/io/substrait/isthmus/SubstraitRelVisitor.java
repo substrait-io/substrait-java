@@ -979,7 +979,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (outerReferenceResolver != null) {
       Integer anchor = outerReferenceResolver.anchorForTarget(r);
       if (anchor != null) {
-        return rel.withRelAnchor(anchor);
+        try {
+          return rel.withRelAnchor(anchor);
+        } catch (UnsupportedOperationException e) {
+          // rel is the binding point of a correlated outer reference but cannot carry a rel_anchor
+          // (a custom, non-Immutables Rel that does not override withRelAnchor). Fail with context
+          // rather than propagating the bare "does not support setting a relation anchor" default.
+          throw new UnsupportedOperationException(
+              "Relation "
+                  + rel.getClass()
+                  + " is the binding point of an id-based outer reference but does not support "
+                  + "setting a rel_anchor; override Rel#withRelAnchor to convert correlated "
+                  + "subqueries into this relation type",
+              e);
+        }
       }
     }
     return rel;

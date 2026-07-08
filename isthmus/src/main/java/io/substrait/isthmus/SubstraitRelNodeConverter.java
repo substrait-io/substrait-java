@@ -846,6 +846,15 @@ public class SubstraitRelNodeConverter
     /** Maps a {@code rel_anchor} to the single {@link CorrelationId} minted for it. */
     private final Map<Integer, CorrelationId> correlationIdByAnchor = new HashMap<>();
 
+    /**
+     * Every {@code rel_anchor} that has entered a scope. Resolution keys {@link #scopeByAnchor} and
+     * {@link #correlationIdByAnchor} purely by anchor value, which is only sound if anchors are
+     * unique plan-wide (as required by {@link io.substrait.relation.Rel#getRelAnchor()}). This set
+     * lets {@link #enterScope} reject a plan that reuses an anchor for two distinct relations
+     * rather than silently mis-resolving references.
+     */
+    private final java.util.Set<Integer> seenAnchors = new HashSet<>();
+
     /** One correlation scope per enclosing relational operator. */
     private static final class Scope {
       final Map<Integer, RelDataType> rowTypeByAnchor = new HashMap<>();
@@ -872,6 +881,13 @@ public class SubstraitRelNodeConverter
       for (final AnchoredInput input : inputs) {
         if (input.anchor.isPresent()) {
           final int anchor = input.anchor.get();
+          if (!seenAnchors.add(anchor)) {
+            throw new UnsupportedOperationException(
+                "Duplicate rel_anchor="
+                    + anchor
+                    + "; rel_anchors must be unique plan-wide for id-based outer references to "
+                    + "resolve unambiguously");
+          }
           scope.rowTypeByAnchor.put(anchor, input.rowType);
           scopeByAnchor.put(anchor, scope);
         }
@@ -924,7 +940,10 @@ public class SubstraitRelNodeConverter
     private Scope requireScope(final int anchor) {
       final Scope scope = scopeByAnchor.get(anchor);
       if (scope == null) {
-        throw new IllegalStateException(
+        // The anchor is not on the active scope stack: the referenced relation is not an enclosing
+        // single-input host. This includes forward references and shared subtrees reached via a
+        // ReferenceRel. Signalled as unsupported, consistent with OuterReferenceConverter.
+        throw new UnsupportedOperationException(
             "Outer reference rel_reference="
                 + anchor
                 + " has no enclosing relation with that anchor");

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.plan.Plan;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.TypeCreator;
 import java.util.List;
@@ -210,6 +211,96 @@ class OuterReferenceConverterTest extends TestBase {
 
     assertThrows(
         UnsupportedOperationException.class, () -> OuterReferenceConverter.toStepsOut(dangling));
+  }
+
+  @Test
+  void multiRootPlanAssignsPlanWideUniqueAnchors() {
+    // Two roots, each with a correlated subquery binding to a distinct relation. Anchors must be
+    // unique plan-wide (Rel#getRelAnchor()), so the second root's binding relation cannot reuse the
+    // first root's anchor.
+    Plan stepsOut =
+        Plan.builder()
+            // from(...) supplies a valid executionBehavior (and the first root); add the second.
+            .from(sb.plan(sb.root(oneStepPlanBoundTo(orderTableScan))))
+            .addRoots(sb.root(oneStepPlanBoundTo(nationTableScan)))
+            .build();
+
+    Plan idBased = OuterReferenceConverter.toIdBased(stepsOut);
+
+    int anchor0 =
+        ((Project) idBased.getRoots().get(0).getInput())
+            .getInput()
+            .getRelAnchor()
+            .orElseThrow(AssertionError::new);
+    int anchor1 =
+        ((Project) idBased.getRoots().get(1).getInput())
+            .getInput()
+            .getRelAnchor()
+            .orElseThrow(AssertionError::new);
+    assertNotEquals(anchor0, anchor1);
+
+    assertEquals(stepsOut, OuterReferenceConverter.toStepsOut(idBased));
+  }
+
+  @Test
+  void correlatedReferenceIntoJoinScopeIsRejected() {
+    // A correlated reference whose binding scope is a multi-input (join) relation, reached through
+    // a
+    // subquery nested in the join condition, is unsupported and must fail rather than silently bind
+    // the reference to the wrong (single-input) enclosing relation.
+    Rel plan =
+        sb.project(
+            input ->
+                List.of(
+                    sb.scalarSubquery(
+                        sb.innerJoin(
+                            joinInputs ->
+                                sb.equal(
+                                    sb.fieldReference(joinInputs, 0),
+                                    sb.scalarSubquery(
+                                        sb.project(
+                                            input3 -> List.of(sb.fieldReference(input3, 1)),
+                                            Remap.of(List.of(1)),
+                                            sb.filter(
+                                                input3 ->
+                                                    sb.equal(
+                                                        sb.fieldReference(input3, 0),
+                                                        // steps_out=1 resolves to the enclosing
+                                                        // join scope, which is multi-input.
+                                                        FieldReference.newRootStructOuterReference(
+                                                            0, TypeCreator.REQUIRED.I64, 1)),
+                                                customerTableScan)),
+                                        TypeCreator.NULLABLE.I64)),
+                            nationTableScan,
+                            orderTableScan),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2)),
+            orderTableScan);
+
+    assertThrows(
+        UnsupportedOperationException.class, () -> OuterReferenceConverter.toIdBased(plan));
+  }
+
+  /** A one-step correlated-subquery plan whose outer reference binds to {@code bindingScan}. */
+  private Rel oneStepPlanBoundTo(Rel bindingScan) {
+    return sb.project(
+        input ->
+            List.of(
+                sb.fieldReference(input, 0),
+                sb.scalarSubquery(
+                    sb.project(
+                        input2 -> List.of(sb.fieldReference(input2, 1)),
+                        Remap.of(List.of(1)),
+                        sb.filter(
+                            input2 ->
+                                sb.equal(
+                                    sb.fieldReference(input2, 0),
+                                    FieldReference.newRootStructOuterReference(
+                                        1, TypeCreator.REQUIRED.I64, 1)),
+                            customerTableScan)),
+                    TypeCreator.NULLABLE.I64)),
+        Remap.of(List.of(2, 3)),
+        bindingScan);
   }
 
   /** Extracts the outer field reference from the one-step plan's scalar-subquery filter. */

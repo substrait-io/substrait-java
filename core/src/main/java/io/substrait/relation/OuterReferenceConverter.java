@@ -6,10 +6,13 @@ import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.plan.Plan;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Converts a Substrait plan between the two outer-reference resolution encodings:
@@ -88,15 +91,22 @@ public final class OuterReferenceConverter {
   }
 
   private static Plan convert(Plan plan, Direction direction) {
+    // A single State (and therefore a single anchor counter) is shared across all roots so that
+    // assigned rel_anchors are unique plan-wide, as required by Rel#getRelAnchor(). The per-tree
+    // traversal state (scope stack, currentInput) is push/pop balanced and empty between roots.
+    State state = new State(direction);
     List<Plan.Root> roots = new ArrayList<>(plan.getRoots().size());
     for (Plan.Root root : plan.getRoots()) {
-      roots.add(Plan.Root.builder().from(root).input(convert(root.getInput(), direction)).build());
+      roots.add(Plan.Root.builder().from(root).input(convert(root.getInput(), state)).build());
     }
     return Plan.builder().from(plan).roots(roots).build();
   }
 
   private static Rel convert(Rel root, Direction direction) {
-    State state = new State(direction);
+    return convert(root, new State(direction));
+  }
+
+  private static Rel convert(Rel root, State state) {
     RelRewriter relRewriter = new RelRewriter(state);
     return root.accept(relRewriter, EmptyVisitationContext.INSTANCE).orElse(root);
   }
@@ -107,8 +117,9 @@ public final class OuterReferenceConverter {
 
     /**
      * Stack of enclosing scope relations, one entry per subquery boundary. A {@code null} entry
-     * marks a multi-input (unsupported) scope. {@code steps_out=N} resolves to the entry {@code N}
-     * from the top.
+     * marks a scope whose expressions are not hosted by a single-input {@link Filter}/{@link
+     * Project} (e.g. a multi-input join/set condition), which is unsupported. {@code steps_out=N}
+     * resolves to the entry {@code N} from the top.
      */
     final List<Rel> outerScopes = new ArrayList<>();
 
@@ -118,9 +129,15 @@ public final class OuterReferenceConverter {
     final Map<Rel, Integer> anchorByRel = new IdentityHashMap<>();
 
     /** Anchors that were resolved to a {@code steps_out} value and should be stripped from rels. */
-    final java.util.Set<Integer> resolvedAnchors = new java.util.HashSet<>();
+    final Set<Integer> resolvedAnchors = new HashSet<>();
 
-    /** The input relation whose expressions are currently being rewritten (RootReference scope). */
+    /**
+     * The input relation whose expressions are currently being rewritten, or {@code null} when the
+     * expressions being rewritten are not those of a single-input host (a {@link Filter} or {@link
+     * Project}). Pushed onto {@link #outerScopes} at each subquery boundary; a {@code null} scope
+     * is therefore what makes an outer reference into a multi-input (or otherwise unsupported)
+     * scope fail rather than bind to the wrong relation.
+     */
     Rel currentInput;
 
     int nextAnchor = 1;
@@ -209,7 +226,7 @@ public final class OuterReferenceConverter {
      * Runs the given expression rewrite with {@code currentInput} temporarily set to {@code input},
      * so that subqueries entered while rewriting push the correct scope.
      */
-    private <T> T rewriteInScope(Rel input, java.util.function.Supplier<T> rewrite) {
+    private <T> T rewriteInScope(Rel input, Supplier<T> rewrite) {
       Rel saved = state.currentInput;
       state.currentInput = input;
       try {
@@ -297,8 +314,9 @@ public final class OuterReferenceConverter {
       Rel binding = state.outerScopes.get(index);
       if (binding == null) {
         throw new UnsupportedOperationException(
-            "Cannot assign a rel_anchor for an outer reference that resolves to a multi-input "
-                + "(e.g. join) scope; only single-input scopes are supported");
+            "Cannot assign a rel_anchor for an outer reference that resolves to a scope that is not "
+                + "the input of a single-input host (Filter/Project); multi-input scopes (e.g. a "
+                + "join/set condition) are not supported");
       }
       return state.allocateAnchor(binding);
     }
@@ -337,7 +355,7 @@ public final class OuterReferenceConverter {
         Expression.InPredicate inPredicate, EmptyVisitationContext context) {
       // needles are evaluated in the current (outer) scope; the haystack is the subquery boundary.
       Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
-      Optional<io.substrait.relation.Rel> haystack =
+      Optional<Rel> haystack =
           withSubqueryScope(
               () -> inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context));
 
@@ -353,9 +371,15 @@ public final class OuterReferenceConverter {
     }
 
     /** Pushes {@code currentInput} as a new subquery scope, runs the action, then pops it. */
-    private <T> T withSubqueryScope(java.util.function.Supplier<T> action) {
+    private <T> T withSubqueryScope(Supplier<T> action) {
       Rel savedInput = state.currentInput;
       state.outerScopes.add(state.currentInput);
+      // Clear currentInput for the duration of the subquery so that only a single-input host
+      // (Filter/Project, which re-sets it via rewriteInScope) contributes a non-null scope. Without
+      // this, a subquery reached through a multi-input host (join/set) or any other relation would
+      // inherit this scope's currentInput and silently bind an outer reference to the wrong
+      // relation instead of failing as an unsupported multi-input scope.
+      state.currentInput = null;
       try {
         return action.get();
       } finally {

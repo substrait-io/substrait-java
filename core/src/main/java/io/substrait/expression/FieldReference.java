@@ -104,13 +104,10 @@ public abstract class FieldReference implements Expression {
    */
   @Value.Check
   protected void check() {
-    long formsSet =
-        java.util.stream.Stream.of(
-                outerReferenceStepsOut(),
-                outerReferenceRelReference(),
-                lambdaParameterReferenceStepsOut())
-            .filter(Optional::isPresent)
-            .count();
+    int formsSet =
+        (outerReferenceStepsOut().isPresent() ? 1 : 0)
+            + (outerReferenceRelReference().isPresent() ? 1 : 0)
+            + (lambdaParameterReferenceStepsOut().isPresent() ? 1 : 0);
     if (formsSet > 1) {
       throw new IllegalArgumentException(
           "FieldReference can set at most one of outerReferenceStepsOut, "
