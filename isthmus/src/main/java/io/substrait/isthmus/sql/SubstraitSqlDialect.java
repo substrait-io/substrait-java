@@ -15,10 +15,10 @@ import org.apache.calcite.sql.util.SqlString;
 public class SubstraitSqlDialect extends SqlDialect {
 
   /** Default context for the Substrait SQL dialect. */
-  public static SqlDialect.Context DEFAULT_CONTEXT = SqlDialect.EMPTY_CONTEXT;
+  public static final SqlDialect.Context DEFAULT_CONTEXT = SqlDialect.EMPTY_CONTEXT;
 
   /** Default instance of Substrait SQL dialect. */
-  public static SqlDialect DEFAULT = new SubstraitSqlDialect(DEFAULT_CONTEXT);
+  public static final SqlDialect DEFAULT = new SubstraitSqlDialect(DEFAULT_CONTEXT);
 
   /**
    * Converts a Calcite {@link RelNode} to its SQL representation using the default dialect.
