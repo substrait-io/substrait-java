@@ -94,15 +94,18 @@ jobs:
           git submodule foreach 'git fetch --unshallow || true'
 
           ./gradlew integrationTest
-  isthmus-native-image-mac-linux:
+  isthmus-native-image-linux:
+    # Only the Linux native image is built per PR: it validates the GraalVM
+    # configuration and runs the smoke tests, and its binary is throwaway (only
+    # smoke-tested, never shipped). macOS-specific native coverage runs in
+    # native-image-macos.yml (on push to main + a weekly schedule), keeping the
+    # slow, 10x-billed macOS build off the PR critical path. This job also runs
+    # in parallel with the java/integration jobs rather than after them.
     name: Build Isthmus Native Image
-    needs:
-      - java
-      - integration
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v7
       with:
@@ -120,7 +123,9 @@ jobs:
         # fetch submodule tags since actions/checkout@v7 does not
         git submodule foreach 'git fetch --unshallow || true'
 
-        ./gradlew nativeCompile
+        # --quick-build-native (-Ob) trades binary runtime performance for a
+        # much faster build; the PR binary is only smoke-tested, so this is free.
+        ./gradlew nativeCompile --quick-build-native
     - name: Smoke Test
       run: |
         ./isthmus-cli/src/test/script/smoke.sh

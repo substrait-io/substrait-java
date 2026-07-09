@@ -1,0 +1,51 @@
+name: macOS Native Image
+
+# macOS native-image coverage is kept off the per-PR critical path: the macOS
+# build is the long pole and macOS runners bill at 10x. Instead we build and
+# smoke-test the macOS native image on every push to main (per-merge signal)
+# plus a weekly backstop, so macOS-specific native regressions are still caught
+# promptly before the Sunday release. PRs build only the Linux native image
+# (see pr.yml).
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Saturday 04:23 UTC — backstop ahead of the Sunday release build.
+    - cron: "23 4 * * 6"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isthmus-native-image-macos:
+    name: Build Isthmus Native Image (macOS)
+    if: github.repository == 'substrait-io/substrait-java'
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - uses: actions/setup-java@v5
+      with:
+        java-version: 25
+        distribution: graalvm
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+    - name: Report Java Version
+      run: java -version
+    - name: Build with Gradle
+      run: |
+        # fetch submodule tags since actions/checkout@v7 does not
+        git submodule foreach 'git fetch --unshallow || true'
+
+        # Full optimization (no --quick-build-native) so this mirrors the
+        # release build and catches anything that would break shipping.
+        ./gradlew nativeCompile
+    - name: Smoke Test
+      run: |
+        ./isthmus-cli/src/test/script/smoke.sh
+        ./isthmus-cli/src/test/script/tpch_smoke.sh
