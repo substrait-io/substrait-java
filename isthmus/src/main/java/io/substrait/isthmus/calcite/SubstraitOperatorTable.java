@@ -32,7 +32,7 @@ import org.jspecify.annotations.Nullable;
 public class SubstraitOperatorTable implements SqlOperatorTable {
 
   /** Singleton instance of the Substrait operator table. */
-  public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
+  public static final SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(

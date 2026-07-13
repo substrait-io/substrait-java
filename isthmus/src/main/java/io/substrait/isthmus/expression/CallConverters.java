@@ -40,7 +40,7 @@ public class CallConverters {
    *
    * @see ExpressionCreator#cast(Type, Expression, Expression.FailureBehavior)
    */
-  public static Function<TypeConverter, SimpleCallConverter> CAST =
+  public static final Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->
           (call, visitor) -> {
             Expression.FailureBehavior failureBehavior;
@@ -78,7 +78,7 @@ public class CallConverters {
    * <p>When converting from Calcite to Substrait, this call converter extracts the stored {@link
    * Expression.UserDefinedLiteral}.
    */
-  public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
+  public static final Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
           (call, visitor) -> {
             if (call.getKind() != SqlKind.REINTERPRET) {
@@ -136,7 +136,7 @@ public class CallConverters {
    *
    * <p>Each literal's nullability is set to match its field type's nullability.
    */
-  public static SimpleCallConverter ROW =
+  public static final SimpleCallConverter ROW =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.ROW) {
           return null;
@@ -189,7 +189,7 @@ public class CallConverters {
    * <p>This converter assumes that operand expressions have already been converted by the provided
    * top-level visitor.
    */
-  public static SimpleCallConverter CASE =
+  public static final SimpleCallConverter CASE =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.CASE) {
           return null;
@@ -225,7 +225,7 @@ public class CallConverters {
    * <p>Returns a {@link SimpleCallConverter} that expands SEARCH calls using the provided {@link
    * RexBuilder}
    */
-  public static Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
+  public static final Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
       (RexBuilder rexBuilder) ->
           (RexCall call, Function<RexNode, Expression> visitor) -> {
             if (call.getKind() != SqlKind.SEARCH) {
@@ -247,7 +247,7 @@ public class CallConverters {
    * <p>Matching is done on operator identity (these are niladic {@link SqlKind#OTHER_FUNCTION}
    * functions with no dedicated {@link SqlKind}).
    */
-  public static SimpleCallConverter EXECUTION_CONTEXT_VARIABLE =
+  public static final SimpleCallConverter EXECUTION_CONTEXT_VARIABLE =
       (call, visitor) -> {
         if (call.getOperator() == SqlStdOperatorTable.CURRENT_TIMESTAMP) {
           return ExpressionCreator.currentTimestamp(call.getType().getPrecision());

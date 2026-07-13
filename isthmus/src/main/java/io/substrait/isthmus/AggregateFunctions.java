@@ -21,19 +21,19 @@ import org.apache.calcite.sql.type.ReturnTypes;
 public class AggregateFunctions {
 
   /** Substrait-specific MIN aggregate function (nullable return type). */
-  public static SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
+  public static final SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
 
   /** Substrait-specific MAX aggregate function (nullable return type). */
-  public static SqlAggFunction MAX = new SubstraitSqlMinMaxAggFunction(SqlKind.MAX);
+  public static final SqlAggFunction MAX = new SubstraitSqlMinMaxAggFunction(SqlKind.MAX);
 
   /** Substrait-specific AVG aggregate function (nullable return type). */
-  public static SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
+  public static final SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
 
   /** Substrait-specific SUM aggregate function (nullable return type). */
-  public static SqlAggFunction SUM = new SubstraitSumAggFunction();
+  public static final SqlAggFunction SUM = new SubstraitSumAggFunction();
 
   /** Substrait-specific SUM0 aggregate function (non-null BIGINT return type). */
-  public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
+  public static final SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
 
   /**
    * Converts default Calcite aggregate functions to Substrait-specific variants when needed.

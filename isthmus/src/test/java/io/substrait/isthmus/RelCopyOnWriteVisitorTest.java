@@ -27,10 +27,10 @@ import org.junit.jupiter.api.Test;
 
 class RelCopyOnWriteVisitorTest extends PlanTestBase {
 
-  public static SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
+  public static final SimpleExtension.FunctionAnchor APPROX_COUNT_DISTINCT =
       SimpleExtension.FunctionAnchor.of(
           "extension:io.substrait:functions_aggregate_approx", "approx_count_distinct:any");
-  public static SimpleExtension.FunctionAnchor COUNT =
+  public static final SimpleExtension.FunctionAnchor COUNT =
       SimpleExtension.FunctionAnchor.of(
           "extension:io.substrait:functions_aggregate_generic", "count:any");
 
