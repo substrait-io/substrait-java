@@ -38,8 +38,10 @@ import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.ImmutableTopN;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -881,6 +883,66 @@ public class SubstraitBuilder {
       Rel input) {
     Iterable<? extends Expression.SortField> condition = sortFieldFn.apply(input);
     return Sort.builder().input(input).sortFields(condition).remap(remap).build();
+  }
+
+  /**
+   * Creates a top-N relation that sorts and then returns a limited number of rows, using {@link
+   * TopN.Mode#ROWS_ONLY}.
+   *
+   * @param sortFieldFn function to derive the sort fields from the input relation
+   * @param offset the number of leading rows to skip
+   * @param count the maximum number of rows to return
+   * @param input the input relation
+   * @return a new {@link TopN} relation
+   */
+  public TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      Rel input) {
+    return topN(sortFieldFn, offset, count, TopN.Mode.ROWS_ONLY, Optional.empty(), input);
+  }
+
+  /**
+   * Creates a top-N relation that sorts and then returns a limited number of rows with a specific
+   * tie-handling mode.
+   *
+   * @param sortFieldFn function to derive the sort fields from the input relation
+   * @param offset the number of leading rows to skip
+   * @param count the maximum number of rows to return
+   * @param mode the tie-handling mode
+   * @param input the input relation
+   * @return a new {@link TopN} relation
+   */
+  public TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      TopN.Mode mode,
+      Rel input) {
+    return topN(sortFieldFn, offset, count, mode, Optional.empty(), input);
+  }
+
+  private TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      TopN.Mode mode,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    Iterable<? extends Expression.SortField> sortFields = sortFieldFn.apply(input);
+    ImmutableTopN.Builder builder =
+        TopN.builder()
+            .input(input)
+            .sortFields(sortFields)
+            .count(i64(count))
+            .mode(mode)
+            .remap(remap);
+    // A null offset is treated as 0, so only emit an offset expression when it is non-zero.
+    if (offset != 0) {
+      builder.offset(i64(offset));
+    }
+    return builder.build();
   }
 
   // Expressions
