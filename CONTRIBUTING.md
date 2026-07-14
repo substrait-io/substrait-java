@@ -4,6 +4,7 @@ This page provides some orientation and recommendations on how to get the best r
 
 1. [Commit conventions](#commit-conventions)
 2. [Style Guide](#style-guide)
+3. [Documentation](#documentation)
 
 ## Commit Conventions
 
@@ -48,3 +49,29 @@ org.gradle.jvmargs=--add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAME
   --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
   --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
 ```
+
+## Documentation
+
+The user-facing documentation site lives under [`docs/`](docs) and is built with
+[Zensical](https://zensical.org). Python and the documentation dependencies are managed with
+[pixi](https://pixi.sh), so the only prerequisite is a pixi installation.
+
+Preview your changes locally with a live-reloading dev server, or produce the static site:
+
+```bash
+pixi run docs-serve   # live-reloading preview at http://localhost:8000
+pixi run docs-build   # build the static site into ./site
+```
+
+Guidelines:
+
+* Every page is a Markdown file under `docs/`; the navigation is defined explicitly in
+  [`zensical.toml`](zensical.toml). When you add a page, add it to the `nav`.
+* Keep code samples accurate — base them on the real APIs and tests rather than inventing method
+  names. `pixi run docs-build` validates internal links.
+* As elsewhere in the codebase, do not reference GitHub issue or PR numbers in the docs.
+
+Documentation is built on every pull request by the `Build documentation` workflow. On each
+release, the `Deploy documentation` workflow publishes a versioned copy to
+<https://substrait-io.github.io/substrait-java/> (via the `mike` version manager, on the
+`gh-pages` branch).

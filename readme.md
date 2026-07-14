@@ -6,6 +6,21 @@ Substrait Java is a project that makes it easier to build [Substrait](https://su
 3) **Spark** is the module that provides an API for translating a Substrait plan to and from a Spark query plan.  The most commonly used logical relations and functions are supported, including those generated from all of the TPC-H and TPC-DS queries.
 The supported features are formally specified in the Substrait dialect file [spark_dialect.yaml](spark/spark_dialect.yaml).
 
+## Documentation
+
+User-facing documentation for all modules is published at
+**<https://substrait-io.github.io/substrait-java/>**.
+
+The documentation sources live under [`docs/`](docs) and are built with
+[Zensical](https://zensical.org). To preview the site locally you need [pixi](https://pixi.sh):
+
+```bash
+pixi run docs-serve   # live-reloading preview at http://localhost:8000
+pixi run docs-build   # build the static site into ./site
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md#documentation) for more detail.
+
 ## Building
 After you've cloned the project through git, Substrait Java is built with a tool called [Gradle](https://gradle.org/). To build, execute the following:
 ```
