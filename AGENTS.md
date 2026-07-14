@@ -192,6 +192,28 @@ compile — they have their own visitor implementors:
   fidelity. See `core/src/test/java/io/substrait/type/proto/DynamicParameterRoundtripTest.java`
   for the canonical pattern.
 
+## Documentation
+
+User-facing documentation lives in `docs/` (Markdown, one file per page) and is built with
+**Zensical** (config in `zensical.toml`). Python and the doc tooling are managed with **pixi**,
+independent of the Gradle build — the only prerequisite is a `pixi` install.
+
+- Preview locally with `pixi run docs-serve` (live reload); build the static site with
+  `pixi run docs-build` (output to `site/`, gitignored). `docs-build` validates internal links,
+  so run it before pushing doc changes.
+- Pages are grouped under `docs/{core,isthmus,isthmus-cli,spark}/` plus a landing page and
+  getting-started. Navigation is **explicit** in `zensical.toml` (`nav`) — when you add a page,
+  add it to `nav`.
+- **Keep the guide in sync with the code as substrait-java evolves.** When you add or change
+  user-facing behavior — a new expression/relation type, a `SubstraitBuilder`/`ExpressionCreator`
+  factory, a newly supported function, an isthmus/spark capability, or a CLI flag — update the
+  matching `docs/` page in the same PR. Ground snippets in real APIs/tests, and (as in source)
+  keep GitHub issue/PR numbers out of the docs.
+- CI: `.github/workflows/docs.yml` build-checks docs on every PR and push to `main`;
+  `.github/workflows/docs-deploy.yml` publishes versioned docs to the `gh-pages` branch via the
+  Zensical-compatible `mike` fork on release tags (the bare `X.Y.Z` tag publishes the minor
+  series `X.Y` and updates the `latest` alias). Site: <https://substrait-io.github.io/substrait-java/>.
+
 ## Conventions & workflow
 
 - **Conventional commits** are required (CI lints them, and PR title + body must form a
@@ -204,7 +226,8 @@ compile — they have their own visitor implementors:
 - Many features track upstream Substrait spec releases (see epic-style issues); a new
   proto message usually needs: POJO + visitor wiring + both proto converters + a
   round-trip test, and often `ExpressionCreator` factories and `dsl/SubstraitBuilder`
-  helpers for ergonomics.
+  helpers for ergonomics — plus a matching update to the user guide under `docs/`
+  (see [Documentation](#documentation)).
 - When monitoring PR checks, budget for a long tail: the **macOS `Build Isthmus Native
   Image`** job is the long pole — it `needs:` the `java` + `integration` jobs (so it
   starts late), then AOT-compiles for ~15–20 min on a slower macOS runner. A PR staying
