@@ -221,13 +221,7 @@ class SubqueryPlanTest extends PlanTestBase {
     assertSame(PredicateOp.PREDICATE_OP_UNIQUE, inner_subquery.getSetPredicate().getPredicateOp());
 
     Expression inner_subquery_condition =
-        inner_subquery
-            .getSetPredicate()
-            .getTuples()
-            .getProject()
-            .getInput()
-            .getFilter()
-            .getCondition();
+        inner_subquery.getSetPredicate().getTuples().getFilter().getCondition();
 
     Expression inner_subquery_cond1 =
         inner_subquery_condition
