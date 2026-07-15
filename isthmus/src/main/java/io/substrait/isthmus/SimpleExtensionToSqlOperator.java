@@ -27,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility class for converting Substrait {@link SimpleExtension} function definitions (scalar and
- * aggregate) into Calcite {@link SqlOperator}s.
+ * Utility class for converting Substrait {@link SimpleExtension} function definitions (scalar,
+ * aggregate, and window) into Calcite {@link SqlOperator}s.
  *
  * <p>This enables Calcite to recognize and use Substrait-defined functions during query planning
  * and execution. Conversion includes:
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  *   <li>Inferring return types based on Substrait type expressions and nullability rules
  * </ul>
  *
- * <p>Currently supports scalar and aggregate functions; window functions are not yet implemented.
+ * <p>Supports scalar, aggregate, and window functions.
  */
 public final class SimpleExtensionToSqlOperator {
 
@@ -53,8 +53,8 @@ public final class SimpleExtensionToSqlOperator {
   private SimpleExtensionToSqlOperator() {}
 
   /**
-   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
-   * aggregate) into Calcite {@link SqlOperator}s using the default type factory.
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar,
+   * aggregate, and window) into Calcite {@link SqlOperator}s using the default type factory.
    *
    * @param collection The Substrait extension collection containing function definitions.
    * @return A list of Calcite {@link SqlOperator}s corresponding to the Substrait functions.
@@ -64,8 +64,8 @@ public final class SimpleExtensionToSqlOperator {
   }
 
   /**
-   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
-   * aggregate) into Calcite {@link SqlOperator}s using a provided type factory.
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar,
+   * aggregate, and window) into Calcite {@link SqlOperator}s using a provided type factory.
    *
    * @param collection The Substrait extension collection containing function definitions.
    * @param typeFactory Calcite {@link RelDataTypeFactory} for type creation and inference.
@@ -77,8 +77,8 @@ public final class SimpleExtensionToSqlOperator {
   }
 
   /**
-   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar and
-   * aggregate) into Calcite {@link SqlOperator}s with a custom type factory and {@link
+   * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar,
+   * aggregate, and window) into Calcite {@link SqlOperator}s with a custom type factory and {@link
    * TypeConverter}.
    *
    * @param collection The Substrait extension collection containing function definitions.

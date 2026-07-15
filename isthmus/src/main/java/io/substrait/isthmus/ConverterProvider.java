@@ -6,11 +6,8 @@ import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
-import io.substrait.isthmus.expression.FieldSelectionConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.isthmus.expression.SqlArrayValueConstructorCallConverter;
-import io.substrait.isthmus.expression.SqlMapValueConstructorCallConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.ImmutableExecutionBehavior;
 import io.substrait.plan.Plan;
@@ -266,15 +263,8 @@ public class ConverterProvider {
    * @return a list of CallConverter instances
    */
   public List<CallConverter> getCallConverters() {
-    ArrayList<CallConverter> callConverters = new ArrayList<>();
-    callConverters.add(new FieldSelectionConverter(typeConverter));
-    callConverters.add(CallConverters.CASE);
-    callConverters.add(CallConverters.ROW);
-    callConverters.add(CallConverters.CAST.apply(typeConverter));
-    callConverters.add(CallConverters.REINTERPRET.apply(typeConverter));
-    callConverters.add(CallConverters.EXECUTION_CONTEXT_VARIABLE);
-    callConverters.add(new SqlArrayValueConstructorCallConverter(typeConverter));
-    callConverters.add(new SqlMapValueConstructorCallConverter());
+    ArrayList<CallConverter> callConverters =
+        new ArrayList<>(CallConverters.defaults(typeConverter));
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     callConverters.add(scalarFunctionConverter);
     return callConverters;
