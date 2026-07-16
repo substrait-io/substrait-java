@@ -205,11 +205,5 @@ compile — they have their own visitor implementors:
   proto message usually needs: POJO + visitor wiring + both proto converters + a
   round-trip test, and often `ExpressionCreator` factories and `dsl/SubstraitBuilder`
   helpers for ergonomics.
-- When monitoring PR checks: the per-PR native-image job (`Build Isthmus Native Image` in
-  `pr.yml`) builds **Linux only**, uses `--quick-build-native`, and runs **in parallel**
-  with the `java` + `integration` jobs (no `needs:`), so it's fast and not a long pole. The
-  **macOS** native image is *not* built on PRs — it runs out-of-band in
-  `.github/workflows/native-image-macos.yml` (push to `main`, a weekly backstop, and
-  `workflow_dispatch`), fully optimized to mirror `release.yml`. So a PR that stays yellow
-  isn't waiting on a macOS native build, and macOS-specific native regressions surface on
-  `main` or the weekly run rather than on the PR.
+- The macOS native image is not built on PRs (only Linux is), so macOS-specific native
+  regressions surface on `main` or the weekly `native-image-macos.yml` run, not on the PR.
