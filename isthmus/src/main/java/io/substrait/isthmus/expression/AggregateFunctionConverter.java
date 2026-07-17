@@ -195,7 +195,8 @@ public class AggregateFunctionConverter
   protected FunctionFinder getFunctionFinder(AggregateCall call) {
     // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
     // before converting into substrait function
-    SqlAggFunction aggFunction = call.getAggregation();
+    SqlAggFunction aggFunction =
+        AggregateFunctions.withoutDeclaredOutputType(call.getAggregation());
     if (aggFunction == SqlStdOperatorTable.COUNT && call.isDistinct() && call.isApproximate()) {
       aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
     }

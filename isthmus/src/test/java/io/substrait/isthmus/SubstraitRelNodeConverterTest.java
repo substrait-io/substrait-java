@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.Rel;
@@ -50,6 +51,35 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       RelNode relNode = substraitToCalcite.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), N.STRING, R.I64);
+    }
+
+    @Test
+    void declaredMeasureOutputTypes() {
+      Rel aggregate =
+          sb.aggregate(
+              input -> sb.grouping(input, 2),
+              input ->
+                  List.of(
+                      withOutputType(sb.sum(input, 0), R.I64),
+                      withOutputType(sb.avg(input, 1), R.FP32)),
+              commonTable);
+
+      RelNode relNode = substraitToCalcite.convert(aggregate);
+      assertRowMatch(relNode.getRowType(), N.STRING, R.I64, R.FP32);
+      assertFullRoundTrip(aggregate);
+    }
+
+    private io.substrait.relation.Aggregate.Measure withOutputType(
+        io.substrait.relation.Aggregate.Measure measure, Type outputType) {
+      AggregateFunctionInvocation function =
+          AggregateFunctionInvocation.builder()
+              .from(measure.getFunction())
+              .outputType(outputType)
+              .build();
+      return io.substrait.relation.Aggregate.Measure.builder()
+          .from(measure)
+          .function(function)
+          .build();
     }
   }
 

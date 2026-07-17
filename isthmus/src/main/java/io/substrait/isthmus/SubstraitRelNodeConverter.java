@@ -339,10 +339,11 @@ public class SubstraitRelNodeConverter
     List<RexNode> groupExprs =
         groupExprLists.stream().flatMap(Collection::stream).collect(Collectors.toList());
     RelBuilder.GroupKey groupKey = relBuilder.groupKey(groupExprs, groupExprLists);
+    boolean hasEmptyGroup = groupExprLists.stream().anyMatch(List::isEmpty);
 
     List<AggregateCall> aggregateCalls =
         aggregate.getMeasures().stream()
-            .map(measure -> fromMeasure(measure, context))
+            .map(measure -> fromMeasure(measure, context, child, hasEmptyGroup))
             .collect(java.util.stream.Collectors.toList());
 
     Optional<Remap> remap = aggregate.getRemap();
@@ -383,7 +384,8 @@ public class SubstraitRelNodeConverter
     return applyRemap(node, remap);
   }
 
-  private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
+  private AggregateCall fromMeasure(
+      Aggregate.Measure measure, Context context, RelNode input, boolean hasEmptyGroup) {
     List<FunctionArg> eArgs = measure.getFunction().arguments();
     // Only value (Expression) arguments map to Calcite aggregate operands. Enum arguments such as
     // the std_dev/variance "distribution" are used to disambiguate the operator, not as operands.
@@ -446,6 +448,25 @@ public class SubstraitRelNodeConverter
               measure.getFunction().sort().stream()
                   .map(sortField -> toRelFieldCollation(sortField, context))
                   .collect(Collectors.toList()));
+    }
+
+    AggregateCall inferredCall =
+        AggregateCall.create(
+            aggFunction,
+            distinct,
+            false,
+            false,
+            Collections.emptyList(),
+            argIndex,
+            filterArg,
+            null,
+            relCollation,
+            hasEmptyGroup,
+            input,
+            null,
+            null);
+    if (!returnType.equals(inferredCall.getType())) {
+      aggFunction = AggregateFunctions.withOutputType(aggFunction, returnType);
     }
 
     return AggregateCall.create(
