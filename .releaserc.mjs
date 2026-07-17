@@ -54,6 +54,7 @@ const TRAILER_KEYS = [
   "Reported-by",
   "Suggested-by",
   "Helped-by",
+  "Mentored-by",
   "Cc",
 ];
 const TRAILER = new RegExp(`^(?:${TRAILER_KEYS.join("|")}):\\s`, "i");
