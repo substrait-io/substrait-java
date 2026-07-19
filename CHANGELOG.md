@@ -1,6 +1,18 @@
 Release Notes
 ---
 
+## [0.96.0](https://github.com/substrait-io/substrait-java/compare/v0.95.1...v0.96.0) (2026-07-19)
+
+### Features
+
+* **core:** support max length, scale, precision in Substrait dialect ([#977](https://github.com/substrait-io/substrait-java/issues/977)) ([f094981](https://github.com/substrait-io/substrait-java/commit/f0949815be582deea7ea34d3e1abf35f34cc258a)), closes [#950](https://github.com/substrait-io/substrait-java/issues/950) [#808](https://github.com/substrait-io/substrait-java/issues/808)
+
+### Bug Fixes
+
+* **ci:** pin semantic-release tooling and restore v0.95.0 and v0.95.1 notes ([#989](https://github.com/substrait-io/substrait-java/issues/989)) ([cff0d50](https://github.com/substrait-io/substrait-java/commit/cff0d50a57d9fb6e05051f56bb31bd689264245f))
+* **isthmus:** std_dev, variance function mappings ([#780](https://github.com/substrait-io/substrait-java/issues/780)) ([17d3c30](https://github.com/substrait-io/substrait-java/commit/17d3c3039e7e1ffa3d59da9211e794c744f82872)), closes [substrait-io/substrait#1011](https://github.com/substrait-io/substrait/issues/1011) [substrait-io/substrait#1019](https://github.com/substrait-io/substrait/issues/1019) [#803](https://github.com/substrait-io/substrait-java/issues/803) [#807](https://github.com/substrait-io/substrait-java/issues/807) [substrait-io/substrait#1012](https://github.com/substrait-io/substrait/issues/1012)
+* **isthmus:** support variadic concat conversion ([#1001](https://github.com/substrait-io/substrait-java/issues/1001)) ([91bb733](https://github.com/substrait-io/substrait-java/commit/91bb73385cf49f0878b90461a2d161208c30b3f9))
+
 ## [0.95.1](https://github.com/substrait-io/substrait-java/compare/v0.95.0...v0.95.1) (2026-07-12)
 
 ### Bug Fixes
