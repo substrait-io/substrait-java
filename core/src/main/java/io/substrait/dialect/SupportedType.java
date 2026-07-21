@@ -36,11 +36,29 @@ public abstract class SupportedType {
   public abstract Optional<SystemTypeMetadata> systemMetadata();
 
   /**
-   * The maximum precision supported for the type, if constrained.
+   * The maximum precision supported for the type, if constrained. Applies to the
+   * subsecond-precision temporal types ({@code PRECISION_TIME}, {@code PRECISION_TIMESTAMP}, {@code
+   * PRECISION_TIMESTAMP_TZ}, {@code INTERVAL_COMPOUND}, {@code INTERVAL_DAY}) and, together with
+   * {@link #maxScale()}, to {@code DECIMAL}.
    *
    * @return the optional maximum precision
    */
   public abstract Optional<Integer> maxPrecision();
+
+  /**
+   * The maximum scale supported for a {@code DECIMAL} type, if constrained.
+   *
+   * @return the optional maximum scale
+   */
+  public abstract Optional<Integer> maxScale();
+
+  /**
+   * The maximum length supported for a variable- or fixed-length type ({@code FIXED_BINARY}, {@code
+   * VARCHAR}, {@code FIXED_CHAR}), if constrained.
+   *
+   * @return the optional maximum length
+   */
+  public abstract Optional<Integer> maxLength();
 
   /**
    * Dependency (alias) where a {@code USER_DEFINED} type is declared.
@@ -66,6 +84,8 @@ public abstract class SupportedType {
         && !metadata().isPresent()
         && !systemMetadata().isPresent()
         && !maxPrecision().isPresent()
+        && !maxScale().isPresent()
+        && !maxLength().isPresent()
         && !source().isPresent()
         && !name().isPresent();
   }

@@ -39,16 +39,13 @@ note the required manual actions for IntelliJ.
 
 ### Gradle & JDK 17
 
-Given that the project currently uses JDK 17 features, it requires to run Gradle itself with JDK 17, which in turn requires the below settings in `~/.gradle/gradle.properties`.
-Without those settings you might see issues when running `./gradlew spotlessApply`.
+Run Gradle with a **JDK 17** daemon.
 
-```
-org.gradle.jvmargs=--add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
-```
+The compile and test tasks pin themselves to a Java 17 toolchain, so those run correctly
+regardless of which JDK launches Gradle, as long as a JDK 17 is installed and discoverable.
+Spotless is the exception: the `google-java-format` version it uses only runs on JDK 17 and
+fails with `NoSuchMethodError` / `NoClassDefFoundError` when the Gradle daemon runs on a newer
+JDK, so `./gradlew spotlessApply` (and `spotlessCheck`) require the daemon itself to be on JDK 17.
 
 ## Documentation
 

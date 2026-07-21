@@ -22,6 +22,8 @@ pixi run docs-build   # build the static site into ./site
 See [CONTRIBUTING.md](CONTRIBUTING.md#documentation) for more detail.
 
 ## Building
+Building requires a **JDK 17** installation, and Gradle itself must run on JDK 17 (see [Gradle & JDK 17](CONTRIBUTING.md#gradle--jdk-17) in the contributing guide for details).
+
 After you've cloned the project through git, Substrait Java is built with a tool called [Gradle](https://gradle.org/). To build, execute the following:
 ```
 ./gradlew build

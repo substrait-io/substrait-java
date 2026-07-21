@@ -37,6 +37,7 @@ import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,8 +54,10 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -86,6 +89,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
   private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
 
+  /** Rex builder for creating Rex expressions during conversion. */
+  protected RexBuilder rexBuilder;
+
   /**
    * Creates a new SubstraitRelVisitor with the specified type factory and extensions.
    *
@@ -108,6 +114,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     this.typeConverter = converterProvider.getTypeConverter();
     this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
     this.rexExpressionConverter = converterProvider.getRexExpressionConverter(this);
+    this.rexBuilder = new RexBuilder(converterProvider.getTypeFactory());
   }
 
   /**
@@ -333,6 +340,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Aggregate aggregate) {
+    // Substrait's std_dev/variance functions only define fp32/fp64 signatures. If a statistical
+    // aggregate has a non-floating-point argument, rewrite the aggregate to cast that argument to
+    // fp64 and cast the result back to the type Calcite inferred, then convert the rewritten plan
+    // through the normal path. The rewrite is idempotent (fp32/fp64 arguments are left untouched),
+    // so it terminates when the converted plan is re-converted.
+    RelNode rewritten = castStatisticalAggregatesToFloatingPoint(aggregate);
+    if (rewritten != aggregate) {
+      return apply(rewritten);
+    }
+
     Rel input = apply(aggregate.getInput());
     Stream<ImmutableBitSet> sets;
     if (aggregate.groupSets != null) {
@@ -476,6 +493,28 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return Aggregate.Grouping.builder().addAllExpressions(references).build();
   }
 
+  /**
+   * Converts a Calcite {@link AggregateCall} to a Substrait {@link Aggregate.Measure}.
+   *
+   * <p>This method handles the conversion of aggregate function calls from Calcite's representation
+   * to Substrait's format. For statistical aggregate functions (STDDEV_POP, STDDEV_SAMP, VAR_POP,
+   * VAR_SAMP), it automatically transforms the input relation by inserting a projection that casts
+   * the aggregate function's argument fields to DOUBLE (FP64) type, ensuring type compatibility
+   * with Substrait's statistical function requirements. Fields not referenced by the aggregate
+   * function are passed through unchanged.
+   *
+   * <p>The method also processes optional filter arguments (FILTER clauses) by converting them to
+   * Substrait's preMeasureFilter representation.
+   *
+   * @param input the input relational node providing data to the aggregate operation
+   * @param inputType the Substrait struct type representing the schema of the input relation
+   * @param call the Calcite aggregate call to convert, containing the aggregate function,
+   *     arguments, and optional filter
+   * @return a Substrait {@link Aggregate.Measure} representing the aggregate function invocation
+   *     with its configuration
+   * @throws UnsupportedOperationException if the aggregate function cannot be converted to a
+   *     Substrait representation (no matching function binding found)
+   */
   Aggregate.Measure fromAggCall(RelNode input, Type.Struct inputType, AggregateCall call) {
     Optional<AggregateFunctionInvocation> invocation =
         aggregateFunctionConverter.convert(
@@ -490,6 +529,141 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     // TODO: handle the collation on the AggregateCall
     //   https://github.com/substrait-io/substrait-java/issues/215
     return builder.build();
+  }
+
+  private static boolean isStatisticalDistributionAggregate(SqlKind kind) {
+    return kind == SqlKind.STDDEV_POP
+        || kind == SqlKind.STDDEV_SAMP
+        || kind == SqlKind.VAR_POP
+        || kind == SqlKind.VAR_SAMP;
+  }
+
+  private boolean isFloatingPoint(RelDataType type) {
+    Type substraitType = typeConverter.toSubstrait(type);
+    return TypeCreator.NULLABLE.FP32.equalsIgnoringNullability(substraitType)
+        || TypeCreator.NULLABLE.FP64.equalsIgnoringNullability(substraitType);
+  }
+
+  /**
+   * Rewrites a Calcite aggregate so that statistical aggregate functions (STDDEV_POP, STDDEV_SAMP,
+   * VAR_POP, VAR_SAMP) with non-floating-point arguments operate on fp64, since Substrait's {@code
+   * std_dev} / {@code variance} functions only define fp32 and fp64 signatures.
+   *
+   * <p>For each statistical aggregate whose single argument is neither fp32 nor fp64 (e.g. an
+   * integer or decimal column), the rewrite:
+   *
+   * <ol>
+   *   <li>appends a {@code cast(arg AS fp64)} column to the aggregate's input (leaving the original
+   *       column in place, so other aggregates over the same column are unaffected),
+   *   <li>re-points the statistical aggregate at the appended column (its return type is re-derived
+   *       over fp64), and
+   *   <li>casts the aggregate's results back to the types Calcite originally inferred, via a
+   *       projection on top, so the aggregate's output row type is preserved.
+   * </ol>
+   *
+   * <p>The rewrite is idempotent: fp32/fp64 arguments are left untouched, so converting the
+   * rewritten plan (whose statistical arguments are already fp64) produces no further rewrite and
+   * the recursion in {@link #visit(org.apache.calcite.rel.core.Aggregate)} terminates. If no
+   * argument needs casting, the aggregate is returned unchanged.
+   *
+   * @param aggregate the Calcite aggregate to inspect
+   * @return {@code aggregate} unchanged, or a {@link LogicalProject} wrapping a rewritten aggregate
+   */
+  protected RelNode castStatisticalAggregatesToFloatingPoint(
+      org.apache.calcite.rel.core.Aggregate aggregate) {
+    RelNode input = aggregate.getInput();
+    List<AggregateCall> calls = aggregate.getAggCallList();
+    int inputFieldCount = input.getRowType().getFieldCount();
+
+    // fp64 cast expressions to append to the input, and the source field each one casts (for reuse)
+    List<RexNode> appendedCasts = new ArrayList<>();
+    List<Integer> appendedSourceFields = new ArrayList<>();
+    // per call: the appended column its argument should be re-pointed at, or -1 if unchanged
+    List<Integer> rewrittenArgColumns = new ArrayList<>(calls.size());
+
+    for (AggregateCall call : calls) {
+      int rewrittenArgColumn = -1;
+      if (isStatisticalDistributionAggregate(call.getAggregation().getKind())
+          && call.getArgList().size() == 1) {
+        int argIndex = call.getArgList().get(0);
+        RelDataType argType = input.getRowType().getFieldList().get(argIndex).getType();
+        if (!isFloatingPoint(argType)) {
+          int existing = appendedSourceFields.indexOf(argIndex);
+          if (existing >= 0) {
+            rewrittenArgColumn = inputFieldCount + existing;
+          } else {
+            RelDataType fp64 =
+                typeConverter.toCalcite(
+                    rexBuilder.getTypeFactory(), Type.withNullability(argType.isNullable()).FP64);
+            appendedCasts.add(rexBuilder.makeCast(fp64, rexBuilder.makeInputRef(input, argIndex)));
+            appendedSourceFields.add(argIndex);
+            rewrittenArgColumn = inputFieldCount + appendedCasts.size() - 1;
+          }
+        }
+      }
+      rewrittenArgColumns.add(rewrittenArgColumn);
+    }
+
+    if (appendedCasts.isEmpty()) {
+      return aggregate;
+    }
+
+    // Extended input: all original columns (passthrough) followed by the appended fp64 casts.
+    List<RexNode> inputProjects = new ArrayList<>(inputFieldCount + appendedCasts.size());
+    for (int i = 0; i < inputFieldCount; i++) {
+      inputProjects.add(rexBuilder.makeInputRef(input, i));
+    }
+    inputProjects.addAll(appendedCasts);
+    RelNode extendedInput =
+        LogicalProject.create(input, Collections.emptyList(), inputProjects, (List<String>) null);
+
+    // Re-point the statistical calls at the appended fp64 columns (return type re-derived); leave
+    // all other calls unchanged.
+    List<AggregateCall> rewrittenCalls = new ArrayList<>(calls.size());
+    for (int i = 0; i < calls.size(); i++) {
+      AggregateCall call = calls.get(i);
+      int rewrittenArgColumn = rewrittenArgColumns.get(i);
+      if (rewrittenArgColumn < 0) {
+        rewrittenCalls.add(call);
+      } else {
+        rewrittenCalls.add(
+            AggregateCall.create(
+                call.getAggregation(),
+                call.isDistinct(),
+                call.isApproximate(),
+                call.ignoreNulls(),
+                Collections.singletonList(rewrittenArgColumn),
+                call.filterArg,
+                call.distinctKeys,
+                call.getCollation(),
+                aggregate.getGroupCount(),
+                extendedInput,
+                /* type, null to re-derive over fp64 */ null,
+                call.getName()));
+      }
+    }
+
+    org.apache.calcite.rel.core.Aggregate rewrittenAggregate =
+        aggregate.copy(
+            aggregate.getTraitSet(),
+            extendedInput,
+            aggregate.getGroupSet(),
+            aggregate.getGroupSets(),
+            rewrittenCalls);
+
+    // Cast the (now fp64) statistical results back to the types Calcite originally inferred,
+    // preserving the aggregate's original output row type. Group keys and unaffected measures pass
+    // through unchanged.
+    RelDataType originalRowType = aggregate.getRowType();
+    List<RexNode> outputProjects = new ArrayList<>(originalRowType.getFieldCount());
+    for (int i = 0; i < originalRowType.getFieldCount(); i++) {
+      RelDataType targetType = originalRowType.getFieldList().get(i).getType();
+      RexNode ref = rexBuilder.makeInputRef(rewrittenAggregate, i);
+      outputProjects.add(
+          ref.getType().equals(targetType) ? ref : rexBuilder.makeCast(targetType, ref));
+    }
+    return LogicalProject.create(
+        rewrittenAggregate, Collections.emptyList(), outputProjects, originalRowType);
   }
 
   /**

@@ -240,8 +240,5 @@ independent of the Gradle build — the only prerequisite is a `pixi` install.
   round-trip test, and often `ExpressionCreator` factories and `dsl/SubstraitBuilder`
   helpers for ergonomics — plus a matching update to the user guide under `docs/`
   (see [Documentation](#documentation)).
-- When monitoring PR checks, budget for a long tail: the **macOS `Build Isthmus Native
-  Image`** job is the long pole — it `needs:` the `java` + `integration` jobs (so it
-  starts late), then AOT-compiles for ~15–20 min on a slower macOS runner. A PR staying
-  yellow after the other checks pass usually just means that job is still running, not
-  that it's stuck or failing.
+- The macOS native image is not built on PRs (only Linux is), so macOS-specific native
+  regressions surface on `main` or the weekly `native-image-macos.yml` run, not on the PR.

@@ -46,8 +46,11 @@ public class PreCalciteAggregateValidator {
    */
   private static boolean isValidCalciteMeasure(Aggregate.Measure measure) {
     return
-    // all function arguments to measures must be field references
-    measure.getFunction().arguments().stream().allMatch(farg -> isSimpleFieldReference(farg))
+    // all value (Expression) function arguments to measures must be field references; non-value
+    // arguments such as the std_dev/variance "distribution" enum argument are exempt
+    measure.getFunction().arguments().stream()
+            .filter(farg -> farg instanceof Expression)
+            .allMatch(farg -> isSimpleFieldReference(farg))
         &&
         // all sort fields must be field references
         measure.getFunction().sort().stream().allMatch(sf -> isSimpleFieldReference(sf.expr()))
@@ -157,9 +160,9 @@ public class PreCalciteAggregateValidator {
     private Aggregate.Measure updateMeasure(Aggregate.Measure measure) {
       AggregateFunctionInvocation oldAggregateFunctionInvocation = measure.getFunction();
 
-      List<Expression> newFunctionArgs =
+      List<FunctionArg> newFunctionArgs =
           oldAggregateFunctionInvocation.arguments().stream()
-              .map(this::projectOutNonFieldReference)
+              .map(this::projectOutNonFieldReferenceArg)
               .collect(Collectors.toList());
 
       List<Expression.SortField> newSortFields =
@@ -194,11 +197,13 @@ public class PreCalciteAggregateValidator {
       return Aggregate.Grouping.builder().expressions(newGroupingExpressions).build();
     }
 
-    private Expression projectOutNonFieldReference(FunctionArg farg) {
+    private FunctionArg projectOutNonFieldReferenceArg(FunctionArg farg) {
       if ((farg instanceof Expression)) {
         return projectOutNonFieldReference((Expression) farg);
       } else {
-        throw new IllegalArgumentException("cannot handle non-expression argument for aggregate");
+        // Non-value arguments (e.g. the std_dev/variance "distribution" enum argument) are not
+        // field references and are passed through unchanged.
+        return farg;
       }
     }
 
