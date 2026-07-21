@@ -18,11 +18,7 @@ nullability:
 ```java
 import io.substrait.expression.ExpressionCreator;
 
-Expression.I32Literal a  = ExpressionCreator.i32(false, 76);        // non-nullable 76
-Expression.StrLiteral  s  = ExpressionCreator.string(true, "hello"); // nullable "hello"
-Expression.BoolLiteral b  = ExpressionCreator.bool(false, true);
-Expression.FP64Literal f  = ExpressionCreator.fp64(false, 2.5);
-Expression.DateLiteral d  = ExpressionCreator.date(false, 19_000);   // days since epoch
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:literals"
 ```
 
 There are factories for the full range of literal kinds, including
@@ -35,7 +31,7 @@ There are factories for the full range of literal kinds, including
 A typed null literal carries the type it stands in for:
 
 ```java
-Expression.NullLiteral n = ExpressionCreator.typedNull(TypeCreator.NULLABLE.I32);
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:typed-null"
 ```
 
 ## Casts, function invocations, and control flow
@@ -43,14 +39,7 @@ Expression.NullLiteral n = ExpressionCreator.typedNull(TypeCreator.NULLABLE.I32)
 `ExpressionCreator` also builds non-literal expressions:
 
 ```java
-// cast with an explicit failure behavior
-Expression cast =
-    ExpressionCreator.cast(
-        TypeCreator.REQUIRED.I64, someExpression, Expression.FailureBehavior.THROW_EXCEPTION);
-
-// scalar function invocation from a resolved declaration
-Expression.ScalarFunctionInvocation call =
-    ExpressionCreator.scalarFunction(declaration, TypeCreator.REQUIRED.I32, argExpr1, argExpr2);
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:creator-nonliteral"
 ```
 
 It further provides `aggregateFunction`, `windowFunction`, `switchStatement` /
@@ -65,16 +54,7 @@ When you already have a `SubstraitBuilder`, its instance methods are usually the
 easiest path. Literal helpers produce **non-nullable** literals:
 
 ```java
-SubstraitBuilder b = new SubstraitBuilder();
-
-b.bool(true);        // BoolLiteral
-b.i8(10);            // I8Literal
-b.i16(100);          // I16Literal
-b.i32(1000);         // I32Literal
-b.i64(10_000L);      // I64Literal
-b.fp32(1.5f);        // FP32Literal
-b.fp64(2.5);         // FP64Literal
-b.str("foo");        // StrLiteral
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:builder-literals"
 ```
 
 ### Field references
@@ -83,12 +63,7 @@ Reference an input column by zero-based index; the builder resolves the field
 type from the relation's schema:
 
 ```java
-NamedScan scan =
-    b.namedScan(List.of("t"), List.of("a", "b"),
-        List.of(TypeCreator.REQUIRED.I32, TypeCreator.REQUIRED.STRING));
-
-FieldReference col0 = b.fieldReference(scan, 0);
-List<FieldReference> cols = b.fieldReferences(scan, 0, 1);
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:field-references"
 ```
 
 For joins, `fieldReference(JoinInput, index)` indexes across the combined
@@ -97,7 +72,7 @@ left-then-right schema.
 ### Casts
 
 ```java
-Expression cast = b.cast(b.i32(1), TypeCreator.REQUIRED.I64);
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:builder-cast"
 ```
 
 ### Arithmetic, comparison, and boolean helpers
@@ -107,20 +82,7 @@ based on the argument types, and compute a sensible output type (including
 nullability):
 
 ```java
-Expression left = b.i32(10);
-Expression right = b.i32(20);
-
-b.add(left, right);       // add:i32_i32     -> functions_arithmetic
-b.subtract(left, right);
-b.multiply(left, right);
-b.divide(left, right);
-b.negate(left);
-
-b.equal(left, right);     // equal:any_any   -> functions_comparison, returns boolean
-b.and(cond1, cond2);      // and:bool        -> functions_boolean
-b.or(cond1, cond2);
-b.not(cond);
-b.isNull(expr);           // is_null:any     -> functions_comparison
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:arithmetic-boolean"
 ```
 
 !!! note
@@ -135,12 +97,7 @@ For any function not covered by a named helper, call `scalarFn` (or `aggregateFn
 arguments:
 
 ```java
-Expression.ScalarFunctionInvocation substr =
-    b.scalarFn(
-        DefaultExtensionCatalog.FUNCTIONS_STRING,
-        "substring:str_i32_i32",
-        TypeCreator.REQUIRED.STRING,
-        strArg, startArg, lengthArg);
+--8<-- "core/src/test/java/io/substrait/docs/ExpressionsDocTest.java:generic-scalarfn"
 ```
 
 Aggregate measures (`count`, `sum`, `min`, `max`, `avg`, and the generic

@@ -61,18 +61,7 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
-ConverterProvider provider =
-    new ConverterProvider() {
-      @Override
-      public SqlParser.Config getSqlParserConfig() {
-        return SqlParser.Config.DEFAULT
-            .withUnquotedCasing(Casing.UNCHANGED)
-            .withParserFactory(SqlDdlParserImpl.FACTORY)
-            .withConformance(SqlConformanceEnum.LENIENT);
-      }
-    };
-
-Plan plan = new SqlToSubstrait(provider).convert(sql, catalog);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/CustomizationDocTest.java:parser-config"
 ```
 
 ## Custom functions
@@ -141,7 +130,7 @@ Custom functions often involve custom types. Supply a `UserTypeMapper` to a
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.UserTypeMapper;
 
-TypeConverter typeConverter = new TypeConverter(myUserTypeMapper);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/CustomizationDocTest.java:type-converter"
 ```
 
 `myUserTypeMapper` implements `toSubstrait(RelDataType)` and
@@ -198,8 +187,7 @@ it to the built-in mappings.
 import io.substrait.isthmus.AutomaticDynamicFunctionMappingConverterProvider;
 import io.substrait.isthmus.SqlToSubstrait;
 
-SqlToSubstrait converter =
-    new SqlToSubstrait(new AutomaticDynamicFunctionMappingConverterProvider());
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/CustomizationDocTest.java:automatic"
 ```
 
 ## Custom SQL dialects for output

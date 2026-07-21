@@ -20,31 +20,15 @@ same optimized plan, so the conversion code is identical from step 2 onward.
 
 === "SQL API"
 
-    ```java
+    ```scala
     // A DataFrame from a SQL string; tables/views must already be registered
-    Dataset<Row> result = spark.sql(
-        "SELECT vehicles.colour, count(*) AS colourcount"
-            + " FROM vehicles"
-            + " INNER JOIN tests ON vehicles.vehicle_id = tests.vehicle_id"
-            + " WHERE tests.test_result = 'P'"
-            + " GROUP BY vehicles.colour"
-            + " ORDER BY count(*)");
-
-    LogicalPlan optimised = result.queryExecution().optimizedPlan();
+    --8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:sql-api"
     ```
 
 === "DataFrame / Dataset API"
 
-    ```java
-    Dataset<Row> joined =
-        dsVehicles
-            .join(dsTests, dsVehicles.col("vehicle_id").equalTo(dsTests.col("vehicle_id")))
-            .filter(dsTests.col("test_result").equalTo("P"))
-            .groupBy(dsVehicles.col("colour"))
-            .count()
-            .orderBy("count");
-
-    LogicalPlan optimised = joined.queryExecution().optimizedPlan();
+    ```scala
+    --8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:dataframe-api"
     ```
 
 Structurally the two optimized plans are identical, so the Substrait plan produced from each is the
@@ -55,11 +39,10 @@ same.
 `ToSubstraitRel.convert` walks the Catalyst plan and returns an `io.substrait.plan.Plan` POJO. The
 plan is stamped with the producer name `substrait-spark`.
 
-```java
-import io.substrait.spark.logical.ToSubstraitRel;
+```scala
+import io.substrait.spark.logical.ToSubstraitRel
 
-ToSubstraitRel toSubstrait = new ToSubstraitRel();
-io.substrait.plan.Plan plan = toSubstrait.convert(optimised);
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:convert"
 ```
 
 `io.substrait.plan.Plan` is a high-level, immutable POJO. You can inspect or transform it in memory,
@@ -71,9 +54,8 @@ but most often you will serialize it.
     bounded it takes at most `rddLimit` rows (default `100`) and logs a warning if there are more.
     Adjust it before converting:
 
-    ```java
-    ToSubstraitRel toSubstrait = new ToSubstraitRel();
-    toSubstrait.rddLimit_$eq(1000); // Scala setter, seen from Java
+    ```scala
+    --8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:rdd-limit"
     ```
 
 ## Step 3: serialize to protobuf
@@ -81,13 +63,13 @@ but most often you will serialize it.
 The canonical Substrait serialization is protobuf. Core's `PlanProtoConverter` turns the POJO plan
 into a protobuf `io.substrait.proto.Plan`, from which you get the wire bytes:
 
-```java
-import io.substrait.plan.PlanProtoConverter;
+```scala
+import io.substrait.plan.PlanProtoConverter
 
-byte[] buffer = new PlanProtoConverter().toProto(plan).toByteArray();
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:serialize"
 
 // e.g. persist the plan to a file
-Files.write(Paths.get("spark_substrait.plan"), buffer);
+Files.write(Paths.get("spark_substrait.plan"), buffer)
 ```
 
 Those bytes are the portable intermediate representation: store them, ship them to another engine,

@@ -6,9 +6,9 @@ direction, rebuilds a Spark logical plan from a Substrait plan so that a Spark s
 it. This lets a query authored in one Spark cluster be serialized as an engine-neutral Substrait
 plan, moved elsewhere, and run — or handed to a different engine entirely.
 
-The module is written in Scala and published for several Spark/Scala combinations. Because the
-public API is small and mostly plain method calls, it is comfortable to drive from Java as well;
-the examples in these pages are Java calling the Scala API.
+The module is written in Scala and published for several Spark/Scala combinations. The examples in
+these pages are Scala; because the public API is small and mostly plain method calls, it is equally
+comfortable to drive from Java.
 
 ## The two entry points
 
@@ -26,9 +26,8 @@ the plan and produces an `io.substrait.plan.Plan` POJO, tagging the plan with th
 `substrait-spark`. From there you serialize to the canonical protobuf wire format with core's
 `PlanProtoConverter`. See [Producing plans](producing-plans.md).
 
-```java
-ToSubstraitRel toSubstrait = new ToSubstraitRel();
-io.substrait.plan.Plan plan = toSubstrait.convert(optimizedPlan);
+```scala
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:index-to-substrait"
 ```
 
 ### `ToLogicalPlan` (Substrait → Spark)
@@ -38,9 +37,8 @@ constructed with an active `SparkSession` (it needs the session to resolve `Name
 build file relations), and its `convert` method accepts either a Substrait `Plan` or a bare `Rel`.
 See [Consuming plans](consuming-plans.md).
 
-```java
-ToLogicalPlan toSpark = new ToLogicalPlan(spark);
-LogicalPlan sparkPlan = toSpark.convert(plan);
+```scala
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:index-to-logical"
 ```
 
 ## Key convention: convert the optimized plan

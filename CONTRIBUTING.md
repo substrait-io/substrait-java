@@ -67,8 +67,18 @@ Guidelines:
 
 * Every page is a Markdown file under `docs/`; the navigation is defined explicitly in
   [`zensical.toml`](zensical.toml). When you add a page, add it to the `nav`.
-* Keep code samples accurate — base them on the real APIs and tests rather than inventing method
-  names. `pixi run docs-build` validates internal links.
+* **Code samples are verified, not hand-written.** Runnable code samples are pulled from compiled,
+  CI-executed tests with
+  [`pymdownx.snippets`](https://facelessuser.github.io/pymdown-extensions/extensions/snippets/), so
+  they cannot drift from the API. The backing test marks a region with `// --8<-- [start:name]` /
+  `// --8<-- [end:name]`, and the Markdown references it inside a fenced code block, e.g.
+  `--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:create-builder"`. Backing
+  tests live in an `io.substrait…docs` package under each module's test sources (`core` and
+  `isthmus` as JUnit tests, `spark` as a scalatest suite that runs a full round trip). To add or
+  change a sample, edit the test — not the Markdown — then run that module's tests; `pixi run
+  docs-build` fails if a referenced file or region is missing. `import` lines and similar
+  illustrative context may be kept as literal text alongside the include. A few pure
+  API-signature snippets (and examples that need external resources) remain inline.
 * As elsewhere in the codebase, do not reference GitHub issue or PR numbers in the docs.
 
 Documentation is built on every pull request by the `Build documentation` workflow. On each

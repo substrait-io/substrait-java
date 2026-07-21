@@ -19,22 +19,11 @@ The examples below use the `R` / `N` type aliases from [Types](types.md) and a
 Reads a named table with a fixed schema.
 
 ```java
-// DSL: names, column names, column types
-NamedScan scan =
-    b.namedScan(List.of("t"), List.of("a", "b"), List.of(R.I32, R.STRING));
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:named-scan-dsl"
 ```
 
 ```java
-// Direct builder
-NamedScan scan =
-    NamedScan.builder()
-        .addNames("test_table")
-        .initialSchema(
-            NamedStruct.builder()
-                .addNames("only_column")
-                .struct(R.struct(R.I32))
-                .build())
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:named-scan-direct"
 ```
 
 ## Filter
@@ -42,8 +31,7 @@ NamedScan scan =
 Keeps rows for which the condition evaluates to true.
 
 ```java
-Filter filter =
-    b.filter(rel -> b.equal(b.fieldReference(rel, 0), b.i32(10)), scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:filter"
 ```
 
 ## Project
@@ -51,10 +39,7 @@ Filter filter =
 Computes a list of output expressions from the input.
 
 ```java
-Project project =
-    b.project(
-        rel -> List.of(b.i32(1), b.fieldReference(rel, 0)),
-        scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:project"
 ```
 
 ## Join
@@ -64,25 +49,11 @@ Project project =
 exposing `left()` and `right()`.
 
 ```java
-Join join =
-    b.innerJoin(
-        inputs ->
-            b.equal(
-                b.fieldReference(inputs.left(), 0),
-                b.fieldReference(inputs.right(), 0)),
-        left,
-        right);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:join-dsl"
 ```
 
 ```java
-// Direct builder, choosing the join type explicitly
-Join join =
-    Join.builder()
-        .left(leftTable)
-        .right(rightTable)
-        .condition(ExpressionCreator.bool(false, true))
-        .joinType(Join.JoinType.LEFT)
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:join-direct"
 ```
 
 !!! tip
@@ -96,11 +67,7 @@ An `Aggregate` combines groupings with measures. `aggregate` takes a lambda for
 the grouping(s) and one for the measures:
 
 ```java
-Aggregate aggregate =
-    b.aggregate(
-        rel -> b.grouping(rel, 1),                    // GROUP BY column 1
-        rel -> List.of(b.count(rel, 0), b.sum(b.fieldReference(rel, 0))),
-        scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:aggregate"
 ```
 
 Measure shortcuts include `count`, `countStar`, `sum`, `sum0`, `min`, `max`, and
@@ -108,14 +75,7 @@ Measure shortcuts include `count`, `countStar`, `sum`, `sum0`, `min`, `max`, and
 it in a measure:
 
 ```java
-AggregateFunctionInvocation afi =
-    b.aggregateFn(
-        DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC,
-        "count:any",
-        R.I64,
-        b.fieldReference(scan, 0));
-
-Aggregate.Measure measure = b.measure(afi);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:aggregate-fn"
 ```
 
 ## Sort
@@ -125,7 +85,7 @@ ascending, nulls-last sort fields; `sortField(expr, direction)` gives full
 control.
 
 ```java
-Sort sort = b.sort(rel -> b.sortFields(rel, 0), scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:sort"
 ```
 
 ## Fetch (limit / offset)
@@ -134,9 +94,7 @@ Sort sort = b.sort(rel -> b.sortFields(rel, 0), scan);
 combined `fetch`:
 
 ```java
-Fetch limited = b.limit(10, scan);          // first 10 rows
-Fetch skipped = b.offset(5, scan);          // skip 5 rows
-Fetch window  = b.fetch(0, 10, scan);       // offset 0, count 10
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:fetch"
 ```
 
 ## Cross
@@ -144,7 +102,7 @@ Fetch window  = b.fetch(0, 10, scan);       // offset 0, count 10
 Cartesian product of two inputs.
 
 ```java
-Cross cross = b.cross(left, right);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:cross"
 ```
 
 ## Set
@@ -153,7 +111,7 @@ Combines multiple inputs with a set operation. `Set.SetOp` includes
 `UNION_ALL`, `UNION_DISTINCT`, `MINUS_PRIMARY`, `INTERSECTION_PRIMARY`, and more.
 
 ```java
-Set union = b.set(Set.SetOp.UNION_ALL, input1, input2);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:set"
 ```
 
 ## VirtualTableScan
@@ -162,12 +120,7 @@ An inline table of literal rows. Build it directly with a schema and one or more
 row expressions:
 
 ```java
-VirtualTableScan table =
-    VirtualTableScan.builder()
-        .initialSchema(
-            NamedStruct.of(List.of("col1"), R.struct(R.I32)))
-        .addRows(ExpressionCreator.nestedStruct(false, ExpressionCreator.i32(false, 3)))
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:virtual-table"
 ```
 
 The DSL also offers `emptyVirtualTableScan()` for a schema-less, row-less table.
@@ -178,14 +131,7 @@ Writes an input relation to a named table. Specify the write operation, the
 create mode, and the output mode:
 
 ```java
-NamedWrite write =
-    b.namedWrite(
-        List.of("target_table"),
-        List.of("c1", "c2"),
-        AbstractWriteRel.WriteOp.INSERT,
-        AbstractWriteRel.CreateMode.APPEND_IF_EXISTS,
-        AbstractWriteRel.OutputMode.MODIFIED_RECORDS,
-        scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:named-write"
 ```
 
 `NamedUpdate` (via `b.namedUpdate(...)`) is the analogous update operator, taking
@@ -198,8 +144,7 @@ POJO builders accept `.remap(...)`. A remap reorders or filters the operator's
 output columns by index:
 
 ```java
-Rel.Remap remap = b.remap(0, 1);            // keep columns 0 and 1
-Sort sort = b.sort(rel -> b.sortFields(rel, 0), remap, scan);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:output-remap"
 ```
 
 ## Building a plan
@@ -207,8 +152,7 @@ Sort sort = b.sort(rel -> b.sortFields(rel, 0), remap, scan);
 Wrap the top relation in a `Plan.Root` and a `Plan`:
 
 ```java
-Plan.Root root = b.root(project, List.of("a", "b"));
-Plan plan = b.plan(root);
+--8<-- "core/src/test/java/io/substrait/docs/RelationsDocTest.java:building-a-plan"
 ```
 
 See [Building plans](building-plans.md) for the full end-to-end flow and

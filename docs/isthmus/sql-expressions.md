@@ -44,11 +44,7 @@ import io.substrait.isthmus.SqlExpressionToSubstrait;
 import io.substrait.proto.ExtendedExpression;
 import java.util.List;
 
-List<String> schema =
-    List.of("CREATE TABLE lineitem (L_ORDERKEY BIGINT, L_COMMENT VARCHAR)");
-
-ExtendedExpression expr =
-    new SqlExpressionToSubstrait().convert("L_ORDERKEY > 10", schema);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SqlExpressionsDocTest.java:example"
 ```
 
 The expression `L_ORDERKEY > 10` becomes a Substrait scalar-function call
@@ -75,15 +71,7 @@ Pass an array to bundle multiple expressions into one `ExtendedExpression`. They
 the same base schema and are named `column-1`, `column-2`, … in order:
 
 ```java
-String[] expressions = {
-  "L_ORDERKEY",
-  "L_ORDERKEY > 10",
-  "L_ORDERKEY + 10",
-  "L_ORDERKEY IN (10, 20)",
-  "L_ORDERKEY IS NOT NULL"
-};
-
-ExtendedExpression expr = new SqlExpressionToSubstrait().convert(expressions, schema);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SqlExpressionsDocTest.java:several"
 ```
 
 ## Related

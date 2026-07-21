@@ -21,21 +21,19 @@ A common idiom (used throughout the codebase and the rest of these docs) is to
 alias them as `R` and `N`:
 
 ```java
-TypeCreator R = TypeCreator.REQUIRED;
-TypeCreator N = TypeCreator.NULLABLE;
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:aliases"
 ```
 
 You can also select one dynamically with `TypeCreator.of(boolean)`:
 
 ```java
-TypeCreator t = TypeCreator.of(nullable); // NULLABLE if true, else REQUIRED
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:of"
 ```
 
 To flip the nullability of an existing type, use the static helpers:
 
 ```java
-io.substrait.type.Type nullableI32   = TypeCreator.asNullable(R.I32);
-io.substrait.type.Type requiredI32   = TypeCreator.asNotNullable(N.I32);
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:flip-nullability"
 ```
 
 ## Scalar type constants
@@ -55,12 +53,7 @@ its nullability:
 | `UUID` | UUID |
 
 ```java
-TypeCreator R = TypeCreator.REQUIRED;
-
-io.substrait.type.Type i32    = R.I32;      // non-nullable i32
-io.substrait.type.Type str    = R.STRING;   // non-nullable string
-io.substrait.type.Type fp64   = R.FP64;     // non-nullable fp64
-io.substrait.type.Type date   = R.DATE;     // non-nullable date
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:scalar-constants"
 ```
 
 ## Parameterized types
@@ -69,36 +62,13 @@ Parameterized types are created with instance methods that carry the creator's
 nullability:
 
 ```java
-TypeCreator R = TypeCreator.REQUIRED;
-
-// decimal(precision, scale)
-io.substrait.type.Type dec = R.decimal(10, 2);
-
-// fixed- and variable-length character/binary
-io.substrait.type.Type fchar  = R.fixedChar(20);
-io.substrait.type.Type vchar  = R.varChar(255);
-io.substrait.type.Type fbin   = R.fixedBinary(16);
-
-// temporal types with fractional-second precision
-io.substrait.type.Type ts     = R.precisionTimestamp(6);
-io.substrait.type.Type tstz   = R.precisionTimestampTZ(6);
-io.substrait.type.Type time   = R.precisionTime(6);
-io.substrait.type.Type iday   = R.intervalDay(6);
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:parameterized"
 ```
 
 ### Structs, lists, and maps
 
 ```java
-TypeCreator R = TypeCreator.REQUIRED;
-
-// struct with i32 and string fields
-io.substrait.type.Type.Struct struct = R.struct(R.I32, R.STRING);
-
-// list of strings
-io.substrait.type.Type list = R.list(R.STRING);
-
-// map from string to i32
-io.substrait.type.Type map = R.map(R.STRING, R.I32);
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:struct-list-map"
 ```
 
 `struct(...)` also accepts an `Iterable<Type>` or a `Stream<Type>`, which is
@@ -109,8 +79,7 @@ handy when building a schema from a computed set of field types.
 Types declared by an extension are referenced by URN and name:
 
 ```java
-io.substrait.type.Type udt =
-    TypeCreator.REQUIRED.userDefined("extension:my.org:my_types", "point");
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:user-defined"
 ```
 
 See [Function & type extensions](extensions.md) for how extension URNs work.
@@ -123,8 +92,7 @@ A relation's schema pairs field names with a struct type via
 ```java
 import io.substrait.type.NamedStruct;
 
-NamedStruct schema =
-    NamedStruct.of(List.of("a", "b"), TypeCreator.REQUIRED.struct(R.I32, R.STRING));
+--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:named-struct"
 ```
 
 The [`SubstraitBuilder`](building-plans.md) `namedScan` helper builds the

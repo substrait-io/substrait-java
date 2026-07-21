@@ -36,13 +36,7 @@ delegates to it:
 import io.substrait.plan.Plan;
 import io.substrait.relation.NamedScan;
 
-NamedScan scan = NamedScan.builder()
-    .addNames("my_table")
-    .initialSchema(schema)
-    .build();
-
-Plan.Root root = Plan.Root.builder().input(scan).build();
-Plan plan = Plan.builder().addRoots(root).build();
+--8<-- "core/src/test/java/io/substrait/docs/CoreIndexDocTest.java:quick-example"
 ```
 
 Because the objects are immutable, they are safe to share and compare by value.

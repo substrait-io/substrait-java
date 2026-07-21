@@ -10,7 +10,7 @@ expressions (literals, field references, casts, functions), and the plan root.
 ```java
 import io.substrait.dsl.SubstraitBuilder;
 
-SubstraitBuilder b = new SubstraitBuilder();
+--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:create-builder"
 ```
 
 The no-arg constructor uses `DefaultExtensionCatalog.DEFAULT_COLLECTION`, which
@@ -20,7 +20,7 @@ pass your own `SimpleExtension.ExtensionCollection` — see
 [Function & type extensions](extensions.md).
 
 ```java
-SubstraitBuilder b = new SubstraitBuilder(myExtensionCollection);
+--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:create-builder-custom"
 ```
 
 ## Type shortcuts
@@ -31,8 +31,7 @@ aliases, matching the convention used across the codebase and tests:
 ```java
 import io.substrait.type.TypeCreator;
 
-TypeCreator R = TypeCreator.REQUIRED; // non-nullable types
-TypeCreator N = TypeCreator.NULLABLE; // nullable types
+--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:type-shortcuts"
 ```
 
 So `R.I32` is a non-nullable 32-bit integer and `N.STRING` is a nullable string.
@@ -46,11 +45,7 @@ the input's schema for you. For example, `filter` takes a
 `Function<Rel, Expression>` that produces the condition:
 
 ```java
-NamedScan scan =
-    b.namedScan(List.of("t"), List.of("a", "b"), List.of(R.I32, R.STRING));
-
-Filter filter =
-    b.filter(rel -> b.equal(b.fieldReference(rel, 0), b.i32(10)), scan);
+--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:filter-lambda"
 ```
 
 `project`, `aggregate`, `sort`, and `join` follow the same pattern: the lambda
@@ -71,28 +66,7 @@ import io.substrait.relation.Project;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 
-TypeCreator R = TypeCreator.REQUIRED;
-SubstraitBuilder b = new SubstraitBuilder();
-
-// 1. scan: table "t" with columns a (i32) and b (string)
-NamedScan scan =
-    b.namedScan(List.of("t"), List.of("a", "b"), List.of(R.I32, R.STRING));
-
-// 2. filter: keep rows where a == 10
-Filter filter =
-    b.filter(rel -> b.equal(b.fieldReference(rel, 0), b.i32(10)), scan);
-
-// 3. project: output columns a and b
-Project project =
-    b.project(
-        rel -> List.of(b.fieldReference(rel, 0), b.fieldReference(rel, 1)),
-        filter);
-
-// 4. root: name the plan's output columns
-Plan.Root root = b.root(project, List.of("a", "b"));
-
-// 5. plan: wrap the root
-Plan plan = b.plan(root);
+--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:end-to-end"
 ```
 
 !!! note

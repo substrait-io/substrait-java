@@ -18,11 +18,7 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 
-// POJO -> proto
-io.substrait.proto.Plan proto = new PlanProtoConverter().toProto(plan);
-
-// proto -> POJO
-Plan roundTripped = new ProtoPlanConverter().from(proto);
+--8<-- "core/src/test/java/io/substrait/docs/SerializationDocTest.java:plan-roundtrip"
 ```
 
 Both converters default to `DefaultExtensionCatalog.DEFAULT_COLLECTION`. When
@@ -31,8 +27,7 @@ your plan references custom functions or types, pass a matching
 extension converters) to the constructor:
 
 ```java
-PlanProtoConverter toProto = new PlanProtoConverter(myExtensions);
-ProtoPlanConverter fromProto = new ProtoPlanConverter(myExtensions);
+--8<-- "core/src/test/java/io/substrait/docs/SerializationDocTest.java:custom-collection"
 ```
 
 See [Function & type extensions](extensions.md) for building extension
@@ -44,14 +39,7 @@ The proto `Plan` is a standard protobuf message, so serialize and parse it with
 the usual protobuf API:
 
 ```java
-// serialize to a byte array
-byte[] bytes = proto.toByteArray();
-
-// parse back from bytes
-io.substrait.proto.Plan parsed = io.substrait.proto.Plan.parseFrom(bytes);
-
-// then convert to the POJO model
-Plan plan = new ProtoPlanConverter().from(parsed);
+--8<-- "core/src/test/java/io/substrait/docs/SerializationDocTest.java:encode-bytes"
 ```
 
 This binary form is the canonical way to store or exchange plans between
@@ -64,13 +52,7 @@ For a human-readable form, use protobuf's `JsonFormat`:
 ```java
 import com.google.protobuf.util.JsonFormat;
 
-// proto -> JSON
-String json = JsonFormat.printer().print(proto);
-
-// JSON -> proto
-io.substrait.proto.Plan.Builder builder = io.substrait.proto.Plan.newBuilder();
-JsonFormat.parser().merge(json, builder);
-io.substrait.proto.Plan fromJson = builder.build();
+--8<-- "core/src/test/java/io/substrait/docs/SerializationDocTest.java:encode-json"
 ```
 
 !!! note
@@ -100,14 +82,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.relation.ProtoRelConverter;
 
-ExtensionCollector collector = new ExtensionCollector();
-RelProtoConverter relToProto = new RelProtoConverter(collector);
-
-io.substrait.proto.Rel protoRel = relToProto.toProto(rel);
-
-ProtoRelConverter protoToRel =
-    new ProtoRelConverter(collector, DefaultExtensionCatalog.DEFAULT_COLLECTION);
-io.substrait.relation.Rel back = protoToRel.from(protoRel);
+--8<-- "core/src/test/java/io/substrait/docs/SerializationDocTest.java:lower-level"
 ```
 
 !!! tip

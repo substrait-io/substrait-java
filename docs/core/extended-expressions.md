@@ -23,12 +23,7 @@ An `ExtendedExpression` bundles:
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extendedexpression.ImmutableExpressionReference;
 
-// an expression referring to the base schema, named "new-column"
-ImmutableExpressionReference literalRef =
-    ImmutableExpressionReference.builder()
-        .expression(ExpressionCreator.i32(false, 76))
-        .addOutputNames("new-column")
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/ExtendedExpressionsDocTest.java:expression-reference"
 ```
 
 A field reference works the same way — it just points into the base schema:
@@ -38,15 +33,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.type.TypeCreator;
 
-ImmutableExpressionReference fieldRef =
-    ImmutableExpressionReference.builder()
-        .expression(
-            ImmutableFieldReference.builder()
-                .addSegments(FieldReference.StructField.of(0))
-                .type(TypeCreator.REQUIRED.decimal(10, 2))
-                .build())
-        .addOutputNames("new-column")
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/ExtendedExpressionsDocTest.java:field-reference"
 ```
 
 An aggregate is expressed as an `AggregateFunctionReference` wrapping a measure:
@@ -55,11 +42,7 @@ An aggregate is expressed as an `AggregateFunctionReference` wrapping a measure:
 import io.substrait.extendedexpression.ImmutableAggregateFunctionReference;
 import io.substrait.relation.Aggregate;
 
-ImmutableAggregateFunctionReference aggRef =
-    ImmutableAggregateFunctionReference.builder()
-        .measure(measure)              // an Aggregate.Measure
-        .addOutputNames("new-column")
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/ExtendedExpressionsDocTest.java:aggregate-reference"
 ```
 
 ## Assembling with a base schema
@@ -72,25 +55,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 
-NamedStruct baseSchema =
-    NamedStruct.builder()
-        .addNames("N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT")
-        .struct(
-            Type.Struct.builder()
-                .nullable(false)
-                .addFields(
-                    TypeCreator.REQUIRED.decimal(10, 2),
-                    TypeCreator.REQUIRED.STRING,
-                    TypeCreator.REQUIRED.decimal(10, 2),
-                    TypeCreator.REQUIRED.STRING)
-                .build())
-        .build();
-
-ImmutableExtendedExpression extendedExpression =
-    ImmutableExtendedExpression.builder()
-        .referredExpressions(List.of(literalRef))
-        .baseSchema(baseSchema)
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/ExtendedExpressionsDocTest.java:assemble"
 ```
 
 ## Serialization
@@ -106,11 +71,7 @@ converters described in [Serialization](serialization.md):
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ProtoExtendedExpressionConverter;
 
-io.substrait.proto.ExtendedExpression proto =
-    new ExtendedExpressionProtoConverter().toProto(extendedExpression);
-
-ExtendedExpression roundTripped =
-    new ProtoExtendedExpressionConverter().from(proto);
+--8<-- "core/src/test/java/io/substrait/docs/ExtendedExpressionsDocTest.java:serialize"
 ```
 
 Both converters default to `DefaultExtensionCatalog.DEFAULT_COLLECTION`; pass a

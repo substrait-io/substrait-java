@@ -59,26 +59,7 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import org.apache.calcite.prepare.Prepare;
 
-String[] createStatements = {
-  "CREATE TABLE users (id BIGINT, name VARCHAR, signup_date DATE)",
-  "CREATE TABLE orders (order_id BIGINT, user_id BIGINT, total DECIMAL(10, 2))"
-};
-
-// 1. Parse the schema into a catalog.
-Prepare.CatalogReader catalog =
-    SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements);
-
-// 2. Convert a query into a Substrait Plan POJO.
-Plan plan =
-    new SqlToSubstrait()
-        .convert(
-            "SELECT u.name, o.total "
-                + "FROM users u JOIN orders o ON u.id = o.user_id "
-                + "WHERE o.total > 100.00",
-            catalog);
-
-// 3. Serialize the POJO Plan to the protobuf wire format.
-io.substrait.proto.Plan proto = new PlanProtoConverter().toProto(plan);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SqlToSubstraitDocTest.java:worked-example"
 ```
 
 `plan` is a fully-formed Substrait plan you can inspect, transform, or (as shown)
@@ -98,14 +79,7 @@ proto plan back into a POJO with `ProtoPlanConverter`.
 Passing several statements in one call produces a plan with one root per statement:
 
 ```java
-Plan plan =
-    new SqlToSubstrait()
-        .convert(
-            "SELECT order_id FROM orders; "
-                + "SELECT user_id FROM orders WHERE total > 20;",
-            catalog);
-
-// plan.getRoots() has two entries, one per SELECT.
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SqlToSubstraitDocTest.java:multiple-statements"
 ```
 
 A trailing semicolon on a single statement is fine, and each statement is converted

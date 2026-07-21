@@ -74,12 +74,11 @@ container and writes its `.plan` file into `_data/`.
 Internally the example converts and serializes exactly as described in
 [Producing plans](producing-plans.md):
 
-```java
-ToSubstraitRel toSubstrait = new ToSubstraitRel();
-io.substrait.plan.Plan plan = toSubstrait.convert(optimised);
+```scala
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:convert"
 
-byte[] buffer = new PlanProtoConverter().toProto(plan).toByteArray();
-Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"), buffer);
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:serialize"
+Files.write(Paths.get(ROOT_DIR, "spark_sql_substrait.plan"), buffer)
 ```
 
 Both entry points also print a human-readable rendering of the plan using the example's
@@ -98,16 +97,15 @@ just consume spark_sql_substrait.plan
 
 The consuming code follows [Consuming plans](consuming-plans.md):
 
-```java
-byte[] buffer = Files.readAllBytes(Paths.get(ROOT_DIR, arg));
-io.substrait.proto.Plan proto = io.substrait.proto.Plan.parseFrom(buffer);
+```scala
+val buffer = Files.readAllBytes(Paths.get(ROOT_DIR, arg))
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:parse"
 
-Plan plan = new ProtoPlanConverter(SparkExtension.COLLECTION()).from(proto);
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:to-pojo"
 
-ToLogicalPlan toSpark = new ToLogicalPlan(spark);
-LogicalPlan sparkPlan = toSpark.convert(plan);
+--8<-- "spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala:rebuild"
 
-Dataset.ofRows(spark, sparkPlan).show();
+Dataset.ofRows(spark, sparkPlan).show()
 ```
 
 !!! warning "Spark 4.0 imports"

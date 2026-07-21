@@ -74,27 +74,7 @@ import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 
-SubstraitBuilder builder = new SubstraitBuilder();
-TypeCreator R = TypeCreator.REQUIRED;
-
-// SELECT id, customer FROM orders WHERE id = 1
-Rel scan =
-    builder.namedScan(
-        List.of("orders"),
-        List.of("id", "customer"),
-        List.of(R.I32, R.STRING));
-
-Rel filtered =
-    builder.filter(
-        input -> builder.equal(builder.fieldReference(input, 0), builder.i32(1)),
-        scan);
-
-Plan.Root root = builder.root(filtered, List.of("id", "customer"));
-Plan plan = builder.plan(root);
-
-// Convert the POJO plan to the Substrait protobuf message
-io.substrait.proto.Plan proto = new PlanProtoConverter().toProto(plan);
-byte[] bytes = proto.toByteArray();
+--8<-- "core/src/test/java/io/substrait/docs/GettingStartedDocTest.java:quick-start"
 ```
 
 That `byte[]` (or its JSON form) is a portable Substrait plan any Substrait-aware engine can

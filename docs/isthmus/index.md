@@ -42,8 +42,7 @@ type system):
 ```java
 import io.substrait.isthmus.SqlToSubstrait;
 
-// Uses ConverterProvider defaults
-SqlToSubstrait converter = new SqlToSubstrait();
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/IsthmusIndexDocTest.java:entry-point"
 ```
 
 | Class | Direction | Returns |

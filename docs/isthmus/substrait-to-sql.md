@@ -28,8 +28,7 @@ import java.util.List;
 
 Plan plan = /* a Substrait plan, e.g. from SqlToSubstrait or a proto */;
 
-List<String> sql = new SubstraitToSql().convert(plan, SubstraitSqlDialect.DEFAULT);
-String firstStatement = sql.get(0);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SubstraitToSqlDocTest.java:convert"
 ```
 
 Any Calcite `SqlDialect` works. `SubstraitSqlDialect.DEFAULT` is the Isthmus dialect
@@ -51,14 +50,7 @@ import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.isthmus.SubstraitToSql;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
 
-// POJO Plan -> protobuf
-io.substrait.proto.Plan proto = new PlanProtoConverter().toProto(plan);
-
-// protobuf -> POJO Plan
-Plan restored = new ProtoPlanConverter().from(proto);
-
-// POJO Plan -> SQL
-List<String> sql = new SubstraitToSql().convert(restored, SubstraitSqlDialect.DEFAULT);
+--8<-- "isthmus/src/test/java/io/substrait/isthmus/docs/SubstraitToSqlDocTest.java:round-trip"
 ```
 
 See [core serialization](../core/serialization.md) for the POJO <-> protobuf converters

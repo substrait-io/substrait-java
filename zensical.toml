@@ -133,6 +133,15 @@ pygments_lang_class = true
 [project.markdown_extensions.pymdownx.magiclink]
 [project.markdown_extensions.pymdownx.mark]
 [project.markdown_extensions.pymdownx.smartsymbols]
+# Snippets pulls the code examples in the guide from the real, compiled and
+# CI-executed test sources under `**/src/test/**/docs/`, so the samples shown
+# here cannot silently drift from the API. `check_paths` fails the docs build if
+# a referenced source file is missing; `dedent_subsections` strips the enclosing
+# method indentation so included regions render flush-left.
+[project.markdown_extensions.pymdownx.snippets]
+base_path = ["."]
+check_paths = true
+dedent_subsections = true
 [project.markdown_extensions.pymdownx.superfences]
 [project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true

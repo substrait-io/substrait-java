@@ -18,8 +18,7 @@ containing all of them, and this is what a no-arg
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 
-SimpleExtension.ExtensionCollection defaults =
-    DefaultExtensionCatalog.DEFAULT_COLLECTION;
+--8<-- "core/src/test/java/io/substrait/docs/ExtensionsDocTest.java:defaults"
 ```
 
 The class also exposes the extension **URN** constants you pass when invoking a
@@ -49,9 +48,7 @@ Functions are addressed by a `FunctionAnchor` — a URN plus a **key** of the fo
 cover the common cases:
 
 ```java
-// arithmetic and comparison helpers resolve FunctionAnchors internally
-b.add(b.i32(1), b.i32(2));            // add:i32_i32   in FUNCTIONS_ARITHMETIC
-b.equal(colA, colB);                  // equal:any_any in FUNCTIONS_COMPARISON
+--8<-- "core/src/test/java/io/substrait/docs/ExtensionsDocTest.java:named-helpers"
 ```
 
 For anything else, call the generic `scalarFn` / `aggregateFn` with the URN, the
@@ -61,21 +58,7 @@ function key, the output type, and the arguments:
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.type.TypeCreator;
 
-// scalar: substring(str, start, length)
-Expression.ScalarFunctionInvocation substr =
-    b.scalarFn(
-        DefaultExtensionCatalog.FUNCTIONS_STRING,
-        "substring:str_i32_i32",
-        TypeCreator.REQUIRED.STRING,
-        strArg, startArg, lengthArg);
-
-// aggregate: count(col)
-AggregateFunctionInvocation count =
-    b.aggregateFn(
-        DefaultExtensionCatalog.FUNCTIONS_AGGREGATE_GENERIC,
-        "count:any",
-        TypeCreator.REQUIRED.I64,
-        b.fieldReference(scan, 0));
+--8<-- "core/src/test/java/io/substrait/docs/ExtensionsDocTest.java:generic-fns"
 ```
 
 Under the hood these call `extensions.getScalarFunction(anchor)` /
@@ -117,12 +100,7 @@ Combine your extensions with the defaults using `merge`, then hand the result to
 a builder or converter:
 
 ```java
-SimpleExtension.ExtensionCollection custom = SimpleExtension.load(yamlContent);
-
-SimpleExtension.ExtensionCollection combined =
-    DefaultExtensionCatalog.DEFAULT_COLLECTION.merge(custom);
-
-SubstraitBuilder b = new SubstraitBuilder(combined);
+--8<-- "core/src/test/java/io/substrait/docs/ExtensionsDocTest.java:merge"
 ```
 
 !!! warning
@@ -143,11 +121,7 @@ attached to a plan or relation. It has two parts:
 ```java
 import io.substrait.extension.AdvancedExtension;
 
-AdvancedExtension ext =
-    AdvancedExtension.builder()
-        .enhancement(myEnhancement)      // implements AdvancedExtension.Enhancement
-        .addOptimizations(myOptimization) // implements AdvancedExtension.Optimization
-        .build();
+--8<-- "core/src/test/java/io/substrait/docs/ExtensionsDocTest.java:advanced-extension"
 ```
 
 Because the payloads are opaque to core, serializing or deserializing a plan that

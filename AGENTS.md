@@ -207,8 +207,20 @@ independent of the Gradle build — the only prerequisite is a `pixi` install.
 - **Keep the guide in sync with the code as substrait-java evolves.** When you add or change
   user-facing behavior — a new expression/relation type, a `SubstraitBuilder`/`ExpressionCreator`
   factory, a newly supported function, an isthmus/spark capability, or a CLI flag — update the
-  matching `docs/` page in the same PR. Ground snippets in real APIs/tests, and (as in source)
-  keep GitHub issue/PR numbers out of the docs.
+  matching `docs/` page in the same PR. (As in source) keep GitHub issue/PR numbers out of the docs.
+- **Runnable code samples are pulled from compiled, CI-run tests via `pymdownx.snippets`** — they
+  are not hand-written in the Markdown, so they can't silently drift from the API. Backing tests
+  live in an `io.substrait…docs` package under each module's test sources: `core`
+  (`core/src/test/java/io/substrait/docs/`) and `isthmus`
+  (`isthmus/src/test/java/io/substrait/isthmus/docs/`) as JUnit tests, and `spark`
+  (`spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala`, a full round-trip run on
+  every variant). A test marks a region with `// --8<-- [start:name]` / `[end:name]`; the Markdown
+  references it inside a fenced block, e.g.
+  `--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:aliases"`. Edit the **test**, not
+  the Markdown, to change a sample; `pixi run docs-build` fails on a missing file or region
+  (`check_paths`), and the backing test failing to compile/run fails the Gradle build. `import`
+  lines stay literal alongside the include; pure API-signature and resource-dependent snippets
+  remain inline.
 - CI: `.github/workflows/docs.yml` build-checks docs on every PR and push to `main`;
   `.github/workflows/docs-deploy.yml` publishes versioned docs to the `gh-pages` branch via the
   Zensical-compatible `mike` fork on release tags (the bare `X.Y.Z` tag publishes the minor
