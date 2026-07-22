@@ -63,14 +63,7 @@ public abstract class Join extends BiRel implements HasExtension {
     /**
      * Right mark join: right rows with an appended boolean column marking whether a match exists.
      */
-    RIGHT_MARK(JoinRel.JoinType.JOIN_TYPE_RIGHT_MARK),
-    // deprecated values last to not get them looked up first in fromProto()
-    /** use {@link #LEFT_SEMI} instead */
-    @Deprecated
-    SEMI(JoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
-    /** use {@link #LEFT_ANTI} instead */
-    @Deprecated
-    ANTI(JoinRel.JoinType.JOIN_TYPE_LEFT_ANTI);
+    RIGHT_MARK(JoinRel.JoinType.JOIN_TYPE_RIGHT_MARK);
 
     private JoinRel.JoinType proto;
 
@@ -135,8 +128,6 @@ public abstract class Join extends BiRel implements HasExtension {
       case OUTER:
       case LEFT_SINGLE:
         return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
-      case SEMI:
-      case ANTI:
       case LEFT_SEMI:
       case LEFT_ANTI:
       case LEFT_MARK:

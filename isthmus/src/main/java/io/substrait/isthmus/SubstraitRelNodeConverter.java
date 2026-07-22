@@ -259,12 +259,6 @@ public class SubstraitRelNodeConverter
     if (type == JoinType.OUTER) {
       return JoinRelType.FULL;
     }
-    if (type == JoinType.SEMI) {
-      return JoinRelType.SEMI;
-    }
-    if (type == JoinType.ANTI) {
-      return JoinRelType.ANTI;
-    }
     if (type == JoinType.LEFT_SEMI) {
       return JoinRelType.SEMI;
     }
