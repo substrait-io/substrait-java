@@ -37,14 +37,16 @@ class StatisticalFunctionTest extends PlanTestBase {
   }
 
   // Integer arguments are cast to fp64 (and the result cast back) since std_dev/variance only have
-  // fp32/fp64 signatures. This rewrite (castStatisticalAggregatesToFloatingPoint) inserts a cast
-  // projection that Calcite normalizes (project merge/column pruning) on the first round trip, so
-  // these use the identity-projection workaround, which asserts stability after normalization.
+  // fp32/fp64 signatures. The cast rewrite stacks a cast projection over the aggregate's input
+  // projection, which Calcite merges (and prunes the redundant column) when it rebuilds the plan on
+  // the Substrait -> Calcite leg. The plan straight from SQL therefore differs from the one after a
+  // Calcite -> Substrait -> Calcite round trip, so these compare loosely: they assert stability of
+  // the normalized plan rather than equality with the initial plan.
 
   @ParameterizedTest
   @CsvSource({"STDDEV_POP", "STDDEV_SAMP", "VAR_POP", "VAR_SAMP"})
   void roundTripIntegerInput(String fn) throws Exception {
-    assertFullRoundTripWithIdentityProjectionWorkaround(
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
         String.format("SELECT %s(i32) FROM numbers", fn),
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
   }
@@ -53,14 +55,14 @@ class StatisticalFunctionTest extends PlanTestBase {
   void roundTripIntegerInputSharedWithOtherAggregate() throws Exception {
     // The integer column is shared by SUM (which must keep operating on the integer) and STDDEV_POP
     // (which is cast to fp64); the cast must be appended, not applied in place.
-    assertFullRoundTripWithIdentityProjectionWorkaround(
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
         "SELECT SUM(i32), STDDEV_POP(i32) FROM numbers",
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
   }
 
   @Test
   void roundTripIntegerInputWithGrouping() throws Exception {
-    assertFullRoundTripWithIdentityProjectionWorkaround(
+    assertSqlSubstraitRelRoundTripLoosePojoComparison(
         "SELECT i8, VAR_POP(i32) FROM numbers GROUP BY i8",
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
   }
