@@ -8,6 +8,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.VisitationContext;
 
 /**
@@ -318,4 +319,14 @@ public interface RelVisitor<O, C extends VisitationContext, E extends Exception>
    * @throws E on visit failure
    */
   O visit(BroadcastExchange exchange, C context) throws E;
+
+  /**
+   * Visit a physical top-N relation.
+   *
+   * @param topN the top-N node
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  O visit(TopN topN, C context) throws E;
 }
