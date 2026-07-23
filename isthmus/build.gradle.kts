@@ -153,7 +153,7 @@ tasks {
 }
 
 // Register a separate task to run integration tests
-val test by testing.suites.existing(JvmTestSuite::class)
+val test = testing.suites.named<JvmTestSuite>("test")
 
 tasks.register<Test>("integrationTest") {
   description = "Run integration tests"

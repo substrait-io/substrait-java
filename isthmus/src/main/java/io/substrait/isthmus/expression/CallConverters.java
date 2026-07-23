@@ -19,6 +19,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -39,7 +40,7 @@ public class CallConverters {
    *
    * @see ExpressionCreator#cast(Type, Expression, Expression.FailureBehavior)
    */
-  public static Function<TypeConverter, SimpleCallConverter> CAST =
+  public static final Function<TypeConverter, SimpleCallConverter> CAST =
       typeConverter ->
           (call, visitor) -> {
             Expression.FailureBehavior failureBehavior;
@@ -77,7 +78,7 @@ public class CallConverters {
    * <p>When converting from Calcite to Substrait, this call converter extracts the stored {@link
    * Expression.UserDefinedLiteral}.
    */
-  public static Function<TypeConverter, SimpleCallConverter> REINTERPRET =
+  public static final Function<TypeConverter, SimpleCallConverter> REINTERPRET =
       typeConverter ->
           (call, visitor) -> {
             if (call.getKind() != SqlKind.REINTERPRET) {
@@ -135,7 +136,7 @@ public class CallConverters {
    *
    * <p>Each literal's nullability is set to match its field type's nullability.
    */
-  public static SimpleCallConverter ROW =
+  public static final SimpleCallConverter ROW =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.ROW) {
           return null;
@@ -188,7 +189,7 @@ public class CallConverters {
    * <p>This converter assumes that operand expressions have already been converted by the provided
    * top-level visitor.
    */
-  public static SimpleCallConverter CASE =
+  public static final SimpleCallConverter CASE =
       (call, visitor) -> {
         if (call.getKind() != SqlKind.CASE) {
           return null;
@@ -224,7 +225,7 @@ public class CallConverters {
    * <p>Returns a {@link SimpleCallConverter} that expands SEARCH calls using the provided {@link
    * RexBuilder}
    */
-  public static Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
+  public static final Function<RexBuilder, SimpleCallConverter> CREATE_SEARCH_CONV =
       (RexBuilder rexBuilder) ->
           (RexCall call, Function<RexNode, Expression> visitor) -> {
             if (call.getKind() != SqlKind.SEARCH) {
@@ -235,6 +236,28 @@ public class CallConverters {
               return expandSearch.equals(call) ? null : visitor.apply(expandSearch);
             }
           };
+
+  /**
+   * Converts Calcite's niladic execution-context operators to Substrait execution context variable
+   * {@link Expression}s: {@link SqlStdOperatorTable#CURRENT_TIMESTAMP} to {@link
+   * Expression.CurrentTimestamp} (with the precision taken from the call's result type), {@link
+   * SqlStdOperatorTable#CURRENT_DATE} to {@link Expression.CurrentDate}, and {@link
+   * CurrentTimezoneFunction} to {@link Expression.CurrentTimezone}.
+   *
+   * <p>Matching is done on operator identity (these are niladic {@link SqlKind#OTHER_FUNCTION}
+   * functions with no dedicated {@link SqlKind}).
+   */
+  public static final SimpleCallConverter EXECUTION_CONTEXT_VARIABLE =
+      (call, visitor) -> {
+        if (call.getOperator() == SqlStdOperatorTable.CURRENT_TIMESTAMP) {
+          return ExpressionCreator.currentTimestamp(call.getType().getPrecision());
+        } else if (call.getOperator() == SqlStdOperatorTable.CURRENT_DATE) {
+          return ExpressionCreator.currentDate();
+        } else if (call.getOperator() == CurrentTimezoneFunction.INSTANCE) {
+          return ExpressionCreator.currentTimezone();
+        }
+        return null;
+      };
 
   /**
    * Returns the default set of converters for common calls.
@@ -249,6 +272,7 @@ public class CallConverters {
         CallConverters.ROW,
         CallConverters.CAST.apply(typeConverter),
         CallConverters.REINTERPRET.apply(typeConverter),
+        CallConverters.EXECUTION_CONTEXT_VARIABLE,
         new SqlArrayValueConstructorCallConverter(typeConverter),
         new SqlMapValueConstructorCallConverter());
   }

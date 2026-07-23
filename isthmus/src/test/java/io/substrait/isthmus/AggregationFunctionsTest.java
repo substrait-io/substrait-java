@@ -45,6 +45,14 @@ class AggregationFunctionsTest extends PlanTestBase {
         return sb.sum0(input, field);
       case "avg":
         return sb.avg(input, field);
+      case "stddev_pop":
+        return sb.stddevPopulation(input, field);
+      case "stddev_samp":
+        return sb.stddevSample(input, field);
+      case "var_pop":
+        return sb.variancePopulation(input, field);
+      case "var_samp":
+        return sb.varianceSample(input, field);
       default:
         throw new UnsupportedOperationException(
             String.format("no function is associated with %s", fname));
@@ -54,14 +62,41 @@ class AggregationFunctionsTest extends PlanTestBase {
   // Create one function call per numeric type column
   private List<Aggregate.Measure> functions(Rel input, String fname) {
     // first column is for grouping, skip it
+    // Statistical functions (stddev_*, var_*) only support floating-point types in Substrait.
+    // This filtering ensures we only test with fp32 and fp64 types for these functions,
+    // avoiding type mismatch errors during round-trip conversion.
+    boolean isStatisticalFunction = fname.startsWith("stddev_") || fname.startsWith("var_");
     return IntStream.range(1, tableTypes.size())
         .boxed()
+        .filter(
+            index -> {
+              if (!isStatisticalFunction) {
+                return true; // All numeric types for non-statistical functions
+              }
+              // Only floating-point types for statistical functions
+              Type type = tableTypes.get(index);
+              return type.equals(R.FP32)
+                  || type.equals(R.FP64)
+                  || type.equals(N.FP32)
+                  || type.equals(N.FP64);
+            })
         .map(index -> functionPicker(input, index, fname))
         .collect(Collectors.toList());
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
+  @ValueSource(
+      strings = {
+        "max",
+        "min",
+        "sum",
+        "sum0",
+        "avg",
+        "stddev_pop",
+        "stddev_samp",
+        "var_pop",
+        "var_samp"
+      })
   void emptyGrouping(String aggFunction) {
     Aggregate rel =
         sb.aggregate(
@@ -70,7 +105,18 @@ class AggregationFunctionsTest extends PlanTestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"max", "min", "sum", "sum0", "avg"})
+  @ValueSource(
+      strings = {
+        "max",
+        "min",
+        "sum",
+        "sum0",
+        "avg",
+        "stddev_pop",
+        "stddev_samp",
+        "var_pop",
+        "var_samp"
+      })
   void withGrouping(String aggFunction) {
     Aggregate rel =
         sb.aggregate(

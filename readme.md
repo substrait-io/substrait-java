@@ -7,6 +7,8 @@ Substrait Java is a project that makes it easier to build [Substrait](https://su
 The supported features are formally specified in the Substrait dialect file [spark_dialect.yaml](spark/spark_dialect.yaml).
 
 ## Building
+Building requires a **JDK 17** installation, and Gradle itself must run on JDK 17 (see [Gradle & JDK 17](CONTRIBUTING.md#gradle--jdk-17) in the contributing guide for details).
+
 After you've cloned the project through git, Substrait Java is built with a tool called [Gradle](https://gradle.org/). To build, execute the following:
 ```
 ./gradlew build

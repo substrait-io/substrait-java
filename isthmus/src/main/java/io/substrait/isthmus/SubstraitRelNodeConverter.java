@@ -259,12 +259,6 @@ public class SubstraitRelNodeConverter
     if (type == JoinType.OUTER) {
       return JoinRelType.FULL;
     }
-    if (type == JoinType.SEMI) {
-      return JoinRelType.SEMI;
-    }
-    if (type == JoinType.ANTI) {
-      return JoinRelType.ANTI;
-    }
     if (type == JoinType.LEFT_SEMI) {
       return JoinRelType.SEMI;
     }
@@ -285,10 +279,6 @@ public class SubstraitRelNodeConverter
             input -> {
               relBuilder.push(input.accept(this, context));
             });
-    // TODO: MINUS_MULTISET and INTERSECTION_PRIMARY mappings are set to be removed as they do not
-    //   correspond to the Calcite relations they are associated with. They are retained for now
-    //   to enable users to migrate off of them.
-    //   See:  https://github.com/substrait-io/substrait-java/issues/303
     RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
     return applyRemap(node, set.getRemap());
@@ -301,9 +291,7 @@ public class SubstraitRelNodeConverter
       case MINUS_PRIMARY:
         return relBuilder.minus(false, numInputs);
       case MINUS_PRIMARY_ALL:
-      case MINUS_MULTISET:
         return relBuilder.minus(true, numInputs);
-      case INTERSECTION_PRIMARY:
       case INTERSECTION_MULTISET:
         return relBuilder.intersect(false, numInputs);
       case INTERSECTION_MULTISET_ALL:
@@ -385,8 +373,11 @@ public class SubstraitRelNodeConverter
 
   private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
     List<FunctionArg> eArgs = measure.getFunction().arguments();
+    // Only value (Expression) arguments map to Calcite aggregate operands. Enum arguments such as
+    // the std_dev/variance "distribution" are used to disambiguate the operator, not as operands.
     List<RexNode> arguments =
-        IntStream.range(0, measure.getFunction().arguments().size())
+        IntStream.range(0, eArgs.size())
+            .filter(i -> eArgs.get(i) instanceof Expression)
             .mapToObj(
                 i ->
                     eArgs
@@ -399,7 +390,9 @@ public class SubstraitRelNodeConverter
             .collect(java.util.stream.Collectors.toList());
     Optional<SqlOperator> operator =
         aggregateFunctionConverter.getSqlOperatorFromSubstraitFunc(
-            measure.getFunction().declaration().key(), measure.getFunction().outputType());
+            measure.getFunction().declaration().key(),
+            measure.getFunction().outputType(),
+            measure.getFunction().arguments());
     if (!operator.isPresent()) {
       throw new IllegalArgumentException(
           String.format(

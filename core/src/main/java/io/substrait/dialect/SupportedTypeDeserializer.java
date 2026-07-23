@@ -35,6 +35,12 @@ class SupportedTypeDeserializer extends JsonDeserializer<SupportedType> {
     if (node.hasNonNull("max_precision")) {
       builder.maxPrecision(node.get("max_precision").asInt());
     }
+    if (node.hasNonNull("max_scale")) {
+      builder.maxScale(node.get("max_scale").asInt());
+    }
+    if (node.hasNonNull("max_length")) {
+      builder.maxLength(node.get("max_length").asInt());
+    }
     if (node.hasNonNull("source")) {
       builder.source(node.get("source").asText());
     }

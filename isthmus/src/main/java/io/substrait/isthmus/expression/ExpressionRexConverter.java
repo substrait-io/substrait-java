@@ -521,6 +521,13 @@ public class ExpressionRexConverter
             .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
+    if (operator == SqlStdOperatorTable.CONCAT && args.size() > 2) {
+      return args.stream()
+          .skip(1)
+          .reduce(
+              args.get(0),
+              (left, right) -> rexBuilder.makeCall(returnType, operator, List.of(left, right)));
+    }
     return rexBuilder.makeCall(returnType, operator, args);
   }
 
@@ -848,6 +855,32 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.DynamicParameter expr, Context context) throws RuntimeException {
     RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.type());
     return rexBuilder.makeDynamicParam(calciteType, expr.parameterReference());
+  }
+
+  @Override
+  public RexNode visit(Expression.CurrentTimestamp expr, Context context) throws RuntimeException {
+    // Substrait current_timestamp is a precision_timestamp_tz, so force the return type to the
+    // corresponding Calcite TIMESTAMP_WITH_LOCAL_TIME_ZONE(precision); Calcite's CURRENT_TIMESTAMP
+    // operator would otherwise infer a plain (timezone-less) TIMESTAMP.
+    RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(
+        returnType, SqlStdOperatorTable.CURRENT_TIMESTAMP, Collections.emptyList());
+  }
+
+  @Override
+  public RexNode visit(Expression.CurrentDate expr, Context context) throws RuntimeException {
+    RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(
+        returnType, SqlStdOperatorTable.CURRENT_DATE, Collections.emptyList());
+  }
+
+  @Override
+  public RexNode visit(Expression.CurrentTimezone expr, Context context) throws RuntimeException {
+    // Calcite has no built-in session-timezone operator; use the Substrait-specific niladic
+    // CurrentTimezoneFunction, forcing the (required) string return type.
+    RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(
+        returnType, CurrentTimezoneFunction.INSTANCE, Collections.emptyList());
   }
 
   /**

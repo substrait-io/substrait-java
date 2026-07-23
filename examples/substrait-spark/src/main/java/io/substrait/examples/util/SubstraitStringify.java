@@ -34,6 +34,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.NamedStruct;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
@@ -424,6 +425,23 @@ public class SubstraitStringify extends ParentStringify
   public String visit(BroadcastExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
     StringBuilder sb = getIndent().append("broadcastExchange:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(TopN topN, EmptyVisitationContext context) throws RuntimeException {
+    StringBuilder sb = getIndent().append("TopN:: ").append(getRemap(topN));
+    topN.getSortFields()
+        .forEach(
+            sf -> {
+              ExpressionStringify expr = new ExpressionStringify(indent);
+              sb.append(sf.expr().accept(expr, context)).append(" ").append(sf.direction());
+            });
+    topN.getInputs()
+        .forEach(
+            i -> {
+              sb.append(i.accept(this, context));
+            });
     return getOutdent(sb);
   }
 }

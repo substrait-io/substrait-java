@@ -1,6 +1,8 @@
 package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
+import io.substrait.isthmus.expression.CurrentTimezoneFunction;
+import io.substrait.isthmus.expression.FunctionMappings;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -31,7 +33,7 @@ import org.jspecify.annotations.Nullable;
 public class SubstraitOperatorTable implements SqlOperatorTable {
 
   /** Singleton instance of the Substrait operator table. */
-  public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
+  public static final SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(
@@ -49,6 +51,13 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
               .map(SqlOperator::getKind)
               .collect(Collectors.toList()));
 
+  // Additional Substrait-specific scalar operators that have no standard Calcite equivalent (e.g.
+  // the session-timezone context variable). These are looked up by name, but deliberately do NOT
+  // feed OVERRIDE_KINDS: they share generic kinds such as OTHER_FUNCTION with many standard
+  // operators, which we must not shadow.
+  private static final SqlOperatorTable SUBSTRAIT_SCALAR_OPERATOR_TABLE =
+      SqlOperatorTables.of(List.of(CurrentTimezoneFunction.INSTANCE, FunctionMappings.RIGHTSHIFT));
+
   // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
   // functions
   private static final SqlOperatorTable LIBRARY_OPERATOR_TABLE =
@@ -64,13 +73,14 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
   private static final SqlOperatorTable STANDARD_OPERATOR_TABLE = SqlStdOperatorTable.instance();
 
   private static final List<SqlOperator> OPERATOR_LIST =
-      Stream.concat(
+      Stream.of(
               SUBSTRAIT_OPERATOR_TABLE.getOperatorList().stream(),
-              Stream.concat(
-                  LIBRARY_OPERATOR_TABLE.getOperatorList().stream(),
-                  // filter out the kinds that have been overriden from the standard operator table
-                  STANDARD_OPERATOR_TABLE.getOperatorList().stream()
-                      .filter(op -> !OVERRIDE_KINDS.contains(op.kind))))
+              SUBSTRAIT_SCALAR_OPERATOR_TABLE.getOperatorList().stream(),
+              LIBRARY_OPERATOR_TABLE.getOperatorList().stream(),
+              // filter out the kinds that have been overriden from the standard operator table
+              STANDARD_OPERATOR_TABLE.getOperatorList().stream()
+                  .filter(op -> !OVERRIDE_KINDS.contains(op.kind)))
+          .flatMap(s -> s)
           .collect(Collectors.toUnmodifiableList());
 
   /** Private constructor. */
@@ -102,6 +112,12 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
       // If a match for a Substrait operator is found, return it immediately.
       // Without this, Calcite will find multiple matches for the same operator.
       // It then fails to resolve a specific operator as it can't pick between them
+      return;
+    }
+
+    SUBSTRAIT_SCALAR_OPERATOR_TABLE.lookupOperatorOverloads(
+        opName, category, syntax, operatorList, nameMatcher);
+    if (!operatorList.isEmpty()) {
       return;
     }
 
