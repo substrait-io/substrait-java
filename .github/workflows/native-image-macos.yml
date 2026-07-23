@@ -16,9 +16,10 @@ on:
     - cron: "23 4 * * 6"
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# No concurrency group: each push to main builds to completion so every merge
+# gets its own macOS native-image signal. A shared cancel-in-progress group
+# would cancel the in-flight build (the long pole, ~20-25 min) whenever a newer
+# merge landed, and those cancelled runs surface as red checks on main.
 
 jobs:
   isthmus-native-image-macos:
