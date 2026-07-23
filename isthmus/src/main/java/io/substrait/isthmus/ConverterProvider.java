@@ -11,6 +11,7 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.SqlArrayValueConstructorCallConverter;
 import io.substrait.isthmus.expression.SqlMapValueConstructorCallConverter;
+import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.ImmutableExecutionBehavior;
 import io.substrait.plan.Plan;
@@ -321,9 +322,21 @@ public class ConverterProvider {
             getTypeFactory(),
             getScalarFunctionConverter(),
             getWindowFunctionConverter(),
-            getTypeConverter());
+            getTypeConverter(),
+            getTypeObserver());
     erc.setRelNodeConverter(relNodeConverter);
     return erc;
+  }
+
+  /**
+   * Returns the observer for supplied and independently inferred expression types.
+   *
+   * <p>Override to collect type observations during Substrait-to-Calcite conversion.
+   *
+   * @return a no-op observer by default
+   */
+  public TypeObserver getTypeObserver() {
+    return TypeObserver.NOOP;
   }
 
   /**
