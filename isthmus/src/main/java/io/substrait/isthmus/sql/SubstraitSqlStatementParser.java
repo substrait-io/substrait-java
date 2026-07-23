@@ -27,8 +27,9 @@ public class SubstraitSqlStatementParser {
    * Parse one or more SQL statements to a list of {@link SqlNode}s, using the parser settings from
    * the given {@link ConverterProvider}.
    *
-   * <p>To use a fully custom parser configuration, subclass {@link ConverterProvider} and override
-   * {@link ConverterProvider#getSqlParserConfig()}.
+   * <p>To use a custom parser configuration, build the {@link ConverterProvider} via {@link
+   * ConverterProvider#builder()} and its {@code sqlParserConfig(...)}; for fully dynamic behaviour,
+   * subclass {@link ConverterProvider} and override {@link ConverterProvider#getSqlParserConfig()}.
    *
    * @param sqlStatements a string containing one or more SQL statements
    * @param converterProvider the converter provider whose parser config controls identifier casing
