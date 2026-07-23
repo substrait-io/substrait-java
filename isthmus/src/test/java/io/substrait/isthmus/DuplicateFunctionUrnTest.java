@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.expression.Expression;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import java.io.IOException;
@@ -15,12 +16,21 @@ import java.util.Optional;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlBasicFunction;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction.Flag;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.junit.jupiter.api.Test;
 
 /** Tests to reproduce #562 */
 class DuplicateFunctionUrnTest extends PlanTestBase {
+
+  /** Test-only operator that maps to the {@code concatenate} function in the test extensions. */
+  static final SqlFunction TEST_CONCATENATE =
+      SqlBasicFunction.create(
+          "TEST_CONCATENATE", ReturnTypes.ARG0_NULLABLE, OperandTypes.STRING_SAME_SAME);
 
   static final SimpleExtension.ExtensionCollection collection1;
   static final SimpleExtension.ExtensionCollection collection2;
@@ -37,7 +47,9 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
       // Verify that the merged collection contains duplicate concat functions with different URNs
       // This is a precondition for the tests - if this fails, the tests don't make sense
       List<SimpleExtension.ScalarFunctionVariant> concatFunctions =
-          collection.scalarFunctions().stream().filter(f -> f.name().equals("concat")).toList();
+          collection.scalarFunctions().stream()
+              .filter(f -> f.name().equals("concatenate"))
+              .toList();
 
       if (concatFunctions.size() != 2) {
         throw new IllegalStateException(
@@ -82,18 +94,20 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     // extension collection will be matched when converting from Calcite to Substrait.
 
     SimpleExtension.ExtensionCollection reverseCollection = collection2.merge(collection1);
+    List<FunctionMappings.Sig> testSig =
+        List.of(new FunctionMappings.Sig(TEST_CONCATENATE, "concatenate"));
     ScalarFunctionConverter converterA =
-        new ScalarFunctionConverter(collection.scalarFunctions(), typeFactory);
+        new ScalarFunctionConverter(
+            collection.scalarFunctions(), testSig, typeFactory, TypeConverter.DEFAULT);
     ScalarFunctionConverter converterB =
-        new ScalarFunctionConverter(reverseCollection.scalarFunctions(), typeFactory);
+        new ScalarFunctionConverter(
+            reverseCollection.scalarFunctions(), testSig, typeFactory, TypeConverter.DEFAULT);
 
     RexBuilder rexBuilder = new RexBuilder(typeFactory);
     RexCall concatCall =
         (RexCall)
             rexBuilder.makeCall(
-                SqlStdOperatorTable.CONCAT,
-                rexBuilder.makeLiteral("hello"),
-                rexBuilder.makeLiteral("world"));
+                TEST_CONCATENATE, rexBuilder.makeLiteral("hello"), rexBuilder.makeLiteral("world"));
 
     // Create a simple topLevelConverter that converts literals to Substrait expressions
     java.util.function.Function<RexNode, Expression> topLevelConverter =
@@ -112,12 +126,12 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     Expression.ScalarFunctionInvocation funcB = (Expression.ScalarFunctionInvocation) exprB.get();
 
     assertEquals(
-        "extension:com.domain:string",
+        "extension:com.domain:string2",
         funcA.declaration().getAnchor().urn(),
         "converterA should use last concat function (from collection2)");
 
     assertEquals(
-        "extension:io.substrait:functions_string",
+        "extension:com.domain:string1",
         funcB.declaration().getAnchor().urn(),
         "converterB should use last concat function (from collection1)");
   }
@@ -125,7 +139,7 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
   @Test
   void testLtrimMergeOrderWithDefaultExtensions() {
     // This test verifies precedence between a custom ltrim (from collection2 with
-    // extension:com.domain:string) and the default extension catalog's ltrim
+    // extension:com.domain:string2) and the default extension catalog's ltrim
     // (extension:io.substrait:functions_string).
     // The FunctionConverter uses a "last-wins" strategy.
 
@@ -167,7 +181,7 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     Expression.ScalarFunctionInvocation funcA = (Expression.ScalarFunctionInvocation) exprA.get();
     // converterA should use collection2's custom ltrim (last)
     assertEquals(
-        "extension:com.domain:string",
+        "extension:com.domain:string2",
         funcA.declaration().getAnchor().urn(),
         "converterA should use last ltrim (custom from collection2)");
 

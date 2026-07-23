@@ -1,6 +1,6 @@
 %YAML 1.2
 ---
-urn: extension:com.domain:string
+urn: extension:com.domain:string2
 
 scalar_functions:
   - name: "ltrim"
@@ -12,7 +12,7 @@ scalar_functions:
           - name: chars
             value: string
         return: string
-  - name: "concat"
+  - name: "concatenate"
     description: "concatenate strings from custom domain"
     impls:
       - args:
