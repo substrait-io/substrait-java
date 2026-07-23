@@ -1,5 +1,7 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import io.substrait.plan.Plan;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.Rel;
@@ -241,6 +243,24 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       RelNode relNode = substraitToCalcite.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
+    }
+
+    // MINUS_MULTISET and INTERSECTION_PRIMARY have no equivalent Calcite relation, so converting
+    // them to Calcite is unsupported.
+    @Test
+    void minusMultisetUnsupported() {
+      Plan.Root root = sb.root(sb.set(SetOp.MINUS_MULTISET, commonTable, commonTable));
+
+      assertThrows(
+          UnsupportedOperationException.class, () -> substraitToCalcite.convert(root.getInput()));
+    }
+
+    @Test
+    void intersectionPrimaryUnsupported() {
+      Plan.Root root = sb.root(sb.set(SetOp.INTERSECTION_PRIMARY, commonTable, commonTable));
+
+      assertThrows(
+          UnsupportedOperationException.class, () -> substraitToCalcite.convert(root.getInput()));
     }
   }
 

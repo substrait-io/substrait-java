@@ -36,6 +36,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.extensions.EmptyDetail;
@@ -51,6 +52,7 @@ import io.substrait.relation.physical.ImmutableMultiBucketExchange;
 import io.substrait.relation.physical.ImmutableRoundRobinExchange;
 import io.substrait.relation.physical.ImmutableScatterExchange;
 import io.substrait.relation.physical.ImmutableSingleBucketExchange;
+import io.substrait.relation.physical.ImmutableTopN;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.NestedLoopJoin;
@@ -58,6 +60,7 @@ import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.relation.physical.TargetType;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
@@ -203,6 +206,8 @@ public class ProtoRelConverter {
         return newUpdate(rel.getUpdate());
       case EXCHANGE:
         return newExchange(rel.getExchange());
+      case TOP_N:
+        return newTopN(rel.getTopN());
       default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
     }
@@ -980,6 +985,41 @@ public class ProtoRelConverter {
         .remap(optionalRelmap(rel.getCommon()))
         .hint(optionalHint(rel.getCommon()))
         .relAnchor(optionalRelAnchor(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
+  protected TopN newTopN(TopNRel rel) {
+    Rel input = from(rel.getInput());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableTopN.Builder builder =
+        TopN.builder()
+            .input(input)
+            .sortFields(
+                rel.getSortsList().stream()
+                    .map(converter::fromSortField)
+                    .collect(Collectors.toList()))
+            .mode(TopN.Mode.fromProto(rel.getMode()));
+    if (rel.hasOffset()) {
+      builder.offset(converter.from(rel.getOffset()));
+    }
+    if (rel.hasCount()) {
+      builder.count(converter.from(rel.getCount()));
+    }
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }

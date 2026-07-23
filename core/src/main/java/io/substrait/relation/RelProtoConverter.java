@@ -42,6 +42,7 @@ import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
 import io.substrait.relation.files.FileOrFiles;
@@ -56,6 +57,7 @@ import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.relation.physical.TargetType;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.ArrayList;
@@ -854,6 +856,23 @@ public class RelProtoConverter
     sort.getExtension()
         .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setSort(builder).build();
+  }
+
+  @Override
+  public Rel visit(TopN topN, EmptyVisitationContext context) throws RuntimeException {
+    TopNRel.Builder builder =
+        TopNRel.newBuilder()
+            .setCommon(common(topN))
+            .setInput(toProto(topN.getInput()))
+            .addAllSorts(toProtoS(topN.getSortFields()))
+            .setMode(topN.getMode().toProto());
+
+    topN.getOffset().ifPresent(offset -> builder.setOffset(toProto(offset)));
+    topN.getCount().ifPresent(count -> builder.setCount(toProto(count)));
+
+    topN.getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+    return Rel.newBuilder().setTopN(builder).build();
   }
 
   @Override

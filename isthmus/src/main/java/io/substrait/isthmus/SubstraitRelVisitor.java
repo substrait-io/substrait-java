@@ -60,6 +60,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -214,6 +215,15 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
+    // An identity projection (input refs in order, with matching types) passes every input field
+    // through unchanged and only ever renames fields. Substrait carries output names on Plan.Root,
+    // not on the Project, so emitting one here is redundant: the reverse conversion drops it, which
+    // leaves the two sides structurally different and breaks round-trips. Skip it instead. Output
+    // names are still preserved because convert(RelRoot, ...) takes them from validatedRowType.
+    if (RexUtil.isIdentity(project.getProjects(), project.getInput().getRowType())) {
+      return apply(project.getInput());
+    }
+
     List<Expression> expressions =
         project.getProjects().stream()
             .map(this::toExpression)
@@ -224,7 +234,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       return Project.builder().expressions(expressions).input(apply(project.getInput())).build();
     }
 
-    // todo: eliminate excessive projects. This should be done by converting rexinputrefs to remaps.
+    // todo: eliminate the remaining excessive projects. Identity projects are dropped above; a
+    // projection whose expressions are all input refs (a permutation or column pruning) could
+    // likewise be expressed as a remap over the input rather than copied expressions.
     return Project.builder()
         .remap(
             Rel.Remap.offset(project.getInput().getRowType().getFieldCount(), expressions.size()))

@@ -78,7 +78,7 @@ signing {
 }
 
 // This allows specifying deps to be shadowed so that they don't get included in the POM file
-val shadowImplementation by configurations.creating
+val shadowImplementation = configurations.create("shadowImplementation")
 
 configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
 
@@ -267,8 +267,8 @@ project.configure<IdeaModel> {
   }
 }
 
-val submodulesUpdate by
-  tasks.registering(Exec::class) {
+val submodulesUpdate =
+  tasks.register<Exec>("submodulesUpdate") {
     group = "Build Setup"
     description = "Updates (and inits) substrait git submodule"
     commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
