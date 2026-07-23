@@ -31,6 +31,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.EmptyVisitationContext;
 import org.apache.calcite.sql.SqlKind;
 
@@ -263,5 +264,10 @@ public class SqlKindFromRel
   public SqlKind visit(BroadcastExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(TopN topN, EmptyVisitationContext context) throws RuntimeException {
+    return QUERY_KIND;
   }
 }

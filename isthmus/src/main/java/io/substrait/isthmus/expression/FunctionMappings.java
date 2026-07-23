@@ -11,6 +11,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -49,6 +50,18 @@ public class FunctionMappings {
           "all_match",
           opBinding -> opBinding.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
           OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
+
+  /**
+   * The {@code RIGHTSHIFT(value, shift)} function. Calcite provides {@link
+   * SqlStdOperatorTable#LEFTSHIFT} (and the {@code <<} operator {@link
+   * SqlStdOperatorTable#BIT_LEFT_SHIFT}) but has no right-shift counterpart, so Isthmus defines one
+   * to map to the Substrait {@code shift_right} function.
+   */
+  public static final SqlFunction RIGHTSHIFT =
+      SqlBasicFunction.create(
+          "RIGHTSHIFT",
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER));
 
   /** Scalar function mappings. */
   public static final ImmutableList<Sig> SCALAR_SIGS =
@@ -128,6 +141,7 @@ public class FunctionMappings {
               s(SqlLibraryOperators.GREATEST, "greatest"),
               s(SqlStdOperatorTable.BIT_LEFT_SHIFT, "shift_left"),
               s(SqlStdOperatorTable.LEFTSHIFT, "shift_left"),
+              s(RIGHTSHIFT, "shift_right"),
               s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
               s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
               s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
@@ -160,7 +174,19 @@ public class FunctionMappings {
               s(AggregateFunctions.SUM0, "sum0"),
               s(SqlStdOperatorTable.COUNT, "count"),
               s(SqlStdOperatorTable.APPROX_COUNT_DISTINCT, "approx_count_distinct"),
-              s(AggregateFunctions.AVG, "avg"))
+              s(AggregateFunctions.AVG, "avg"),
+              /*
+               * Substrait std_dev and variance functions use a leading 'distribution' enum
+               * argument (SAMPLE or POPULATION) to distinguish between population and sample
+               * variants. AggregateFunctionConverter synthesizes that argument based on the SqlKind.
+               *
+               * Note: Standard Calcite operators (SqlStdOperatorTable.STDDEV_SAMP, etc.) are
+               * automatically converted to these Substrait variants via toSubstraitAggVariant().
+               */
+              s(AggregateFunctions.STDDEV_POP, "std_dev"),
+              s(AggregateFunctions.STDDEV_SAMP, "std_dev"),
+              s(AggregateFunctions.VAR_POP, "variance"),
+              s(AggregateFunctions.VAR_SAMP, "variance"))
           .build();
 
   /** Window function signatures (including supported aggregates) mapped to Substrait names. */

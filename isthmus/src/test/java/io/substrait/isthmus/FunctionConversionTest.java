@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -210,6 +211,31 @@ class FunctionConversionTest extends PlanTestBase {
   @Test
   void concatStringLiteralAndChar() throws Exception {
     assertProtoPlanRoundrip("select 'brand_'||P_BRAND from PART");
+  }
+
+  @Test
+  void variadicConcat() {
+    ScalarFunctionInvocation concat =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_STRING,
+            "concat:str",
+            TypeCreator.REQUIRED.STRING,
+            Expression.StrLiteral.builder().value("a").build(),
+            Expression.StrLiteral.builder().value("b").build(),
+            Expression.StrLiteral.builder().value("c").build());
+
+    RexCall outer =
+        assertInstanceOf(
+            RexCall.class, concat.accept(expressionRexConverter, Context.newContext()));
+    assertEquals(SqlStdOperatorTable.CONCAT, outer.getOperator());
+    assertEquals(2, outer.getOperands().size());
+
+    RexCall inner = assertInstanceOf(RexCall.class, outer.getOperands().get(0));
+    assertEquals(SqlStdOperatorTable.CONCAT, inner.getOperator());
+    assertEquals(2, inner.getOperands().size());
+    assertEquals("'a':VARCHAR", inner.getOperands().get(0).toString());
+    assertEquals("'b':VARCHAR", inner.getOperands().get(1).toString());
+    assertEquals("'c':VARCHAR", outer.getOperands().get(1).toString());
   }
 
   @Test

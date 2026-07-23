@@ -17,6 +17,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -413,6 +414,27 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .from(sort)
             .input(input.orElse(sort.getInput()))
             .sortFields(sortFields.orElse(sort.getSortFields()))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(TopN topN, EmptyVisitationContext context) throws E {
+    Optional<Rel> input = topN.getInput().accept(this, context);
+    Optional<List<Expression.SortField>> sortFields =
+        transformList(topN.getSortFields(), context, this::visitSortField);
+    Optional<Expression> offset = visitOptionalExpression(topN.getOffset(), context);
+    Optional<Expression> count = visitOptionalExpression(topN.getCount(), context);
+
+    if (allEmpty(input, sortFields, offset, count)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        TopN.builder()
+            .from(topN)
+            .input(input.orElse(topN.getInput()))
+            .sortFields(sortFields.orElse(topN.getSortFields()))
+            .offset(or(offset, topN::getOffset))
+            .count(or(count, topN::getCount))
             .build());
   }
 

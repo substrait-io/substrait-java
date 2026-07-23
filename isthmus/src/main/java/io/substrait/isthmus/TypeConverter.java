@@ -40,7 +40,7 @@ public class TypeConverter {
    * <p>Both {@link UserTypeMapper#toSubstrait(RelDataType)} and {@link
    * UserTypeMapper#toCalcite(Type.UserDefined)} return {@code null} in this default configuration.
    */
-  public static TypeConverter DEFAULT =
+  public static final TypeConverter DEFAULT =
       new TypeConverter(
           new UserTypeMapper() {
             @Nullable

@@ -2,6 +2,7 @@ package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.expression.CurrentTimezoneFunction;
+import io.substrait.isthmus.expression.FunctionMappings;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -32,7 +33,7 @@ import org.jspecify.annotations.Nullable;
 public class SubstraitOperatorTable implements SqlOperatorTable {
 
   /** Singleton instance of the Substrait operator table. */
-  public static SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
+  public static final SubstraitOperatorTable INSTANCE = new SubstraitOperatorTable();
 
   private static final SqlOperatorTable SUBSTRAIT_OPERATOR_TABLE =
       SqlOperatorTables.of(
@@ -55,7 +56,7 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
   // feed OVERRIDE_KINDS: they share generic kinds such as OTHER_FUNCTION with many standard
   // operators, which we must not shadow.
   private static final SqlOperatorTable SUBSTRAIT_SCALAR_OPERATOR_TABLE =
-      SqlOperatorTables.of(List.of(CurrentTimezoneFunction.INSTANCE));
+      SqlOperatorTables.of(List.of(CurrentTimezoneFunction.INSTANCE, FunctionMappings.RIGHTSHIFT));
 
   // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
   // functions

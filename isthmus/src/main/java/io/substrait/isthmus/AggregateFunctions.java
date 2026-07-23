@@ -21,19 +21,43 @@ import org.apache.calcite.sql.type.ReturnTypes;
 public class AggregateFunctions {
 
   /** Substrait-specific MIN aggregate function (nullable return type). */
-  public static SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
+  public static final SqlAggFunction MIN = new SubstraitSqlMinMaxAggFunction(SqlKind.MIN);
 
   /** Substrait-specific MAX aggregate function (nullable return type). */
-  public static SqlAggFunction MAX = new SubstraitSqlMinMaxAggFunction(SqlKind.MAX);
+  public static final SqlAggFunction MAX = new SubstraitSqlMinMaxAggFunction(SqlKind.MAX);
 
   /** Substrait-specific AVG aggregate function (nullable return type). */
-  public static SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
+  public static final SqlAggFunction AVG = new SubstraitAvgAggFunction(SqlKind.AVG);
+
+  /**
+   * Standard deviation (population) aggregate function. Maps to Substrait's std_dev function with
+   * distribution=POPULATION enum argument.
+   */
+  public static SqlAggFunction STDDEV_POP = new SubstraitAvgAggFunction(SqlKind.STDDEV_POP);
+
+  /**
+   * Standard deviation (sample) aggregate function. Maps to Substrait's std_dev function with
+   * distribution=SAMPLE enum argument.
+   */
+  public static SqlAggFunction STDDEV_SAMP = new SubstraitAvgAggFunction(SqlKind.STDDEV_SAMP);
+
+  /**
+   * Variance (population) aggregate function. Maps to Substrait's variance function with
+   * distribution=POPULATION enum argument.
+   */
+  public static SqlAggFunction VAR_POP = new SubstraitAvgAggFunction(SqlKind.VAR_POP);
+
+  /**
+   * Variance (sample) aggregate function. Maps to Substrait's variance function with
+   * distribution=SAMPLE enum argument.
+   */
+  public static SqlAggFunction VAR_SAMP = new SubstraitAvgAggFunction(SqlKind.VAR_SAMP);
 
   /** Substrait-specific SUM aggregate function (nullable return type). */
-  public static SqlAggFunction SUM = new SubstraitSumAggFunction();
+  public static final SqlAggFunction SUM = new SubstraitSumAggFunction();
 
   /** Substrait-specific SUM0 aggregate function (non-null BIGINT return type). */
-  public static SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
+  public static final SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
 
   /**
    * Converts default Calcite aggregate functions to Substrait-specific variants when needed.
@@ -42,18 +66,34 @@ public class AggregateFunctions {
    * @return optional containing Substrait equivalent if conversion applies
    */
   public static Optional<SqlAggFunction> toSubstraitAggVariant(SqlAggFunction aggFunction) {
-    if (aggFunction instanceof SqlMinMaxAggFunction) {
-      SqlMinMaxAggFunction fun = (SqlMinMaxAggFunction) aggFunction;
-      return Optional.of(
-          fun.getKind() == SqlKind.MIN ? AggregateFunctions.MIN : AggregateFunctions.MAX);
-    } else if (aggFunction instanceof SqlAvgAggFunction) {
-      return Optional.of(AggregateFunctions.AVG);
-    } else if (aggFunction instanceof SqlSumAggFunction) {
-      return Optional.of(AggregateFunctions.SUM);
-    } else if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
-      return Optional.of(AggregateFunctions.SUM0);
-    } else {
-      return Optional.empty();
+    // First check by SqlKind to handle all statistical functions
+    SqlKind kind = aggFunction.getKind();
+    switch (kind) {
+      case MIN:
+        return Optional.of(AggregateFunctions.MIN);
+      case MAX:
+        return Optional.of(AggregateFunctions.MAX);
+      case AVG:
+        return Optional.of(AggregateFunctions.AVG);
+      case STDDEV_POP:
+        return Optional.of(AggregateFunctions.STDDEV_POP);
+      case STDDEV_SAMP:
+        return Optional.of(AggregateFunctions.STDDEV_SAMP);
+      case VAR_POP:
+        return Optional.of(AggregateFunctions.VAR_POP);
+      case VAR_SAMP:
+        return Optional.of(AggregateFunctions.VAR_SAMP);
+      case SUM:
+      case SUM0:
+        // Check instance type for SUM variants
+        if (aggFunction instanceof SqlSumEmptyIsZeroAggFunction) {
+          return Optional.of(AggregateFunctions.SUM0);
+        } else if (aggFunction instanceof SqlSumAggFunction) {
+          return Optional.of(AggregateFunctions.SUM);
+        }
+        return Optional.empty();
+      default:
+        return Optional.empty();
     }
   }
 

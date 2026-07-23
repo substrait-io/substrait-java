@@ -1,6 +1,54 @@
 Release Notes
 ---
 
+## [0.96.0](https://github.com/substrait-io/substrait-java/compare/v0.95.1...v0.96.0) (2026-07-19)
+
+### Features
+
+* **core:** support max length, scale, precision in Substrait dialect ([#977](https://github.com/substrait-io/substrait-java/issues/977)) ([f094981](https://github.com/substrait-io/substrait-java/commit/f0949815be582deea7ea34d3e1abf35f34cc258a)), closes [#950](https://github.com/substrait-io/substrait-java/issues/950) [#808](https://github.com/substrait-io/substrait-java/issues/808)
+
+### Bug Fixes
+
+* **ci:** pin semantic-release tooling and restore v0.95.0 and v0.95.1 notes ([#989](https://github.com/substrait-io/substrait-java/issues/989)) ([cff0d50](https://github.com/substrait-io/substrait-java/commit/cff0d50a57d9fb6e05051f56bb31bd689264245f))
+* **isthmus:** std_dev, variance function mappings ([#780](https://github.com/substrait-io/substrait-java/issues/780)) ([17d3c30](https://github.com/substrait-io/substrait-java/commit/17d3c3039e7e1ffa3d59da9211e794c744f82872)), closes [substrait-io/substrait#1011](https://github.com/substrait-io/substrait/issues/1011) [substrait-io/substrait#1019](https://github.com/substrait-io/substrait/issues/1019) [#803](https://github.com/substrait-io/substrait-java/issues/803) [#807](https://github.com/substrait-io/substrait-java/issues/807) [substrait-io/substrait#1012](https://github.com/substrait-io/substrait/issues/1012)
+* **isthmus:** support variadic concat conversion ([#1001](https://github.com/substrait-io/substrait-java/issues/1001)) ([91bb733](https://github.com/substrait-io/substrait-java/commit/91bb73385cf49f0878b90461a2d161208c30b3f9))
+
+## [0.95.1](https://github.com/substrait-io/substrait-java/compare/v0.95.0...v0.95.1) (2026-07-12)
+
+### Bug Fixes
+
+* declare constants as final ([#996](https://github.com/substrait-io/substrait-java/issues/996)) ([a107b72](https://github.com/substrait-io/substrait-java/commit/a107b72347ef32cbcf246a9aba1473dc0824b5d2))
+
+## [0.95.0](https://github.com/substrait-io/substrait-java/compare/v0.94.0...v0.95.0) (2026-07-05)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** remove deprecated Time, Timestamp, TimestampTZ types and literals (#950)
+* **deps:** Protobuf bindings are now generated using the v4
+protobuf libraries, released in March 2024. Ensure that dependent
+projects also use the v4 protobuf-java libraries, and be aware of the
+breaking changes within the protobuf-java APIs documented at
+https://protobuf.dev/news/v26/#java-breaking-changes
+
+### Features
+
+* **core:** add Substrait dialect support ([#861](https://github.com/substrait-io/substrait-java/issues/861)) ([ff76c77](https://github.com/substrait-io/substrait-java/commit/ff76c771d37f644ee57c77c7db0eb061804126f5))
+* **core:** remove deprecated Time, Timestamp, TimestampTZ types and literals ([#950](https://github.com/substrait-io/substrait-java/issues/950)) ([71b940f](https://github.com/substrait-io/substrait-java/commit/71b940f94fcd711603d1cfbafb9a2002ea5fd0f5))
+* **isthmus:** map execution context variables to/from Calcite ([#976](https://github.com/substrait-io/substrait-java/issues/976)) ([08c2889](https://github.com/substrait-io/substrait-java/commit/08c2889e675bb51ef6b5d39b8c9ed1e3811a474b))
+
+### Bug Fixes
+
+* **core:** add compiled output to javadocImmutable classpath ([#953](https://github.com/substrait-io/substrait-java/issues/953)) ([1d3ea51](https://github.com/substrait-io/substrait-java/commit/1d3ea51537ee6b3e944ae6db96d014ef15e37c41))
+* **core:** validate Plan.Root output name count ([#812](https://github.com/substrait-io/substrait-java/issues/812)) ([4bd6b69](https://github.com/substrait-io/substrait-java/commit/4bd6b69ce535098da82d1ae33d6e2cfd78c62e78))
+* **isthmus:** avoid NPE from dangling correlations left by partial decorrelation ([fbf2930](https://github.com/substrait-io/substrait-java/commit/fbf2930ce575a47a643940f3f5bcd89474dab3cc))
+* **isthmus:** handle LITERAL_AGG in aggregate conversion ([52a32ba](https://github.com/substrait-io/substrait-java/commit/52a32bad575da67031ddd4e44caddeef641b9ed5))
+* **isthmus:** use reachability-metadata.json for native image build ([#979](https://github.com/substrait-io/substrait-java/issues/979)) ([a1e48c6](https://github.com/substrait-io/substrait-java/commit/a1e48c6b4d38b5ec8750b1918263c35bc1a83dc0))
+* **isthmus:** use Substrait type system when building Calcite RelBuilder ([#973](https://github.com/substrait-io/substrait-java/issues/973)) ([b370df5](https://github.com/substrait-io/substrait-java/commit/b370df50b8f35e802be3e78d3e5f87303b2e7517)), closes [#954](https://github.com/substrait-io/substrait-java/issues/954) [#955](https://github.com/substrait-io/substrait-java/issues/955)
+
+### Build System
+
+* **deps:** update protobuf from v3 to v4 ([#962](https://github.com/substrait-io/substrait-java/issues/962)) ([1516209](https://github.com/substrait-io/substrait-java/commit/1516209dd1c6801082a4a04649b5da79af4e0a1b))
+
 ## [0.94.0](https://github.com/substrait-io/substrait-java/compare/v0.93.0...v0.94.0) (2026-06-21)
 
 ### Features
