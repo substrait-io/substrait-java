@@ -95,10 +95,15 @@ public class ProtoExpressionConverter {
           switch (outerReference.getOuterReferenceTypeCase()) {
             case STEPS_OUT:
               return FieldReference.newRootStructOuterReference(
-                  field, rootType, outerReference.getStepsOut());
+                  field,
+                  protoRelConverter.outerScopeForStepsOut(outerReference.getStepsOut(), rootType),
+                  outerReference.getStepsOut());
             case REL_REFERENCE:
               return FieldReference.newRootStructOuterReferenceByRelReference(
-                  field, rootType, outerReference.getRelReference());
+                  field,
+                  protoRelConverter.outerScopeForRelReference(
+                      outerReference.getRelReference(), rootType),
+                  outerReference.getRelReference());
             case OUTERREFERENCETYPE_NOT_SET:
             default:
               throw new IllegalArgumentException(
@@ -261,7 +266,8 @@ public class ProtoExpressionConverter {
             case SET_PREDICATE:
               {
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getSetPredicate().getTuples(), rootType);
                 return Expression.SetPredicate.builder()
                     .tuples(rel)
                     .predicateOp(
@@ -272,7 +278,8 @@ public class ProtoExpressionConverter {
             case SCALAR:
               {
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getScalar().getInput());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getScalar().getInput(), rootType);
                 return Expression.ScalarSubquery.builder()
                     .input(rel)
                     .type(
@@ -294,8 +301,11 @@ public class ProtoExpressionConverter {
               }
             case IN_PREDICATE:
               {
+                // The haystack is a subquery boundary; the needles are evaluated in the current
+                // (outer) scope and so are converted without pushing a new enclosing scope.
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getInPredicate().getHaystack(), rootType);
                 List<Expression> needles =
                     expr.getSubquery().getInPredicate().getNeedlesList().stream()
                         .map(e -> this.from(e))

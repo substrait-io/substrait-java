@@ -66,7 +66,9 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -86,6 +88,20 @@ public class ProtoRelConverter {
 
   /** Converts advanced extension information from proto. */
   @NonNull protected final ProtoExtensionConverter protoExtensionConverter;
+
+  /**
+   * Enclosing correlation scopes encountered while converting nested relations, innermost last. A
+   * scope is pushed at each subquery boundary (see {@link #fromSubqueryRel}); an offset-based outer
+   * reference ({@code steps_out=N}) is typed against the entry {@code N} from the end.
+   */
+  private final List<Type.Struct> outerScopeStack = new ArrayList<>();
+
+  /**
+   * The correlation-scope schema exposed by each {@code rel_anchor} seen so far, keyed by anchor.
+   * An id-based outer reference ({@code rel_reference}) is typed against the matching entry. Rel
+   * anchors are plan-wide unique, so entries do not collide within a single plan.
+   */
+  private final Map<Integer, Type.Struct> anchorScopes = new HashMap<>();
 
   /**
    * Constructor with custom {@link ExtensionLookup}.
@@ -163,6 +179,17 @@ public class ProtoRelConverter {
    * @return the converted result
    */
   public Rel from(io.substrait.proto.Rel rel) {
+    Rel converted = dispatch(rel);
+    // Track the correlation scope each rel_anchor exposes so that id-based outer references
+    // (rel_reference) nested deeper in the plan are typed against the correct enclosing schema
+    // rather than the schema of the relation that lexically hosts them.
+    converted
+        .getRelAnchor()
+        .ifPresent(anchor -> anchorScopes.put(anchor, outerReferenceScope(converted)));
+    return converted;
+  }
+
+  private Rel dispatch(io.substrait.proto.Rel rel) {
     io.substrait.proto.Rel.RelTypeCase relType = rel.getRelTypeCase();
     switch (relType) {
       case READ:
@@ -214,6 +241,71 @@ public class ProtoRelConverter {
       default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
     }
+  }
+
+  /**
+   * Returns the schema an outer reference sees when it resolves to {@code rel} via {@code rel}'s
+   * {@link Rel#getRelAnchor() rel anchor}. This is {@code rel}'s own record type for every relation
+   * except a {@link LateralJoin}, whose right input references only the current left row and so
+   * sees the left input's schema rather than the joined output.
+   *
+   * @param rel the relation carrying the anchor
+   * @return the correlation-scope schema exposed by that anchor
+   */
+  private static Type.Struct outerReferenceScope(Rel rel) {
+    if (rel instanceof LateralJoin) {
+      return ((LateralJoin) rel).getLeft().getRecordType();
+    }
+    return rel.getRecordType();
+  }
+
+  /**
+   * Converts a subquery's input relation, tracking {@code outerScope} (the hosting relation's
+   * schema) as a new enclosing correlation scope for the duration of the conversion. This lets
+   * offset-based outer references ({@code steps_out}) nested inside the subquery resolve to the
+   * correct enclosing type.
+   *
+   * @param rel the subquery input relation to convert
+   * @param outerScope the schema of the relation hosting the subquery
+   * @return the converted relation
+   */
+  public Rel fromSubqueryRel(io.substrait.proto.Rel rel, Type.Struct outerScope) {
+    outerScopeStack.add(outerScope);
+    try {
+      return from(rel);
+    } finally {
+      outerScopeStack.remove(outerScopeStack.size() - 1);
+    }
+  }
+
+  /**
+   * Resolves the enclosing schema that an offset-based outer reference ({@code steps_out}) is typed
+   * against. Falls back to {@code fallback} when the reference does not resolve to a tracked
+   * enclosing scope, e.g. an expression converted standalone rather than within its relation tree.
+   *
+   * @param stepsOut the number of subquery boundaries the reference steps out
+   * @param fallback the schema to use when no enclosing scope is tracked
+   * @return the resolved enclosing schema, or {@code fallback}
+   */
+  public Type.Struct outerScopeForStepsOut(int stepsOut, Type.Struct fallback) {
+    int index = outerScopeStack.size() - stepsOut;
+    if (index < 0 || index >= outerScopeStack.size()) {
+      return fallback;
+    }
+    return outerScopeStack.get(index);
+  }
+
+  /**
+   * Resolves the enclosing schema that an id-based outer reference ({@code rel_reference}) is typed
+   * against. Falls back to {@code fallback} when the referenced anchor has not been seen, e.g. an
+   * expression converted standalone or a reference to an out-of-scope anchor.
+   *
+   * @param relReference the {@code rel_anchor} the reference resolves to
+   * @param fallback the schema to use when the anchor is unknown
+   * @return the resolved enclosing schema, or {@code fallback}
+   */
+  public Type.Struct outerScopeForRelReference(int relReference, Type.Struct fallback) {
+    return anchorScopes.getOrDefault(relReference, fallback);
   }
 
   /**
@@ -1072,6 +1164,10 @@ public class ProtoRelConverter {
    */
   protected Rel newLateralJoin(LateralJoinRel rel) {
     Rel left = from(rel.getLeft());
+    // The right input's outer references resolve to the current left row via this join's anchor, so
+    // register that scope before converting the right input (which is where those references live).
+    optionalRelAnchor(rel.getCommon())
+        .ifPresent(anchor -> anchorScopes.put(anchor, left.getRecordType()));
     Rel right = from(rel.getRight());
     Type.Struct leftStruct = left.getRecordType();
     Type.Struct rightStruct = right.getRecordType();
