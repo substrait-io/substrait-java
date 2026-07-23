@@ -14,6 +14,8 @@ public enum RelationKind {
   SORT,
   /** The join relation. */
   JOIN,
+  /** The lateral join relation. */
+  LATERAL_JOIN,
   /** The project relation. */
   PROJECT,
   /** The set-operation relation. */

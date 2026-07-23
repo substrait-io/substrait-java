@@ -13,6 +13,7 @@ import io.substrait.relation.ExtensionWrite;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
+import io.substrait.relation.LateralJoin;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
@@ -193,6 +194,27 @@ public class SubstraitStringify extends ParentStringify
 
     sb.append(join.getLeft().accept(this, context));
     sb.append(join.getRight().accept(this, context));
+
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(LateralJoin lateralJoin, EmptyVisitationContext context)
+      throws RuntimeException {
+
+    StringBuilder sb =
+        getIndent()
+            .append("LateralJoin:: ")
+            .append(lateralJoin.getJoinType())
+            .append(" ")
+            .append(getRemap(lateralJoin));
+
+    if (lateralJoin.getCondition().isPresent()) {
+      sb.append(lateralJoin.getCondition().get().accept(new ExpressionStringify(indent), context));
+    }
+
+    sb.append(lateralJoin.getLeft().accept(this, context));
+    sb.append(lateralJoin.getRight().accept(this, context));
 
     return getOutdent(sb);
   }

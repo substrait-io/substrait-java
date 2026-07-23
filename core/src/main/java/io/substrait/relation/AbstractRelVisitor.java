@@ -51,6 +51,11 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   }
 
   @Override
+  public O visit(LateralJoin lateralJoin, C context) throws E {
+    return visitFallback(lateralJoin, context);
+  }
+
+  @Override
   public O visit(Set set, C context) throws E {
     return visitFallback(set, context);
   }
