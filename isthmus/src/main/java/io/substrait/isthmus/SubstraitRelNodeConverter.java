@@ -259,12 +259,6 @@ public class SubstraitRelNodeConverter
     if (type == JoinType.OUTER) {
       return JoinRelType.FULL;
     }
-    if (type == JoinType.SEMI) {
-      return JoinRelType.SEMI;
-    }
-    if (type == JoinType.ANTI) {
-      return JoinRelType.ANTI;
-    }
     if (type == JoinType.LEFT_SEMI) {
       return JoinRelType.SEMI;
     }
@@ -285,10 +279,6 @@ public class SubstraitRelNodeConverter
             input -> {
               relBuilder.push(input.accept(this, context));
             });
-    // TODO: MINUS_MULTISET and INTERSECTION_PRIMARY mappings are set to be removed as they do not
-    //   correspond to the Calcite relations they are associated with. They are retained for now
-    //   to enable users to migrate off of them.
-    //   See:  https://github.com/substrait-io/substrait-java/issues/303
     RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
     return applyRemap(node, set.getRemap());
@@ -301,9 +291,7 @@ public class SubstraitRelNodeConverter
       case MINUS_PRIMARY:
         return relBuilder.minus(false, numInputs);
       case MINUS_PRIMARY_ALL:
-      case MINUS_MULTISET:
         return relBuilder.minus(true, numInputs);
-      case INTERSECTION_PRIMARY:
       case INTERSECTION_MULTISET:
         return relBuilder.intersect(false, numInputs);
       case INTERSECTION_MULTISET_ALL:
