@@ -521,13 +521,6 @@ public class ExpressionRexConverter
             .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
-    if (operator == SqlStdOperatorTable.CONCAT && args.size() > 2) {
-      return args.stream()
-          .skip(1)
-          .reduce(
-              args.get(0),
-              (left, right) -> rexBuilder.makeCall(returnType, operator, List.of(left, right)));
-    }
     return rexBuilder.makeCall(returnType, operator, args);
   }
 

@@ -65,6 +65,7 @@ public class ScalarFunctionConverter
 
     mappers =
         List.of(
+            new ConcatFunctionMapper(functions),
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions),
             new ExtractDateFunctionMapper(functions),
