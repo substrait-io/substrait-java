@@ -484,6 +484,8 @@ public class RelProtoConverter
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
+    hashJoin.getResidualExpression().ifPresent(t -> builder.setResidualExpression(toProto(t)));
+
     hashJoin
         .getExtension()
         .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
@@ -514,6 +516,8 @@ public class RelProtoConverter
     }
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
+    mergeJoin.getResidualExpression().ifPresent(t -> builder.setResidualExpression(toProto(t)));
 
     mergeJoin
         .getExtension()

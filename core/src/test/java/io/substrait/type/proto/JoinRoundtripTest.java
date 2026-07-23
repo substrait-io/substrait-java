@@ -35,6 +35,23 @@ class JoinRoundtripTest extends TestBase {
   }
 
   @Test
+  void hashJoinWithResidualExpression() {
+    List<Integer> leftKeys = Arrays.asList(0, 1);
+    List<Integer> rightKeys = Arrays.asList(2, 0);
+    // Residual filter over the combined left+right schema: left.a (I64, index 0) == right.f (I64,
+    // index 5).
+    Rel rel =
+        HashJoin.builder()
+            .from(sb.hashJoin(leftKeys, rightKeys, HashJoin.JoinType.INNER, leftTable, rightTable))
+            .residualExpression(
+                sb.equal(
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 0),
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 5)))
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
   void mergeJoin() {
     List<Integer> leftKeys = Arrays.asList(0, 1);
     List<Integer> rightKeys = Arrays.asList(2, 0);
@@ -44,6 +61,24 @@ class JoinRoundtripTest extends TestBase {
                 sb.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @Test
+  void mergeJoinWithResidualExpression() {
+    List<Integer> leftKeys = Arrays.asList(0, 1);
+    List<Integer> rightKeys = Arrays.asList(2, 0);
+    // Residual filter over the combined left+right schema: left.a (I64, index 0) == right.f (I64,
+    // index 5).
+    Rel rel =
+        MergeJoin.builder()
+            .from(
+                sb.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
+            .residualExpression(
+                sb.equal(
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 0),
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 5)))
+            .build();
+    verifyRoundTrip(rel);
   }
 
   @Test

@@ -1140,7 +1140,12 @@ public class ProtoRelConverter {
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
+            .residualExpression(
+                Optional.ofNullable(
+                    rel.hasResidualExpression()
+                        ? unionConverter.from(rel.getResidualExpression())
+                        : null));
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
         .remap(optionalRelmap(rel.getCommon()))
@@ -1185,7 +1190,12 @@ public class ProtoRelConverter {
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null));
+                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
+            .residualExpression(
+                Optional.ofNullable(
+                    rel.hasResidualExpression()
+                        ? unionConverter.from(rel.getResidualExpression())
+                        : null));
 
     builder
         .commonExtension(optionalAdvancedExtension(rel.getCommon()))
