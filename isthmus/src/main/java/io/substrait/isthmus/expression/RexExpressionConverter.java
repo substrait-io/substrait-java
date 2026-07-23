@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexDynamicParam;
@@ -224,28 +225,22 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     switch (kind) {
       case CORREL_VARIABLE:
         {
-          Integer stepsOut = relVisitor.getFieldAccessDepth(fieldAccess);
-          // Substrait requires steps_out >= 1 for an outer reference
-          // (proto/substrait/algebra.proto, OuterReference.steps_out: "Must be >= 1.").
-          // A null or 0 depth means the correlation does not step out of any subquery,
-          // typically a plan that was only partially decorrelated (the owning Correlate
-          // was rewritten into a join but the $cor reference remains in this Filter).
-          // We can't represent that with steps_out, so fail clearly rather than emit
-          // an invalid steps_out=0 reference. Id-based outer-reference resolution
-          // would handle this and is the proper long-term fix.
-          if (stepsOut == null || stepsOut == 0) {
+          CorrelationId correlationId = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
+          Integer anchor = relVisitor.getOuterReferenceAnchor(correlationId);
+          if (anchor == null) {
             throw new UnsupportedOperationException(
                 String.format(
-                    "Cannot convert outer reference %s: it does not step out of any "
-                        + "subquery (steps_out=%s). This usually indicates a plan that was "
-                        + "only partially decorrelated; Substrait requires steps_out >= 1.",
-                    fieldAccess, stepsOut));
+                    "Cannot convert outer reference %s: correlation %s has no binding relation. "
+                        + "This usually indicates a plan that was only partially decorrelated.",
+                    fieldAccess, correlationId));
           }
 
-          return FieldReference.newRootStructOuterReference(
+          // Emit an id-based outer reference. The binding relation is stamped with this anchor by
+          // SubstraitRelVisitor#apply.
+          return FieldReference.newRootStructOuterReferenceByRelReference(
               fieldAccess.getField().getIndex(),
               typeConverter.toSubstrait(fieldAccess.getType()),
-              stepsOut);
+              anchor);
         }
       case ITEM:
       case INPUT_REF:

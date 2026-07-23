@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,7 +55,9 @@ class SubqueryPlanTest extends PlanTestBase {
             .getSelection(); // l_orderkey
 
     assertEquals(0, correlatedCol.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
+    // Correlated references are now emitted in the id-based form (rel_reference) rather than
+    // steps_out; see OuterReferenceConverter.
+    assertTrue(correlatedCol.getOuterReference().hasRelReference());
   }
 
   @Test
@@ -97,7 +100,9 @@ class SubqueryPlanTest extends PlanTestBase {
             .getSelection(); // l_orderkey
 
     assertEquals(0, correlatedCol.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
+    // Correlated references are now emitted in the id-based form (rel_reference) rather than
+    // steps_out; see OuterReferenceConverter.
+    assertTrue(correlatedCol.getOuterReference().hasRelReference());
   }
 
   @Test
@@ -135,7 +140,9 @@ class SubqueryPlanTest extends PlanTestBase {
             .getSelection(); // l_partkey
 
     assertEquals(1, correlatedCol.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
+    // Correlated references are now emitted in the id-based form (rel_reference) rather than
+    // steps_out; see OuterReferenceConverter.
+    assertTrue(correlatedCol.getOuterReference().hasRelReference());
   }
 
   @Test
@@ -175,7 +182,9 @@ class SubqueryPlanTest extends PlanTestBase {
             .getSelection(); // l_partkey
 
     assertEquals(1, correlatedCol.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol.getOuterReference().getStepsOut());
+    // Correlated references are now emitted in the id-based form (rel_reference) rather than
+    // steps_out; see OuterReferenceConverter.
+    assertTrue(correlatedCol.getOuterReference().hasRelReference());
   }
 
   @Test
@@ -241,7 +250,7 @@ class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // p.p_partkey
     assertEquals(0, correlatedCol1.getDirectReference().getStructField().getField());
-    assertEquals(2, correlatedCol1.getOuterReference().getStepsOut());
+    assertTrue(correlatedCol1.getOuterReference().hasRelReference());
 
     Expression.FieldReference correlatedCol2 =
         inner_subquery_cond2
@@ -250,7 +259,11 @@ class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l.l_suppkey
     assertEquals(2, correlatedCol2.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol2.getOuterReference().getStepsOut());
+    // The two correlated columns reference different outer relations, so distinct rel anchors.
+    assertTrue(correlatedCol2.getOuterReference().hasRelReference());
+    assertNotEquals(
+        correlatedCol1.getOuterReference().getRelReference(),
+        correlatedCol2.getOuterReference().getRelReference());
   }
 
   @Test
@@ -316,7 +329,7 @@ class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // p.p_partkey
     assertEquals(0, correlatedCol1.getDirectReference().getStructField().getField());
-    assertEquals(2, correlatedCol1.getOuterReference().getStepsOut());
+    assertTrue(correlatedCol1.getOuterReference().hasRelReference());
 
     Expression.FieldReference correlatedCol2 =
         inner_subquery_cond2
@@ -325,7 +338,11 @@ class SubqueryPlanTest extends PlanTestBase {
             .getValue()
             .getSelection(); // l.l_suppkey
     assertEquals(2, correlatedCol2.getDirectReference().getStructField().getField());
-    assertEquals(1, correlatedCol2.getOuterReference().getStepsOut());
+    // The two correlated columns reference different outer relations, so distinct rel anchors.
+    assertTrue(correlatedCol2.getOuterReference().hasRelReference());
+    assertNotEquals(
+        correlatedCol1.getOuterReference().getRelReference(),
+        correlatedCol2.getOuterReference().getRelReference());
   }
 
   @Test

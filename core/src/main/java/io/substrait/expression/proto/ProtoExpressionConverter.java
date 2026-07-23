@@ -88,10 +88,23 @@ public class ProtoExpressionConverter {
         return FieldReference.ofRoot(
             rootType, getDirectReferenceSegments(reference.getDirectReference()));
       case OUTER_REFERENCE:
-        return FieldReference.newRootStructOuterReference(
-            reference.getDirectReference().getStructField().getField(),
-            rootType,
-            reference.getOuterReference().getStepsOut());
+        {
+          io.substrait.proto.Expression.FieldReference.OuterReference outerReference =
+              reference.getOuterReference();
+          int field = reference.getDirectReference().getStructField().getField();
+          switch (outerReference.getOuterReferenceTypeCase()) {
+            case STEPS_OUT:
+              return FieldReference.newRootStructOuterReference(
+                  field, rootType, outerReference.getStepsOut());
+            case REL_REFERENCE:
+              return FieldReference.newRootStructOuterReferenceByRelReference(
+                  field, rootType, outerReference.getRelReference());
+            case OUTERREFERENCETYPE_NOT_SET:
+            default:
+              throw new IllegalArgumentException(
+                  "Unhandled outer reference type: " + outerReference.getOuterReferenceTypeCase());
+          }
+        }
       case LAMBDA_PARAMETER_REFERENCE:
         {
           io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =

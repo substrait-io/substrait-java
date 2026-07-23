@@ -961,6 +961,8 @@ public class RelProtoConverter
         .ifPresent(
             extension -> builder.setAdvancedExtension(extensionProtoConverter.toProto(extension)));
 
+    rel.getRelAnchor().ifPresent(builder::setRelAnchor);
+
     io.substrait.relation.Rel.Remap remap = rel.getRemap().orElse(null);
     if (remap != null) {
       builder.setEmit(RelCommon.Emit.newBuilder().addAllOutputMapping(remap.indices()));

@@ -41,7 +41,6 @@ import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
@@ -52,13 +51,13 @@ import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
@@ -88,7 +87,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /** Converter for Calcite {@link RelDataType} to Substrait {@link Type}. */
   protected final TypeConverter typeConverter;
 
-  private Map<RexFieldAccess, Integer> fieldAccessDepthMap;
+  private OuterReferenceResolver outerReferenceResolver;
 
   /** Rex builder for creating Rex expressions during conversion. */
   protected RexBuilder rexBuilder;
@@ -958,33 +957,57 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Precomputes depth for outer field accesses used by correlated expressions.
+   * Assigns id-based outer-reference anchors for correlated expressions in the given tree.
    *
    * @param root Root Calcite node to analyze
    */
-  protected void popFieldAccessDepthMap(RelNode root) {
-    final OuterReferenceResolver resolver = new OuterReferenceResolver();
-    fieldAccessDepthMap = resolver.apply(root);
+  protected void resolveOuterReferences(RelNode root) {
+    outerReferenceResolver = new OuterReferenceResolver();
+    outerReferenceResolver.resolve(root);
   }
 
   /**
-   * Returns the depth of a field access for correlated expressions.
+   * Returns the outer-reference anchor a correlated field reference bound to the given correlation
+   * id must emit.
    *
-   * @param fieldAccess Rex field access
-   * @return Depth value, or {@code null} if unknown
+   * @param correlationId the Calcite correlation id
+   * @return the anchor, or {@code null} if unknown
    */
-  public Integer getFieldAccessDepth(RexFieldAccess fieldAccess) {
-    return fieldAccessDepthMap.get(fieldAccess);
+  public Integer getOuterReferenceAnchor(CorrelationId correlationId) {
+    return outerReferenceResolver == null
+        ? null
+        : outerReferenceResolver.anchorForCorrelationId(correlationId);
   }
 
   /**
-   * Applies the visitor to a Calcite {@link RelNode}.
+   * Applies the visitor to a Calcite {@link RelNode}, stamping the produced relation with its
+   * outer-reference {@code rel_anchor} when it is the binding point of a correlated reference.
    *
    * @param r Calcite node
    * @return Converted Substrait relation
    */
   public Rel apply(RelNode r) {
-    return reverseAccept(r);
+    Rel rel = reverseAccept(r);
+    if (outerReferenceResolver != null) {
+      Integer anchor = outerReferenceResolver.anchorForTarget(r);
+      if (anchor != null) {
+        try {
+          return rel.withRelAnchor(anchor);
+        } catch (UnsupportedOperationException e) {
+          // rel is the binding point of a correlated outer reference but cannot carry a rel_anchor
+          // (a custom, non-Immutables Rel that does not override withRelAnchor). Fail with context
+          // rather than propagating the bare "does not support setting a relation anchor" default.
+          throw new UnsupportedOperationException(
+              "Relation "
+                  + rel.getClass()
+                  + " is the binding point of an id-based outer reference but does not support "
+                  + "setting a rel_anchor; override Rel#withRelAnchor to convert correlated "
+                  + "subqueries into this relation type",
+              e);
+        }
+      }
+    }
+    return rel;
   }
 
   /**
@@ -1026,7 +1049,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   public static Plan.Root convert(RelRoot relRoot, ConverterProvider converterProvider) {
     SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
-    visitor.popFieldAccessDepthMap(relRoot.rel);
+    // Assign id-based outer-reference anchors; apply() then emits rel_reference for correlated
+    // references and stamps rel_anchor on their binding relations.
+    visitor.resolveOuterReferences(relRoot.rel);
     Rel rel = visitor.apply(relRoot.project());
 
     // Avoid using the names from relRoot.validatedRowType because if there are
@@ -1060,7 +1085,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   public static Rel convert(RelNode relNode, ConverterProvider converterProvider) {
     SubstraitRelVisitor visitor = converterProvider.getSubstraitRelVisitor();
-    visitor.popFieldAccessDepthMap(relNode);
+    visitor.resolveOuterReferences(relNode);
     return visitor.apply(relNode);
   }
 }

@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.PlanTestBase;
@@ -85,6 +86,79 @@ class SubqueryConversionTest extends PlanTestBase {
             + "WHERE \"c_custkey\" = \"orders\".\"o_custkey\") AS \"$f3\"\n"
             + "FROM \"orders\" AS \"orders\"",
         SubstraitSqlDialect.toSql(calciteRel).getSql());
+  }
+
+  @Test
+  void testOuterFieldReferenceOneStepIdBased() {
+    /*
+     * Same correlated scalar subquery as testOuterFieldReferenceOneStep, but the outer reference is
+     * expressed in the id-based form (rel_reference) binding to the orders scan's rel_anchor. The
+     * consumer must resolve it to the same Calcite $cor0 correlation as the steps_out form.
+     */
+    final Rel root =
+        sb.project(
+            input ->
+                List.of(
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
+                            Remap.of(List.of(1)),
+                            sb.filter(
+                                input2 ->
+                                    sb.equal(
+                                        sb.fieldReference(input2, 0),
+                                        FieldReference.newRootStructOuterReferenceByRelReference(
+                                            1, TypeCreator.REQUIRED.I64, 1)),
+                                customerTableScan)),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2, 3)),
+            // The orders scan is the binding relation for the id-based outer reference.
+            orderTableScan.withRelAnchor(1));
+
+    final RelNode calciteRel = substraitToCalcite.convert(root);
+
+    assertEquals(
+        "LogicalProject(variablesSet=[[$cor0]], o_orderkey0=[$0], $f3=[$SCALAR_QUERY({\n"
+            + "LogicalProject(c_nationkey=[$1])\n"
+            + "  LogicalFilter(condition=[=($0, $cor0.o_custkey)])\n"
+            + "    LogicalTableScan(table=[[customer]])\n"
+            + "})])\n"
+            + "  LogicalTableScan(table=[[orders]])\n",
+        calciteRel.explain());
+  }
+
+  @Test
+  void duplicateRelAnchorIsRejected() {
+    /*
+     * A malformed id-based plan that reuses the same rel_anchor for two distinct relations (the
+     * outer orders scan and the inner customer scan). Resolving references purely by anchor value
+     * is only sound when anchors are unique plan-wide, so conversion must reject this rather than
+     * silently mis-resolve the outer reference.
+     */
+    final Rel root =
+        sb.project(
+            input ->
+                List.of(
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
+                            Remap.of(List.of(1)),
+                            sb.filter(
+                                input2 ->
+                                    sb.equal(
+                                        sb.fieldReference(input2, 0),
+                                        FieldReference.newRootStructOuterReferenceByRelReference(
+                                            1, TypeCreator.REQUIRED.I64, 1)),
+                                // duplicate anchor: the customer scan reuses the orders scan's
+                                // rel_anchor (1)
+                                customerTableScan.withRelAnchor(1))),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2, 3)),
+            orderTableScan.withRelAnchor(1));
+
+    assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(root));
   }
 
   @Test
