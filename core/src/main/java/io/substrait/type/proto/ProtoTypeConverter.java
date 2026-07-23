@@ -116,8 +116,6 @@ public class ProtoTypeConverter {
               .typeVariationReference(userDefined.getTypeVariationReference())
               .build();
         }
-      case USER_DEFINED_TYPE_REFERENCE:
-        throw new UnsupportedOperationException("Unsupported user defined reference: " + type);
       case KIND_NOT_SET:
         throw new UnsupportedOperationException("Type is not set: " + type);
       default:
