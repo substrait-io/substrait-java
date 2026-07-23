@@ -30,6 +30,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.LateralJoinRel;
 import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.proto.ProjectRel;
@@ -176,6 +177,8 @@ public class ProtoRelConverter {
         return newSort(rel.getSort());
       case JOIN:
         return newJoin(rel.getJoin());
+      case LATERAL_JOIN:
+        return newLateralJoin(rel.getLateralJoin());
       case SET:
         return newSet(rel.getSet());
       case PROJECT:
@@ -1045,6 +1048,43 @@ public class ProtoRelConverter {
             .left(left)
             .right(right)
             .condition(converter.from(rel.getExpression()))
+            .joinType(Join.JoinType.fromProto(rel.getType()))
+            .postJoinFilter(
+                Optional.ofNullable(
+                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
+
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()))
+        .relAnchor(optionalRelAnchor(rel.getCommon()));
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
+  protected Rel newLateralJoin(LateralJoinRel rel) {
+    Rel left = from(rel.getLeft());
+    Rel right = from(rel.getRight());
+    Type.Struct leftStruct = left.getRecordType();
+    Type.Struct rightStruct = right.getRecordType();
+    Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    ImmutableLateralJoin.Builder builder =
+        LateralJoin.builder()
+            .left(left)
+            .right(right)
+            .condition(
+                Optional.ofNullable(
+                    rel.hasExpression() ? converter.from(rel.getExpression()) : null))
             .joinType(Join.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(

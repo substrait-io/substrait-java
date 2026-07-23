@@ -25,6 +25,7 @@ import io.substrait.proto.FetchRel;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.HashJoinRel;
 import io.substrait.proto.JoinRel;
+import io.substrait.proto.LateralJoinRel;
 import io.substrait.proto.MergeJoinRel;
 import io.substrait.proto.NamedObjectWrite;
 import io.substrait.proto.NamedTable;
@@ -376,6 +377,26 @@ public class RelProtoConverter
     join.getExtension()
         .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setJoin(builder).build();
+  }
+
+  @Override
+  public Rel visit(LateralJoin lateralJoin, EmptyVisitationContext context)
+      throws RuntimeException {
+    LateralJoinRel.Builder builder =
+        LateralJoinRel.newBuilder()
+            .setCommon(common(lateralJoin))
+            .setLeft(toProto(lateralJoin.getLeft()))
+            .setRight(toProto(lateralJoin.getRight()))
+            .setType(lateralJoin.getJoinType().toProto());
+
+    lateralJoin.getCondition().ifPresent(t -> builder.setExpression(toProto(t)));
+
+    lateralJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
+
+    lateralJoin
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+    return Rel.newBuilder().setLateralJoin(builder).build();
   }
 
   @Override

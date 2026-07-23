@@ -13,6 +13,7 @@ import io.substrait.relation.ExtensionWrite;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
+import io.substrait.relation.LateralJoin;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
@@ -64,6 +65,12 @@ public class SqlKindFromRel
 
   @Override
   public SqlKind visit(Join join, EmptyVisitationContext context) throws RuntimeException {
+    return SqlKind.JOIN;
+  }
+
+  @Override
+  public SqlKind visit(LateralJoin lateralJoin, EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.JOIN;
   }
 

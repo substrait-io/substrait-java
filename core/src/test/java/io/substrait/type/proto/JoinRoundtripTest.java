@@ -1,6 +1,8 @@
 package io.substrait.type.proto;
 
 import io.substrait.TestBase;
+import io.substrait.relation.Join;
+import io.substrait.relation.LateralJoin;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.HashJoin;
 import io.substrait.relation.physical.MergeJoin;
@@ -92,6 +94,59 @@ class JoinRoundtripTest extends TestBase {
                     NestedLoopJoin.JoinType.INNER,
                     leftTable,
                     rightTable))
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void lateralJoin() {
+    // Condition over the combined left+right schema: left.a (I64, index 0) == right.f (I64,
+    // index 5).
+    Rel rel =
+        LateralJoin.builder()
+            .left(leftTable)
+            .right(rightTable)
+            .condition(
+                sb.equal(
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 0),
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 5)))
+            .joinType(Join.JoinType.INNER)
+            .relAnchor(1)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void lateralJoinWithoutCondition() {
+    // A lateral join with no join condition (the correlation lives inside the right input); the
+    // unset expression must round-trip as an empty condition, not throw.
+    Rel rel =
+        LateralJoin.builder()
+            .left(leftTable)
+            .right(rightTable)
+            .joinType(Join.JoinType.INNER)
+            .relAnchor(1)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void lateralJoinWithAnchorAndPostFilter() {
+    // A lateral join sets a rel anchor so the right input can reference the current left row.
+    Rel rel =
+        LateralJoin.builder()
+            .left(leftTable)
+            .right(rightTable)
+            .condition(
+                sb.equal(
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 0),
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 5)))
+            .postJoinFilter(
+                sb.equal(
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 2),
+                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 4)))
+            .joinType(Join.JoinType.LEFT)
+            .relAnchor(1)
             .build();
     verifyRoundTrip(rel);
   }

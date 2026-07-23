@@ -198,6 +198,27 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
+  public Optional<Rel> visit(LateralJoin lateralJoin, EmptyVisitationContext context) throws E {
+    Optional<Rel> left = lateralJoin.getLeft().accept(this, context);
+    Optional<Rel> right = lateralJoin.getRight().accept(this, context);
+    Optional<Expression> condition = visitOptionalExpression(lateralJoin.getCondition(), context);
+    Optional<Expression> postFilter =
+        visitOptionalExpression(lateralJoin.getPostJoinFilter(), context);
+
+    if (allEmpty(left, right, condition, postFilter)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableLateralJoin.builder()
+            .from(lateralJoin)
+            .left(left.orElse(lateralJoin.getLeft()))
+            .right(right.orElse(lateralJoin.getRight()))
+            .condition(or(condition, lateralJoin::getCondition))
+            .postJoinFilter(or(postFilter, lateralJoin::getPostJoinFilter))
+            .build());
+  }
+
+  @Override
   public Optional<Rel> visit(Set set, EmptyVisitationContext context) throws E {
     return transformList(set.getInputs(), context, (t, c) -> t.accept(this, c))
         .map(s -> Set.builder().from(set).inputs(s).build());

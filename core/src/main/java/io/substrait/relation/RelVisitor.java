@@ -61,6 +61,16 @@ public interface RelVisitor<O, C extends VisitationContext, E extends Exception>
   O visit(Join join, C context) throws E;
 
   /**
+   * Visit a lateral join relation.
+   *
+   * @param lateralJoin the lateral join node
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  O visit(LateralJoin lateralJoin, C context) throws E;
+
+  /**
    * Visit a set operation relation (e.g., UNION/INTERSECT).
    *
    * @param set the set node
