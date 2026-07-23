@@ -513,8 +513,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         transformList(hashJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
+    Optional<Expression> residual =
+        visitOptionalExpression(hashJoin.getResidualExpression(), context);
 
-    if (allEmpty(left, right, keys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -524,6 +526,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .right(right.orElse(hashJoin.getRight()))
             .keys(keys.orElse(hashJoin.getKeys()))
             .postJoinFilter(or(postFilter, hashJoin::getPostJoinFilter))
+            .residualExpression(or(residual, hashJoin::getResidualExpression))
             .build());
   }
 
@@ -535,8 +538,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         transformList(mergeJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
+    Optional<Expression> residual =
+        visitOptionalExpression(mergeJoin.getResidualExpression(), context);
 
-    if (allEmpty(left, right, keys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -546,6 +551,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .right(right.orElse(mergeJoin.getRight()))
             .keys(keys.orElse(mergeJoin.getKeys()))
             .postJoinFilter(or(postFilter, mergeJoin::getPostJoinFilter))
+            .residualExpression(or(residual, mergeJoin::getResidualExpression))
             .build());
   }
 
