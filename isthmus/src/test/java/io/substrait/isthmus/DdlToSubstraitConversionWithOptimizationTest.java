@@ -33,7 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class DdlToSubstraitConversionWithOptimizationTest {
 
-  private final ConverterProvider converterProvider = new ConverterProvider();
+  private final ConverterProvider converterProvider = ConverterProvider.DEFAULT;
 
   /**
    * Tests that optimization rules can be safely applied to DDL statements.

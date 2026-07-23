@@ -40,8 +40,8 @@ import org.apache.calcite.tools.RelBuilder;
  *
  * <p>It is consumed by all conversion classes as their primary source of configuration.
  *
- * <p>The no argument constructor {@link #ConverterProvider()} provides reasonable system defaults,
- * and {@link #DEFAULT} is a shared instance of it.
+ * <p>{@link #DEFAULT} is a shared instance configured with reasonable system defaults, equivalent
+ * to {@code builder().build()}.
  *
  * <p>For customized conversion behaviour — including supplying a full Calcite {@link
  * SqlParser.Config} for SQL parsing — use the {@link #builder()}.
@@ -70,12 +70,12 @@ public class ConverterProvider {
 
   /**
    * A shared default {@link ConverterProvider} instance using all system defaults. Equivalent to
-   * {@code new ConverterProvider()} but avoids redundant construction at every call site.
+   * {@code builder().build()} but avoids redundant construction at every call site.
    *
    * <p>This instance is safe to share because {@link ConverterProvider} is effectively immutable
    * after construction — all fields are set only in constructors.
    */
-  public static final ConverterProvider DEFAULT = new ConverterProvider();
+  public static final ConverterProvider DEFAULT = builder().build();
 
   /** The Calcite type factory used for creating and managing data types. */
   protected RelDataTypeFactory typeFactory;
@@ -104,18 +104,24 @@ public class ConverterProvider {
   /**
    * Creates a ConverterProvider with default extension collection and type factory. Uses {@link
    * DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link SubstraitTypeSystem#TYPE_FACTORY}.
+   *
+   * @deprecated Use {@link #builder()} (or the shared {@link #DEFAULT} instance) instead.
    */
+  @Deprecated
   public ConverterProvider() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
+    this(builder());
   }
 
   /**
    * Creates a ConverterProvider with the specified extension collection and default type factory.
    *
    * @param extensions the Substrait extension collection to use
+   * @deprecated Use {@link #builder()} instead, e.g. {@code
+   *     builder().extensions(extensions).build()}.
    */
+  @Deprecated
   public ConverterProvider(SimpleExtension.ExtensionCollection extensions) {
-    this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
+    this(builder().extensions(extensions));
   }
 
   /**
@@ -123,18 +129,13 @@ public class ConverterProvider {
    *
    * @param extensions the Substrait extension collection to use
    * @param typeFactory the Calcite type factory to use
+   * @deprecated Use {@link #builder()} instead, e.g. {@code
+   *     builder().extensions(extensions).typeFactory(typeFactory).build()}.
    */
+  @Deprecated
   public ConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-    this(
-        typeFactory,
-        extensions,
-        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
-        new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory),
-        new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
-        TypeConverter.DEFAULT,
-        createDefaultExecutionBehavior(),
-        DEFAULT_SQL_PARSER_CONFIG);
+    this(builder().extensions(extensions).typeFactory(typeFactory));
   }
 
   /**
@@ -158,14 +159,13 @@ public class ConverterProvider {
       WindowFunctionConverter wfc,
       TypeConverter tc) {
     this(
-        typeFactory,
-        extensions,
-        sfc,
-        afc,
-        wfc,
-        tc,
-        createDefaultExecutionBehavior(),
-        DEFAULT_SQL_PARSER_CONFIG);
+        builder()
+            .typeFactory(typeFactory)
+            .extensions(extensions)
+            .scalarFunctionConverter(sfc)
+            .aggregateFunctionConverter(afc)
+            .windowFunctionConverter(wfc)
+            .typeConverter(tc));
   }
 
   /**
@@ -190,39 +190,50 @@ public class ConverterProvider {
       WindowFunctionConverter wfc,
       TypeConverter tc,
       Plan.ExecutionBehavior executionBehavior) {
-    this(typeFactory, extensions, sfc, afc, wfc, tc, executionBehavior, DEFAULT_SQL_PARSER_CONFIG);
+    this(
+        builder()
+            .typeFactory(typeFactory)
+            .extensions(extensions)
+            .scalarFunctionConverter(sfc)
+            .aggregateFunctionConverter(afc)
+            .windowFunctionConverter(wfc)
+            .typeConverter(tc)
+            .executionBehavior(executionBehavior));
   }
 
   /**
-   * Master constructor: assigns all components directly. Used by the {@link Builder} and the
-   * delegating public constructors.
+   * Master constructor and the sole subclassing seam: derives any unset function converters from
+   * the configured extensions and type factory, then assigns all components. {@link
+   * Builder#build()} and every delegating public constructor route here, and subclasses (e.g.
+   * {@link DynamicConverterProvider}) invoke it via {@code super(builder)}.
    *
-   * @param typeFactory the Calcite type factory to use
-   * @param extensions the Substrait extension collection to use
-   * @param sfc the scalar function converter to use
-   * @param afc the aggregate function converter to use
-   * @param wfc the window function converter to use
-   * @param tc the type converter to use
-   * @param executionBehavior the execution behavior to use for plans
-   * @param sqlParserConfig the Calcite SQL parser configuration to use
+   * <p>Taking the {@link Builder} rather than a positional argument list keeps this seam stable as
+   * new components are added: a new field is a change to the builder and this constructor only, not
+   * to every subclass's {@code super(...)} call.
+   *
+   * @param builder the builder carrying the configured components
    */
-  private ConverterProvider(
-      RelDataTypeFactory typeFactory,
-      SimpleExtension.ExtensionCollection extensions,
-      ScalarFunctionConverter sfc,
-      AggregateFunctionConverter afc,
-      WindowFunctionConverter wfc,
-      TypeConverter tc,
-      Plan.ExecutionBehavior executionBehavior,
-      SqlParser.Config sqlParserConfig) {
-    this.typeFactory = typeFactory;
-    this.extensions = extensions;
-    this.scalarFunctionConverter = sfc;
-    this.aggregateFunctionConverter = afc;
-    this.windowFunctionConverter = wfc;
-    this.typeConverter = tc;
-    this.executionBehavior = executionBehavior;
-    this.sqlParserConfig = sqlParserConfig;
+  protected ConverterProvider(Builder builder) {
+    this.typeFactory = builder.typeFactory;
+    this.extensions = builder.extensions;
+    this.scalarFunctionConverter =
+        builder.scalarFunctionConverter != null
+            ? builder.scalarFunctionConverter
+            : new ScalarFunctionConverter(
+                builder.extensions.scalarFunctions(), builder.typeFactory);
+    this.aggregateFunctionConverter =
+        builder.aggregateFunctionConverter != null
+            ? builder.aggregateFunctionConverter
+            : new AggregateFunctionConverter(
+                builder.extensions.aggregateFunctions(), builder.typeFactory);
+    this.windowFunctionConverter =
+        builder.windowFunctionConverter != null
+            ? builder.windowFunctionConverter
+            : new WindowFunctionConverter(
+                builder.extensions.windowFunctions(), builder.typeFactory);
+    this.typeConverter = builder.typeConverter;
+    this.executionBehavior = builder.executionBehavior;
+    this.sqlParserConfig = builder.sqlParserConfig;
   }
 
   /**
@@ -501,10 +512,10 @@ public class ConverterProvider {
   /**
    * Creates a new {@link Builder} for configuring a {@link ConverterProvider}.
    *
-   * <p>The builder starts from the same system defaults as {@link #ConverterProvider()} and lets
-   * callers override individual components — most notably the Calcite {@link SqlParser.Config} used
-   * for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)} for full control or
-   * {@link Builder#unquotedCasing(Casing)} for the common casing-only case.
+   * <p>The builder starts from reasonable system defaults (the same ones behind {@link #DEFAULT})
+   * and lets callers override individual components — most notably the Calcite {@link
+   * SqlParser.Config} used for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)}
+   * for full control or {@link Builder#unquotedCasing(Casing)} for the common casing-only case.
    *
    * @return a new builder
    */
@@ -515,9 +526,8 @@ public class ConverterProvider {
   /**
    * Fluent builder for {@link ConverterProvider}.
    *
-   * <p>Unset components fall back to the same system defaults as {@link
-   * ConverterProvider#ConverterProvider()}. The scalar, aggregate and window function converters,
-   * if not set explicitly, are derived from the configured {@link
+   * <p>Unset components fall back to reasonable system defaults. The scalar, aggregate and window
+   * function converters, if not set explicitly, are derived from the configured {@link
    * #extensions(SimpleExtension.ExtensionCollection) extensions} and {@link
    * #typeFactory(RelDataTypeFactory) type factory} when {@link #build()} is called.
    */
@@ -651,27 +661,7 @@ public class ConverterProvider {
      * @return a new {@link ConverterProvider}
      */
     public ConverterProvider build() {
-      ScalarFunctionConverter sfc =
-          scalarFunctionConverter != null
-              ? scalarFunctionConverter
-              : new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
-      AggregateFunctionConverter afc =
-          aggregateFunctionConverter != null
-              ? aggregateFunctionConverter
-              : new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
-      WindowFunctionConverter wfc =
-          windowFunctionConverter != null
-              ? windowFunctionConverter
-              : new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
-      return new ConverterProvider(
-          typeFactory,
-          extensions,
-          sfc,
-          afc,
-          wfc,
-          typeConverter,
-          executionBehavior,
-          sqlParserConfig);
+      return new ConverterProvider(this);
     }
   }
 }
