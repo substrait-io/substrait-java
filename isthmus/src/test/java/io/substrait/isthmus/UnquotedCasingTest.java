@@ -8,12 +8,16 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.junit.jupiter.api.Test;
 
 /**
- * Verifies that the {@link ConverterProvider} unquoted casing parameter controls identifier casing
- * consistently across both CREATE TABLE parsing and query parsing, so that the table name stored in
- * a Substrait {@link NamedScan} reflects the configured casing.
+ * Verifies that {@link ConverterProvider#builder()} configures the Calcite {@link SqlParser.Config}
+ * used for SQL parsing — via the {@code unquotedCasing} convenience or a full {@code
+ * sqlParserConfig} — and that the configured casing is applied consistently across both CREATE
+ * TABLE parsing and query parsing, so that the table name stored in a Substrait {@link NamedScan}
+ * reflects the configured casing.
  */
 class UnquotedCasingTest {
 
@@ -21,23 +25,36 @@ class UnquotedCasingTest {
 
   @Test
   void defaultCasingIsToUpper() {
-    ConverterProvider provider = new ConverterProvider();
+    ConverterProvider provider = ConverterProvider.builder().build();
     assertEquals(Casing.TO_UPPER, provider.getSqlParserConfig().unquotedCasing());
-    assertEquals(Casing.TO_UPPER, provider.getUnquotedCasing());
   }
 
   @Test
-  void constructorCasingUnchanged() {
-    ConverterProvider provider = new ConverterProvider(Casing.UNCHANGED);
+  void builderCasingUnchanged() {
+    ConverterProvider provider =
+        ConverterProvider.builder().unquotedCasing(Casing.UNCHANGED).build();
     assertEquals(Casing.UNCHANGED, provider.getSqlParserConfig().unquotedCasing());
-    assertEquals(Casing.UNCHANGED, provider.getUnquotedCasing());
   }
 
   @Test
-  void constructorCasingToLower() {
-    ConverterProvider provider = new ConverterProvider(Casing.TO_LOWER);
+  void builderCasingToLower() {
+    ConverterProvider provider =
+        ConverterProvider.builder().unquotedCasing(Casing.TO_LOWER).build();
     assertEquals(Casing.TO_LOWER, provider.getSqlParserConfig().unquotedCasing());
-    assertEquals(Casing.TO_LOWER, provider.getUnquotedCasing());
+  }
+
+  /**
+   * A full {@link SqlParser.Config} supplied to the builder is used verbatim. Deriving it from
+   * {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} preserves isthmus' parser defaults (here,
+   * {@link SqlConformanceEnum#LENIENT} conformance) while overriding a single setting.
+   */
+  @Test
+  void builderFullSqlParserConfig() {
+    SqlParser.Config config =
+        ConverterProvider.DEFAULT_SQL_PARSER_CONFIG.withUnquotedCasing(Casing.TO_LOWER);
+    ConverterProvider provider = ConverterProvider.builder().sqlParserConfig(config).build();
+    assertEquals(Casing.TO_LOWER, provider.getSqlParserConfig().unquotedCasing());
+    assertEquals(SqlConformanceEnum.LENIENT, provider.getSqlParserConfig().conformance());
   }
 
   /**
@@ -46,7 +63,7 @@ class UnquotedCasingTest {
    */
   @Test
   void defaultCasingFoldsTableNameToUpper() throws Exception {
-    ConverterProvider provider = new ConverterProvider();
+    ConverterProvider provider = ConverterProvider.builder().build();
     Prepare.CatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(provider, CREATE_STATEMENT);
 
@@ -64,7 +81,8 @@ class UnquotedCasingTest {
    */
   @Test
   void unchangedCasingPreservesTableName() throws Exception {
-    ConverterProvider provider = new ConverterProvider(Casing.UNCHANGED);
+    ConverterProvider provider =
+        ConverterProvider.builder().unquotedCasing(Casing.UNCHANGED).build();
     Prepare.CatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(provider, CREATE_STATEMENT);
 

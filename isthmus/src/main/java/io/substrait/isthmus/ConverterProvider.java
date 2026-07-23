@@ -40,14 +40,33 @@ import org.apache.calcite.tools.RelBuilder;
  *
  * <p>It is consumed by all conversion classes as their primary source of configuration.
  *
- * <p>The no argument constructor {@link #ConverterProvider()} provides reasonable system defaults.
+ * <p>The no argument constructor {@link #ConverterProvider()} provides reasonable system defaults,
+ * and {@link #DEFAULT} is a shared instance of it.
  *
- * <p>Other constructors allow for further customization of conversion behaviours.
+ * <p>For customized conversion behaviour — including supplying a full Calcite {@link
+ * SqlParser.Config} for SQL parsing — use the {@link #builder()}.
  *
  * <p>More in-depth customization can be achieved by extending this class, as is done in {@link
  * DynamicConverterProvider}.
  */
 public class ConverterProvider {
+
+  /**
+   * The default Calcite {@link SqlParser.Config} used by isthmus: {@link SqlParser.Config#DEFAULT}
+   * with {@link Casing#TO_UPPER} unquoted-identifier casing, the {@link SqlDdlParserImpl} parser
+   * factory (so {@code CREATE TABLE} statements parse), and {@link SqlConformanceEnum#LENIENT}
+   * conformance.
+   *
+   * <p>This is the recommended starting point for a customized parser configuration: derive from it
+   * with Calcite's {@code withXxx} methods and pass the result to {@link
+   * Builder#sqlParserConfig(SqlParser.Config)}, e.g. {@code
+   * DEFAULT_SQL_PARSER_CONFIG.withUnquotedCasing(Casing.UNCHANGED)}.
+   */
+  public static final SqlParser.Config DEFAULT_SQL_PARSER_CONFIG =
+      SqlParser.Config.DEFAULT
+          .withUnquotedCasing(Casing.TO_UPPER)
+          .withParserFactory(SqlDdlParserImpl.FACTORY)
+          .withConformance(SqlConformanceEnum.LENIENT);
 
   /**
    * A shared default {@link ConverterProvider} instance using all system defaults. Equivalent to
@@ -64,8 +83,8 @@ public class ConverterProvider {
   /** The collection of Substrait extensions (functions and types) available for conversion. */
   protected final SimpleExtension.ExtensionCollection extensions;
 
-  /** The casing applied to unquoted SQL identifiers during parsing. */
-  protected final Casing unquotedCasing;
+  /** The Calcite SQL parser configuration, controlling parsing behaviour like identifier casing. */
+  protected final SqlParser.Config sqlParserConfig;
 
   /** Converter for Substrait scalar functions. */
   protected ScalarFunctionConverter scalarFunctionConverter;
@@ -91,21 +110,6 @@ public class ConverterProvider {
   }
 
   /**
-   * Creates a ConverterProvider with the specified unquoted identifier casing.
-   *
-   * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link
-   * SubstraitTypeSystem#TYPE_FACTORY}.
-   *
-   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
-   */
-  public ConverterProvider(Casing unquotedCasing) {
-    this(
-        DefaultExtensionCatalog.DEFAULT_COLLECTION,
-        SubstraitTypeSystem.TYPE_FACTORY,
-        unquotedCasing);
-  }
-
-  /**
    * Creates a ConverterProvider with the specified extension collection and default type factory.
    *
    * @param extensions the Substrait extension collection to use
@@ -122,21 +126,6 @@ public class ConverterProvider {
    */
   public ConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-    this(extensions, typeFactory, Casing.TO_UPPER);
-  }
-
-  /**
-   * Creates a ConverterProvider with the specified extension collection, type factory, and unquoted
-   * identifier casing.
-   *
-   * @param extensions the Substrait extension collection to use
-   * @param typeFactory the Calcite type factory to use
-   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
-   */
-  public ConverterProvider(
-      SimpleExtension.ExtensionCollection extensions,
-      RelDataTypeFactory typeFactory,
-      Casing unquotedCasing) {
     this(
         typeFactory,
         extensions,
@@ -145,7 +134,7 @@ public class ConverterProvider {
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
         TypeConverter.DEFAULT,
         createDefaultExecutionBehavior(),
-        unquotedCasing);
+        DEFAULT_SQL_PARSER_CONFIG);
   }
 
   /**
@@ -157,7 +146,10 @@ public class ConverterProvider {
    * @param afc the aggregate function converter to use
    * @param wfc the window function converter to use
    * @param tc the type converter to use
+   * @deprecated Use {@link #builder()} instead; the growing set of components is more readably
+   *     configured through the builder than through this positional constructor.
    */
+  @Deprecated
   public ConverterProvider(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
@@ -173,7 +165,7 @@ public class ConverterProvider {
         wfc,
         tc,
         createDefaultExecutionBehavior(),
-        Casing.TO_UPPER);
+        DEFAULT_SQL_PARSER_CONFIG);
   }
 
   /**
@@ -186,7 +178,10 @@ public class ConverterProvider {
    * @param wfc the window function converter to use
    * @param tc the type converter to use
    * @param executionBehavior the execution behavior to use for plans
+   * @deprecated Use {@link #builder()} instead; the growing set of components is more readably
+   *     configured through the builder than through this positional constructor.
    */
+  @Deprecated
   public ConverterProvider(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
@@ -195,12 +190,12 @@ public class ConverterProvider {
       WindowFunctionConverter wfc,
       TypeConverter tc,
       Plan.ExecutionBehavior executionBehavior) {
-    this(typeFactory, extensions, sfc, afc, wfc, tc, executionBehavior, Casing.TO_UPPER);
+    this(typeFactory, extensions, sfc, afc, wfc, tc, executionBehavior, DEFAULT_SQL_PARSER_CONFIG);
   }
 
   /**
-   * Creates a ConverterProvider with full customization including execution behavior and unquoted
-   * identifier casing.
+   * Master constructor: assigns all components directly. Used by the {@link Builder} and the
+   * delegating public constructors.
    *
    * @param typeFactory the Calcite type factory to use
    * @param extensions the Substrait extension collection to use
@@ -209,9 +204,9 @@ public class ConverterProvider {
    * @param wfc the window function converter to use
    * @param tc the type converter to use
    * @param executionBehavior the execution behavior to use for plans
-   * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+   * @param sqlParserConfig the Calcite SQL parser configuration to use
    */
-  public ConverterProvider(
+  private ConverterProvider(
       RelDataTypeFactory typeFactory,
       SimpleExtension.ExtensionCollection extensions,
       ScalarFunctionConverter sfc,
@@ -219,7 +214,7 @@ public class ConverterProvider {
       WindowFunctionConverter wfc,
       TypeConverter tc,
       Plan.ExecutionBehavior executionBehavior,
-      Casing unquotedCasing) {
+      SqlParser.Config sqlParserConfig) {
     this.typeFactory = typeFactory;
     this.extensions = extensions;
     this.scalarFunctionConverter = sfc;
@@ -227,7 +222,7 @@ public class ConverterProvider {
     this.windowFunctionConverter = wfc;
     this.typeConverter = tc;
     this.executionBehavior = executionBehavior;
-    this.unquotedCasing = unquotedCasing;
+    this.sqlParserConfig = sqlParserConfig;
   }
 
   /**
@@ -244,25 +239,17 @@ public class ConverterProvider {
   // SQL to Calcite Processing
 
   /**
-   * Returns the casing applied to unquoted SQL identifiers during parsing.
-   *
-   * @return the unquoted identifier casing
-   */
-  public Casing getUnquotedCasing() {
-    return unquotedCasing;
-  }
-
-  /**
    * {@link SqlParser.Config} is a Calcite class which controls SQL parsing behaviour like
    * identifier casing.
+   *
+   * <p>Defaults to {@link #DEFAULT_SQL_PARSER_CONFIG}. Provide a custom configuration via {@link
+   * Builder#sqlParserConfig(SqlParser.Config)} (or the {@link Builder#unquotedCasing(Casing)}
+   * convenience), or override this method in a subclass for fully dynamic behaviour.
    *
    * @return the SQL parser configuration
    */
   public SqlParser.Config getSqlParserConfig() {
-    return SqlParser.Config.DEFAULT
-        .withUnquotedCasing(unquotedCasing)
-        .withParserFactory(SqlDdlParserImpl.FACTORY)
-        .withConformance(SqlConformanceEnum.LENIENT);
+    return sqlParserConfig;
   }
 
   /**
@@ -502,12 +489,189 @@ public class ConverterProvider {
    *
    * <p>The default execution behavior uses {@link
    * Plan.ExecutionBehavior.VariableEvaluationMode#PER_PLAN}, which evaluates variables once per
-   * plan execution. This can be customized by providing a different execution behavior through the
-   * constructor.
+   * plan execution. This can be customized via {@link
+   * Builder#executionBehavior(Plan.ExecutionBehavior)}.
    *
    * @return the execution behavior to use when creating plans
    */
   public Plan.ExecutionBehavior getExecutionBehavior() {
     return executionBehavior;
+  }
+
+  /**
+   * Creates a new {@link Builder} for configuring a {@link ConverterProvider}.
+   *
+   * <p>The builder starts from the same system defaults as {@link #ConverterProvider()} and lets
+   * callers override individual components — most notably the Calcite {@link SqlParser.Config} used
+   * for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)} for full control or
+   * {@link Builder#unquotedCasing(Casing)} for the common casing-only case.
+   *
+   * @return a new builder
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  /**
+   * Fluent builder for {@link ConverterProvider}.
+   *
+   * <p>Unset components fall back to the same system defaults as {@link
+   * ConverterProvider#ConverterProvider()}. The scalar, aggregate and window function converters,
+   * if not set explicitly, are derived from the configured {@link
+   * #extensions(SimpleExtension.ExtensionCollection) extensions} and {@link
+   * #typeFactory(RelDataTypeFactory) type factory} when {@link #build()} is called.
+   */
+  public static class Builder {
+    private SimpleExtension.ExtensionCollection extensions =
+        DefaultExtensionCatalog.DEFAULT_COLLECTION;
+    private RelDataTypeFactory typeFactory = SubstraitTypeSystem.TYPE_FACTORY;
+    private ScalarFunctionConverter scalarFunctionConverter;
+    private AggregateFunctionConverter aggregateFunctionConverter;
+    private WindowFunctionConverter windowFunctionConverter;
+    private TypeConverter typeConverter = TypeConverter.DEFAULT;
+    private Plan.ExecutionBehavior executionBehavior = createDefaultExecutionBehavior();
+    private SqlParser.Config sqlParserConfig = DEFAULT_SQL_PARSER_CONFIG;
+
+    /**
+     * Sets the Substrait extension collection to use.
+     *
+     * @param extensions the extension collection
+     * @return this builder
+     */
+    public Builder extensions(SimpleExtension.ExtensionCollection extensions) {
+      this.extensions = extensions;
+      return this;
+    }
+
+    /**
+     * Sets the Calcite type factory to use.
+     *
+     * @param typeFactory the type factory
+     * @return this builder
+     */
+    public Builder typeFactory(RelDataTypeFactory typeFactory) {
+      this.typeFactory = typeFactory;
+      return this;
+    }
+
+    /**
+     * Sets the scalar function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param scalarFunctionConverter the scalar function converter
+     * @return this builder
+     */
+    public Builder scalarFunctionConverter(ScalarFunctionConverter scalarFunctionConverter) {
+      this.scalarFunctionConverter = scalarFunctionConverter;
+      return this;
+    }
+
+    /**
+     * Sets the aggregate function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param aggregateFunctionConverter the aggregate function converter
+     * @return this builder
+     */
+    public Builder aggregateFunctionConverter(
+        AggregateFunctionConverter aggregateFunctionConverter) {
+      this.aggregateFunctionConverter = aggregateFunctionConverter;
+      return this;
+    }
+
+    /**
+     * Sets the window function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param windowFunctionConverter the window function converter
+     * @return this builder
+     */
+    public Builder windowFunctionConverter(WindowFunctionConverter windowFunctionConverter) {
+      this.windowFunctionConverter = windowFunctionConverter;
+      return this;
+    }
+
+    /**
+     * Sets the type converter.
+     *
+     * @param typeConverter the type converter
+     * @return this builder
+     */
+    public Builder typeConverter(TypeConverter typeConverter) {
+      this.typeConverter = typeConverter;
+      return this;
+    }
+
+    /**
+     * Sets the execution behavior for plans created by the resulting converter.
+     *
+     * @param executionBehavior the execution behavior
+     * @return this builder
+     */
+    public Builder executionBehavior(Plan.ExecutionBehavior executionBehavior) {
+      this.executionBehavior = executionBehavior;
+      return this;
+    }
+
+    /**
+     * Sets the full Calcite {@link SqlParser.Config} used for SQL parsing, replacing the default.
+     *
+     * <p>Use {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} as a starting point to retain
+     * isthmus' DDL parser factory and conformance while overriding individual settings.
+     *
+     * @param sqlParserConfig the parser configuration
+     * @return this builder
+     */
+    public Builder sqlParserConfig(SqlParser.Config sqlParserConfig) {
+      this.sqlParserConfig = sqlParserConfig;
+      return this;
+    }
+
+    /**
+     * Convenience for the common case of overriding only the unquoted-identifier casing, applied on
+     * top of the current {@link #sqlParserConfig(SqlParser.Config) parser configuration}.
+     *
+     * <p>Equivalent to {@code sqlParserConfig(currentConfig.withUnquotedCasing(unquotedCasing))}.
+     * Because it layers onto the current configuration, a subsequent {@link
+     * #sqlParserConfig(SqlParser.Config)} call replaces the whole configuration and discards the
+     * casing set here; set the full config first, then apply this convenience.
+     *
+     * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+     * @return this builder
+     */
+    public Builder unquotedCasing(Casing unquotedCasing) {
+      this.sqlParserConfig = this.sqlParserConfig.withUnquotedCasing(unquotedCasing);
+      return this;
+    }
+
+    /**
+     * Builds a {@link ConverterProvider} from the configured components, deriving any unset
+     * function converters from the configured extensions and type factory.
+     *
+     * @return a new {@link ConverterProvider}
+     */
+    public ConverterProvider build() {
+      ScalarFunctionConverter sfc =
+          scalarFunctionConverter != null
+              ? scalarFunctionConverter
+              : new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory);
+      AggregateFunctionConverter afc =
+          aggregateFunctionConverter != null
+              ? aggregateFunctionConverter
+              : new AggregateFunctionConverter(extensions.aggregateFunctions(), typeFactory);
+      WindowFunctionConverter wfc =
+          windowFunctionConverter != null
+              ? windowFunctionConverter
+              : new WindowFunctionConverter(extensions.windowFunctions(), typeFactory);
+      return new ConverterProvider(
+          typeFactory,
+          extensions,
+          sfc,
+          afc,
+          wfc,
+          typeConverter,
+          executionBehavior,
+          sqlParserConfig);
+    }
   }
 }

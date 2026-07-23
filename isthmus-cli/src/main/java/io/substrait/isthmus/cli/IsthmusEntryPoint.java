@@ -86,7 +86,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    ConverterProvider provider = new ConverterProvider(unquotedCasing);
+    ConverterProvider provider = ConverterProvider.builder().unquotedCasing(unquotedCasing).build();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
       SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(provider);

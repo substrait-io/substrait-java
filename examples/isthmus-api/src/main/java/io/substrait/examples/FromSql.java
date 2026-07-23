@@ -54,7 +54,8 @@ public class FromSql implements Action {
       // ConverterProvider. The same provider is used for both the schema and the query so that
       // identifier casing stays consistent end-to-end. Casing.UNCHANGED preserves identifiers as
       // written, matching the lower-case names used in the CREATE TABLE statements above.
-      final ConverterProvider converterProvider = new ConverterProvider(Casing.UNCHANGED);
+      final ConverterProvider converterProvider =
+          ConverterProvider.builder().unquotedCasing(Casing.UNCHANGED).build();
 
       final CalciteCatalogReader catalogReader =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
