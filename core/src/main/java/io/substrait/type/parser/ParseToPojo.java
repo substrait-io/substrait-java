@@ -233,7 +233,9 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
-      String name = ctx.Identifier().getSymbol().getText();
+      // The optional dependency-alias prefix (alias.u!Name) added to the grammar in spec v0.92.1
+      // contributes a leading Identifier; the user-defined type name is always the last Identifier.
+      String name = ctx.Identifier(ctx.Identifier().size() - 1).getSymbol().getText();
       boolean nullable = ctx.isnull != null;
       List<SubstraitTypeParser.ExprContext> paramExprs = ctx.expr();
       if (paramExprs.isEmpty()) {

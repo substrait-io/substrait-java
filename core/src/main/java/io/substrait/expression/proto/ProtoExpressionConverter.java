@@ -350,9 +350,6 @@ public class ProtoExpressionConverter {
                       + ecv.getExecutionContextVariableTypeCase());
           }
         }
-      // TODO enum.
-      case ENUM:
-        throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
       default:
         throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     }
