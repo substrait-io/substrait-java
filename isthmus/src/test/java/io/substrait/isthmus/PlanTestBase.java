@@ -245,8 +245,7 @@ public class PlanTestBase {
 
     // SQL -> Calcite 1
     RelRoot calcite1 =
-        SubstraitSqlToCalcite.convertQuery(
-            sqlQuery, catalogReader, converterProvider.getSqlOperatorTable());
+        SubstraitSqlToCalcite.convertQuery(sqlQuery, catalogReader, converterProvider);
 
     // Calcite 1 -> Substrait POJO 1
     Plan.Root root1 = SubstraitRelVisitor.convert(calcite1, converterProvider);

@@ -224,7 +224,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         }
       }
     }
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    SqlValidator validator =
+        new SubstraitSqlValidator(catalogReader, converterProvider.getSqlOperatorTable());
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
 

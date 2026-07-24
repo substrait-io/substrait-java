@@ -52,12 +52,39 @@ public class SubstraitSqlToCalcite {
    * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
    * @return a {@link RelRoot} corresponding to the given SQL statement
    * @throws SqlParseException if there is an error while parsing the SQL statement
+   * @deprecated Prefer {@link #convertQuery(String, Prepare.CatalogReader, ConverterProvider)}: the
+   *     operator table now comes from the {@link ConverterProvider}, which also controls the parser
+   *     configuration. To use a custom operator table, subclass {@link ConverterProvider} and
+   *     override {@link ConverterProvider#getSqlOperatorTable()}.
    */
+  @Deprecated
   public static RelRoot convertQuery(
       String sqlStatement, Prepare.CatalogReader catalogReader, SqlOperatorTable operatorTable)
       throws SqlParseException {
     SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
     return convertQuery(sqlStatement, catalogReader, validator, createDefaultRelOptCluster());
+  }
+
+  /**
+   * Converts a SQL statement to a Calcite {@link RelRoot}, using the parser configuration and
+   * operator table from the given {@link ConverterProvider}.
+   *
+   * @param sqlStatement a SQL statement string
+   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
+   *     the SQL statement
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings, and whose {@link ConverterProvider#getSqlOperatorTable()}
+   *     controls the valid operators
+   * @return a {@link RelRoot} corresponding to the given SQL statement
+   * @throws SqlParseException if there is an error while parsing the SQL statement
+   */
+  public static RelRoot convertQuery(
+      String sqlStatement, Prepare.CatalogReader catalogReader, ConverterProvider converterProvider)
+      throws SqlParseException {
+    SqlValidator validator =
+        new SubstraitSqlValidator(catalogReader, converterProvider.getSqlOperatorTable());
+    return convertQuery(
+        sqlStatement, catalogReader, validator, createDefaultRelOptCluster(), converterProvider);
   }
 
   /**
@@ -112,7 +139,12 @@ public class SubstraitSqlToCalcite {
    * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
    * @return a list of {@link RelRoot}s corresponding to the given SQL statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
+   * @deprecated Prefer {@link #convertQueries(String, Prepare.CatalogReader, ConverterProvider)}:
+   *     the operator table now comes from the {@link ConverterProvider}, which also controls the
+   *     parser configuration. To use a custom operator table, subclass {@link ConverterProvider}
+   *     and override {@link ConverterProvider#getSqlOperatorTable()}.
    */
+  @Deprecated
   public static List<RelRoot> convertQueries(
       String sqlStatements, Prepare.CatalogReader catalogReader, SqlOperatorTable operatorTable)
       throws SqlParseException {
@@ -122,37 +154,15 @@ public class SubstraitSqlToCalcite {
 
   /**
    * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
-   * statement, using the parser configuration from the given {@link ConverterProvider}.
+   * statement, using the parser configuration and operator table from the given {@link
+   * ConverterProvider}.
    *
    * @param sqlStatements a string containing one or more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
    * @param converterProvider the converter provider whose parser config controls identifier casing
-   *     and other parser settings
-   * @param operatorTable the {@link SqlOperatorTable} for controlling valid operators
-   * @return a list of {@link RelRoot}s corresponding to the given SQL statements
-   * @throws SqlParseException if there is an error while parsing the SQL statements
-   */
-  public static List<RelRoot> convertQueries(
-      String sqlStatements,
-      Prepare.CatalogReader catalogReader,
-      ConverterProvider converterProvider,
-      SqlOperatorTable operatorTable)
-      throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader, operatorTable);
-    return convertQueries(
-        sqlStatements, catalogReader, validator, createDefaultRelOptCluster(), converterProvider);
-  }
-
-  /**
-   * Converts one or more SQL statements to a List of {@link RelRoot}, with one {@link RelRoot} per
-   * statement, using the parser configuration from the given {@link ConverterProvider}.
-   *
-   * @param sqlStatements a string containing one or more SQL statements
-   * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
-   *     the SQL statements
-   * @param converterProvider the converter provider whose parser config controls identifier casing
-   *     and other parser settings
+   *     and other parser settings, and whose {@link ConverterProvider#getSqlOperatorTable()}
+   *     controls the valid operators
    * @return a list of {@link RelRoot}s corresponding to the given SQL statements
    * @throws SqlParseException if there is an error while parsing the SQL statements
    */
@@ -161,7 +171,8 @@ public class SubstraitSqlToCalcite {
       Prepare.CatalogReader catalogReader,
       ConverterProvider converterProvider)
       throws SqlParseException {
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    SqlValidator validator =
+        new SubstraitSqlValidator(catalogReader, converterProvider.getSqlOperatorTable());
     return convertQueries(
         sqlStatements, catalogReader, validator, createDefaultRelOptCluster(), converterProvider);
   }

@@ -6,7 +6,6 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 
 /**
@@ -15,7 +14,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
  * <p>Conversion behaviours can be customized using a {@link ConverterProvider}
  */
 public class SqlToSubstrait extends SqlConverterBase {
-  private final SqlOperatorTable operatorTable;
 
   /** Creates a SQL-to-Substrait converter using the default configuration. */
   public SqlToSubstrait() {
@@ -29,7 +27,6 @@ public class SqlToSubstrait extends SqlConverterBase {
    */
   public SqlToSubstrait(ConverterProvider converterProvider) {
     super(converterProvider);
-    this.operatorTable = converterProvider.getSqlOperatorTable();
   }
 
   /**
@@ -48,9 +45,7 @@ public class SqlToSubstrait extends SqlConverterBase {
     builder.executionBehavior(converterProvider.getExecutionBehavior());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    SubstraitSqlToCalcite.convertQueries(
-            sqlStatements, catalogReader, converterProvider, operatorTable)
-        .stream()
+    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, converterProvider).stream()
         .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
         .forEach(root -> builder.addRoots(root));
 
