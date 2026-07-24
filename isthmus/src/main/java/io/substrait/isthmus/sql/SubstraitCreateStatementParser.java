@@ -55,6 +55,47 @@ public class SubstraitCreateStatementParser {
   }
 
   /**
+   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s,
+   * using the parser settings from the given {@link ConverterProvider}.
+   *
+   * <p>This method only supports simple table names without any additional qualifiers. Only used
+   * with {@link io.substrait.isthmus.SqlExpressionToSubstrait}.
+   *
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings
+   * @param createStatements a SQL string containing only CREATE statements; must not be null
+   * @return list of {@link SubstraitTable}s generated from the CREATE statements
+   * @throws SqlParseException if parsing fails or statements are invalid
+   */
+  public static List<SubstraitTable> processCreateStatements(
+      @NonNull final ConverterProvider converterProvider, @NonNull final String createStatements)
+      throws SqlParseException {
+    final List<SubstraitTable> tableList = new ArrayList<>();
+
+    final List<SqlNode> sqlNode =
+        SubstraitSqlStatementParser.parseStatements(createStatements, converterProvider);
+    for (final SqlNode parsed : sqlNode) {
+      if (!(parsed instanceof SqlCreateTable)) {
+        throw fail("Not a valid CREATE TABLE statement.");
+      }
+
+      final SqlCreateTable create = (SqlCreateTable) parsed;
+
+      if (create.name.names.size() > 1) {
+        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
+      }
+
+      if (create.query != null) {
+        throw fail("CTAS not supported.", create.name.getParserPosition());
+      }
+
+      tableList.add(createSubstraitTable(create.name.names.get(0), create.columnList));
+    }
+
+    return tableList;
+  }
+
+  /**
    * Parses one or more SQL strings containing only CREATE statements into a {@link
    * CalciteCatalogReader}.
    *
@@ -156,47 +197,6 @@ public class SubstraitCreateStatementParser {
    */
   private static SqlParseException fail(@Nullable final String message) {
     return fail(message, SqlParserPos.ZERO);
-  }
-
-  /**
-   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s,
-   * using the parser settings from the given {@link ConverterProvider}.
-   *
-   * <p>This method only supports simple table names without any additional qualifiers. Only used
-   * with {@link io.substrait.isthmus.SqlExpressionToSubstrait}.
-   *
-   * @param converterProvider the converter provider whose parser config controls identifier casing
-   *     and other parser settings
-   * @param createStatements a SQL string containing only CREATE statements; must not be null
-   * @return list of {@link SubstraitTable}s generated from the CREATE statements
-   * @throws SqlParseException if parsing fails or statements are invalid
-   */
-  public static List<SubstraitTable> processCreateStatements(
-      @NonNull final ConverterProvider converterProvider, @NonNull final String createStatements)
-      throws SqlParseException {
-    final List<SubstraitTable> tableList = new ArrayList<>();
-
-    final List<SqlNode> sqlNode =
-        SubstraitSqlStatementParser.parseStatements(createStatements, converterProvider);
-    for (final SqlNode parsed : sqlNode) {
-      if (!(parsed instanceof SqlCreateTable)) {
-        throw fail("Not a valid CREATE TABLE statement.");
-      }
-
-      final SqlCreateTable create = (SqlCreateTable) parsed;
-
-      if (create.name.names.size() > 1) {
-        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
-      }
-
-      if (create.query != null) {
-        throw fail("CTAS not supported.", create.name.getParserPosition());
-      }
-
-      tableList.add(createSubstraitTable(create.name.names.get(0), create.columnList));
-    }
-
-    return tableList;
   }
 
   /**
