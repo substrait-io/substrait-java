@@ -47,9 +47,14 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
    *
    * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} for extensions and {@link
    * SubstraitTypeSystem#TYPE_FACTORY} for type operations.
+   *
+   * @deprecated Use {@link
+   *     #AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.Builder)} with {@link
+   *     ConverterProvider#builder()} instead.
    */
+  @Deprecated
   public AutomaticDynamicFunctionMappingConverterProvider() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
+    this(ConverterProvider.builder());
   }
 
   /**
@@ -58,10 +63,15 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
    * <p>Uses {@link SubstraitTypeSystem#TYPE_FACTORY} for type operations.
    *
    * @param extensions the extension collection containing function definitions
+   * @deprecated Use {@link
+   *     #AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.Builder)} instead, e.g.
+   *     {@code new AutomaticDynamicFunctionMappingConverterProvider(
+   *     ConverterProvider.builder().extensions(extensions))}.
    */
+  @Deprecated
   public AutomaticDynamicFunctionMappingConverterProvider(
       SimpleExtension.ExtensionCollection extensions) {
-    this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
+    this(ConverterProvider.builder().extensions(extensions));
   }
 
   /**
@@ -72,10 +82,27 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
    *
    * @param extensions the extension collection containing function definitions
    * @param typeFactory the type factory for creating and managing Calcite data types
+   * @deprecated Use {@link
+   *     #AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.Builder)} instead, e.g.
+   *     {@code new AutomaticDynamicFunctionMappingConverterProvider(
+   *     ConverterProvider.builder().extensions(extensions).typeFactory(typeFactory))}.
    */
+  @Deprecated
   public AutomaticDynamicFunctionMappingConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-    super(extensions, typeFactory);
+    this(ConverterProvider.builder().extensions(extensions).typeFactory(typeFactory));
+  }
+
+  /**
+   * Creates a new provider from a {@link ConverterProvider.Builder}, seeding base state from the
+   * builder and then installing the automatically generated dynamic function mappings and operator
+   * table. This is the seam through which the other constructors — and subclasses, via {@code
+   * super(builder)} — route.
+   *
+   * @param builder the builder carrying the configured components
+   */
+  public AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.Builder builder) {
+    super(builder);
 
     List<SqlOperator> dynamicScalarOperators = getDynamicScalarOperators();
     this.scalarFunctionConverter = createScalarFunctionConverter(dynamicScalarOperators);

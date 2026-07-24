@@ -257,13 +257,14 @@ class CustomFunctionTest extends PlanTestBase {
 
   CustomFunctionTest() {
     super(
-        new ConverterProvider(
-            SubstraitTypeSystem.TYPE_FACTORY,
-            CUSTOM_EXTENSIONS,
-            scalarFunctionConverter,
-            aggregateFunctionConverter,
-            windowFunctionConverter,
-            typeConverter));
+        ConverterProvider.builder()
+            .typeFactory(SubstraitTypeSystem.TYPE_FACTORY)
+            .extensions(CUSTOM_EXTENSIONS)
+            .scalarFunctionConverter(scalarFunctionConverter)
+            .aggregateFunctionConverter(aggregateFunctionConverter)
+            .windowFunctionConverter(windowFunctionConverter)
+            .typeConverter(typeConverter)
+            .build());
   }
 
   @Test

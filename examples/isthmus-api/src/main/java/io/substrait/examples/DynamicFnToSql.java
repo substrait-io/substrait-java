@@ -5,6 +5,7 @@ import io.substrait.examples.IsthmusAppExamples.Action;
 import io.substrait.expression.Expression;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.DynamicConverterProvider;
 import io.substrait.isthmus.SubstraitToSql;
 import io.substrait.plan.Plan;
@@ -77,7 +78,8 @@ public class DynamicFnToSql implements Action {
 
     // Convert the plan to SQL
     final SubstraitToSql substraitToSql =
-        new SubstraitToSql(new DynamicConverterProvider(extensions));
+        new SubstraitToSql(
+            new DynamicConverterProvider(ConverterProvider.builder().extensions(extensions)));
     System.out.println("\nWith default DuckDB SqlDialect::");
     substraitToSql.convert(plan, SqlDialect.DatabaseProduct.DUCKDB.getDialect()).stream()
         .forEachOrdered(System.out::println);

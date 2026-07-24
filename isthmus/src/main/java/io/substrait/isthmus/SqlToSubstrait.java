@@ -61,8 +61,9 @@ public class SqlToSubstrait extends SqlConverterBase {
    * Converts one or more SQL statements into a Substrait {@link Plan}.
    *
    * <p>The {@code sqlDialect} parameter was previously used to influence identifier casing during
-   * parsing. This is now controlled by the {@link ConverterProvider} supplied to this converter; to
-   * customise it, subclass {@link ConverterProvider} and override {@link
+   * parsing. This is now configurable via {@link ConverterProvider#builder()} (for example {@code
+   * ConverterProvider.builder().unquotedCasing(...)}), or for fully custom parser behaviour, by
+   * subclassing {@link ConverterProvider} and overriding {@link
    * ConverterProvider#getSqlParserConfig()}.
    *
    * @param sqlStatements a string containing one more SQL statements
@@ -72,9 +73,10 @@ public class SqlToSubstrait extends SqlConverterBase {
    * @return the Substrait {@link Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements
    * @deprecated Prefer constructing {@link SqlToSubstrait} with a {@link ConverterProvider}
-   *     configured for the desired casing and calling {@link #convert(String,
-   *     Prepare.CatalogReader)}. For fully custom parser behaviour, subclass {@link
-   *     ConverterProvider} and override {@link ConverterProvider#getSqlParserConfig()}.
+   *     configured for the desired casing (via {@link ConverterProvider#builder()}) and calling
+   *     {@link #convert(String, Prepare.CatalogReader)}. For fully custom parser behaviour,
+   *     subclass {@link ConverterProvider} and override {@link
+   *     ConverterProvider#getSqlParserConfig()}.
    */
   @Deprecated
   public Plan convert(
