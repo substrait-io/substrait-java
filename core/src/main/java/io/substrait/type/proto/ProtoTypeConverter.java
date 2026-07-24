@@ -55,10 +55,12 @@ public class ProtoTypeConverter {
       case INTERVAL_YEAR:
         return n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
       case INTERVAL_DAY:
+        // The precision is required; reject an interval day type that leaves it unset.
+        if (!type.getIntervalDay().hasPrecision()) {
+          throw new IllegalArgumentException("Interval day type must have its precision set");
+        }
         return n(type.getIntervalDay().getNullability())
-            // precision defaults to 6 (micros) for backwards compatibility, see protobuf
-            .intervalDay(
-                type.getIntervalDay().hasPrecision() ? type.getIntervalDay().getPrecision() : 6);
+            .intervalDay(type.getIntervalDay().getPrecision());
       case INTERVAL_COMPOUND:
         return n(type.getIntervalCompound().getNullability())
             .intervalCompound(type.getIntervalCompound().getPrecision());

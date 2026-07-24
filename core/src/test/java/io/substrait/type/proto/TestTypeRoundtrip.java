@@ -1,6 +1,7 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
@@ -8,6 +9,7 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -60,5 +62,17 @@ class TestTypeRoundtrip {
     io.substrait.proto.Type converted = type.accept(typeProtoConverter);
     Type actual = protoTypeConverter.from(converted);
     assertEquals(type, actual);
+  }
+
+  @Test
+  @DisplayName("interval day type with an unset precision is rejected")
+  void intervalDayWithoutPrecisionIsRejected() {
+    io.substrait.proto.Type protoType =
+        io.substrait.proto.Type.newBuilder()
+            .setIntervalDay(
+                io.substrait.proto.Type.IntervalDay.newBuilder()
+                    .setNullability(io.substrait.proto.Type.Nullability.NULLABILITY_REQUIRED))
+            .build();
+    assertThrows(IllegalArgumentException.class, () -> protoTypeConverter.from(protoType));
   }
 }
