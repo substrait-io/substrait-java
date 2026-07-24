@@ -254,8 +254,8 @@ public class ConverterProvider {
    * identifier casing.
    *
    * <p>Defaults to {@link #DEFAULT_SQL_PARSER_CONFIG}. Provide a custom configuration via {@link
-   * Builder#sqlParserConfig(SqlParser.Config)}, or override this method in a subclass for fully
-   * dynamic behaviour.
+   * Builder#sqlParserConfig(SqlParser.Config)} (or the {@link Builder#unquotedCasing(Casing)}
+   * convenience), or override this method in a subclass for fully dynamic behaviour.
    *
    * @return the SQL parser configuration
    */
@@ -514,7 +514,8 @@ public class ConverterProvider {
    *
    * <p>The builder starts from reasonable system defaults (the same ones behind {@link #DEFAULT})
    * and lets callers override individual components — most notably the Calcite {@link
-   * SqlParser.Config} used for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)}.
+   * SqlParser.Config} used for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)}
+   * for full control or {@link Builder#unquotedCasing(Casing)} for the common casing-only case.
    *
    * @return a new builder
    */
@@ -633,6 +634,23 @@ public class ConverterProvider {
      */
     public Builder sqlParserConfig(SqlParser.Config sqlParserConfig) {
       this.sqlParserConfig = sqlParserConfig;
+      return this;
+    }
+
+    /**
+     * Convenience for the common case of overriding only the unquoted-identifier casing, applied on
+     * top of the current {@link #sqlParserConfig(SqlParser.Config) parser configuration}.
+     *
+     * <p>Equivalent to {@code sqlParserConfig(currentConfig.withUnquotedCasing(unquotedCasing))}.
+     * Because it layers onto the current configuration, a subsequent {@link
+     * #sqlParserConfig(SqlParser.Config)} call replaces the whole configuration and discards the
+     * casing set here; set the full config first, then apply this convenience.
+     *
+     * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
+     * @return this builder
+     */
+    public Builder unquotedCasing(Casing unquotedCasing) {
+      this.sqlParserConfig = this.sqlParserConfig.withUnquotedCasing(unquotedCasing);
       return this;
     }
 
