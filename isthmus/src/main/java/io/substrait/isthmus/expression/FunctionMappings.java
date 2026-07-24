@@ -107,7 +107,7 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.LIKE),
               s(SqlStdOperatorTable.REPLACE, "replace"),
               s(SqlStdOperatorTable.SUBSTRING, "substring"),
-              s(SqlStdOperatorTable.CONCAT, "concat"),
+              s(SqlLibraryOperators.CONCAT_FUNCTION, "concat"),
               s(SqlStdOperatorTable.CHAR_LENGTH, "char_length"),
               s(SqlStdOperatorTable.LOWER, "lower"),
               s(SqlStdOperatorTable.UPPER, "upper"),
