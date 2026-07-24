@@ -145,6 +145,11 @@ public class FunctionMappings {
               s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
               s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
               s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
+              // Two-argument REGEXP_EXTRACT(value, regexp) maps to the two-argument
+              // regexp_match_substring(input, pattern), which returns the substring matching the
+              // full pattern. Patterns containing a capture group are not handled specially here:
+              // the full match is returned rather than the captured group.
+              s(SqlLibraryOperators.REGEXP_EXTRACT, "regexp_match_substring"),
               s(SqlStdOperatorTable.POSITION, "strpos"),
               s(SqlLibraryOperators.LEFT, "left"),
               s(SqlLibraryOperators.RIGHT, "right"),
