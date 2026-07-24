@@ -35,4 +35,11 @@ class FetchRoundtripTest extends TestBase {
     Rel rel = Fetch.builder().input(table).offset(sb.i64(3)).count(sb.i64(7)).build();
     verifyRoundTrip(rel);
   }
+
+  @Test
+  void dslExpressionOverloads() {
+    verifyRoundTrip(sb.fetch(rel -> sb.i64(2), rel -> sb.i64(8), table));
+    verifyRoundTrip(sb.limit(rel -> sb.i64(8), table));
+    verifyRoundTrip(sb.offset(rel -> sb.i64(2), table));
+  }
 }
