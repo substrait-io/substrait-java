@@ -96,16 +96,17 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
+    ConverterProvider provider = converterProvider();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {
-      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(converterProvider());
+      SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait(provider);
       ExtendedExpression extendedExpression = converter.convert(sqlExpressions, createStatements);
       printMessage(extendedExpression);
     } else { // by default Isthmus image are parsing SQL Query
-      SqlToSubstrait converter = new SqlToSubstrait(converterProvider());
+      SqlToSubstrait converter = new SqlToSubstrait(provider);
       Prepare.CatalogReader catalog =
           SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-              createStatements.toArray(String[]::new));
+              provider, createStatements);
       Plan plan = new PlanProtoConverter().toProto(converter.convert(sql, catalog));
       printMessage(plan);
     }

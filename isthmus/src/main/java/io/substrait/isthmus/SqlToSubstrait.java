@@ -5,11 +5,9 @@ import io.substrait.plan.ImmutablePlan.Builder;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Version;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.server.ServerDdlExecutor;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
 
 /**
  * Take a SQL statement and a set of table definitions and return a substrait plan.
@@ -21,7 +19,7 @@ public class SqlToSubstrait extends SqlConverterBase {
 
   /** Creates a SQL-to-Substrait converter using the default configuration. */
   public SqlToSubstrait() {
-    this(new ConverterProvider());
+    this(ConverterProvider.DEFAULT);
   }
 
   /**
@@ -50,7 +48,9 @@ public class SqlToSubstrait extends SqlConverterBase {
     builder.executionBehavior(converterProvider.getExecutionBehavior());
 
     // TODO: consider case in which one sql passes conversion while others don't
-    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, operatorTable).stream()
+    SubstraitSqlToCalcite.convertQueries(
+            sqlStatements, catalogReader, converterProvider, operatorTable)
+        .stream()
         .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
         .forEach(root -> builder.addRoots(root));
 
@@ -60,31 +60,28 @@ public class SqlToSubstrait extends SqlConverterBase {
   /**
    * Converts one or more SQL statements into a Substrait {@link Plan}.
    *
+   * <p>The {@code sqlDialect} parameter was previously used to influence identifier casing during
+   * parsing. This is now controlled by the {@link ConverterProvider} supplied to this converter; to
+   * customise it, subclass {@link ConverterProvider} and override {@link
+   * ConverterProvider#getSqlParserConfig()}.
+   *
    * @param sqlStatements a string containing one more SQL statements
    * @param catalogReader the {@link Prepare.CatalogReader} for finding tables/views referenced in
    *     the SQL statements
    * @param sqlDialect The sql dialect to use for parsing.
    * @return the Substrait {@link Plan}
    * @throws SqlParseException if there is an error while parsing the SQL statements
+   * @deprecated Prefer constructing {@link SqlToSubstrait} with a {@link ConverterProvider}
+   *     configured for the desired casing and calling {@link #convert(String,
+   *     Prepare.CatalogReader)}. For fully custom parser behaviour, subclass {@link
+   *     ConverterProvider} and override {@link ConverterProvider#getSqlParserConfig()}.
    */
+  @Deprecated
   public Plan convert(
       final String sqlStatements,
       final Prepare.CatalogReader catalogReader,
       final SqlDialect sqlDialect)
       throws SqlParseException {
-    Builder builder = io.substrait.plan.Plan.builder();
-    builder.version(Version.builder().from(Version.DEFAULT_VERSION).producer("isthmus").build());
-    builder.executionBehavior(converterProvider.getExecutionBehavior());
-
-    final SqlParser.Config sqlParserConfig =
-        sqlDialect.configureParser(
-            SqlParser.config().withParserFactory(ServerDdlExecutor.PARSER_FACTORY));
-
-    // TODO: consider case in which one sql passes conversion while others don't
-    SubstraitSqlToCalcite.convertQueries(sqlStatements, catalogReader, sqlParserConfig).stream()
-        .map(root -> SubstraitRelVisitor.convert(root, converterProvider))
-        .forEach(root -> builder.addRoots(root));
-
-    return builder.build();
+    return convert(sqlStatements, catalogReader);
   }
 }

@@ -1,5 +1,6 @@
 package io.substrait.isthmus.sql;
 
+import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SqlConverterBase;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.Utils;
@@ -50,28 +51,7 @@ public class SubstraitCreateStatementParser {
    */
   public static List<SubstraitTable> processCreateStatements(@NonNull final String createStatements)
       throws SqlParseException {
-    final List<SubstraitTable> tableList = new ArrayList<>();
-
-    final List<SqlNode> sqlNode = SubstraitSqlStatementParser.parseStatements(createStatements);
-    for (final SqlNode parsed : sqlNode) {
-      if (!(parsed instanceof SqlCreateTable)) {
-        throw fail("Not a valid CREATE TABLE statement.");
-      }
-
-      final SqlCreateTable create = (SqlCreateTable) parsed;
-
-      if (create.name.names.size() > 1) {
-        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
-      }
-
-      if (create.query != null) {
-        throw fail("CTAS not supported.", create.name.getParserPosition());
-      }
-
-      tableList.add(createSubstraitTable(create.name.names.get(0), create.columnList));
-    }
-
-    return tableList;
+    return processCreateStatements(ConverterProvider.DEFAULT, createStatements);
   }
 
   /**
@@ -91,6 +71,26 @@ public class SubstraitCreateStatementParser {
 
   /**
    * Parses one or more SQL strings containing only CREATE statements into a {@link
+   * CalciteCatalogReader}, using the parser settings from the given {@link ConverterProvider}.
+   *
+   * <p>This method expects the use of fully qualified table names in the CREATE statements.
+   *
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings
+   * @param createStatements List of SQL strings containing only CREATE statements, must not be null
+   * @return a {@link CalciteCatalogReader} generated from the CREATE statements
+   * @throws SqlParseException if there is an error parsing the SQL statements
+   */
+  public static CalciteCatalogReader processCreateStatementsToCatalog(
+      @NonNull final ConverterProvider converterProvider,
+      @NonNull final List<String> createStatements)
+      throws SqlParseException {
+    return processCreateStatementsToCatalog(
+        converterProvider, createStatements.toArray(new String[0]));
+  }
+
+  /**
+   * Parses one or more SQL strings containing only CREATE statements into a {@link
    * CalciteCatalogReader}
    *
    * <p>This method expects the use of fully qualified table names in the CREATE statements.
@@ -101,7 +101,33 @@ public class SubstraitCreateStatementParser {
    */
   public static CalciteCatalogReader processCreateStatementsToCatalog(
       @NonNull final String... createStatements) throws SqlParseException {
-    final CalciteSchema rootSchema = processCreateStatementsToSchema(createStatements);
+    final CalciteSchema rootSchema =
+        processCreateStatementsToSchema(ConverterProvider.DEFAULT, createStatements);
+    final List<String> defaultSchema = Collections.emptyList();
+    return new CalciteCatalogReader(
+        rootSchema,
+        defaultSchema,
+        SubstraitTypeSystem.TYPE_FACTORY,
+        SqlConverterBase.CONNECTION_CONFIG);
+  }
+
+  /**
+   * Parses one or more SQL strings containing only CREATE statements into a {@link
+   * CalciteCatalogReader}, using the parser settings from the given {@link ConverterProvider}.
+   *
+   * <p>This method expects the use of fully qualified table names in the CREATE statements.
+   *
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings
+   * @param createStatements a SQL string containing only CREATE statements, must not be null
+   * @return a {@link CalciteCatalogReader} generated from the CREATE statements
+   * @throws SqlParseException if parsing fails or statements are invalid
+   */
+  public static CalciteCatalogReader processCreateStatementsToCatalog(
+      @NonNull final ConverterProvider converterProvider, @NonNull final String... createStatements)
+      throws SqlParseException {
+    final CalciteSchema rootSchema =
+        processCreateStatementsToSchema(converterProvider, createStatements);
     final List<String> defaultSchema = Collections.emptyList();
     return new CalciteCatalogReader(
         rootSchema,
@@ -133,19 +159,58 @@ public class SubstraitCreateStatementParser {
   }
 
   /**
-   * Parses one or more SQL strings containing only CREATE statements into a {@link CalciteSchema}.
+   * Parses a SQL string containing only CREATE statements into a list of {@link SubstraitTable}s,
+   * using the parser settings from the given {@link ConverterProvider}.
    *
-   * @param createStatements one or more SQL strings containing only CREATE statements; must not be
-   *     null
-   * @return a {@link CalciteSchema} generated from the CREATE statements
+   * <p>This method only supports simple table names without any additional qualifiers. Only used
+   * with {@link io.substrait.isthmus.SqlExpressionToSubstrait}.
+   *
+   * @param converterProvider the converter provider whose parser config controls identifier casing
+   *     and other parser settings
+   * @param createStatements a SQL string containing only CREATE statements; must not be null
+   * @return list of {@link SubstraitTable}s generated from the CREATE statements
    * @throws SqlParseException if parsing fails or statements are invalid
    */
+  public static List<SubstraitTable> processCreateStatements(
+      @NonNull final ConverterProvider converterProvider, @NonNull final String createStatements)
+      throws SqlParseException {
+    final List<SubstraitTable> tableList = new ArrayList<>();
+
+    final List<SqlNode> sqlNode =
+        SubstraitSqlStatementParser.parseStatements(createStatements, converterProvider);
+    for (final SqlNode parsed : sqlNode) {
+      if (!(parsed instanceof SqlCreateTable)) {
+        throw fail("Not a valid CREATE TABLE statement.");
+      }
+
+      final SqlCreateTable create = (SqlCreateTable) parsed;
+
+      if (create.name.names.size() > 1) {
+        throw fail("Only simple table names are allowed.", create.name.getParserPosition());
+      }
+
+      if (create.query != null) {
+        throw fail("CTAS not supported.", create.name.getParserPosition());
+      }
+
+      tableList.add(createSubstraitTable(create.name.names.get(0), create.columnList));
+    }
+
+    return tableList;
+  }
+
+  /**
+   * Parses one or more SQL strings containing only CREATE statements into a {@link CalciteSchema}
+   * using the given provider's parser config.
+   */
   private static CalciteSchema processCreateStatementsToSchema(
-      @NonNull final String... createStatements) throws SqlParseException {
+      @NonNull final ConverterProvider converterProvider, @NonNull final String... createStatements)
+      throws SqlParseException {
     final CalciteSchema rootSchema = CalciteSchema.createRootSchema(false);
 
     for (final String statement : createStatements) {
-      final List<SqlNode> sqlNode = SubstraitSqlStatementParser.parseStatements(statement);
+      final List<SqlNode> sqlNode =
+          SubstraitSqlStatementParser.parseStatements(statement, converterProvider);
       for (final SqlNode parsed : sqlNode) {
         if (!(parsed instanceof SqlCreateTable)) {
           throw fail("Not a valid CREATE TABLE statement.");
