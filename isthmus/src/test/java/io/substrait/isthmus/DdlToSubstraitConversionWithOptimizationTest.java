@@ -19,10 +19,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.calcite.server.ServerDdlExecutor;
-import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -36,13 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class DdlToSubstraitConversionWithOptimizationTest {
 
-  /** Parser configuration for DDL statements. */
-  private static final SqlParser.Config DDL_PARSER_CONFIG =
-      SqlDialect.DatabaseProduct.CALCITE
-          .getDialect()
-          .configureParser(SqlParser.config().withParserFactory(ServerDdlExecutor.PARSER_FACTORY));
-
-  private final ConverterProvider converterProvider = new ConverterProvider();
+  private final ConverterProvider converterProvider = ConverterProvider.DEFAULT;
 
   /**
    * Tests that optimization rules can be safely applied to DDL statements.
@@ -68,7 +59,7 @@ class DdlToSubstraitConversionWithOptimizationTest {
 
     // Convert DDL to RelRoot
     List<RelRoot> relRoots =
-        SubstraitSqlToCalcite.convertQueries(createStatement, catalogReader, DDL_PARSER_CONFIG);
+        SubstraitSqlToCalcite.convertQueries(createStatement, catalogReader, converterProvider);
     RelRoot relRoot = relRoots.get(0);
 
     // Apply an optimization rule (FILTER_INTO_JOIN) that will structurally mutate the children

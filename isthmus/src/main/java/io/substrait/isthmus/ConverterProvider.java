@@ -71,6 +71,15 @@ public class ConverterProvider {
   protected final Plan.ExecutionBehavior executionBehavior;
 
   /**
+   * A shared default {@link ConverterProvider} instance using all system defaults. Equivalent to
+   * {@code new ConverterProvider()} but avoids redundant construction at every call site.
+   *
+   * <p>This instance is safe to share because {@link ConverterProvider} is effectively immutable
+   * after construction — all fields are set only in constructors.
+   */
+  public static final ConverterProvider DEFAULT = new ConverterProvider();
+
+  /**
    * Creates a ConverterProvider with default extension collection and type factory. Uses {@link
    * DefaultExtensionCatalog#DEFAULT_COLLECTION} and {@link SubstraitTypeSystem#TYPE_FACTORY}.
    */
