@@ -44,24 +44,24 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
       collection2 = SimpleExtension.load(extensions2);
       collection = collection1.merge(collection2);
 
-      // Verify that the merged collection contains duplicate concat functions with different URNs
-      // This is a precondition for the tests - if this fails, the tests don't make sense
-      List<SimpleExtension.ScalarFunctionVariant> concatFunctions =
+      // Verify that the merged collection contains duplicate concatenate functions with different
+      // URNs. This is a precondition for the tests - if this fails, the tests don't make sense
+      List<SimpleExtension.ScalarFunctionVariant> concatenateFunctions =
           collection.scalarFunctions().stream()
               .filter(f -> f.name().equals("concatenate"))
               .toList();
 
-      if (concatFunctions.size() != 2) {
+      if (concatenateFunctions.size() != 2) {
         throw new IllegalStateException(
-            "Expected 2 concat functions in merged collection, but found: "
-                + concatFunctions.size());
+            "Expected 2 concatenate functions in merged collection, but found: "
+                + concatenateFunctions.size());
       }
 
-      String urn1 = concatFunctions.get(0).getAnchor().urn();
-      String urn2 = concatFunctions.get(1).getAnchor().urn();
+      String urn1 = concatenateFunctions.get(0).getAnchor().urn();
+      String urn2 = concatenateFunctions.get(1).getAnchor().urn();
       if (urn1.equals(urn2)) {
         throw new IllegalStateException(
-            "Expected different URNs for the two concat functions, but both were: " + urn1);
+            "Expected different URNs for the two concatenate functions, but both were: " + urn1);
       }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -104,7 +104,7 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
             reverseCollection.scalarFunctions(), testSig, typeFactory, TypeConverter.DEFAULT);
 
     RexBuilder rexBuilder = new RexBuilder(typeFactory);
-    RexCall concatCall =
+    RexCall concatenateCall =
         (RexCall)
             rexBuilder.makeCall(
                 TEST_CONCATENATE, rexBuilder.makeLiteral("hello"), rexBuilder.makeLiteral("world"));
@@ -119,8 +119,8 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
               .build();
         };
 
-    Optional<Expression> exprA = converterA.convert(concatCall, topLevelConverter);
-    Optional<Expression> exprB = converterB.convert(concatCall, topLevelConverter);
+    Optional<Expression> exprA = converterA.convert(concatenateCall, topLevelConverter);
+    Optional<Expression> exprB = converterB.convert(concatenateCall, topLevelConverter);
 
     Expression.ScalarFunctionInvocation funcA = (Expression.ScalarFunctionInvocation) exprA.get();
     Expression.ScalarFunctionInvocation funcB = (Expression.ScalarFunctionInvocation) exprB.get();
@@ -128,12 +128,12 @@ class DuplicateFunctionUrnTest extends PlanTestBase {
     assertEquals(
         "extension:com.domain:string2",
         funcA.declaration().getAnchor().urn(),
-        "converterA should use last concat function (from collection2)");
+        "converterA should use last concatenate function (from collection2)");
 
     assertEquals(
         "extension:com.domain:string1",
         funcB.declaration().getAnchor().urn(),
-        "converterB should use last concat function (from collection1)");
+        "converterB should use last concatenate function (from collection1)");
   }
 
   @Test
