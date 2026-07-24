@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.expression.Expression;
 import io.substrait.relation.Rel;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,18 @@ class FetchTest extends PlanTestBase {
   @Test
   void offsetAndLimit() {
     Rel rel = sb.fetch(50, 10, TABLE);
+    assertFullRoundTrip(rel);
+  }
+
+  @Test
+  void limitWithDynamicParameterCount() {
+    // Substrait models fetch offset/count as expressions, so a non-literal (dynamic-parameter)
+    // count must pass through to Calcite as a RexDynamicParam and back.
+    Rel rel =
+        sb.limit(
+            input ->
+                Expression.DynamicParameter.builder().type(R.I64).parameterReference(0).build(),
+            TABLE);
     assertFullRoundTrip(rel);
   }
 }

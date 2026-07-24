@@ -51,7 +51,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -484,18 +483,14 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
     RelNode child = fetch.getInput().accept(this, context);
-    OptionalLong optCount = fetch.getCount();
-    long count = optCount.orElse(-1L);
-    long offset = fetch.getOffset();
-    if (offset > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException(
-          String.format("offset is overflowed as an integer: %d", offset));
-    }
-    if (count > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException(
-          String.format("count is overflowed as an integer: %d", count));
-    }
-    RelNode node = relBuilder.push(child).limit((int) offset, (int) count).build();
+    // Offset/count are expressions; pass them through to Calcite as RexNodes so non-literal (e.g.
+    // dynamic-parameter) offset/count are preserved. An unset offset means 0 and an unset count
+    // means LIMIT ALL.
+    RexNode offset =
+        fetch.getOffset().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
+    RexNode count =
+        fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
+    RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
     return applyRemap(node, fetch.getRemap());
   }
 
