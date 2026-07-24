@@ -148,8 +148,7 @@ class AdvancedExtensionRelProtoConversionTest extends TestBase {
                     .initialSchema(
                         NamedStruct.builder().struct(TypeCreator.REQUIRED.struct()).build())
                     .build())
-            .offset(0)
-            .count(10)
+            .count(ExpressionCreator.i64(false, 10))
             .extension(extension)
             .build();
 

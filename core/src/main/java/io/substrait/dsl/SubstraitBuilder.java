@@ -29,6 +29,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
@@ -283,7 +284,14 @@ public class SubstraitBuilder {
   }
 
   private Fetch fetch(long offset, OptionalLong count, Optional<Rel.Remap> remap, Rel input) {
-    return Fetch.builder().offset(offset).count(count).input(input).remap(remap).build();
+    ImmutableFetch.Builder builder = Fetch.builder().input(input).remap(remap);
+    // Offset/count are expressions; wrap the given values as i64 literals. An unset offset is
+    // treated as 0, and an unset count signals LIMIT ALL.
+    if (offset != 0) {
+      builder.offset(i64(offset));
+    }
+    count.ifPresent(c -> builder.count(i64(c)));
+    return builder.build();
   }
 
   /**

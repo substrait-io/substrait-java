@@ -334,12 +334,10 @@ public class RelProtoConverter
   @Override
   public Rel visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
     FetchRel.Builder builder =
-        FetchRel.newBuilder()
-            .setCommon(common(fetch))
-            .setInput(toProto(fetch.getInput()))
-            .setOffset(fetch.getOffset())
-            // -1 is used as a sentinel value to signal LIMIT ALL
-            .setCount(fetch.getCount().orElse(-1));
+        FetchRel.newBuilder().setCommon(common(fetch)).setInput(toProto(fetch.getInput()));
+
+    fetch.getOffset().ifPresent(offset -> builder.setOffsetExpr(toProto(offset)));
+    fetch.getCount().ifPresent(count -> builder.setCountExpr(toProto(count)));
 
     fetch
         .getExtension()

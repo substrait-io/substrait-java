@@ -906,11 +906,15 @@ public class ProtoRelConverter {
    */
   protected Fetch newFetch(FetchRel rel) {
     Rel input = from(rel.getInput());
-    ImmutableFetch.Builder builder = Fetch.builder().input(input).offset(rel.getOffset());
-    if (rel.getCount() != -1) {
-      // -1 is used as a sentinel value to signal LIMIT ALL
-      // count only needs to be set when it is not -1
-      builder.count(rel.getCount());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableFetch.Builder builder = Fetch.builder().input(input);
+    if (rel.hasOffsetExpr()) {
+      builder.offset(converter.from(rel.getOffsetExpr()));
+    }
+    if (rel.hasCountExpr()) {
+      // An unset count signals LIMIT ALL.
+      builder.count(converter.from(rel.getCountExpr()));
     }
 
     builder

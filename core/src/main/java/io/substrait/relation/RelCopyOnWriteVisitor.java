@@ -154,10 +154,20 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Fetch fetch, EmptyVisitationContext context) throws E {
-    return fetch
-        .getInput()
-        .accept(this, context)
-        .map(input -> Fetch.builder().from(fetch).input(input).build());
+    Optional<Rel> input = fetch.getInput().accept(this, context);
+    Optional<Expression> offset = visitOptionalExpression(fetch.getOffset(), context);
+    Optional<Expression> count = visitOptionalExpression(fetch.getCount(), context);
+
+    if (allEmpty(input, offset, count)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Fetch.builder()
+            .from(fetch)
+            .input(input.orElse(fetch.getInput()))
+            .offset(or(offset, fetch::getOffset))
+            .count(or(count, fetch::getCount))
+            .build());
   }
 
   @Override
