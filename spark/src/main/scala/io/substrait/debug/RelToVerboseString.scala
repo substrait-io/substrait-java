@@ -18,6 +18,7 @@ package io.substrait.debug
 
 import io.substrait.spark.DefaultRelVisitor
 
+import io.substrait.expression.{Expression => SExpression}
 import io.substrait.relation._
 import io.substrait.relation.physical.{BroadcastExchange, MultiBucketExchange, RoundRobinExchange, ScatterExchange, SingleBucketExchange}
 import io.substrait.util.EmptyVisitationContext
@@ -49,13 +50,22 @@ class RelToVerboseString(addSuffix: Boolean) extends DefaultRelVisitor[String] {
   override def visit(fetch: Fetch, context: EmptyVisitationContext): String = {
     withBuilder(fetch, 7)(
       builder => {
-        builder.append("offset=").append(fetch.getOffset)
+        // offset/count are expressions; render their numeric value, and an unset offset as 0.
+        builder
+          .append("offset=")
+          .append(if (fetch.getOffset.isPresent) fetchValue(fetch.getOffset.get) else "0")
         fetch.getCount.ifPresent(
           count => {
             builder.append(", ")
-            builder.append("count=").append(count)
+            builder.append("count=").append(fetchValue(count))
           })
       })
+  }
+
+  private def fetchValue(e: SExpression): String = e match {
+    case l: SExpression.I64Literal => l.value().toString
+    case l: SExpression.I32Literal => l.value().toString
+    case other => other.toString
   }
   override def visit(sort: Sort, context: EmptyVisitationContext): String = {
     withBuilder(sort, 5)(

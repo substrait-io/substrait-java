@@ -1,8 +1,9 @@
 package io.substrait.relation;
 
+import io.substrait.expression.Expression;
 import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
-import java.util.OptionalLong;
+import java.util.Optional;
 import org.immutables.value.Value;
 
 /**
@@ -13,18 +14,20 @@ import org.immutables.value.Value;
 public abstract class Fetch extends SingleInputRel implements HasExtension {
 
   /**
-   * Returns the number of leading input rows to skip.
+   * Returns the expression evaluated into the number of leading input rows to skip, if any. An
+   * empty value (or an expression evaluating to null) is treated as {@code 0}.
    *
-   * @return the offset
+   * @return the optional offset expression
    */
-  public abstract long getOffset();
+  public abstract Optional<Expression> getOffset();
 
   /**
-   * Returns the maximum number of rows to return, or empty to return all remaining rows.
+   * Returns the expression evaluated into the maximum number of rows to return, if any. An empty
+   * value signals that all remaining rows should be returned.
    *
-   * @return the optional row count limit
+   * @return the optional row count expression
    */
-  public abstract OptionalLong getCount();
+  public abstract Optional<Expression> getCount();
 
   @Override
   protected Type.Struct deriveRecordType() {

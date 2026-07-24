@@ -9,7 +9,6 @@ import static io.substrait.expression.ExpressionCreator.string;
 import static io.substrait.expression.ExpressionCreator.struct;
 import static io.substrait.expression.ExpressionCreator.typedNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
@@ -83,37 +82,9 @@ class VirtualTableScanTest extends TestBase {
   }
 
   @Test
-  void virtualTableUsingValuesShouldBeConvertedToFields() {
-    // Create 2 virtual tables with the same contents, but different encodings (values vs fields)
-    io.substrait.proto.Rel virtualTableWithValuesSet = virtualTableUsingValues(schema, literal);
+  void virtualTableUsingFieldsRoundTrips() {
     io.substrait.proto.Rel virtualTableWithFieldsSet = virtualTableUsingFields(schema, expression);
-
-    Rel rel1 = protoRelConverter.from(virtualTableWithFieldsSet);
-    Rel rel2 = protoRelConverter.from(virtualTableWithValuesSet);
-
-    // The relations should be equivalent
-    assertEquals(rel1, rel2);
-  }
-
-  @Test
-  void rejectVirtualTablesWhenBothValuesAndFieldsAreSet() {
-    io.substrait.proto.Expression.Literal.Struct literalStruct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder().addFields(literal).build();
-    io.substrait.proto.Expression.Nested.Struct nestedStruct =
-        io.substrait.proto.Expression.Nested.Struct.newBuilder().addFields(expression).build();
-
-    io.substrait.proto.ReadRel readRel =
-        ReadRel.newBuilder()
-            .setVirtualTable(
-                ReadRel.VirtualTable.newBuilder()
-                    .addExpressions(nestedStruct)
-                    .addValues(literalStruct)
-                    .build())
-            .setBaseSchema(schema)
-            .build();
-
-    io.substrait.proto.Rel rel = io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
-    assertThrows(IllegalArgumentException.class, () -> protoRelConverter.from(rel));
+    assertDoesNotThrow(() -> protoRelConverter.from(virtualTableWithFieldsSet));
   }
 
   io.substrait.proto.Rel virtualTableUsingFields(
@@ -124,20 +95,6 @@ class VirtualTableScanTest extends TestBase {
     io.substrait.proto.ReadRel readRel =
         ReadRel.newBuilder()
             .setVirtualTable(ReadRel.VirtualTable.newBuilder().addExpressions(struct).build())
-            .setBaseSchema(schema)
-            .build();
-
-    return io.substrait.proto.Rel.newBuilder().setRead(readRel).build();
-  }
-
-  io.substrait.proto.Rel virtualTableUsingValues(
-      io.substrait.proto.NamedStruct schema, io.substrait.proto.Expression.Literal value) {
-    io.substrait.proto.Expression.Literal.Struct struct =
-        io.substrait.proto.Expression.Literal.Struct.newBuilder().addFields(literal).build();
-
-    io.substrait.proto.ReadRel readRel =
-        ReadRel.newBuilder()
-            .setVirtualTable(ReadRel.VirtualTable.newBuilder().addValues(struct).build())
             .setBaseSchema(schema)
             .build();
 

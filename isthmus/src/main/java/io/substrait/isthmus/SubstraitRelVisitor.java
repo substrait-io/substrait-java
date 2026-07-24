@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -712,27 +711,19 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
 
     if (sort.fetch != null || sort.offset != null) {
-      Long offset = Optional.ofNullable(sort.offset).map(this::asLong).orElse(0L);
-      OptionalLong count =
-          Optional.ofNullable(sort.fetch)
-              .map(r -> OptionalLong.of(asLong(r)))
-              .orElse(OptionalLong.empty());
-
-      ImmutableFetch.Builder builder = Fetch.builder().input(output).offset(offset).count(count);
+      // Offset/count are expressions; pass the Calcite RexNodes through so non-literal (e.g.
+      // dynamic-parameter) offset/count are preserved.
+      ImmutableFetch.Builder builder = Fetch.builder().input(output);
+      if (sort.offset != null) {
+        builder.offset(toExpression(sort.offset));
+      }
+      if (sort.fetch != null) {
+        builder.count(toExpression(sort.fetch));
+      }
       output = builder.build();
     }
 
     return output;
-  }
-
-  private long asLong(RexNode rex) {
-    Expression expr = toExpression(rex);
-    if (expr instanceof Expression.I64Literal) {
-      return ((Expression.I64Literal) expr).value();
-    } else if (expr instanceof Expression.I32Literal) {
-      return ((Expression.I32Literal) expr).value();
-    }
-    throw new UnsupportedOperationException("Unknown type: " + rex);
   }
 
   /**

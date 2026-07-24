@@ -269,12 +269,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   private def fetch(child: LogicalPlan, offset: Long, limit: Long = -1): relation.Fetch = {
+    // Offset/count are i64-literal expressions; offset 0 is left unset and an unset count signals
+    // LIMIT ALL.
     val builder = relation.Fetch
       .builder()
       .input(visit(child))
-      .offset(offset)
+    if (offset != 0) {
+      builder.offset(ExpressionCreator.i64(false, offset))
+    }
     if (limit != -1) {
-      builder.count(limit)
+      builder.count(ExpressionCreator.i64(false, limit))
     }
 
     builder.build()

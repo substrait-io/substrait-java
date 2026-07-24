@@ -233,35 +233,6 @@ public class RelProtoConverter
         .build();
   }
 
-  /**
-   * Returns {@code true} when every key is a plain {@link
-   * ComparisonJoinKey.SimpleComparisonType#EQ} comparison, i.e. the only case the deprecated {@code
-   * left_keys}/{@code right_keys} fields can represent without losing information. {@code
-   * IS_NOT_DISTINCT_FROM}, {@code MIGHT_EQUAL} and custom comparisons cannot be expressed by the
-   * deprecated fields, where an old consumer would silently interpret them as equality.
-   */
-  private boolean isLosslessAsDeprecatedKeys(List<ComparisonJoinKey> keys) {
-    return keys.stream()
-        .allMatch(
-            key ->
-                key.getComparison()
-                    .accept(
-                        new ComparisonJoinKey.ComparisonTypeVisitor<Boolean, RuntimeException>() {
-                          @Override
-                          public Boolean visit(
-                              ComparisonJoinKey.SimpleComparison simpleComparison) {
-                            return simpleComparison.getType()
-                                == ComparisonJoinKey.SimpleComparisonType.EQ;
-                          }
-
-                          @Override
-                          public Boolean visit(
-                              ComparisonJoinKey.CustomComparison customComparison) {
-                            return false;
-                          }
-                        }));
-  }
-
   @Override
   public Rel visit(Aggregate aggregate, EmptyVisitationContext context) throws RuntimeException {
     final List<Expression> uniqueGroupingExpressions =
@@ -334,12 +305,10 @@ public class RelProtoConverter
   @Override
   public Rel visit(Fetch fetch, EmptyVisitationContext context) throws RuntimeException {
     FetchRel.Builder builder =
-        FetchRel.newBuilder()
-            .setCommon(common(fetch))
-            .setInput(toProto(fetch.getInput()))
-            .setOffset(fetch.getOffset())
-            // -1 is used as a sentinel value to signal LIMIT ALL
-            .setCount(fetch.getCount().orElse(-1));
+        FetchRel.newBuilder().setCommon(common(fetch)).setInput(toProto(fetch.getInput()));
+
+    fetch.getOffset().ifPresent(offset -> builder.setOffsetExpr(toProto(offset)));
+    fetch.getCount().ifPresent(count -> builder.setCountExpr(toProto(count)));
 
     fetch
         .getExtension()
@@ -481,7 +450,6 @@ public class RelProtoConverter
   }
 
   @Override
-  @SuppressWarnings("deprecation") // intentionally also writes the deprecated left_keys/right_keys
   public Rel visit(HashJoin hashJoin, EmptyVisitationContext context) throws RuntimeException {
     HashJoinRel.Builder builder =
         HashJoinRel.newBuilder()
@@ -492,16 +460,6 @@ public class RelProtoConverter
 
     List<ComparisonJoinKey> keys = hashJoin.getKeys();
     builder.addAllKeys(keys.stream().map(this::toProto).collect(Collectors.toList()));
-
-    // Also populate the deprecated left_keys/right_keys when every key is a plain EQ comparison so
-    // that consumers which have not yet adopted the new keys field keep working. Lossy comparison
-    // types are intentionally left out of the deprecated fields.
-    if (isLosslessAsDeprecatedKeys(keys)) {
-      builder.addAllLeftKeys(
-          keys.stream().map(k -> toProto(k.getLeft())).collect(Collectors.toList()));
-      builder.addAllRightKeys(
-          keys.stream().map(k -> toProto(k.getRight())).collect(Collectors.toList()));
-    }
 
     hashJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 
@@ -514,7 +472,6 @@ public class RelProtoConverter
   }
 
   @Override
-  @SuppressWarnings("deprecation") // intentionally also writes the deprecated left_keys/right_keys
   public Rel visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws RuntimeException {
     MergeJoinRel.Builder builder =
         MergeJoinRel.newBuilder()
@@ -525,16 +482,6 @@ public class RelProtoConverter
 
     List<ComparisonJoinKey> keys = mergeJoin.getKeys();
     builder.addAllKeys(keys.stream().map(this::toProto).collect(Collectors.toList()));
-
-    // Also populate the deprecated left_keys/right_keys when every key is a plain EQ comparison so
-    // that consumers which have not yet adopted the new keys field keep working. Lossy comparison
-    // types are intentionally left out of the deprecated fields.
-    if (isLosslessAsDeprecatedKeys(keys)) {
-      builder.addAllLeftKeys(
-          keys.stream().map(k -> toProto(k.getLeft())).collect(Collectors.toList()));
-      builder.addAllRightKeys(
-          keys.stream().map(k -> toProto(k.getRight())).collect(Collectors.toList()));
-    }
 
     mergeJoin.getPostJoinFilter().ifPresent(t -> builder.setPostJoinFilter(toProto(t)));
 

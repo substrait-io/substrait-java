@@ -71,7 +71,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.jspecify.annotations.NonNull;
 
 /** Converts from {@link io.substrait.proto.Rel} to {@link io.substrait.relation.Rel} */
@@ -826,28 +825,6 @@ public class ProtoRelConverter {
   }
 
   /**
-   * Converts StructLiteral instances to NestedStruct for VirtualTableScan. This is a convenience
-   * method for migrating from the legacy StructLiteral-based VirtualTable API to the new
-   * NestedStruct-based API.
-   *
-   * @param nullable whether the resulting NestedStruct instances should be nullable
-   * @param structs the StructLiteral instances to convert
-   * @return a list of NestedStruct instances with the same field structure
-   */
-  private static List<Expression.NestedStruct> nestedStruct(
-      boolean nullable, Expression.StructLiteral... structs) {
-    List<Expression.NestedStruct> nestedStructs = new ArrayList<>();
-    for (Expression.StructLiteral struct : structs) {
-      nestedStructs.add(
-          Expression.NestedStruct.builder()
-              .nullable(nullable)
-              .addAllFields(struct.fields())
-              .build());
-    }
-    return nestedStructs;
-  }
-
-  /**
    * Converts the corresponding protobuf message to its POJO representation.
    *
    * @param rel the protobuf value to convert
@@ -855,24 +832,11 @@ public class ProtoRelConverter {
    */
   protected VirtualTableScan newVirtualTable(ReadRel rel) {
     ReadRel.VirtualTable virtualTable = rel.getVirtualTable();
-    // If both values and expressions are set, raise an error
-    if (virtualTable.getValuesCount() > 0 && virtualTable.getExpressionsCount() > 0) {
-      throw new IllegalArgumentException(
-          "VirtualTable cannot have both values and expressions set");
-    }
     NamedStruct virtualTableSchema = newNamedStruct(rel);
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, virtualTableSchema.struct(), this);
 
-    List<Expression.NestedStruct> expressions =
-        new ArrayList<>(virtualTable.getValuesCount() + virtualTable.getExpressionsCount());
-
-    // We cannot have a null row in VirtualTable, therefore we set the nullability to false
-    // nullability is also not supported at the Expression.Nested.Struct level
-    for (io.substrait.proto.Expression.Literal.Struct struct : virtualTable.getValuesList()) {
-      expressions.addAll(nestedStruct(false, converter.from(struct)));
-    }
-
+    List<Expression.NestedStruct> expressions = new ArrayList<>(virtualTable.getExpressionsCount());
     for (io.substrait.proto.Expression.Nested.Struct expr : virtualTable.getExpressionsList()) {
       expressions.add(converter.from(expr));
     }
@@ -906,11 +870,15 @@ public class ProtoRelConverter {
    */
   protected Fetch newFetch(FetchRel rel) {
     Rel input = from(rel.getInput());
-    ImmutableFetch.Builder builder = Fetch.builder().input(input).offset(rel.getOffset());
-    if (rel.getCount() != -1) {
-      // -1 is used as a sentinel value to signal LIMIT ALL
-      // count only needs to be set when it is not -1
-      builder.count(rel.getCount());
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, input.getRecordType(), this);
+    ImmutableFetch.Builder builder = Fetch.builder().input(input);
+    if (rel.hasOffsetExpr()) {
+      builder.offset(converter.from(rel.getOffsetExpr()));
+    }
+    if (rel.hasCountExpr()) {
+      // An unset count signals LIMIT ALL.
+      builder.count(converter.from(rel.getCountExpr()));
     }
 
     builder
@@ -1266,13 +1234,7 @@ public class ProtoRelConverter {
         HashJoin.builder()
             .left(left)
             .right(right)
-            .keys(
-                comparisonJoinKeys(
-                    rel.getKeysList(),
-                    rel.getLeftKeysList(),
-                    rel.getRightKeysList(),
-                    leftConverter,
-                    rightConverter))
+            .keys(comparisonJoinKeys(rel.getKeysList(), leftConverter, rightConverter))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -1316,13 +1278,7 @@ public class ProtoRelConverter {
         MergeJoin.builder()
             .left(left)
             .right(right)
-            .keys(
-                comparisonJoinKeys(
-                    rel.getKeysList(),
-                    rel.getLeftKeysList(),
-                    rel.getRightKeysList(),
-                    leftConverter,
-                    rightConverter))
+            .keys(comparisonJoinKeys(rel.getKeysList(), leftConverter, rightConverter))
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
             .postJoinFilter(
                 Optional.ofNullable(
@@ -1352,25 +1308,10 @@ public class ProtoRelConverter {
    */
   private List<ComparisonJoinKey> comparisonJoinKeys(
       List<io.substrait.proto.ComparisonJoinKey> keys,
-      List<io.substrait.proto.Expression.FieldReference> leftKeys,
-      List<io.substrait.proto.Expression.FieldReference> rightKeys,
       ProtoExpressionConverter leftConverter,
       ProtoExpressionConverter rightConverter) {
-    if (!keys.isEmpty()) {
-      return keys.stream()
-          .map(key -> comparisonJoinKey(key, leftConverter, rightConverter))
-          .collect(Collectors.toList());
-    }
-    if (leftKeys.size() != rightKeys.size()) {
-      throw new IllegalArgumentException("Number of left and right keys must be equal.");
-    }
-    return IntStream.range(0, leftKeys.size())
-        .mapToObj(
-            i ->
-                ComparisonJoinKey.of(
-                    leftConverter.from(leftKeys.get(i)),
-                    rightConverter.from(rightKeys.get(i)),
-                    ComparisonJoinKey.SimpleComparisonType.EQ))
+    return keys.stream()
+        .map(key -> comparisonJoinKey(key, leftConverter, rightConverter))
         .collect(Collectors.toList());
   }
 

@@ -29,6 +29,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
@@ -282,8 +283,111 @@ public class SubstraitBuilder {
     return fetch(offset, OptionalLong.empty(), Optional.of(remap), input);
   }
 
+  /**
+   * Creates a fetch relation that skips {@code offset} rows and returns {@code count} rows, where
+   * offset and count are built from the input relation and each evaluate to a non-negative integer.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param count builds the row-count expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch fetch(Function<Rel, Expression> offset, Function<Rel, Expression> count, Rel input) {
+    return fetch(
+        Optional.of(offset.apply(input)), Optional.of(count.apply(input)), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips {@code offset} rows and returns {@code count} rows, where
+   * offset and count are built from the input relation and each evaluate to a non-negative integer,
+   * with output field remapping.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param count builds the row-count expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch fetch(
+      Function<Rel, Expression> offset,
+      Function<Rel, Expression> count,
+      Rel.Remap remap,
+      Rel input) {
+    return fetch(
+        Optional.of(offset.apply(input)),
+        Optional.of(count.apply(input)),
+        Optional.of(remap),
+        input);
+  }
+
+  /**
+   * Creates a fetch relation that limits the number of rows returned to a count expression built
+   * from the input relation.
+   *
+   * @param count builds the row-count expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch limit(Function<Rel, Expression> count, Rel input) {
+    return fetch(Optional.empty(), Optional.of(count.apply(input)), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that limits the number of rows returned to a count expression built
+   * from the input relation, with output field remapping.
+   *
+   * @param count builds the row-count expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch limit(Function<Rel, Expression> count, Rel.Remap remap, Rel input) {
+    return fetch(Optional.empty(), Optional.of(count.apply(input)), Optional.of(remap), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips a number of rows given by an offset expression built from
+   * the input relation.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch offset(Function<Rel, Expression> offset, Rel input) {
+    return fetch(Optional.of(offset.apply(input)), Optional.empty(), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips a number of rows given by an offset expression built from
+   * the input relation, with output field remapping.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch offset(Function<Rel, Expression> offset, Rel.Remap remap, Rel input) {
+    return fetch(Optional.of(offset.apply(input)), Optional.empty(), Optional.of(remap), input);
+  }
+
   private Fetch fetch(long offset, OptionalLong count, Optional<Rel.Remap> remap, Rel input) {
-    return Fetch.builder().offset(offset).count(count).input(input).remap(remap).build();
+    // Offset/count are expressions; wrap the given values as i64 literals. An unset offset is
+    // treated as 0, and an unset count signals LIMIT ALL.
+    Optional<Expression> offsetExpr = offset == 0 ? Optional.empty() : Optional.of(i64(offset));
+    Optional<Expression> countExpr =
+        count.isPresent() ? Optional.of(i64(count.getAsLong())) : Optional.empty();
+    return fetch(offsetExpr, countExpr, remap, input);
+  }
+
+  private Fetch fetch(
+      Optional<Expression> offset,
+      Optional<Expression> count,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    ImmutableFetch.Builder builder = Fetch.builder().input(input).remap(remap);
+    offset.ifPresent(o -> builder.offset(o));
+    count.ifPresent(c -> builder.count(c));
+    return builder.build();
   }
 
   /**
