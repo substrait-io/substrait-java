@@ -259,8 +259,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   override def visit(fetch: relation.Fetch, context: EmptyVisitationContext): LogicalPlan = {
     val child = fetch.getInput.accept(this, context)
     // Offset/count are expressions; an unset count means LIMIT ALL (-1) and an unset offset means 0.
-    val limit = if (fetch.getCount.isPresent) asLong(fetch.getCount.get).toInt else -1
-    val offset = if (fetch.getOffset.isPresent) asLong(fetch.getOffset.get).toInt else 0
+    val limit = if (fetch.getCount.isPresent) asInt(fetch.getCount.get) else -1
+    val offset = if (fetch.getOffset.isPresent) asInt(fetch.getOffset.get) else 0
     val toLiteral = (i: Int) => Literal(i, IntegerType)
     val plan = if (limit >= 0) {
       val limitExpr = toLiteral(limit)
@@ -277,9 +277,9 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     remap(plan, fetch.getRemap)
   }
 
-  private def asLong(e: SExpression): Long = e match {
-    case l: SExpression.I64Literal => l.value()
-    case l: SExpression.I32Literal => l.value().toLong
+  private def asInt(e: SExpression): Int = e match {
+    case l: SExpression.I64Literal => l.value().toInt
+    case l: SExpression.I32Literal => l.value().toInt
     case other =>
       throw new UnsupportedOperationException(s"Unsupported fetch offset/count expression: $other")
   }
