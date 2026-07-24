@@ -14,8 +14,8 @@ jobs:
       - name: Validate credentials for Sonatype and Signing
         run: ./ci/release/sanity.sh
         env:
-          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          MAVENCENTRAL_USERNAME: ${{ secrets.M2_CENTRAL_USERNAME }}
+          MAVENCENTRAL_PASSWORD: ${{ secrets.M2_CENTRAL_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.M2_SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.M2_SIGNING_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.M2_SIGNING_KEY }}
