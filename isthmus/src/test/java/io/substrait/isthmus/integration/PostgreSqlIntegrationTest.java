@@ -101,7 +101,7 @@ class PostgreSqlIntegrationTest extends PlanTestBase {
     final SqlToSubstrait sqlToSubstrait = new SqlToSubstrait();
     final Plan plan = sqlToSubstrait.convert(inputSql, TPCH_CATALOG);
 
-    final ConverterProvider provider = new ConverterProvider(extensions);
+    final ConverterProvider provider = ConverterProvider.builder().extensions(extensions).build();
     final SubstraitToSql substraitToSql = new SubstraitToSql(provider);
 
     final String generatedSql = substraitToSql.convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
