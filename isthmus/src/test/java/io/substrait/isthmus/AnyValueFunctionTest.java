@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 class AnyValueFunctionTest extends PlanTestBase {
 
   AnyValueFunctionTest() {
-    super(new AutomaticDynamicFunctionMappingConverterProvider());
+    super(new AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.builder()));
   }
 
   @Test

@@ -70,7 +70,7 @@ public class PlanTestBase {
       PlanTestBase.schemaToCatalog("tpcds", TPCDS_SCHEMA);
 
   protected PlanTestBase() {
-    this(new ConverterProvider());
+    this(ConverterProvider.DEFAULT);
   }
 
   protected PlanTestBase(ConverterProvider converterProvider) {
