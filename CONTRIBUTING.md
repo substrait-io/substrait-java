@@ -4,6 +4,7 @@ This page provides some orientation and recommendations on how to get the best r
 
 1. [Commit conventions](#commit-conventions)
 2. [Style Guide](#style-guide)
+3. [Documentation](#documentation)
 
 ## Commit Conventions
 
@@ -45,3 +46,39 @@ regardless of which JDK launches Gradle, as long as a JDK 17 is installed and di
 Spotless is the exception: the `google-java-format` version it uses only runs on JDK 17 and
 fails with `NoSuchMethodError` / `NoClassDefFoundError` when the Gradle daemon runs on a newer
 JDK, so `./gradlew spotlessApply` (and `spotlessCheck`) require the daemon itself to be on JDK 17.
+
+## Documentation
+
+The user-facing documentation site lives under [`docs/`](docs) and is built with
+[Zensical](https://zensical.org). Python and the documentation dependencies are managed with
+[pixi](https://pixi.sh), so the only prerequisite is a pixi installation.
+
+Preview your changes locally with a live-reloading dev server, or produce the static site:
+
+```bash
+pixi run docs-serve   # live-reloading preview at http://localhost:8000
+pixi run docs-build   # build the static site into ./site
+```
+
+Guidelines:
+
+* Every page is a Markdown file under `docs/`; the navigation is defined explicitly in
+  [`zensical.toml`](zensical.toml). When you add a page, add it to the `nav`.
+* **Code samples are verified, not hand-written.** Runnable code samples are pulled from compiled,
+  CI-executed tests with
+  [`pymdownx.snippets`](https://facelessuser.github.io/pymdown-extensions/extensions/snippets/), so
+  they cannot drift from the API. The backing test marks a region with `// --8<-- [start:name]` /
+  `// --8<-- [end:name]`, and the Markdown references it inside a fenced code block, e.g.
+  `--8<-- "core/src/test/java/io/substrait/docs/BuildingPlansDocTest.java:create-builder"`. Backing
+  tests live in an `io.substrait…docs` package under each module's test sources (`core` and
+  `isthmus` as JUnit tests, `spark` as a scalatest suite that runs a full round trip). To add or
+  change a sample, edit the test — not the Markdown — then run that module's tests; `pixi run
+  docs-build` fails if a referenced file or region is missing. `import` lines and similar
+  illustrative context may be kept as literal text alongside the include. A few pure
+  API-signature snippets (and examples that need external resources) remain inline.
+* As elsewhere in the codebase, do not reference GitHub issue or PR numbers in the docs.
+
+Documentation is built on every pull request by the `Build documentation` workflow. On each
+release, the `Deploy documentation` workflow publishes a versioned copy to
+<https://substrait-io.github.io/substrait-java/> (via the `mike` version manager, on the
+`gh-pages` branch).

@@ -192,6 +192,40 @@ compile — they have their own visitor implementors:
   fidelity. See `core/src/test/java/io/substrait/type/proto/DynamicParameterRoundtripTest.java`
   for the canonical pattern.
 
+## Documentation
+
+User-facing documentation lives in `docs/` (Markdown, one file per page) and is built with
+**Zensical** (config in `zensical.toml`). Python and the doc tooling are managed with **pixi**,
+independent of the Gradle build — the only prerequisite is a `pixi` install.
+
+- Preview locally with `pixi run docs-serve` (live reload); build the static site with
+  `pixi run docs-build` (output to `site/`, gitignored). `docs-build` validates internal links,
+  so run it before pushing doc changes.
+- Pages are grouped under `docs/{core,isthmus,isthmus-cli,spark}/` plus a landing page and
+  getting-started. Navigation is **explicit** in `zensical.toml` (`nav`) — when you add a page,
+  add it to `nav`.
+- **Keep the guide in sync with the code as substrait-java evolves.** When you add or change
+  user-facing behavior — a new expression/relation type, a `SubstraitBuilder`/`ExpressionCreator`
+  factory, a newly supported function, an isthmus/spark capability, or a CLI flag — update the
+  matching `docs/` page in the same PR. (As in source) keep GitHub issue/PR numbers out of the docs.
+- **Runnable code samples are pulled from compiled, CI-run tests via `pymdownx.snippets`** — they
+  are not hand-written in the Markdown, so they can't silently drift from the API. Backing tests
+  live in an `io.substrait…docs` package under each module's test sources: `core`
+  (`core/src/test/java/io/substrait/docs/`) and `isthmus`
+  (`isthmus/src/test/java/io/substrait/isthmus/docs/`) as JUnit tests, and `spark`
+  (`spark/src/test/scala/io/substrait/spark/docs/DocExamplesSuite.scala`, a full round-trip run on
+  every variant). A test marks a region with `// --8<-- [start:name]` / `[end:name]`; the Markdown
+  references it inside a fenced block, e.g.
+  `--8<-- "core/src/test/java/io/substrait/docs/TypesDocTest.java:aliases"`. Edit the **test**, not
+  the Markdown, to change a sample; `pixi run docs-build` fails on a missing file or region
+  (`check_paths`), and the backing test failing to compile/run fails the Gradle build. `import`
+  lines stay literal alongside the include; pure API-signature and resource-dependent snippets
+  remain inline.
+- CI: `.github/workflows/docs.yml` build-checks docs on every PR and push to `main`;
+  `.github/workflows/docs-deploy.yml` publishes versioned docs to the `gh-pages` branch via the
+  Zensical-compatible `mike` fork on release tags (the bare `X.Y.Z` tag publishes the minor
+  series `X.Y` and updates the `latest` alias). Site: <https://substrait-io.github.io/substrait-java/>.
+
 ## Conventions & workflow
 
 - **Conventional commits** are required (CI lints them, and PR title + body must form a
@@ -204,6 +238,7 @@ compile — they have their own visitor implementors:
 - Many features track upstream Substrait spec releases (see epic-style issues); a new
   proto message usually needs: POJO + visitor wiring + both proto converters + a
   round-trip test, and often `ExpressionCreator` factories and `dsl/SubstraitBuilder`
-  helpers for ergonomics.
+  helpers for ergonomics — plus a matching update to the user guide under `docs/`
+  (see [Documentation](#documentation)).
 - The macOS native image is not built on PRs (only Linux is), so macOS-specific native
   regressions surface on `main` or the weekly `native-image-macos.yml` run, not on the PR.

@@ -20,3 +20,7 @@ bin
 .classpath
 .settings
 bin/
+
+# Documentation site (Zensical + pixi)
+/site
+.pixi
