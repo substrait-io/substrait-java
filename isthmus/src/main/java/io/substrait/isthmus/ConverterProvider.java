@@ -220,17 +220,26 @@ public class ConverterProvider {
         builder.scalarFunctionConverter != null
             ? builder.scalarFunctionConverter
             : new ScalarFunctionConverter(
-                builder.extensions.scalarFunctions(), builder.typeFactory);
+                builder.extensions.scalarFunctions(),
+                List.of(),
+                builder.typeFactory,
+                builder.typeConverter);
     this.aggregateFunctionConverter =
         builder.aggregateFunctionConverter != null
             ? builder.aggregateFunctionConverter
             : new AggregateFunctionConverter(
-                builder.extensions.aggregateFunctions(), builder.typeFactory);
+                builder.extensions.aggregateFunctions(),
+                List.of(),
+                builder.typeFactory,
+                builder.typeConverter);
     this.windowFunctionConverter =
         builder.windowFunctionConverter != null
             ? builder.windowFunctionConverter
             : new WindowFunctionConverter(
-                builder.extensions.windowFunctions(), builder.typeFactory);
+                builder.extensions.windowFunctions(),
+                List.of(),
+                builder.typeFactory,
+                builder.typeConverter);
     this.typeConverter = builder.typeConverter;
     this.executionBehavior = builder.executionBehavior;
     this.sqlParserConfig = builder.sqlParserConfig;
