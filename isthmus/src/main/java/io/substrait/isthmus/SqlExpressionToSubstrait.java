@@ -40,7 +40,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
 
   /** Creates a converter with default configuration. */
   public SqlExpressionToSubstrait() {
-    this(new ConverterProvider());
+    this(ConverterProvider.DEFAULT);
   }
 
   /**
@@ -202,7 +202,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
     if (tables != null) {
       for (String tableDef : tables) {
         List<SubstraitTable> tList =
-            SubstraitCreateStatementParser.processCreateStatements(tableDef);
+            SubstraitCreateStatementParser.processCreateStatements(converterProvider, tableDef);
         for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
@@ -224,7 +224,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         }
       }
     }
-    SqlValidator validator = new SubstraitSqlValidator(catalogReader);
+    SqlValidator validator =
+        new SubstraitSqlValidator(catalogReader, converterProvider.getSqlOperatorTable());
     return new Result(validator, catalogReader, nameToTypeMap, nameToNodeMap);
   }
 

@@ -32,6 +32,12 @@ import org.apache.calcite.sql.util.SqlOperatorTables;
 public class DynamicConverterProvider extends ConverterProvider {
 
   /**
+   * The SQL operator table, computed once at construction, including operators generated from
+   * dynamic extensions. See {@link #getSqlOperatorTable()}.
+   */
+  private final SqlOperatorTable operatorTable;
+
+  /**
    * Creates a new DynamicConverterProvider with default extension catalog and type factory.
    *
    * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} for extensions and {@link
@@ -66,6 +72,7 @@ public class DynamicConverterProvider extends ConverterProvider {
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
     super(extensions, typeFactory);
     this.scalarFunctionConverter = createScalarFunctionConverter();
+    this.operatorTable = buildSqlOperatorTable();
   }
 
   /**
@@ -109,16 +116,27 @@ public class DynamicConverterProvider extends ConverterProvider {
    */
   @Override
   public SqlOperatorTable getSqlOperatorTable() {
-    SqlOperatorTable operatorTable = super.getSqlOperatorTable();
+    return operatorTable;
+  }
+
+  /**
+   * Builds the SQL operator table, chaining the base table with operators generated from dynamic
+   * extensions when any dynamic scalar or aggregate functions are present.
+   *
+   * @return the SQL operator table including standard and dynamically generated operators
+   */
+  private SqlOperatorTable buildSqlOperatorTable() {
+    SqlOperatorTable baseOperatorTable = super.getSqlOperatorTable();
     SimpleExtension.ExtensionCollection dynamicExtensionCollection =
         ExtensionUtils.getDynamicExtensions(extensions);
     if (dynamicExtensionCollection.scalarFunctions().isEmpty()
         && dynamicExtensionCollection.aggregateFunctions().isEmpty()) {
-      return operatorTable;
+      return baseOperatorTable;
     }
     List<SqlOperator> generatedDynamicOperators =
         SimpleExtensionToSqlOperator.from(dynamicExtensionCollection, typeFactory);
-    return SqlOperatorTables.chain(operatorTable, SqlOperatorTables.of(generatedDynamicOperators));
+    return SqlOperatorTables.chain(
+        baseOperatorTable, SqlOperatorTables.of(generatedDynamicOperators));
   }
 
   /**

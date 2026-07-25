@@ -80,9 +80,7 @@ class StatisticalFunctionTest extends PlanTestBase {
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES);
     RelRoot calcite =
         SubstraitSqlToCalcite.convertQuery(
-            String.format("SELECT %s(fp64) FROM numbers", sqlFn),
-            catalog,
-            converterProvider.getSqlOperatorTable());
+            String.format("SELECT %s(fp64) FROM numbers", sqlFn), catalog, converterProvider);
     Plan.Root root = SubstraitRelVisitor.convert(calcite, converterProvider);
 
     AggregateFunctionInvocation function = firstMeasure(root.getInput()).getFunction();
