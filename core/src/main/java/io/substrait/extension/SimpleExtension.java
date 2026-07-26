@@ -655,7 +655,8 @@ public class SimpleExtension {
      * @return the resolve Type
      */
     public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
-      return TypeExpressionEvaluator.evaluateExpression(returnType(), args(), argumentTypes);
+      return TypeExpressionEvaluator.evaluateExpression(
+          returnType(), args(), variadic(), argumentTypes);
     }
   }
 
