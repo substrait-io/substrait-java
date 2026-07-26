@@ -35,6 +35,9 @@ public class SubstraitToCalcite {
   /** The converter provider containing configuration. */
   protected ConverterProvider converterProvider;
 
+  /** Controls how aggregate output types are chosen and validated. */
+  protected final AggregateConversion aggregateConversion;
+
   /**
    * Creates a Substrait-to-Calcite converter using configuration from the provider.
    *
@@ -52,9 +55,24 @@ public class SubstraitToCalcite {
    */
   public SubstraitToCalcite(
       ConverterProvider converterProvider, Prepare.CatalogReader catalogReader) {
+    this(converterProvider, catalogReader, AggregateConversion.DEFAULT);
+  }
+
+  /**
+   * Creates a Substrait-to-Calcite converter with an explicit aggregate-conversion configuration.
+   *
+   * @param converterProvider the converter provider containing configuration and converters
+   * @param catalogReader Calcite catalog reader for schema resolution
+   * @param aggregateConversion controls how aggregate output types are chosen and validated
+   */
+  public SubstraitToCalcite(
+      ConverterProvider converterProvider,
+      Prepare.CatalogReader catalogReader,
+      AggregateConversion aggregateConversion) {
     this.converterProvider = converterProvider;
     this.typeFactory = converterProvider.getTypeFactory();
     this.catalogReader = catalogReader;
+    this.aggregateConversion = aggregateConversion;
   }
 
   /**
@@ -76,8 +94,12 @@ public class SubstraitToCalcite {
       CalciteSchema rootSchema = converterProvider.getSchemaResolver().apply(rel);
       relBuilder = converterProvider.getRelBuilder(rootSchema);
     }
+    // Under the default policy, dispatch through the long-standing single-argument factory so a
+    // ConverterProvider subclass overriding it still customizes conversion.
     SubstraitRelNodeConverter converter =
-        converterProvider.getSubstraitRelNodeConverter(relBuilder);
+        aggregateConversion.isDefault()
+            ? converterProvider.getSubstraitRelNodeConverter(relBuilder)
+            : converterProvider.getSubstraitRelNodeConverter(relBuilder, aggregateConversion);
 
     return rel.accept(converter, Context.newContext());
   }
