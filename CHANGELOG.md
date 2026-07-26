@@ -1,6 +1,83 @@
 Release Notes
 ---
 
+## [0.97.0](https://github.com/substrait-io/substrait-java/compare/v0.96.0...v0.97.0) (2026-07-26)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** The `SqlParser.Config`-based SQL parsing entry points (public
+since v0.94.0) have been removed in favour of passing a `ConverterProvider`:
+
+- `SubstraitSqlStatementParser.parseStatements(String, SqlParser.Config)`
+- `SubstraitSqlToCalcite.convertQueries(String, Prepare.CatalogReader, SqlParser.Config)`
+  and its 5-arg `convertQueries(..., SqlValidator, RelOptCluster, SqlParser.Config)` overload
+
+To customise parser behaviour, subclass `ConverterProvider`, override
+`getSqlParserConfig()`, and pass it to the `ConverterProvider`-based parsing methods.
+* **core:** `Fetch.getOffset()`/`getCount()` now return
+`Optional<Expression>` instead of `long`/`OptionalLong`. The generated
+protobuf API also drops `FetchRel.offset`/`count`,
+`HashJoinRel`/`MergeJoinRel.left_keys`/`right_keys`,
+`ReadRel.VirtualTable.values`, and
+`Expression.Literal.IntervalDayToSecond.microseconds`. Reading an
+`IntervalDay` type with an unset precision now throws instead of
+defaulting to 6.
+* **core:** ** type expressions in extension YAMLs are now parsed
+with conventional operator precedence, changing the parse of expressions
+that relied on the previous uniform left-to-right precedence. The
+generated protobuf API also drops `Type.user_defined_type_reference`.
+
+## Verification
+`./gradlew :core:check :isthmus:check :core:javadoc`, both Spark Scala
+variants (`spark-3.5_2.12`, `spark-4.0_2.13`), and
+`examples:substrait-spark` all pass.
+* **core:** ** the generated protobuf API drops `Expression.Enum`
+and the deprecated `args` accessors on the scalar, window, and aggregate
+function messages. Use `FunctionArgument` (the `arguments` field)
+instead.
+
+## Verification
+`./gradlew :core:check :isthmus:check :core:javadoc`, both Spark Scala
+variants (`spark-3.5_2.12`, `spark-4.0_2.13`), and
+`examples:substrait-spark` all pass.
+* Isthmus now emits id-based outer references
+(rel_anchor / rel_reference) instead of offset-based steps_out. It still
+consumes both forms, but downstream consumers that only handle steps_out
+must be updated to read rel_reference. Rel also gains an abstract
+getRelAnchor() that non-Immutables Rel implementations must implement.
+* **core:** remove deprecated Join.JoinType.SEMI/ANTI (#1006)
+* **isthmus:** Converting a Substrait plan that uses
+`MINUS_MULTISET` or `INTERSECTION_PRIMARY` to Calcite now throws
+`UnsupportedOperationException` instead of producing an incorrect
+Calcite relation. The supported set-difference operations are
+`MINUS_PRIMARY` (`Minus all=false`) and `MINUS_PRIMARY_ALL` (`Minus
+all=true`); the supported intersection operations are
+`INTERSECTION_MULTISET` (`Intersect all=false`) and
+`INTERSECTION_MULTISET_ALL` (`Intersect all=true`).
+
+### Features
+
+* **core:** add TopNRel physical operator ([#1007](https://github.com/substrait-io/substrait-java/issues/1007)) ([daef55b](https://github.com/substrait-io/substrait-java/commit/daef55b878287045e938d8105675cf3f92c23d82))
+* **core:** bump substrait to v0.91.0 ([#1026](https://github.com/substrait-io/substrait-java/issues/1026)) ([482b898](https://github.com/substrait-io/substrait-java/commit/482b89852d24c4253da153837ae959bf0cd77281)), closes [#870](https://github.com/substrait-io/substrait-java/issues/870) [#871](https://github.com/substrait-io/substrait-java/issues/871)
+* **core:** bump substrait to v0.93.0 ([#1027](https://github.com/substrait-io/substrait-java/issues/1027)) ([97db19b](https://github.com/substrait-io/substrait-java/commit/97db19b4a13ecd5a0bd0c5aad878650b9d6170b9)), closes [#872](https://github.com/substrait-io/substrait-java/issues/872) [#873](https://github.com/substrait-io/substrait-java/issues/873) [#868](https://github.com/substrait-io/substrait-java/issues/868)
+* **core:** bump substrait to v0.95.0 ([#1028](https://github.com/substrait-io/substrait-java/issues/1028)) ([1792014](https://github.com/substrait-io/substrait-java/commit/1792014dbdcd56b96763cf0bc3f478fea0570c4e)), closes [#1107](https://github.com/substrait-io/substrait-java/issues/1107) [#863](https://github.com/substrait-io/substrait-java/issues/863) [#965](https://github.com/substrait-io/substrait-java/issues/965)
+* **core:** bump substrait to v0.97.0 ([#1032](https://github.com/substrait-io/substrait-java/issues/1032)) ([598350b](https://github.com/substrait-io/substrait-java/commit/598350bcf4b99c1316194bcbd07932e63393bf99))
+* **core:** bump substrait to v0.98.0 ([#1033](https://github.com/substrait-io/substrait-java/issues/1033)) ([a968058](https://github.com/substrait-io/substrait-java/commit/a9680585f21883c4479af006a5ba16f6555a1749))
+* id-based outer-reference resolution (Substrait 0.89.0) ([#982](https://github.com/substrait-io/substrait-java/issues/982)) ([2375c2e](https://github.com/substrait-io/substrait-java/commit/2375c2e8b99adf1ef322094b3e654c4e93a4c17d)), closes [#869](https://github.com/substrait-io/substrait-java/issues/869)
+* **isthmus:** inject ConverterProvider into the SQL statement parsers ([#1035](https://github.com/substrait-io/substrait-java/issues/1035)) ([e018342](https://github.com/substrait-io/substrait-java/commit/e0183423b619072ae2a6c3aecef45d9b796b082a))
+* **isthmus:** map RIGHTSHIFT to Substrait shift_right ([#986](https://github.com/substrait-io/substrait-java/issues/986)) ([6a44814](https://github.com/substrait-io/substrait-java/commit/6a448148894fa59776ea4c84acca7d0aeb7cf750))
+* **isthmus:** map Substrait concat to Calcite CONCAT_FUNCTION ([#1025](https://github.com/substrait-io/substrait-java/issues/1025)) ([a054f4f](https://github.com/substrait-io/substrait-java/commit/a054f4ff360ab5d691355a38ed965900ca34ad60))
+* **isthmus:** remove invalid SetOp to Calcite relation mappings ([#998](https://github.com/substrait-io/substrait-java/issues/998)) ([5281a1c](https://github.com/substrait-io/substrait-java/commit/5281a1c288a31d4ed31b89e8183f29c400164e75))
+
+### Bug Fixes
+
+* **core:** type outer references against the enclosing scope on proto import ([#1034](https://github.com/substrait-io/substrait-java/issues/1034)) ([1dd1bf6](https://github.com/substrait-io/substrait-java/commit/1dd1bf6786c1a66b1657f1d88dee42142ca9c443))
+* **isthmus:** elide redundant identity projections ([#1009](https://github.com/substrait-io/substrait-java/issues/1009)) ([aa51ae9](https://github.com/substrait-io/substrait-java/commit/aa51ae9a35d3eae31fd9979d6a4956f6d3c87092))
+
+### Code Refactoring
+
+* **core:** remove deprecated Join.JoinType.SEMI/ANTI ([#1006](https://github.com/substrait-io/substrait-java/issues/1006)) ([f625365](https://github.com/substrait-io/substrait-java/commit/f625365c669383a57ea80a2886376c20b2cf7cc3))
+
 ## [0.96.0](https://github.com/substrait-io/substrait-java/compare/v0.95.1...v0.96.0) (2026-07-19)
 
 ### Features
