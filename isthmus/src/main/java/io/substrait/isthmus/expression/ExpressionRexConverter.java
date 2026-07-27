@@ -554,26 +554,27 @@ public class ExpressionRexConverter
     if (typeObserver == TypeObserver.NOOP) {
       return rexCall;
     }
-    observeScalarType(expr, () -> rexBuilder.makeCall(operator, args));
+    observeType(
+        expr,
+        TypeObservation.Source.SCALAR_FUNCTION,
+        () -> rexBuilder.makeCall(operator, args).getType());
     return rexCall;
   }
 
-  private void observeScalarType(
-      Expression.ScalarFunctionInvocation expression, Supplier<RexNode> inferredCallSupplier) {
+  private void observeType(
+      Expression expression,
+      TypeObservation.Source source,
+      Supplier<RelDataType> inferredTypeSupplier) {
     TypeObservation observation;
-    RexNode inferredCall;
+    RelDataType inferredType;
     try {
-      inferredCall = inferredCallSupplier.get();
+      inferredType = inferredTypeSupplier.get();
     } catch (RuntimeException inferenceFailure) {
-      observation =
-          TypeObservation.failure(
-              TypeObservation.Source.SCALAR_FUNCTION, expression, inferenceFailure);
+      observation = TypeObservation.failure(source, expression, inferenceFailure);
       typeObserver.observe(observation);
       return;
     }
-    observation =
-        TypeObservation.success(
-            TypeObservation.Source.SCALAR_FUNCTION, expression, inferredCall.getType());
+    observation = TypeObservation.success(source, expression, inferredType);
     typeObserver.observe(observation);
   }
 
@@ -631,19 +632,28 @@ public class ExpressionRexConverter
     boolean nullWhenCountZero = false;
     boolean allowPartial = true;
 
-    return rexBuilder.makeOver(
-        outputType,
-        (SqlAggFunction) operator,
-        args,
-        partitionKeys,
-        orderKeys,
-        lowerBound,
-        upperBound,
-        rowMode,
-        allowPartial,
-        nullWhenCountZero,
-        distinct,
-        ignoreNulls);
+    RexNode rexOver =
+        rexBuilder.makeOver(
+            outputType,
+            (SqlAggFunction) operator,
+            args,
+            partitionKeys,
+            orderKeys,
+            lowerBound,
+            upperBound,
+            rowMode,
+            allowPartial,
+            nullWhenCountZero,
+            distinct,
+            ignoreNulls);
+    if (typeObserver == TypeObserver.NOOP) {
+      return rexOver;
+    }
+    observeType(
+        expr,
+        TypeObservation.Source.WINDOW_FUNCTION,
+        () -> rexBuilder.deriveReturnType(operator, args));
+    return rexOver;
   }
 
   private Set<SqlKind> asSqlKind(Expression.SortDirection direction) {
