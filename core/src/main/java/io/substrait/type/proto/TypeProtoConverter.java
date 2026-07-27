@@ -268,6 +268,8 @@ public class TypeProtoConverter extends BaseProtoConverter<Type, Integer> {
         return bldr.setMap((Type.Map) o).build();
       } else if (o instanceof Type.UUID) {
         return bldr.setUuid((Type.UUID) o).build();
+      } else if (o instanceof Type.Unbound) {
+        return bldr.setUnbound((Type.Unbound) o).build();
       } else if (o instanceof Type.UserDefined) {
         return bldr.setUserDefined((Type.UserDefined) o).build();
       }

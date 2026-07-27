@@ -107,6 +107,13 @@ abstract class BaseProtoConverter<T, I>
   }
 
   @Override
+  public final T visit(final Type.Unbound expr) {
+    // The unbound type carries no nullability; pick either container (they are identical) rather
+    // than typeContainer(expr), whose nullability lookup would call Type.Unbound.nullable().
+    return typeContainer(false).UNBOUND;
+  }
+
+  @Override
   public final T visit(final Type.FixedChar expr) {
     return typeContainer(expr).fixedChar(expr.length());
   }

@@ -65,6 +65,17 @@ class TestTypeRoundtrip {
   }
 
   @Test
+  @DisplayName("unbound type round trip")
+  void roundtripUnbound() {
+    // The unbound type carries no nullability, so it is not part of the nullability-parameterized
+    // types() source above.
+    Type type = Type.Unbound.builder().build();
+    io.substrait.proto.Type converted = type.accept(typeProtoConverter);
+    Type actual = protoTypeConverter.from(converted);
+    assertEquals(type, actual);
+  }
+
+  @Test
   @DisplayName("interval day type with an unset precision is rejected")
   void intervalDayWithoutPrecisionIsRejected() {
     io.substrait.proto.Type protoType =

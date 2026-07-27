@@ -115,6 +115,11 @@ public class TypeStringify extends ParentStringify
   }
 
   @Override
+  public String visit(Type.Unbound type) throws RuntimeException {
+    return type.getClass().getSimpleName();
+  }
+
+  @Override
   public String visit(FixedChar type) throws RuntimeException {
     return type.getClass().getSimpleName();
   }

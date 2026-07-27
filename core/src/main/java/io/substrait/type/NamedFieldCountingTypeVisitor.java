@@ -127,6 +127,11 @@ public final class NamedFieldCountingTypeVisitor implements TypeVisitor<Integer,
   }
 
   @Override
+  public Integer visit(Type.Unbound type) {
+    return 0;
+  }
+
+  @Override
   public Integer visit(Type.FixedChar type) {
     return 0;
   }

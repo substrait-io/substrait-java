@@ -84,6 +84,12 @@ public class StringTypeVisitor implements TypeVisitor<String, RuntimeException> 
   }
 
   @Override
+  public String visit(Type.Unbound type) throws RuntimeException {
+    // The unbound type carries no nullability, so there is no trailing "?".
+    return "unbound";
+  }
+
+  @Override
   public String visit(Type.FixedChar type) throws RuntimeException {
     return String.format("char<%d>%s", type.length(), n(type));
   }
