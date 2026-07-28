@@ -13,7 +13,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
 import io.substrait.extension.SimpleExtension
 
-import java.io.{File, FileInputStream, FileWriter, OutputStreamWriter}
+import java.io.{File, FileWriter, InputStream, OutputStreamWriter}
 
 import scala.jdk.CollectionConverters._
 
@@ -40,7 +40,16 @@ case class SupportedFunction(
     supported_impls: Seq[String])
 
 class DialectGenerator {
-  val schemaPath = "../../substrait/text/dialect_schema.yaml"
+  // The dialect schema ships on the classpath in the substrait-packaging extensions artifact.
+  val schemaResource = "/substrait/text/dialect_schema.yaml"
+
+  def schemaStream(): InputStream = {
+    val stream = getClass.getResourceAsStream(schemaResource)
+    if (stream == null) {
+      throw new IllegalStateException(s"Dialect schema not found on classpath: $schemaResource")
+    }
+    stream
+  }
 
   private val sourceURNs = Map(
     "extension:io.substrait:functions_aggregate_approx" -> "aggregate_approx",
@@ -95,7 +104,7 @@ class DialectGenerator {
     val jsonSchemaFactory = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
 
     val schema =
-      jsonSchemaFactory.getSchema(new FileInputStream(new File(schemaPath)), InputFormat.YAML)
+      jsonSchemaFactory.getSchema(schemaStream(), InputFormat.YAML)
     val errors = schema.validate(yaml, InputFormat.YAML)
     if (!errors.isEmpty) {
       throw new Exception(errors.toString)

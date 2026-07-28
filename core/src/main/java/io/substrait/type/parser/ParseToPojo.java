@@ -1,5 +1,7 @@
 package io.substrait.type.parser;
 
+import io.substrait.antlr.SubstraitTypeParser;
+import io.substrait.antlr.SubstraitTypeVisitor;
 import io.substrait.function.ImmutableParameterizedType;
 import io.substrait.function.ImmutableTypeExpression;
 import io.substrait.function.ParameterizedType;
@@ -7,8 +9,6 @@ import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
 import io.substrait.type.ImmutableType;
-import io.substrait.type.SubstraitTypeParser;
-import io.substrait.type.SubstraitTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.ArrayList;

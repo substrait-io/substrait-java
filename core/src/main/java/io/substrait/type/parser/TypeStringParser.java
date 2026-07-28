@@ -1,9 +1,9 @@
 package io.substrait.type.parser;
 
+import io.substrait.antlr.SubstraitTypeLexer;
+import io.substrait.antlr.SubstraitTypeParser;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
-import io.substrait.type.SubstraitTypeLexer;
-import io.substrait.type.SubstraitTypeParser;
 import io.substrait.type.Type;
 import java.util.function.BiFunction;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -55,7 +55,7 @@ public class TypeStringParser {
     lexer.removeErrorListeners();
     lexer.addErrorListener(TypeErrorListener.INSTANCE);
     CommonTokenStream tokenStream = new CommonTokenStream(lexer);
-    SubstraitTypeParser parser = new io.substrait.type.SubstraitTypeParser(tokenStream);
+    SubstraitTypeParser parser = new io.substrait.antlr.SubstraitTypeParser(tokenStream);
     parser.removeErrorListeners();
     parser.addErrorListener(TypeErrorListener.INSTANCE);
     return parser.startRule();

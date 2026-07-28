@@ -13,9 +13,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Exercises the per-section dialect fixtures published by the substrait spec (copied onto the test
- * classpath by the build). For each fixture we confirm it is schema-valid, parses, and survives a
- * lossless serialize/parse round-trip whose output is itself schema-valid.
+ * Exercises the per-section dialect fixtures published by the substrait spec (on the test classpath
+ * via the substrait-packaging extensions artifact). For each fixture we confirm it is schema-valid,
+ * parses, and survives a lossless serialize/parse round-trip whose output is itself schema-valid.
  */
 class SpecDialectFixturesTest {
 
@@ -40,7 +40,7 @@ class SpecDialectFixturesTest {
         "execution_behavior_test.yaml"
       })
   void roundTrips(String fixture) {
-    String resourcePath = "/dialect/tests/" + fixture;
+    String resourcePath = "/substrait/dialects/tests/" + fixture;
     String original = readResource(resourcePath);
 
     // The published fixture is itself schema-valid.

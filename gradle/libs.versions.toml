@@ -28,6 +28,8 @@ spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
 spotless = "8.8.0"
+# substrait-packaging artifacts, versioned by the Substrait spec release they are generated from.
+substrait-packaging = "0.98.0"
 testcontainers = "2.0.5"
 validator = "3.0.6"
 
@@ -83,6 +85,9 @@ spark-catalyst-4-0-2-13 = { module = "org.apache.spark:spark-catalyst_2.13", ver
 spark-core-4-0-2-13 = { module = "org.apache.spark:spark-core_2.13", version.ref = "spark-4-0" }
 spark-hive-4-0-2-13 = { module = "org.apache.spark:spark-hive_2.13", version.ref = "spark-4-0" }
 spark-sql-4-0-2-13 = { module = "org.apache.spark:spark-sql_2.13", version.ref = "spark-4-0" }
+substrait-antlr = { module = "io.substrait:antlr", version.ref = "substrait-packaging" }
+substrait-extensions = { module = "io.substrait:extensions", version.ref = "substrait-packaging" }
+substrait-protobuf = { module = "io.substrait:protobuf", version.ref = "substrait-packaging" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit5 = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgres = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
