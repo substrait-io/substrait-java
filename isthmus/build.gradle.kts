@@ -4,7 +4,6 @@ plugins {
   id("java-library")
   id("idea")
   id("eclipse")
-  alias(libs.plugins.shadow)
   alias(libs.plugins.spotless)
   alias(libs.plugins.protobuf)
   alias(libs.plugins.nmcp)
@@ -127,11 +126,6 @@ dependencies {
 }
 
 tasks {
-  shadowJar {
-    archiveBaseName.set("isthmus")
-    manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
-  }
-
   classes { dependsOn(":core:shadowJar") }
 
   jar {
@@ -140,8 +134,6 @@ tasks {
       attributes("Implementation-Title" to "isthmus")
     }
   }
-
-  build { dependsOn(shadowJar) }
 
   // Only set the compile release since JUnit 6 requires Java 17 to run tests.
   compileJava { options.release = 11 }
