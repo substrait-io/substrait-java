@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import io.substrait.antlr.SubstraitTypeParser;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
