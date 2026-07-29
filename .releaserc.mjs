@@ -85,14 +85,7 @@ const presetTransform = preset.writer.transform;
 const dryRun = process.env.RELEASE_DRY_RUN !== "false";
 
 export default {
-  branches: [
-    { name: "+([0-9])?(.{+([0-9]),x}).x" },
-    { name: "main" },
-    { name: "next" },
-    { name: "next-major" },
-    { name: "beta", prerelease: true },
-    { name: "alpha", prerelease: true },
-  ],
+  branches: [{ name: "main" }],
   preset: "conventionalcommits",
   dryRun,
   plugins: [
