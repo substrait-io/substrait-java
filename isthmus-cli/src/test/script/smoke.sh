@@ -18,6 +18,13 @@ echo "${LINEITEM}"
 # SQL Query - Aggregate
 "${CMD}" 'select l_orderkey, count(l_partkey) from lineitem group by l_orderkey' --create "${LINEITEM}"
 
+# SQL Query - Grouping-only aggregate (no aggregate function; exercises the column-uniqueness
+# metadata query that must not fall back to Janino runtime codegen in the native image)
+"${CMD}" 'select l_orderkey from lineitem group by l_orderkey' --create "${LINEITEM}"
+
+# SQL Query - DISTINCT (same metadata-query path as grouping-only aggregate)
+"${CMD}" 'select distinct l_orderkey from lineitem' --create "${LINEITEM}"
+
 # SQL Expression - Literal expression
 "${CMD}" --expression '10'
 
