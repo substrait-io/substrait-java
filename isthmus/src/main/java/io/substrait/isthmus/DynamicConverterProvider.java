@@ -87,14 +87,35 @@ public class DynamicConverterProvider extends ConverterProvider {
   /**
    * Creates a new DynamicConverterProvider from a {@link ConverterProvider.Builder}, seeding base
    * state from the builder and then installing the converter that handles dynamic extension
-   * functions. This is the seam through which subclasses route via {@code super(builder)}.
+   * functions.
    *
    * @param builder the builder carrying the configured components
+   * @throws IllegalArgumentException if the builder configures a scalar function converter, which
+   *     this provider derives itself
    */
   public DynamicConverterProvider(ConverterProvider.Builder builder) {
-    super(builder);
+    super(requireDerivedScalarFunctionConverter(builder));
     this.scalarFunctionConverter = createScalarFunctionConverter();
     this.operatorTable = buildSqlOperatorTable();
+  }
+
+  /**
+   * Rejects a builder that configures a scalar function converter: this provider derives its own
+   * from the dynamic extensions, so a configured one would be silently discarded.
+   *
+   * @param builder the builder to check
+   * @return the given builder
+   * @throws IllegalArgumentException if the builder configures a scalar function converter
+   */
+  private static ConverterProvider.Builder requireDerivedScalarFunctionConverter(
+      ConverterProvider.Builder builder) {
+    if (builder.getScalarFunctionConverter().isPresent()) {
+      throw new IllegalArgumentException(
+          "DynamicConverterProvider derives its own scalar function converter from the dynamic "
+              + "extensions; remove the ConverterProvider.Builder.scalarFunctionConverter(...) "
+              + "setting");
+    }
+    return builder;
   }
 
   /**

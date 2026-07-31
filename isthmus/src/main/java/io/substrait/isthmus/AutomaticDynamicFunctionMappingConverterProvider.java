@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -96,13 +97,14 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
   /**
    * Creates a new provider from a {@link ConverterProvider.Builder}, seeding base state from the
    * builder and then installing the automatically generated dynamic function mappings and operator
-   * table. This is the seam through which the other constructors — and subclasses, via {@code
-   * super(builder)} — route.
+   * table.
    *
    * @param builder the builder carrying the configured components
+   * @throws IllegalArgumentException if the builder configures a scalar, aggregate or window
+   *     function converter, all of which this provider derives itself
    */
   public AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.Builder builder) {
-    super(builder);
+    super(requireDerivedFunctionConverters(builder));
 
     List<SqlOperator> dynamicScalarOperators = getDynamicScalarOperators();
     this.scalarFunctionConverter = createScalarFunctionConverter(dynamicScalarOperators);
@@ -118,6 +120,32 @@ public class AutomaticDynamicFunctionMappingConverterProvider extends ConverterP
             .flatMap(List::stream)
             .collect(Collectors.toList());
     this.operatorTable = buildOperatorTable(allOperators);
+  }
+
+  /**
+   * Rejects a builder that configures any function converter: this provider derives all three from
+   * the unmapped extension functions, so a configured one would be silently discarded.
+   *
+   * @param builder the builder to check
+   * @return the given builder
+   * @throws IllegalArgumentException if the builder configures a function converter
+   */
+  private static ConverterProvider.Builder requireDerivedFunctionConverters(
+      ConverterProvider.Builder builder) {
+    requireUnset(builder.getScalarFunctionConverter(), "scalarFunctionConverter");
+    requireUnset(builder.getAggregateFunctionConverter(), "aggregateFunctionConverter");
+    requireUnset(builder.getWindowFunctionConverter(), "windowFunctionConverter");
+    return builder;
+  }
+
+  private static void requireUnset(Optional<?> functionConverter, String setterName) {
+    if (functionConverter.isPresent()) {
+      throw new IllegalArgumentException(
+          "AutomaticDynamicFunctionMappingConverterProvider derives its own function converters "
+              + "from the unmapped extension functions; remove the ConverterProvider.Builder."
+              + setterName
+              + "(...) setting");
+    }
   }
 
   /**

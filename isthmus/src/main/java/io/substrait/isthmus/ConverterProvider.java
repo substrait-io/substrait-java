@@ -17,6 +17,7 @@ import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -52,7 +53,7 @@ import org.apache.calcite.tools.RelBuilder;
 public class ConverterProvider {
 
   /**
-   * The default Calcite {@link SqlParser.Config} used by isthmus: {@link SqlParser.Config#DEFAULT}
+   * The default Calcite {@link SqlParser.Config} used by Isthmus: {@link SqlParser.Config#DEFAULT}
    * with {@link Casing#TO_UPPER} unquoted-identifier casing, the {@link SqlDdlParserImpl} parser
    * factory (so {@code CREATE TABLE} statements parse), and {@link SqlConformanceEnum#LENIENT}
    * conformance.
@@ -202,47 +203,42 @@ public class ConverterProvider {
   }
 
   /**
-   * Master constructor and the sole subclassing seam: derives any unset function converters from
-   * the configured extensions and type factory, then assigns all components. {@link
-   * Builder#build()} and every delegating public constructor route here, and subclasses (e.g.
-   * {@link DynamicConverterProvider}) invoke it via {@code super(builder)}.
-   *
-   * <p>Taking the {@link Builder} rather than a positional argument list keeps this seam stable as
-   * new components are added: a new field is a change to the builder and this constructor only, not
-   * to every subclass's {@code super(...)} call.
+   * Primary constructor for ConverterProvider. The {@link Builder} passed in can be used to further
+   * customize behaviours.
    *
    * @param builder the builder carrying the configured components
    */
   protected ConverterProvider(Builder builder) {
     this.typeFactory = builder.typeFactory;
     this.extensions = builder.extensions;
-    this.scalarFunctionConverter =
-        builder.scalarFunctionConverter != null
-            ? builder.scalarFunctionConverter
-            : new ScalarFunctionConverter(
-                builder.extensions.scalarFunctions(),
-                List.of(),
-                builder.typeFactory,
-                builder.typeConverter);
-    this.aggregateFunctionConverter =
-        builder.aggregateFunctionConverter != null
-            ? builder.aggregateFunctionConverter
-            : new AggregateFunctionConverter(
-                builder.extensions.aggregateFunctions(),
-                List.of(),
-                builder.typeFactory,
-                builder.typeConverter);
-    this.windowFunctionConverter =
-        builder.windowFunctionConverter != null
-            ? builder.windowFunctionConverter
-            : new WindowFunctionConverter(
-                builder.extensions.windowFunctions(),
-                List.of(),
-                builder.typeFactory,
-                builder.typeConverter);
     this.typeConverter = builder.typeConverter;
     this.executionBehavior = builder.executionBehavior;
     this.sqlParserConfig = builder.sqlParserConfig;
+
+    this.scalarFunctionConverter =
+        builder.scalarFunctionConverter.orElseGet(
+            () ->
+                new ScalarFunctionConverter(
+                    this.extensions.scalarFunctions(),
+                    List.of(),
+                    this.typeFactory,
+                    this.typeConverter));
+    this.aggregateFunctionConverter =
+        builder.aggregateFunctionConverter.orElseGet(
+            () ->
+                new AggregateFunctionConverter(
+                    this.extensions.aggregateFunctions(),
+                    List.of(),
+                    this.typeFactory,
+                    this.typeConverter));
+    this.windowFunctionConverter =
+        builder.windowFunctionConverter.orElseGet(
+            () ->
+                new WindowFunctionConverter(
+                    this.extensions.windowFunctions(),
+                    List.of(),
+                    this.typeFactory,
+                    this.typeConverter));
   }
 
   /**
@@ -543,12 +539,14 @@ public class ConverterProvider {
     private SimpleExtension.ExtensionCollection extensions =
         DefaultExtensionCatalog.DEFAULT_COLLECTION;
     private RelDataTypeFactory typeFactory = SubstraitTypeSystem.TYPE_FACTORY;
-    private ScalarFunctionConverter scalarFunctionConverter;
-    private AggregateFunctionConverter aggregateFunctionConverter;
-    private WindowFunctionConverter windowFunctionConverter;
     private TypeConverter typeConverter = TypeConverter.DEFAULT;
     private Plan.ExecutionBehavior executionBehavior = createDefaultExecutionBehavior();
     private SqlParser.Config sqlParserConfig = DEFAULT_SQL_PARSER_CONFIG;
+
+    // Derived from the extensions and type factory at build time when left unset.
+    private Optional<ScalarFunctionConverter> scalarFunctionConverter = Optional.empty();
+    private Optional<AggregateFunctionConverter> aggregateFunctionConverter = Optional.empty();
+    private Optional<WindowFunctionConverter> windowFunctionConverter = Optional.empty();
 
     /**
      * Sets the Substrait extension collection to use.
@@ -569,43 +567,6 @@ public class ConverterProvider {
      */
     public Builder typeFactory(RelDataTypeFactory typeFactory) {
       this.typeFactory = typeFactory;
-      return this;
-    }
-
-    /**
-     * Sets the scalar function converter. When left unset, it is derived from the configured
-     * extensions and type factory.
-     *
-     * @param scalarFunctionConverter the scalar function converter
-     * @return this builder
-     */
-    public Builder scalarFunctionConverter(ScalarFunctionConverter scalarFunctionConverter) {
-      this.scalarFunctionConverter = scalarFunctionConverter;
-      return this;
-    }
-
-    /**
-     * Sets the aggregate function converter. When left unset, it is derived from the configured
-     * extensions and type factory.
-     *
-     * @param aggregateFunctionConverter the aggregate function converter
-     * @return this builder
-     */
-    public Builder aggregateFunctionConverter(
-        AggregateFunctionConverter aggregateFunctionConverter) {
-      this.aggregateFunctionConverter = aggregateFunctionConverter;
-      return this;
-    }
-
-    /**
-     * Sets the window function converter. When left unset, it is derived from the configured
-     * extensions and type factory.
-     *
-     * @param windowFunctionConverter the window function converter
-     * @return this builder
-     */
-    public Builder windowFunctionConverter(WindowFunctionConverter windowFunctionConverter) {
-      this.windowFunctionConverter = windowFunctionConverter;
       return this;
     }
 
@@ -635,7 +596,7 @@ public class ConverterProvider {
      * Sets the full Calcite {@link SqlParser.Config} used for SQL parsing, replacing the default.
      *
      * <p>Use {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} as a starting point to retain
-     * isthmus' DDL parser factory and conformance while overriding individual settings.
+     * Isthmus' DDL parser factory and conformance while overriding individual settings.
      *
      * @param sqlParserConfig the parser configuration
      * @return this builder
@@ -643,6 +604,73 @@ public class ConverterProvider {
     public Builder sqlParserConfig(SqlParser.Config sqlParserConfig) {
       this.sqlParserConfig = sqlParserConfig;
       return this;
+    }
+
+    /**
+     * Sets the scalar function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param scalarFunctionConverter the scalar function converter
+     * @return this builder
+     */
+    public Builder scalarFunctionConverter(ScalarFunctionConverter scalarFunctionConverter) {
+      this.scalarFunctionConverter = Optional.ofNullable(scalarFunctionConverter);
+      return this;
+    }
+
+    /**
+     * Returns the explicitly configured scalar function converter, or {@link Optional#empty()} when
+     * it is to be derived from the configured extensions and type factory.
+     *
+     * @return the configured scalar function converter, if any
+     */
+    public Optional<ScalarFunctionConverter> getScalarFunctionConverter() {
+      return scalarFunctionConverter;
+    }
+
+    /**
+     * Sets the aggregate function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param aggregateFunctionConverter the aggregate function converter
+     * @return this builder
+     */
+    public Builder aggregateFunctionConverter(
+        AggregateFunctionConverter aggregateFunctionConverter) {
+      this.aggregateFunctionConverter = Optional.ofNullable(aggregateFunctionConverter);
+      return this;
+    }
+
+    /**
+     * Returns the explicitly configured aggregate function converter, or {@link Optional#empty()}
+     * when it is to be derived from the configured extensions and type factory.
+     *
+     * @return the configured aggregate function converter, if any
+     */
+    public Optional<AggregateFunctionConverter> getAggregateFunctionConverter() {
+      return aggregateFunctionConverter;
+    }
+
+    /**
+     * Sets the window function converter. When left unset, it is derived from the configured
+     * extensions and type factory.
+     *
+     * @param windowFunctionConverter the window function converter
+     * @return this builder
+     */
+    public Builder windowFunctionConverter(WindowFunctionConverter windowFunctionConverter) {
+      this.windowFunctionConverter = Optional.ofNullable(windowFunctionConverter);
+      return this;
+    }
+
+    /**
+     * Returns the explicitly configured window function converter, or {@link Optional#empty()} when
+     * it is to be derived from the configured extensions and type factory.
+     *
+     * @return the configured window function converter, if any
+     */
+    public Optional<WindowFunctionConverter> getWindowFunctionConverter() {
+      return windowFunctionConverter;
     }
 
     /**
