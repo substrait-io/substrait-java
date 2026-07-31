@@ -242,7 +242,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
       String k = entry.getKey();
       RelDataType v = entry.getValue();
       names.add(k);
-      types.add(TypeConverter.DEFAULT.toSubstrait(v));
+      types.add(converterProvider.getTypeConverter().toSubstrait(v));
     }
     return NamedStruct.of(names, Type.Struct.builder().fields(types).nullable(false).build());
   }

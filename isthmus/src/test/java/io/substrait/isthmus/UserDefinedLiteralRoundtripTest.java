@@ -140,13 +140,14 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
 
   UserDefinedLiteralRoundtripTest() {
     super(
-        new ConverterProvider(
-            SubstraitTypeSystem.TYPE_FACTORY,
-            NESTED_TYPES_EXTENSIONS,
-            SCALAR_FUNCTION_CONVERTER,
-            AGGREGATE_FUNCTION_CONVERTER,
-            WINDOW_FUNCTION_CONVERTER,
-            TYPE_CONVERTER));
+        ConverterProvider.builder()
+            .typeFactory(SubstraitTypeSystem.TYPE_FACTORY)
+            .extensions(NESTED_TYPES_EXTENSIONS)
+            .scalarFunctionConverter(SCALAR_FUNCTION_CONVERTER)
+            .aggregateFunctionConverter(AGGREGATE_FUNCTION_CONVERTER)
+            .windowFunctionConverter(WINDOW_FUNCTION_CONVERTER)
+            .typeConverter(TYPE_CONVERTER)
+            .build());
   }
 
   private void assertRoundTrip(Expression.UserDefinedLiteral literal) {

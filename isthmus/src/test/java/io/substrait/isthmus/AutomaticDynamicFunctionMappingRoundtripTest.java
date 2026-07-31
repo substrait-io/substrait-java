@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class AutomaticDynamicFunctionMappingRoundtripTest extends PlanTestBase {
 
   AutomaticDynamicFunctionMappingRoundtripTest() {
-    super(new AutomaticDynamicFunctionMappingConverterProvider());
+    super(new AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.builder()));
   }
 
   /**

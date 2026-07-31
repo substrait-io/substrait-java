@@ -142,14 +142,7 @@ public class SubstraitCreateStatementParser {
    */
   public static CalciteCatalogReader processCreateStatementsToCatalog(
       @NonNull final String... createStatements) throws SqlParseException {
-    final CalciteSchema rootSchema =
-        processCreateStatementsToSchema(ConverterProvider.DEFAULT, createStatements);
-    final List<String> defaultSchema = Collections.emptyList();
-    return new CalciteCatalogReader(
-        rootSchema,
-        defaultSchema,
-        SubstraitTypeSystem.TYPE_FACTORY,
-        SqlConverterBase.CONNECTION_CONFIG);
+    return processCreateStatementsToCatalog(ConverterProvider.DEFAULT, createStatements);
   }
 
   /**
@@ -173,8 +166,8 @@ public class SubstraitCreateStatementParser {
     return new CalciteCatalogReader(
         rootSchema,
         defaultSchema,
-        SubstraitTypeSystem.TYPE_FACTORY,
-        SqlConverterBase.CONNECTION_CONFIG);
+        converterProvider.getTypeFactory(),
+        converterProvider.getCalciteConnectionConfig());
   }
 
   /**

@@ -42,9 +42,13 @@ public class DynamicConverterProvider extends ConverterProvider {
    *
    * <p>Uses {@link DefaultExtensionCatalog#DEFAULT_COLLECTION} for extensions and {@link
    * SubstraitTypeSystem#TYPE_FACTORY} for type operations.
+   *
+   * @deprecated Use {@link #DynamicConverterProvider(ConverterProvider.Builder)} with {@link
+   *     ConverterProvider#builder()} instead.
    */
+  @Deprecated
   public DynamicConverterProvider() {
-    this(DefaultExtensionCatalog.DEFAULT_COLLECTION, SubstraitTypeSystem.TYPE_FACTORY);
+    this(ConverterProvider.builder());
   }
 
   /**
@@ -53,9 +57,12 @@ public class DynamicConverterProvider extends ConverterProvider {
    * <p>Uses {@link SubstraitTypeSystem#TYPE_FACTORY} for type operations.
    *
    * @param extensions the collection of Substrait extensions to use for function mappings
+   * @deprecated Use {@link #DynamicConverterProvider(ConverterProvider.Builder)} instead, e.g.
+   *     {@code new DynamicConverterProvider(ConverterProvider.builder().extensions(extensions))}.
    */
+  @Deprecated
   public DynamicConverterProvider(SimpleExtension.ExtensionCollection extensions) {
-    this(extensions, SubstraitTypeSystem.TYPE_FACTORY);
+    this(ConverterProvider.builder().extensions(extensions));
   }
 
   /**
@@ -67,12 +74,48 @@ public class DynamicConverterProvider extends ConverterProvider {
    *
    * @param extensions the collection of Substrait extensions to use for function mappings
    * @param typeFactory the factory to use for creating and managing relational data types
+   * @deprecated Use {@link #DynamicConverterProvider(ConverterProvider.Builder)} instead, e.g.
+   *     {@code new DynamicConverterProvider(ConverterProvider.builder().extensions(extensions)
+   *     .typeFactory(typeFactory))}.
    */
+  @Deprecated
   public DynamicConverterProvider(
       SimpleExtension.ExtensionCollection extensions, RelDataTypeFactory typeFactory) {
-    super(extensions, typeFactory);
+    this(ConverterProvider.builder().extensions(extensions).typeFactory(typeFactory));
+  }
+
+  /**
+   * Creates a new DynamicConverterProvider from a {@link ConverterProvider.Builder}, seeding base
+   * state from the builder and then installing the converter that handles dynamic extension
+   * functions.
+   *
+   * @param builder the builder carrying the configured components
+   * @throws IllegalArgumentException if the builder configures a scalar function converter, which
+   *     this provider derives itself
+   */
+  public DynamicConverterProvider(ConverterProvider.Builder builder) {
+    super(requireDerivedScalarFunctionConverter(builder));
     this.scalarFunctionConverter = createScalarFunctionConverter();
     this.operatorTable = buildSqlOperatorTable();
+  }
+
+  /**
+   * Rejects a builder that configures a scalar function converter: this provider derives its own
+   * from the dynamic extensions, so a configured one would be silently discarded.
+   *
+   * @param builder the builder to check
+   * @return the given builder
+   * @throws IllegalArgumentException if the builder configures a scalar function converter
+   */
+  private static ConverterProvider.Builder requireDerivedScalarFunctionConverter(
+      ConverterProvider.Builder builder) {
+    if (builder.getScalarFunctionConverter().isPresent()) {
+      throw new IllegalArgumentException(
+          "DynamicConverterProvider derives its own scalar function converter from the dynamic "
+              + "extensions; remove the ConverterProvider.Builder.scalarFunctionConverter(...) "
+              + "setting");
+    }
+    return builder;
   }
 
   /**
