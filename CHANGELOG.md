@@ -1,6 +1,30 @@
 Release Notes
 ---
 
+## [0.98.0](https://github.com/substrait-io/substrait-java/compare/v0.97.0...v0.98.0) (2026-08-02)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** the isthmus fat jar (`isthmus-<version>-all.jar` — the
+`all` classifier / `shadowRuntimeElements` variant) is no longer
+published to Maven Central. Consumers that referenced it explicitly
+should depend on the regular `isthmus` artifact and its transitive
+dependencies instead.
+
+🤖 Generated with AI
+* the substrait git submodule is gone. Checkouts no longer need
+`--recurse-submodules`; the spec inputs come entirely from the substrait-packaging
+artifacts pinned in the version catalog.
+
+### Features
+
+* **isthmus:** introduce a ConverterProvider builder ([#1036](https://github.com/substrait-io/substrait-java/issues/1036)) ([8643e2f](https://github.com/substrait-io/substrait-java/commit/8643e2f5515e9327ee12f1fe62a248f539fca118)), closes [#1035](https://github.com/substrait-io/substrait-java/issues/1035) [#983](https://github.com/substrait-io/substrait-java/issues/983) [#1035](https://github.com/substrait-io/substrait-java/issues/1035) [#1037](https://github.com/substrait-io/substrait-java/issues/1037)
+
+### Build System
+
+* **isthmus:** stop publishing the isthmus fat jar ([#1044](https://github.com/substrait-io/substrait-java/issues/1044)) ([1eb3c54](https://github.com/substrait-io/substrait-java/commit/1eb3c545e3ab1d54629a4ed9675424a506e014d3))
+* source spec inputs from substrait-packaging artifacts, drop the submodule ([#1043](https://github.com/substrait-io/substrait-java/issues/1043)) ([8bc8034](https://github.com/substrait-io/substrait-java/commit/8bc8034e59a388dd1b362c3610b9ec2c77fdc0c8))
+
 ## [0.97.0](https://github.com/substrait-io/substrait-java/compare/v0.96.0...v0.97.0) (2026-07-26)
 
 ### ⚠ BREAKING CHANGES
