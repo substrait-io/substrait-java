@@ -17,7 +17,7 @@ class NestedListExpressionTest extends TestBase {
   void rejectNestedListWithElementsOfDifferentTypes() {
     ImmutableExpression.NestedList.Builder builder =
         Expression.NestedList.builder().addValues(literalExpression).addValues(sb.i32(12));
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
@@ -37,7 +37,7 @@ class NestedListExpressionTest extends TestBase {
   @Test
   void rejectEmptyNestedListTest() {
     ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
