@@ -45,6 +45,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
@@ -777,6 +778,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    *
    * @param modify Calcite table modify node
    * @return Substrait write/update relation
+   * @throws IllegalArgumentException if the node has no target table.
    * @throws IllegalStateException if an update column is not found in the table schema.
    */
   @Override
@@ -791,20 +793,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                   ? AbstractWriteRel.WriteOp.INSERT
                   : AbstractWriteRel.WriteOp.DELETE;
 
-          assert modify.getTable() != null;
+          final RelOptTable table = requireTable(modify);
           return NamedWrite.builder()
               .input(input)
-              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
+              .tableSchema(typeConverter.toNamedStruct(table.getRowType()))
               .operation(op)
               .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
               .outputMode(AbstractWriteRel.OutputMode.MODIFIED_RECORDS)
-              .names(modify.getTable().getQualifiedName())
+              .names(table.getQualifiedName())
               .build();
         }
 
       case UPDATE:
         {
-          assert modify.getTable() != null;
+          final RelOptTable table = requireTable(modify);
 
           RelNode input = modify.getInput();
           final Expression condition;
@@ -817,7 +819,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
           List<RexNode> sourceExpressions = getSourceExpressions(modify);
-          List<String> allTableColumnNames = modify.getTable().getRowType().getFieldNames();
+          List<String> allTableColumnNames = table.getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
           for (int i = 0; i < updateColumnNames.size(); i++) {
@@ -840,8 +842,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           }
 
           return NamedUpdate.builder()
-              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
-              .names(modify.getTable().getQualifiedName())
+              .tableSchema(typeConverter.toNamedStruct(table.getRowType()))
+              .names(table.getQualifiedName())
               .condition(condition)
               .transformations(transformations)
               .build();
@@ -850,6 +852,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       default:
         return super.visit(modify);
     }
+  }
+
+  private static RelOptTable requireTable(TableModify modify) {
+    RelOptTable table = modify.getTable();
+    if (table == null) {
+      throw new IllegalArgumentException(
+          String.format(
+              "TableModify with operation %s has no target table", modify.getOperation()));
+    }
+    return table;
   }
 
   private List<RexNode> getSourceExpressions(TableModify modify) {

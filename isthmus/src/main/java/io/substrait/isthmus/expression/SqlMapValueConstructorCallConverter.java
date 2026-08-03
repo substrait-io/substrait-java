@@ -35,7 +35,8 @@ public class SqlMapValueConstructorCallConverter implements CallConverter {
    *     {@link SqlMapValueConstructor}; otherwise {@link Optional#empty()}.
    * @throws ClassCastException if operands converted by {@code topLevelConverter} are not {@link
    *     Expression.Literal} instances.
-   * @throws AssertionError if the number of operands is not even (expecting key/value pairs).
+   * @throws IllegalArgumentException if the number of operands is not even (expecting key/value
+   *     pairs).
    */
   @Override
   public Optional<Expression> convert(
@@ -53,8 +54,13 @@ public class SqlMapValueConstructorCallConverter implements CallConverter {
         call.operands.stream()
             .map(t -> ((Expression.Literal) topLevelConverter.apply(t)))
             .collect(java.util.stream.Collectors.toList());
+    if (literals.size() % 2 != 0) {
+      throw new IllegalArgumentException(
+          String.format(
+              "SqlMapValueConstructor requires an even number of operands (key/value pairs), but got %d",
+              literals.size()));
+    }
     Map<Expression.Literal, Expression.Literal> items = new HashMap<>();
-    assert literals.size() % 2 == 0;
     for (int i = 0; i < literals.size(); i += 2) {
       items.put(literals.get(i), literals.get(i + 1));
     }

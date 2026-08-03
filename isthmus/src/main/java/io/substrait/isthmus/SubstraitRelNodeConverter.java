@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
@@ -548,15 +549,13 @@ public class SubstraitRelNodeConverter
           transform.getTransformation().accept(expressionRexConverter, context));
     }
 
-    assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(update.getNames());
+    final RelOptTable table = requireRelOptSchema().getTableForMember(update.getNames());
 
     if (table == null) {
       throw new IllegalStateException("Table not found in Calcite catalog: " + update.getNames());
     }
     final Prepare.CatalogReader catalogReader = (Prepare.CatalogReader) table.getRelOptSchema();
 
-    assert catalogReader != null;
     return LogicalTableModify.create(
         table,
         catalogReader,
@@ -713,9 +712,8 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedWrite write, Context context) {
     RelNode input = write.getInput().accept(this, context);
-    assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable targetTable =
-        relBuilder.getRelOptSchema().getTableForMember(write.getNames());
+    final RelOptSchema relOptSchema = requireRelOptSchema();
+    final RelOptTable targetTable = relOptSchema.getTableForMember(write.getNames());
 
     TableModify.Operation operation;
     switch (write.getOperation()) {
@@ -734,17 +732,28 @@ public class SubstraitRelNodeConverter
                 write.getOperation()));
     }
 
-    // checked by validation
-    assert targetTable != null;
+    if (targetTable == null) {
+      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
+    }
 
     return LogicalTableModify.create(
-        targetTable,
-        (Prepare.CatalogReader) relBuilder.getRelOptSchema(),
-        input,
-        operation,
-        null,
-        null,
-        false);
+        targetTable, (Prepare.CatalogReader) relOptSchema, input, operation, null, null, false);
+  }
+
+  /**
+   * Returns the {@link RelOptSchema} backing the {@link org.apache.calcite.tools.RelBuilder} used
+   * by this converter.
+   *
+   * @return the Calcite catalog to resolve table names against
+   * @throws IllegalStateException if the RelBuilder was created without a RelOptSchema
+   */
+  private RelOptSchema requireRelOptSchema() {
+    RelOptSchema relOptSchema = relBuilder.getRelOptSchema();
+    if (relOptSchema == null) {
+      throw new IllegalStateException(
+          "The RelBuilder of this converter has no RelOptSchema; a catalog-backed RelBuilder is required to resolve table names");
+    }
+    return relOptSchema;
   }
 
   @Override

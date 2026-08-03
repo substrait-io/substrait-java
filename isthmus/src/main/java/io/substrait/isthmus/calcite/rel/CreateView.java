@@ -42,10 +42,14 @@ public class CreateView extends SingleRel {
    * Returns the inputs to this node (single input).
    *
    * @return a list containing the input relation
+   * @throws IllegalArgumentException if given anything but exactly one input
    */
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    assert inputs.size() == 1;
+    if (inputs.size() != 1) {
+      throw new IllegalArgumentException(
+          "CreateView requires exactly one input, but got " + inputs.size());
+    }
     return new CreateView(getCluster(), traitSet, viewName, inputs.get(0));
   }
 

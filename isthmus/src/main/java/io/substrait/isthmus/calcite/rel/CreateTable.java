@@ -45,10 +45,14 @@ public class CreateTable extends SingleRel {
    * @param traitSet the RelTraitSet
    * @param inputs List of RelNodes
    * @return the input relation
+   * @throws IllegalArgumentException if given anything but exactly one input
    */
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    assert inputs.size() == 1;
+    if (inputs.size() != 1) {
+      throw new IllegalArgumentException(
+          "CreateTable requires exactly one input, but got " + inputs.size());
+    }
     return new CreateTable(getCluster(), traitSet, tableName, inputs.get(0));
   }
 
