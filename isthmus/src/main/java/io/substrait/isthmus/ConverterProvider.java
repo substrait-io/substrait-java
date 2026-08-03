@@ -424,11 +424,14 @@ public class ConverterProvider {
    * @return a new RelBuilder instance
    */
   public RelBuilder getRelBuilder(CalciteSchema schema) {
-    return RelBuilder.create(
-        Frameworks.newConfigBuilder()
-            .defaultSchema(schema.plus())
-            .typeSystem(getTypeSystem())
-            .build());
+    RelBuilder relBuilder =
+        RelBuilder.create(
+            Frameworks.newConfigBuilder()
+                .defaultSchema(schema.plus())
+                .typeSystem(getTypeSystem())
+                .build());
+    Utils.useReflectiveMetadataProvider(relBuilder.getCluster());
+    return relBuilder;
   }
 
   // Utility Getters

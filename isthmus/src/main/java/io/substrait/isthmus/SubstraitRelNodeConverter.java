@@ -164,6 +164,7 @@ public class SubstraitRelNodeConverter
                 .typeSystem(converterProvider.getTypeSystem())
                 .programs()
                 .build());
+    Utils.useReflectiveMetadataProvider(relBuilder.getCluster());
     // Normalize any offset-based outer references (steps_out) to the id-based form (rel_anchor /
     // rel_reference) so the conversion below resolves correlations purely by anchor. Plans that are
     // already id-based are left unchanged.

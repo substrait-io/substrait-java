@@ -2,6 +2,7 @@ package io.substrait.isthmus.sql;
 
 import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SubstraitTypeSystem;
+import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.calcite.rel.DdlSqlToRelConverter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -256,6 +257,8 @@ public class SubstraitSqlToCalcite {
         new RexBuilder(new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM));
     HepProgram program = HepProgram.builder().build();
     RelOptPlanner emptyPlanner = new HepPlanner(program);
-    return RelOptCluster.create(emptyPlanner, rexBuilder);
+    RelOptCluster cluster = RelOptCluster.create(emptyPlanner, rexBuilder);
+    Utils.useReflectiveMetadataProvider(cluster);
+    return cluster;
   }
 }
