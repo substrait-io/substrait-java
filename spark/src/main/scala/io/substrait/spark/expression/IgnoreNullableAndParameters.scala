@@ -57,6 +57,8 @@ class IgnoreNullableAndParameters(val typeToMatch: ParameterizedType)
 
   override def visit(`type`: Type.UUID): Boolean = typeToMatch.isInstanceOf[Type.UUID]
 
+  override def visit(`type`: Type.Unbound): Boolean = typeToMatch.isInstanceOf[Type.Unbound]
+
   override def visit(`type`: Type.FixedChar): Boolean =
     typeToMatch.isInstanceOf[Type.FixedChar] || typeToMatch
       .isInstanceOf[ParameterizedType.FixedChar]

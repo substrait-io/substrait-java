@@ -161,6 +161,15 @@ public interface TypeVisitor<R, E extends Throwable> {
   R visit(Type.UUID type) throws E;
 
   /**
+   * Visits an unbound type.
+   *
+   * @param type the type being visited
+   * @return the visit result
+   * @throws E if the visit fails
+   */
+  R visit(Type.Unbound type) throws E;
+
+  /**
    * Visits a fixed-length character type.
    *
    * @param type the type being visited
@@ -337,6 +346,11 @@ public interface TypeVisitor<R, E extends Throwable> {
 
     @Override
     public R visit(Type.UUID type) throws E {
+      throw t();
+    }
+
+    @Override
+    public R visit(Type.Unbound type) throws E {
       throw t();
     }
 

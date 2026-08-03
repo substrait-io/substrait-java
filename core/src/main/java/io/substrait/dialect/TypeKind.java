@@ -44,6 +44,8 @@ public enum TypeKind {
   INTERVAL_YEAR,
   /** The UUID type. */
   UUID,
+  /** The unbound type: a placeholder for a type that has not yet been bound to a concrete type. */
+  UNBOUND,
   /** The fixed-point decimal type. */
   DECIMAL,
   /** The struct (record) type. */

@@ -39,10 +39,7 @@ class DefaultExtensionCatalogTest {
           "functions_geometry.yaml",
           // type_variations.yaml only defines type variations, which are not tracked by
           // ExtensionCollection (no functions or types), so containsUrn cannot verify it.
-          "type_variations.yaml",
-          // unknown.yaml uses an "unknown" type that is not a recognized type literal or
-          // parameterized type, causing Function.constructKey to fail at load time.
-          "unknown.yaml");
+          "type_variations.yaml");
 
   private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 

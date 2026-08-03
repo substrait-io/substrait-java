@@ -189,6 +189,17 @@ public class IgnoreNullableAndParameters
   }
 
   /**
+   * Compares {@link Type.Unbound}.
+   *
+   * @param type unbound type
+   * @return {@code true} if {@code typeToMatch} is {@link Type.Unbound}
+   */
+  @Override
+  public Boolean visit(Type.Unbound type) {
+    return typeToMatch instanceof Type.Unbound;
+  }
+
+  /**
    * Compares {@link Type.UserDefined} for exact equality (URI and name).
    *
    * @param type user-defined type

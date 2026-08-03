@@ -66,6 +66,9 @@ public class ProtoTypeConverter {
             .intervalCompound(type.getIntervalCompound().getPrecision());
       case UUID:
         return n(type.getUuid().getNullability()).UUID;
+      case UNBOUND:
+        // The unbound type carries no nullability.
+        return Type.Unbound.builder().build();
       case FIXED_CHAR:
         return n(type.getFixedChar().getNullability()).fixedChar(type.getFixedChar().getLength());
       case VARCHAR:
