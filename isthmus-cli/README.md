@@ -57,15 +57,15 @@ Convert SQL Queries and SQL Expressions to Substrait
      "SELECT lastName, firstName FROM Persons WHERE zip = 90210"
 
 {
-  "extensionUris": [{
-    "extensionUriAnchor": 1,
-    "uri": "/functions_comparison.yaml"
+  "extensionUrns": [{
+    "extensionUrnAnchor": 1,
+    "urn": "extension:io.substrait:functions_comparison"
   }],
   "extensions": [{
     "extensionFunction": {
-      "extensionUriReference": 1,
       "functionAnchor": 0,
-      "name": "equal:any1_any1"
+      "name": "equal:any1_any1",
+      "extensionUrnReference": 1
     }
   }],
   "relations": [{
@@ -187,15 +187,15 @@ $ ./isthmus-cli/build/native/nativeCompile/isthmus -c "CREATE TABLE NATION (N_NA
     -e  "N_REGIONKEY + 10"
 
 {
-  "extensionUris": [{
-    "extensionUriAnchor": 1,
-    "uri": "/functions_arithmetic.yaml"
+  "extensionUrns": [{
+    "extensionUrnAnchor": 1,
+    "urn": "extension:io.substrait:functions_arithmetic"
   }],
   "extensions": [{
     "extensionFunction": {
-      "extensionUriReference": 1,
       "functionAnchor": 0,
-      "name": "add:i64_i64"
+      "name": "add:i64_i64",
+      "extensionUrnReference": 1
     }
   }],
   "referredExpr": [{
@@ -287,15 +287,15 @@ $ ./isthmus-cli/build/native/nativeCompile/isthmus -c "CREATE TABLE NATION (N_NA
     -e  "N_REGIONKEY > 10"
 
 {
-  "extensionUris": [{
-    "extensionUriAnchor": 1,
-    "uri": "/functions_comparison.yaml"
+  "extensionUrns": [{
+    "extensionUrnAnchor": 1,
+    "urn": "extension:io.substrait:functions_comparison"
   }],
   "extensions": [{
     "extensionFunction": {
-      "extensionUriReference": 1,
       "functionAnchor": 0,
-      "name": "gt:any_any"
+      "name": "gt:any_any",
+      "extensionUrnReference": 1
     }
   }],
   "referredExpr": [{

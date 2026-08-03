@@ -1,0 +1,77 @@
+name: Deploy documentation
+
+# Publishes versioned docs to the `gh-pages` branch using the Zensical-compatible
+# fork of `mike` (https://github.com/squidfunk/mike): each version is committed
+# as a subdirectory of `site_url` (see zensical.toml), with a `latest` alias and
+# a root redirect pointing at the newest release.
+#
+# Runs automatically on release tags (semantic-release tags the bare version,
+# e.g. 0.95.1) and can be triggered manually. Release tags publish the minor
+# series (e.g. 0.95) so that patch releases update the same series page.
+
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label to publish (e.g. 0.95 or dev)"
+        required: true
+        default: "dev"
+      alias:
+        description: "Alias to update"
+        required: false
+        default: "latest"
+      set_default:
+        description: "Point the site root at this alias"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write # mike pushes the built docs to the gh-pages branch
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy docs with mike
+    runs-on: ubuntu-latest
+    # Auto-deploy only on the canonical repo; manual runs are allowed anywhere
+    # (e.g. to bootstrap gh-pages on a fork while testing).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'substrait-io/substrait-java' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # mike reads/writes the full gh-pages history
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: docs
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Resolve version and alias
+        id: v
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            full="${GITHUB_REF_NAME}"                        # 0.95.1
+            echo "version=${full%.*}" >> "$GITHUB_OUTPUT"    # 0.95 (minor series)
+            echo "alias=latest" >> "$GITHUB_OUTPUT"
+            echo "set_default=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "alias=${{ inputs.alias }}" >> "$GITHUB_OUTPUT"
+            echo "set_default=${{ inputs.set_default }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy version
+        run: |
+          pixi run -e docs mike deploy --push --update-aliases \
+            "${{ steps.v.outputs.version }}" "${{ steps.v.outputs.alias }}"
+      - name: Set default version
+        if: ${{ steps.v.outputs.set_default == 'true' }}
+        run: |
+          pixi run -e docs mike set-default --push "${{ steps.v.outputs.alias }}"

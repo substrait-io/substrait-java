@@ -1,0 +1,28 @@
+name: Build documentation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Build-check only: this verifies the docs compile on every PR so broken pages
+# or a broken link are caught early. It does NOT publish. Versioned publishing
+# to GitHub Pages is handled separately by .github/workflows/docs-deploy.yml
+# (mike -> gh-pages branch).
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: docs
+      - name: Build the documentation site
+        run: pixi run docs-build
