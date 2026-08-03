@@ -8,11 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.calcite.SubstraitTable;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,13 +28,18 @@ class CreateStatementParserProviderConfigTest {
       "CREATE TABLE employees (id BIGINT, name VARCHAR, salary DECIMAL(10, 2))";
 
   /**
-   * A type factory that records the struct types it is asked to build, so a test can tell which
-   * factory produced a table's row type and where its column types came from.
+   * A type factory that records the row types it is asked to build and the SQL types it is asked to
+   * create, so a test can tell which factory produced a table's row type and which one the
+   * validator derived its column types through.
+   *
+   * <p>Recording the requests is what makes the column-derivation check meaningful: {@code
+   * RelDataTypeFactoryImpl.canonize} interns through a {@code static} cache shared by every factory
+   * instance, so comparing interned type instances cannot distinguish one factory from another.
    */
   static final class RecordingTypeFactory extends SqlTypeFactoryImpl {
 
     private boolean createStructTypeCalled;
-    private List<RelDataType> recordedFieldTypes = List.of();
+    private final List<SqlTypeName> requestedSqlTypeNames = new ArrayList<>();
 
     RecordingTypeFactory() {
       super(SubstraitTypeSystem.TYPE_SYSTEM);
@@ -42,21 +49,34 @@ class CreateStatementParserProviderConfigTest {
     public RelDataType createStructType(
         final List<RelDataType> typeList, final List<String> fieldNameList) {
       createStructTypeCalled = true;
-      recordedFieldTypes = List.copyOf(typeList);
       return super.createStructType(typeList, fieldNameList);
+    }
+
+    @Override
+    public RelDataType createSqlType(final SqlTypeName typeName) {
+      requestedSqlTypeNames.add(typeName);
+      return super.createSqlType(typeName);
+    }
+
+    @Override
+    public RelDataType createSqlType(final SqlTypeName typeName, final int precision) {
+      requestedSqlTypeNames.add(typeName);
+      return super.createSqlType(typeName, precision);
+    }
+
+    @Override
+    public RelDataType createSqlType(
+        final SqlTypeName typeName, final int precision, final int scale) {
+      requestedSqlTypeNames.add(typeName);
+      return super.createSqlType(typeName, precision, scale);
     }
 
     boolean wasUsedForStructType() {
       return createStructTypeCalled;
     }
 
-    List<RelDataType> recordedFieldTypes() {
-      return recordedFieldTypes;
-    }
-
-    /** Exposes the protected interning hook so a test can check a type belongs to this factory. */
-    RelDataType canonizeType(final RelDataType type) {
-      return canonize(type);
+    List<SqlTypeName> requestedSqlTypeNames() {
+      return List.copyOf(requestedSqlTypeNames);
     }
   }
 
@@ -89,8 +109,9 @@ class CreateStatementParserProviderConfigTest {
   }
 
   /**
-   * The column types are derived through a validator built from the provider, so they are interned
-   * in the provider's type factory too — not just the enclosing struct type.
+   * The validator that derives the column types is built from the provider, so the declared column
+   * types are requested from the provider's type factory — covering the validator path, not just
+   * the enclosing struct type.
    */
   @Test
   void columnTypesAreDerivedWithProviderTypeFactory() throws SqlParseException {
@@ -99,14 +120,13 @@ class CreateStatementParserProviderConfigTest {
 
     SubstraitCreateStatementParser.processCreateStatementsToCatalog(provider, CREATE_STATEMENT);
 
-    List<RelDataType> fieldTypes = typeFactory.recordedFieldTypes();
-    assertEquals(3, fieldTypes.size());
-    for (RelDataType fieldType : fieldTypes) {
-      assertSame(
-          fieldType,
-          typeFactory.canonizeType(fieldType),
-          "column types should be interned in the provider's type factory");
-    }
+    assertTrue(
+        typeFactory
+            .requestedSqlTypeNames()
+            .containsAll(List.of(SqlTypeName.BIGINT, SqlTypeName.VARCHAR, SqlTypeName.DECIMAL)),
+        "the validator should derive the declared column types through the provider's type "
+            + "factory, but it only saw "
+            + typeFactory.requestedSqlTypeNames());
   }
 
   /** The default entry points keep working off {@link ConverterProvider#DEFAULT}. */
