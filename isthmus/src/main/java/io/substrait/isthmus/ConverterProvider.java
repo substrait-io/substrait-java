@@ -213,7 +213,13 @@ public class ConverterProvider {
     this.extensions = builder.extensions;
     this.typeConverter = builder.typeConverter;
     this.executionBehavior = builder.executionBehavior;
-    this.sqlParserConfig = builder.sqlParserConfig;
+    // An unquoted casing set through the builder convenience is applied over the parser config
+    // here, so that the two setters are order-independent.
+    this.sqlParserConfig =
+        builder
+            .unquotedCasing
+            .map(builder.sqlParserConfig::withUnquotedCasing)
+            .orElse(builder.sqlParserConfig);
 
     this.scalarFunctionConverter =
         builder.scalarFunctionConverter.orElseGet(
@@ -543,6 +549,7 @@ public class ConverterProvider {
     private TypeConverter typeConverter = TypeConverter.DEFAULT;
     private Plan.ExecutionBehavior executionBehavior = createDefaultExecutionBehavior();
     private SqlParser.Config sqlParserConfig = DEFAULT_SQL_PARSER_CONFIG;
+    private Optional<Casing> unquotedCasing = Optional.empty();
 
     // Derived from the extensions and type factory at build time when left unset.
     private Optional<ScalarFunctionConverter> scalarFunctionConverter = Optional.empty();
@@ -608,19 +615,21 @@ public class ConverterProvider {
     }
 
     /**
-     * Convenience for the common case of overriding only the unquoted-identifier casing, applied on
-     * top of the current {@link #sqlParserConfig(SqlParser.Config) parser configuration}.
+     * Convenience for the common case of overriding only the unquoted-identifier casing, without
+     * having to restate the rest of the parser configuration.
      *
-     * <p>Equivalent to {@code sqlParserConfig(currentConfig.withUnquotedCasing(unquotedCasing))}.
-     * Because it layers onto the current configuration, a subsequent {@link
-     * #sqlParserConfig(SqlParser.Config)} call replaces the whole configuration and discards the
-     * casing set here; set the full config first, then apply this convenience.
+     * <p>Unlike deriving a config by hand, this cannot accidentally drop the DDL parser factory or
+     * conformance that {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} supplies.
+     *
+     * <p>The casing set here is applied over the {@link #sqlParserConfig(SqlParser.Config) parser
+     * configuration} when the provider is constructed, so it wins over any casing that
+     * configuration carries and the two setters may be called in either order.
      *
      * @param unquotedCasing the casing to apply to unquoted SQL identifiers during parsing
      * @return this builder
      */
     public Builder unquotedCasing(Casing unquotedCasing) {
-      this.sqlParserConfig = this.sqlParserConfig.withUnquotedCasing(unquotedCasing);
+      this.unquotedCasing = Optional.ofNullable(unquotedCasing);
       return this;
     }
 

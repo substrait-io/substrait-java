@@ -58,6 +58,52 @@ class UnquotedCasingTest {
   }
 
   /**
+   * The {@code unquotedCasing} convenience is applied over the configured {@link SqlParser.Config}
+   * at construction, so it wins over the casing that config carries no matter which order the two
+   * setters are called in, and the rest of the supplied config is retained either way.
+   */
+  @Test
+  void unquotedCasingIsOrderIndependentWithSqlParserConfig() {
+    SqlParser.Config config =
+        ConverterProvider.DEFAULT_SQL_PARSER_CONFIG
+            .withUnquotedCasing(Casing.TO_LOWER)
+            .withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+
+    ConverterProvider casingLast =
+        ConverterProvider.builder()
+            .sqlParserConfig(config)
+            .unquotedCasing(Casing.UNCHANGED)
+            .build();
+    ConverterProvider casingFirst =
+        ConverterProvider.builder()
+            .unquotedCasing(Casing.UNCHANGED)
+            .sqlParserConfig(config)
+            .build();
+
+    assertEquals(Casing.UNCHANGED, casingLast.getSqlParserConfig().unquotedCasing());
+    assertEquals(Casing.UNCHANGED, casingFirst.getSqlParserConfig().unquotedCasing());
+    assertEquals(SqlConformanceEnum.PRAGMATIC_2003, casingLast.getSqlParserConfig().conformance());
+    assertEquals(SqlConformanceEnum.PRAGMATIC_2003, casingFirst.getSqlParserConfig().conformance());
+  }
+
+  /**
+   * The convenience layers onto {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG}, so it cannot
+   * drop the DDL parser factory or conformance the way hand-deriving from {@link
+   * SqlParser.Config#DEFAULT} would.
+   */
+  @Test
+  void unquotedCasingRetainsIsthmusParserDefaults() {
+    ConverterProvider provider =
+        ConverterProvider.builder().unquotedCasing(Casing.UNCHANGED).build();
+
+    assertEquals(Casing.UNCHANGED, provider.getSqlParserConfig().unquotedCasing());
+    assertEquals(SqlConformanceEnum.LENIENT, provider.getSqlParserConfig().conformance());
+    assertEquals(
+        ConverterProvider.DEFAULT_SQL_PARSER_CONFIG.parserFactory(),
+        provider.getSqlParserConfig().parserFactory());
+  }
+
+  /**
    * With the default {@link Casing#TO_UPPER}, both CREATE TABLE and SELECT fold unquoted
    * identifiers to upper-case. The resulting {@link NamedScan} table name is {@code EMPLOYEES}.
    */
