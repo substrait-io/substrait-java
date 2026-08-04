@@ -3,6 +3,7 @@ package io.substrait.isthmus.expression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.isthmus.PlanTestBase;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
@@ -159,6 +160,40 @@ class SubqueryConversionTest extends PlanTestBase {
             orderTableScan.withRelAnchor(1));
 
     assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(root));
+  }
+
+  @Test
+  void correlationBoundToSortInputIsRejected() {
+    /*
+     * A sort key holding a correlated scalar subquery that binds to the sort's own input. Calcite's
+     * Sort carries no variablesSet, so there is nowhere to declare the correlation: conversion must
+     * reject the plan rather than emit a correlation variable no operator owns.
+     */
+    final Rel root =
+        sb.sort(
+            input ->
+                List.of(
+                    sb.sortField(
+                        sb.scalarSubquery(
+                            sb.project(
+                                input2 -> List.of(sb.fieldReference(input2, 1)),
+                                Remap.of(List.of(1)),
+                                sb.filter(
+                                    input2 ->
+                                        sb.equal(
+                                            sb.fieldReference(input2, 0),
+                                            FieldReference
+                                                .newRootStructOuterReferenceByRelReference(
+                                                    1, TypeCreator.REQUIRED.I64, 1)),
+                                    customerTableScan)),
+                            TypeCreator.NULLABLE.I64),
+                        Expression.SortDirection.ASC_NULLS_LAST)),
+            orderTableScan.withRelAnchor(1));
+
+    final UnsupportedOperationException failure =
+        assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(root));
+    assertEquals(
+        "Outer references bound to the sort input are not supported", failure.getMessage());
   }
 
   @Test

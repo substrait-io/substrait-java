@@ -320,6 +320,7 @@ public class SubstraitRelNodeConverter
     }
 
     RelNode child = aggregate.getInput().accept(this, context);
+    context.enterScope(AnchoredInput.of(aggregate.getInput().getRelAnchor(), child.getRowType()));
     List<List<RexNode>> groupExprLists =
         aggregate.getGroupings().stream()
             .map(
@@ -382,6 +383,8 @@ public class SubstraitRelNodeConverter
         remap = Optional.of(Remap.of(remapList));
       }
     }
+
+    exitUncorrelatedScope(context, "aggregate");
 
     // RelBuilder deduplicates equal aggregate calls, and AggregateCall equality ignores the stored
     // type: two measures of the same function that differ only by their declared output type would
@@ -605,10 +608,12 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Sort sort, Context context) throws RuntimeException {
     RelNode child = sort.getInput().accept(this, context);
+    context.enterScope(AnchoredInput.of(sort.getInput().getRelAnchor(), child.getRowType()));
     List<RexNode> sortExpressions =
         sort.getSortFields().stream()
             .map(sortField -> directedRexNode(sortField, context))
             .collect(Collectors.toList());
+    exitUncorrelatedScope(context, "sort");
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
     return applyRemap(node, sort.getRemap());
   }
@@ -641,6 +646,7 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
     RelNode child = fetch.getInput().accept(this, context);
+    context.enterScope(AnchoredInput.of(fetch.getInput().getRelAnchor(), child.getRowType()));
     // Offset/count are expressions; pass them through to Calcite as RexNodes so non-literal (e.g.
     // dynamic-parameter) offset/count are preserved. An unset offset means 0 and an unset count
     // means LIMIT ALL.
@@ -648,6 +654,7 @@ public class SubstraitRelNodeConverter
         fetch.getOffset().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
     RexNode count =
         fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
+    exitUncorrelatedScope(context, "fetch");
     RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
     return applyRemap(node, fetch.getRemap());
   }
@@ -688,9 +695,8 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedUpdate update, Context context) {
     relBuilder.scan(update.getNames());
+    context.enterScope(AnchoredInput.of(Optional.empty(), relBuilder.peek().getRowType()));
     RexNode condition = update.getCondition().accept(expressionRexConverter, context);
-    relBuilder.filter(condition);
-    RelNode inputForModify = relBuilder.build();
 
     NamedStruct tableSchema = update.getTableSchema();
     List<String> fieldNames = tableSchema.names();
@@ -704,6 +710,10 @@ public class SubstraitRelNodeConverter
       sourceExpressionList.add(
           transform.getTransformation().accept(expressionRexConverter, context));
     }
+
+    java.util.Set<CorrelationId> correlationIds = context.exitScope();
+    relBuilder.filter(correlationIds, condition);
+    RelNode inputForModify = relBuilder.build();
 
     assert relBuilder.getRelOptSchema() != null;
     final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(update.getNames());
@@ -929,6 +939,23 @@ public class SubstraitRelNodeConverter
     return relNode;
   }
 
+  /**
+   * Exits a scope entered only to resolve input field types, on an operator that cannot carry
+   * correlation variables. Calcite's Aggregate, Sort and Fetch have no {@code variablesSet}, so a
+   * correlation resolved against such an operator's input has nowhere to be declared and is
+   * rejected rather than silently dropped.
+   *
+   * @param context the conversion context whose innermost scope is exited
+   * @param relName the relation kind, used in the failure message
+   */
+  private static void exitUncorrelatedScope(Context context, String relName) {
+    java.util.Set<CorrelationId> correlationIds = context.exitScope();
+    if (!correlationIds.isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Outer references bound to the " + relName + " input are not supported");
+    }
+  }
+
   private RelNode applyRemap(RelNode relNode, Rel.Remap remap) {
     RelDataType rowType = relNode.getRowType();
     List<String> fieldNames = rowType.getFieldNames();
@@ -987,6 +1014,9 @@ public class SubstraitRelNodeConverter
     /** Maps a {@code rel_anchor} to the single {@link CorrelationId} minted for it. */
     private final Map<Integer, CorrelationId> correlationIdByAnchor = new HashMap<>();
 
+    /** Lambda parameter types by nesting level, innermost on top. */
+    private final Deque<List<RelDataType>> lambdaParameterTypes = new ArrayDeque<>();
+
     /**
      * Every {@code rel_anchor} that has entered a scope. Resolution keys {@link #scopeByAnchor} and
      * {@link #correlationIdByAnchor} purely by anchor value, which is only sound if anchors are
@@ -998,6 +1028,7 @@ public class SubstraitRelNodeConverter
 
     /** One correlation scope per enclosing relational operator. */
     private static final class Scope {
+      final List<RelDataType> inputRowTypes = new ArrayList<>();
       final Map<Integer, RelDataType> rowTypeByAnchor = new HashMap<>();
       final java.util.Set<CorrelationId> correlationIds = new HashSet<>();
     }
@@ -1013,13 +1044,14 @@ public class SubstraitRelNodeConverter
 
     /**
      * Enters a correlation scope for a relational operator, recording the {@code rel_anchor} (if
-     * any) carried by each of its inputs.
+     * any) and row type carried by each of its inputs.
      *
      * @param inputs the operator's inputs paired with their anchors
      */
     public void enterScope(final AnchoredInput... inputs) {
       final Scope scope = new Scope();
       for (final AnchoredInput input : inputs) {
+        scope.inputRowTypes.add(input.rowType);
         if (input.anchor.isPresent()) {
           final int anchor = input.anchor.get();
           if (!seenAnchors.add(anchor)) {
@@ -1034,6 +1066,63 @@ public class SubstraitRelNodeConverter
         }
       }
       scopes.push(scope);
+    }
+
+    /**
+     * Returns the type of a field in the current operator's flattened input row.
+     *
+     * @param fieldIndex zero-based field index across all current inputs
+     * @return the Calcite field type from the input relation
+     * @throws IllegalStateException if expression conversion has no current relational input
+     * @throws IndexOutOfBoundsException if the field index is outside the flattened input row
+     */
+    public RelDataType getInputFieldType(final int fieldIndex) {
+      if (scopes.isEmpty()) {
+        throw new IllegalStateException("No input row type is available for field reference");
+      }
+
+      int remainingIndex = fieldIndex;
+      int fieldCount = 0;
+      for (final RelDataType inputRowType : scopes.peek().inputRowTypes) {
+        final int inputFieldCount = inputRowType.getFieldCount();
+        fieldCount += inputFieldCount;
+        if (remainingIndex < inputFieldCount) {
+          return inputRowType.getFieldList().get(remainingIndex).getType();
+        }
+        remainingIndex -= inputFieldCount;
+      }
+      throw new IndexOutOfBoundsException(
+          "Field index " + fieldIndex + " is outside input row with " + fieldCount + " fields");
+    }
+
+    /**
+     * Enters a lambda scope with its Calcite parameter types.
+     *
+     * @param parameterTypes parameter types in declaration order
+     */
+    public void enterLambdaScope(final List<RelDataType> parameterTypes) {
+      lambdaParameterTypes.push(List.copyOf(parameterTypes));
+    }
+
+    /** Exits the innermost lambda scope. */
+    public void exitLambdaScope() {
+      lambdaParameterTypes.pop();
+    }
+
+    /**
+     * Returns a parameter type from the innermost lambda scope.
+     *
+     * @param parameterIndex zero-based parameter index
+     * @return the Calcite parameter type
+     * @throws IllegalStateException if expression conversion has no current lambda
+     * @throws IndexOutOfBoundsException if the index is outside the lambda's parameter list
+     */
+    public RelDataType getLambdaParameterType(final int parameterIndex) {
+      if (lambdaParameterTypes.isEmpty()) {
+        throw new IllegalStateException(
+            "No lambda parameter type is available for field reference");
+      }
+      return lambdaParameterTypes.peek().get(parameterIndex);
     }
 
     /**
