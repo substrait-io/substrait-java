@@ -59,7 +59,7 @@ the daemon between JDK 17 and GraalVM is the most common cause of the cache chur
 
 ## Building and testing
 
-`./gradlew build` builds and tests everything; see the [README](README.md#building) for the
+`./gradlew build` builds and tests everything; see the [readme](readme.md#building) for the
 high-level build and the native-image executable. Useful narrower tasks while iterating:
 
 * **Run a module's tests:** `./gradlew :core:test`

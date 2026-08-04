@@ -5,21 +5,13 @@ human-facing docs first, then keep the codebase-specific notes below in mind.
 
 ## Start here
 
-- **[`README.md`](README.md)** — what the project is, the module overview, and how to build
+- **[`readme.md`](readme.md)** — what the project is, the module overview, and how to build
   and run it.
 - **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — commit conventions, the style guide, and the
   build / test / format / PMD command mechanics plus the JDK 17 daemon and GraalVM
   native-image setup.
 
 For GitHub work (issues, PRs), use the `gh` CLI.
-
-## What this project is
-
-`substrait-java` is the Java implementation of [Substrait](https://substrait.io/) —
-a cross-language specification for relational query plans. It provides an immutable
-POJO model for plans/relations/expressions/types and bidirectional conversion to and
-from the Substrait protobuf wire format, plus integrations (Isthmus → Apache Calcite,
-Spark).
 
 ## Module layout
 
@@ -126,18 +118,9 @@ Proto conversion is split into two directions, and the class name tells you whic
 
 ## Building and testing
 
-The build / test / format command reference, the PMD ruleset and its tripwires, the JDK 17
-daemon consistency rules, and the GraalVM native-image toolchain all live in
-[`CONTRIBUTING.md`](CONTRIBUTING.md#building-and-testing). Two habits matter most for agents:
-
-- **Build the whole thing before pushing.** Narrower local tasks pass while CI fails: **PMD**
-  runs only via `check`/`build` and `javadoc` doclint only via `build`/`javadocJar` — never
-  via `compileJava` / `test` / `spotlessCheck` — while CI runs the full `./gradlew build
-  --rerun-tasks`. Run `./gradlew :core:check :core:javadoc` (and the module you touched)
-  before pushing.
-- **When you extend the public expression/visitor API, verify the dependent modules still
-  compile** — they have their own visitor implementors:
-  `./gradlew :core:spotlessCheck :isthmus:compileJava :spark:spark-3.5_2.12:compileScala :examples:substrait-spark:compileJava`
+Run `./gradlew build` and make sure it passes before pushing — narrower tasks skip checks that
+CI runs, and a `:core` change can break the visitor implementors in the other modules. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md#building-and-testing).
 
 ## Isthmus (Calcite conversion) notes
 
@@ -177,14 +160,11 @@ daemon consistency rules, and the GraalVM native-image toolchain all live in
 
 ## Conventions & workflow
 
-- **Conventional commits** are required (CI lints them, and PR title + body must form a
-  valid commit message). Scope tags seen in history: `feat(core)`, `feat(pojo)`,
-  `feat(isthmus)`, `feat(extensions)`, `build(deps)`, `chore(release)`. A `!` marks a
-  breaking change.
 - **Keep PR descriptions high-signal.** The PR title and body together become the
   squash-merge commit message that `semantic-release` uses to build `CHANGELOG.md`, so they
-  must form that valid conventional commit. Beyond that, leave out the noise agents tend to
-  add:
+  must together form a valid conventional commit (see
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#commit-conventions)). Beyond that, leave out the noise
+  agents tend to add:
   - **Lists of files touched** — they're in the diff.
   - **Claims that CI-verified things pass** — e.g. "tests pass", "spotless clean". If they
     didn't, the checks would be red.
