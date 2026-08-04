@@ -280,12 +280,7 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
   void injectTypeObserverThroughConverterProvider() {
     AtomicReference<TypeObservation> observed = new AtomicReference<>();
     ConverterProvider observingProvider =
-        new ConverterProvider() {
-          @Override
-          public TypeObserver getTypeObserver() {
-            return observed::set;
-          }
-        };
+        ConverterProvider.builder().typeObserver(observed::set).build();
     Expression.ScalarFunctionInvocation expr =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,

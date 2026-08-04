@@ -11,6 +11,7 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class ConverterProviderBuilderTest {
     assertNotNull(provider.getAggregateFunctionConverter());
     assertNotNull(provider.getWindowFunctionConverter());
     assertEquals(ConverterProvider.DEFAULT_SQL_PARSER_CONFIG, provider.getSqlParserConfig());
+    assertSame(TypeObserver.NOOP, provider.getTypeObserver());
   }
 
   @Test
