@@ -26,8 +26,10 @@ import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -95,6 +97,9 @@ public class ExpressionRexConverter
   /** Converter for Substrait window function invocations to Calcite {@link SqlOperator}s. */
   protected final WindowFunctionConverter windowFunctionConverter;
 
+  /** Observer for supplied and inferred expression types. */
+  protected final TypeObserver typeObserver;
+
   /** Converter for Substrait relational nodes to Calcite {@link RelNode}s, used for subqueries. */
   protected SubstraitRelNodeConverter relNodeConverter;
 
@@ -113,11 +118,35 @@ public class ExpressionRexConverter
       ScalarFunctionConverter scalarFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter) {
+    this(
+        typeFactory,
+        scalarFunctionConverter,
+        windowFunctionConverter,
+        typeConverter,
+        TypeObserver.NOOP);
+  }
+
+  /**
+   * Creates an {@code ExpressionRexConverter} with type observation enabled.
+   *
+   * @param typeFactory Calcite type factory for type creation
+   * @param scalarFunctionConverter converter for scalar function invocations
+   * @param windowFunctionConverter converter for window function invocations
+   * @param typeConverter converter for Substrait and Calcite type mappings
+   * @param typeObserver observer for supplied and independently inferred expression types
+   */
+  public ExpressionRexConverter(
+      RelDataTypeFactory typeFactory,
+      ScalarFunctionConverter scalarFunctionConverter,
+      WindowFunctionConverter windowFunctionConverter,
+      TypeConverter typeConverter,
+      TypeObserver typeObserver) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.windowFunctionConverter = windowFunctionConverter;
+    this.typeObserver = Objects.requireNonNull(typeObserver, "typeObserver");
   }
 
   /**
@@ -519,7 +548,33 @@ public class ExpressionRexConverter
             .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
-    return rexBuilder.makeCall(returnType, operator, args);
+    RexNode rexCall = rexBuilder.makeCall(returnType, operator, args);
+    // If type observations are not needed, avoid recomputing the RexCall with Calcite's
+    // independently inferred return type.
+    if (typeObserver == TypeObserver.NOOP) {
+      return rexCall;
+    }
+    observeScalarType(expr, () -> rexBuilder.makeCall(operator, args));
+    return rexCall;
+  }
+
+  private void observeScalarType(
+      Expression.ScalarFunctionInvocation expression, Supplier<RexNode> inferredCallSupplier) {
+    TypeObservation observation;
+    RexNode inferredCall;
+    try {
+      inferredCall = inferredCallSupplier.get();
+    } catch (RuntimeException inferenceFailure) {
+      observation =
+          TypeObservation.failure(
+              TypeObservation.Source.SCALAR_FUNCTION, expression, inferenceFailure);
+      typeObserver.observe(observation);
+      return;
+    }
+    observation =
+        TypeObservation.success(
+            TypeObservation.Source.SCALAR_FUNCTION, expression, inferredCall.getType());
+    typeObserver.observe(observation);
   }
 
   private String callConversionFailureMessage(
