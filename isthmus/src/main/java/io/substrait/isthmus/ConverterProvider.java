@@ -265,8 +265,10 @@ public class ConverterProvider {
    * identifier casing.
    *
    * <p>Defaults to {@link #DEFAULT_SQL_PARSER_CONFIG}. Provide a custom configuration via {@link
-   * Builder#sqlParserConfig(SqlParser.Config)} (or the {@link Builder#unquotedCasing(Casing)}
-   * convenience), or override this method in a subclass for fully dynamic behaviour.
+   * Builder#sqlParserConfig(SqlParser.Config)}, or override this method in a subclass for even more
+   * control.
+   *
+   * <p>To override just the unquoted casing, consider {@link Builder#unquotedCasing(Casing)}.
    *
    * @return the SQL parser configuration
    */
@@ -524,9 +526,7 @@ public class ConverterProvider {
    * Creates a new {@link Builder} for configuring a {@link ConverterProvider}.
    *
    * <p>The builder starts from reasonable system defaults (the same ones behind {@link #DEFAULT})
-   * and lets callers override individual components — most notably the Calcite {@link
-   * SqlParser.Config} used for SQL parsing, via {@link Builder#sqlParserConfig(SqlParser.Config)}
-   * for full control or {@link Builder#unquotedCasing(Casing)} for the common casing-only case.
+   * and lets callers override individual components.
    *
    * @return a new builder
    */
@@ -617,9 +617,6 @@ public class ConverterProvider {
     /**
      * Convenience for the common case of overriding only the unquoted-identifier casing, without
      * having to restate the rest of the parser configuration.
-     *
-     * <p>Unlike deriving a config by hand, this cannot accidentally drop the DDL parser factory or
-     * conformance that {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} supplies.
      *
      * <p>The casing set here is applied over the {@link #sqlParserConfig(SqlParser.Config) parser
      * configuration} when the provider is constructed, so it wins over any casing that
