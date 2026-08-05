@@ -17,8 +17,11 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.prepare.Prepare;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
 
 /** Isthmus CLI entry point. */
 @Command(
@@ -59,33 +62,57 @@ public class IsthmusEntryPoint implements Callable<Integer> {
       description = "Calcite's casing policy for unquoted identifiers: ${COMPLETION-CANDIDATES}")
   private Casing unquotedCasing = Casing.TO_UPPER;
 
+  @Option(
+      names = {"--stacktrace"},
+      description = "Print the full stack trace of any error, not just its message")
+  private boolean stackTrace;
+
+  @Spec private CommandSpec spec;
+
   /**
    * Standard Java Main method invoked by the isthmus CLI command.
    *
    * @param args Isthmus CLI arguments.
    */
   public static void main(String... args) {
+    CommandLine commandLine = createCommandLine();
+    if (args.length == 0) { // If no arguments print usage help
+      commandLine.usage(commandLine.getOut());
+      System.exit(CommandLine.ExitCode.OK);
+    }
+    System.exit(commandLine.execute(args));
+  }
+
+  /**
+   * Creates the {@link CommandLine} driving the isthmus CLI. Errors caused by the given SQL are
+   * reported by {@link IsthmusExecutionExceptionHandler} rather than as a stack trace.
+   *
+   * @return the configured {@link CommandLine}
+   */
+  static CommandLine createCommandLine() {
     CommandLine commandLine = new CommandLine(new IsthmusEntryPoint());
     commandLine.setCaseInsensitiveEnumValuesAllowed(true);
-    CommandLine.ParseResult parseResult = commandLine.parseArgs(args);
-    if (parseResult.originalArgs().isEmpty()) { // If no arguments print usage help
-      commandLine.usage(System.out);
-      System.exit(0);
-    }
-    if (commandLine.isUsageHelpRequested()) {
-      commandLine.usage(System.out);
-      System.exit(0);
-    }
-    if (commandLine.isVersionHelpRequested()) {
-      commandLine.printVersionHelp(System.out);
-      System.exit(0);
-    }
-    int exitCode = commandLine.execute(args);
-    System.exit(exitCode);
+    commandLine.setExecutionExceptionHandler(new IsthmusExecutionExceptionHandler());
+    return commandLine;
+  }
+
+  /**
+   * Reports whether the full stack trace of an error was asked for on the command line.
+   *
+   * @return true if {@code --stacktrace} was given
+   */
+  boolean isStackTraceRequested() {
+    return stackTrace;
   }
 
   @Override
   public Integer call() throws Exception {
+    if (sqlExpressions == null && sql == null) {
+      throw new ParameterException(
+          spec.commandLine(),
+          "Missing SQL to convert: pass a SQL query as the first argument, "
+              + "or SQL expressions with -e / --expression");
+    }
     ConverterProvider provider = ConverterProvider.builder().unquotedCasing(unquotedCasing).build();
     // Isthmus image is parsing SQL Expression if that argument is defined
     if (sqlExpressions != null) {

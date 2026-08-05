@@ -215,6 +215,11 @@ public class SubstraitCreateStatementParser {
         }
 
         final SqlCreateTable create = (SqlCreateTable) parsed;
+
+        if (create.query != null) {
+          throw fail("CTAS not supported.", create.name.getParserPosition());
+        }
+
         final List<String> names = create.name.names;
 
         final CalciteSchema schema =

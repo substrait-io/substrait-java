@@ -119,4 +119,13 @@ class SubstraitCreateStatementParserTest {
                 "create table src1 (intcol int, charcol varchar(10))",
                 "create table src1 (intcol int, charcol varchar(20))"));
   }
+
+  @Test
+  void testToCatalogWithCreateTableAsSelectThrowsException() {
+    assertThrows(
+        SqlParseException.class,
+        () ->
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                "create table src1 as select 1"));
+  }
 }
