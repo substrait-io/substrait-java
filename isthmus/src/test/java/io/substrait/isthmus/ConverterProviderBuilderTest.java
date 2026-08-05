@@ -13,7 +13,11 @@ import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class ConverterProviderBuilderTest {
@@ -94,6 +98,68 @@ class ConverterProviderBuilderTest {
         () ->
             new AutomaticDynamicFunctionMappingConverterProvider(
                 ConverterProvider.builder().extensions(EXTENSIONS)));
+  }
+
+  @Nested
+  class UnquotedCasing {
+
+    @Test
+    void defaultsToUpper() {
+      ConverterProvider provider = ConverterProvider.builder().build();
+      assertEquals(Casing.TO_UPPER, provider.getSqlParserConfig().unquotedCasing());
+    }
+
+    @Test
+    void configuredCasingIsUsed() {
+      ConverterProvider provider =
+          ConverterProvider.builder().unquotedCasing(Casing.UNCHANGED).build();
+      assertEquals(Casing.UNCHANGED, provider.getSqlParserConfig().unquotedCasing());
+    }
+
+    /**
+     * A full {@link SqlParser.Config} supplied to the builder is used verbatim. Deriving it from
+     * {@link ConverterProvider#DEFAULT_SQL_PARSER_CONFIG} preserves Isthmus' parser defaults (here,
+     * {@link SqlConformanceEnum#LENIENT} conformance) while overriding a single setting.
+     */
+    @Test
+    void fullSqlParserConfigIsUsed() {
+      SqlParser.Config config =
+          ConverterProvider.DEFAULT_SQL_PARSER_CONFIG.withUnquotedCasing(Casing.TO_LOWER);
+      ConverterProvider provider = ConverterProvider.builder().sqlParserConfig(config).build();
+      assertEquals(Casing.TO_LOWER, provider.getSqlParserConfig().unquotedCasing());
+      assertEquals(SqlConformanceEnum.LENIENT, provider.getSqlParserConfig().conformance());
+    }
+
+    /**
+     * The casing is applied over the configured {@link SqlParser.Config} at construction, so it
+     * wins over the casing that config carries no matter which order the two setters are called in,
+     * and the rest of the supplied config is retained either way.
+     */
+    @Test
+    void isOrderIndependentWithSqlParserConfig() {
+      SqlParser.Config config =
+          ConverterProvider.DEFAULT_SQL_PARSER_CONFIG
+              .withUnquotedCasing(Casing.TO_LOWER)
+              .withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+
+      ConverterProvider casingLast =
+          ConverterProvider.builder()
+              .sqlParserConfig(config)
+              .unquotedCasing(Casing.UNCHANGED)
+              .build();
+      ConverterProvider casingFirst =
+          ConverterProvider.builder()
+              .unquotedCasing(Casing.UNCHANGED)
+              .sqlParserConfig(config)
+              .build();
+
+      assertEquals(Casing.UNCHANGED, casingLast.getSqlParserConfig().unquotedCasing());
+      assertEquals(Casing.UNCHANGED, casingFirst.getSqlParserConfig().unquotedCasing());
+      assertEquals(
+          SqlConformanceEnum.PRAGMATIC_2003, casingLast.getSqlParserConfig().conformance());
+      assertEquals(
+          SqlConformanceEnum.PRAGMATIC_2003, casingFirst.getSqlParserConfig().conformance());
+    }
   }
 
   private static void assertRejected(ConverterProvider.Builder builder, String setterName) {
