@@ -9,7 +9,10 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
+import io.substrait.expression.ImmutableFieldReference;
+import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -424,30 +427,104 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(FieldReference fieldReference, EmptyVisitationContext context)
       throws E {
-    Optional<Expression> inputExpression =
-        visitOptionalExpression(fieldReference.inputExpression(), context);
+    return visitFieldReference(fieldReference, context).map(Expression.class::cast);
+  }
 
-    if (allEmpty(inputExpression)) {
+  /**
+   * Visits a field reference, rewriting the expression it is rooted at, if any, and re-deriving its
+   * cached type from the root it resolves against. Re-deriving the type is what keeps references
+   * correct when a relation's input is replaced by one emitting a different record type.
+   *
+   * <p>The type of a reference to a lambda parameter, or of an outer reference identified by the
+   * {@link io.substrait.relation.Rel#getRelAnchor() rel anchor} of the relation it is rooted on, is
+   * left as it is: neither resolves against a relation in the enclosing scopes tracked during the
+   * traversal.
+   *
+   * @param fieldReference the field reference to visit
+   * @param context the visitation context
+   * @return Optional containing the modified field reference, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
+  public Optional<FieldReference> visitFieldReference(
+      FieldReference fieldReference, EmptyVisitationContext context) throws E {
+    if (fieldReference.inputExpression().isPresent()) {
+      Optional<Expression> inputExpression =
+          fieldReference.inputExpression().get().accept(this, context);
+      if (!inputExpression.isPresent()) {
+        return Optional.empty();
+      }
+      ImmutableFieldReference.Builder rewritten =
+          ImmutableFieldReference.builder().from(fieldReference).inputExpression(inputExpression);
+      if (!fieldReference.segments().isEmpty()) {
+        rewritten.type(
+            FieldReference.ofExpression(inputExpression.get(), segmentsOf(fieldReference)).type());
+      }
+      return Optional.of(rewritten.build());
+    }
+    return retypeRootReference(fieldReference);
+  }
+
+  /**
+   * Re-derives the type of a reference into the record type of the relation it is rooted on, which
+   * may have been replaced by one emitting a different record type.
+   */
+  private Optional<FieldReference> retypeRootReference(FieldReference fieldReference) {
+    if (fieldReference.isLambdaParameterReference()
+        || fieldReference.outerReferenceRelReference().isPresent()) {
       return Optional.empty();
     }
-    return Optional.of(FieldReference.builder().inputExpression(inputExpression).build());
+    Type.Struct rootType =
+        getRelCopyOnWriteVisitor()
+            .inputTypeStepsOut(fieldReference.outerReferenceStepsOut().orElse(0));
+    // A rewrite that drops fields can leave a reference selecting a field its input no longer has.
+    // The resulting relation tree is invalid either way, so leave the reference as it is rather
+    // than turn re-deriving its type into a failure of the rewrite.
+    if (rootType == null || !selectsFieldOf(fieldReference, rootType)) {
+      return Optional.empty();
+    }
+    Type type = FieldReference.ofRoot(rootType, segmentsOf(fieldReference)).type();
+    if (type.equals(fieldReference.type())) {
+      return Optional.empty();
+    }
+    return Optional.of(ImmutableFieldReference.builder().from(fieldReference).type(type).build());
+  }
+
+  /**
+   * Returns whether the outermost segment of the given reference selects a field that the given
+   * record type has. The segments are held innermost first, so the outermost one is the last.
+   */
+  private static boolean selectsFieldOf(FieldReference fieldReference, Type.Struct rootType) {
+    List<FieldReference.ReferenceSegment> segments = fieldReference.segments();
+    if (segments.isEmpty()) {
+      return false;
+    }
+    FieldReference.ReferenceSegment outermost = segments.get(segments.size() - 1);
+    return outermost instanceof FieldReference.StructField
+        && ((FieldReference.StructField) outermost).offset() < rootType.fields().size();
+  }
+
+  /**
+   * Returns the segments of the given reference as a mutable list, which is what {@link
+   * FieldReference#ofRoot} and {@link FieldReference#ofExpression} require: they reverse the list
+   * they are given.
+   */
+  private static List<FieldReference.ReferenceSegment> segmentsOf(FieldReference fieldReference) {
+    return new ArrayList<>(fieldReference.segments());
   }
 
   @Override
   public Optional<Expression> visit(
       Expression.SetPredicate setPredicate, EmptyVisitationContext context) throws E {
-    return setPredicate
-        .tuples()
-        .accept(getRelCopyOnWriteVisitor(), context)
+    return getRelCopyOnWriteVisitor()
+        .inSubqueryScope(() -> setPredicate.tuples().accept(getRelCopyOnWriteVisitor(), context))
         .map(tuple -> Expression.SetPredicate.builder().from(setPredicate).tuples(tuple).build());
   }
 
   @Override
   public Optional<Expression> visit(
       Expression.ScalarSubquery scalarSubquery, EmptyVisitationContext context) throws E {
-    return scalarSubquery
-        .input()
-        .accept(getRelCopyOnWriteVisitor(), context)
+    return getRelCopyOnWriteVisitor()
+        .inSubqueryScope(() -> scalarSubquery.input().accept(getRelCopyOnWriteVisitor(), context))
         .map(
             input -> Expression.ScalarSubquery.builder().from(scalarSubquery).input(input).build());
   }
@@ -455,8 +532,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.InPredicate inPredicate, EmptyVisitationContext context) throws E {
-    Optional<Rel> haystack = inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context);
+    // The needles are evaluated in the current scope; only the haystack is a subquery boundary.
     Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
+    Optional<Rel> haystack =
+        getRelCopyOnWriteVisitor()
+            .inSubqueryScope(
+                () -> inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context));
 
     if (allEmpty(haystack, needles)) {
       return Optional.empty();
@@ -521,15 +602,6 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   protected Optional<List<Expression>> visitExprList(
       List<Expression> exprs, EmptyVisitationContext context) throws E {
     return transformList(exprs, context, (e, c) -> e.accept(this, c));
-  }
-
-  private Optional<Expression> visitOptionalExpression(
-      Optional<Expression> optExpr, EmptyVisitationContext context) throws E {
-    // not using optExpr.map to allow us to propagate the EXCEPTION nicely
-    if (optExpr.isPresent()) {
-      return optExpr.get().accept(this, context);
-    }
-    return Optional.empty();
   }
 
   /**
