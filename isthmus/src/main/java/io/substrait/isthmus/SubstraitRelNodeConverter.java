@@ -554,7 +554,8 @@ public class SubstraitRelNodeConverter
     if (table == null) {
       throw new IllegalStateException("Table not found in Calcite catalog: " + update.getNames());
     }
-    final Prepare.CatalogReader catalogReader = (Prepare.CatalogReader) table.getRelOptSchema();
+    final Prepare.CatalogReader catalogReader =
+        requireCatalogReader(table.getRelOptSchema(), update.getNames());
 
     return LogicalTableModify.create(
         table,
@@ -737,7 +738,13 @@ public class SubstraitRelNodeConverter
     }
 
     return LogicalTableModify.create(
-        targetTable, (Prepare.CatalogReader) relOptSchema, input, operation, null, null, false);
+        targetTable,
+        requireCatalogReader(relOptSchema, write.getNames()),
+        input,
+        operation,
+        null,
+        null,
+        false);
   }
 
   /**
@@ -754,6 +761,34 @@ public class SubstraitRelNodeConverter
           "The RelBuilder of this converter has no RelOptSchema; a catalog-backed RelBuilder is required to resolve table names");
     }
     return relOptSchema;
+  }
+
+  /**
+   * Narrows a {@link RelOptSchema} to the {@link org.apache.calcite.prepare.Prepare.CatalogReader}
+   * that Calcite's table-modification relations require.
+   *
+   * <p>{@link RelOptTable#getRelOptSchema()} is nullable and a {@link RelOptSchema} is not
+   * necessarily a catalog reader, while {@link TableModify} stores the reader without checking it
+   * and only dereferences it later (e.g. from {@code getExpectedInputRowType()}). Validating here
+   * reports the misconfigured catalog instead of failing as a {@link NullPointerException} or
+   * {@link ClassCastException} further downstream.
+   *
+   * @param relOptSchema the schema to narrow, possibly null
+   * @param names the table name being resolved, for the error message
+   * @return the schema as a catalog reader
+   * @throws IllegalStateException if the schema is null or is not a catalog reader
+   */
+  private static Prepare.CatalogReader requireCatalogReader(
+      RelOptSchema relOptSchema, List<String> names) {
+    if (!(relOptSchema instanceof Prepare.CatalogReader)) {
+      throw new IllegalStateException(
+          String.format(
+              "Cannot read table metadata for %s: expected a %s, but got %s",
+              names,
+              Prepare.CatalogReader.class.getName(),
+              relOptSchema == null ? "null" : relOptSchema.getClass().getName()));
+    }
+    return (Prepare.CatalogReader) relOptSchema;
   }
 
   @Override
