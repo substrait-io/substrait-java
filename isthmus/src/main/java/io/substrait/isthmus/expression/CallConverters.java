@@ -127,14 +127,18 @@ public class CallConverters {
           };
 
   /**
-   * Converts Calcite ROW constructors into Substrait {@link Expression.StructLiteral}s.
+   * Converts Calcite ROW constructors into Substrait {@link Expression.StructLiteral}s, or into
+   * {@link Expression.NestedStruct}s when the fields are not all literals.
    *
-   * <p>ROW values are always concrete (never null themselves) - if a value is actually null, use
-   * NullLiteral instead of StructLiteral. Therefore, the resulting StructLiteral always has
-   * nullable=false. The ROW's type may be nullable (for regular structs) or non-nullable (for UDT
-   * struct encoding), but the value itself is always concrete.
+   * <p>Either way the struct takes its nullability from the ROW's type, which is where Calcite
+   * keeps it. On a Substrait literal, {@code nullable} marks the literal's type as nullable rather
+   * than the value as null - a value that is actually null is a NullLiteral - so a nullable ROW of
+   * literals does not have to give up being a StructLiteral. The UDT struct encoding depends on
+   * that: it builds a deliberately non-nullable ROW, keeping the user-defined type's own
+   * nullability in the REINTERPRET target type, and so still arrives here as a StructLiteral.
    *
-   * <p>Each literal's nullability is set to match its field type's nullability.
+   * <p>Each literal's nullability is set to match its field type's nullability. Note that Calcite
+   * makes every field of a nullable record type nullable, so a nullable ROW widens its fields.
    */
   public static final SimpleCallConverter ROW =
       (call, visitor) -> {
@@ -145,10 +149,12 @@ public class CallConverters {
         List<Expression> operands =
             call.getOperands().stream().map(visitor).collect(Collectors.toList());
         if (!operands.stream().allMatch(expr -> expr instanceof Expression.Literal)) {
-          throw new IllegalArgumentException("ROW operands must be literals.");
+          return Expression.NestedStruct.builder()
+              .nullable(call.getType().isNullable())
+              .fields(operands)
+              .build();
         }
 
-        // ROW types are never nullable (struct literals are always concrete values).
         // Field nullability comes from individual field types, so match literal nullability
         // to field type nullability.
         List<RelDataTypeField> fieldTypes = call.getType().getFieldList();
@@ -162,9 +168,7 @@ public class CallConverters {
                     })
                 .collect(Collectors.toList());
 
-        // Struct literals are always concrete values (never null).
-        // For UDT struct literals, struct-level nullability is in the REINTERPRET target type.
-        return ExpressionCreator.struct(false, literals);
+        return ExpressionCreator.struct(call.getType().isNullable(), literals);
       };
 
   /**
