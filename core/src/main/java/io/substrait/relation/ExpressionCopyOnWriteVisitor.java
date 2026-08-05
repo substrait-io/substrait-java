@@ -10,7 +10,9 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -400,6 +402,25 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     return expressions.map(
         expressionList ->
             Expression.NestedList.builder().from(expr).values(expressionList).build());
+  }
+
+  @Override
+  public Optional<Expression> visit(Expression.NestedMap expr, EmptyVisitationContext context)
+      throws E {
+    boolean changed = false;
+    // A LinkedHashMap keeps the key-value pairs in their original order.
+    Map<Expression, Expression> values = new LinkedHashMap<>();
+    for (Map.Entry<Expression, Expression> keyValue : expr.values().entrySet()) {
+      Optional<Expression> key = keyValue.getKey().accept(this, context);
+      Optional<Expression> value = keyValue.getValue().accept(this, context);
+      changed |= !allEmpty(key, value);
+      values.put(key.orElse(keyValue.getKey()), value.orElse(keyValue.getValue()));
+    }
+
+    if (!changed) {
+      return Optional.empty();
+    }
+    return Optional.of(Expression.NestedMap.builder().from(expr).values(values).build());
   }
 
   /**

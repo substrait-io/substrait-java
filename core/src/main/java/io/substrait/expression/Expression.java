@@ -1819,6 +1819,64 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * A nested map expression with one or more key-value pairs.
+   *
+   * <p>Note: This class cannot be used to construct an empty map. To create an empty map, use
+   * {@link ExpressionCreator#emptyMap(boolean, Type, Type)} which returns an {@link
+   * EmptyMapLiteral}.
+   */
+  @Value.Immutable
+  abstract class NestedMap implements Nested {
+    /**
+     * Returns the key-value pairs in this nested map, in the order they were added.
+     *
+     * @return the key-value pairs
+     */
+    public abstract Map<Expression, Expression> values();
+
+    /**
+     * Validates that the nested map is not empty and that all keys, and all values, have a single
+     * common type.
+     */
+    @Value.Check
+    protected void check() {
+      if (values().isEmpty()) {
+        throw new IllegalArgumentException(
+            "To specify an empty map, use ExpressionCreator.emptyMap");
+      }
+      if (values().keySet().stream().map(Expression::getType).distinct().count() > 1) {
+        throw new IllegalArgumentException("All keys in a NestedMap must have the same type");
+      }
+      if (values().values().stream().map(Expression::getType).distinct().count() > 1) {
+        throw new IllegalArgumentException("All values in a NestedMap must have the same type");
+      }
+    }
+
+    @Override
+    public Type getType() {
+      return Type.withNullability(nullable())
+          .map(
+              values().keySet().iterator().next().getType(),
+              values().values().iterator().next().getType());
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+
+    /**
+     * Creates a new builder for constructing a NestedMap.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.NestedMap.Builder builder() {
+      return ImmutableExpression.NestedMap.builder();
+    }
+  }
+
   /** Represents a single record (combination of values) in a multi-or-list expression. */
   @Value.Immutable
   abstract class MultiOrListRecord {
