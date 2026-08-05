@@ -2,14 +2,17 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +20,11 @@ import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
+import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends PlanTestBase {
@@ -109,6 +116,26 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
     assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void valuesLiteralUsesSchemaType() {
+    RelDataType rowType = typeFactory.builder().add("col1", SqlTypeName.INTEGER).build();
+    RexLiteral literal =
+        builder
+            .getRexBuilder()
+            .makeExactLiteral(BigDecimal.ONE, typeFactory.createSqlType(SqlTypeName.TINYINT));
+    LogicalValues values =
+        LogicalValues.create(
+            builder.getCluster(), rowType, ImmutableList.of(ImmutableList.of(literal)));
+
+    VirtualTableScan converted =
+        assertInstanceOf(
+            VirtualTableScan.class, SubstraitRelVisitor.convert(values, converterProvider));
+    assertEquals(R.I32, converted.getInitialSchema().struct().fields().get(0));
+    Expression.I32Literal convertedLiteral =
+        assertInstanceOf(Expression.I32Literal.class, converted.getRows().get(0).fields().get(0));
+    assertEquals(1, convertedLiteral.value());
   }
 
   @SafeVarargs
