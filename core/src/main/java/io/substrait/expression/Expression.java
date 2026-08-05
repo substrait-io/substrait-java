@@ -1819,6 +1819,104 @@ public interface Expression extends FunctionArg {
     }
   }
 
+  /**
+   * A nested map expression with one or more key-value pairs.
+   *
+   * <p>The pairs are held as an ordered list rather than a {@code Map} because that is what the
+   * Substrait map expression is: a repeated list of key-value pairs. Two pairs may carry equal
+   * keys, and a {@code Map} would silently drop one of them.
+   *
+   * <p>Note: This class cannot be used to construct an empty map. To create an empty map, use
+   * {@link ExpressionCreator#emptyMap(boolean, Type, Type)} which returns an {@link
+   * EmptyMapLiteral}.
+   */
+  @Value.Immutable
+  abstract class NestedMap implements Nested {
+    /**
+     * Returns the key-value pairs in this nested map, in the order they were added.
+     *
+     * @return the key-value pairs
+     */
+    public abstract List<KeyValue> keyValues();
+
+    /**
+     * Validates that the nested map is not empty and that all keys, and all values, have a single
+     * common type.
+     */
+    @Value.Check
+    protected void check() {
+      if (keyValues().isEmpty()) {
+        throw new IllegalArgumentException(
+            "To specify an empty map, use ExpressionCreator.emptyMap");
+      }
+      if (keyValues().stream().map(keyValue -> keyValue.key().getType()).distinct().count() > 1) {
+        throw new IllegalArgumentException("All keys in a NestedMap must have the same type");
+      }
+      if (keyValues().stream().map(keyValue -> keyValue.value().getType()).distinct().count() > 1) {
+        throw new IllegalArgumentException("All values in a NestedMap must have the same type");
+      }
+    }
+
+    @Override
+    public Type getType() {
+      KeyValue first = keyValues().get(0);
+      return Type.withNullability(nullable()).map(first.key().getType(), first.value().getType());
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+
+    /**
+     * Creates a new builder for constructing a NestedMap.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.NestedMap.Builder builder() {
+      return ImmutableExpression.NestedMap.builder();
+    }
+
+    /** A single key-value pair of a {@link NestedMap}. */
+    @Value.Immutable
+    public abstract static class KeyValue {
+      /**
+       * Returns the key expression of this pair.
+       *
+       * @return the key
+       */
+      public abstract Expression key();
+
+      /**
+       * Returns the value expression of this pair.
+       *
+       * @return the value
+       */
+      public abstract Expression value();
+
+      /**
+       * Creates a key-value pair.
+       *
+       * @param key the key expression
+       * @param value the value expression
+       * @return the key-value pair
+       */
+      public static KeyValue of(Expression key, Expression value) {
+        return builder().key(key).value(value).build();
+      }
+
+      /**
+       * Creates a new builder for constructing a KeyValue.
+       *
+       * @return a new builder instance
+       */
+      public static ImmutableExpression.KeyValue.Builder builder() {
+        return ImmutableExpression.KeyValue.builder();
+      }
+    }
+  }
+
   /** Represents a single record (combination of values) in a multi-or-list expression. */
   @Value.Immutable
   abstract class MultiOrListRecord {

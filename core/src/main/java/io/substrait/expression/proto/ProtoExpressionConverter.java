@@ -481,13 +481,29 @@ public class ProtoExpressionConverter {
    */
   public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
     switch (nested.getNestedTypeCase()) {
+      case STRUCT:
+        List<Expression> fields =
+            nested.getStruct().getFieldsList().stream()
+                .map(this::from)
+                .collect(Collectors.toList());
+        return ExpressionCreator.nestedStruct(nested.getNullable(), fields);
       case LIST:
         List<Expression> list =
             nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
         return ExpressionCreator.nestedList(nested.getNullable(), list);
+      case MAP:
+        // The pairs are kept in a list, in the order the producer emitted them, so that a map
+        // repeating a key keeps both of its pairs.
+        List<Expression.NestedMap.KeyValue> keyValues =
+            nested.getMap().getKeyValuesList().stream()
+                .map(
+                    keyValue ->
+                        Expression.NestedMap.KeyValue.of(
+                            from(keyValue.getKey()), from(keyValue.getValue())))
+                .collect(Collectors.toList());
+        return ExpressionCreator.nestedMap(nested.getNullable(), keyValues);
       default:
-        throw new UnsupportedOperationException(
-            "Unimplemented nested type: " + nested.getNestedTypeCase());
+        throw new IllegalStateException("Unexpected nested type: " + nested.getNestedTypeCase());
     }
   }
 

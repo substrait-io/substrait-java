@@ -514,6 +514,19 @@ public abstract class AbstractExpressionVisitor<O, C extends VisitationContext, 
   }
 
   /**
+   * Visits a nested map expression.
+   *
+   * @param expr the nested map
+   * @param context the visitation context
+   * @return the visit result
+   * @throws E if visitation fails
+   */
+  @Override
+  public O visit(Expression.NestedMap expr, C context) throws E {
+    return visitFallback(expr, context);
+  }
+
+  /**
    * Visits a field reference.
    *
    * @param expr the field reference
