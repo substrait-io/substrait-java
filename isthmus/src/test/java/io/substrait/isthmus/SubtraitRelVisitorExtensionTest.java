@@ -132,6 +132,21 @@ class SubtraitRelVisitorExtensionTest {
     }
 
     @Override
+    public Rel withRemap(final Optional<? extends Remap> remap) {
+      return new SubstraitRepeatRel(input.withRemap(remap), repeatCount);
+    }
+
+    @Override
+    public Rel withCommonExtension(final Optional<? extends AdvancedExtension> commonExtension) {
+      return new SubstraitRepeatRel(input.withCommonExtension(commonExtension), repeatCount);
+    }
+
+    @Override
+    public Rel withHint(final Optional<? extends Hint> hint) {
+      return new SubstraitRepeatRel(input.withHint(hint), repeatCount);
+    }
+
+    @Override
     public <O, C extends VisitationContext, E extends Exception> O accept(
         final RelVisitor<O, C, E> visitor, final C context) throws E {
       return null;
@@ -290,5 +305,27 @@ class SubtraitRelVisitorExtensionTest {
 
     // Clearing the anchor works too.
     assertFalse(anchored.withRelAnchor(Optional.empty()).getRelAnchor().isPresent());
+  }
+
+  @Test
+  void customRelSupportsTheRestOfTheRelCommonContract() {
+    // The remaining RelCommon copy methods are delegated the same way, so a custom Rel can be
+    // handed to code that stamps an emit mapping, a hint or a common extension onto an arbitrary
+    // relation without hitting Rel's throwing defaults.
+    final SubstraitBuilder sb = new SubstraitBuilder();
+    final Rel scan = sb.namedScan(List.of("t"), List.of("a"), List.of(TypeCreator.REQUIRED.I64));
+    final SubstraitRepeatRel repeat = new SubstraitRepeatRel(scan, 3);
+
+    final Rel remapped = repeat.withRemap(Optional.of(Rel.Remap.of(List.of(0))));
+    assertTrue(remapped instanceof SubstraitRepeatRel);
+    assertEquals(List.of(0), remapped.getRemap().orElseThrow(AssertionError::new).indices());
+
+    final Hint hint = Hint.builder().alias("an_alias").build();
+    assertEquals(Optional.of(hint), repeat.withHint(Optional.of(hint)).getHint());
+
+    final AdvancedExtension extension = AdvancedExtension.builder().build();
+    assertEquals(
+        Optional.of(extension),
+        repeat.withCommonExtension(Optional.of(extension)).getCommonExtension());
   }
 }

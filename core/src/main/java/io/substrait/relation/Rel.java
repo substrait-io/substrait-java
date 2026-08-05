@@ -74,6 +74,61 @@ public interface Rel {
   }
 
   /**
+   * Returns a copy of this relation with its {@link #getRemap() output mapping} set to the given
+   * optional value ({@link Optional#empty()} clears it, making the relation emit directly).
+   *
+   * <p>Like {@link #withRelAnchor(Optional)}, this is overridden by the generated Immutables {@code
+   * withRemap(Optional)} and provides a type-agnostic way to set the remap on an arbitrary
+   * relation. Custom {@link Rel} implementations that are not Immutables-backed inherit this
+   * throwing default.
+   *
+   * <p>The {@code ? extends} wildcard is load-bearing: Immutables emits it for attribute types that
+   * are not {@code final} (unlike {@code withRelAnchor(Optional<Integer>)}), and no
+   * {@code @Override} links the two, so narrowing this parameter type would silently leave the
+   * throwing default in place on every generated relation.
+   *
+   * @param remap the output mapping to set, or empty to clear it
+   * @return a copy of this relation carrying the given output mapping
+   */
+  default Rel withRemap(Optional<? extends Remap> remap) {
+    throw new UnsupportedOperationException(
+        getClass() + " does not support setting an output mapping");
+  }
+
+  /**
+   * Returns a copy of this relation with its {@link #getCommonExtension() common extension} set to
+   * the given optional value ({@link Optional#empty()} clears it).
+   *
+   * <p>Like {@link #withRelAnchor(Optional)}, this is overridden by the generated Immutables {@code
+   * withCommonExtension(Optional)} and provides a type-agnostic way to set the extension on an
+   * arbitrary relation. Custom {@link Rel} implementations that are not Immutables-backed inherit
+   * this throwing default.
+   *
+   * @param commonExtension the extension to set, or empty to clear it
+   * @return a copy of this relation carrying the given common extension
+   */
+  default Rel withCommonExtension(Optional<? extends AdvancedExtension> commonExtension) {
+    throw new UnsupportedOperationException(
+        getClass() + " does not support setting a common extension");
+  }
+
+  /**
+   * Returns a copy of this relation with its {@link #getHint() hint} set to the given optional
+   * value ({@link Optional#empty()} clears it).
+   *
+   * <p>Like {@link #withRelAnchor(Optional)}, this is overridden by the generated Immutables {@code
+   * withHint(Optional)} and provides a type-agnostic way to set the hint on an arbitrary relation.
+   * Custom {@link Rel} implementations that are not Immutables-backed inherit this throwing
+   * default.
+   *
+   * @param hint the hint to set, or empty to clear it
+   * @return a copy of this relation carrying the given hint
+   */
+  default Rel withHint(Optional<? extends Hint> hint) {
+    throw new UnsupportedOperationException(getClass() + " does not support setting a hint");
+  }
+
+  /**
    * Returns the record type (schema) produced by this relation.
    *
    * @return the struct type representing the output schema

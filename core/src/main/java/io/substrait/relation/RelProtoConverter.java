@@ -613,6 +613,7 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
+    checkNoRelCommon(update);
     UpdateRel.Builder builder =
         UpdateRel.newBuilder()
             .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
@@ -927,6 +928,29 @@ public class RelProtoConverter
     return Rel.newBuilder().setExtensionMulti(builder).build();
   }
 
+  /**
+   * Rejects {@link RelCommon} data on a relation whose protobuf message has no {@code common}
+   * field. {@code UpdateRel} is the only such message (spec v0.99.0), so an update relation cannot
+   * express an emit mapping, a hint, a rel anchor or a common advanced extension. The POJO model
+   * exposes those accessors on every {@link io.substrait.relation.Rel}, and an emit mapping
+   * additionally changes {@link io.substrait.relation.Rel#getRecordType()} — serializing such a
+   * relation would silently produce a plan with a different schema, so fail instead.
+   *
+   * @param rel the relation about to be serialized
+   */
+  private static void checkNoRelCommon(io.substrait.relation.Rel rel) {
+    if (rel.getRemap().isPresent()
+        || rel.getHint().isPresent()
+        || rel.getRelAnchor().isPresent()
+        || rel.getCommonExtension().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Relation "
+              + rel.getClass()
+              + " carries RelCommon data (emit mapping, hint, rel anchor or common advanced "
+              + "extension) but its protobuf message has no common field to carry it");
+    }
+  }
+
   private RelCommon common(io.substrait.relation.Rel rel) {
     RelCommon.Builder builder = RelCommon.newBuilder();
     rel.getCommonExtension()
@@ -948,6 +972,9 @@ public class RelProtoConverter
 
       hint.getAlias().ifPresent(hintBuilder::setAlias);
       hintBuilder.addAllOutputNames(hint.getOutputNames());
+
+      hint.getExtension()
+          .ifPresent(ae -> hintBuilder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
 
       if (hint.getStats().isPresent()) {
         io.substrait.hint.Hint.Stats stats = hint.getStats().get();

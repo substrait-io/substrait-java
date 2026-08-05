@@ -114,6 +114,18 @@ Proto conversion is split into two directions, and the class name tells you whic
   to one proto value, order the deprecated ones **last** so the reverse lookup returns the
   canonical one (see `Join.JoinType`). Adding an enum value is an edit to the enum, not the
   converters.
+- **`RelCommon` data** (emit mapping, hint, rel anchor, common advanced extension) is converted by
+  one helper per direction: `ProtoRelConverter.applyRelCommon(rel, relCommon)` on the way in and
+  `RelProtoConverter.common(Rel)` on the way out. Both are still *called* per relation, so both
+  halves are easy to forget: a new `newXxx` must route its result through `applyRelCommon`, and a
+  new `visit` must call `.setCommon(common(rel))`. `RelCommonRoundtripTest` covers every
+  `RelVisitor` type and fails when one has no sample — but it is keyed on POJO types, not on proto
+  `oneof` cases, so a new case mapping to an existing POJO type slips through. `applyRelCommon`
+  runs *after* `build()`, so a relation with a `@Value.Check` on one of these fields must also set
+  it on its builder (see `newLateralJoin`). `UpdateRel` is the one relation message with no
+  `common` field; the POJO accessors live on `Rel`, so `NamedUpdate` can still *hold* this data —
+  and an emit mapping would change its `getRecordType()` — so `RelProtoConverter.checkNoRelCommon`
+  rejects it on the way out rather than silently serializing a plan with a different schema.
 - POJO types are created with `TypeCreator.REQUIRED` / `TypeCreator.NULLABLE`.
 
 ## Building and testing
