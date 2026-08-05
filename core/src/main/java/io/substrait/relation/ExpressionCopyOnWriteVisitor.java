@@ -12,7 +12,6 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -435,10 +434,20 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
    * cached type from the root it resolves against. Re-deriving the type is what keeps references
    * correct when a relation's input is replaced by one emitting a different record type.
    *
+   * <p>A reference that no longer resolves against its root, at any segment depth, is left exactly
+   * as it is, including the type it has cached. Such a reference makes the relation tree invalid
+   * whatever this visitor does with it, so re-deriving its type is not turned into a failure of the
+   * rewrite.
+   *
    * <p>The type of a reference to a lambda parameter, or of an outer reference identified by the
    * {@link io.substrait.relation.Rel#getRelAnchor() rel anchor} of the relation it is rooted on, is
    * left as it is: neither resolves against a relation in the enclosing scopes tracked during the
    * traversal.
+   *
+   * <p>Override this rather than {@link #visit(FieldReference, EmptyVisitationContext)} to change
+   * how references are rewritten: this is what the positions that hold a reference rather than an
+   * arbitrary expression — a {@link io.substrait.relation.physical.ScatterExchange}'s fields and a
+   * {@link io.substrait.relation.physical.ComparisonJoinKey}'s sides — are rewritten through.
    *
    * @param fieldReference the field reference to visit
    * @param context the visitation context
@@ -453,12 +462,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
       if (!inputExpression.isPresent()) {
         return Optional.empty();
       }
+      // The reference is returned rewritten even when its type could not be re-derived: the
+      // expression it is rooted at changed, and that change is not lost because the type is stale.
       ImmutableFieldReference.Builder rewritten =
           ImmutableFieldReference.builder().from(fieldReference).inputExpression(inputExpression);
-      if (!fieldReference.segments().isEmpty()) {
-        rewritten.type(
-            FieldReference.ofExpression(inputExpression.get(), segmentsOf(fieldReference)).type());
-      }
+      FieldReference.resolveType(inputExpression.get().getType(), fieldReference.segments())
+          .ifPresent(rewritten::type);
       return Optional.of(rewritten.build());
     }
     return retypeRootReference(fieldReference);
@@ -476,40 +485,21 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     Type.Struct rootType =
         getRelCopyOnWriteVisitor()
             .inputTypeStepsOut(fieldReference.outerReferenceStepsOut().orElse(0));
-    // A rewrite that drops fields can leave a reference selecting a field its input no longer has.
-    // The resulting relation tree is invalid either way, so leave the reference as it is rather
-    // than turn re-deriving its type into a failure of the rewrite.
-    if (rootType == null || !selectsFieldOf(fieldReference, rootType)) {
+    if (rootType == null) {
       return Optional.empty();
     }
-    Type type = FieldReference.ofRoot(rootType, segmentsOf(fieldReference)).type();
-    if (type.equals(fieldReference.type())) {
+    // A rewrite that drops a field, or that reshapes a nested one, can leave a reference selecting
+    // something its input no longer has. The resulting relation tree is invalid either way, so
+    // leave
+    // the reference as it is rather than turn re-deriving its type into a failure of the rewrite.
+    // Resolution is total, at every segment depth and for every kind of segment, so this is a
+    // decision the rewrite makes rather than an exception it has to recover from.
+    Optional<Type> type = FieldReference.resolveType(rootType, fieldReference.segments());
+    if (!type.isPresent() || type.get().equals(fieldReference.type())) {
       return Optional.empty();
     }
-    return Optional.of(ImmutableFieldReference.builder().from(fieldReference).type(type).build());
-  }
-
-  /**
-   * Returns whether the outermost segment of the given reference selects a field that the given
-   * record type has. The segments are held innermost first, so the outermost one is the last.
-   */
-  private static boolean selectsFieldOf(FieldReference fieldReference, Type.Struct rootType) {
-    List<FieldReference.ReferenceSegment> segments = fieldReference.segments();
-    if (segments.isEmpty()) {
-      return false;
-    }
-    FieldReference.ReferenceSegment outermost = segments.get(segments.size() - 1);
-    return outermost instanceof FieldReference.StructField
-        && ((FieldReference.StructField) outermost).offset() < rootType.fields().size();
-  }
-
-  /**
-   * Returns the segments of the given reference as a mutable list, which is what {@link
-   * FieldReference#ofRoot} and {@link FieldReference#ofExpression} require: they reverse the list
-   * they are given.
-   */
-  private static List<FieldReference.ReferenceSegment> segmentsOf(FieldReference fieldReference) {
-    return new ArrayList<>(fieldReference.segments());
+    return Optional.of(
+        ImmutableFieldReference.builder().from(fieldReference).type(type.get()).build());
   }
 
   @Override

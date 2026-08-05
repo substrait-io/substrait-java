@@ -609,12 +609,15 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(HashJoin hashJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = hashJoin.getLeft().accept(this, context);
     Optional<Rel> right = hashJoin.getRight().accept(this, context);
+    Type.Struct leftType = recordTypeOf(left.orElse(hashJoin.getLeft()));
+    Type.Struct rightType = recordTypeOf(right.orElse(hashJoin.getRight()));
     Type.Struct inputType =
         recordTypeOf(left.orElse(hashJoin.getLeft()), right.orElse(hashJoin.getRight()));
     Optional<List<ComparisonJoinKey>> keys =
-        inInputScope(
-            inputType,
-            () -> transformList(hashJoin.getKeys(), context, this::visitComparisonJoinKey));
+        transformList(
+            hashJoin.getKeys(),
+            context,
+            (key, c) -> visitComparisonJoinKey(key, leftType, rightType, c));
     Optional<Expression> postFilter =
         inInputScope(
             inputType, () -> visitOptionalExpression(hashJoin.getPostJoinFilter(), context));
@@ -640,12 +643,15 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = mergeJoin.getLeft().accept(this, context);
     Optional<Rel> right = mergeJoin.getRight().accept(this, context);
+    Type.Struct leftType = recordTypeOf(left.orElse(mergeJoin.getLeft()));
+    Type.Struct rightType = recordTypeOf(right.orElse(mergeJoin.getRight()));
     Type.Struct inputType =
         recordTypeOf(left.orElse(mergeJoin.getLeft()), right.orElse(mergeJoin.getRight()));
     Optional<List<ComparisonJoinKey>> keys =
-        inInputScope(
-            inputType,
-            () -> transformList(mergeJoin.getKeys(), context, this::visitComparisonJoinKey));
+        transformList(
+            mergeJoin.getKeys(),
+            context,
+            (key, c) -> visitComparisonJoinKey(key, leftType, rightType, c));
     Optional<Expression> postFilter =
         inInputScope(
             inputType, () -> visitOptionalExpression(mergeJoin.getPostJoinFilter(), context));
@@ -761,6 +767,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
    * Returns the record type that the root field references of a relation's own expressions resolve
    * against: the record types of the given inputs, concatenated in order.
    *
+   * <p>Only the fields of the result are ever read, so its own nullability is not meaningful.
+   *
    * @param inputs the relations the expressions are evaluated over, in field order
    * @return the combined record type
    */
@@ -872,15 +880,27 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   /**
    * Rewrites a comparison join key, returning a new one if either side changed.
    *
+   * <p>Each side is rewritten against its own input, because the field offsets of a join key are
+   * relative to the side of the join they select from — unlike those of a join condition or
+   * post-join filter, which are relative to the two inputs combined.
+   *
    * @param key the comparison join key to rewrite
+   * @param leftType the record type the key's left side selects from
+   * @param rightType the record type the key's right side selects from
    * @param context the visitation context
    * @return the rewritten comparison join key, or empty if unchanged
    * @throws E if the visit fails
    */
   public Optional<ComparisonJoinKey> visitComparisonJoinKey(
-      ComparisonJoinKey key, EmptyVisitationContext context) throws E {
-    Optional<FieldReference> left = visitFieldReference(key.getLeft(), context);
-    Optional<FieldReference> right = visitFieldReference(key.getRight(), context);
+      ComparisonJoinKey key,
+      Type.Struct leftType,
+      Type.Struct rightType,
+      EmptyVisitationContext context)
+      throws E {
+    Optional<FieldReference> left =
+        inInputScope(leftType, () -> visitFieldReference(key.getLeft(), context));
+    Optional<FieldReference> right =
+        inInputScope(rightType, () -> visitFieldReference(key.getRight(), context));
     if (allEmpty(left, right)) {
       return Optional.empty();
     }

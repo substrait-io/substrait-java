@@ -7,11 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FieldReference.ListElement;
+import io.substrait.expression.FieldReference.MapKey;
+import io.substrait.expression.FieldReference.StructField;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.relation.physical.ComparisonJoinKey;
+import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.util.EmptyVisitationContext;
@@ -39,20 +47,52 @@ class RelCopyOnWriteVisitorTest extends TestBase {
    * the given column types instead of the ones it was built with.
    */
   private static Rel replaceScanTypes(Rel rel, Type... columnTypes) {
-    RelCopyOnWriteVisitor<RuntimeException> visitor =
-        new RelCopyOnWriteVisitor<RuntimeException>() {
-          @Override
-          public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
-            return Optional.of(
-                NamedScan.builder()
-                    .from(namedScan)
-                    .initialSchema(
-                        NamedStruct.of(namedScan.getInitialSchema().names(), R.struct(columnTypes)))
-                    .build());
-          }
-        };
-    return rel.accept(visitor, EmptyVisitationContext.INSTANCE)
+    return rel.accept(scanTypeReplacer(null, columnTypes), EmptyVisitationContext.INSTANCE)
         .orElseThrow(() -> new AssertionError("expected the visitation to replace the scan"));
+  }
+
+  /** The same, replacing only the {@link NamedScan} that reads the given table. */
+  private static Rel replaceScanTypesOf(Rel rel, String table, Type... columnTypes) {
+    return rel.accept(scanTypeReplacer(table, columnTypes), EmptyVisitationContext.INSTANCE)
+        .orElseThrow(() -> new AssertionError("expected the visitation to replace the scan"));
+  }
+
+  private static RelCopyOnWriteVisitor<RuntimeException> scanTypeReplacer(
+      String table, Type... columnTypes) {
+    return new RelCopyOnWriteVisitor<RuntimeException>() {
+      @Override
+      public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) {
+        if (table != null && !namedScan.getNames().equals(Arrays.asList(table))) {
+          return Optional.empty();
+        }
+        return Optional.of(
+            NamedScan.builder()
+                .from(namedScan)
+                .initialSchema(
+                    NamedStruct.of(namedScan.getInitialSchema().names(), R.struct(columnTypes)))
+                .build());
+      }
+    };
+  }
+
+  /**
+   * Projects a reference that navigates the given segments into the single column of a scan of
+   * {@code columnType}, then rewrites the plan with that column replaced by {@code
+   * replacementType}, and returns the resulting reference. The segments are given outermost first,
+   * the order they are navigated in.
+   */
+  private FieldReference rewriteNestedReference(
+      Type columnType, Type replacementType, FieldReference.ReferenceSegment... segments) {
+    Rel input = scan("t", columnType);
+    FieldReference navigated = sb.fieldReference(input, 0);
+    for (FieldReference.ReferenceSegment segment : segments) {
+      navigated = segment.apply(navigated);
+    }
+    FieldReference reference = navigated;
+    Rel plan = sb.project(in -> Arrays.asList(reference), input);
+
+    Project rewritten = assertInstanceOf(Project.class, replaceScanTypes(plan, replacementType));
+    return assertInstanceOf(FieldReference.class, rewritten.getExpressions().get(0));
   }
 
   private static List<Type> argumentTypes(List<FunctionArg> arguments) {
@@ -235,6 +275,373 @@ class RelCopyOnWriteVisitorTest extends TestBase {
 
     Project rewritten = assertInstanceOf(Project.class, replaceScanTypes(plan, N.I64));
     assertEquals(R.STRING, rewritten.getExpressions().get(0).getType());
+  }
+
+  @Test
+  void nestedStructFieldIsRetyped() {
+    FieldReference reference =
+        rewriteNestedReference(R.struct(R.I64), R.struct(N.I64), StructField.of(0));
+    assertEquals(N.I64, reference.getType());
+    assertEquals(2, reference.segments().size());
+  }
+
+  @Test
+  void nestedStructFieldTheInputNoLongerHasIsLeftAlone() {
+    // Resolution has to hold at every depth, not just for the segment that selects out of the
+    // record type: this reference selects a field of a struct column that has since shrunk.
+    FieldReference reference =
+        rewriteNestedReference(R.struct(R.I64, R.STRING), R.struct(R.I64), StructField.of(1));
+    assertEquals(R.STRING, reference.getType());
+    assertEquals(2, reference.segments().size());
+  }
+
+  @Test
+  void threeSegmentsDeepIsRetyped() {
+    FieldReference reference =
+        rewriteNestedReference(
+            R.struct(R.struct(R.I64, R.STRING)),
+            R.struct(R.struct(R.I64, N.STRING)),
+            StructField.of(0),
+            StructField.of(1));
+    assertEquals(N.STRING, reference.getType());
+    assertEquals(3, reference.segments().size());
+  }
+
+  @Test
+  void threeSegmentsDeepWithTheInnermostGoneIsLeftAlone() {
+    FieldReference reference =
+        rewriteNestedReference(
+            R.struct(R.struct(R.I64, R.STRING)),
+            R.struct(R.struct(R.I64)),
+            StructField.of(0),
+            StructField.of(1));
+    assertEquals(R.STRING, reference.getType());
+    assertEquals(3, reference.segments().size());
+  }
+
+  @Test
+  void structFieldSegmentOnAContainerIsLeftAlone() {
+    // The column keeps its field count but stops being a struct, so the inner segment no longer
+    // applies. Retyping it against the container's element or value type would be wrong.
+    assertEquals(
+        R.STRING,
+        rewriteNestedReference(R.struct(R.STRING), R.list(R.I64), StructField.of(0)).getType());
+    assertEquals(
+        R.STRING,
+        rewriteNestedReference(R.struct(R.STRING), R.map(R.STRING, R.I64), StructField.of(0))
+            .getType());
+    assertEquals(
+        R.STRING, rewriteNestedReference(R.struct(R.STRING), R.I64, StructField.of(0)).getType());
+  }
+
+  @Test
+  void listElementSegmentIsRetyped() {
+    assertEquals(
+        N.I64, rewriteNestedReference(R.list(R.I64), R.list(N.I64), ListElement.of(0)).getType());
+    // The length of a list is not part of its type, so the offset never affects the result and is
+    // deliberately not bounds checked.
+    assertEquals(
+        N.I64, rewriteNestedReference(R.list(R.I64), R.list(N.I64), ListElement.of(7)).getType());
+  }
+
+  @Test
+  void listElementSegmentOnANonListIsLeftAlone() {
+    assertEquals(
+        R.STRING,
+        rewriteNestedReference(R.list(R.STRING), R.struct(R.I64), ListElement.of(0)).getType());
+  }
+
+  @Test
+  void mapKeySegmentIsRetyped() {
+    assertEquals(
+        N.I64,
+        rewriteNestedReference(
+                R.map(R.STRING, R.I64), R.map(R.STRING, N.I64), MapKey.of(sb.str("k")))
+            .getType());
+  }
+
+  @Test
+  void mapKeySegmentWhoseKeyTypeNoLongerMatchesIsLeftAlone() {
+    // The derivation compares the key type exactly, nullability included, so a map whose key became
+    // nullable no longer accepts this segment.
+    assertEquals(
+        R.STRING,
+        rewriteNestedReference(
+                R.map(R.STRING, R.STRING), R.map(N.STRING, R.I64), MapKey.of(sb.str("k")))
+            .getType());
+  }
+
+  @Test
+  void mapKeySegmentOnANonMapIsLeftAlone() {
+    assertEquals(
+        R.STRING,
+        rewriteNestedReference(R.map(R.STRING, R.STRING), R.list(R.I64), MapKey.of(sb.str("k")))
+            .getType());
+  }
+
+  @Test
+  void referenceThatDoesNotStartAtAStructFieldIsLeftAlone() {
+    // A root reference selects out of the input's record type, which is a struct, so a reference
+    // whose outermost segment is a list element or a map key cannot resolve against it.
+    for (FieldReference.ReferenceSegment outermost :
+        Arrays.asList(ListElement.of(0), MapKey.of(sb.str("k")))) {
+      Rel plan =
+          sb.project(
+              in ->
+                  Arrays.asList(
+                      FieldReference.builder().addSegments(outermost).type(R.STRING).build()),
+              scan("t", R.I64));
+
+      Project rewritten = assertInstanceOf(Project.class, replaceScanTypes(plan, N.I64));
+      assertEquals(R.STRING, rewritten.getExpressions().get(0).getType());
+    }
+  }
+
+  @Test
+  void referenceRootedAtAnotherExpressionThatNoLongerResolves() {
+    Rel input = scan("t", R.struct(R.I64, R.STRING));
+    Rel plan =
+        sb.project(
+            in -> Arrays.asList(FieldReference.newStructReference(1, sb.fieldReference(in, 0))),
+            input);
+
+    Project rewritten = assertInstanceOf(Project.class, replaceScanTypes(plan, R.struct(R.I64)));
+    FieldReference reference =
+        assertInstanceOf(FieldReference.class, rewritten.getExpressions().get(0));
+    // The expression it is rooted at was rewritten, so the reference is rewritten too, but its own
+    // type is kept because the field it selects is gone.
+    assertEquals(R.STRING, reference.getType());
+    assertEquals(R.struct(R.I64), reference.inputExpression().orElseThrow().getType());
+    assertEquals(1, reference.segments().size());
+  }
+
+  @Test
+  void hashJoinKeysAreRetypedAgainstTheirOwnSide() {
+    Rel left = scan("l", R.I64, R.I64);
+    Rel right = scan("r", R.STRING);
+    // A join key's offsets are relative to the side it selects from, so the right key's offset is 0
+    // even though that column is the third of the joined output.
+    Rel plan =
+        HashJoin.builder()
+            .left(left)
+            .right(right)
+            .joinType(HashJoin.JoinType.INNER)
+            .addKeys(
+                ComparisonJoinKey.of(
+                    sb.fieldReference(left, 0),
+                    sb.fieldReference(right, 0),
+                    ComparisonJoinKey.SimpleComparisonType.EQ))
+            .build();
+
+    HashJoin rewritten = assertInstanceOf(HashJoin.class, replaceScanTypesOf(plan, "r", N.STRING));
+    ComparisonJoinKey key = rewritten.getKeys().get(0);
+    assertEquals(R.I64, key.getLeft().getType());
+    // Resolving the right key against the two inputs combined would have found a left column here.
+    assertEquals(N.STRING, key.getRight().getType());
+  }
+
+  @Test
+  void hashJoinFiltersAreRetypedAgainstBothInputs() {
+    Rel left = scan("l", R.I64);
+    Rel right = scan("r", R.I64);
+    List<Rel> inputs = Arrays.asList(left, right);
+    Rel plan =
+        HashJoin.builder()
+            .left(left)
+            .right(right)
+            .joinType(HashJoin.JoinType.INNER)
+            .postJoinFilter(sb.equal(sb.fieldReference(inputs, 0), sb.fieldReference(inputs, 1)))
+            .residualExpression(
+                sb.equal(sb.fieldReference(inputs, 1), sb.fieldReference(inputs, 0)))
+            .build();
+
+    HashJoin rewritten = assertInstanceOf(HashJoin.class, replaceScanTypesOf(plan, "r", N.I64));
+    // Unlike the keys, these resolve against the concatenation of the two inputs.
+    assertEquals(
+        Arrays.asList(R.I64, N.I64), argumentTypes(rewritten.getPostJoinFilter().orElseThrow()));
+    assertEquals(
+        Arrays.asList(N.I64, R.I64),
+        argumentTypes(rewritten.getResidualExpression().orElseThrow()));
+  }
+
+  @Test
+  void lateralJoinConditionSpansBothInputs() {
+    Rel left = scan("l", R.I64);
+    Rel right = scan("r", R.I64);
+    List<Rel> inputs = Arrays.asList(left, right);
+    Rel plan =
+        LateralJoin.builder()
+            .left(left)
+            .right(right)
+            .joinType(Join.JoinType.INNER)
+            .relAnchor(1)
+            .condition(sb.equal(sb.fieldReference(inputs, 0), sb.fieldReference(inputs, 1)))
+            .build();
+
+    LateralJoin rewritten =
+        assertInstanceOf(LateralJoin.class, replaceScanTypesOf(plan, "l", N.I64));
+    assertEquals(
+        Arrays.asList(N.I64, R.I64), argumentTypes(rewritten.getCondition().orElseThrow()));
+  }
+
+  @Test
+  void anchorBasedOuterReferenceIsLeftAlone() {
+    // A lateral join's right input references the current left row by the join's rel anchor rather
+    // than by stepping out of subquery scopes. Resolving an anchor needs the whole plan, which this
+    // visitor does not track, so such a reference keeps its type and can be left stale.
+    Rel left = scan("l", R.I64);
+    Rel plan =
+        LateralJoin.builder()
+            .left(left)
+            .right(
+                sb.filter(
+                    in ->
+                        sb.equal(
+                            sb.fieldReference(in, 0),
+                            FieldReference.newRootStructOuterReferenceByRelReference(0, R.I64, 1)),
+                    scan("r", R.I64)))
+            .joinType(Join.JoinType.INNER)
+            .relAnchor(1)
+            .build();
+
+    LateralJoin rewritten =
+        assertInstanceOf(LateralJoin.class, replaceScanTypesOf(plan, "l", N.I64));
+    Filter right = assertInstanceOf(Filter.class, rewritten.getRight());
+    assertEquals(Arrays.asList(R.I64, R.I64), argumentTypes(right.getCondition()));
+  }
+
+  @Test
+  void topNSortFieldAndCount() {
+    Rel input = scan("t", R.I64);
+    Rel plan =
+        TopN.builder()
+            .input(input)
+            .sortFields(sb.sortFields(input, 0))
+            .count(sb.fieldReference(input, 0))
+            .build();
+
+    TopN rewritten = assertInstanceOf(TopN.class, replaceScanTypes(plan, N.I64));
+    assertEquals(N.I64, rewritten.getSortFields().get(0).expr().getType());
+    assertEquals(N.I64, rewritten.getCount().orElseThrow().getType());
+  }
+
+  @Test
+  void fetchOffsetAndCount() {
+    Rel input = scan("t", R.I64);
+    Rel plan =
+        Fetch.builder()
+            .input(input)
+            .offset(sb.fieldReference(input, 0))
+            .count(sb.fieldReference(input, 0))
+            .build();
+
+    Fetch rewritten = assertInstanceOf(Fetch.class, replaceScanTypes(plan, N.I64));
+    assertEquals(N.I64, rewritten.getOffset().orElseThrow().getType());
+    assertEquals(N.I64, rewritten.getCount().orElseThrow().getType());
+  }
+
+  @Test
+  void singleBucketExchangeExpression() {
+    Rel input = scan("t", R.I64);
+    Rel plan =
+        SingleBucketExchange.builder()
+            .input(input)
+            .partitionCount(2)
+            .expression(sb.fieldReference(input, 0))
+            .build();
+
+    SingleBucketExchange rewritten =
+        assertInstanceOf(SingleBucketExchange.class, replaceScanTypes(plan, N.I64));
+    assertEquals(N.I64, rewritten.getExpression().getType());
+  }
+
+  @Test
+  void multiBucketExchangeExpressionIsRetypedWithAnUnchangedInput() {
+    // Nothing here replaces the input; the reference simply carries a type its input does not emit.
+    // A guard that only asked whether the input had changed would discard the retyped expression.
+    Rel plan =
+        MultiBucketExchange.builder()
+            .input(scan("t", R.I64))
+            .partitionCount(2)
+            .constrainedToCount(true)
+            .expression(FieldReference.newRootStructReference(0, N.I64))
+            .build();
+
+    MultiBucketExchange rewritten =
+        assertInstanceOf(
+            MultiBucketExchange.class,
+            plan.accept(
+                    new RelCopyOnWriteVisitor<RuntimeException>(), EmptyVisitationContext.INSTANCE)
+                .orElseThrow(() -> new AssertionError("expected the expression to be retyped")));
+    assertEquals(R.I64, rewritten.getExpression().getType());
+  }
+
+  @Test
+  void outerReferenceInScalarSubquery() {
+    Rel correlated =
+        sb.filter(
+            in ->
+                sb.equal(
+                    sb.fieldReference(in, 0),
+                    FieldReference.newRootStructOuterReference(0, R.I64, 1)),
+            scan("inner", R.I64));
+    Rel plan =
+        sb.filter(
+            in -> sb.equal(sb.fieldReference(in, 0), sb.scalarSubquery(correlated, R.I64)),
+            scan("outer", R.I64));
+
+    Filter rewritten = assertInstanceOf(Filter.class, replaceScanTypes(plan, N.I64));
+    Expression.ScalarSubquery subquery =
+        assertInstanceOf(
+            Expression.ScalarSubquery.class,
+            assertInstanceOf(Expression.ScalarFunctionInvocation.class, rewritten.getCondition())
+                .arguments()
+                .get(1));
+    Filter innerFilter = assertInstanceOf(Filter.class, subquery.input());
+    assertEquals(Arrays.asList(N.I64, N.I64), argumentTypes(innerFilter.getCondition()));
+  }
+
+  @Test
+  void outerReferenceInInPredicateHaystack() {
+    Rel correlated =
+        sb.filter(
+            in ->
+                sb.equal(
+                    sb.fieldReference(in, 0),
+                    FieldReference.newRootStructOuterReference(0, R.I64, 1)),
+            scan("inner", R.I64));
+    Rel plan =
+        sb.filter(in -> sb.inPredicate(correlated, sb.fieldReference(in, 0)), scan("outer", R.I64));
+
+    Filter rewritten = assertInstanceOf(Filter.class, replaceScanTypes(plan, N.I64));
+    Expression.InPredicate inPredicate =
+        assertInstanceOf(Expression.InPredicate.class, rewritten.getCondition());
+    // The needles are evaluated in the enclosing scope; only the haystack is a subquery boundary.
+    assertEquals(N.I64, inPredicate.needles().get(0).getType());
+    Filter innerFilter = assertInstanceOf(Filter.class, inPredicate.haystack());
+    assertEquals(Arrays.asList(N.I64, N.I64), argumentTypes(innerFilter.getCondition()));
+  }
+
+  @Test
+  void aVisitorCanBeReusedForASecondTraversal() {
+    // The scope bookkeeping is pushed and popped around every rewrite, so a traversal leaves no
+    // residue behind that would mistype the next one.
+    RelCopyOnWriteVisitor<RuntimeException> visitor = scanTypeReplacer(null, N.I64);
+    Rel plan =
+        sb.project(
+            input -> sb.fieldReferences(input, 0),
+            sb.filter(input -> sb.fieldReference(input, 0), scan("t", R.I64)));
+
+    for (int traversal = 0; traversal < 2; traversal++) {
+      Project rewritten =
+          assertInstanceOf(
+              Project.class,
+              plan.accept(visitor, EmptyVisitationContext.INSTANCE)
+                  .orElseThrow(() -> new AssertionError("expected the scan to be replaced")));
+      assertEquals(N.I64, rewritten.getExpressions().get(0).getType());
+      assertEquals(
+          N.I64, assertInstanceOf(Filter.class, rewritten.getInput()).getCondition().getType());
+    }
   }
 
   @Test
