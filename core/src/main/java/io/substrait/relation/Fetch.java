@@ -29,6 +29,32 @@ public abstract class Fetch extends SingleInputRel implements HasExtension {
    */
   public abstract Optional<Expression> getCount();
 
+  @Value.Check
+  protected void check() {
+    getOffset()
+        .ifPresent(
+            offset -> {
+              Type type = offset.getType();
+              if (!type.isInteger()) {
+                throw new IllegalArgumentException(
+                    "Fetch offset expression must have an integer type "
+                        + "(I8, I16, I32 or I64), but got: "
+                        + type);
+              }
+            });
+    getCount()
+        .ifPresent(
+            count -> {
+              Type type = count.getType();
+              if (!type.isInteger()) {
+                throw new IllegalArgumentException(
+                    "Fetch count expression must have an integer type "
+                        + "(I8, I16, I32 or I64), but got: "
+                        + type);
+              }
+            });
+  }
+
   @Override
   protected Type.Struct deriveRecordType() {
     return getInput().getRecordType();

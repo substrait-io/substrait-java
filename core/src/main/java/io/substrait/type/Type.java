@@ -53,6 +53,18 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     return TypeCreator.asNullable(this).equals(TypeCreator.asNullable(other));
   }
 
+  /**
+   * Returns whether this is one of the integer types {@link I8}, {@link I16}, {@link I32} or {@link
+   * I64}. The Substrait spec only "recommends" {@code i64} for contexts such as {@code FetchRel}'s
+   * {@code offset_expr}/{@code count_expr}, so callers that accept any integer width can use this
+   * to reject non-integer types.
+   *
+   * @return {@code true} if this is an integer type
+   */
+  default boolean isInteger() {
+    return this instanceof I8 || this instanceof I16 || this instanceof I32 || this instanceof I64;
+  }
+
   /** The boolean type. */
   @Value.Immutable
   abstract class Bool implements Type {
