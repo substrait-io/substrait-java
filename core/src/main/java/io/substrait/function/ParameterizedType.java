@@ -56,6 +56,17 @@ public interface ParameterizedType extends TypeExpression {
     return false;
   }
 
+  /**
+   * Returns whether this type is a <em>numbered</em> wildcard ({@code any1}, {@code any2}, ...), as
+   * opposed to a plain {@code any}. Occurrences of the same numbered wildcard within one signature
+   * must bind to the same type, while each plain {@code any} binds independently.
+   *
+   * @return {@code true} if this type is a numbered wildcard
+   */
+  default boolean isNumberedWildcard() {
+    return false;
+  }
+
   /** Base class for parameterized types that dispatch to a {@link ParameterizedTypeVisitor}. */
   abstract class BaseParameterizedType implements ParameterizedType {
     @Override
@@ -451,6 +462,20 @@ public interface ParameterizedType extends TypeExpression {
     @Override
     public boolean isWildcard() {
       return value().toLowerCase(Locale.ROOT).startsWith("any");
+    }
+
+    @Override
+    public boolean isNumberedWildcard() {
+      String literal = value().toLowerCase(Locale.ROOT);
+      if (!literal.startsWith("any") || literal.length() == "any".length()) {
+        return false;
+      }
+      for (int i = "any".length(); i < literal.length(); i++) {
+        if (!Character.isDigit(literal.charAt(i))) {
+          return false;
+        }
+      }
+      return true;
     }
 
     @Override

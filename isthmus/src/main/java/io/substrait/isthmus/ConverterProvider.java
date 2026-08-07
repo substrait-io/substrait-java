@@ -403,11 +403,34 @@ public class ConverterProvider {
    * A {@link SubstraitRelNodeConverter} is used when converting from Substrait {@link Rel}s to
    * Calcite {@link org.apache.calcite.rel.RelNode}s.
    *
+   * <p>This overload is used for the default {@link AggregateConversion} only; a subclass that
+   * overrides it to customize conversion should override {@link
+   * #getSubstraitRelNodeConverter(RelBuilder, AggregateConversion)} as well, otherwise the
+   * customization is skipped whenever a caller asks for a non-default configuration.
+   *
    * @param relBuilder the RelBuilder to use for creating Calcite RelNodes
    * @return a new SubstraitRelNodeConverter instance
    */
   public SubstraitRelNodeConverter getSubstraitRelNodeConverter(RelBuilder relBuilder) {
-    return new SubstraitRelNodeConverter(relBuilder, this);
+    return getSubstraitRelNodeConverter(relBuilder, AggregateConversion.DEFAULT);
+  }
+
+  /**
+   * A {@link SubstraitRelNodeConverter} is used when converting from Substrait {@link Rel}s to
+   * Calcite {@link org.apache.calcite.rel.RelNode}s.
+   *
+   * <p>{@link SubstraitToCalcite} calls this overload only for a non-default {@link
+   * AggregateConversion}, and {@link #getSubstraitRelNodeConverter(RelBuilder)} otherwise — that
+   * dispatch keeps subclasses which only override the long-standing single-argument factory
+   * working. A subclass that customizes conversion should therefore override both.
+   *
+   * @param relBuilder the RelBuilder to use for creating Calcite RelNodes
+   * @param aggregateConversion controls how aggregate output types are chosen and validated
+   * @return a new SubstraitRelNodeConverter instance
+   */
+  public SubstraitRelNodeConverter getSubstraitRelNodeConverter(
+      RelBuilder relBuilder, AggregateConversion aggregateConversion) {
+    return new SubstraitRelNodeConverter(relBuilder, this, aggregateConversion);
   }
 
   /**

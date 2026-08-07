@@ -1,0 +1,56 @@
+%YAML 1.2
+---
+urn: extension:test:binding_extensions
+scalar_functions:
+  - name: "pair"
+    description: >-
+      Two plain (unnumbered) wildcards. Each argument binds independently, so the two may
+      be of different types.
+    impls:
+      - args:
+          - name: x
+            value: any
+          - name: y
+            value: any
+        return: boolean
+  - name: "same_pair"
+    description: >-
+      Two occurrences of one numbered wildcard, which must agree on a single type.
+    impls:
+      - args:
+          - name: x
+            value: any1
+          - name: y
+            value: any1
+        return: boolean
+  - name: "decimal_pair"
+    description: >-
+      Two decimals sharing one set of type parameters, with a concrete return type. The shared
+      parameters must agree even though nothing about the return depends on them.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,S>
+          - name: y
+            value: DECIMAL<P,S>
+        return: boolean
+  - name: "discrete_decimal"
+    description: >-
+      A DISCRETE signature over a parameterized decimal, so the declared argument nullability is
+      part of the signature just as it is for a concrete type.
+    impls:
+      - args:
+          - name: x
+            value: "DECIMAL?<P,S>"
+        nullability: DISCRETE
+        return: boolean
+  - name: "discrete_wildcard"
+    description: >-
+      A DISCRETE signature over a numbered wildcard, so the declared argument nullability is
+      part of the signature.
+    impls:
+      - args:
+          - name: x
+            value: any1
+        nullability: DISCRETE
+        return: any1

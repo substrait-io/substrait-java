@@ -2,10 +2,12 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.AggregateFunctionInvocation;
+import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.StatisticalDistribution;
+import io.substrait.extension.ResolvedAggregateBinding;
+import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.AggregateFunctions;
 import io.substrait.isthmus.SubstraitRelVisitor;
@@ -103,24 +105,127 @@ public class AggregateFunctionConverter
       Type outputType) {
     AggregateCall agg = call.getUnderlying();
 
-    List<Expression.SortField> sorts =
-        agg.getCollation() != null
-            ? agg.getCollation().getFieldCollations().stream()
-                .map(r -> SubstraitRelVisitor.toSortField(r, call.inputType))
-                .collect(java.util.stream.Collectors.toList())
-            : Collections.emptyList();
-    Expression.AggregationInvocation invocation =
-        agg.isDistinct()
-            ? Expression.AggregationInvocation.DISTINCT
-            : Expression.AggregationInvocation.ALL;
+    return AggregateFunctionInvocation.builder()
+        .declaration(function)
+        .outputType(outputType)
+        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+        .sort(sortFields(agg, call.inputType))
+        .invocation(
+            agg.isDistinct()
+                ? Expression.AggregationInvocation.DISTINCT
+                : Expression.AggregationInvocation.ALL)
+        .addAllArguments(arguments)
+        .build();
+  }
 
-    return ExpressionCreator.aggregateFunction(
-        function,
-        outputType,
-        Expression.AggregationPhase.INITIAL_TO_RESULT,
-        sorts,
-        invocation,
-        arguments);
+  /**
+   * Rebuilds the invocation from the binding a converted call carries, when that binding still
+   * describes the call.
+   *
+   * <p>A binding names the exact declaration the plan used and the semantics Calcite cannot express
+   * — the function's options and its aggregation phase — so it beats re-matching: matching can only
+   * guess a declaration among equally-shaped candidates, always produces a full initial-to-result
+   * aggregation with no options, and for a phase that consumes an intermediate state cannot match
+   * at all, because the call's operands are then intermediate values rather than the declaration's
+   * arguments.
+   *
+   * <p>The binding describes the plan as it was converted, and a planner rule may have rewritten
+   * the call since. Staleness is therefore decided by comparing the arguments the binding recorded
+   * with the ones the call now has — not by re-validating against the declaration, which cannot
+   * judge a phase whose state is parameterized by the initial arguments it no longer sees (the
+   * intermediate {@code STRUCT<DECIMAL<38,S>,i64>} of a decimal average, say). When the arguments
+   * differ, this returns empty and the call is matched on its own terms, binding and all.
+   */
+  private Optional<AggregateFunctionInvocation> fromCarriedBinding(
+      RelNode input,
+      Type.Struct inputType,
+      AggregateCall call,
+      Function<RexNode, Expression> topLevelConverter) {
+    Optional<ResolvedAggregateBinding> bound =
+        AggregateFunctions.boundBinding(call.getAggregation());
+    if (!bound.isPresent()
+        || !(bound.get().function().declaration()
+            instanceof SimpleExtension.AggregateFunctionVariant)) {
+      return Optional.empty();
+    }
+    ResolvedAggregateBinding binding = bound.get();
+    SimpleExtension.AggregateFunctionVariant declaration =
+        (SimpleExtension.AggregateFunctionVariant) binding.function().declaration();
+
+    List<Expression> operands =
+        call.getArgList().stream()
+            .map(index -> topLevelConverter.apply(rexBuilder.makeInputRef(input, index)))
+            .collect(java.util.stream.Collectors.toList());
+    Optional<List<FunctionArg>> arguments = alignArguments(binding, declaration, operands);
+    if (!arguments.isPresent()) {
+      return Optional.empty();
+    }
+
+    AggregateFunctionInvocation invocation =
+        AggregateFunctionInvocation.builder()
+            .declaration(declaration)
+            .outputType(typeConverter.toSubstrait(call.getType()))
+            .aggregationPhase(binding.phase())
+            .sort(sortFields(call, inputType))
+            // The invocation comes from the Calcite call rather than from the binding: a planner
+            // rule may legitimately have dropped a redundant DISTINCT since the plan was converted.
+            .invocation(
+                call.isDistinct()
+                    ? Expression.AggregationInvocation.DISTINCT
+                    : Expression.AggregationInvocation.ALL)
+            .addAllArguments(arguments.get())
+            .options(binding.function().options())
+            .build();
+
+    List<ResolvedArgument> rebuilt =
+        ResolvedAggregateBinding.resolve(invocation).function().arguments();
+    return rebuilt.equals(binding.function().arguments())
+        ? Optional.of(invocation)
+        : Optional.empty();
+  }
+
+  /**
+   * Puts the call's operands back into the declaration's argument order, restoring the enum
+   * arguments — which are not Calcite operands — from the binding. Returns empty when the operands
+   * no longer fit the declaration, which again means the binding does not describe this call.
+   */
+  private static Optional<List<FunctionArg>> alignArguments(
+      ResolvedAggregateBinding binding,
+      SimpleExtension.AggregateFunctionVariant declaration,
+      List<Expression> operands) {
+    List<ResolvedArgument> resolved = binding.function().arguments();
+    List<FunctionArg> arguments = new ArrayList<>();
+    int operandIndex = 0;
+    for (int index = 0; index < declaration.args().size(); index++) {
+      if (declaration.args().get(index) instanceof SimpleExtension.EnumArgument) {
+        if (index >= resolved.size() || resolved.get(index).kind() != ResolvedArgument.Kind.ENUM) {
+          return Optional.empty();
+        }
+        arguments.add(
+            resolved.get(index).enumValue().map(EnumArg::of).orElse(EnumArg.UNSPECIFIED_ENUM_ARG));
+      } else {
+        if (operandIndex >= operands.size()) {
+          return Optional.empty();
+        }
+        arguments.add(operands.get(operandIndex++));
+      }
+    }
+    // A variadic declaration states its trailing argument once but accepts it repeatedly.
+    while (operandIndex < operands.size()) {
+      if (!declaration.variadic().isPresent()) {
+        return Optional.empty();
+      }
+      arguments.add(operands.get(operandIndex++));
+    }
+    return Optional.of(arguments);
+  }
+
+  private static List<Expression.SortField> sortFields(AggregateCall call, Type.Struct inputType) {
+    return call.getCollation() != null
+        ? call.getCollation().getFieldCollations().stream()
+            .map(collation -> SubstraitRelVisitor.toSortField(collation, inputType))
+            .collect(java.util.stream.Collectors.toList())
+        : Collections.emptyList();
   }
 
   /**
@@ -137,6 +242,14 @@ public class AggregateFunctionConverter
       Type.Struct inputType,
       AggregateCall call,
       Function<RexNode, Expression> topLevelConverter) {
+
+    // A call converted from Substrait may carry its resolved binding; that is a better source than
+    // re-matching the operator, and the only source for a phase Calcite cannot represent.
+    Optional<AggregateFunctionInvocation> carried =
+        fromCarriedBinding(input, inputType, call, topLevelConverter);
+    if (carried.isPresent()) {
+      return carried;
+    }
 
     FunctionFinder m = getFunctionFinder(call);
     if (m == null) {
@@ -195,7 +308,7 @@ public class AggregateFunctionConverter
   protected FunctionFinder getFunctionFinder(AggregateCall call) {
     // replace COUNT() + distinct == true and approximate == true with APPROX_COUNT_DISTINCT
     // before converting into substrait function
-    SqlAggFunction aggFunction = call.getAggregation();
+    SqlAggFunction aggFunction = AggregateFunctions.unwrapBound(call.getAggregation());
     if (aggFunction == SqlStdOperatorTable.COUNT && call.isDistinct() && call.isApproximate()) {
       aggFunction = SqlStdOperatorTable.APPROX_COUNT_DISTINCT;
     }
