@@ -53,6 +53,16 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     return TypeCreator.asNullable(this).equals(TypeCreator.asNullable(other));
   }
 
+  /**
+   * Returns whether this is one of the fixed-width signed integer types: {@link I8}, {@link I16},
+   * {@link I32} or {@link I64}.
+   *
+   * @return {@code true} if this is an integer type
+   */
+  default boolean isInteger() {
+    return this instanceof I8 || this instanceof I16 || this instanceof I32 || this instanceof I64;
+  }
+
   /** The boolean type. */
   @Value.Immutable
   abstract class Bool implements Type {
