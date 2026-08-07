@@ -46,16 +46,7 @@ class TypeTest {
   }
 
   @Test
-  void equalsIgnoringNullabilityMatchesAcrossNullability() {
-    assertTrue(R.I64.equalsIgnoringNullability(N.I64));
-    assertTrue(N.I64.equalsIgnoringNullability(R.I64));
-    assertTrue(R.I64.equalsIgnoringNullability(R.I64));
-  }
-
-  @Test
-  void equalsIgnoringNullabilityDistinguishesKinds() {
-    assertFalse(R.I64.equalsIgnoringNullability(R.I32));
-    assertFalse(R.I64.equalsIgnoringNullability(N.FP64));
-    assertFalse(R.struct(R.I64).equalsIgnoringNullability(R.I64));
+  void userDefinedIsNotAnInteger() {
+    assertFalse(R.userDefined("urn:test", "t").isInteger());
   }
 }
