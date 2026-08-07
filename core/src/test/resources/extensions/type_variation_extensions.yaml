@@ -1,0 +1,26 @@
+%YAML 1.2
+---
+urn: extension:test:type_variation_extensions
+type_variations:
+  # Explicit INHERITS behavior with a description.
+  - parent: string
+    name: dict4
+    description: a four-byte dictionary encoded string
+    functions: INHERITS
+  # Explicit SEPARATE behavior.
+  - parent: struct
+    name: avro
+    description: an avro encoded struct
+    functions: SEPARATE
+  # functions omitted -> defaults to INHERITS.
+  - parent: string
+    name: inheritsByDefault
+    description: a variation without an explicit functions behavior
+  # Deprecated variation.
+  - parent: struct
+    name: deprecatedVariation
+    description: a deprecated struct variation
+    functions: SEPARATE
+    deprecated:
+      since: "0.86.0"
+      reason: "Replaced by avro"
