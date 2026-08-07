@@ -18,7 +18,11 @@ import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.relation.physical.TopN;
+import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -28,11 +32,37 @@ import java.util.function.Function;
  * overriding a visitor method. The traversal will include relations inside of subquery expressions.
  * By default, no subtree substitution will be performed. However, if a visit method is overridden
  * to return a non-empty optional value, then that value will replace the relation in the tree.
+ *
+ * <p>Replacing a subtree may change the record type it emits. Because a {@link FieldReference}
+ * caches the type of the field it references, the references in the expressions of the relations
+ * above the replaced subtree would otherwise be left with a stale type. To avoid that, this visitor
+ * tracks the record type that each relation's own expressions resolve against and re-derives the
+ * cached type of every field reference it rewrites from the input the reference resolves against.
+ * The types cached on function invocations are not re-derived; deriving those requires the function
+ * declarations, which this visitor does not have.
+ *
+ * <p>Tracking that scope makes a visitor instance stateful for the duration of a traversal, so an
+ * instance must not be used to visit several relation trees concurrently.
  */
 public class RelCopyOnWriteVisitor<E extends Exception>
     implements RelVisitor<Optional<Rel>, EmptyVisitationContext, E> {
 
   private final ExpressionCopyOnWriteVisitor<E> expressionCopyOnWriteVisitor;
+
+  /**
+   * The record types that the root {@link FieldReference}s of the expressions being rewritten
+   * resolve against, innermost last. An entry is {@code null} when the expressions it covers do not
+   * resolve against an input record type, as for the filter of a read relation, which resolves
+   * against the schema being read.
+   */
+  private final List<Type.Struct> inputTypes = new ArrayList<>();
+
+  /**
+   * The record types of the enclosing scopes, one entry per subquery boundary crossed. An outer
+   * reference stepping out {@code stepsOut} levels resolves against the entry {@code stepsOut} from
+   * the top.
+   */
+  private final List<Type.Struct> outerInputTypes = new ArrayList<>();
 
   /** Creates a visitor using a default expression visitor bound to this relation visitor. */
   public RelCopyOnWriteVisitor() {
@@ -70,10 +100,13 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(Aggregate aggregate, EmptyVisitationContext context) throws E {
     Optional<Rel> input = aggregate.getInput().accept(this, context);
+    Type.Struct inputType = recordTypeOf(input.orElse(aggregate.getInput()));
     Optional<List<Aggregate.Grouping>> groupings =
-        transformList(aggregate.getGroupings(), context, this::visitGrouping);
+        inInputScope(
+            inputType, () -> transformList(aggregate.getGroupings(), context, this::visitGrouping));
     Optional<List<Aggregate.Measure>> measures =
-        transformList(aggregate.getMeasures(), context, this::visitMeasure);
+        inInputScope(
+            inputType, () -> transformList(aggregate.getMeasures(), context, this::visitMeasure));
 
     if (allEmpty(input, groupings, measures)) {
       return Optional.empty();
@@ -155,8 +188,11 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(Fetch fetch, EmptyVisitationContext context) throws E {
     Optional<Rel> input = fetch.getInput().accept(this, context);
-    Optional<Expression> offset = visitOptionalExpression(fetch.getOffset(), context);
-    Optional<Expression> count = visitOptionalExpression(fetch.getCount(), context);
+    Type.Struct inputType = recordTypeOf(input.orElse(fetch.getInput()));
+    Optional<Expression> offset =
+        inInputScope(inputType, () -> visitOptionalExpression(fetch.getOffset(), context));
+    Optional<Expression> count =
+        inInputScope(inputType, () -> visitOptionalExpression(fetch.getCount(), context));
 
     if (allEmpty(input, offset, count)) {
       return Optional.empty();
@@ -174,7 +210,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(Filter filter, EmptyVisitationContext context) throws E {
     Optional<Rel> input = filter.getInput().accept(this, context);
     Optional<Expression> condition =
-        filter.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
+        inInputScope(
+            recordTypeOf(input.orElse(filter.getInput())),
+            () -> filter.getCondition().accept(getExpressionCopyOnWriteVisitor(), context));
 
     if (allEmpty(input, condition)) {
       return Optional.empty();
@@ -191,8 +229,12 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(Join join, EmptyVisitationContext context) throws E {
     Optional<Rel> left = join.getLeft().accept(this, context);
     Optional<Rel> right = join.getRight().accept(this, context);
-    Optional<Expression> condition = visitOptionalExpression(join.getCondition(), context);
-    Optional<Expression> postFilter = visitOptionalExpression(join.getPostJoinFilter(), context);
+    Type.Struct inputType =
+        recordTypeOf(left.orElse(join.getLeft()), right.orElse(join.getRight()));
+    Optional<Expression> condition =
+        inInputScope(inputType, () -> visitOptionalExpression(join.getCondition(), context));
+    Optional<Expression> postFilter =
+        inInputScope(inputType, () -> visitOptionalExpression(join.getPostJoinFilter(), context));
 
     if (allEmpty(left, right, condition, postFilter)) {
       return Optional.empty();
@@ -211,9 +253,13 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(LateralJoin lateralJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = lateralJoin.getLeft().accept(this, context);
     Optional<Rel> right = lateralJoin.getRight().accept(this, context);
-    Optional<Expression> condition = visitOptionalExpression(lateralJoin.getCondition(), context);
+    Type.Struct inputType =
+        recordTypeOf(left.orElse(lateralJoin.getLeft()), right.orElse(lateralJoin.getRight()));
+    Optional<Expression> condition =
+        inInputScope(inputType, () -> visitOptionalExpression(lateralJoin.getCondition(), context));
     Optional<Expression> postFilter =
-        visitOptionalExpression(lateralJoin.getPostJoinFilter(), context);
+        inInputScope(
+            inputType, () -> visitOptionalExpression(lateralJoin.getPostJoinFilter(), context));
 
     if (allEmpty(left, right, condition, postFilter)) {
       return Optional.empty();
@@ -236,7 +282,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) throws E {
-    Optional<Expression> filter = visitOptionalExpression(namedScan.getFilter(), context);
+    Optional<Expression> filter =
+        outsideInputScope(() -> visitOptionalExpression(namedScan.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -247,7 +294,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(LocalFiles localFiles, EmptyVisitationContext context) throws E {
-    Optional<Expression> filter = visitOptionalExpression(localFiles.getFilter(), context);
+    Optional<Expression> filter =
+        outsideInputScope(() -> visitOptionalExpression(localFiles.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -259,7 +307,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(Project project, EmptyVisitationContext context) throws E {
     Optional<Rel> input = project.getInput().accept(this, context);
-    Optional<List<Expression>> expressions = visitExprList(project.getExpressions(), context);
+    Optional<List<Expression>> expressions =
+        inInputScope(
+            recordTypeOf(input.orElse(project.getInput())),
+            () -> visitExprList(project.getExpressions(), context));
 
     if (allEmpty(input, expressions)) {
       return Optional.empty();
@@ -329,10 +380,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(NamedUpdate update, EmptyVisitationContext context) throws E {
     Optional<Expression> condition =
-        update.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
+        outsideInputScope(
+            () -> update.getCondition().accept(getExpressionCopyOnWriteVisitor(), context));
 
     Optional<List<AbstractUpdate.TransformExpression>> transformations =
-        transformList(update.getTransformations(), context, this::visitTransformExpression);
+        outsideInputScope(
+            () ->
+                transformList(
+                    update.getTransformations(), context, this::visitTransformExpression));
 
     if (allEmpty(condition, transformations)) {
       return Optional.empty();
@@ -350,7 +405,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(ScatterExchange exchange, EmptyVisitationContext context) throws E {
     Optional<Rel> input = exchange.getInput().accept(this, context);
     Optional<List<FieldReference>> fields =
-        transformList(exchange.getFields(), context, this::visitFieldReference);
+        inInputScope(
+            recordTypeOf(input.orElse(exchange.getInput())),
+            () -> transformList(exchange.getFields(), context, this::visitFieldReference));
 
     if (allEmpty(input, fields)) {
       return Optional.empty();
@@ -370,7 +427,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     Optional<Rel> input = exchange.getInput().accept(this, context);
 
     Optional<Expression> expression =
-        exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
+        inInputScope(
+            recordTypeOf(input.orElse(exchange.getInput())),
+            () -> exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context));
 
     if (allEmpty(input, expression)) {
       return Optional.empty();
@@ -389,9 +448,11 @@ public class RelCopyOnWriteVisitor<E extends Exception>
       throws E {
     Optional<Rel> input = exchange.getInput().accept(this, context);
     Optional<Expression> expression =
-        exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
+        inInputScope(
+            recordTypeOf(input.orElse(exchange.getInput())),
+            () -> exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context));
 
-    if (allEmpty(input)) {
+    if (allEmpty(input, expression)) {
       return Optional.empty();
     }
 
@@ -435,7 +496,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(Sort sort, EmptyVisitationContext context) throws E {
     Optional<Rel> input = sort.getInput().accept(this, context);
     Optional<List<Expression.SortField>> sortFields =
-        transformList(sort.getSortFields(), context, this::visitSortField);
+        inInputScope(
+            recordTypeOf(input.orElse(sort.getInput())),
+            () -> transformList(sort.getSortFields(), context, this::visitSortField));
 
     if (allEmpty(input, sortFields)) {
       return Optional.empty();
@@ -451,10 +514,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(TopN topN, EmptyVisitationContext context) throws E {
     Optional<Rel> input = topN.getInput().accept(this, context);
+    Type.Struct inputType = recordTypeOf(input.orElse(topN.getInput()));
     Optional<List<Expression.SortField>> sortFields =
-        transformList(topN.getSortFields(), context, this::visitSortField);
-    Optional<Expression> offset = visitOptionalExpression(topN.getOffset(), context);
-    Optional<Expression> count = visitOptionalExpression(topN.getCount(), context);
+        inInputScope(
+            inputType, () -> transformList(topN.getSortFields(), context, this::visitSortField));
+    Optional<Expression> offset =
+        inInputScope(inputType, () -> visitOptionalExpression(topN.getOffset(), context));
+    Optional<Expression> count =
+        inInputScope(inputType, () -> visitOptionalExpression(topN.getCount(), context));
 
     if (allEmpty(input, sortFields, offset, count)) {
       return Optional.empty();
@@ -488,7 +555,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws E {
-    Optional<Expression> filter = visitOptionalExpression(virtualTableScan.getFilter(), context);
+    Optional<Expression> filter =
+        outsideInputScope(() -> visitOptionalExpression(virtualTableScan.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -524,7 +592,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(ExtensionTable extensionTable, EmptyVisitationContext context)
       throws E {
-    Optional<Expression> filter = visitOptionalExpression(extensionTable.getFilter(), context);
+    Optional<Expression> filter =
+        outsideInputScope(() -> visitOptionalExpression(extensionTable.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -540,12 +609,21 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(HashJoin hashJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = hashJoin.getLeft().accept(this, context);
     Optional<Rel> right = hashJoin.getRight().accept(this, context);
+    Type.Struct leftType = recordTypeOf(left.orElse(hashJoin.getLeft()));
+    Type.Struct rightType = recordTypeOf(right.orElse(hashJoin.getRight()));
+    Type.Struct inputType =
+        recordTypeOf(left.orElse(hashJoin.getLeft()), right.orElse(hashJoin.getRight()));
     Optional<List<ComparisonJoinKey>> keys =
-        transformList(hashJoin.getKeys(), context, this::visitComparisonJoinKey);
+        transformList(
+            hashJoin.getKeys(),
+            context,
+            (key, c) -> visitComparisonJoinKey(key, leftType, rightType, c));
     Optional<Expression> postFilter =
-        visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
+        inInputScope(
+            inputType, () -> visitOptionalExpression(hashJoin.getPostJoinFilter(), context));
     Optional<Expression> residual =
-        visitOptionalExpression(hashJoin.getResidualExpression(), context);
+        inInputScope(
+            inputType, () -> visitOptionalExpression(hashJoin.getResidualExpression(), context));
 
     if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
@@ -565,12 +643,21 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(MergeJoin mergeJoin, EmptyVisitationContext context) throws E {
     Optional<Rel> left = mergeJoin.getLeft().accept(this, context);
     Optional<Rel> right = mergeJoin.getRight().accept(this, context);
+    Type.Struct leftType = recordTypeOf(left.orElse(mergeJoin.getLeft()));
+    Type.Struct rightType = recordTypeOf(right.orElse(mergeJoin.getRight()));
+    Type.Struct inputType =
+        recordTypeOf(left.orElse(mergeJoin.getLeft()), right.orElse(mergeJoin.getRight()));
     Optional<List<ComparisonJoinKey>> keys =
-        transformList(mergeJoin.getKeys(), context, this::visitComparisonJoinKey);
+        transformList(
+            mergeJoin.getKeys(),
+            context,
+            (key, c) -> visitComparisonJoinKey(key, leftType, rightType, c));
     Optional<Expression> postFilter =
-        visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
+        inInputScope(
+            inputType, () -> visitOptionalExpression(mergeJoin.getPostJoinFilter(), context));
     Optional<Expression> residual =
-        visitOptionalExpression(mergeJoin.getResidualExpression(), context);
+        inInputScope(
+            inputType, () -> visitOptionalExpression(mergeJoin.getResidualExpression(), context));
 
     if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
@@ -592,7 +679,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     Optional<Rel> left = nestedLoopJoin.getLeft().accept(this, context);
     Optional<Rel> right = nestedLoopJoin.getRight().accept(this, context);
     Optional<Expression> condition =
-        nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor(), context);
+        inInputScope(
+            recordTypeOf(
+                left.orElse(nestedLoopJoin.getLeft()), right.orElse(nestedLoopJoin.getRight())),
+            () -> nestedLoopJoin.getCondition().accept(getExpressionCopyOnWriteVisitor(), context));
 
     if (allEmpty(left, right, condition)) {
       return Optional.empty();
@@ -610,24 +700,34 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(
       ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
       throws E {
+    Optional<Rel> input = consistentPartitionWindow.getInput().accept(this, context);
+    Type.Struct inputType = recordTypeOf(input.orElse(consistentPartitionWindow.getInput()));
     Optional<List<ConsistentPartitionWindow.WindowRelFunctionInvocation>> windowFunctions =
-        transformList(
-            consistentPartitionWindow.getWindowFunctions(), context, this::visitWindowRelFunction);
+        inInputScope(
+            inputType,
+            () ->
+                transformList(
+                    consistentPartitionWindow.getWindowFunctions(),
+                    context,
+                    this::visitWindowRelFunction));
     Optional<List<Expression>> partitionExpressions =
-        transformList(
-            consistentPartitionWindow.getPartitionExpressions(),
-            context,
-            (t, c) -> t.accept(getExpressionCopyOnWriteVisitor(), c));
+        inInputScope(
+            inputType,
+            () -> visitExprList(consistentPartitionWindow.getPartitionExpressions(), context));
     Optional<List<Expression.SortField>> sorts =
-        transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField);
+        inInputScope(
+            inputType,
+            () ->
+                transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField));
 
-    if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
+    if (allEmpty(input, windowFunctions, partitionExpressions, sorts)) {
       return Optional.empty();
     }
 
     return Optional.of(
         ConsistentPartitionWindow.builder()
             .from(consistentPartitionWindow)
+            .input(input.orElse(consistentPartitionWindow.getInput()))
             .partitionExpressions(
                 partitionExpressions.orElse(consistentPartitionWindow.getPartitionExpressions()))
             .sorts(sorts.orElse(consistentPartitionWindow.getSorts()))
@@ -661,6 +761,93 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .build());
   }
 
+  // input scope tracking
+
+  /**
+   * Returns the record type that the root field references of a relation's own expressions resolve
+   * against: the record types of the given inputs, concatenated in order.
+   *
+   * <p>Only the fields of the result are ever read, so its own nullability is not meaningful.
+   *
+   * @param inputs the relations the expressions are evaluated over, in field order
+   * @return the combined record type
+   */
+  protected static Type.Struct recordTypeOf(Rel... inputs) {
+    return TypeCreator.REQUIRED.struct(
+        Arrays.stream(inputs).flatMap(input -> input.getRecordType().fields().stream()));
+  }
+
+  /**
+   * Runs the given rewrite of a relation's own expressions with the record type that their root
+   * field references resolve against, so that the cached type of a rewritten reference can be
+   * re-derived from it. Inputs must be rewritten <em>before</em> calling this, and their rewritten
+   * record type passed in, so that references pick up the type a replaced input emits.
+   *
+   * @param <T> the type of the rewrite's result
+   * @param inputType the record type the expressions resolve against, or {@code null} if they do
+   *     not resolve against an input record type
+   * @param rewrite the expression rewrite to run
+   * @return the result of the rewrite
+   * @throws E if the rewrite fails
+   */
+  protected <T> T inInputScope(
+      Type.Struct inputType, CopyOnWriteUtils.ThrowingSupplier<T, E> rewrite) throws E {
+    inputTypes.add(inputType);
+    try {
+      return rewrite.get();
+    } finally {
+      inputTypes.remove(inputTypes.size() - 1);
+    }
+  }
+
+  /**
+   * Runs the given rewrite of expressions that do not resolve against an input record type, such as
+   * the filter of a read relation, whose references resolve against the schema being read.
+   *
+   * @param <T> the type of the rewrite's result
+   * @param rewrite the expression rewrite to run
+   * @return the result of the rewrite
+   * @throws E if the rewrite fails
+   */
+  protected <T> T outsideInputScope(CopyOnWriteUtils.ThrowingSupplier<T, E> rewrite) throws E {
+    return inInputScope(null, rewrite);
+  }
+
+  /**
+   * Records the scope currently being rewritten as an enclosing one for the duration of the given
+   * rewrite, so that an outer reference within it resolves against the right relation.
+   */
+  <T> T inSubqueryScope(CopyOnWriteUtils.ThrowingSupplier<T, E> rewrite) throws E {
+    outerInputTypes.add(currentInputType());
+    // The relations within the subquery set their own scope as they are visited. Entering the
+    // subquery with no scope keeps one of them that hosts no expressions from leaking the enclosing
+    // scope into the expressions it contains.
+    inputTypes.add(null);
+    try {
+      return rewrite.get();
+    } finally {
+      inputTypes.remove(inputTypes.size() - 1);
+      outerInputTypes.remove(outerInputTypes.size() - 1);
+    }
+  }
+
+  /**
+   * Returns the record type that a field reference stepping out of {@code stepsOut} subquery levels
+   * resolves against, or {@code null} if it is not known.
+   */
+  Type.Struct inputTypeStepsOut(int stepsOut) {
+    if (stepsOut <= 0) {
+      return currentInputType();
+    }
+    int index = outerInputTypes.size() - stepsOut;
+    return index < 0 ? null : outerInputTypes.get(index);
+  }
+
+  /** Returns the record type the expressions being rewritten resolve against, if it is known. */
+  private Type.Struct currentInputType() {
+    return inputTypes.isEmpty() ? null : inputTypes.get(inputTypes.size() - 1);
+  }
+
   // utilities
 
   /**
@@ -677,7 +864,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   }
 
   /**
-   * Rewrites a field reference, returning a new one if its input expression changed.
+   * Rewrites a field reference, returning a new one if the expression it is rooted at changed or
+   * its cached type no longer matches the input it resolves against.
    *
    * @param fieldReference the field reference to rewrite
    * @param context the visitation context
@@ -686,27 +874,33 @@ public class RelCopyOnWriteVisitor<E extends Exception>
    */
   public Optional<FieldReference> visitFieldReference(
       FieldReference fieldReference, EmptyVisitationContext context) throws E {
-    Optional<Expression> inputExpression =
-        visitOptionalExpression(fieldReference.inputExpression(), context);
-    if (allEmpty(inputExpression)) {
-      return Optional.empty();
-    }
-
-    return Optional.of(FieldReference.builder().inputExpression(inputExpression).build());
+    return getExpressionCopyOnWriteVisitor().visitFieldReference(fieldReference, context);
   }
 
   /**
    * Rewrites a comparison join key, returning a new one if either side changed.
    *
+   * <p>Each side is rewritten against its own input, because the field offsets of a join key are
+   * relative to the side of the join they select from — unlike those of a join condition or
+   * post-join filter, which are relative to the two inputs combined.
+   *
    * @param key the comparison join key to rewrite
+   * @param leftType the record type the key's left side selects from
+   * @param rightType the record type the key's right side selects from
    * @param context the visitation context
    * @return the rewritten comparison join key, or empty if unchanged
    * @throws E if the visit fails
    */
   public Optional<ComparisonJoinKey> visitComparisonJoinKey(
-      ComparisonJoinKey key, EmptyVisitationContext context) throws E {
-    Optional<FieldReference> left = visitFieldReference(key.getLeft(), context);
-    Optional<FieldReference> right = visitFieldReference(key.getRight(), context);
+      ComparisonJoinKey key,
+      Type.Struct leftType,
+      Type.Struct rightType,
+      EmptyVisitationContext context)
+      throws E {
+    Optional<FieldReference> left =
+        inInputScope(leftType, () -> visitFieldReference(key.getLeft(), context));
+    Optional<FieldReference> right =
+        inInputScope(rightType, () -> visitFieldReference(key.getRight(), context));
     if (allEmpty(left, right)) {
       return Optional.empty();
     }
