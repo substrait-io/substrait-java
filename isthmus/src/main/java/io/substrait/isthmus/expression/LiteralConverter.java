@@ -96,39 +96,23 @@ public class LiteralConverter {
   }
 
   /**
-   * Converts a RexLiteral to a Substrait Literal with the specified nullability.
-   *
-   * <p>This overload is useful when the target nullability should come from the schema rather than
-   * the literal's own type. For example, Calcite's LogicalValues may have literals with
-   * non-nullable types even when the schema field is nullable.
-   *
-   * @param literal the RexLiteral to convert
-   * @param nullable the nullability to use for the resulting Substrait literal
-   * @return the converted Substrait Literal
-   */
-  public Expression.Literal convert(RexLiteral literal, boolean nullable) {
-    return convert(literal, literal.getType(), nullable);
-  }
-
-  /**
-   * Converts a RexLiteral to a Substrait Literal using the specified result type.
+   * Converts a RexLiteral to a Substrait Literal carrying the given result type.
    *
    * <p>This overload is useful when the target type comes from a containing schema rather than the
    * literal itself. Calcite may infer a narrower type for a value in a LogicalValues tuple than for
-   * the corresponding row field.
+   * the corresponding row field. Nullability is taken from {@code resultType}, so callers that need
+   * a nullability other than the literal's own should widen the Calcite type with {@link
+   * org.apache.calcite.rel.type.RelDataTypeFactory#createTypeWithNullability} before calling.
    *
    * @param literal the RexLiteral to convert
    * @param resultType the Calcite type required by the containing schema
    * @return the converted Substrait Literal
    */
   public Expression.Literal convert(RexLiteral literal, RelDataType resultType) {
-    Type type = typeConverter.toSubstrait(resultType);
-    return convert(literal, resultType, type.nullable());
-  }
-
-  private Expression.Literal convert(RexLiteral literal, RelDataType resultType, boolean nullable) {
+    // convert type first to guarantee we can handle the value.
+    final Type type = typeConverter.toSubstrait(resultType);
+    final boolean nullable = type.nullable();
     if (literal.isNull()) {
-      final Type type = typeConverter.toSubstrait(resultType);
       final Type typeWithNullability =
           nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
       return ExpressionCreator.typedNull(typeWithNullability);
