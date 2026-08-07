@@ -1,16 +1,12 @@
-import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import org.gradle.plugins.ide.idea.model.IdeaModel
-import org.slf4j.LoggerFactory
 
 plugins {
   `maven-publish`
   signing
   id("java-library")
   id("idea")
-  id("antlr")
   id("eclipse")
-  alias(libs.plugins.protobuf)
   alias(libs.plugins.spotless)
   alias(libs.plugins.shadow)
   alias(libs.plugins.nmcp)
@@ -78,7 +74,7 @@ signing {
 }
 
 // This allows specifying deps to be shadowed so that they don't get included in the POM file
-val shadowImplementation by configurations.creating
+val shadowImplementation = configurations.create("shadowImplementation")
 
 configurations[JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME].extendsFrom(shadowImplementation)
 
@@ -98,70 +94,33 @@ dependencies {
   implementation(platform(libs.jackson.bom))
   implementation(libs.bundles.jackson)
 
-  api(libs.protobuf.java)
+  // Compiled protobuf bindings (io.substrait.proto) from the substrait-packaging artifact,
+  // which transitively brings protobuf-java.
+  api(libs.substrait.protobuf)
   api(libs.jspecify)
 
-  antlr(libs.antlr4)
-  shadowImplementation(libs.antlr4.runtime)
+  // Compiled ANTLR parsers (io.substrait.antlr) from the substrait-packaging artifact.
+  // It is shadowed so the ANTLR runtime it pulls in is relocated (see shadowJar below) and
+  // does not leak onto consumers' classpaths. Exclude the ANTLR tool (antlr4): only the
+  // runtime is needed to run the generated parsers.
+  shadowImplementation(libs.substrait.antlr) { exclude(group = "org.antlr", module = "antlr4") }
+  // Extension YAMLs, text schemas and function test cases (under substrait/ on the classpath).
+  implementation(libs.substrait.extensions)
   implementation(libs.slf4j.api)
   annotationProcessor(libs.immutables.value)
   compileOnly(libs.immutables.annotations)
 }
 
-configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
-  // Workaround for https://github.com/gradle/gradle/issues/820
-  apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter { it.name != "antlr" })
-}
-
-abstract class SubstraitSpecVersionValueSource :
-  ValueSource<String, SubstraitSpecVersionValueSource.Parameters> {
-  companion object {
-    val logger = LoggerFactory.getLogger("SubstraitSpecVersionValueSource")
-  }
-
-  interface Parameters : ValueSourceParameters {
-    val substraitDirectory: Property<File>
-  }
-
-  @get:Inject abstract val execOperations: ExecOperations
-
-  override fun obtain(): String {
-    val stdOutput = ByteArrayOutputStream()
-    val errOutput = ByteArrayOutputStream()
-    execOperations.exec {
-      commandLine("git", "describe", "--tags")
-      standardOutput = stdOutput
-      errorOutput = errOutput
-      setIgnoreExitValue(true)
-      workingDir = parameters.substraitDirectory.get()
-    }
-
-    // capturing the error output and logging it to avoid issues with VS Code Spotless plugin
-    val error = String(errOutput.toByteArray())
-    if (error != "") {
-      logger.warn(error)
-    }
-
-    var cmdOut = String(stdOutput.toByteArray()).trim()
-
-    if (cmdOut == "") {
-      cmdOut = "0.0.0"
-    } else if (cmdOut.startsWith("v")) {
-      return cmdOut.substring(1)
-    }
-
-    return cmdOut
-  }
-}
+// The Substrait spec version is the version of the substrait-packaging artifacts consumed
+// (see the version catalog), with any -SNAPSHOT suffix stripped. This is the spec release the
+// generated proto/ANTLR/extension resources come from, so it is the single source of truth for
+// SubstraitVersion and the manifest's Specification-Version.
+val substraitSpecVersion = libs.versions.substrait.packaging.get().removeSuffix("-SNAPSHOT")
 
 tasks.register("writeManifest") {
   val version = project.version
+  val specVersion = substraitSpecVersion
   doLast {
-    val substraitSpecVersionProvider =
-      providers.of(SubstraitSpecVersionValueSource::class) {
-        parameters.substraitDirectory.set(project(":").file("substrait"))
-      }
-
     val manifestFile =
       layout.buildDirectory
         .file("generated/sources/manifest/META-INF/MANIFEST.MF")
@@ -174,7 +133,7 @@ tasks.register("writeManifest") {
       it.println("Implementation-Title: substrait-java")
       it.println("Implementation-Version: " + version)
       it.println("Specification-Title: substrait")
-      it.println("Specification-Version: " + substraitSpecVersionProvider.get())
+      it.println("Specification-Version: " + specVersion)
     }
 
     val substraitVersionClass =
@@ -187,9 +146,7 @@ tasks.register("writeManifest") {
     substraitVersionClass.printWriter(StandardCharsets.UTF_8).use {
       it.println("package io.substrait;\n")
       it.println("public class SubstraitVersion {")
-      it.println(
-        "  public static final String VERSION = \"" + substraitSpecVersionProvider.get() + "\";"
-      )
+      it.println("  public static final String VERSION = \"" + specVersion + "\";")
       it.println("}")
     }
   }
@@ -223,116 +180,27 @@ java {
 
 configurations { runtimeClasspath { resolutionStrategy.activateDependencyLocking() } }
 
-tasks.named<Jar>("sourcesJar") {
-  mustRunAfter("generateGrammarSource")
-  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
+tasks.named<Jar>("sourcesJar") { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
 
 sourceSets {
   main {
-    antlr { setSrcDirs(listOf(file("${rootProject.projectDir}/substrait/grammar"))) }
-    proto.srcDir("../substrait/proto")
-    // Extension YAMLs are relocated into substrait/extensions/ on the classpath
-    // via processResources below, rather than landing at the classpath root.
     resources.srcDir("build/generated/sources/manifest/")
-    java.srcDir(file("build/generated/sources/antlr/main/java/"))
     java.srcDir("build/generated/sources/version/")
   }
 }
 
-tasks.named<ProcessResources>("processResources") {
-  from("../substrait/extensions") { into("substrait/extensions") }
-}
-
 tasks.named<ProcessResources>("processTestResources") {
-  // Dialect schema, used to validate dialects produced by the Dialect model in tests.
-  from("../substrait/text") { into("substrait/text") }
-  // A real-world dialect to exercise parsing against.
+  // A real-world dialect to exercise parsing against. The dialect schema, the per-section
+  // dialect fixtures and the extension YAMLs are on the test classpath from the
+  // substrait-packaging extensions artifact under substrait/.
   from("../spark/spark_dialect.yaml") { into("dialect") }
-  // Per-section dialect fixtures published by the substrait spec.
-  from("../substrait/dialects/tests") { into("dialect/tests") }
 }
 
 project.configure<IdeaModel> {
-  module {
-    resourceDirs.addAll(
-      listOf(file("../substrait/text"), file("../substrait/extensions"), file("../substrait/proto"))
-    )
-    generatedSourceDirs.addAll(
-      listOf(
-        file("build/generated/sources/antlr/main"),
-        file("build/generated/sources/proto/main/java"),
-      )
-    )
-  }
+  module { generatedSourceDirs.addAll(listOf(file("build/generated/sources/version"))) }
 }
-
-val submodulesUpdate by
-  tasks.registering(Exec::class) {
-    group = "Build Setup"
-    description = "Updates (and inits) substrait git submodule"
-    commandLine = listOf("git", "submodule", "update", "--init", "--recursive")
-    workingDir = rootProject.projectDir
-  }
-
-tasks.named<AntlrTask>("generateGrammarSource") {
-  dependsOn(submodulesUpdate)
-  arguments.add("-package")
-  arguments.add("io.substrait.type")
-  arguments.add("-visitor")
-  arguments.add("-long-messages")
-  arguments.add("-Xlog")
-  arguments.add("-Werror")
-  arguments.add("-Xexact-output-dir")
-  exclude("FuncTestCaseLexer.g4", "FuncTestCaseParser.g4")
-  outputDirectory =
-    layout.buildDirectory.dir("generated/sources/antlr/main/java/io/substrait/type").get().asFile
-}
-
-protobuf {
-  generateProtoTasks { all().configureEach { dependsOn(submodulesUpdate) } }
-  protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() }
-}
-
-val protoJavaDir = layout.buildDirectory.dir("generated/sources/proto/main/java")
 
 val immuteableJavaDir = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")
-
-// First pass: Javadoc for generated protobufs — ignore warnings.
-tasks.register<Javadoc>("javadocProto") {
-  dependsOn("generateProto", "compileJava")
-
-  group = JavaBasePlugin.DOCUMENTATION_GROUP
-  description = "Generate Javadoc for protobuf-generated sources (warnings suppressed)."
-
-  // Only the generated proto sources
-  setSource(fileTree(protoJavaDir) { include("**/*.java") })
-
-  // Use the main source set classpath to resolve types referenced by the generated code
-  classpath = sourceSets["main"].compileClasspath
-
-  // Destination separate from main Javadoc
-  setDestinationDir(
-    rootProject.layout.buildDirectory.dir("docs/${version}/core-proto").get().asFile
-  )
-
-  // Make sure protobufs are generated before Javadoc runs
-  dependsOn("generateProto")
-
-  // Suppress warnings/doclint for protobuf pass
-  options {
-    require(this is StandardJavadocDocletOptions)
-    // Generated proto bindings are missing javadoc
-    addBooleanOption("Xdoclint:all,-missing", true)
-    addBooleanOption("Xwerror", true)
-    // Encoding is good practice
-    encoding = "UTF-8"
-    addStringOption(
-      "overview",
-      "${rootProject.projectDir}/core/src/main/javadoc/overview-proto.html",
-    )
-  }
-}
 
 tasks.register<Javadoc>("javadocImmutable") {
   dependsOn("compileJava", "javadoc")
@@ -340,7 +208,7 @@ tasks.register<Javadoc>("javadocImmutable") {
   group = JavaBasePlugin.DOCUMENTATION_GROUP
   description = "Generate Javadoc for immutable-generated sources (warnings suppressed)."
 
-  // Only the generated proto sources
+  // Only the Immutables-generated sources
   setSource(fileTree(immuteableJavaDir) { include("**/*.java") })
 
   // Use the main source set classpath + compiled output to resolve types referenced by the
@@ -351,7 +219,7 @@ tasks.register<Javadoc>("javadocImmutable") {
   // Destination separate from main Javadoc
   setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/immutable").get().asFile)
 
-  // Suppress warnings/doclint for protobuf pass
+  // Suppress warnings/doclint for the immutable pass
   options {
     require(this is StandardJavadocDocletOptions)
     addBooleanOption("Xdoclint:all", true)
@@ -363,24 +231,18 @@ tasks.register<Javadoc>("javadocImmutable") {
       "${rootProject.projectDir}/core/src/main/javadoc/overview-immutable.html",
     )
     links("../core/")
-    links("../core-proto/")
   }
 }
 
-// Second pass: Javadoc for main code, excluding the generated protobuf sources.
+// Javadoc for main code. Only the version-generated directory needs excluding from the
+// hand-written pass; proto and ANTLR classes come compiled from the substrait-packaging artifacts.
 tasks.named<Javadoc>("javadoc") {
-  dependsOn("javadocProto")
-  description = "Generate Javadoc for main sources (excludes protobuf-generated sources)."
+  description = "Generate Javadoc for main sources."
 
-  // Exclude the protobuf-, ANTLR- and version-generated directories from the main pass.
-  // These sources are regenerated on every build and cannot carry hand-written Javadoc.
+  // Exclude the version-generated directory from the main pass. These sources are regenerated
+  // on every build and cannot carry hand-written Javadoc.
   val generatedDirs =
-    listOf(
-        protoJavaDir,
-        layout.buildDirectory.dir("generated/sources/antlr/main/java"),
-        layout.buildDirectory.dir("generated/sources/version"),
-      )
-      .map { it.get().asFile.toPath() }
+    listOf(layout.buildDirectory.dir("generated/sources/version")).map { it.get().asFile.toPath() }
   exclude { spec -> generatedDirs.any { spec.file.toPath().startsWith(it) } }
   source(fileTree(immuteableJavaDir) { include("**/*.java") })
 
@@ -392,7 +254,6 @@ tasks.named<Javadoc>("javadoc") {
     encoding = "UTF-8"
     setDestinationDir(rootProject.layout.buildDirectory.dir("docs/${version}/core").get().asFile)
     addStringOption("overview", "${rootProject.projectDir}/core/src/main/javadoc/overview.html")
-    links("../core-proto/")
   }
 }
 
@@ -404,7 +265,6 @@ tasks.named<Jar>("javadocJar") {
 
   // Add the outputs of the Javadoc tasks to this JAR
   // Using 'from' on a task automatically adds the 'dependsOn'
-  from(tasks.named("javadocProto"))
   from(tasks.named("javadoc"))
   from(tasks.named("javadocImmutable"))
 

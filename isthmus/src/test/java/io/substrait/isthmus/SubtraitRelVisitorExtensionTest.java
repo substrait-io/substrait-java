@@ -1,7 +1,10 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
@@ -10,6 +13,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.RelVisitor;
 import io.substrait.relation.SingleInputRel;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -111,6 +115,23 @@ class SubtraitRelVisitorExtensionTest {
     }
 
     @Override
+    public Optional<Integer> getRelAnchor() {
+      return input.getRelAnchor();
+    }
+
+    @Override
+    public Rel withRelAnchor(final int relAnchor) {
+      // Delegate to the input, mirroring getRelAnchor(), so this custom Rel can serve as the
+      // binding point of an id-based outer reference instead of inheriting Rel's throwing default.
+      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount);
+    }
+
+    @Override
+    public Rel withRelAnchor(final Optional<Integer> relAnchor) {
+      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount);
+    }
+
+    @Override
     public <O, C extends VisitationContext, E extends Exception> O accept(
         final RelVisitor<O, C, E> visitor, final C context) throws E {
       return null;
@@ -146,7 +167,7 @@ class SubtraitRelVisitorExtensionTest {
         final RelNode relNode, final SimpleExtension.ExtensionCollection extensions) {
       final SubstraitRelVisitorCustom visitor =
           new SubstraitRelVisitorCustom(relNode.getCluster().getTypeFactory(), extensions);
-      visitor.popFieldAccessDepthMap(relNode);
+      visitor.resolveOuterReferences(relNode);
       return visitor.apply(relNode);
     }
   }
@@ -251,5 +272,23 @@ class SubtraitRelVisitorExtensionTest {
     assertTrue(
         findNode(rel, SubstraitRepeatRel.class),
         "substrait plan must contain SubstraitRepeatRel relation");
+  }
+
+  @Test
+  void customRelSupportsRelAnchor() {
+    // A custom (non-Immutables) Rel completes the Rel contract by delegating withRelAnchor, so
+    // SubstraitRelVisitor#apply can stamp an id-based outer-reference anchor on it rather than
+    // hitting Rel's throwing withRelAnchor default.
+    final SubstraitBuilder sb = new SubstraitBuilder();
+    final Rel scan = sb.namedScan(List.of("t"), List.of("a"), List.of(TypeCreator.REQUIRED.I64));
+    final SubstraitRepeatRel repeat = new SubstraitRepeatRel(scan, 3);
+
+    final Rel anchored = repeat.withRelAnchor(7);
+    assertTrue(anchored instanceof SubstraitRepeatRel);
+    assertEquals(3, ((SubstraitRepeatRel) anchored).getRepeatCount());
+    assertEquals(7, anchored.getRelAnchor().orElseThrow(AssertionError::new));
+
+    // Clearing the anchor works too.
+    assertFalse(anchored.withRelAnchor(Optional.empty()).getRelAnchor().isPresent());
   }
 }

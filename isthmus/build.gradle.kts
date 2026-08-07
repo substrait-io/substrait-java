@@ -4,7 +4,6 @@ plugins {
   id("java-library")
   id("idea")
   id("eclipse")
-  alias(libs.plugins.shadow)
   alias(libs.plugins.spotless)
   alias(libs.plugins.protobuf)
   alias(libs.plugins.nmcp)
@@ -127,11 +126,6 @@ dependencies {
 }
 
 tasks {
-  shadowJar {
-    archiveBaseName.set("isthmus")
-    manifest { attributes(mapOf("Main-Class" to "io.substrait.isthmus.PlanEntryPoint")) }
-  }
-
   classes { dependsOn(":core:shadowJar") }
 
   jar {
@@ -140,8 +134,6 @@ tasks {
       attributes("Implementation-Title" to "isthmus")
     }
   }
-
-  build { dependsOn(shadowJar) }
 
   // Only set the compile release since JUnit 6 requires Java 17 to run tests.
   compileJava { options.release = 11 }
@@ -153,7 +145,7 @@ tasks {
 }
 
 // Register a separate task to run integration tests
-val test by testing.suites.existing(JvmTestSuite::class)
+val test = testing.suites.named<JvmTestSuite>("test")
 
 tasks.register<Test>("integrationTest") {
   description = "Run integration tests"
@@ -169,7 +161,7 @@ sourceSets { test { proto.srcDirs("src/test/resources/extensions") } }
 protobuf { protoc { artifact = "com.google.protobuf:protoc:" + libs.protoc.get().getVersion() } }
 
 tasks.named<Javadoc>("javadoc") {
-  dependsOn(":core:javadoc", ":core:javadocProto")
+  dependsOn(":core:javadoc")
   description = "Generate Javadoc for main sources."
 
   // Keep normal behavior for main javadoc (warnings allowed to show/fail if you want)
@@ -180,7 +172,6 @@ tasks.named<Javadoc>("javadoc") {
     addStringOption("overview", "${rootProject.projectDir}/isthmus/src/main/javadoc/overview.html")
     addBooleanOption("Xdoclint:all", true)
     addBooleanOption("Xwerror", true)
-    links("../core-proto/")
     links("../core/")
     links("https://calcite.apache.org/javadocAggregate/")
   }

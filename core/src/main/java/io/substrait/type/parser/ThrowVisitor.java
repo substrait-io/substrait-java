@@ -1,6 +1,6 @@
 package io.substrait.type.parser;
 
-import io.substrait.type.SubstraitTypeBaseVisitor;
+import io.substrait.antlr.SubstraitTypeBaseVisitor;
 import org.antlr.v4.runtime.tree.RuleNode;
 
 class ThrowVisitor<T> extends SubstraitTypeBaseVisitor<T> {

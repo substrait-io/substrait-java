@@ -1,7 +1,6 @@
 package io.substrait.spark
 
 import io.substrait.spark.utils.{Dialect, DialectGenerator}
-import io.substrait.spark.utils.DialectGenerator.schemaPath
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.test.SharedSparkSession
@@ -11,7 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
 
-import java.io.{File, FileInputStream}
+import java.io.File
 
 import scala.io.Source
 
@@ -27,7 +26,7 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     val jsonSchemaFactory = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
 
     val schema =
-      jsonSchemaFactory.getSchema(new FileInputStream(new File(schemaPath)), InputFormat.YAML)
+      jsonSchemaFactory.getSchema(DialectGenerator.schemaStream(), InputFormat.YAML)
     val dialect = Source.fromFile(dialectPath).mkString
     val errors = schema.validate(dialect, InputFormat.YAML)
     assertResult(java.util.List.of())(errors)

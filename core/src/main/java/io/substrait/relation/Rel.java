@@ -26,6 +26,54 @@ public interface Rel {
   Optional<AdvancedExtension> getCommonExtension();
 
   /**
+   * Returns the plan-wide unique anchor identifying this relation, if set.
+   *
+   * <p>This corresponds to {@link io.substrait.proto.RelCommon#getRelAnchor()} and is required when
+   * this relation is the binding point for an id-based outer reference (see {@link
+   * io.substrait.expression.FieldReference#outerReferenceRelReference()}). When set it must be
+   * unique across all relations within a plan and {@code >= 1}.
+   *
+   * @return the optional relation anchor
+   */
+  Optional<Integer> getRelAnchor();
+
+  /**
+   * Returns a copy of this relation with its {@link #getRelAnchor() relation anchor} set to the
+   * given value.
+   *
+   * <p>Overridden by the generated Immutables {@code withRelAnchor(int)} on every concrete
+   * relation, this provides a type-agnostic way to stamp an anchor onto an arbitrary relation (used
+   * by {@link OuterReferenceConverter} when assigning anchors during {@code steps_out →
+   * rel_reference} conversion). Custom {@link Rel} implementations that are not Immutables-backed
+   * inherit this throwing default.
+   *
+   * @param relAnchor the plan-wide unique anchor to set (must be {@code >= 1})
+   * @return a copy of this relation carrying the given anchor
+   */
+  default Rel withRelAnchor(int relAnchor) {
+    throw new UnsupportedOperationException(
+        getClass() + " does not support setting a relation anchor");
+  }
+
+  /**
+   * Returns a copy of this relation with its {@link #getRelAnchor() relation anchor} set to the
+   * given optional value ({@link Optional#empty()} clears it).
+   *
+   * <p>Like {@link #withRelAnchor(int)}, this is overridden by the generated Immutables {@code
+   * withRelAnchor(Optional)} and provides a type-agnostic way to set or clear the anchor (used by
+   * {@link OuterReferenceConverter} when stripping anchors during {@code rel_reference → steps_out}
+   * conversion). Custom {@link Rel} implementations that are not Immutables-backed inherit this
+   * throwing default.
+   *
+   * @param relAnchor the anchor to set, or empty to clear it
+   * @return a copy of this relation carrying the given anchor
+   */
+  default Rel withRelAnchor(Optional<Integer> relAnchor) {
+    throw new UnsupportedOperationException(
+        getClass() + " does not support setting a relation anchor");
+  }
+
+  /**
    * Returns the record type (schema) produced by this relation.
    *
    * @return the struct type representing the output schema

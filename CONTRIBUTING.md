@@ -4,6 +4,7 @@ This page provides some orientation and recommendations on how to get the best r
 
 1. [Commit conventions](#commit-conventions)
 2. [Style Guide](#style-guide)
+3. [Building and testing](#building-and-testing)
 
 ## Commit Conventions
 
@@ -38,13 +39,52 @@ note the required manual actions for IntelliJ.
 
 ### Gradle & JDK 17
 
-Given that the project currently uses JDK 17 features, it requires to run Gradle itself with JDK 17, which in turn requires the below settings in `~/.gradle/gradle.properties`.
-Without those settings you might see issues when running `./gradlew spotlessApply`.
+Run Gradle with a **JDK 17** daemon.
 
-```
-org.gradle.jvmargs=--add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
-  --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
-```
+The compile and test tasks pin themselves to a Java 17 toolchain, so those run correctly
+regardless of which JDK launches Gradle, as long as a JDK 17 is installed and discoverable.
+Spotless is the exception: the `google-java-format` version it uses only runs on JDK 17 and
+fails with `NoSuchMethodError` / `NoClassDefFoundError` when the Gradle daemon runs on a newer
+JDK, so `./gradlew spotlessApply` (and `spotlessCheck`) require the daemon itself to be on JDK 17.
+
+Keep the daemon on JDK 17 **consistently**. The `build-logic` convention plugins are compiled
+to bytecode matching the daemon's JDK, so switching JDKs between builds can leave cached plugins
+that a later daemon cannot load (`UnsupportedClassVersionError`); run `./gradlew --stop` and
+rebuild to clear the stale daemon and cache.
+
+The one exception is the `isthmus-cli` **native image**: `nativeCompile` uses whatever JDK runs
+the Gradle daemon (`graalvmNative { toolchainDetection = false }` in `isthmus-cli/build.gradle.kts`),
+so it needs the daemon on a **GraalVM** JDK with `native-image` (CI uses GraalVM 25). Switching
+the daemon between JDK 17 and GraalVM is the most common cause of the cache churn above.
+
+## Building and testing
+
+`./gradlew build` builds and tests everything; see the [readme](readme.md#building) for the
+high-level build and the native-image executable. Useful narrower tasks while iterating:
+
+* **Run a module's tests:** `./gradlew :core:test`
+* **A single test class:** `./gradlew :core:test --tests "io.substrait.<pkg>.<Class>"`
+* **Format:** `./gradlew spotlessApply` (Google Java Format), or scope it with
+  `./gradlew :core:spotlessApply`. `spotlessCheck` runs in CI and requires a JDK 17 daemon
+  (see [Gradle & JDK 17](#gradle--jdk-17)).
+* **Spark variants:** the Scala source is shared across `spark-3.4_2.12`, `spark-3.5_2.12`, and
+  `spark-4.0_2.13`; `./gradlew :spark:build` builds all three, or compile one with
+  `./gradlew :spark:spark-3.5_2.12:compileScala`. Formatting runs from the parent `:spark`.
+
+Some checks are **not** wired into `compileJava` / `test`, so they can pass locally yet fail
+CI — build the whole thing before pushing:
+
+* **PMD** (`substrait.java-conventions`, ruleset
+  `build-logic/src/main/resources/substrait-pmd.xml`) runs via `check` / `build` and fails on
+  violations. Common tripwires: missing `@Override`, unused private fields/methods/locals,
+  `var` (rule `UseExplicitTypes` — use explicit types), and `public` JUnit 5 test
+  classes/methods (they must be package-private).
+* **javadoc** doclint fails the build, but only via `build` / `javadocJar` — run
+  `./gradlew :core:javadoc` before pushing.
+* **CI** runs the full `./gradlew build --rerun-tasks` plus `yamllint`, `editorconfig-checker`,
+  and commitlint (all also wired as local pre-commit hooks).
+
+`build-logic/` is an **included build**, not a normal subproject, so it does not inherit the
+root `gradle.properties`; its Kotlin-compile daemon heap is set in `build-logic/gradle.properties`.
+Avoid `--no-build-cache` casually — it forces the `build-logic` Kotlin plugins to recompile on
+every run.

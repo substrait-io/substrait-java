@@ -2,6 +2,7 @@ package io.substrait.type.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
@@ -72,6 +73,64 @@ class TestTypeParser {
         ParseToPojo.Visitor.expression(URN),
         eo.program(pr.fixedCharE("L1"), new TypeExpressionCreator.Assign("L1", eo.i(1))),
         "L1=1\nFIXEDCHAR<L1>");
+  }
+
+  @Test
+  void operatorPrecedence() {
+    // Binary operators must bind with conventional precedence (spec v0.95.0 grammar fix):
+    // '*' '/' tighter than '+' '-', tighter than comparisons, then 'and', then 'or'. Parentheses
+    // override. Each case is rendered fully parenthesized from the parsed expression tree.
+    assertPrecedence("1 + 2 * 3", "(1 + (2 * 3))");
+    assertPrecedence("1 + 2 * 3 - 4 / 5", "((1 + (2 * 3)) - (4 / 5))");
+    assertPrecedence("1 * 2 + 3", "((1 * 2) + 3)");
+    assertPrecedence("(1 + 2) * 3", "((1 + 2) * 3)");
+    assertPrecedence("1 + 2 < 3 * 4", "((1 + 2) < (3 * 4))");
+    assertPrecedence("a and b or c", "((a and b) or c)");
+  }
+
+  private static void assertPrecedence(String toParse, String expected) {
+    TypeExpression parsed = TypeStringParser.parse(toParse, ParseToPojo.Visitor.expression(URN));
+    assertEquals(expected, render(parsed), toParse);
+  }
+
+  /** Renders a parsed type expression as a fully-parenthesized string reflecting its structure. */
+  private static String render(TypeExpression e) {
+    if (e instanceof TypeExpression.BinaryOperation) {
+      TypeExpression.BinaryOperation op = (TypeExpression.BinaryOperation) e;
+      return "(" + render(op.left()) + " " + symbol(op.opType()) + " " + render(op.right()) + ")";
+    }
+    if (e instanceof TypeExpression.IntegerLiteral) {
+      return Integer.toString(((TypeExpression.IntegerLiteral) e).value());
+    }
+    if (e instanceof ParameterizedType.StringLiteral) {
+      return ((ParameterizedType.StringLiteral) e).value();
+    }
+    throw new IllegalStateException("Unexpected type expression: " + e);
+  }
+
+  private static String symbol(TypeExpression.BinaryOperation.OpType op) {
+    switch (op) {
+      case ADD:
+        return "+";
+      case SUBTRACT:
+        return "-";
+      case MULTIPLY:
+        return "*";
+      case DIVIDE:
+        return "/";
+      case LT:
+        return "<";
+      case GT:
+        return ">";
+      case EQ:
+        return "=";
+      case AND:
+        return "and";
+      case OR:
+        return "or";
+      default:
+        throw new IllegalStateException("Unexpected operator: " + op);
+    }
   }
 
   private <T> void simpleTests(ParseToPojo.Visitor v) {

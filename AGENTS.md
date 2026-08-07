@@ -1,16 +1,17 @@
 # AGENTS.md
 
-Guidance for AI agents working in the `substrait-java` repository. This complements
-`CONTRIBUTING.md` (commit conventions, style guide) with practical, codebase-specific
-knowledge.
+Entry point for AI agents working in the `substrait-java` repository. Read the shared,
+human-facing docs first, then keep the codebase-specific notes below in mind.
 
-## What this project is
+## Start here
 
-`substrait-java` is the Java implementation of [Substrait](https://substrait.io/) —
-a cross-language specification for relational query plans. It provides an immutable
-POJO model for plans/relations/expressions/types and bidirectional conversion to and
-from the Substrait protobuf wire format, plus integrations (Isthmus → Apache Calcite,
-Spark).
+- **[`readme.md`](readme.md)** — what the project is, the module overview, and how to build
+  and run it.
+- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — commit conventions, the style guide, and the
+  build / test / format / PMD command mechanics plus the JDK 17 daemon and GraalVM
+  native-image setup.
+
+For GitHub work (issues, PRs), use the `gh` CLI.
 
 ## Module layout
 
@@ -23,21 +24,26 @@ Spark).
 | `:isthmus-cli` | `isthmus-cli/` | CLI over `:isthmus`, compiled to a GraalVM **native image** (`nativeCompile`) — the `isthmus` binary + smoke tests. |
 | `build-logic` | `build-logic/` | Gradle **included build**: Kotlin-DSL convention plugins (`substrait.java-conventions` → shared Java config + PMD). Has its own `gradle.properties`; does not inherit the root's. |
 
-The `substrait/` directory is a **git submodule** of the upstream spec, and several
-`:core` build inputs are read from it — none are vendored in this repo, so don't look
-for them under `core/src`:
+The spec inputs `:core` needs are **not** generated or vendored in this repo — they come
+from the `substrait-packaging` Maven artifacts (`io.substrait:{protobuf,antlr,extensions}`),
+pinned via the `substrait-packaging` version in `gradle/libs.versions.toml`. Don't look for
+these under `core/src`:
 
-- **Proto**: `substrait/proto/substrait/*.proto` → generated Java in package `io.substrait.proto`.
-- **ANTLR grammars**: `substrait/grammar/*.g4` (notably `SubstraitType.g4`, the type /
-  function-signature grammar) → parser generated under `io.substrait.type`.
-- **Standard extension YAMLs**: `substrait/extensions/*.yaml` (e.g. `functions_arithmetic.yaml`)
-  → packaged into `:core` resources at `substrait/extensions/`.
-- **Validation schemas**: `substrait/text/simple_extensions_schema.yaml` and
-  `dialect_schema.yaml` → validate extensions/dialects (mainly in tests).
+- **Proto**: compiled `io.substrait.proto.*` bindings ship in the `protobuf` artifact
+  (`api(libs.substrait.protobuf)` in `core/build.gradle.kts`).
+- **ANTLR parsers**: the generated `io.substrait.antlr` parser ships in the `antlr`
+  artifact (shadowed so its ANTLR runtime is relocated).
+- **Standard extension YAMLs**, **function test cases**, **validation schemas**
+  (`simple_extensions_schema.yaml`, `dialect_schema.yaml`), and the **per-section dialect
+  fixtures**: all ship in the `extensions` artifact as classpath resources under
+  `substrait/` (e.g. `/substrait/extensions/functions_arithmetic.yaml`,
+  `/substrait/text/dialect_schema.yaml`, `/substrait/dialects/tests/*_test.yaml`).
 
-`:core:submodulesUpdate` (submodule init/update) therefore gates proto and grammar
-generation. These files are owned by the upstream spec — to change them, update
-`substrait` upstream and bump the submodule pin, don't edit them in-tree.
+These resources are owned by the upstream spec — to change them, update the spec and cut a
+new `substrait-packaging` release, then bump the `substrait-packaging` version in the
+catalog. The spec version reported by `io.substrait.SubstraitVersion.VERSION` is derived
+from that same catalog version (with any `-SNAPSHOT` suffix stripped) in
+`core/build.gradle.kts`, so it stays in lockstep with the artifacts.
 
 ## Core architecture (the pattern most changes follow)
 
@@ -110,51 +116,11 @@ Proto conversion is split into two directions, and the class name tells you whic
   converters.
 - POJO types are created with `TypeCreator.REQUIRED` / `TypeCreator.NULLABLE`.
 
-## Building, testing, formatting
+## Building and testing
 
-- Build/run a module's tests: `./gradlew :core:test`
-- Single test class: `./gradlew :core:test --tests "io.substrait.<pkg>.<Class>"`
-- Format code: `./gradlew spotlessApply` (Google Java Format); scope to a module with
-  `./gradlew :core:spotlessApply` when iterating. `spotlessCheck` runs in CI.
-- Static analysis: `substrait.java-conventions` applies **PMD** (custom ruleset at
-  `build-logic/src/main/resources/substrait-pmd.xml`) to the Java modules, and `check`/
-  `build` **fail** on violations. Easy ones to trip: missing `@Override`, unused private
-  fields/methods/locals, `var` (rule `UseExplicitTypes` — use explicit types), and
-  `public` JUnit 5 test classes/methods (they must be package-private).
-- Spark subprojects are nested: compile with
-  `./gradlew :spark:spark-3.5_2.12:compileScala`.
-- Requires running Gradle with JDK 17 and the `--add-exports` flags in
-  `~/.gradle/gradle.properties` (see `CONTRIBUTING.md`), or `spotlessApply` may fail.
-  Keep the daemon on JDK 17 *consistently*: `build-logic`'s convention plugins are
-  compiled to bytecode matching the daemon's JDK, so switching JDKs between builds can
-  leave cached plugins a later daemon can't load (`UnsupportedClassVersionError`) —
-  `./gradlew --stop` then rebuild clears the stale daemon/cache.
-- The `isthmus-cli` **native image** is the exception to JDK 17: `nativeCompile` uses
-  whatever JDK runs the Gradle daemon (`graalvmNative { toolchainDetection = false }` in
-  `isthmus-cli/build.gradle.kts`), so it needs the daemon on a **GraalVM** JDK with
-  `native-image` — CI uses GraalVM **25**, while everything else declares a JDK 17
-  toolchain. Switching the daemon between the two is a common cause of the daemon/cache
-  churn noted above.
-- `build-logic/` is an **included build**, not a normal subproject: it does **not**
-  inherit the root `gradle.properties`, so its Kotlin-compile daemon heap is set in
-  `build-logic/gradle.properties` (raising the root heap does nothing for it). Avoid
-  `--no-build-cache` casually — it forces `build-logic`'s Kotlin plugins to recompile
-  every run.
-- CI (`.github/workflows/pr.yml`) runs the **full** `./gradlew build --rerun-tasks`,
-  plus `yamllint`, `editorconfig-checker`, and commitlint (all also wired as local
-  pre-commit hooks). Narrower local tasks pass while the PR fails — build the whole
-  thing before pushing.
-- `javadoc` runs doclint that **fails the build**, but only via `build`/`javadocJar` —
-  not via `compileJava` / `test` / `spotlessCheck`. So Javadoc errors surface only on
-  the PR; run `./gradlew :core:javadoc` before pushing.
-- The `substrait` proto submodule needs its **tags** fetched: the generated
-  `SubstraitVersion` derives from `git describe --tags` on the submodule, so a
-  shallow/tagless checkout yields a malformed version that throws at *runtime* (not
-  build time). CI fetches them explicitly because `actions/checkout` doesn't.
-
-When you add to the public expression/visitor API, verify the dependent modules still
-compile — they have their own visitor implementors:
-`./gradlew :core:spotlessCheck :isthmus:compileJava :spark:spark-3.5_2.12:compileScala :examples:substrait-spark:compileJava`
+Run `./gradlew build` and make sure it passes before pushing — narrower tasks skip checks that
+CI runs, and a `:core` change can break the visitor implementors in the other modules. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md#building-and-testing).
 
 ## Isthmus (Calcite conversion) notes
 
@@ -194,10 +160,20 @@ compile — they have their own visitor implementors:
 
 ## Conventions & workflow
 
-- **Conventional commits** are required (CI lints them, and PR title + body must form a
-  valid commit message). Scope tags seen in history: `feat(core)`, `feat(pojo)`,
-  `feat(isthmus)`, `feat(extensions)`, `build(deps)`, `chore(release)`. A `!` marks a
-  breaking change.
+- **Keep PR descriptions high-signal.** The PR title and body together become the
+  squash-merge commit message that `semantic-release` uses to build `CHANGELOG.md`, so they
+  must together form a valid conventional commit (see
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#commit-conventions)). Beyond that, leave out the noise
+  agents tend to add:
+  - **Lists of files touched** — they're in the diff.
+  - **Claims that CI-verified things pass** — e.g. "tests pass", "spotless clean". If they
+    didn't, the checks would be red.
+  - **Process notes that are already implicit** — e.g. "opened as draft pending review".
+
+  Do include the rationale, and for spec-tracking changes the spec version (e.g.
+  `spec v0.88.0`). Keep commit bodies free of git trailers (`Signed-off-by`,
+  `Co-authored-by`, tool-attribution lines) — `semantic-release` builds the changelog from
+  the commit message and history here doesn't carry them.
 - **No GitHub issue/PR references in source** (comments or Javadoc) — they belong in
   commit messages and PR descriptions. `Closes #NNN` in the commit/PR body is fine;
   in the code, describe behavior and spec version (e.g. `spec v0.88.0`) instead.
@@ -205,8 +181,5 @@ compile — they have their own visitor implementors:
   proto message usually needs: POJO + visitor wiring + both proto converters + a
   round-trip test, and often `ExpressionCreator` factories and `dsl/SubstraitBuilder`
   helpers for ergonomics.
-- When monitoring PR checks, budget for a long tail: the **macOS `Build Isthmus Native
-  Image`** job is the long pole — it `needs:` the `java` + `integration` jobs (so it
-  starts late), then AOT-compiles for ~15–20 min on a slower macOS runner. A PR staying
-  yellow after the other checks pass usually just means that job is still running, not
-  that it's stuck or failing.
+- The macOS native image is not built on PRs (only Linux is), so macOS-specific native
+  regressions surface on `main` or the weekly `native-image-macos.yml` run, not on the PR.

@@ -66,6 +66,15 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
    */
   public abstract Optional<Expression> getPostJoinFilter();
 
+  /**
+   * Returns the residual filter evaluated on each candidate key-match, if any. A candidate is only
+   * considered a match when every {@link #getKeys() key} comparison and this expression evaluate to
+   * true.
+   *
+   * @return the optional residual filter expression
+   */
+  public abstract Optional<Expression> getResidualExpression();
+
   /** The kinds of join supported by a {@link MergeJoin} relation. */
   public enum JoinType {
     /** Unspecified or unknown join type. */

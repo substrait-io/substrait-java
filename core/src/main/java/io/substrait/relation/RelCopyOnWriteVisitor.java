@@ -17,6 +17,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -153,10 +154,20 @@ public class RelCopyOnWriteVisitor<E extends Exception>
 
   @Override
   public Optional<Rel> visit(Fetch fetch, EmptyVisitationContext context) throws E {
-    return fetch
-        .getInput()
-        .accept(this, context)
-        .map(input -> Fetch.builder().from(fetch).input(input).build());
+    Optional<Rel> input = fetch.getInput().accept(this, context);
+    Optional<Expression> offset = visitOptionalExpression(fetch.getOffset(), context);
+    Optional<Expression> count = visitOptionalExpression(fetch.getCount(), context);
+
+    if (allEmpty(input, offset, count)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Fetch.builder()
+            .from(fetch)
+            .input(input.orElse(fetch.getInput()))
+            .offset(or(offset, fetch::getOffset))
+            .count(or(count, fetch::getCount))
+            .build());
   }
 
   @Override
@@ -193,6 +204,27 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .right(right.orElse(join.getRight()))
             .condition(or(condition, join::getCondition))
             .postJoinFilter(or(postFilter, join::getPostJoinFilter))
+            .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(LateralJoin lateralJoin, EmptyVisitationContext context) throws E {
+    Optional<Rel> left = lateralJoin.getLeft().accept(this, context);
+    Optional<Rel> right = lateralJoin.getRight().accept(this, context);
+    Optional<Expression> condition = visitOptionalExpression(lateralJoin.getCondition(), context);
+    Optional<Expression> postFilter =
+        visitOptionalExpression(lateralJoin.getPostJoinFilter(), context);
+
+    if (allEmpty(left, right, condition, postFilter)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        ImmutableLateralJoin.builder()
+            .from(lateralJoin)
+            .left(left.orElse(lateralJoin.getLeft()))
+            .right(right.orElse(lateralJoin.getRight()))
+            .condition(or(condition, lateralJoin::getCondition))
+            .postJoinFilter(or(postFilter, lateralJoin::getPostJoinFilter))
             .build());
   }
 
@@ -417,6 +449,27 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   }
 
   @Override
+  public Optional<Rel> visit(TopN topN, EmptyVisitationContext context) throws E {
+    Optional<Rel> input = topN.getInput().accept(this, context);
+    Optional<List<Expression.SortField>> sortFields =
+        transformList(topN.getSortFields(), context, this::visitSortField);
+    Optional<Expression> offset = visitOptionalExpression(topN.getOffset(), context);
+    Optional<Expression> count = visitOptionalExpression(topN.getCount(), context);
+
+    if (allEmpty(input, sortFields, offset, count)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        TopN.builder()
+            .from(topN)
+            .input(input.orElse(topN.getInput()))
+            .sortFields(sortFields.orElse(topN.getSortFields()))
+            .offset(or(offset, topN::getOffset))
+            .count(or(count, topN::getCount))
+            .build());
+  }
+
+  @Override
   public Optional<Rel> visit(Cross cross, EmptyVisitationContext context) throws E {
     Optional<Rel> left = cross.getLeft().accept(this, context);
     Optional<Rel> right = cross.getRight().accept(this, context);
@@ -491,8 +544,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         transformList(hashJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(hashJoin.getPostJoinFilter(), context);
+    Optional<Expression> residual =
+        visitOptionalExpression(hashJoin.getResidualExpression(), context);
 
-    if (allEmpty(left, right, keys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -502,6 +557,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .right(right.orElse(hashJoin.getRight()))
             .keys(keys.orElse(hashJoin.getKeys()))
             .postJoinFilter(or(postFilter, hashJoin::getPostJoinFilter))
+            .residualExpression(or(residual, hashJoin::getResidualExpression))
             .build());
   }
 
@@ -513,8 +569,10 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         transformList(mergeJoin.getKeys(), context, this::visitComparisonJoinKey);
     Optional<Expression> postFilter =
         visitOptionalExpression(mergeJoin.getPostJoinFilter(), context);
+    Optional<Expression> residual =
+        visitOptionalExpression(mergeJoin.getResidualExpression(), context);
 
-    if (allEmpty(left, right, keys, postFilter)) {
+    if (allEmpty(left, right, keys, postFilter, residual)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -524,6 +582,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .right(right.orElse(mergeJoin.getRight()))
             .keys(keys.orElse(mergeJoin.getKeys()))
             .postJoinFilter(or(postFilter, mergeJoin::getPostJoinFilter))
+            .residualExpression(or(residual, mergeJoin::getResidualExpression))
             .build());
   }
 

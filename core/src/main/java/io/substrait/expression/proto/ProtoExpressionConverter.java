@@ -88,10 +88,28 @@ public class ProtoExpressionConverter {
         return FieldReference.ofRoot(
             rootType, getDirectReferenceSegments(reference.getDirectReference()));
       case OUTER_REFERENCE:
-        return FieldReference.newRootStructOuterReference(
-            reference.getDirectReference().getStructField().getField(),
-            rootType,
-            reference.getOuterReference().getStepsOut());
+        {
+          io.substrait.proto.Expression.FieldReference.OuterReference outerReference =
+              reference.getOuterReference();
+          int field = reference.getDirectReference().getStructField().getField();
+          switch (outerReference.getOuterReferenceTypeCase()) {
+            case STEPS_OUT:
+              return FieldReference.newRootStructOuterReference(
+                  field,
+                  protoRelConverter.outerScopeForStepsOut(outerReference.getStepsOut(), rootType),
+                  outerReference.getStepsOut());
+            case REL_REFERENCE:
+              return FieldReference.newRootStructOuterReferenceByRelReference(
+                  field,
+                  protoRelConverter.outerScopeForRelReference(
+                      outerReference.getRelReference(), rootType),
+                  outerReference.getRelReference());
+            case OUTERREFERENCETYPE_NOT_SET:
+            default:
+              throw new IllegalArgumentException(
+                  "Unhandled outer reference type: " + outerReference.getOuterReferenceTypeCase());
+          }
+        }
       case LAMBDA_PARAMETER_REFERENCE:
         {
           io.substrait.proto.Expression.FieldReference.LambdaParameterReference lambdaParamRef =
@@ -248,7 +266,8 @@ public class ProtoExpressionConverter {
             case SET_PREDICATE:
               {
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getSetPredicate().getTuples());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getSetPredicate().getTuples(), rootType);
                 return Expression.SetPredicate.builder()
                     .tuples(rel)
                     .predicateOp(
@@ -259,7 +278,8 @@ public class ProtoExpressionConverter {
             case SCALAR:
               {
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getScalar().getInput());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getScalar().getInput(), rootType);
                 return Expression.ScalarSubquery.builder()
                     .input(rel)
                     .type(
@@ -281,8 +301,11 @@ public class ProtoExpressionConverter {
               }
             case IN_PREDICATE:
               {
+                // The haystack is a subquery boundary; the needles are evaluated in the current
+                // (outer) scope and so are converted without pushing a new enclosing scope.
                 io.substrait.relation.Rel rel =
-                    protoRelConverter.from(expr.getSubquery().getInPredicate().getHaystack());
+                    protoRelConverter.fromSubqueryRel(
+                        expr.getSubquery().getInPredicate().getHaystack(), rootType);
                 List<Expression> needles =
                     expr.getSubquery().getInPredicate().getNeedlesList().stream()
                         .map(e -> this.from(e))
@@ -337,9 +360,6 @@ public class ProtoExpressionConverter {
                       + ecv.getExecutionContextVariableTypeCase());
           }
         }
-      // TODO enum.
-      case ENUM:
-        throw new UnsupportedOperationException("Unsupported type: " + expr.getRexTypeCase());
       default:
         throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     }
@@ -520,39 +540,21 @@ public class ProtoExpressionConverter {
             literal.getIntervalYearToMonth().getYears(),
             literal.getIntervalYearToMonth().getMonths());
       case INTERVAL_DAY_TO_SECOND:
-        {
-          // Handle deprecated version that doesn't provide precision and that uses microseconds
-          // instead of subseconds, for backwards compatibility
-          int precision =
-              literal.getIntervalDayToSecond().hasPrecision()
-                  ? literal.getIntervalDayToSecond().getPrecision()
-                  : 6; // microseconds
-          long subseconds =
-              literal.getIntervalDayToSecond().hasPrecision()
-                  ? literal.getIntervalDayToSecond().getSubseconds()
-                  : literal.getIntervalDayToSecond().getMicroseconds();
-          return ExpressionCreator.intervalDay(
-              literal.getNullable(),
-              literal.getIntervalDayToSecond().getDays(),
-              literal.getIntervalDayToSecond().getSeconds(),
-              subseconds,
-              precision);
-        }
+        return ExpressionCreator.intervalDay(
+            literal.getNullable(),
+            literal.getIntervalDayToSecond().getDays(),
+            literal.getIntervalDayToSecond().getSeconds(),
+            literal.getIntervalDayToSecond().getSubseconds(),
+            literal.getIntervalDayToSecond().getPrecision());
       case INTERVAL_COMPOUND:
-        {
-          if (!literal.getIntervalCompound().getIntervalDayToSecond().hasPrecision()) {
-            throw new UnsupportedOperationException(
-                "Interval compound with deprecated version of interval day (ie. no precision) is not supported");
-          }
-          return ExpressionCreator.intervalCompound(
-              literal.getNullable(),
-              literal.getIntervalCompound().getIntervalYearToMonth().getYears(),
-              literal.getIntervalCompound().getIntervalYearToMonth().getMonths(),
-              literal.getIntervalCompound().getIntervalDayToSecond().getDays(),
-              literal.getIntervalCompound().getIntervalDayToSecond().getSeconds(),
-              literal.getIntervalCompound().getIntervalDayToSecond().getSubseconds(),
-              literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
-        }
+        return ExpressionCreator.intervalCompound(
+            literal.getNullable(),
+            literal.getIntervalCompound().getIntervalYearToMonth().getYears(),
+            literal.getIntervalCompound().getIntervalYearToMonth().getMonths(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getDays(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getSeconds(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getSubseconds(),
+            literal.getIntervalCompound().getIntervalDayToSecond().getPrecision());
       case FIXED_CHAR:
         return ExpressionCreator.fixedChar(literal.getNullable(), literal.getFixedChar());
       case VAR_CHAR:

@@ -16,21 +16,18 @@ class DmlRoundtripTest extends PlanTestBase {
 
   @Test
   void testDelete() throws SqlParseException {
-    assertFullRoundTripWithIdentityProjectionWorkaround(
-        "delete from src1 where intcol=10", catalogReader);
+    assertFullRoundTrip("delete from src1 where intcol=10", catalogReader);
   }
 
   @Test
   void testUpdate() throws SqlParseException {
-    assertFullRoundTripWithIdentityProjectionWorkaround(
-        "update src1 set intcol=10 where charcol='a'", catalogReader);
+    assertFullRoundTrip("update src1 set intcol=10 where charcol='a'", catalogReader);
   }
 
   @Test
   void testInsert() throws SqlParseException {
-    assertFullRoundTripWithIdentityProjectionWorkaround(
-        "insert into src1 (intcol, charcol) values (1,'a'); ", catalogReader);
-    assertFullRoundTripWithIdentityProjectionWorkaround(
+    assertFullRoundTrip("insert into src1 (intcol, charcol) values (1,'a'); ", catalogReader);
+    assertFullRoundTrip(
         "insert into src1 (intcol, charcol) select intcol,charcol from src2;", catalogReader);
   }
 }

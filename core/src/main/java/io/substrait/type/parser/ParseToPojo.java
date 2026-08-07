@@ -1,5 +1,7 @@
 package io.substrait.type.parser;
 
+import io.substrait.antlr.SubstraitTypeParser;
+import io.substrait.antlr.SubstraitTypeVisitor;
 import io.substrait.function.ImmutableParameterizedType;
 import io.substrait.function.ImmutableTypeExpression;
 import io.substrait.function.ParameterizedType;
@@ -7,8 +9,6 @@ import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionCreator;
 import io.substrait.type.ImmutableType;
-import io.substrait.type.SubstraitTypeParser;
-import io.substrait.type.SubstraitTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
@@ -233,7 +233,9 @@ public class ParseToPojo {
 
     @Override
     public TypeExpression visitUserDefined(SubstraitTypeParser.UserDefinedContext ctx) {
-      String name = ctx.Identifier().getSymbol().getText();
+      // The optional dependency-alias prefix (alias.u!Name) added to the grammar in spec v0.92.1
+      // contributes a leading Identifier; the user-defined type name is always the last Identifier.
+      String name = ctx.Identifier(ctx.Identifier().size() - 1).getSymbol().getText();
       boolean nullable = ctx.isnull != null;
       List<SubstraitTypeParser.ExprContext> paramExprs = ctx.expr();
       if (paramExprs.isEmpty()) {
@@ -622,13 +624,42 @@ public class ParseToPojo {
     }
 
     @Override
-    public TypeExpression visitBinaryExpr(final SubstraitTypeParser.BinaryExprContext ctx) {
+    public TypeExpression visitMulDiv(final SubstraitTypeParser.MulDivContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    @Override
+    public TypeExpression visitAddSub(final SubstraitTypeParser.AddSubContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    @Override
+    public TypeExpression visitComparison(final SubstraitTypeParser.ComparisonContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    @Override
+    public TypeExpression visitEquality(final SubstraitTypeParser.EqualityContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    @Override
+    public TypeExpression visitAnd(final SubstraitTypeParser.AndContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    @Override
+    public TypeExpression visitOr(final SubstraitTypeParser.OrContext ctx) {
+      return binaryOperation(ctx.op, ctx.left, ctx.right);
+    }
+
+    private TypeExpression binaryOperation(
+        Token op, SubstraitTypeParser.ExprContext left, SubstraitTypeParser.ExprContext right) {
       checkExpression();
-      TypeExpression.BinaryOperation.OpType type = getBinaryExpressionType(ctx.op);
       return TypeExpression.BinaryOperation.builder()
-          .opType(type)
-          .left(ctx.left.accept(this))
-          .right(ctx.right.accept(this))
+          .opType(getBinaryExpressionType(op))
+          .left(left.accept(this))
+          .right(right.accept(this))
           .build();
     }
 

@@ -15,6 +15,7 @@ import io.substrait.relation.ExtensionTable;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
+import io.substrait.relation.LateralJoin;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Project;
@@ -168,6 +169,21 @@ class ExtensionRoundtripTest extends TestBase {
     Rel rel =
         Join.builder()
             .from(sb.innerJoin(__ -> sb.bool(true), commonTable, commonTable))
+            .commonExtension(commonExtension)
+            .extension(relExtension)
+            .build();
+    verifyRoundTrip(rel);
+  }
+
+  @Test
+  void lateralJoin() {
+    Rel rel =
+        LateralJoin.builder()
+            .left(commonTable)
+            .right(commonTable)
+            .condition(sb.bool(true))
+            .joinType(Join.JoinType.INNER)
+            .relAnchor(1)
             .commonExtension(commonExtension)
             .extension(relExtension)
             .build();

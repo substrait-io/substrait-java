@@ -1,9 +1,9 @@
 %YAML 1.2
 ---
-urn: extension:io.substrait:functions_string
+urn: extension:com.domain:string1
 
 scalar_functions:
-  - name: "concat"
+  - name: "concatenate"
     description: "concatenate strings"
     impls:
       - args:

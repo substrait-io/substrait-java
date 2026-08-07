@@ -40,7 +40,8 @@ public class ToOptimizedSql implements Action {
       final Plan substraitPlan = new ProtoPlanConverter().from(proto);
 
       // Configure Isthmus Utilities
-      final SubstraitToCalcite substraitToCalcite = new SubstraitToCalcite(new ConverterProvider());
+      final SubstraitToCalcite substraitToCalcite =
+          new SubstraitToCalcite(ConverterProvider.DEFAULT);
 
       // Configure Calcite Utilities
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();

@@ -319,6 +319,60 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
     }
   }
 
+  /**
+   * The unbound type: a placeholder for a type that has not yet been bound to a concrete type.
+   *
+   * <p>An unbound type may appear wherever a concrete type would normally appear (for example as a
+   * field type within a read relation's schema), allowing a producer to serialize the shape of a
+   * plan — its relations and the names and ordering of its fields — before the concrete types of
+   * those fields are known. A plan that contains an unbound type anywhere within it is <i>partially
+   * bound</i>: it may be serialized and exchanged, but it must be bound to concrete types before
+   * execution.
+   *
+   * <p>Unlike every other {@link Type}, the unbound type carries no nullability and no parameters;
+   * those properties are determined only when it is bound to a concrete type. Consequently {@link
+   * #nullable()} throws and {@link #withNullable(boolean)} is a no-op. The unbound type is not a
+   * wildcard, is distinct from {@code any}, and has no literal form.
+   */
+  @Value.Immutable
+  abstract class Unbound implements Type {
+    /**
+     * Creates a builder for {@link Unbound}.
+     *
+     * @return a new builder
+     */
+    public static ImmutableType.Unbound.Builder builder() {
+      return ImmutableType.Unbound.builder();
+    }
+
+    /**
+     * The unbound type has no nullability, so this always throws.
+     *
+     * @return never returns
+     * @throws UnsupportedOperationException always
+     */
+    @Override
+    public boolean nullable() {
+      throw new UnsupportedOperationException("The unbound type has no nullability");
+    }
+
+    /**
+     * Returns this unbound type unchanged; an unbound type has no nullability to change.
+     *
+     * @param nullable ignored
+     * @return this unbound type
+     */
+    @Override
+    public Type withNullable(boolean nullable) {
+      return this;
+    }
+
+    @Override
+    public <R, E extends Throwable> R accept(final TypeVisitor<R, E> typeVisitor) throws E {
+      return typeVisitor.visit(this);
+    }
+  }
+
   /** The fixed-length character type. */
   @Value.Immutable
   abstract class FixedChar implements Type {

@@ -13,6 +13,7 @@ import io.substrait.relation.ExtensionWrite;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Join;
+import io.substrait.relation.LateralJoin;
 import io.substrait.relation.LocalFiles;
 import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedScan;
@@ -31,6 +32,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.EmptyVisitationContext;
 import org.apache.calcite.sql.SqlKind;
 
@@ -63,6 +65,12 @@ public class SqlKindFromRel
 
   @Override
   public SqlKind visit(Join join, EmptyVisitationContext context) throws RuntimeException {
+    return SqlKind.JOIN;
+  }
+
+  @Override
+  public SqlKind visit(LateralJoin lateralJoin, EmptyVisitationContext context)
+      throws RuntimeException {
     return SqlKind.JOIN;
   }
 
@@ -263,5 +271,10 @@ public class SqlKindFromRel
   public SqlKind visit(BroadcastExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
     return SqlKind.OTHER_DDL;
+  }
+
+  @Override
+  public SqlKind visit(TopN topN, EmptyVisitationContext context) throws RuntimeException {
+    return QUERY_KIND;
   }
 }

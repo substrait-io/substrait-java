@@ -29,6 +29,7 @@ import io.substrait.relation.Cross;
 import io.substrait.relation.Expand;
 import io.substrait.relation.Fetch;
 import io.substrait.relation.Filter;
+import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.Join;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
@@ -40,8 +41,10 @@ import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
+import io.substrait.relation.physical.ImmutableTopN;
 import io.substrait.relation.physical.MergeJoin;
 import io.substrait.relation.physical.NestedLoopJoin;
+import io.substrait.relation.physical.TopN;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -280,8 +283,111 @@ public class SubstraitBuilder {
     return fetch(offset, OptionalLong.empty(), Optional.of(remap), input);
   }
 
+  /**
+   * Creates a fetch relation that skips {@code offset} rows and returns {@code count} rows, where
+   * offset and count are built from the input relation and each evaluate to a non-negative integer.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param count builds the row-count expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch fetch(Function<Rel, Expression> offset, Function<Rel, Expression> count, Rel input) {
+    return fetch(
+        Optional.of(offset.apply(input)), Optional.of(count.apply(input)), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips {@code offset} rows and returns {@code count} rows, where
+   * offset and count are built from the input relation and each evaluate to a non-negative integer,
+   * with output field remapping.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param count builds the row-count expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch fetch(
+      Function<Rel, Expression> offset,
+      Function<Rel, Expression> count,
+      Rel.Remap remap,
+      Rel input) {
+    return fetch(
+        Optional.of(offset.apply(input)),
+        Optional.of(count.apply(input)),
+        Optional.of(remap),
+        input);
+  }
+
+  /**
+   * Creates a fetch relation that limits the number of rows returned to a count expression built
+   * from the input relation.
+   *
+   * @param count builds the row-count expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch limit(Function<Rel, Expression> count, Rel input) {
+    return fetch(Optional.empty(), Optional.of(count.apply(input)), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that limits the number of rows returned to a count expression built
+   * from the input relation, with output field remapping.
+   *
+   * @param count builds the row-count expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch limit(Function<Rel, Expression> count, Rel.Remap remap, Rel input) {
+    return fetch(Optional.empty(), Optional.of(count.apply(input)), Optional.of(remap), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips a number of rows given by an offset expression built from
+   * the input relation.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch offset(Function<Rel, Expression> offset, Rel input) {
+    return fetch(Optional.of(offset.apply(input)), Optional.empty(), Optional.empty(), input);
+  }
+
+  /**
+   * Creates a fetch relation that skips a number of rows given by an offset expression built from
+   * the input relation, with output field remapping.
+   *
+   * @param offset builds the offset expression from the input relation
+   * @param remap the output field remapping specification
+   * @param input the input relation
+   * @return a new {@link Fetch} relation
+   */
+  public Fetch offset(Function<Rel, Expression> offset, Rel.Remap remap, Rel input) {
+    return fetch(Optional.of(offset.apply(input)), Optional.empty(), Optional.of(remap), input);
+  }
+
   private Fetch fetch(long offset, OptionalLong count, Optional<Rel.Remap> remap, Rel input) {
-    return Fetch.builder().offset(offset).count(count).input(input).remap(remap).build();
+    // Offset/count are expressions; wrap the given values as i64 literals. An unset offset is
+    // treated as 0, and an unset count signals LIMIT ALL.
+    Optional<Expression> offsetExpr = offset == 0 ? Optional.empty() : Optional.of(i64(offset));
+    Optional<Expression> countExpr =
+        count.isPresent() ? Optional.of(i64(count.getAsLong())) : Optional.empty();
+    return fetch(offsetExpr, countExpr, remap, input);
+  }
+
+  private Fetch fetch(
+      Optional<Expression> offset,
+      Optional<Expression> count,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    ImmutableFetch.Builder builder = Fetch.builder().input(input).remap(remap);
+    offset.ifPresent(o -> builder.offset(o));
+    count.ifPresent(c -> builder.count(c));
+    return builder.build();
   }
 
   /**
@@ -883,6 +989,66 @@ public class SubstraitBuilder {
       Rel input) {
     Iterable<? extends Expression.SortField> condition = sortFieldFn.apply(input);
     return Sort.builder().input(input).sortFields(condition).remap(remap).build();
+  }
+
+  /**
+   * Creates a top-N relation that sorts and then returns a limited number of rows, using {@link
+   * TopN.Mode#ROWS_ONLY}.
+   *
+   * @param sortFieldFn function to derive the sort fields from the input relation
+   * @param offset the number of leading rows to skip
+   * @param count the maximum number of rows to return
+   * @param input the input relation
+   * @return a new {@link TopN} relation
+   */
+  public TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      Rel input) {
+    return topN(sortFieldFn, offset, count, TopN.Mode.ROWS_ONLY, Optional.empty(), input);
+  }
+
+  /**
+   * Creates a top-N relation that sorts and then returns a limited number of rows with a specific
+   * tie-handling mode.
+   *
+   * @param sortFieldFn function to derive the sort fields from the input relation
+   * @param offset the number of leading rows to skip
+   * @param count the maximum number of rows to return
+   * @param mode the tie-handling mode
+   * @param input the input relation
+   * @return a new {@link TopN} relation
+   */
+  public TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      TopN.Mode mode,
+      Rel input) {
+    return topN(sortFieldFn, offset, count, mode, Optional.empty(), input);
+  }
+
+  private TopN topN(
+      Function<Rel, Iterable<? extends Expression.SortField>> sortFieldFn,
+      long offset,
+      long count,
+      TopN.Mode mode,
+      Optional<Rel.Remap> remap,
+      Rel input) {
+    Iterable<? extends Expression.SortField> sortFields = sortFieldFn.apply(input);
+    ImmutableTopN.Builder builder =
+        TopN.builder()
+            .input(input)
+            .sortFields(sortFields)
+            .count(i64(count))
+            .mode(mode)
+            .remap(remap);
+    // A null offset is treated as 0, so only emit an offset expression when it is non-zero.
+    if (offset != 0) {
+      builder.offset(i64(offset));
+    }
+    return builder.build();
   }
 
   // Expressions

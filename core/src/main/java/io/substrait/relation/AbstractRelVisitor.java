@@ -8,6 +8,7 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TopN;
 import io.substrait.util.VisitationContext;
 
 /**
@@ -47,6 +48,11 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   @Override
   public O visit(Join join, C context) throws E {
     return visitFallback(join, context);
+  }
+
+  @Override
+  public O visit(LateralJoin lateralJoin, C context) throws E {
+    return visitFallback(lateralJoin, context);
   }
 
   @Override
@@ -177,5 +183,10 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   @Override
   public O visit(RoundRobinExchange exchange, C context) throws E {
     return visitFallback(exchange, context);
+  }
+
+  @Override
+  public O visit(TopN topN, C context) throws E {
+    return visitFallback(topN, context);
   }
 }

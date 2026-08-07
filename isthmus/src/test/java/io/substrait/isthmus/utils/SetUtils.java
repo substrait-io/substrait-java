@@ -59,7 +59,8 @@ public class SetUtils {
   }
 
   // Generate all SetOp types excluding:
-  // * MINUS_MULTISET, INTERSECTION_PRIMARY: do not map to Calcite relations
+  // * MINUS_MULTISET, INTERSECTION_PRIMARY: no equivalent Calcite relation, so they are
+  //   unsupported in Substrait -> Calcite conversion
   // * UNKNOWN: invalid
   public static Stream<Arguments> setTestConfig() {
     return Arrays.stream(Set.SetOp.values())

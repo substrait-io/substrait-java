@@ -55,15 +55,20 @@ public class ProtoTypeConverter {
       case INTERVAL_YEAR:
         return n(type.getIntervalYear().getNullability()).INTERVAL_YEAR;
       case INTERVAL_DAY:
+        // The precision is required; reject an interval day type that leaves it unset.
+        if (!type.getIntervalDay().hasPrecision()) {
+          throw new IllegalArgumentException("Interval day type must have its precision set");
+        }
         return n(type.getIntervalDay().getNullability())
-            // precision defaults to 6 (micros) for backwards compatibility, see protobuf
-            .intervalDay(
-                type.getIntervalDay().hasPrecision() ? type.getIntervalDay().getPrecision() : 6);
+            .intervalDay(type.getIntervalDay().getPrecision());
       case INTERVAL_COMPOUND:
         return n(type.getIntervalCompound().getNullability())
             .intervalCompound(type.getIntervalCompound().getPrecision());
       case UUID:
         return n(type.getUuid().getNullability()).UUID;
+      case UNBOUND:
+        // The unbound type carries no nullability.
+        return Type.Unbound.builder().build();
       case FIXED_CHAR:
         return n(type.getFixedChar().getNullability()).fixedChar(type.getFixedChar().getLength());
       case VARCHAR:
@@ -116,8 +121,6 @@ public class ProtoTypeConverter {
               .typeVariationReference(userDefined.getTypeVariationReference())
               .build();
         }
-      case USER_DEFINED_TYPE_REFERENCE:
-        throw new UnsupportedOperationException("Unsupported user defined reference: " + type);
       case KIND_NOT_SET:
         throw new UnsupportedOperationException("Type is not set: " + type);
       default:

@@ -63,14 +63,7 @@ public abstract class Join extends BiRel implements HasExtension {
     /**
      * Right mark join: right rows with an appended boolean column marking whether a match exists.
      */
-    RIGHT_MARK(JoinRel.JoinType.JOIN_TYPE_RIGHT_MARK),
-    // deprecated values last to not get them looked up first in fromProto()
-    /** use {@link #LEFT_SEMI} instead */
-    @Deprecated
-    SEMI(JoinRel.JoinType.JOIN_TYPE_LEFT_SEMI),
-    /** use {@link #LEFT_ANTI} instead */
-    @Deprecated
-    ANTI(JoinRel.JoinType.JOIN_TYPE_LEFT_ANTI);
+    RIGHT_MARK(JoinRel.JoinType.JOIN_TYPE_RIGHT_MARK);
 
     private JoinRel.JoinType proto;
 
@@ -107,53 +100,64 @@ public abstract class Join extends BiRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    Stream<Type> leftTypes = getLeftTypes();
-    Stream<Type> rightTypes = getRightTypes();
-    Stream<Type> markType = getMarkType();
+    return deriveRecordType(getJoinType(), getLeft(), getRight());
+  }
+
+  /**
+   * Derives the output record type of a join from its type and inputs. Shared with {@link
+   * LateralJoin}, which has the same output-schema semantics.
+   *
+   * @param joinType the join type
+   * @param left the left input
+   * @param right the right input
+   * @return the derived output record type
+   */
+  static Type.Struct deriveRecordType(JoinType joinType, Rel left, Rel right) {
+    Stream<Type> leftTypes = leftTypes(joinType, left);
+    Stream<Type> rightTypes = rightTypes(joinType, right);
+    Stream<Type> markType = markType(joinType);
     return TypeCreator.REQUIRED.struct(Stream.of(leftTypes, rightTypes, markType).flatMap(s -> s));
   }
 
-  private Stream<Type> getLeftTypes() {
-    switch (getJoinType()) {
+  private static Stream<Type> leftTypes(JoinType joinType, Rel left) {
+    switch (joinType) {
       case RIGHT:
       case OUTER:
       case RIGHT_SINGLE:
-        return getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
+        return left.getRecordType().fields().stream().map(TypeCreator::asNullable);
       case RIGHT_SEMI:
       case RIGHT_ANTI:
       case RIGHT_MARK:
         // these joins ignore left side columns
         return Stream.of();
       default:
-        return getLeft().getRecordType().fields().stream();
+        return left.getRecordType().fields().stream();
     }
   }
 
-  private Stream<Type> getRightTypes() {
-    switch (getJoinType()) {
+  private static Stream<Type> rightTypes(JoinType joinType, Rel right) {
+    switch (joinType) {
       case LEFT:
       case OUTER:
       case LEFT_SINGLE:
-        return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
-      case SEMI:
-      case ANTI:
+        return right.getRecordType().fields().stream().map(TypeCreator::asNullable);
       case LEFT_SEMI:
       case LEFT_ANTI:
       case LEFT_MARK:
         // these joins ignore right side columns
         return Stream.of();
       default:
-        return getRight().getRecordType().fields().stream();
+        return right.getRecordType().fields().stream();
     }
   }
 
-  private Stream<Type> getMarkType() {
+  private static Stream<Type> markType(JoinType joinType) {
     // Mark joins append a nullable boolean "mark" column at the end of the
     // emitted side. The column is nullable because the match state is 3-valued:
     //  - true  : at least one partner matched
     //  - false : no partner, and no NULL-producing comparisons
     //  - NULL  : no partner, but some comparison produced NULL
-    switch (getJoinType()) {
+    switch (joinType) {
       case LEFT_MARK:
       case RIGHT_MARK:
         return Stream.of(TypeCreator.NULLABLE.BOOLEAN);

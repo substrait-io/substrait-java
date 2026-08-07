@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -98,5 +102,29 @@ public class Utils {
     }
 
     return schema;
+  }
+
+  /**
+   * Configures {@code cluster} to answer relational-metadata queries with handlers built via {@link
+   * java.lang.reflect.Proxy reflection} rather than runtime code generation.
+   *
+   * <p>Calcite's default {@link RelMetadataQuery} obtains its handlers from {@code
+   * JaninoRelMetadataProvider}, which compiles a handler class at runtime with Janino. Runtime code
+   * generation is unavailable in a GraalVM native image (closed-world, ahead-of-time compiled), so
+   * any metadata query — e.g. the column-uniqueness check {@code RelBuilder} runs for a grouping
+   * {@code aggregate} or {@code DISTINCT} — fails there. {@link ProxyingMetadataHandlerProvider}
+   * builds the same handlers with dynamic proxies, which are supported in native images once the
+   * handler interfaces are registered.
+   *
+   * <p>Apply this to every {@link RelOptCluster} used while converting to or from Calcite so the
+   * native image never reaches the Janino-backed path.
+   *
+   * @param cluster the cluster to configure
+   */
+  public static void useReflectiveMetadataProvider(final RelOptCluster cluster) {
+    cluster.setMetadataQuerySupplier(
+        () ->
+            new RelMetadataQuery(
+                new ProxyingMetadataHandlerProvider(DefaultRelMetadataProvider.INSTANCE)));
   }
 }

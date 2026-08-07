@@ -1,8 +1,6 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeMap;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -28,8 +26,10 @@ import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -97,6 +97,9 @@ public class ExpressionRexConverter
   /** Converter for Substrait window function invocations to Calcite {@link SqlOperator}s. */
   protected final WindowFunctionConverter windowFunctionConverter;
 
+  /** Observer for supplied and inferred expression types. */
+  protected final TypeObserver typeObserver;
+
   /** Converter for Substrait relational nodes to Calcite {@link RelNode}s, used for subqueries. */
   protected SubstraitRelNodeConverter relNodeConverter;
 
@@ -115,11 +118,35 @@ public class ExpressionRexConverter
       ScalarFunctionConverter scalarFunctionConverter,
       WindowFunctionConverter windowFunctionConverter,
       TypeConverter typeConverter) {
+    this(
+        typeFactory,
+        scalarFunctionConverter,
+        windowFunctionConverter,
+        typeConverter,
+        TypeObserver.NOOP);
+  }
+
+  /**
+   * Creates an {@code ExpressionRexConverter} with type observation enabled.
+   *
+   * @param typeFactory Calcite type factory for type creation
+   * @param scalarFunctionConverter converter for scalar function invocations
+   * @param windowFunctionConverter converter for window function invocations
+   * @param typeConverter converter for Substrait and Calcite type mappings
+   * @param typeObserver observer for supplied and independently inferred expression types
+   */
+  public ExpressionRexConverter(
+      RelDataTypeFactory typeFactory,
+      ScalarFunctionConverter scalarFunctionConverter,
+      WindowFunctionConverter windowFunctionConverter,
+      TypeConverter typeConverter,
+      TypeObserver typeObserver) {
     this.typeFactory = typeFactory;
     this.typeConverter = typeConverter;
     this.rexBuilder = new RexBuilder(typeFactory);
     this.scalarFunctionConverter = scalarFunctionConverter;
     this.windowFunctionConverter = windowFunctionConverter;
+    this.typeObserver = Objects.requireNonNull(typeObserver, "typeObserver");
   }
 
   /**
@@ -521,14 +548,33 @@ public class ExpressionRexConverter
             .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
-    if (operator == SqlStdOperatorTable.CONCAT && args.size() > 2) {
-      return args.stream()
-          .skip(1)
-          .reduce(
-              args.get(0),
-              (left, right) -> rexBuilder.makeCall(returnType, operator, List.of(left, right)));
+    RexNode rexCall = rexBuilder.makeCall(returnType, operator, args);
+    // If type observations are not needed, avoid recomputing the RexCall with Calcite's
+    // independently inferred return type.
+    if (typeObserver == TypeObserver.NOOP) {
+      return rexCall;
     }
-    return rexBuilder.makeCall(returnType, operator, args);
+    observeScalarType(expr, () -> rexBuilder.makeCall(operator, args));
+    return rexCall;
+  }
+
+  private void observeScalarType(
+      Expression.ScalarFunctionInvocation expression, Supplier<RexNode> inferredCallSupplier) {
+    TypeObservation observation;
+    RexNode inferredCall;
+    try {
+      inferredCall = inferredCallSupplier.get();
+    } catch (RuntimeException inferenceFailure) {
+      observation =
+          TypeObservation.failure(
+              TypeObservation.Source.SCALAR_FUNCTION, expression, inferenceFailure);
+      typeObserver.observe(observation);
+      return;
+    }
+    observation =
+        TypeObservation.success(
+            TypeObservation.Source.SCALAR_FUNCTION, expression, inferredCall.getType());
+    typeObserver.observe(observation);
   }
 
   private String callConversionFailureMessage(
@@ -651,9 +697,7 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.InPredicate expr, Context context) throws RuntimeException {
     List<RexNode> needles =
         expr.needles().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
-    context.incrementSubqueryDepth();
     RelNode rel = expr.haystack().accept(relNodeConverter, context);
-    context.decrementSubqueryDepth();
     return RexSubQuery.in(rel, ImmutableList.copyOf(needles));
   }
 
@@ -744,27 +788,21 @@ public class ExpressionRexConverter
     } else if (expr.isOuterReference()) {
       final ReferenceSegment segment = expr.segments().get(0);
 
-      final RexNode rexInputRef;
       if (segment instanceof FieldReference.StructField) {
         final FieldReference.StructField field = (FieldReference.StructField) segment;
 
-        final RangeMap<Integer, RelDataType> fieldRangeMap =
-            context.getOuterRowTypeRangeMap(expr.outerReferenceStepsOut().get());
-        final Range<Integer> range = fieldRangeMap.getEntry(field.offset()).getKey();
-        final int fieldOffset = field.offset() - range.lowerEndpoint();
-
+        // Resolve the id-based outer reference by anchor. Incoming offset-based (steps_out) plans
+        // are normalized to the id-based form at the conversion boundary, so rel_reference is set.
+        final int anchor = expr.outerReferenceRelReference().get();
+        final RelDataType rowType = context.getAnchorRowType(anchor);
         final CorrelationId correlationId =
-            relNodeConverter.getRelBuilder().getCluster().createCorrel();
-        context.addCorrelationId(expr.outerReferenceStepsOut().get(), correlationId);
-        rexInputRef =
-            rexBuilder.makeFieldAccess(
-                rexBuilder.makeCorrel(fieldRangeMap.get(field.offset()), correlationId),
-                fieldOffset);
+            context.correlationIdForAnchor(
+                anchor, () -> relNodeConverter.getRelBuilder().getCluster().createCorrel());
+        return rexBuilder.makeFieldAccess(
+            rexBuilder.makeCorrel(rowType, correlationId), field.offset());
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
-
-      return rexInputRef;
     } else if (expr.isLambdaParameterReference()) {
       // as of now calcite doesn't support nested lambda functions
       // https://github.com/substrait-io/substrait-java/issues/711
@@ -827,17 +865,13 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(ScalarSubquery expr, Context context) throws RuntimeException {
-    context.incrementSubqueryDepth();
     RelNode inputRelnode = expr.input().accept(relNodeConverter, context);
-    context.decrementSubqueryDepth();
     return RexSubQuery.scalar(inputRelnode);
   }
 
   @Override
   public RexNode visit(SetPredicate expr, Context context) throws RuntimeException {
-    context.incrementSubqueryDepth();
     RelNode inputRelnode = expr.tuples().accept(relNodeConverter, context);
-    context.decrementSubqueryDepth();
     switch (expr.predicateOp()) {
       case PREDICATE_OP_EXISTS:
         return RexSubQuery.exists(inputRelnode);

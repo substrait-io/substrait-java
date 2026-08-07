@@ -40,6 +40,15 @@ class NameRoundtripTest extends PlanTestBase {
   }
 
   @Test
+  void roundTripNameChangingProjectionOverAggregate() throws Exception {
+    // Calcite wraps the aggregate in a name-changing identity projection (b -> B). That projection
+    // is redundant in Substrait (output names live on Plan.Root), so it must not break the round
+    // trip by surviving on only one side of the conversion.
+    assertFullRoundTrip(
+        "SELECT \"a\", \"B\" FROM foo GROUP BY a, b", "CREATE TABLE foo(a BIGINT, b BIGINT)");
+  }
+
+  @Test
   void preserveNamesFromSubstrait() {
     NamedScan rel =
         sb.namedScan(

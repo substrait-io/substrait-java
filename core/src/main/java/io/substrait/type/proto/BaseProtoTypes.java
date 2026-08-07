@@ -18,6 +18,7 @@ abstract class BaseProtoTypes<T, I> {
   public final T DATE;
   public final T INTERVAL_YEAR;
   public final T UUID;
+  public final T UNBOUND;
 
   public BaseProtoTypes(Type.Nullability nullability) {
     this.nullability = nullability;
@@ -33,6 +34,8 @@ abstract class BaseProtoTypes<T, I> {
     DATE = wrap(Type.Date.newBuilder().setNullability(nullability).build());
     INTERVAL_YEAR = wrap(Type.IntervalYear.newBuilder().setNullability(nullability).build());
     UUID = wrap(Type.UUID.newBuilder().setNullability(nullability).build());
+    // The unbound type carries no nullability, so this value is identical in every container.
+    UNBOUND = wrap(Type.Unbound.newBuilder().build());
   }
 
   public abstract T fixedChar(I len);

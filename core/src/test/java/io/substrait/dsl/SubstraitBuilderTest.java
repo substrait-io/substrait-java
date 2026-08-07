@@ -24,6 +24,7 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Sort;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -133,16 +134,17 @@ class SubstraitBuilderTest extends TestBase {
     void testFetchAndLimit() {
       final NamedScan scan = createSimpleScan();
       Fetch limit = builder.limit(10, scan);
-      assertEquals(10, limit.getCount().getAsLong());
-      assertEquals(0, limit.getOffset());
+      // offset/count are i64-literal expressions; offset 0 is left unset.
+      assertEquals(Optional.of(builder.i64(10)), limit.getCount());
+      assertEquals(Optional.empty(), limit.getOffset());
       limit = builder.limit(10, Remap.of(List.of(0, 1)), scan);
       assertNotNull(limit);
 
       Fetch offset = builder.offset(5, scan);
-      assertEquals(5, offset.getOffset());
+      assertEquals(Optional.of(builder.i64(5)), offset.getOffset());
 
       offset = builder.offset(5, Remap.of(List.of(0, 1)), scan);
-      assertEquals(5, offset.getOffset());
+      assertEquals(Optional.of(builder.i64(5)), offset.getOffset());
     }
 
     @Test
