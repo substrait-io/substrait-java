@@ -79,7 +79,8 @@ class VirtualTableScanTest extends PlanTestBase {
   void emptySchemaNonEmptyTable() {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
     assertThrows(
-        AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
+        IllegalArgumentException.class,
+        () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
   @Test

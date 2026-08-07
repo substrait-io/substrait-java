@@ -1789,13 +1789,28 @@ public interface Expression extends FunctionArg {
      */
     public abstract List<Expression> values();
 
-    /** Validates that the nested list is not empty and all values have the same type. */
+    /**
+     * Validates that the nested list is not empty and all values have the same type.
+     *
+     * @throws IllegalArgumentException if the list is empty or its values have differing types
+     */
     @Value.Check
     protected void check() {
-      assert !values().isEmpty() : "To specify an empty list, use ExpressionCreator.emptyList()";
+      if (values().isEmpty()) {
+        throw new IllegalArgumentException(
+            "To specify an empty list, use ExpressionCreator.emptyList()");
+      }
 
-      assert values().stream().map(Expression::getType).distinct().count() <= 1
-          : "All values in NestedList must have the same type";
+      List<Type> distinctTypes =
+          values().stream()
+              .map(Expression::getType)
+              .distinct()
+              .collect(java.util.stream.Collectors.toList());
+      if (distinctTypes.size() > 1) {
+        throw new IllegalArgumentException(
+            String.format(
+                "All values in NestedList must have the same type, found: %s", distinctTypes));
+      }
     }
 
     @Override

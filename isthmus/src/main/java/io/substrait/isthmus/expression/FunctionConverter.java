@@ -559,10 +559,16 @@ public abstract class FunctionConverter<
      * @param rexOperands operand RexNodes
      * @param opTypes operand type strings (Substrait)
      * @return stream of candidate key suffixes to test
+     * @throws IllegalStateException if the operand and operand type counts differ
      */
     private Stream<String> matchKeys(List<RexNode> rexOperands, List<String> opTypes) {
 
-      assert (rexOperands.size() == opTypes.size());
+      if (rexOperands.size() != opTypes.size()) {
+        throw new IllegalStateException(
+            String.format(
+                "Operand count (%d) does not match operand type count (%d)",
+                rexOperands.size(), opTypes.size()));
+      }
 
       if (rexOperands.isEmpty()) {
         return Stream.of("");
