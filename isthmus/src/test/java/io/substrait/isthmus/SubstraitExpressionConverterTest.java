@@ -300,6 +300,30 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
+  void injectTypeObserverByOverridingConverterProvider() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ConverterProvider observingProvider =
+        new ConverterProvider() {
+          @Override
+          public TypeObserver getTypeObserver() {
+            return observed::set;
+          }
+        };
+    Expression.ScalarFunctionInvocation expr =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+            "add:i32_i32",
+            R.I32,
+            sb.i32(7),
+            sb.i32(42));
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
+
+    new SubstraitToCalcite(observingProvider).convert(query);
+
+    assertEquals(R.I32, observed.get().suppliedType());
+  }
+
+  @Test
   void observeEachNestedScalarFunction() {
     List<TypeObservation> observations = new ArrayList<>();
     ExpressionRexConverter observingConverter = observingConverter(observations::add);
@@ -415,7 +439,10 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
     RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
 
-    assertEquals(SqlTypeName.INTEGER, observed.get().inferredType().orElseThrow().getSqlTypeName());
+    // LAG with no default operand forces a nullable return type.
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, N.I32),
+        observed.get().inferredType().orElseThrow());
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
   }
 

@@ -551,15 +551,10 @@ public class ExpressionRexConverter
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
     RexNode rexCall = rexBuilder.makeCall(returnType, operator, args);
-    // If type observations are not needed, avoid recomputing the RexCall with Calcite's
-    // independently inferred return type.
-    if (typeObserver == TypeObserver.NOOP) {
-      return rexCall;
-    }
     observeType(
         expr,
         TypeObservation.Source.SCALAR_FUNCTION,
-        () -> rexBuilder.makeCall(operator, args).getType());
+        () -> rexBuilder.deriveReturnType(operator, args));
     return rexCall;
   }
 
@@ -567,6 +562,11 @@ public class ExpressionRexConverter
       Expression expression,
       TypeObservation.Source source,
       Supplier<RelDataType> inferredTypeSupplier) {
+    // The conversion result never depends on the independently inferred type, so when no observer
+    // is installed skip Calcite's inference entirely.
+    if (typeObserver == TypeObserver.NOOP) {
+      return;
+    }
     TypeObservation observation;
     RelDataType inferredType;
     try {
@@ -648,9 +648,6 @@ public class ExpressionRexConverter
             nullWhenCountZero,
             distinct,
             ignoreNulls);
-    if (typeObserver == TypeObserver.NOOP) {
-      return rexOver;
-    }
     observeType(
         expr,
         TypeObservation.Source.WINDOW_FUNCTION,
