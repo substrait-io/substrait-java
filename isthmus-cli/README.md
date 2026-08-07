@@ -27,25 +27,46 @@ isthmus 0.1
 ```
 $ ./isthmus-cli/build/native/nativeCompile/isthmus --help
 
-Usage: isthmus [-hV] [--outputformat=<outputFormat>]
+Usage: isthmus [-hV] [--stacktrace] [--outputformat=<outputFormat>]
                [--unquotedcasing=<unquotedCasing>] [-c=<createStatements>]...
                [-e=<sqlExpressions>...]... [<sql>]
 Convert SQL Queries and SQL Expressions to Substrait
-      [<sql>]     A SQL query
+      [<sql>]        A SQL query
   -c, --create=<createStatements>
-                  One or multiple create table statements e.g. CREATE
-                    TABLE T1(foo int, bar bigint)
+                     One or multiple create table statements e.g. CREATE TABLE
+                       T1(foo int, bar bigint)
   -e, --expression=<sqlExpressions>...
-                  One or more SQL expressions e.g. col + 1
-  -h, --help      Show this help message and exit.
+                     One or more SQL expressions e.g. col + 1
+  -h, --help         Show this help message and exit.
       --outputformat=<outputFormat>
-                  Set the output format for the generated plan:
-                    PROTOJSON, PROTOTEXT, BINARY
+                     Set the output format for the generated plan: PROTOJSON,
+                       PROTOTEXT, BINARY
+      --stacktrace   Print the full stack trace of any error, not just its
+                       message
       --unquotedcasing=<unquotedCasing>
-                  Calcite's casing policy for unquoted identifiers:
-                    UNCHANGED, TO_UPPER, TO_LOWER
-  -V, --version   Print version information and exit.
+                     Calcite's casing policy for unquoted identifiers:
+                       UNCHANGED, TO_UPPER, TO_LOWER
+  -V, --version      Print version information and exit.
 ```
+
+### Errors
+
+A mistake in the SQL is reported as a message, along with a hint about the option to reach for where one applies:
+
+```
+$ ./isthmus-cli/build/native/nativeCompile/isthmus "SELECT lastName FROM Persons"
+
+Error: From line 1, column 22 to line 1, column 28: Object 'PERSONS' not found
+
+Hint: table definitions are not part of the query. Pass a CREATE TABLE
+statement for each table it references using -c / --create:
+
+  isthmus -c "CREATE TABLE PERSONS (col1 INT, col2 VARCHAR)" "SELECT * FROM PERSONS"
+
+Unquoted identifiers are upper-cased unless --unquotedcasing says otherwise.
+```
+
+Add `--stacktrace` to get the full stack trace as well. Anything that is not a recognizable problem with the input is always reported with its stack trace.
 
 ## Example
 

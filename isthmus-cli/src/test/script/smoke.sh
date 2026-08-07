@@ -39,3 +39,19 @@ echo "${LINEITEM}"
 
 # SQL Expression - 03 Projection expression (column-1, column-2, column-3)
 "${CMD}" --expression 'l_orderkey + 9888486986' 'l_orderkey * 2' 'l_orderkey > 10' 'l_orderkey in (10, 20)' --create "${LINEITEM}"
+
+# Error path - a query over an undefined table must be reported as a message hinting at --create,
+# not as a Java stack trace
+if error=$("${CMD}" 'select * from lineitem' 2>&1); then
+  echo "expected a query without a table definition to fail"
+  exit 1
+fi
+echo "${error}"
+if ! grep -q -- '--create' <<<"${error}"; then
+  echo "expected a hint about --create"
+  exit 1
+fi
+if grep -q 'CalciteContextException' <<<"${error}"; then
+  echo "expected a message instead of a stack trace"
+  exit 1
+fi
