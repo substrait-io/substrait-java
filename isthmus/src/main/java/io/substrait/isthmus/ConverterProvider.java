@@ -88,6 +88,9 @@ public class ConverterProvider {
   /** The Calcite SQL parser configuration, controlling parsing behaviour like identifier casing. */
   protected final SqlParser.Config sqlParserConfig;
 
+  /** Observer for supplied and independently inferred expression types. */
+  protected final TypeObserver typeObserver;
+
   /** Converter for Substrait scalar functions. */
   protected ScalarFunctionConverter scalarFunctionConverter;
 
@@ -221,6 +224,7 @@ public class ConverterProvider {
             .unquotedCasing
             .map(builder.sqlParserConfig::withUnquotedCasing)
             .orElse(builder.sqlParserConfig);
+    this.typeObserver = builder.typeObserver;
 
     this.scalarFunctionConverter =
         builder.scalarFunctionConverter.orElseGet(
@@ -429,12 +433,13 @@ public class ConverterProvider {
   /**
    * Returns the observer for supplied and independently inferred expression types.
    *
-   * <p>Override to collect type observations during Substrait-to-Calcite conversion.
+   * <p>Configure via {@link Builder#typeObserver(TypeObserver)} or override this method to collect
+   * type observations during Substrait-to-Calcite conversion.
    *
    * @return a no-op observer by default
    */
   public TypeObserver getTypeObserver() {
-    return TypeObserver.NOOP;
+    return typeObserver;
   }
 
   /**
@@ -565,6 +570,7 @@ public class ConverterProvider {
     private TypeConverter typeConverter = TypeConverter.DEFAULT;
     private Plan.ExecutionBehavior executionBehavior = createDefaultExecutionBehavior();
     private SqlParser.Config sqlParserConfig = DEFAULT_SQL_PARSER_CONFIG;
+    private TypeObserver typeObserver = TypeObserver.NOOP;
     private Optional<Casing> unquotedCasing = Optional.empty();
 
     // Derived from the extensions and type factory at build time when left unset.
@@ -643,6 +649,17 @@ public class ConverterProvider {
      */
     public Builder unquotedCasing(Casing unquotedCasing) {
       this.unquotedCasing = Optional.ofNullable(unquotedCasing);
+      return this;
+    }
+
+    /**
+     * Sets the observer for supplied and independently inferred expression types.
+     *
+     * @param typeObserver the type observer
+     * @return this builder
+     */
+    public Builder typeObserver(TypeObserver typeObserver) {
+      this.typeObserver = typeObserver;
       return this;
     }
 

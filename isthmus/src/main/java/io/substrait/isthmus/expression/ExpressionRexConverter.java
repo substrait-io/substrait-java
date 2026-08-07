@@ -39,6 +39,7 @@ import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCallBinding;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLambdaRef;
@@ -51,6 +52,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -549,31 +551,32 @@ public class ExpressionRexConverter
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
     RexNode rexCall = rexBuilder.makeCall(returnType, operator, args);
-    // If type observations are not needed, avoid recomputing the RexCall with Calcite's
-    // independently inferred return type.
-    if (typeObserver == TypeObserver.NOOP) {
-      return rexCall;
-    }
-    observeScalarType(expr, () -> rexBuilder.makeCall(operator, args));
+    observeType(
+        expr,
+        TypeObservation.Source.SCALAR_FUNCTION,
+        () -> rexBuilder.deriveReturnType(operator, args));
     return rexCall;
   }
 
-  private void observeScalarType(
-      Expression.ScalarFunctionInvocation expression, Supplier<RexNode> inferredCallSupplier) {
+  private void observeType(
+      Expression expression,
+      TypeObservation.Source source,
+      Supplier<RelDataType> inferredTypeSupplier) {
+    // The conversion result never depends on the independently inferred type, so when no observer
+    // is installed skip Calcite's inference entirely.
+    if (typeObserver == TypeObserver.NOOP) {
+      return;
+    }
     TypeObservation observation;
-    RexNode inferredCall;
+    RelDataType inferredType;
     try {
-      inferredCall = inferredCallSupplier.get();
+      inferredType = inferredTypeSupplier.get();
     } catch (RuntimeException inferenceFailure) {
-      observation =
-          TypeObservation.failure(
-              TypeObservation.Source.SCALAR_FUNCTION, expression, inferenceFailure);
+      observation = TypeObservation.failure(source, expression, inferenceFailure);
       typeObserver.observe(observation);
       return;
     }
-    observation =
-        TypeObservation.success(
-            TypeObservation.Source.SCALAR_FUNCTION, expression, inferredCall.getType());
+    observation = TypeObservation.success(source, expression, inferredType);
     typeObserver.observe(observation);
   }
 
@@ -631,19 +634,52 @@ public class ExpressionRexConverter
     boolean nullWhenCountZero = false;
     boolean allowPartial = true;
 
-    return rexBuilder.makeOver(
-        outputType,
-        (SqlAggFunction) operator,
-        args,
-        partitionKeys,
-        orderKeys,
-        lowerBound,
-        upperBound,
-        rowMode,
-        allowPartial,
-        nullWhenCountZero,
-        distinct,
-        ignoreNulls);
+    RexNode rexOver =
+        rexBuilder.makeOver(
+            outputType,
+            (SqlAggFunction) operator,
+            args,
+            partitionKeys,
+            orderKeys,
+            lowerBound,
+            upperBound,
+            rowMode,
+            allowPartial,
+            nullWhenCountZero,
+            distinct,
+            ignoreNulls);
+    observeType(
+        expr,
+        TypeObservation.Source.WINDOW_FUNCTION,
+        () -> operator.inferReturnType(windowBinding(operator, args, lowerBound, upperBound)));
+    return rexOver;
+  }
+
+  /**
+   * Builds the operand binding Calcite itself uses when inferring the return type of a windowed
+   * aggregate.
+   *
+   * <p>{@link RexBuilder#deriveReturnType(SqlOperator, java.util.List)} binds the operands with a
+   * plain {@link RexCallBinding}, whose {@link
+   * org.apache.calcite.sql.SqlOperatorBinding#hasEmptyGroup()} is always {@code false}. Calcite's
+   * validator instead derives that flag from the window bounds, so any return type strategy that
+   * consults it (for example {@code ARG0_NULLABLE_IF_EMPTY} or {@code AGG_SUM}) widens its result
+   * to nullable over a frame that may be empty. Binding without the flag would report a
+   * non-nullable inferred type for such an operator, so a genuine nullability deviation would be
+   * observed as a match.
+   */
+  private RexCallBinding windowBinding(
+      SqlOperator operator,
+      List<RexNode> operands,
+      RexWindowBound lowerBound,
+      RexWindowBound upperBound) {
+    boolean emptyGroup = !SqlWindow.isAlwaysNonEmpty(lowerBound, upperBound);
+    return new RexCallBinding(typeFactory, operator, operands, ImmutableList.of()) {
+      @Override
+      public boolean hasEmptyGroup() {
+        return emptyGroup;
+      }
+    };
   }
 
   private Set<SqlKind> asSqlKind(Expression.SortDirection direction) {
