@@ -21,7 +21,9 @@ import io.substrait.type.TypeVisitor;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -481,13 +483,26 @@ public class ProtoExpressionConverter {
    */
   public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
     switch (nested.getNestedTypeCase()) {
+      case STRUCT:
+        List<Expression> fields =
+            nested.getStruct().getFieldsList().stream()
+                .map(this::from)
+                .collect(Collectors.toList());
+        return ExpressionCreator.nestedStruct(nested.getNullable(), fields);
       case LIST:
         List<Expression> list =
             nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
         return ExpressionCreator.nestedList(nested.getNullable(), list);
+      case MAP:
+        // A LinkedHashMap keeps the key-value pairs in the order the producer emitted them.
+        Map<Expression, Expression> map = new LinkedHashMap<>();
+        for (io.substrait.proto.Expression.Nested.Map.KeyValue keyValue :
+            nested.getMap().getKeyValuesList()) {
+          map.put(from(keyValue.getKey()), from(keyValue.getValue()));
+        }
+        return ExpressionCreator.nestedMap(nested.getNullable(), map);
       default:
-        throw new UnsupportedOperationException(
-            "Unimplemented nested type: " + nested.getNestedTypeCase());
+        throw new IllegalStateException("Unexpected nested type: " + nested.getNestedTypeCase());
     }
   }
 

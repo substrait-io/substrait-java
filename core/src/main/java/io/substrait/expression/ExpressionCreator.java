@@ -572,6 +572,22 @@ public class ExpressionCreator {
   }
 
   /**
+   * Creates a nested map expression with one or more key-value pairs.
+   *
+   * <p>Note: This method cannot be used to construct an empty map. To create an empty map, use
+   * {@link ExpressionCreator#emptyMap(boolean, Type, Type)} which returns an {@link
+   * Expression.EmptyMapLiteral}.
+   *
+   * @param nullable whether the map can be null
+   * @param values the key-value pairs in the nested map
+   * @return a NestedMap expression
+   */
+  public static Expression.NestedMap nestedMap(
+      boolean nullable, Map<Expression, Expression> values) {
+    return Expression.NestedMap.builder().nullable(nullable).putAllValues(values).build();
+  }
+
+  /**
    * Create a UserDefinedAnyLiteral with google.protobuf.Any representation.
    *
    * @param nullable whether the literal is nullable
