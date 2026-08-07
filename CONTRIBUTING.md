@@ -2,9 +2,19 @@
 
 This page provides some orientation and recommendations on how to get the best results when engaging with the community.
 
-1. [Commit conventions](#commit-conventions)
-2. [Style Guide](#style-guide)
-3. [Building and testing](#building-and-testing)
+1. [The specification is the source of truth](#the-specification-is-the-source-of-truth)
+2. [Commit conventions](#commit-conventions)
+3. [Pull requests](#pull-requests)
+4. [Style Guide](#style-guide)
+5. [Building and testing](#building-and-testing)
+
+## The specification is the source of truth
+
+Substrait Java is an implementation of the [Substrait specification](https://substrait.io/); it does not define Substrait semantics. Review behavioral changes against the spec — the proto comments and the spec text for the version this tree targets, which is pinned by the `substrait-packaging` version in `gradle/libs.versions.toml` and reported by `io.substrait.SubstraitVersion.VERSION`.
+
+Where the spec is genuinely unclear, don't settle it here. Survey the ecosystem for an existing consensus first. The closest comparison is the sibling language bindings listed under [Active Libraries](https://substrait.io/community/active_libraries/) — `substrait-go`, `substrait-python`, and `substrait-rs` solve the same modeling problem at the same layer, so how they represent a construct is directly relevant; that page also marks which bindings are unmaintained, and a stale binding's choice is weaker evidence. For questions about runtime semantics rather than modeling, the engines under [Powered by Substrait](https://substrait.io/community/powered_by/) (DataFusion, DuckDB, Acero, Velox, Gluten) are the better reference.
+
+If they agree, follow that de facto consensus and say so in the PR. If they disagree, or none of them cover the case, raise a clarification issue in [`substrait-io/substrait`](https://github.com/substrait-io/substrait/issues) or bring it to the [community](https://substrait.io/community/) channels rather than encoding a guess — and record the open question in the PR so the assumption stays reviewable.
 
 ## Commit Conventions
 
@@ -16,6 +26,24 @@ pre-commit installed at .git/hooks/commit-msg
 ```
 
 Examples of commit messages can be seen [here](https://www.conventionalcommits.org/en/v1.0.0/#examples).
+
+## Pull requests
+
+Pull requests are squash-merged, and the **PR title and description become the commit message** that `semantic-release` parses to build [`CHANGELOG.md`](CHANGELOG.md). The title is the subject and the description is the body, so the two together must form a valid conventional commit; CI checks both and comments on the PR when they don't. [`.github/pull_request_template.md`](.github/pull_request_template.md) restates that where you write the description.
+
+Because the description is changelog input rather than a review scratchpad, leave out anything the diff and the CI checks already show:
+
+* **Lists of files touched** — they are in the diff.
+* **Claims that CI-verified things pass** — "tests pass", "spotless clean". If they didn't, the checks would be red.
+* **Process notes that are already implicit** — "opened as draft pending review".
+
+Do include the rationale, and for spec-tracking changes the spec version (e.g. `spec v0.88.0`).
+
+### Breaking changes
+
+Mark a breaking change twice: with `!` after the type and scope in the title (`feat(core)!: …`), and with a `BREAKING CHANGE:` footer in the description. The `!` drives the version bump; the footer text is what populates the ⚠ BREAKING CHANGES section of the release notes, so describe what breaks and what consumers should do instead.
+
+Keep that footer **last, with nothing after it** — below the rationale and below any `Closes #NNN` line. The conventional-commits parser ends a `BREAKING CHANGE` note only at another footer keyword or an issue reference; anything else trailing it, whether prose, an attribution line, or a stray comment marker, is absorbed into the note and published verbatim. This is not hypothetical — the ⚠ BREAKING CHANGES section of v0.98.0 ends with a tool-attribution line that was never meant to be release notes. (`.releaserc.mjs` strips trailing git trailers such as `Signed-off-by:` for exactly this reason, but it matches only `Key: value` trailers, so it cannot recognize prose.) Putting the footer last also means the squash-merge message can be trimmed to just the subject and the footer in a single cut.
 
 ## Style guide
 
