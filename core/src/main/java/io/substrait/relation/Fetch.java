@@ -1,6 +1,7 @@
 package io.substrait.relation;
 
 import io.substrait.expression.Expression;
+import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
 import java.util.Optional;
@@ -29,30 +30,31 @@ public abstract class Fetch extends SingleInputRel implements HasExtension {
    */
   public abstract Optional<Expression> getCount();
 
+  /**
+   * Validates that the offset and count expressions are integer-typed. Both must evaluate to a
+   * non-negative integer; {@code i64} is recommended but not required, so any integer width is
+   * accepted (spec v0.99.0).
+   *
+   * @throws IllegalArgumentException if the offset or count expression is not integer-typed
+   */
   @Value.Check
   protected void check() {
-    getOffset()
-        .ifPresent(
-            offset -> {
-              Type type = offset.getType();
-              if (!type.isInteger()) {
-                throw new IllegalArgumentException(
-                    "Fetch offset expression must have an integer type "
-                        + "(I8, I16, I32 or I64), but got: "
-                        + type);
-              }
-            });
-    getCount()
-        .ifPresent(
-            count -> {
-              Type type = count.getType();
-              if (!type.isInteger()) {
-                throw new IllegalArgumentException(
-                    "Fetch count expression must have an integer type "
-                        + "(I8, I16, I32 or I64), but got: "
-                        + type);
-              }
-            });
+    requireIntegerType(getOffset(), "offset");
+    requireIntegerType(getCount(), "count");
+  }
+
+  private static void requireIntegerType(Optional<Expression> expression, String field) {
+    expression.ifPresent(
+        e -> {
+          Type type = e.getType();
+          if (!type.isInteger()) {
+            throw new IllegalArgumentException(
+                "Fetch "
+                    + field
+                    + " expression must have an integer type (i8, i16, i32 or i64), but got: "
+                    + type.accept(new StringTypeVisitor()));
+          }
+        });
   }
 
   @Override

@@ -54,10 +54,8 @@ public interface Type extends TypeExpression, ParameterizedType, NullableType, F
   }
 
   /**
-   * Returns whether this is one of the integer types {@link I8}, {@link I16}, {@link I32} or {@link
-   * I64}. The Substrait spec only "recommends" {@code i64} for contexts such as {@code FetchRel}'s
-   * {@code offset_expr}/{@code count_expr}, so callers that accept any integer width can use this
-   * to reject non-integer types.
+   * Returns whether this is one of the fixed-width signed integer types: {@link I8}, {@link I16},
+   * {@link I32} or {@link I64}.
    *
    * @return {@code true} if this is an integer type
    */
