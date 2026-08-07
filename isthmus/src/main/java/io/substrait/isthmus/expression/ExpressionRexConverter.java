@@ -662,13 +662,11 @@ public class ExpressionRexConverter
    * <p>{@link RexBuilder#deriveReturnType(SqlOperator, java.util.List)} binds the operands with a
    * plain {@link RexCallBinding}, whose {@link
    * org.apache.calcite.sql.SqlOperatorBinding#hasEmptyGroup()} is always {@code false}. Calcite's
-   * validator instead derives that flag from the window bounds, and an operator whose return type
-   * strategy consults it widens its result to nullable over a frame that may be empty. Among the
-   * operators reachable here that is {@code FIRST_VALUE}, {@code LAST_VALUE} and {@code NTH_VALUE},
-   * which use {@code ARG0_NULLABLE_IF_EMPTY}; the aggregates usable in a window are unaffected
-   * because {@link io.substrait.isthmus.AggregateFunctions} already forces their results nullable.
-   * Binding without the flag would report a non-nullable inferred type for the former, so a genuine
-   * nullability deviation would be observed as a match.
+   * validator instead derives that flag from the window bounds, so any return type strategy that
+   * consults it (for example {@code ARG0_NULLABLE_IF_EMPTY} or {@code AGG_SUM}) widens its result
+   * to nullable over a frame that may be empty. Binding without the flag would report a
+   * non-nullable inferred type for such an operator, so a genuine nullability deviation would be
+   * observed as a match.
    */
   private RexCallBinding windowBinding(
       SqlOperator operator,
