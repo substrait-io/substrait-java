@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -419,6 +420,34 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
   }
 
   @Test
+  void observeNullableWindowTypeOverPossiblyEmptyWindow() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    // first_value infers ARG0 widened to nullable whenever the frame may be empty, and a frame
+    // bounded by a row offset carries no compile-time guarantee that it is not.
+    Expression.WindowFunctionInvocation expr =
+        firstValueOver(WindowBound.Preceding.of(1), WindowBound.Preceding.of(1));
+
+    expr.accept(observingConverter, Context.newContext());
+
+    assertTrue(observed.get().inferredType().orElseThrow().isNullable());
+  }
+
+  @Test
+  void observeNonNullableWindowTypeOverAlwaysNonEmptyWindow() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    // A frame running from the start of the partition to the current row always holds that row,
+    // so first_value keeps the non-nullable argument type.
+    Expression.WindowFunctionInvocation expr =
+        firstValueOver(WindowBound.UNBOUNDED, WindowBound.CURRENT_ROW);
+
+    expr.accept(observingConverter, Context.newContext());
+
+    assertFalse(observed.get().inferredType().orElseThrow().isNullable());
+  }
+
+  @Test
   void skipWindowTypeInferenceForNoopObserver() {
     AtomicInteger inferenceCalls = new AtomicInteger();
     ExpressionRexConverter nonObservingConverter =
@@ -496,6 +525,20 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
         Expression.WindowBoundsType.RANGE,
         WindowBound.UNBOUNDED,
         WindowBound.UNBOUNDED);
+  }
+
+  private Expression.WindowFunctionInvocation firstValueOver(
+      WindowBound lowerBound, WindowBound upperBound) {
+    return sb.windowFn(
+        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+        "first_value:any",
+        R.I32,
+        Expression.AggregationPhase.INITIAL_TO_RESULT,
+        Expression.AggregationInvocation.ALL,
+        Expression.WindowBoundsType.ROWS,
+        lowerBound,
+        upperBound,
+        sb.i32(42));
   }
 
   private ExpressionRexConverter observingConverter(TypeObserver observer) {

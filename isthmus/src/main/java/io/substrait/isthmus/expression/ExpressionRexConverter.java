@@ -39,6 +39,7 @@ import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCallBinding;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLambdaRef;
@@ -51,6 +52,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -652,8 +654,37 @@ public class ExpressionRexConverter
     observeType(
         expr,
         TypeObservation.Source.WINDOW_FUNCTION,
-        () -> rexBuilder.deriveReturnType(operator, args));
+        () -> operator.inferReturnType(windowBinding(operator, args, lowerBound, upperBound)));
     return rexOver;
+  }
+
+  /**
+   * Builds the operand binding Calcite itself uses when inferring the return type of a windowed
+   * aggregate.
+   *
+   * <p>{@link RexBuilder#deriveReturnType(SqlOperator, java.util.List)} binds the operands with a
+   * plain {@link RexCallBinding}, whose {@link
+   * org.apache.calcite.sql.SqlOperatorBinding#hasEmptyGroup()} is always {@code false}. Calcite's
+   * validator instead derives that flag from the window bounds, and an operator whose return type
+   * strategy consults it widens its result to nullable over a frame that may be empty. Among the
+   * operators reachable here that is {@code FIRST_VALUE}, {@code LAST_VALUE} and {@code NTH_VALUE},
+   * which use {@code ARG0_NULLABLE_IF_EMPTY}; the aggregates usable in a window are unaffected
+   * because {@link io.substrait.isthmus.AggregateFunctions} already forces their results nullable.
+   * Binding without the flag would report a non-nullable inferred type for the former, so a genuine
+   * nullability deviation would be observed as a match.
+   */
+  private RexCallBinding windowBinding(
+      SqlOperator operator,
+      List<RexNode> operands,
+      RexWindowBound lowerBound,
+      RexWindowBound upperBound) {
+    boolean emptyGroup = !SqlWindow.isAlwaysNonEmpty(lowerBound, upperBound);
+    return new RexCallBinding(typeFactory, operator, operands, ImmutableList.of()) {
+      @Override
+      public boolean hasEmptyGroup() {
+        return emptyGroup;
+      }
+    };
   }
 
   private Set<SqlKind> asSqlKind(Expression.SortDirection direction) {
