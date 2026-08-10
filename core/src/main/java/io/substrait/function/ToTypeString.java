@@ -223,7 +223,11 @@ public class ToTypeString
 
   @Override
   public String visit(ParameterizedType.StringLiteral expr) throws RuntimeException {
-    if (expr.value().toLowerCase().startsWith("any")) {
+    // Only the wildcard family any / any0-any9 collapses to "any" in a signature key; an ordinary
+    // named type parameter that merely starts with "any" (e.g. "anything") is not a wildcard and
+    // falls through to the throwing base visitor, so a declaration using one fails when its key is
+    // computed rather than being keyed as if it were any.
+    if (expr.isWildcard()) {
       return "any";
     } else {
       return super.visit(expr);
