@@ -534,9 +534,10 @@ public class ProtoRelConverter {
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
-    // No applyRelCommon here: unlike every other relation message, UpdateRel carries no `common`
-    // field (spec v0.99.0), so an update relation cannot express an emit mapping, a hint, a rel
-    // anchor or a common advanced extension.
+    // No applyRelCommon here: alone among the modeled relation messages, UpdateRel carries no
+    // `common` field (spec v0.99.0), so an update relation cannot express an emit mapping, a hint,
+    // a rel anchor or a common advanced extension. (ReferenceRel has none either, but no POJO
+    // models it.)
     return builder.build();
   }
 

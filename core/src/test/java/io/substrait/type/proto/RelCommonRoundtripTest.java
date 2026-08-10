@@ -75,7 +75,9 @@ class RelCommonRoundtripTest extends TestBase {
 
   /**
    * Relations whose protobuf message has no {@code common} field and which therefore cannot carry
-   * any {@code RelCommon} data at all (spec v0.99.0).
+   * any {@code RelCommon} data at all. {@code UpdateRel} is the only modeled message without one
+   * (spec v0.99.0); {@code ReferenceRel} has no {@code common} field either, but no POJO models it,
+   * so it cannot reach this set.
    */
   static final java.util.Set<Class<? extends Rel>> WITHOUT_REL_COMMON =
       Collections.singleton(NamedUpdate.class);

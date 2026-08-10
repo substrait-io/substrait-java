@@ -822,6 +822,14 @@ public class SubstraitBuilder {
   /**
    * Creates a named update relation that updates rows in a table with output field remapping.
    *
+   * <p>Note that {@code UpdateRel} has no {@code common} field as of spec v0.99.0, so it has
+   * nowhere to carry the emit mapping. The resulting relation therefore cannot be serialized:
+   * {@link io.substrait.relation.RelProtoConverter} rejects it rather than emitting a plan whose
+   * schema silently differs from the relation's own {@link
+   * io.substrait.relation.Rel#getRecordType()}. Until the spec gives {@code UpdateRel} a {@code
+   * common} field, use {@link #namedUpdate(Iterable, Iterable, List, Expression, boolean)} for
+   * relations that have to survive a round trip.
+   *
    * @param tableName the qualified name of the table to update
    * @param columnNames the names of the columns in the table
    * @param transformations the list of transformation expressions to apply

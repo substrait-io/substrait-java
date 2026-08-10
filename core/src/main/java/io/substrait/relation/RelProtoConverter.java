@@ -930,11 +930,13 @@ public class RelProtoConverter
 
   /**
    * Rejects {@link RelCommon} data on a relation whose protobuf message has no {@code common}
-   * field. {@code UpdateRel} is the only such message (spec v0.99.0), so an update relation cannot
-   * express an emit mapping, a hint, a rel anchor or a common advanced extension. The POJO model
-   * exposes those accessors on every {@link io.substrait.relation.Rel}, and an emit mapping
-   * additionally changes {@link io.substrait.relation.Rel#getRecordType()} — serializing such a
-   * relation would silently produce a plan with a different schema, so fail instead.
+   * field. {@code UpdateRel} is the only modeled message without one (spec v0.99.0), so an update
+   * relation cannot express an emit mapping, a hint, a rel anchor or a common advanced extension.
+   * ({@code ReferenceRel} has no {@code common} field either, but it points at another subtree
+   * instead of producing output of its own, and no POJO models it.) The POJO model exposes those
+   * accessors on every {@link io.substrait.relation.Rel}, and an emit mapping additionally changes
+   * {@link io.substrait.relation.Rel#getRecordType()} — serializing such a relation would silently
+   * produce a plan with a different schema, so fail instead.
    *
    * @param rel the relation about to be serialized
    */
