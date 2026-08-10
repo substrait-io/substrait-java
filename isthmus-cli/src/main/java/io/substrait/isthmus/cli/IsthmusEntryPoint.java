@@ -64,7 +64,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
 
   @Option(
       names = {"--stacktrace"},
-      description = "Print the full stack trace of any error, not just its message")
+      description = "Print the full stack trace of a conversion failure, not just its message")
   private boolean stackTrace;
 
   @Spec private CommandSpec spec;
@@ -75,12 +75,7 @@ public class IsthmusEntryPoint implements Callable<Integer> {
    * @param args Isthmus CLI arguments.
    */
   public static void main(String... args) {
-    CommandLine commandLine = createCommandLine();
-    if (args.length == 0) { // If no arguments print usage help
-      commandLine.usage(commandLine.getOut());
-      System.exit(CommandLine.ExitCode.OK);
-    }
-    System.exit(commandLine.execute(args));
+    System.exit(createCommandLine().execute(args));
   }
 
   /**
@@ -96,15 +91,6 @@ public class IsthmusEntryPoint implements Callable<Integer> {
     return commandLine;
   }
 
-  /**
-   * Reports whether the full stack trace of an error was asked for on the command line.
-   *
-   * @return true if {@code --stacktrace} was given
-   */
-  boolean isStackTraceRequested() {
-    return stackTrace;
-  }
-
   @Override
   public Integer call() throws Exception {
     if (sqlExpressions == null && sql == null) {
@@ -112,6 +98,13 @@ public class IsthmusEntryPoint implements Callable<Integer> {
           spec.commandLine(),
           "Missing SQL to convert: pass a SQL query as the first argument, "
               + "or SQL expressions with -e / --expression");
+    }
+    if (sqlExpressions != null && sql != null) {
+      throw new ParameterException(
+          spec.commandLine(),
+          "Give either a SQL query or -e / --expression, not both: the query '"
+              + sql
+              + "' would be ignored");
     }
     ConverterProvider provider = ConverterProvider.builder().unquotedCasing(unquotedCasing).build();
     // Isthmus image is parsing SQL Expression if that argument is defined

@@ -84,9 +84,7 @@ public class SubstraitCreateStatementParser {
         throw fail("Only simple table names are allowed.", create.name.getParserPosition());
       }
 
-      if (create.query != null) {
-        throw fail("CTAS not supported.", create.name.getParserPosition());
-      }
+      validateCreateTable(create);
 
       tableList.add(
           createSubstraitTable(
@@ -197,6 +195,26 @@ public class SubstraitCreateStatementParser {
   }
 
   /**
+   * Rejects the CREATE TABLE statements that carry no table schema to build a {@link
+   * SubstraitTable} from. Calcite's DDL grammar makes both the column list and the {@code AS query}
+   * optional and independent of each other, so a statement can arrive with either part missing.
+   *
+   * @param create the parsed CREATE TABLE statement; must not be null
+   * @throws SqlParseException if the statement defines its columns by a query, or does not define
+   *     them at all
+   */
+  private static void validateCreateTable(@NonNull final SqlCreateTable create)
+      throws SqlParseException {
+    if (create.query != null) {
+      throw fail("CTAS not supported.", create.name.getParserPosition());
+    }
+
+    if (create.columnList == null) {
+      throw fail("Column definitions are required.", create.name.getParserPosition());
+    }
+  }
+
+  /**
    * Parses one or more SQL strings containing only CREATE statements into a {@link CalciteSchema}
    * using the given provider's parser config.
    */
@@ -216,9 +234,7 @@ public class SubstraitCreateStatementParser {
 
         final SqlCreateTable create = (SqlCreateTable) parsed;
 
-        if (create.query != null) {
-          throw fail("CTAS not supported.", create.name.getParserPosition());
-        }
+        validateCreateTable(create);
 
         final List<String> names = create.name.names;
 

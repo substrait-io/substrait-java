@@ -41,8 +41,8 @@ Convert SQL Queries and SQL Expressions to Substrait
       --outputformat=<outputFormat>
                      Set the output format for the generated plan: PROTOJSON,
                        PROTOTEXT, BINARY
-      --stacktrace   Print the full stack trace of any error, not just its
-                       message
+      --stacktrace   Print the full stack trace of a conversion failure, not
+                       just its message
       --unquotedcasing=<unquotedCasing>
                      Calcite's casing policy for unquoted identifiers:
                        UNCHANGED, TO_UPPER, TO_LOWER
@@ -66,7 +66,15 @@ statement for each table it references using -c / --create:
 Unquoted identifiers are upper-cased unless --unquotedcasing says otherwise.
 ```
 
-Add `--stacktrace` to get the full stack trace as well. Anything that is not a recognizable problem with the input is always reported with its stack trace.
+Add `--stacktrace` to get the full stack trace of the failure as well. A conversion that fails for a reason that is not a recognizable problem with the input is always reported with its stack trace.
+
+The exit code distinguishes the two kinds of mistake:
+
+| Code | Meaning |
+| --- | --- |
+| 0 | The plan or extended expression was written to stdout |
+| 1 | The SQL could not be converted, or the conversion hit a defect |
+| 2 | The command line itself was wrong, e.g. no SQL was given |
 
 ## Example
 

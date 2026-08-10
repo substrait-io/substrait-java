@@ -26,6 +26,14 @@ dependencies {
   implementation(libs.classgraph)
   implementation(libs.guava)
   compileOnly(libs.graal.sdk)
+  // Only to name the parser class the native image must keep reflectively callable; :isthmus
+  // brings it along at runtime.
+  compileOnly(libs.calcite.server) {
+    exclude(group = "commons-lang", module = "commons-lang")
+      .because(
+        "calcite-core brings in commons-lang:commons-lang:2.4 which has a security vulnerability"
+      )
+  }
   implementation(libs.picocli)
   annotationProcessor(libs.picocli.codegen)
   implementation(libs.protobuf.java.util) {

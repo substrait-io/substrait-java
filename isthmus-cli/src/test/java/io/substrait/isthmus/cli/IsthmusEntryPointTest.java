@@ -26,6 +26,11 @@ class IsthmusEntryPointTest {
       assertFalse(err.contains("\tat "), () -> "unexpected stack trace in:\n" + err);
     }
 
+    /** Asserts that the error was reported with its stack trace. */
+    void assertStackTrace() {
+      assertTrue(err.contains("\tat "), () -> "expected a stack trace in:\n" + err);
+    }
+
     /**
      * Asserts that stderr contains the given snippets.
      *
@@ -34,6 +39,17 @@ class IsthmusEntryPointTest {
     void assertErrContains(String... snippets) {
       for (String snippet : snippets) {
         assertTrue(err.contains(snippet), () -> "expected '" + snippet + "' in:\n" + err);
+      }
+    }
+
+    /**
+     * Asserts that stderr contains none of the given snippets.
+     *
+     * @param snippets the snippets stderr must not contain
+     */
+    void assertErrDoesNotContain(String... snippets) {
+      for (String snippet : snippets) {
+        assertFalse(err.contains(snippet), () -> "unexpected '" + snippet + "' in:\n" + err);
       }
     }
   }
@@ -73,6 +89,25 @@ class IsthmusEntryPointTest {
   }
 
   @Test
+  void undefinedTableInSchemaIsSuggestedQualified() {
+    Run run = run("SELECT * FROM s.u", "-c", "CREATE TABLE s.t(a INT)");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Object 'U' not found within 'S'", "CREATE TABLE S.U");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void chosenCasingIsNotSecondGuessed() {
+    Run run = run("SELECT * FROM foo", "--unquotedcasing", "UNCHANGED");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Object 'foo' not found", "CREATE TABLE foo");
+    run.assertErrDoesNotContain("upper-cased");
+    run.assertNoStackTrace();
+  }
+
+  @Test
   void undefinedColumnIsExplained() {
     Run run = run("SELECT bar FROM foo", "-c", "CREATE TABLE foo(id INT)");
 
@@ -82,11 +117,30 @@ class IsthmusEntryPointTest {
   }
 
   @Test
+  void undefinedColumnWithoutCreatesSuggestsCreateOption() {
+    Run run = run("SELECT bar");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Column 'BAR' not found", "no table was defined", "CREATE TABLE T (BAR");
+    run.assertNoStackTrace();
+  }
+
+  @Test
   void unknownIdentifierInExpressionSuggestsCreateOption() {
     Run run = run("-e", "col + 1");
 
     assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
     run.assertErrContains("Unknown identifier 'COL'", "-e / --expression", "-c / --create");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void unknownIdentifierInCreateIsNotBlamedOnExpressions() {
+    Run run = run("SELECT 1", "-c", "CREATE TABLE foo(a NOSUCHTYPE)");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Unknown identifier 'NOSUCHTYPE'");
+    run.assertErrDoesNotContain("-e / --expression");
     run.assertNoStackTrace();
   }
 
@@ -129,6 +183,42 @@ class IsthmusEntryPointTest {
   }
 
   @Test
+  void createTableWithoutColumnsSuggestsAColumnList() {
+    Run run = run("SELECT * FROM foo", "-c", "CREATE TABLE foo");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Column definitions are required.", "needs the columns of the table");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void createTableWithoutColumnsSuggestsAColumnListForExpressions() {
+    Run run = run("-e", "1", "-c", "CREATE TABLE foo");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("Column definitions are required.", "needs the columns of the table");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void queryAfterExpressionOptionIsExplained() {
+    Run run = run("-e", "1 + 1", "SELECT 1");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("-e / --expression consumes every following argument");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void queryAndExpressionsTogetherReportsUsageError() {
+    Run run = run("SELECT 1", "-e", "1 + 1");
+
+    assertEquals(CommandLine.ExitCode.USAGE, run.statusCode);
+    run.assertErrContains("not both", "the query 'SELECT 1' would be ignored", "Usage: isthmus");
+    run.assertNoStackTrace();
+  }
+
+  @Test
   void missingSqlReportsUsageError() {
     Run run = run("-c", "CREATE TABLE foo(id INT)");
 
@@ -138,11 +228,30 @@ class IsthmusEntryPointTest {
   }
 
   @Test
+  void noArgumentsReportsUsageError() {
+    Run run = run();
+
+    assertEquals(CommandLine.ExitCode.USAGE, run.statusCode);
+    run.assertErrContains("Missing SQL to convert", "Usage: isthmus");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void failureWithoutAPositionKeepsTheStackTrace() {
+    // A parse failure that Calcite reports without a position did not come from the grammar, so it
+    // is a defect rather than a problem with the SQL and must stay reported as one.
+    Run run = run("");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertStackTrace();
+  }
+
+  @Test
   void stackTraceOptionKeepsTheStackTrace() {
     Run run = run("SELECT * FROM foo", "--stacktrace");
 
     assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
-    run.assertErrContains(
-        "Object 'FOO' not found", "-c / --create", "org.apache.calcite.runtime", "\tat ");
+    run.assertErrContains("Object 'FOO' not found", "-c / --create", "org.apache.calcite.runtime");
+    run.assertStackTrace();
   }
 }

@@ -47,11 +47,43 @@ if error=$("${CMD}" 'select * from lineitem' 2>&1); then
   exit 1
 fi
 echo "${error}"
-if ! grep -q -- '--create' <<<"${error}"; then
+# Match the hint itself rather than the option name, which also appears in the usage block
+if ! grep -q 'table definitions are not part of the query' <<<"${error}"; then
   echo "expected a hint about --create"
   exit 1
 fi
-if grep -q 'CalciteContextException' <<<"${error}"; then
+if grep -q $'\tat ' <<<"${error}"; then
   echo "expected a message instead of a stack trace"
+  exit 1
+fi
+
+# Error path - a syntax error must be reported at its position. Calcite collects the tokens the
+# grammar expected there by reflecting on the parser, which only works in the native image if those
+# productions were registered, so this is not covered by the JVM tests.
+if syntax=$("${CMD}" 'select 1 from' 2>&1); then
+  echo "expected a malformed query to fail"
+  exit 1
+fi
+echo "${syntax}"
+if ! grep -q 'Encountered "<EOF>" at line 1, column 13' <<<"${syntax}"; then
+  echo "expected the parse error to name the position"
+  exit 1
+fi
+if grep -q $'\tat ' <<<"${syntax}"; then
+  echo "expected a message instead of a stack trace"
+  exit 1
+fi
+
+# Error path - --stacktrace keeps the trace as well as the message
+if trace=$("${CMD}" --stacktrace 'select * from lineitem' 2>&1); then
+  echo "expected a query without a table definition to fail"
+  exit 1
+fi
+if ! grep -q 'table definitions are not part of the query' <<<"${trace}"; then
+  echo "expected --stacktrace to print the hint as well"
+  exit 1
+fi
+if ! grep -q $'\tat ' <<<"${trace}"; then
+  echo "expected --stacktrace to print the stack trace"
   exit 1
 fi
