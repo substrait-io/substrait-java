@@ -115,3 +115,54 @@ aggregate_functions:
           - name: some_arg
             value: i64
         return: i64
+  - name: "custom_typed_aggregate"
+    description: "an aggregate carrying a type argument ahead of its value argument"
+    impls:
+      - args:
+          - name: t
+            type: i32
+          - name: some_arg
+            value: i64
+        return: i64
+  - name: "custom_enum_aggregate"
+    description: "an aggregate whose enum argument no Calcite operator kind encodes"
+    impls:
+      - args:
+          - name: mode
+            options: [ EXACT, APPROXIMATE ]
+          - name: some_arg
+            value: i64
+        return: i64
+  - name: "custom_flags_aggregate"
+    description: "an aggregate with a variadic trailing enum argument"
+    impls:
+      - args:
+          - name: some_arg
+            value: i64
+          - name: flag
+            options: [ A, B, C ]
+        variadic:
+          min: 1
+        return: i64
+  - name: "custom_overlap"
+    description: "a concrete impl shadowing a wildcard impl on the reverse path"
+    impls:
+      - args:
+          - name: x
+            value: i32
+        return: i64
+      - args:
+          - name: x
+            value: any
+          - name: y
+            value: any
+        return: i64
+  - name: "custom_mix"
+    description: "a declaration whose return type differs from what a plan may declare"
+    impls:
+      - args:
+          - name: x
+            value: any
+          - name: y
+            value: string
+        return: i32
