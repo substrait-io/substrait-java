@@ -1,0 +1,120 @@
+%YAML 1.2
+---
+urn: extension:test:binding_extensions
+scalar_functions:
+  - name: "pair"
+    description: >-
+      Two plain (unnumbered) wildcards. Each argument binds independently, so the two may
+      be of different types.
+    impls:
+      - args:
+          - name: x
+            value: any
+          - name: y
+            value: any
+        return: boolean
+  - name: "same_pair"
+    description: >-
+      Two occurrences of one numbered wildcard, which must agree on a single type.
+    impls:
+      - args:
+          - name: x
+            value: any1
+          - name: y
+            value: any1
+        return: boolean
+  - name: "decimal_pair"
+    description: >-
+      Two decimals sharing one set of type parameters, with a concrete return type. The shared
+      parameters must agree even though nothing about the return depends on them.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,S>
+          - name: y
+            value: DECIMAL<P,S>
+        return: boolean
+  - name: "discrete_decimal"
+    description: >-
+      A DISCRETE signature over a parameterized decimal, so the declared argument nullability is
+      part of the signature just as it is for a concrete type.
+    impls:
+      - args:
+          - name: x
+            value: "DECIMAL?<P,S>"
+        nullability: DISCRETE
+        return: boolean
+  - name: "discrete_wildcard"
+    description: >-
+      A DISCRETE signature over a numbered wildcard, so the declared argument nullability is
+      part of the signature.
+    impls:
+      - args:
+          - name: x
+            value: any1
+        nullability: DISCRETE
+        return: any1
+  - name: "zero_scale"
+    description: >-
+      A decimal argument with a literal scale. The literal is a constraint on the actual type,
+      not a parameter name, so only an actual scale of exactly 0 binds.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,0>
+        return: boolean
+  - name: "cased_options"
+    description: >-
+      Two declared option names differing only in case. Substrait matches option names
+      case-insensitively, so this declaration is ambiguous.
+    impls:
+      - args:
+          - name: x
+            value: i32
+        options:
+          rounding:
+            values: [ TIE_TO_EVEN ]
+          ROUNDING:
+            values: [ TRUNCATE ]
+        return: boolean
+  - name: "typed"
+    description: >-
+      A declaration with a type argument: the declared pattern constrains the supplied type.
+    impls:
+      - args:
+          - name: t
+            type: i32
+          - name: x
+            value: i64
+        return: i64
+  - name: "typed_decimal"
+    description: >-
+      The return type derives from the type argument's parameters.
+    impls:
+      - args:
+          - name: t
+            type: DECIMAL<P,S>
+        return: DECIMAL<P,S>
+  - name: "zero_scale_variadic"
+    description: >-
+      An INCONSISTENT variadic over DECIMAL<P,0>: P may differ per repetition, but the literal 0
+      constrains every repetition.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,0>
+        variadic:
+          min: 1
+          parameterConsistency: INCONSISTENT
+        return: boolean
+  - name: "list_pair"
+    description: >-
+      A numbered wildcard nested inside a list. Nested shapes cannot be checked structurally
+      yet, so strict validation fails closed on them.
+    impls:
+      - args:
+          - name: x
+            value: list<any1>
+          - name: y
+            value: list<any1>
+        return: boolean
