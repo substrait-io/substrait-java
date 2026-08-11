@@ -5,7 +5,6 @@ import io.substrait.type.NamedFieldCountingTypeVisitor;
 import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
 import java.util.List;
-import java.util.Objects;
 import org.immutables.value.Value;
 
 /** A read relation that produces an inline table from a fixed list of literal rows. */
@@ -23,8 +22,6 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * Checks the following invariants when construction a VirtualTableScan
    *
    * <ul>
-   *   <li>no null field names
-   *   <li>no null rows
    *   <li>row shape must match field-list
    *   <li>row field types must match schema types
    * </ul>
@@ -43,16 +40,10 @@ public abstract class VirtualTableScan extends AbstractReadRel {
               "VirtualTableScan schema names count (%d) does not match the depth-first named-field count of the schema struct (%d)",
               names.size(), schemaNameCount));
     }
-    if (names.stream().anyMatch(Objects::isNull)) {
-      throw new IllegalArgumentException("VirtualTableScan schema names must not contain null");
-    }
 
-    List<Expression.NestedStruct> rows = getRows();
-    if (rows.stream().anyMatch(Objects::isNull)) {
-      throw new IllegalArgumentException("VirtualTableScan rows must not contain null");
-    }
+    List<Type> schemaFieldTypes = getInitialSchema().struct().fields();
 
-    for (Expression.NestedStruct row : rows) {
+    for (Expression.NestedStruct row : getRows()) {
       // At the PROTOBUF layer, the Nested.Struct message does not carry nullability information.
       // Nullability is attached to the Nested message, which can contain a Nested.Struct.
       // The NestedStruct POJO flattens the Nested and Nested.Struct messages together, allowing
@@ -75,7 +66,7 @@ public abstract class VirtualTableScan extends AbstractReadRel {
                 rowNameCount, names.size()));
       }
 
-      validateRowConformsToSchema(row);
+      validateRowConformsToSchema(row, schemaFieldTypes);
     }
   }
 
@@ -83,11 +74,11 @@ public abstract class VirtualTableScan extends AbstractReadRel {
    * Validates that a row's field types conform to the table's schema.
    *
    * @param row the row to validate
+   * @param schemaFieldTypes the field types of the table's schema
    * @throws IllegalArgumentException if the row does not conform to the schema
    */
-  private void validateRowConformsToSchema(Expression.NestedStruct row) {
-    Type.Struct schemaStruct = getInitialSchema().struct();
-    List<Type> schemaFieldTypes = schemaStruct.fields();
+  private static void validateRowConformsToSchema(
+      Expression.NestedStruct row, List<Type> schemaFieldTypes) {
     List<Expression> rowFields = row.fields();
 
     if (rowFields.size() != schemaFieldTypes.size()) {

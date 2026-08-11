@@ -778,7 +778,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    *
    * @param modify Calcite table modify node
    * @return Substrait write/update relation
-   * @throws IllegalArgumentException if the node has no target table.
    * @throws IllegalStateException if an update column is not found in the table schema.
    */
   @Override

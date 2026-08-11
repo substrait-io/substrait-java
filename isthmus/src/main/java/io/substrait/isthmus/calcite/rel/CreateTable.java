@@ -40,11 +40,11 @@ public class CreateTable extends SingleRel {
   }
 
   /**
-   * Returns the inputs to this node (single input).
+   * Copies this node with the given traits and input.
    *
    * @param traitSet the RelTraitSet
    * @param inputs List of RelNodes
-   * @return the input relation
+   * @return a copy of this node with the given input
    * @throws IllegalArgumentException if given anything but exactly one input
    */
   @Override

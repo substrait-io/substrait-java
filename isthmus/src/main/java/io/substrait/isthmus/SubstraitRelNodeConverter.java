@@ -911,7 +911,7 @@ public class SubstraitRelNodeConverter
    * @return the Calcite catalog to resolve table names against
    * @throws IllegalStateException if the RelBuilder was created without a RelOptSchema
    */
-  private RelOptSchema requireRelOptSchema() {
+  protected RelOptSchema requireRelOptSchema() {
     RelOptSchema relOptSchema = relBuilder.getRelOptSchema();
     if (relOptSchema == null) {
       throw new IllegalStateException(
@@ -935,7 +935,7 @@ public class SubstraitRelNodeConverter
    * @return the schema as a catalog reader
    * @throws IllegalStateException if the schema is null or is not a catalog reader
    */
-  private static Prepare.CatalogReader requireCatalogReader(
+  protected static Prepare.CatalogReader requireCatalogReader(
       RelOptSchema relOptSchema, List<String> names) {
     if (!(relOptSchema instanceof Prepare.CatalogReader)) {
       throw new IllegalStateException(

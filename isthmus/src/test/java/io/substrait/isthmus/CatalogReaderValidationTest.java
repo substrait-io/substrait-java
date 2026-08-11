@@ -13,6 +13,7 @@ import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.util.List;
 import java.util.function.UnaryOperator;
+import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -20,26 +21,20 @@ import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelDistribution;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelReferentialConstraint;
-import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.schema.ColumnStrategy;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.util.ImmutableBitSet;
 import org.junit.jupiter.api.Test;
 
 /**
- * Substrait to Calcite conversion of the table-modification relations needs a {@link
- * Prepare.CatalogReader}, not merely a {@link RelOptSchema}. {@link
- * org.apache.calcite.rel.core.TableModify} stores the reader without checking it and only
- * dereferences it later, so an unvalidated one surfaces as a confusing failure elsewhere.
+ * Substrait to Calcite conversion of the table-modification relations needs a catalog to resolve
+ * the target table, and that catalog must be a {@link Prepare.CatalogReader}, not merely a {@link
+ * RelOptSchema}. {@link org.apache.calcite.rel.core.TableModify} stores the reader without checking
+ * it and only dereferences it later, so an unvalidated one surfaces as a confusing failure
+ * elsewhere.
  */
 class CatalogReaderValidationTest extends PlanTestBase {
 
@@ -51,18 +46,40 @@ class CatalogReaderValidationTest extends PlanTestBase {
   CatalogReaderValidationTest() throws SqlParseException {}
 
   @Test
-  void namedWriteRejectsSchemaThatIsNotACatalogReader() {
-    NamedWrite write =
-        sb.namedWrite(
-            TABLE,
-            List.of("A"),
-            AbstractWriteRel.WriteOp.INSERT,
-            AbstractWriteRel.CreateMode.UNSPECIFIED,
-            AbstractWriteRel.OutputMode.MODIFIED_RECORDS,
-            oneRowInput());
+  void namedWriteRequiresACatalogBackedRelBuilder() {
+    // A RelBuilder can be built without a catalog at all; RelBuilder.getRelOptSchema() is nullable.
+    SubstraitRelNodeConverter converter =
+        new SubstraitRelNodeConverter(relBuilderWith(schema -> null), converterProvider);
 
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class,
+            () -> write(TABLE).accept(converter, SubstraitRelNodeConverter.Context.newContext()));
+    assertTrue(
+        e.getMessage().contains("has no RelOptSchema"),
+        () -> "unexpected message: " + e.getMessage());
+  }
+
+  @Test
+  void namedWriteRejectsUnknownTable() {
+    SubstraitRelNodeConverter converter =
+        new SubstraitRelNodeConverter(relBuilderWith(UnaryOperator.identity()), converterProvider);
+
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                write(List.of("MISSING"))
+                    .accept(converter, SubstraitRelNodeConverter.Context.newContext()));
+    assertTrue(
+        e.getMessage().contains("Table not found in Calcite catalog"),
+        () -> "unexpected message: " + e.getMessage());
+  }
+
+  @Test
+  void namedWriteRejectsSchemaThatIsNotACatalogReader() {
     // The write path takes its catalog reader from the RelBuilder's schema.
-    assertRejects(write, schema -> new DelegatingRelOptSchema(schema, TableSchema.SELF));
+    assertRejects(write(TABLE), schema -> new DelegatingRelOptSchema(schema, TableSchema.SELF));
   }
 
   @Test
@@ -88,6 +105,16 @@ class CatalogReaderValidationTest extends PlanTestBase {
     assertTrue(
         e.getMessage().contains(Prepare.CatalogReader.class.getName()),
         () -> "unexpected message: " + e.getMessage());
+  }
+
+  private NamedWrite write(List<String> names) {
+    return sb.namedWrite(
+        names,
+        List.of("A"),
+        AbstractWriteRel.WriteOp.INSERT,
+        AbstractWriteRel.CreateMode.UNSPECIFIED,
+        AbstractWriteRel.OutputMode.MODIFIED_RECORDS,
+        oneRowInput());
   }
 
   private NamedUpdate update() {
@@ -162,7 +189,12 @@ class CatalogReaderValidationTest extends PlanTestBase {
       if (table == null) {
         return null;
       }
-      return new DelegatingRelOptTable(table, tableSchema == TableSchema.SELF ? this : null);
+      // Re-create the resolved table so that the schema it reports is this one (or none).
+      return RelOptTableImpl.create(
+          tableSchema == TableSchema.SELF ? this : null,
+          table.getRowType(),
+          table.getQualifiedName(),
+          Expressions.constant(null));
     }
 
     @Override
@@ -173,87 +205,6 @@ class CatalogReaderValidationTest extends PlanTestBase {
     @Override
     public void registerRules(RelOptPlanner planner) {
       delegate.registerRules(planner);
-    }
-  }
-
-  /** A {@link RelOptTable} that delegates everything but the schema it claims to belong to. */
-  private static final class DelegatingRelOptTable implements RelOptTable {
-    private final RelOptTable delegate;
-    private final RelOptSchema relOptSchema;
-
-    DelegatingRelOptTable(RelOptTable delegate, RelOptSchema relOptSchema) {
-      this.delegate = delegate;
-      this.relOptSchema = relOptSchema;
-    }
-
-    @Override
-    public RelOptSchema getRelOptSchema() {
-      return relOptSchema;
-    }
-
-    @Override
-    public List<String> getQualifiedName() {
-      return delegate.getQualifiedName();
-    }
-
-    @Override
-    public double getRowCount() {
-      return delegate.getRowCount();
-    }
-
-    @Override
-    public RelDataType getRowType() {
-      return delegate.getRowType();
-    }
-
-    @Override
-    public RelNode toRel(ToRelContext context) {
-      return delegate.toRel(context);
-    }
-
-    @Override
-    public List<RelCollation> getCollationList() {
-      return delegate.getCollationList();
-    }
-
-    @Override
-    public RelDistribution getDistribution() {
-      return delegate.getDistribution();
-    }
-
-    @Override
-    public boolean isKey(ImmutableBitSet columns) {
-      return delegate.isKey(columns);
-    }
-
-    @Override
-    public List<ImmutableBitSet> getKeys() {
-      return delegate.getKeys();
-    }
-
-    @Override
-    public List<RelReferentialConstraint> getReferentialConstraints() {
-      return delegate.getReferentialConstraints();
-    }
-
-    @Override
-    public org.apache.calcite.linq4j.tree.Expression getExpression(Class clazz) {
-      return delegate.getExpression(clazz);
-    }
-
-    @Override
-    public RelOptTable extend(List<RelDataTypeField> extendedFields) {
-      return delegate.extend(extendedFields);
-    }
-
-    @Override
-    public List<ColumnStrategy> getColumnStrategies() {
-      return delegate.getColumnStrategies();
-    }
-
-    @Override
-    public <C> C unwrap(Class<C> aClass) {
-      return delegate.unwrap(aClass);
     }
   }
 }
