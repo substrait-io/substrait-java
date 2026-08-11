@@ -196,7 +196,8 @@ class IsthmusExecutionExceptionHandler implements CommandLine.IExecutionExceptio
     if (expressions && unknownIdentifier.find()) {
       // Without -e this is a complaint about a -c statement, where naming the identifier as a
       // column of a new table would be the wrong advice.
-      return Optional.of(EXPRESSION_HINT.formatted(unknownIdentifier.group(1)));
+      return Optional.of(
+          withCasingNote(EXPRESSION_HINT.formatted(unknownIdentifier.group(1)), parseResult));
     }
     return Optional.empty();
   }

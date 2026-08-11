@@ -130,7 +130,8 @@ class IsthmusEntryPointTest {
     Run run = run("-e", "col + 1");
 
     assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
-    run.assertErrContains("Unknown identifier 'COL'", "-e / --expression", "-c / --create");
+    run.assertErrContains(
+        "Unknown identifier 'COL'", "-e / --expression", "-c / --create", "--unquotedcasing");
     run.assertNoStackTrace();
   }
 
