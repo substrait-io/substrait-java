@@ -63,6 +63,9 @@ public class DefaultExtensionCatalog {
   /** Identifier for extension types. */
   public static final String EXTENSION_TYPES = "extension:io.substrait:extension_types";
 
+  /** Extension identifier for unsigned integer types and functions. */
+  public static final String UNSIGNED_INTEGERS = "extension:io.substrait:unsigned_integers";
+
   /** Default collection of built-in extensions loaded from YAML resources. */
   public static final SimpleExtension.ExtensionCollection DEFAULT_COLLECTION =
       loadDefaultCollection();
@@ -93,6 +96,7 @@ public class DefaultExtensionCatalog {
             .collect(Collectors.toList());
 
     defaultFiles.add("/substrait/extensions/extension_types.yaml");
+    defaultFiles.add("/substrait/extensions/unsigned_integers.yaml");
 
     return SimpleExtension.load(defaultFiles);
   }
