@@ -63,6 +63,7 @@ class DialectGenerator {
     "extension:io.substrait:functions_rounding" -> "rounding",
     "extension:io.substrait:functions_rounding_decimal" -> "rounding_decimal",
     "extension:io.substrait:functions_string" -> "string",
+    "extension:io.substrait:unsigned_integers" -> "unsigned_integers",
     "extension:substrait:spark" -> "spark"
   )
 
