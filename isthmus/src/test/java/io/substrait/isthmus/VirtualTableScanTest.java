@@ -120,22 +120,33 @@ class VirtualTableScanTest extends PlanTestBase {
 
   @Test
   void valuesLiteralUsesSchemaType() {
-    RelDataType rowType = typeFactory.builder().add("col1", SqlTypeName.INTEGER).build();
-    RexLiteral literal =
+    RelDataType requiredI32 = typeFactory.createSqlType(SqlTypeName.INTEGER);
+    RelDataType nullableI32 = typeFactory.createTypeWithNullability(requiredI32, true);
+    RelDataType rowType =
+        typeFactory.builder().add("required", requiredI32).add("nullable", nullableI32).build();
+    RelDataType narrowType = typeFactory.createSqlType(SqlTypeName.TINYINT);
+    RexLiteral one = builder.getRexBuilder().makeExactLiteral(BigDecimal.ONE, narrowType);
+    RexLiteral nullValue =
         builder
             .getRexBuilder()
-            .makeExactLiteral(BigDecimal.ONE, typeFactory.createSqlType(SqlTypeName.TINYINT));
+            .makeNullLiteral(typeFactory.createTypeWithNullability(narrowType, true));
+    RexLiteral five = builder.getRexBuilder().makeExactLiteral(BigDecimal.valueOf(5), narrowType);
     LogicalValues values =
         LogicalValues.create(
-            builder.getCluster(), rowType, ImmutableList.of(ImmutableList.of(literal)));
+            builder.getCluster(),
+            rowType,
+            ImmutableList.of(ImmutableList.of(one, nullValue), ImmutableList.of(one, five)));
 
     VirtualTableScan converted =
         assertInstanceOf(
             VirtualTableScan.class, SubstraitRelVisitor.convert(values, converterProvider));
-    assertEquals(R.I32, converted.getInitialSchema().struct().fields().get(0));
-    Expression.I32Literal convertedLiteral =
-        assertInstanceOf(Expression.I32Literal.class, converted.getRows().get(0).fields().get(0));
-    assertEquals(1, convertedLiteral.value());
+    assertEquals(List.of(R.I32, N.I32), converted.getInitialSchema().struct().fields());
+    assertEquals(
+        List.of(ExpressionCreator.i32(false, 1), ExpressionCreator.typedNull(N.I32)),
+        converted.getRows().get(0).fields());
+    assertEquals(
+        List.of(ExpressionCreator.i32(false, 1), ExpressionCreator.i32(true, 5)),
+        converted.getRows().get(1).fields());
   }
 
   @SafeVarargs

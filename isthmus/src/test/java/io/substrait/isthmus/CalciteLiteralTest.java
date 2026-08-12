@@ -14,6 +14,7 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.type.TypeCreator;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -398,6 +400,17 @@ class CalciteLiteralTest extends CalciteObjs {
                 Arrays.asList("c1", "c2")),
             false,
             false));
+  }
+
+  @Test
+  void tStructUsesResultFieldTypes() {
+    RelDataType literalType = type.createStructType(List.of(t(SqlTypeName.TINYINT)), List.of("c1"));
+    RexLiteral literal = (RexLiteral) rex.makeLiteral(List.of(4), literalType, false, false);
+    RelDataType resultType = type.createStructType(List.of(tN(SqlTypeName.INTEGER)), List.of("c1"));
+
+    assertEquals(
+        ExpressionCreator.struct(false, ExpressionCreator.i32(true, 4)),
+        new LiteralConverter(TypeConverter.DEFAULT).convert(literal, resultType));
   }
 
   @Test
