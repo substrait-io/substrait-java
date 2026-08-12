@@ -127,7 +127,6 @@ supported_relations:
   - "UNION_ALL"
 dependencies:
   rounding: "extension:io.substrait:functions_rounding"
-  unsigned_integers: "extension:io.substrait:unsigned_integers"
   comparison: "extension:io.substrait:functions_comparison"
   logarithmic: "extension:io.substrait:functions_logarithmic"
   datetime: "extension:io.substrait:functions_datetime"
