@@ -627,14 +627,17 @@ public class ExpressionProtoConverter
       throws RuntimeException {
     return nested(
         bldr -> {
-          Expression.Nested.Map.Builder mapBldr = Expression.Nested.Map.newBuilder();
-          for (io.substrait.expression.Expression.NestedMap.KeyValue keyValue : expr.keyValues()) {
-            mapBldr.addKeyValues(
-                Expression.Nested.Map.KeyValue.newBuilder()
-                    .setKey(toProto(keyValue.key()))
-                    .setValue(toProto(keyValue.value())));
-          }
-          bldr.setMap(mapBldr).setNullable(expr.nullable());
+          List<Expression.Nested.Map.KeyValue> keyValues =
+              expr.keyValues().stream()
+                  .map(
+                      keyValue ->
+                          Expression.Nested.Map.KeyValue.newBuilder()
+                              .setKey(toProto(keyValue.key()))
+                              .setValue(toProto(keyValue.value()))
+                              .build())
+                  .collect(Collectors.toList());
+          bldr.setMap(Expression.Nested.Map.newBuilder().addAllKeyValues(keyValues))
+              .setNullable(expr.nullable());
         });
   }
 

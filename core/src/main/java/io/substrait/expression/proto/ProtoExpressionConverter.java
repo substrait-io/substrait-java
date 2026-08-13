@@ -496,15 +496,34 @@ public class ProtoExpressionConverter {
         // repeating a key keeps both of its pairs.
         List<Expression.NestedMap.KeyValue> keyValues =
             nested.getMap().getKeyValuesList().stream()
-                .map(
-                    keyValue ->
-                        Expression.NestedMap.KeyValue.of(
-                            from(keyValue.getKey()), from(keyValue.getValue())))
+                .map(this::from)
                 .collect(Collectors.toList());
         return ExpressionCreator.nestedMap(nested.getNullable(), keyValues);
       default:
-        throw new IllegalStateException("Unexpected nested type: " + nested.getNestedTypeCase());
+        throw new IllegalArgumentException(
+            "Unsupported nested type: " + nested.getNestedTypeCase());
     }
+  }
+
+  /**
+   * Converts a proto key-value pair of a nested map expression into its POJO {@link
+   * io.substrait.expression.Expression.NestedMap.KeyValue}.
+   *
+   * @param keyValue the proto key-value pair to convert
+   * @return the converted key-value pair
+   * @throws IllegalArgumentException if the pair is missing its key or its value
+   */
+  private Expression.NestedMap.KeyValue from(
+      io.substrait.proto.Expression.Nested.Map.KeyValue keyValue) {
+    if (!keyValue.hasKey()) {
+      throw new IllegalArgumentException(
+          "A key-value pair of a nested map expression has no key set");
+    }
+    if (!keyValue.hasValue()) {
+      throw new IllegalArgumentException(
+          "A key-value pair of a nested map expression has no value set");
+    }
+    return Expression.NestedMap.KeyValue.of(from(keyValue.getKey()), from(keyValue.getValue()));
   }
 
   /**

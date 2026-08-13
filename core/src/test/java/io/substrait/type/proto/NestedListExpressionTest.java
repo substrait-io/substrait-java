@@ -28,12 +28,7 @@ class NestedListExpressionTest extends TestBase {
         Expression.NestedList.builder().addValues(nonLiteralExpression).addValues(sb.i32(12));
     assertDoesNotThrow(builder::build);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(builder.build())
-            .input(sb.emptyVirtualTableScan())
-            .build();
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(builder.build()));
   }
 
   @Test
@@ -45,15 +40,18 @@ class NestedListExpressionTest extends TestBase {
             .addValues(sb.i32(12))
             .addValues(ExpressionCreator.typedNull(N.I32))
             .build();
-    // The element type is the type of the first value, nullability included.
-    assertEquals(R.list(R.I32), mixedNullability.getType());
+    // The element type is nullable, because the list holds a null.
+    assertEquals(R.list(N.I32), mixedNullability.getType());
+    // The value order does not change the type.
+    assertEquals(
+        mixedNullability.getType(),
+        Expression.NestedList.builder()
+            .addValues(ExpressionCreator.typedNull(N.I32))
+            .addValues(sb.i32(12))
+            .build()
+            .getType());
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(mixedNullability)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(mixedNullability));
   }
 
   @Test
@@ -70,13 +68,7 @@ class NestedListExpressionTest extends TestBase {
             .addValues(literalExpression)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(literalNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(literalNestedList));
   }
 
   @Test
@@ -88,13 +80,7 @@ class NestedListExpressionTest extends TestBase {
             .nullable(true)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(literalNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(literalNestedList));
   }
 
   @Test
@@ -105,12 +91,6 @@ class NestedListExpressionTest extends TestBase {
             .addValues(nonLiteralExpression)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(nonLiteralNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(nonLiteralNestedList));
   }
 }

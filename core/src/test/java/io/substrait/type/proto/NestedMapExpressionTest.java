@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
-import io.substrait.relation.Project;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +37,46 @@ class NestedMapExpressionTest extends TestBase {
             .addKeyValues(Expression.NestedMap.KeyValue.of(sb.str("a"), literalExpression))
             .addKeyValues(Expression.NestedMap.KeyValue.of(sb.str("b"), sb.i32(1)));
     assertThrows(IllegalArgumentException.class, builder::build);
+  }
+
+  @Test
+  void rejectNestedMapWithValuesOfDifferentDecimalTypes() {
+    // Values of the same kind but with different parameters are not the same type.
+    ImmutableExpression.NestedMap.Builder builder =
+        Expression.NestedMap.builder()
+            .addKeyValues(
+                Expression.NestedMap.KeyValue.of(
+                    sb.str("a"), ExpressionCreator.typedNull(N.decimal(10, 2))))
+            .addKeyValues(
+                Expression.NestedMap.KeyValue.of(
+                    sb.str("b"), ExpressionCreator.typedNull(N.decimal(12, 2))));
+    assertThrows(IllegalArgumentException.class, builder::build);
+  }
+
+  @Test
+  void acceptNestedMapWithKeysAndValuesOfMixedNullability() {
+    // Keys or values that differ only in nullability are valid; SQL builds such maps from
+    // MAP['a', not_null_column, 'b', nullable_column].
+    Expression.NestedMap.KeyValue notNull =
+        Expression.NestedMap.KeyValue.of(sb.str("a"), sb.i32(1));
+    Expression.NestedMap.KeyValue nullable =
+        Expression.NestedMap.KeyValue.of(
+            ExpressionCreator.typedNull(N.STRING), ExpressionCreator.typedNull(N.I32));
+
+    Expression.NestedMap mixedNullability =
+        Expression.NestedMap.builder().addKeyValues(notNull).addKeyValues(nullable).build();
+    // The key and value types are nullable, because the map holds a null key and a null value.
+    assertEquals(R.map(N.STRING, N.I32), mixedNullability.getType());
+    // The pair order does not change the type.
+    assertEquals(
+        mixedNullability.getType(),
+        Expression.NestedMap.builder()
+            .addKeyValues(nullable)
+            .addKeyValues(notNull)
+            .build()
+            .getType());
+
+    verifyRoundTrip(projectOf(mixedNullability));
   }
 
   @Test
@@ -131,7 +171,47 @@ class NestedMapExpressionTest extends TestBase {
     verifyRoundTrip(projectOf(nestedMap));
   }
 
-  private Project projectOf(Expression expression) {
-    return Project.builder().addExpressions(expression).input(sb.emptyVirtualTableScan()).build();
+  @Test
+  void rejectMapPairWithoutKeyOnImport() {
+    io.substrait.proto.Expression.Nested.Map.KeyValue keyValue =
+        io.substrait.proto.Expression.Nested.Map.KeyValue.newBuilder()
+            .setValue(expressionProtoConverter.toProto(sb.i32(1)))
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class, () -> protoExpressionConverter.from(protoMapOf(keyValue)));
+  }
+
+  @Test
+  void rejectMapPairWithoutValueOnImport() {
+    io.substrait.proto.Expression.Nested.Map.KeyValue keyValue =
+        io.substrait.proto.Expression.Nested.Map.KeyValue.newBuilder()
+            .setKey(expressionProtoConverter.toProto(sb.str("a")))
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class, () -> protoExpressionConverter.from(protoMapOf(keyValue)));
+  }
+
+  @Test
+  void rejectNestedExpressionWithoutKindOnImport() {
+    io.substrait.proto.Expression nested =
+        io.substrait.proto.Expression.newBuilder()
+            .setNested(io.substrait.proto.Expression.Nested.newBuilder())
+            .build();
+
+    assertThrows(IllegalArgumentException.class, () -> protoExpressionConverter.from(nested));
+  }
+
+  /** Builds a proto map expression directly, so that pairs the POJO model rejects can be tested. */
+  private io.substrait.proto.Expression protoMapOf(
+      io.substrait.proto.Expression.Nested.Map.KeyValue... keyValues) {
+    return io.substrait.proto.Expression.newBuilder()
+        .setNested(
+            io.substrait.proto.Expression.Nested.newBuilder()
+                .setMap(
+                    io.substrait.proto.Expression.Nested.Map.newBuilder()
+                        .addAllKeyValues(List.of(keyValues))))
+        .build();
   }
 }

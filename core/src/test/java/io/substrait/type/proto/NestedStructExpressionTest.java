@@ -2,7 +2,6 @@ package io.substrait.type.proto;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
-import io.substrait.relation.Project;
 import org.junit.jupiter.api.Test;
 
 class NestedStructExpressionTest extends TestBase {
@@ -60,9 +59,5 @@ class NestedStructExpressionTest extends TestBase {
         Expression.NestedStruct.builder().addFields(inner).addFields(list).addFields(map).build();
 
     verifyRoundTrip(projectOf(outer));
-  }
-
-  private Project projectOf(Expression expression) {
-    return Project.builder().addExpressions(expression).input(sb.emptyVirtualTableScan()).build();
   }
 }

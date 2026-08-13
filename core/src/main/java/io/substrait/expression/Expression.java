@@ -1,5 +1,7 @@
 package io.substrait.expression;
 
+import static io.substrait.expression.NestedExpressionUtils.commonType;
+
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
@@ -11,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.immutables.value.Value;
 
 /**
@@ -1790,11 +1793,9 @@ public interface Expression extends FunctionArg {
     public abstract List<Expression> values();
 
     /**
-     * Validates that the nested list is not empty and all values have the same type, disregarding
-     * nullability. Values of mixed nullability are allowed, because SQL list constructors do not
-     * cast their values to a common type: {@code ARRAY[not_null_column, nullable_column]} produces
-     * values that differ only in nullability. The list's element type is that of its first value,
-     * as {@link #getType()} shows.
+     * Validates that the nested list is not empty and that all values have the same type,
+     * disregarding nullability. Values of mixed nullability are allowed; the list's element type is
+     * then the nullable one, as {@link #getType()} shows.
      *
      * @throws IllegalArgumentException if the list is empty or its values have differing types
      */
@@ -1802,20 +1803,17 @@ public interface Expression extends FunctionArg {
     protected void check() {
       if (values().isEmpty()) {
         throw new IllegalArgumentException(
-            "To specify an empty list, use ExpressionCreator.emptyList()");
+            "A nested list expression must have at least one value; an empty list is expressed as"
+                + " an empty list literal (see ExpressionCreator.emptyList)");
       }
-
-      List<Type> types =
-          values().stream().map(Expression::getType).collect(java.util.stream.Collectors.toList());
-      if (types.stream().map(TypeCreator::asNullable).distinct().limit(2).count() > 1) {
-        throw new IllegalArgumentException(
-            String.format("All values in NestedList must have the same type, found: %s", types));
-      }
+      // Throws if the values have differing types.
+      getType();
     }
 
     @Override
     public Type getType() {
-      return Type.withNullability(nullable()).list(values().get(0).getType());
+      return Type.withNullability(nullable())
+          .list(commonType("The values of a nested list expression", values()));
     }
 
     @Override
@@ -1855,27 +1853,33 @@ public interface Expression extends FunctionArg {
     public abstract List<KeyValue> keyValues();
 
     /**
-     * Validates that the nested map is not empty and that all keys, and all values, have a single
-     * common type.
+     * Validates that the nested map is not empty and that all keys, and all values, have the same
+     * type, disregarding nullability. Keys or values of mixed nullability are allowed; the map's
+     * key or value type is then the nullable one, as {@link #getType()} shows.
+     *
+     * @throws IllegalArgumentException if the map is empty, its keys have differing types, or its
+     *     values have differing types
      */
     @Value.Check
     protected void check() {
       if (keyValues().isEmpty()) {
         throw new IllegalArgumentException(
-            "To specify an empty map, use ExpressionCreator.emptyMap");
+            "A nested map expression must have at least one key-value pair; an empty map is"
+                + " expressed as an empty map literal (see ExpressionCreator.emptyMap)");
       }
-      if (keyValues().stream().map(keyValue -> keyValue.key().getType()).distinct().count() > 1) {
-        throw new IllegalArgumentException("All keys in a NestedMap must have the same type");
-      }
-      if (keyValues().stream().map(keyValue -> keyValue.value().getType()).distinct().count() > 1) {
-        throw new IllegalArgumentException("All values in a NestedMap must have the same type");
-      }
+      // Throws if the keys, or the values, have differing types.
+      getType();
     }
 
     @Override
     public Type getType() {
-      KeyValue first = keyValues().get(0);
-      return Type.withNullability(nullable()).map(first.key().getType(), first.value().getType());
+      List<Expression> keys = keyValues().stream().map(KeyValue::key).collect(Collectors.toList());
+      List<Expression> values =
+          keyValues().stream().map(KeyValue::value).collect(Collectors.toList());
+      return Type.withNullability(nullable())
+          .map(
+              commonType("The keys of a nested map expression", keys),
+              commonType("The values of a nested map expression", values));
     }
 
     @Override
