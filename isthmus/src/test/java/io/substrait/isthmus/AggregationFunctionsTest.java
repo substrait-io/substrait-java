@@ -138,8 +138,8 @@ class AggregationFunctionsTest extends PlanTestBase {
   void aggregateCallCollation() {
     builder.values(new String[] {"value", "first_sort", "second_sort"}, 1, 2, 3);
     RexNode value = builder.field("value");
-    RexNode firstSort = builder.nullsLast(builder.field("first_sort"));
-    RexNode secondSort = builder.nullsFirst(builder.desc(builder.field("second_sort")));
+    RexNode firstSort = builder.nullsFirst(builder.field("first_sort"));
+    RexNode secondSort = builder.nullsLast(builder.desc(builder.field("second_sort")));
 
     RelNode calcite =
         builder
@@ -148,17 +148,14 @@ class AggregationFunctionsTest extends PlanTestBase {
 
     Aggregate converted =
         assertInstanceOf(Aggregate.class, SubstraitRelVisitor.convert(calcite, converterProvider));
-    Type.Struct inputType = converted.getInput().getRecordType();
     assertEquals(
         List.of(
-            Expression.SortField.builder()
-                .expr(FieldReference.newRootStructReference(1, inputType.fields().get(1)))
-                .direction(Expression.SortDirection.ASC_NULLS_LAST)
-                .build(),
-            Expression.SortField.builder()
-                .expr(FieldReference.newRootStructReference(2, inputType.fields().get(2)))
-                .direction(Expression.SortDirection.DESC_NULLS_FIRST)
-                .build()),
+            sb.sortField(
+                FieldReference.newRootStructReference(1, R.I32),
+                Expression.SortDirection.ASC_NULLS_FIRST),
+            sb.sortField(
+                FieldReference.newRootStructReference(2, R.I32),
+                Expression.SortDirection.DESC_NULLS_LAST)),
         converted.getMeasures().get(0).getFunction().sort());
   }
 }

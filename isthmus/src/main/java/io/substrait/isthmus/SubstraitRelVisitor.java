@@ -507,12 +507,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /**
    * Converts a Calcite {@link AggregateCall} to a Substrait {@link Aggregate.Measure}.
    *
-   * <p>This method handles the conversion of aggregate function calls from Calcite's representation
-   * to Substrait's format. For statistical aggregate functions (STDDEV_POP, STDDEV_SAMP, VAR_POP,
-   * VAR_SAMP), it automatically transforms the input relation by inserting a projection that casts
-   * the aggregate function's argument fields to DOUBLE (FP64) type, ensuring type compatibility
-   * with Substrait's statistical function requirements. Fields not referenced by the aggregate
-   * function are passed through unchanged.
+   * <p>Statistical aggregate arguments have already been rewritten by {@link
+   * #castStatisticalAggregatesToFloatingPoint(org.apache.calcite.rel.core.Aggregate)} before this
+   * method runs. That rewrite appends fp64 input columns and re-points the affected calls.
    *
    * <p>The method also processes optional filter arguments (FILTER clauses) by converting them to
    * Substrait's preMeasureFilter representation.
@@ -535,7 +532,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
     Builder builder = Aggregate.Measure.builder().function(invocation.get());
     if (call.filterArg != -1) {
-      builder.preMeasureFilter(FieldReference.newRootStructReference(call.filterArg, inputType));
+      builder.preMeasureFilter(
+          FieldReference.StructField.of(call.filterArg).constructOnRoot(inputType));
     }
     return builder.build();
   }
@@ -737,9 +735,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     Expression.SortDirection direction = asSortDirection(collation);
 
     return Expression.SortField.builder()
-        .expr(
-            FieldReference.newRootStructReference(
-                collation.getFieldIndex(), inputType.fields().get(collation.getFieldIndex())))
+        .expr(FieldReference.StructField.of(collation.getFieldIndex()).constructOnRoot(inputType))
         .direction(direction)
         .build();
   }
