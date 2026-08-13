@@ -85,7 +85,7 @@ class VariadicParameterConsistencyTest extends TestBase {
             .build();
 
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             createScalarFunctionInvocation(
                 args,
@@ -97,7 +97,7 @@ class VariadicParameterConsistencyTest extends TestBase {
         "Consistent variadic with different types should fail");
 
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             createScalarFunctionInvocation(
                 args,
@@ -181,7 +181,7 @@ class VariadicParameterConsistencyTest extends TestBase {
         "Consistent variadic with wildcard type and same concrete types should pass");
 
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             createScalarFunctionInvocation(
                 args,
@@ -218,7 +218,7 @@ class VariadicParameterConsistencyTest extends TestBase {
         "Consistent variadic with min=2 and same types should pass");
 
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             createScalarFunctionInvocation(
                 args,

@@ -260,6 +260,7 @@ class ExtensionRoundtripTest extends TestBase {
         Expand.builder()
             .from(sb.expand(__ -> Collections.emptyList(), commonTable))
             .commonExtension(commonExtension)
+            .extension(relExtension)
             .build();
     verifyRoundTrip(rel);
   }

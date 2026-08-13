@@ -3,9 +3,11 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
+import io.substrait.expression.Expression;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.physical.TopN;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,23 @@ class RelAnchorRoundtripTest extends TestBase {
             .build();
 
     verifyRoundTrip(filter);
+  }
+
+  @Test
+  void relAnchorOnTopN() {
+    Rel topN =
+        TopN.builder()
+            .input(baseTable)
+            .relAnchor(3)
+            .addSortFields(
+                Expression.SortField.builder()
+                    .expr(sb.fieldReference(baseTable, 0))
+                    .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                    .build())
+            .count(sb.i64(10))
+            .build();
+
+    verifyRoundTrip(topN);
   }
 
   @Test

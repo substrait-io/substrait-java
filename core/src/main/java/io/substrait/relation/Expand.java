@@ -13,7 +13,7 @@ import org.immutables.value.Value;
  */
 @Value.Enclosing
 @Value.Immutable
-public abstract class Expand extends SingleInputRel {
+public abstract class Expand extends SingleInputRel implements HasExtension {
 
   /**
    * Returns the fields produced by the expand operation.
