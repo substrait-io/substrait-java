@@ -622,6 +622,26 @@ public class ExpressionProtoConverter
   }
 
   @Override
+  public Expression visit(
+      io.substrait.expression.Expression.NestedMap expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return nested(
+        bldr -> {
+          List<Expression.Nested.Map.KeyValue> keyValues =
+              expr.keyValues().stream()
+                  .map(
+                      keyValue ->
+                          Expression.Nested.Map.KeyValue.newBuilder()
+                              .setKey(toProto(keyValue.key()))
+                              .setValue(toProto(keyValue.value()))
+                              .build())
+                  .collect(Collectors.toList());
+          bldr.setMap(Expression.Nested.Map.newBuilder().addAllKeyValues(keyValues))
+              .setNullable(expr.nullable());
+        });
+  }
+
+  @Override
   public Expression visit(FieldReference expr, EmptyVisitationContext context) {
 
     Expression.ReferenceSegment seg = null;

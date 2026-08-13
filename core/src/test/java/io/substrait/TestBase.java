@@ -12,6 +12,7 @@ import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
@@ -60,6 +61,11 @@ public abstract class TestBase {
     io.substrait.proto.Expression protoExpression = expressionProtoConverter.toProto(expression);
     Expression expressionReturned = protoExpressionConverter.from(protoExpression);
     assertEquals(expression, expressionReturned);
+  }
+
+  /** Wraps the given expression in a {@link Project} over an empty virtual table scan. */
+  protected Project projectOf(Expression expression) {
+    return Project.builder().addExpressions(expression).input(sb.emptyVirtualTableScan()).build();
   }
 
   public static String asString(String resource) throws IOException {
