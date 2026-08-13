@@ -1,6 +1,11 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
 import com.google.common.collect.Streams;
+import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
@@ -9,6 +14,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rex.RexNode;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -124,5 +132,30 @@ class AggregationFunctionsTest extends PlanTestBase {
             input -> functions(input, aggFunction),
             numericTypesTable);
     assertFullRoundTrip(rel);
+  }
+
+  @Test
+  void aggregateCallCollation() {
+    builder.values(new String[] {"value", "first_sort", "second_sort"}, 1, 2, 3);
+    RexNode value = builder.field("value");
+    RexNode firstSort = builder.nullsFirst(builder.field("first_sort"));
+    RexNode secondSort = builder.nullsLast(builder.desc(builder.field("second_sort")));
+
+    RelNode calcite =
+        builder
+            .aggregate(builder.groupKey(), builder.sum(value).sort(firstSort, secondSort))
+            .build();
+
+    Aggregate converted =
+        assertInstanceOf(Aggregate.class, SubstraitRelVisitor.convert(calcite, converterProvider));
+    assertEquals(
+        List.of(
+            sb.sortField(
+                FieldReference.newRootStructReference(1, R.I32),
+                Expression.SortDirection.ASC_NULLS_FIRST),
+            sb.sortField(
+                FieldReference.newRootStructReference(2, R.I32),
+                Expression.SortDirection.DESC_NULLS_LAST)),
+        converted.getMeasures().get(0).getFunction().sort());
   }
 }
