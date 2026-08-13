@@ -2,9 +2,14 @@
 
 This page provides some orientation and recommendations on how to get the best results when engaging with the community.
 
-1. [Commit conventions](#commit-conventions)
-2. [Style Guide](#style-guide)
-3. [Building and testing](#building-and-testing)
+1. [Contributor License Agreement](#contributor-license-agreement)
+2. [Commit conventions](#commit-conventions)
+3. [Style Guide](#style-guide)
+4. [Building and testing](#building-and-testing)
+
+## Contributor License Agreement
+
+Substrait requires all contributors to sign the [Contributor License Agreement (CLA)](https://cla-assistant.io/substrait-io/substrait) before their contributions can be merged. A GitHub app checks this on every pull request and guides new contributors through signing it.
 
 ## Commit Conventions
 
