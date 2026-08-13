@@ -814,6 +814,10 @@ public class RelProtoConverter
                     "Consistent or Switching fields must be set for the Expand relation.");
               }
             });
+
+    expand
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExpand(builder).build();
   }
 

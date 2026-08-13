@@ -1,5 +1,7 @@
 package io.substrait.expression;
 
+import static io.substrait.expression.NestedExpressionUtils.commonType;
+
 import com.google.protobuf.ByteString;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
@@ -11,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.immutables.value.Value;
 
 /**
@@ -1789,18 +1792,28 @@ public interface Expression extends FunctionArg {
      */
     public abstract List<Expression> values();
 
-    /** Validates that the nested list is not empty and all values have the same type. */
+    /**
+     * Validates that the nested list is not empty and that all values have the same type,
+     * disregarding nullability. Values of mixed nullability are allowed; the list's element type is
+     * then the nullable one, as {@link #getType()} shows.
+     *
+     * @throws IllegalArgumentException if the list is empty or its values have differing types
+     */
     @Value.Check
     protected void check() {
-      assert !values().isEmpty() : "To specify an empty list, use ExpressionCreator.emptyList()";
-
-      assert values().stream().map(Expression::getType).distinct().count() <= 1
-          : "All values in NestedList must have the same type";
+      if (values().isEmpty()) {
+        throw new IllegalArgumentException(
+            "A nested list expression must have at least one value; an empty list is expressed as"
+                + " an empty list literal (see ExpressionCreator.emptyList)");
+      }
+      // Throws if the values have differing types.
+      getType();
     }
 
     @Override
     public Type getType() {
-      return Type.withNullability(nullable()).list(values().get(0).getType());
+      return Type.withNullability(nullable())
+          .list(commonType("The values of a nested list expression", values()));
     }
 
     @Override
@@ -1816,6 +1829,110 @@ public interface Expression extends FunctionArg {
      */
     public static ImmutableExpression.NestedList.Builder builder() {
       return ImmutableExpression.NestedList.builder();
+    }
+  }
+
+  /**
+   * A nested map expression with one or more key-value pairs.
+   *
+   * <p>The pairs are held as an ordered list rather than a {@code Map} because that is what the
+   * Substrait map expression is: a repeated list of key-value pairs. Two pairs may carry equal
+   * keys, and a {@code Map} would silently drop one of them.
+   *
+   * <p>Note: This class cannot be used to construct an empty map. To create an empty map, use
+   * {@link ExpressionCreator#emptyMap(boolean, Type, Type)} which returns an {@link
+   * EmptyMapLiteral}.
+   */
+  @Value.Immutable
+  abstract class NestedMap implements Nested {
+    /**
+     * Returns the key-value pairs in this nested map, in the order they were added.
+     *
+     * @return the key-value pairs
+     */
+    public abstract List<KeyValue> keyValues();
+
+    /**
+     * Validates that the nested map is not empty and that all keys, and all values, have the same
+     * type, disregarding nullability. Keys or values of mixed nullability are allowed; the map's
+     * key or value type is then the nullable one, as {@link #getType()} shows.
+     *
+     * @throws IllegalArgumentException if the map is empty, its keys have differing types, or its
+     *     values have differing types
+     */
+    @Value.Check
+    protected void check() {
+      if (keyValues().isEmpty()) {
+        throw new IllegalArgumentException(
+            "A nested map expression must have at least one key-value pair; an empty map is"
+                + " expressed as an empty map literal (see ExpressionCreator.emptyMap)");
+      }
+      // Throws if the keys, or the values, have differing types.
+      getType();
+    }
+
+    @Override
+    public Type getType() {
+      List<Expression> keys = keyValues().stream().map(KeyValue::key).collect(Collectors.toList());
+      List<Expression> values =
+          keyValues().stream().map(KeyValue::value).collect(Collectors.toList());
+      return Type.withNullability(nullable())
+          .map(
+              commonType("The keys of a nested map expression", keys),
+              commonType("The values of a nested map expression", values));
+    }
+
+    @Override
+    public <R, C extends VisitationContext, E extends Throwable> R accept(
+        ExpressionVisitor<R, C, E> visitor, C context) throws E {
+      return visitor.visit(this, context);
+    }
+
+    /**
+     * Creates a new builder for constructing a NestedMap.
+     *
+     * @return a new builder instance
+     */
+    public static ImmutableExpression.NestedMap.Builder builder() {
+      return ImmutableExpression.NestedMap.builder();
+    }
+
+    /** A single key-value pair of a {@link NestedMap}. */
+    @Value.Immutable
+    public abstract static class KeyValue {
+      /**
+       * Returns the key expression of this pair.
+       *
+       * @return the key
+       */
+      public abstract Expression key();
+
+      /**
+       * Returns the value expression of this pair.
+       *
+       * @return the value
+       */
+      public abstract Expression value();
+
+      /**
+       * Creates a key-value pair.
+       *
+       * @param key the key expression
+       * @param value the value expression
+       * @return the key-value pair
+       */
+      public static KeyValue of(Expression key, Expression value) {
+        return builder().key(key).value(value).build();
+      }
+
+      /**
+       * Creates a new builder for constructing a KeyValue.
+       *
+       * @return a new builder instance
+       */
+      public static ImmutableExpression.KeyValue.Builder builder() {
+        return ImmutableExpression.KeyValue.builder();
+      }
     }
   }
 

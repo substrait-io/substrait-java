@@ -402,6 +402,16 @@ public interface ExpressionVisitor<R, C extends VisitationContext, E extends Thr
   R visit(Expression.NestedList expr, C context) throws E;
 
   /**
+   * Visit a nested map.
+   *
+   * @param expr the nested map
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  R visit(Expression.NestedMap expr, C context) throws E;
+
+  /**
    * Visit a field reference.
    *
    * @param expr the field reference

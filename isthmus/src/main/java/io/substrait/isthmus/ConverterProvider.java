@@ -6,11 +6,8 @@ import io.substrait.isthmus.calcite.SubstraitOperatorTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
-import io.substrait.isthmus.expression.FieldSelectionConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
-import io.substrait.isthmus.expression.SqlArrayValueConstructorCallConverter;
-import io.substrait.isthmus.expression.SqlMapValueConstructorCallConverter;
 import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.plan.ImmutableExecutionBehavior;
@@ -18,6 +15,7 @@ import io.substrait.plan.Plan;
 import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.calcite.avatica.util.Casing;
@@ -87,6 +85,12 @@ public class ConverterProvider {
 
   /** The Calcite SQL parser configuration, controlling parsing behaviour like identifier casing. */
   protected final SqlParser.Config sqlParserConfig;
+
+  /** Observer for supplied and independently inferred expression types. */
+  protected final TypeObserver typeObserver;
+
+  /** Controls how aggregate output types are chosen and validated during conversion. */
+  protected final AggregateConversion aggregateConversion;
 
   /** Converter for Substrait scalar functions. */
   protected ScalarFunctionConverter scalarFunctionConverter;
@@ -221,6 +225,8 @@ public class ConverterProvider {
             .unquotedCasing
             .map(builder.sqlParserConfig::withUnquotedCasing)
             .orElse(builder.sqlParserConfig);
+    this.typeObserver = builder.typeObserver;
+    this.aggregateConversion = builder.aggregateConversion;
 
     this.scalarFunctionConverter =
         builder.scalarFunctionConverter.orElseGet(
@@ -365,15 +371,8 @@ public class ConverterProvider {
    * @return a list of CallConverter instances
    */
   public List<CallConverter> getCallConverters() {
-    ArrayList<CallConverter> callConverters = new ArrayList<>();
-    callConverters.add(new FieldSelectionConverter(typeConverter));
-    callConverters.add(CallConverters.CASE);
-    callConverters.add(CallConverters.ROW);
-    callConverters.add(CallConverters.CAST.apply(typeConverter));
-    callConverters.add(CallConverters.REINTERPRET.apply(typeConverter));
-    callConverters.add(CallConverters.EXECUTION_CONTEXT_VARIABLE);
-    callConverters.add(new SqlArrayValueConstructorCallConverter(typeConverter));
-    callConverters.add(new SqlMapValueConstructorCallConverter());
+    ArrayList<CallConverter> callConverters =
+        new ArrayList<>(CallConverters.defaults(typeConverter));
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     callConverters.add(scalarFunctionConverter);
     return callConverters;
@@ -398,6 +397,8 @@ public class ConverterProvider {
   /**
    * A {@link SubstraitRelNodeConverter} is used when converting from Substrait {@link Rel}s to
    * Calcite {@link org.apache.calcite.rel.RelNode}s.
+   *
+   * <p>Aggregate conversion follows {@link #getAggregateConversion()}.
    *
    * @param relBuilder the RelBuilder to use for creating Calcite RelNodes
    * @return a new SubstraitRelNodeConverter instance
@@ -429,12 +430,25 @@ public class ConverterProvider {
   /**
    * Returns the observer for supplied and independently inferred expression types.
    *
-   * <p>Override to collect type observations during Substrait-to-Calcite conversion.
+   * <p>Configure via {@link Builder#typeObserver(TypeObserver)} or override this method to collect
+   * type observations during Substrait-to-Calcite conversion.
    *
    * @return a no-op observer by default
    */
   public TypeObserver getTypeObserver() {
-    return TypeObserver.NOOP;
+    return typeObserver;
+  }
+
+  /**
+   * Returns the aggregate-conversion configuration: how the output type of a converted Substrait
+   * aggregate is chosen and whether it is validated against the extension declaration.
+   *
+   * <p>Configure via {@link Builder#aggregateConversion(AggregateConversion)}.
+   *
+   * @return {@link AggregateConversion#DEFAULT} unless configured otherwise
+   */
+  public AggregateConversion getAggregateConversion() {
+    return aggregateConversion;
   }
 
   /**
@@ -565,6 +579,8 @@ public class ConverterProvider {
     private TypeConverter typeConverter = TypeConverter.DEFAULT;
     private Plan.ExecutionBehavior executionBehavior = createDefaultExecutionBehavior();
     private SqlParser.Config sqlParserConfig = DEFAULT_SQL_PARSER_CONFIG;
+    private TypeObserver typeObserver = TypeObserver.NOOP;
+    private AggregateConversion aggregateConversion = AggregateConversion.DEFAULT;
     private Optional<Casing> unquotedCasing = Optional.empty();
 
     // Derived from the extensions and type factory at build time when left unset.
@@ -643,6 +659,29 @@ public class ConverterProvider {
      */
     public Builder unquotedCasing(Casing unquotedCasing) {
       this.unquotedCasing = Optional.ofNullable(unquotedCasing);
+      return this;
+    }
+
+    /**
+     * Sets the observer for supplied and independently inferred expression types.
+     *
+     * @param typeObserver the type observer
+     * @return this builder
+     */
+    public Builder typeObserver(TypeObserver typeObserver) {
+      this.typeObserver = typeObserver;
+      return this;
+    }
+
+    /**
+     * Sets how the output type of a converted Substrait aggregate is chosen and whether it is
+     * validated against the extension declaration.
+     *
+     * @param aggregateConversion the aggregate-conversion configuration
+     * @return this builder
+     */
+    public Builder aggregateConversion(AggregateConversion aggregateConversion) {
+      this.aggregateConversion = Objects.requireNonNull(aggregateConversion, "aggregateConversion");
       return this;
     }
 

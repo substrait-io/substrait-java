@@ -481,14 +481,49 @@ public class ProtoExpressionConverter {
    */
   public Expression.Nested from(io.substrait.proto.Expression.Nested nested) {
     switch (nested.getNestedTypeCase()) {
+      case STRUCT:
+        List<Expression> fields =
+            nested.getStruct().getFieldsList().stream()
+                .map(this::from)
+                .collect(Collectors.toList());
+        return ExpressionCreator.nestedStruct(nested.getNullable(), fields);
       case LIST:
         List<Expression> list =
             nested.getList().getValuesList().stream().map(this::from).collect(Collectors.toList());
         return ExpressionCreator.nestedList(nested.getNullable(), list);
+      case MAP:
+        // The pairs are kept in a list, in the order the producer emitted them, so that a map
+        // repeating a key keeps both of its pairs.
+        List<Expression.NestedMap.KeyValue> keyValues =
+            nested.getMap().getKeyValuesList().stream()
+                .map(this::from)
+                .collect(Collectors.toList());
+        return ExpressionCreator.nestedMap(nested.getNullable(), keyValues);
       default:
-        throw new UnsupportedOperationException(
-            "Unimplemented nested type: " + nested.getNestedTypeCase());
+        throw new IllegalArgumentException(
+            "Unsupported nested type: " + nested.getNestedTypeCase());
     }
+  }
+
+  /**
+   * Converts a proto key-value pair of a nested map expression into its POJO {@link
+   * io.substrait.expression.Expression.NestedMap.KeyValue}.
+   *
+   * @param keyValue the proto key-value pair to convert
+   * @return the converted key-value pair
+   * @throws IllegalArgumentException if the pair is missing its key or its value
+   */
+  private Expression.NestedMap.KeyValue from(
+      io.substrait.proto.Expression.Nested.Map.KeyValue keyValue) {
+    if (!keyValue.hasKey()) {
+      throw new IllegalArgumentException(
+          "A key-value pair of a nested map expression has no key set");
+    }
+    if (!keyValue.hasValue()) {
+      throw new IllegalArgumentException(
+          "A key-value pair of a nested map expression has no value set");
+    }
+    return Expression.NestedMap.KeyValue.of(from(keyValue.getKey()), from(keyValue.getValue()));
   }
 
   /**

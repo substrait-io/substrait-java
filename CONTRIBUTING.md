@@ -2,11 +2,16 @@
 
 This page provides some orientation and recommendations on how to get the best results when engaging with the community.
 
-1. [The specification is the source of truth](#the-specification-is-the-source-of-truth)
-2. [Commit conventions](#commit-conventions)
-3. [Pull requests](#pull-requests)
-4. [Style Guide](#style-guide)
-5. [Building and testing](#building-and-testing)
+1. [Contributor License Agreement](#contributor-license-agreement)
+2. [The specification is the source of truth](#the-specification-is-the-source-of-truth)
+3. [Commit conventions](#commit-conventions)
+4. [Pull requests](#pull-requests)
+5. [Style Guide](#style-guide)
+6. [Building and testing](#building-and-testing)
+
+## Contributor License Agreement
+
+Substrait requires all contributors to sign the [Contributor License Agreement (CLA)](https://cla-assistant.io/substrait-io/substrait) before their contributions can be merged. A GitHub app checks this on every pull request and guides new contributors through signing it.
 
 ## The specification is the source of truth
 
@@ -105,8 +110,10 @@ CI — build the whole thing before pushing:
 * **PMD** (`substrait.java-conventions`, ruleset
   `build-logic/src/main/resources/substrait-pmd.xml`) runs via `check` / `build` and fails on
   violations. Common tripwires: missing `@Override`, unused private fields/methods/locals,
-  `var` (rule `UseExplicitTypes` — use explicit types), and `public` JUnit 5 test
-  classes/methods (they must be package-private).
+  `var` (rule `UseExplicitTypes` — use explicit types), `assert` (rule `AvoidAssertStatement` —
+  assertions are disabled unless the JVM runs with `-ea`, so throw `IllegalArgumentException`
+  for caller-facing invariants and `IllegalStateException` for internal ones), and `public`
+  JUnit 5 test classes/methods (they must be package-private).
 * **javadoc** doclint fails the build, but only via `build` / `javadocJar` — run
   `./gradlew :core:javadoc` before pushing.
 * **CI** runs the full `./gradlew build --rerun-tasks` plus `yamllint`, `editorconfig-checker`,

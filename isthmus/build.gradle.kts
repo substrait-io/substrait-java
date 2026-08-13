@@ -87,8 +87,11 @@ dependencies {
       )
   }
   constraints {
-    // calcite-core:1.41.0 has dependencies that contain vulnerabilities:
+    // calcite-core:1.42.0 has dependencies that contain vulnerabilities:
     // - CVE-2024-57699 (net.minidev:json-smart < 2.5.2)
+    // - CVE-2026-54399 (org.apache.httpcomponents.core5:httpcore5 < 5.4.3)
+    implementation(libs.httpcore)
+    implementation(libs.httpcore.h2)
     implementation(libs.json.smart)
   }
   implementation(libs.calcite.server) {

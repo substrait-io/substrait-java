@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -30,6 +31,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
@@ -279,6 +281,28 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
   void injectTypeObserverThroughConverterProvider() {
     AtomicReference<TypeObservation> observed = new AtomicReference<>();
     ConverterProvider observingProvider =
+        ConverterProvider.builder().typeObserver(observed::set).build();
+    Expression.ScalarFunctionInvocation expr =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+            "add:i32_i32",
+            R.I32,
+            sb.i32(7),
+            sb.i32(42));
+    Project query = sb.project(input -> List.of(expr), sb.emptyVirtualTableScan());
+
+    new SubstraitToCalcite(observingProvider).convert(query);
+
+    assertEquals(R.I32, observed.get().suppliedType());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I32),
+        observed.get().inferredType().orElseThrow());
+  }
+
+  @Test
+  void injectTypeObserverByOverridingConverterProvider() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ConverterProvider observingProvider =
         new ConverterProvider() {
           @Override
           public TypeObserver getTypeObserver() {
@@ -297,9 +321,6 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
     new SubstraitToCalcite(observingProvider).convert(query);
 
     assertEquals(R.I32, observed.get().suppliedType());
-    assertEquals(
-        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I32),
-        observed.get().inferredType().orElseThrow());
   }
 
   @Test
@@ -357,12 +378,57 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
 
   @Test
   void useSubstraitReturnTypeDuringWindowFunctionConversion() {
+    // THIS IS (INTENTIONALLY) THE WRONG OUTPUT TYPE
+    // SHOULD BE R.I64
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.STRING);
+
+    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
+  }
+
+  @Test
+  void observeSuppliedAndInferredWindowFunctionTypes() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.STRING);
+
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
+
+    TypeObservation observation = observed.get();
+    assertEquals(TypeObservation.Source.WINDOW_FUNCTION, observation.source());
+    assertSame(expr, observation.expression());
+    assertEquals(R.STRING, observation.suppliedType());
+    assertTrue(observation.inferenceFailure().isEmpty());
+    assertNotEquals(calciteExpr.getType(), observation.inferredType().orElseThrow());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I64),
+        observation.inferredType().orElseThrow());
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
+  }
+
+  @Test
+  void observeMatchingWindowFunctionTypes() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.I64);
+
+    expr.accept(observingConverter, Context.newContext());
+
+    assertSame(expr, observed.get().expression());
+    assertEquals(R.I64, observed.get().suppliedType());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I64),
+        observed.get().inferredType().orElseThrow());
+  }
+
+  @Test
+  void observeArgumentDependentWindowFunctionType() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
     Expression.WindowFunctionInvocation expr =
         sb.windowFn(
             DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
-            "row_number:",
-            // THIS IS (INTENTIONALLY) THE WRONG OUTPUT TYPE
-            // SHOULD BE R.I64
+            "lag:any",
             R.STRING,
             Expression.AggregationPhase.INITIAL_TO_RESULT,
             Expression.AggregationInvocation.ALL,
@@ -371,8 +437,95 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
             WindowBound.UNBOUNDED,
             sb.i32(42));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
+
+    // LAG with no default operand forces a nullable return type.
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, N.I32),
+        observed.get().inferredType().orElseThrow());
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
+  }
+
+  @Test
+  void observeNullableWindowTypeOverPossiblyEmptyWindow() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    // first_value infers ARG0 widened to nullable whenever the frame may be empty, and a frame
+    // bounded by a row offset carries no compile-time guarantee that it is not.
+    Expression.WindowFunctionInvocation expr =
+        firstValueOver(WindowBound.Preceding.of(1), WindowBound.Preceding.of(1));
+
+    expr.accept(observingConverter, Context.newContext());
+
+    assertTrue(observed.get().inferredType().orElseThrow().isNullable());
+  }
+
+  @Test
+  void observeNonNullableWindowTypeOverAlwaysNonEmptyWindow() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    // A frame running from the start of the partition to the current row always holds that row,
+    // so first_value keeps the non-nullable argument type.
+    Expression.WindowFunctionInvocation expr =
+        firstValueOver(WindowBound.UNBOUNDED, WindowBound.CURRENT_ROW);
+
+    expr.accept(observingConverter, Context.newContext());
+
+    assertFalse(observed.get().inferredType().orElseThrow().isNullable());
+  }
+
+  @Test
+  void skipWindowTypeInferenceForNoopObserver() {
+    AtomicInteger inferenceCalls = new AtomicInteger();
+    ExpressionRexConverter nonObservingConverter =
+        new ExpressionRexConverter(
+            typeFactory,
+            new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+            countingInferenceWindowFunctionConverter(inferenceCalls),
+            TypeConverter.DEFAULT);
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.STRING);
+
+    RexNode calciteExpr = expr.accept(nonObservingConverter, Context.newContext());
+
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
+    assertEquals(0, inferenceCalls.get());
+  }
+
+  @Test
+  void reportWindowInferenceFailureWithoutFailingConversion() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter =
+        observingConverter(failingInferenceWindowFunctionConverter(), observed::set);
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.STRING);
+
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
+
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.STRING), calciteExpr.getType());
+    assertSame(expr, observed.get().expression());
+    assertEquals(R.STRING, observed.get().suppliedType());
+    assertTrue(observed.get().inferredType().isEmpty());
+    IllegalStateException failure =
+        assertInstanceOf(
+            IllegalStateException.class, observed.get().inferenceFailure().orElseThrow());
+    assertEquals("controlled window inference failure", failure.getMessage());
+  }
+
+  @Test
+  void propagateWindowObserverException() {
+    ExpressionRexConverter observingConverter =
+        observingConverter(
+            new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+            observation -> {
+              throw new IllegalStateException("window observer failure");
+            });
+    Expression.WindowFunctionInvocation expr = rowNumberWithReturnType(R.I64);
+
+    IllegalStateException failure =
+        assertThrows(
+            IllegalStateException.class,
+            () -> expr.accept(observingConverter, Context.newContext()));
+
+    assertEquals("window observer failure", failure.getMessage());
   }
 
   void assertTypeMatch(RelDataType actual, Type expected) {
@@ -389,6 +542,32 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
         sb.i32(42));
   }
 
+  private Expression.WindowFunctionInvocation rowNumberWithReturnType(Type outputType) {
+    return sb.windowFn(
+        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+        "row_number:",
+        outputType,
+        Expression.AggregationPhase.INITIAL_TO_RESULT,
+        Expression.AggregationInvocation.ALL,
+        Expression.WindowBoundsType.RANGE,
+        WindowBound.UNBOUNDED,
+        WindowBound.UNBOUNDED);
+  }
+
+  private Expression.WindowFunctionInvocation firstValueOver(
+      WindowBound lowerBound, WindowBound upperBound) {
+    return sb.windowFn(
+        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+        "first_value:any",
+        R.I32,
+        Expression.AggregationPhase.INITIAL_TO_RESULT,
+        Expression.AggregationInvocation.ALL,
+        Expression.WindowBoundsType.ROWS,
+        lowerBound,
+        upperBound,
+        sb.i32(42));
+  }
+
   private ExpressionRexConverter observingConverter(TypeObserver observer) {
     return observingConverter(
         new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory), observer);
@@ -400,6 +579,16 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
         typeFactory,
         scalarFunctionConverter,
         new WindowFunctionConverter(extensions.windowFunctions(), typeFactory),
+        TypeConverter.DEFAULT,
+        observer);
+  }
+
+  private ExpressionRexConverter observingConverter(
+      WindowFunctionConverter windowFunctionConverter, TypeObserver observer) {
+    return new ExpressionRexConverter(
+        typeFactory,
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory),
+        windowFunctionConverter,
         TypeConverter.DEFAULT,
         observer);
   }
@@ -440,6 +629,45 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
       @Override
       public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
         return Optional.of(countingOperator);
+      }
+    };
+  }
+
+  private WindowFunctionConverter failingInferenceWindowFunctionConverter() {
+    SqlAggFunction failingOperator =
+        new SqlAggFunction(
+            "controlled_window_inference_failure",
+            SqlKind.OTHER_FUNCTION,
+            binding -> {
+              throw new IllegalStateException("controlled window inference failure");
+            },
+            null,
+            null,
+            SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+    return windowFunctionConverter(failingOperator);
+  }
+
+  private WindowFunctionConverter countingInferenceWindowFunctionConverter(
+      AtomicInteger inferenceCalls) {
+    SqlAggFunction countingOperator =
+        new SqlAggFunction(
+            "counting_window_inference",
+            SqlKind.OTHER_FUNCTION,
+            binding -> {
+              inferenceCalls.incrementAndGet();
+              return TypeConverter.DEFAULT.toCalcite(typeFactory, R.I64);
+            },
+            null,
+            null,
+            SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+    return windowFunctionConverter(countingOperator);
+  }
+
+  private WindowFunctionConverter windowFunctionConverter(SqlAggFunction operator) {
+    return new WindowFunctionConverter(extensions.windowFunctions(), typeFactory) {
+      @Override
+      public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(String key, Type outputType) {
+        return Optional.of(operator);
       }
     };
   }

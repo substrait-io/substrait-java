@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Any;
 import io.substrait.expression.Expression.UserDefinedLiteral;
@@ -229,8 +230,59 @@ class CustomFunctionTest extends PlanTestBase {
           null,
           SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
 
+  static final SqlAggFunction customTypedAggregateFn =
+      new SqlAggFunction(
+          "custom_typed_aggregate",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+
+  static final SqlAggFunction customEnumAggregateFn =
+      new SqlAggFunction(
+          "custom_enum_aggregate",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+
+  static final SqlAggFunction customFlagsAggregateFn =
+      new SqlAggFunction(
+          "custom_flags_aggregate",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+
+  static final SqlAggFunction customOverlapFn =
+      new SqlAggFunction(
+          "custom_overlap",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+
+  static final SqlAggFunction customMixFn =
+      new SqlAggFunction(
+          "custom_mix",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          null,
+          null,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+
   static final List<FunctionMappings.Sig> additionalAggregateSignatures =
-      List.of(FunctionMappings.s(customAggregateFn));
+      List.of(
+          FunctionMappings.s(customAggregateFn),
+          FunctionMappings.s(customTypedAggregateFn),
+          FunctionMappings.s(customEnumAggregateFn),
+          FunctionMappings.s(customFlagsAggregateFn),
+          FunctionMappings.s(customOverlapFn),
+          FunctionMappings.s(customMixFn));
 
   static TypeConverter typeConverter = new TypeConverter(userTypeMapper);
 
@@ -542,6 +594,277 @@ class CustomFunctionTest extends PlanTestBase {
     RelNode calciteRel = substraitToCalcite.convert(rel);
     Rel relReturned = calciteToSubstrait.apply(calciteRel);
     assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void typeArgumentAggregateRoundtrip() {
+    // custom_typed_aggregate(<type: i32>, x: i64): only value arguments become Calcite operands,
+    // so the type argument can come back only from the carried binding — the wrapper is mandatory
+    // for such a declaration, and the reverse conversion restores the type argument without
+    // consuming an operand.
+    Rel input = sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    io.substrait.relation.Aggregate.Measure.builder()
+                        .function(
+                            io.substrait.expression.AggregateFunctionInvocation.builder()
+                                .declaration(
+                                    CUSTOM_EXTENSIONS.getAggregateFunction(
+                                        SimpleExtension.FunctionAnchor.of(
+                                            URN, "custom_typed_aggregate:type_i64")))
+                                .outputType(R.I64)
+                                .aggregationPhase(
+                                    io.substrait.expression.Expression.AggregationPhase
+                                        .INITIAL_TO_RESULT)
+                                .invocation(
+                                    io.substrait.expression.Expression.AggregationInvocation.ALL)
+                                .addArguments(TypeCreator.REQUIRED.I32)
+                                .addArguments(sb.fieldReference(i, 0))
+                                .build())
+                        .build()),
+            input);
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void enumArgumentAggregateRoundtrip() {
+    // custom_enum_aggregate(EXACT|APPROXIMATE, x: i64): no Calcite operator kind encodes this
+    // enum (only the std_dev/variance distribution is operator-encoded), so it can come back only
+    // from the carried binding — the wrapper is mandatory even though the output type matches
+    // Calcite's inference.
+    Rel input = sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    io.substrait.relation.Aggregate.Measure.builder()
+                        .function(
+                            io.substrait.expression.AggregateFunctionInvocation.builder()
+                                .declaration(
+                                    CUSTOM_EXTENSIONS.getAggregateFunction(
+                                        SimpleExtension.FunctionAnchor.of(
+                                            URN, "custom_enum_aggregate:req_i64")))
+                                .outputType(R.I64)
+                                .aggregationPhase(
+                                    io.substrait.expression.Expression.AggregationPhase
+                                        .INITIAL_TO_RESULT)
+                                .invocation(
+                                    io.substrait.expression.Expression.AggregationInvocation.ALL)
+                                .addArguments(io.substrait.expression.EnumArg.of("EXACT"))
+                                .addArguments(sb.fieldReference(i, 0))
+                                .build())
+                        .build()),
+            input);
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void argumentTypeMismatchedAggregateKeepsItsBinding() {
+    // Under the default FunctionBindingValidation.NONE a plan may invoke custom_aggregate(i64)
+    // with an i32 argument. The permissive Calcite operator accepts it and its explicit BIGINT
+    // return matches the declared i64, but re-matching would reject the i32 against the
+    // declaration's i64 — so the binding must travel for the round trip to reconstruct the
+    // invocation as the plan spelled it.
+    Rel input = sb.namedScan(List.of("example"), List.of("a"), List.of(R.I32));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN, "custom_aggregate:i64", R.I64, sb.fieldReference(i, 0)))),
+            input);
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+
+    org.apache.calcite.rel.core.Aggregate calciteAgg =
+        (org.apache.calcite.rel.core.Aggregate) calciteRel;
+    assertTrue(
+        AggregateFunctions.boundBinding(calciteAgg.getAggCallList().get(0).getAggregation())
+            .isPresent());
+    assertEquals(rel, calciteToSubstrait.apply(calciteRel));
+  }
+
+  @Test
+  void wildcardShadowedAggregateKeepsItsBinding() {
+    // custom_overlap declares both (i32) and (any, any). The reverse signature matcher checks no
+    // per-variant arity — a shorter declaration matches by repeating its trailing argument — so
+    // invoking the wildcard impl as f(i32, i32) would re-match the concrete (i32) impl first. The
+    // binding must travel for the plan's declaration to survive.
+    Rel input = sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I32, R.I32));
+    Rel wildcard =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN,
+                            "custom_overlap:any_any",
+                            R.I64,
+                            sb.fieldReference(i, 0),
+                            sb.fieldReference(i, 1)))),
+            input);
+
+    RelNode wildcardRel = substraitToCalcite.convert(wildcard);
+    org.apache.calcite.rel.core.Aggregate wildcardAgg =
+        (org.apache.calcite.rel.core.Aggregate) wildcardRel;
+    assertTrue(
+        AggregateFunctions.boundBinding(wildcardAgg.getAggCallList().get(0).getAggregation())
+            .isPresent());
+    assertEquals(wildcard, calciteToSubstrait.apply(wildcardRel));
+
+    // The concrete impl itself is reconstructable by its direct key: no wrapper needed.
+    Rel concrete =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(URN, "custom_overlap:i32", R.I64, sb.fieldReference(i, 1)))),
+            input);
+    RelNode concreteRel = substraitToCalcite.convert(concrete);
+    org.apache.calcite.rel.core.Aggregate concreteAgg =
+        (org.apache.calcite.rel.core.Aggregate) concreteRel;
+    assertTrue(
+        AggregateFunctions.boundBinding(concreteAgg.getAggCallList().get(0).getAggregation())
+            .isEmpty());
+    assertEquals(concrete, calciteToSubstrait.apply(concreteRel));
+  }
+
+  @Test
+  void divergentReturnTypeAggregateKeepsItsBinding() {
+    // custom_mix(any, string) declares an i32 return, while the plan declares i64 — permitted
+    // under FunctionBindingValidation.NONE and equal to the operator's inference, so nothing about
+    // the type forces a wrapper. The reverse signature matcher would reject the declaration by its
+    // return type and the singular fallback finds no least-restrictive type for (i64, string), so
+    // without the binding the invocation could not be reconstructed at all.
+    Rel input = sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I64, R.STRING));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN,
+                            "custom_mix:any_str",
+                            R.I64,
+                            sb.fieldReference(i, 0),
+                            sb.fieldReference(i, 1)))),
+            input);
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    org.apache.calcite.rel.core.Aggregate calciteAgg =
+        (org.apache.calcite.rel.core.Aggregate) calciteRel;
+    assertTrue(
+        AggregateFunctions.boundBinding(calciteAgg.getAggCallList().get(0).getAggregation())
+            .isPresent());
+    assertEquals(rel, calciteToSubstrait.apply(calciteRel));
+  }
+
+  @Test
+  void variadicEnumAggregateRoundtrip() {
+    // custom_flags_aggregate(x: i64, flag: [A,B,C]...): the trailing enum repeats, and none of the
+    // repetitions is a Calcite operand — all of them can come back only from the carried binding.
+    Rel input = sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    io.substrait.relation.Aggregate.Measure.builder()
+                        .function(
+                            io.substrait.expression.AggregateFunctionInvocation.builder()
+                                .declaration(
+                                    CUSTOM_EXTENSIONS.getAggregateFunction(
+                                        SimpleExtension.FunctionAnchor.of(
+                                            URN, "custom_flags_aggregate:i64_req")))
+                                .outputType(R.I64)
+                                .aggregationPhase(
+                                    io.substrait.expression.Expression.AggregationPhase
+                                        .INITIAL_TO_RESULT)
+                                .invocation(
+                                    io.substrait.expression.Expression.AggregationInvocation.ALL)
+                                .addArguments(sb.fieldReference(i, 0))
+                                .addArguments(io.substrait.expression.EnumArg.of("A"))
+                                .addArguments(io.substrait.expression.EnumArg.of("B"))
+                                .build())
+                        .build()),
+            input);
+
+    RelNode calciteRel = substraitToCalcite.convert(rel);
+    Rel relReturned = calciteToSubstrait.apply(calciteRel);
+    assertEquals(rel, relReturned);
+  }
+
+  @Test
+  void aggregateInferenceFailureFallsBackToThePlanTypeUnderPlanOutput() {
+    // custom_aggregate mapped to an operator whose return-type inference rejects its operands.
+    // Under PLAN_OUTPUT the inferred type only decides whether the plan's type must travel on a
+    // wrapper, so the failure counts as "diverges" and the conversion proceeds with the plan's
+    // type; under CALCITE_INFERENCE there is nothing to fall back to and the failure propagates.
+    SqlAggFunction throwingAggregateFn =
+        new SqlAggFunction(
+            "custom_aggregate",
+            SqlKind.OTHER_FUNCTION,
+            opBinding -> {
+              throw new IllegalStateException("this operator cannot infer a return type");
+            },
+            null,
+            null,
+            SqlFunctionCategory.USER_DEFINED_FUNCTION) {};
+    AggregateFunctionConverter throwingAggregateConverter =
+        new AggregateFunctionConverter(
+            CUSTOM_EXTENSIONS.aggregateFunctions(),
+            List.of(FunctionMappings.s(throwingAggregateFn)),
+            SubstraitTypeSystem.TYPE_FACTORY,
+            typeConverter);
+    Rel rel =
+        sb.aggregate(
+            input -> sb.grouping(input, 0),
+            input ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN, "custom_aggregate:i64", R.I64, sb.fieldReference(input, 0)))),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.I64)));
+
+    ConverterProvider planOutput =
+        ConverterProvider.builder()
+            .typeFactory(SubstraitTypeSystem.TYPE_FACTORY)
+            .extensions(CUSTOM_EXTENSIONS)
+            .aggregateFunctionConverter(throwingAggregateConverter)
+            .typeConverter(typeConverter)
+            .build();
+    org.apache.calcite.rel.core.Aggregate calciteAgg =
+        (org.apache.calcite.rel.core.Aggregate) new SubstraitToCalcite(planOutput).convert(rel);
+    assertEquals(SqlTypeName.BIGINT, calciteAgg.getAggCallList().get(0).getType().getSqlTypeName());
+
+    ConverterProvider calciteInference =
+        ConverterProvider.builder()
+            .typeFactory(SubstraitTypeSystem.TYPE_FACTORY)
+            .extensions(CUSTOM_EXTENSIONS)
+            .aggregateFunctionConverter(throwingAggregateConverter)
+            .typeConverter(typeConverter)
+            .aggregateConversion(
+                new AggregateConversion(
+                    AggregateConversion.OutputTypeSource.CALCITE_INFERENCE,
+                    AggregateConversion.FunctionBindingValidation.NONE))
+            .build();
+    assertThrows(
+        IllegalStateException.class, () -> new SubstraitToCalcite(calciteInference).convert(rel));
   }
 
   @Test

@@ -119,4 +119,50 @@ class SubstraitCreateStatementParserTest {
                 "create table src1 (intcol int, charcol varchar(10))",
                 "create table src1 (intcol int, charcol varchar(20))"));
   }
+
+  @Test
+  void testToCatalogWithCreateTableAsSelectThrowsException() {
+    final SqlParseException e =
+        assertThrows(
+            SqlParseException.class,
+            () ->
+                SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                    "create table src1 as select 1"));
+
+    assertEquals("CTAS not supported.", e.getMessage());
+  }
+
+  @Test
+  void testToCatalogWithCreateTableAsSelectWithColumnListThrowsException() {
+    final SqlParseException e =
+        assertThrows(
+            SqlParseException.class,
+            () ->
+                SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                    "create table src1 (intcol int) as select 1"));
+
+    assertEquals("CTAS not supported.", e.getMessage());
+  }
+
+  @Test
+  void testToCatalogWithCreateTableWithoutColumnsThrowsException() {
+    final SqlParseException e =
+        assertThrows(
+            SqlParseException.class,
+            () ->
+                SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                    "create table src1"));
+
+    assertEquals("Column definitions are required.", e.getMessage());
+  }
+
+  @Test
+  void testCreateStatementsWithCreateTableWithoutColumnsThrowsException() {
+    final SqlParseException e =
+        assertThrows(
+            SqlParseException.class,
+            () -> SubstraitCreateStatementParser.processCreateStatements("create table src1"));
+
+    assertEquals("Column definitions are required.", e.getMessage());
+  }
 }

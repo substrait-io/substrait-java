@@ -402,6 +402,40 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             Expression.NestedList.builder().from(expr).values(expressionList).build());
   }
 
+  @Override
+  public Optional<Expression> visit(Expression.NestedMap expr, EmptyVisitationContext context)
+      throws E {
+    Optional<List<Expression.NestedMap.KeyValue>> keyValues =
+        transformList(expr.keyValues(), context, this::visitKeyValue);
+
+    return keyValues.map(
+        keyValueList -> Expression.NestedMap.builder().from(expr).keyValues(keyValueList).build());
+  }
+
+  /**
+   * Visits a key-value pair of a nested map expression.
+   *
+   * @param keyValue the key-value pair to visit
+   * @param context the visitation context
+   * @return Optional containing modified key-value pair, or empty if no changes
+   * @throws E if an error occurs during visitation
+   */
+  protected Optional<Expression.NestedMap.KeyValue> visitKeyValue(
+      Expression.NestedMap.KeyValue keyValue, EmptyVisitationContext context) throws E {
+    Optional<Expression> key = keyValue.key().accept(this, context);
+    Optional<Expression> value = keyValue.value().accept(this, context);
+
+    if (allEmpty(key, value)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Expression.NestedMap.KeyValue.builder()
+            .from(keyValue)
+            .key(key.orElse(keyValue.key()))
+            .value(value.orElse(keyValue.value()))
+            .build());
+  }
+
   /**
    * Visits a multi-or-list record.
    *
