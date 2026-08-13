@@ -75,7 +75,10 @@ class SubtraitRelVisitorExtensionTest {
 
     @Override
     public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs) {
-      assert inputs.size() == 1;
+      if (inputs.size() != 1) {
+        throw new IllegalArgumentException(
+            "RepeatRel requires exactly one input, but got " + inputs.size());
+      }
       return new RepeatRel(getCluster(), traitSet, inputs.get(0), this.repeatCount);
     }
   }

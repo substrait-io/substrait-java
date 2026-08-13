@@ -885,6 +885,9 @@ public class ProtoRelConverter {
                         })
                     .collect(java.util.stream.Collectors.toList()));
 
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
     return applyRelCommon(builder.build(), rel.getCommon());
   }
 

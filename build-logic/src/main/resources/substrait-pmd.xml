@@ -21,4 +21,22 @@
   <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod" />
   <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes" />
   <rule ref="category/java/errorprone.xml/MissingSerialVersionUID" />
+
+  <rule name="AvoidAssertStatement" language="java"
+    message="Do not validate with assert: assertions only run when the JVM is started with -ea. Throw IllegalArgumentException for caller-facing invariants or IllegalStateException for internal ones."
+    class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+    <description>
+      Java assertions are disabled unless the host JVM runs with -ea, which is the case for
+      Gradle's test JVMs and for almost nothing else. An assert-based check is therefore
+      enforced in CI and silently skipped in every real deployment, and AssertionError is an
+      Error rather than an Exception, so callers that catch Exception to report a bad plan
+      never see it.
+    </description>
+    <priority>3</priority>
+    <properties>
+      <property name="xpath">
+        <value>//AssertStatement</value>
+      </property>
+    </properties>
+  </rule>
 </ruleset>

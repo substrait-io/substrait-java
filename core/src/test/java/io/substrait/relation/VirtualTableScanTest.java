@@ -112,7 +112,7 @@ class VirtualTableScanTest extends TestBase {
                     .addFields(ExpressionCreator.i64(true, 1))
                     .nullable(true) // can't have nullable rows
                     .build());
-    assertThrows(AssertionError.class, bldr::build);
+    assertThrows(IllegalArgumentException.class, bldr::build);
   }
 
   @Test
@@ -134,7 +134,7 @@ class VirtualTableScanTest extends TestBase {
   void checkInvalidRowTypeMismatch() {
     // Row has I32 where schema expects STRING
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             ImmutableVirtualTableScan.builder()
                 .initialSchema(
@@ -153,7 +153,7 @@ class VirtualTableScanTest extends TestBase {
   void checkInvalidRowWrongFieldCount() {
     // Row has wrong number of fields
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             ImmutableVirtualTableScan.builder()
                 .initialSchema(
@@ -169,7 +169,7 @@ class VirtualTableScanTest extends TestBase {
   void checkInvalidNestedStructTypeMismatch() {
     // Nested struct has wrong field type
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             ImmutableVirtualTableScan.builder()
                 .initialSchema(
@@ -191,7 +191,7 @@ class VirtualTableScanTest extends TestBase {
   void checkInvalidListElementTypeMismatch() {
     // List has wrong element type
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             ImmutableVirtualTableScan.builder()
                 .initialSchema(
@@ -208,7 +208,7 @@ class VirtualTableScanTest extends TestBase {
   void checkInvalidNullabilityMismatch() {
     // Nullability must match exactly
     assertThrows(
-        AssertionError.class,
+        IllegalArgumentException.class,
         () ->
             ImmutableVirtualTableScan.builder()
                 .initialSchema(

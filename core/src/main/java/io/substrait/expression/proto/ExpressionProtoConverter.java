@@ -477,7 +477,12 @@ public class ExpressionProtoConverter
 
   private Expression.Literal toLiteral(io.substrait.expression.Expression expression) {
     Expression e = toProto(expression);
-    assert e.getRexTypeCase() == Expression.RexTypeCase.LITERAL;
+    if (e.getRexTypeCase() != Expression.RexTypeCase.LITERAL) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Expected a literal expression, but %s was converted to a %s",
+              expression.getClass().getSimpleName(), e.getRexTypeCase()));
+    }
     return e.getLiteral();
   }
 
@@ -614,6 +619,26 @@ public class ExpressionProtoConverter
                 .setList(Expression.Nested.List.newBuilder().addAllValues(values))
                 .setNullable(expr.nullable()))
         .build();
+  }
+
+  @Override
+  public Expression visit(
+      io.substrait.expression.Expression.NestedMap expr, EmptyVisitationContext context)
+      throws RuntimeException {
+    return nested(
+        bldr -> {
+          List<Expression.Nested.Map.KeyValue> keyValues =
+              expr.keyValues().stream()
+                  .map(
+                      keyValue ->
+                          Expression.Nested.Map.KeyValue.newBuilder()
+                              .setKey(toProto(keyValue.key()))
+                              .setValue(toProto(keyValue.value()))
+                              .build())
+                  .collect(Collectors.toList());
+          bldr.setMap(Expression.Nested.Map.newBuilder().addAllKeyValues(keyValues))
+              .setNullable(expr.nullable());
+        });
   }
 
   @Override

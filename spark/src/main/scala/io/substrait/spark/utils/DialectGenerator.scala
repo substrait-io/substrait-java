@@ -5,7 +5,7 @@ import io.substrait.spark.expression.FunctionMappings.{AGGREGATE_SIGS, SCALAR_SI
 import io.substrait.spark.expression.Sig
 
 import org.apache.spark.sql.catalyst.expressions.{BinaryOperator, Expression, Literal}
-import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, DoubleType, FloatType, IntegerType, LongType, NullType, ShortType, TimestampNTZType, TimestampType, YearMonthIntervalType}
+import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, DoubleType, FloatType, IntegerType, LongType, ShortType, TimestampNTZType, TimestampType, YearMonthIntervalType}
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
@@ -223,17 +223,19 @@ class DialectGenerator {
               {
                 val signature = v.key().split(":", 2).apply(1)
                 // generate sample arguments for this variant
-                val args = if (signature.isEmpty) {
+                val args: Seq[Option[Literal]] = if (signature.isEmpty) {
                   Seq.empty
                 } else {
                   signature.split("_").toSeq.map(argValue)
                 }
-                // test it against the function expression
+                // A variant is only supported if every argument type has a Spark
+                // equivalent. Probing an unmappable type with a placeholder literal
+                // would let permissive type checks pass and report support that
+                // Spark does not have.
                 if (
-                  expr.children != null && expr.children.size == args.size && expr
-                    .withNewChildren(args)
-                    .checkInputDataTypes()
-                    .isSuccess
+                  args.forall(_.isDefined) && expr.children != null
+                  && expr.children.size == args.size
+                  && expr.withNewChildren(args.flatten).checkInputDataTypes().isSuccess
                 ) {
                   (v.urn, signature)
                 } else {
@@ -260,30 +262,31 @@ class DialectGenerator {
     }.toSeq
   }
 
-  // Generate a type-appropriate sample value
-  private def argValue(argType: String): Literal = {
+  // Generate a type-appropriate sample value, or None when the Substrait type has no
+  // Spark equivalent to build a literal from.
+  private def argValue(argType: String): Option[Literal] = {
     argType match {
-      case "i8" => Literal(Byte.MaxValue, ByteType)
-      case "i16" => Literal(Short.MaxValue, ShortType)
-      case "i32" => Literal(Integer.MAX_VALUE, IntegerType)
-      case "i64" => Literal(Long.MaxValue, LongType)
-      case "fp32" => Literal(Float.MaxValue, FloatType)
-      case "fp64" => Literal(Double.MaxValue, DoubleType)
-      case "dec" => Literal(BigDecimal(1))
-      case "str" => Literal("str")
-      case "vchar" => Literal("str")
-      case "fchar" => Literal("str")
-      case "any" => Literal("any") // can be any literal type - use string
-      case "bool" => Literal(true)
-      case "date" => Literal(0, DateType)
-      case "ts" => Literal(0L, TimestampNTZType)
-      case "tstz" => Literal(0L, TimestampType)
-      case "pts" => Literal(0L, TimestampNTZType)
-      case "ptstz" => Literal(0L, TimestampType)
-      case "iyear" => Literal(0, YearMonthIntervalType())
-      case "iday" => Literal(0L, DayTimeIntervalType())
-      case "req" => Literal("req")
-      case _ => Literal(null, NullType)
+      case "i8" => Some(Literal(Byte.MaxValue, ByteType))
+      case "i16" => Some(Literal(Short.MaxValue, ShortType))
+      case "i32" => Some(Literal(Integer.MAX_VALUE, IntegerType))
+      case "i64" => Some(Literal(Long.MaxValue, LongType))
+      case "fp32" => Some(Literal(Float.MaxValue, FloatType))
+      case "fp64" => Some(Literal(Double.MaxValue, DoubleType))
+      case "dec" => Some(Literal(BigDecimal(1)))
+      case "str" => Some(Literal("str"))
+      case "vchar" => Some(Literal("str"))
+      case "fchar" => Some(Literal("str"))
+      case "any" => Some(Literal("any")) // can be any literal type - use string
+      case "bool" => Some(Literal(true))
+      case "date" => Some(Literal(0, DateType))
+      case "ts" => Some(Literal(0L, TimestampNTZType))
+      case "tstz" => Some(Literal(0L, TimestampType))
+      case "pts" => Some(Literal(0L, TimestampNTZType))
+      case "ptstz" => Some(Literal(0L, TimestampType))
+      case "iyear" => Some(Literal(0, YearMonthIntervalType()))
+      case "iday" => Some(Literal(0L, DayTimeIntervalType()))
+      case "req" => Some(Literal("req"))
+      case _ => None
     }
   }
 }

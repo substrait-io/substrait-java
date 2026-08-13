@@ -1,7 +1,8 @@
 package io.substrait.function;
 
 import io.substrait.type.TypeVisitor;
-import java.util.Locale;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.immutables.value.Value;
 
 /**
@@ -53,6 +54,17 @@ public interface ParameterizedType extends TypeExpression {
    * @return {@code true} if this type is a wildcard
    */
   default boolean isWildcard() {
+    return false;
+  }
+
+  /**
+   * Returns whether this type is a <em>numbered</em> wildcard ({@code any1}, {@code any2}, ...), as
+   * opposed to a plain {@code any}. Occurrences of the same numbered wildcard within one signature
+   * must bind to the same type, while each plain {@code any} binds independently.
+   *
+   * @return {@code true} if this type is a numbered wildcard
+   */
+  default boolean isNumberedWildcard() {
     return false;
   }
 
@@ -432,6 +444,18 @@ public interface ParameterizedType extends TypeExpression {
   /** A string-literal type parameter, used as a placeholder for an integer or type parameter. */
   @Value.Immutable
   abstract class StringLiteral extends BaseParameterizedType implements NullableType {
+    // Transcribed from the Substrait type grammar's lexer, which is caseInsensitive:
+    //     Any:    'ANY';
+    //     AnyVar: Any [0-9];
+    // Exactly one ASCII digit: "any10" lexes as an Identifier, i.e. an ordinary named type
+    // parameter rather than a wildcard (spec v0.99.0). \A..\z rather than ^..$ because
+    // asPredicate() is find()-based, and asMatchPredicate() needs Java 11 while this module
+    // compiles for Java 8.
+    private static final Predicate<String> WILDCARD =
+        Pattern.compile("\\Aany[0-9]?\\z", Pattern.CASE_INSENSITIVE).asPredicate();
+    private static final Predicate<String> NUMBERED_WILDCARD =
+        Pattern.compile("\\Aany[0-9]\\z", Pattern.CASE_INSENSITIVE).asPredicate();
+
     /**
      * Returns the literal parameter value.
      *
@@ -450,7 +474,12 @@ public interface ParameterizedType extends TypeExpression {
 
     @Override
     public boolean isWildcard() {
-      return value().toLowerCase(Locale.ROOT).startsWith("any");
+      return WILDCARD.test(value());
+    }
+
+    @Override
+    public boolean isNumberedWildcard() {
+      return NUMBERED_WILDCARD.test(value());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package io.substrait.function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -66,5 +67,44 @@ class ToTypeStringTest {
     ParameterizedType.StringLiteral any1 =
         ParameterizedType.StringLiteral.builder().nullable(false).value("any1").build();
     assertEquals("any1", any1.accept(ToTypeString.ToTypeLiteralStringLossless.INSTANCE));
+  }
+
+  static Stream<Arguments> wildcardBoundaries() {
+    // The type grammar's lexer defines the wildcard family as 'ANY' [0-9]? (case-insensitive) with
+    // exactly one digit at most; a longer token lexes as an ordinary named type parameter.
+    return Stream.of(
+        Arguments.of("any", true, false),
+        Arguments.of("ANY", true, false),
+        Arguments.of("any0", true, true),
+        Arguments.of("any1", true, true),
+        Arguments.of("ANY2", true, true),
+        Arguments.of("any9", true, true),
+        Arguments.of("any10", false, false),
+        Arguments.of("any123", false, false),
+        Arguments.of("any1x", false, false),
+        Arguments.of("anything", false, false),
+        Arguments.of("anywhere", false, false),
+        // Character.isDigit is Unicode-aware, but the grammar admits ASCII digits only.
+        Arguments.of("any٢", false, false),
+        Arguments.of("T", false, false));
+  }
+
+  @ParameterizedTest
+  @MethodSource("wildcardBoundaries")
+  void wildcardPredicatesFollowTheTypeGrammar(
+      String value, boolean wildcard, boolean numberedWildcard) {
+    ParameterizedType.StringLiteral literal =
+        ParameterizedType.StringLiteral.builder().nullable(false).value(value).build();
+    assertEquals(wildcard, literal.isWildcard());
+    assertEquals(numberedWildcard, literal.isNumberedWildcard());
+    // The signature key collapses exactly the wildcard family to "any". An ordinary named
+    // parameter that merely starts with "any" (e.g. "anything") no longer collides with f(any):
+    // like every other named literal ("T"), it has no short name and fails loudly instead.
+    if (wildcard) {
+      assertEquals("any", literal.accept(ToTypeString.INSTANCE));
+    } else {
+      assertThrows(
+          UnsupportedOperationException.class, () -> literal.accept(ToTypeString.INSTANCE));
+    }
   }
 }

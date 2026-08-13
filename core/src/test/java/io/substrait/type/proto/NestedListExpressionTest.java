@@ -1,10 +1,12 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +19,7 @@ class NestedListExpressionTest extends TestBase {
   void rejectNestedListWithElementsOfDifferentTypes() {
     ImmutableExpression.NestedList.Builder builder =
         Expression.NestedList.builder().addValues(literalExpression).addValues(sb.i32(12));
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
@@ -26,18 +28,36 @@ class NestedListExpressionTest extends TestBase {
         Expression.NestedList.builder().addValues(nonLiteralExpression).addValues(sb.i32(12));
     assertDoesNotThrow(builder::build);
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(builder.build())
-            .input(sb.emptyVirtualTableScan())
+    verifyRoundTrip(projectOf(builder.build()));
+  }
+
+  @Test
+  void acceptNestedListWithElementsOfMixedNullability() {
+    // A list of values that differ only in nullability is valid; SQL builds such lists from
+    // ARRAY[not_null_column, nullable_column].
+    Expression.NestedList mixedNullability =
+        Expression.NestedList.builder()
+            .addValues(sb.i32(12))
+            .addValues(ExpressionCreator.typedNull(N.I32))
             .build();
-    verifyRoundTrip(project);
+    // The element type is nullable, because the list holds a null.
+    assertEquals(R.list(N.I32), mixedNullability.getType());
+    // The value order does not change the type.
+    assertEquals(
+        mixedNullability.getType(),
+        Expression.NestedList.builder()
+            .addValues(ExpressionCreator.typedNull(N.I32))
+            .addValues(sb.i32(12))
+            .build()
+            .getType());
+
+    verifyRoundTrip(projectOf(mixedNullability));
   }
 
   @Test
   void rejectEmptyNestedListTest() {
     ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
@@ -48,13 +68,7 @@ class NestedListExpressionTest extends TestBase {
             .addValues(literalExpression)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(literalNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(literalNestedList));
   }
 
   @Test
@@ -66,13 +80,7 @@ class NestedListExpressionTest extends TestBase {
             .nullable(true)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(literalNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(literalNestedList));
   }
 
   @Test
@@ -83,12 +91,6 @@ class NestedListExpressionTest extends TestBase {
             .addValues(nonLiteralExpression)
             .build();
 
-    io.substrait.relation.Project project =
-        io.substrait.relation.Project.builder()
-            .addExpressions(nonLiteralNestedList)
-            .input(sb.emptyVirtualTableScan())
-            .build();
-
-    verifyRoundTrip(project);
+    verifyRoundTrip(projectOf(nonLiteralNestedList));
   }
 }
