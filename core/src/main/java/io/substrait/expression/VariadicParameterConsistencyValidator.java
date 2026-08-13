@@ -20,7 +20,7 @@ class VariadicParameterConsistencyValidator {
    *
    * @param func the function declaration
    * @param arguments the function arguments to validate
-   * @throws AssertionError if validation fails
+   * @throws IllegalArgumentException if validation fails
    */
   public static void validate(SimpleExtension.Function func, List<FunctionArg> arguments) {
     Optional<SimpleExtension.VariadicBehavior> variadic = func.variadic();
@@ -85,7 +85,7 @@ class VariadicParameterConsistencyValidator {
     for (int i = firstVariadicArgIdx + 1; i < argumentTypes.size(); i++) {
       Type currentType = argumentTypes.get(i);
       if (!firstVariadicType.equalsIgnoringNullability(currentType)) {
-        throw new AssertionError(
+        throw new IllegalArgumentException(
             String.format(
                 "Variadic arguments must have consistent types when parameterConsistency is CONSISTENT. "
                     + "Argument at index %d has type %s but argument at index %d has type %s",
