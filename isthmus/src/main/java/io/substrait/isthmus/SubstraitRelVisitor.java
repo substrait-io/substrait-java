@@ -56,6 +56,7 @@ import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -161,21 +162,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Values values) {
     NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
+    List<RelDataTypeField> rowFields = values.getRowType().getFieldList();
 
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Type> schemaFieldTypes = type.struct().fields();
     List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  // Use schema nullability since Calcite infers non-nullable for all non-null
-                  // values
+                  // Calcite may infer a narrower type for a tuple literal than for its row field.
+                  // Virtual table rows must use the row field type.
                   List<Expression> fields =
                       IntStream.range(0, list.size())
                           .mapToObj(
                               i ->
-                                  literalConverter.convert(
-                                      list.get(i), schemaFieldTypes.get(i).nullable()))
+                                  literalConverter.convert(list.get(i), rowFields.get(i).getType()))
                           .collect(Collectors.toUnmodifiableList());
                   return ExpressionCreator.nestedStruct(false, fields);
                 })
