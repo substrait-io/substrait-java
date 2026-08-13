@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -384,7 +385,7 @@ public class SubstraitRelNodeConverter
       }
     }
 
-    exitUncorrelatedScope(context, "aggregate");
+    exitUncorrelatedScope(context, Aggregate.class);
 
     // RelBuilder deduplicates equal aggregate calls, and AggregateCall equality ignores the stored
     // type: two measures of the same function that differ only by their declared output type would
@@ -613,7 +614,7 @@ public class SubstraitRelNodeConverter
         sort.getSortFields().stream()
             .map(sortField -> directedRexNode(sortField, context))
             .collect(Collectors.toList());
-    exitUncorrelatedScope(context, "sort");
+    exitUncorrelatedScope(context, Sort.class);
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
     return applyRemap(node, sort.getRemap());
   }
@@ -654,7 +655,7 @@ public class SubstraitRelNodeConverter
         fetch.getOffset().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
     RexNode count =
         fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
-    exitUncorrelatedScope(context, "fetch");
+    exitUncorrelatedScope(context, Fetch.class);
     RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
     return applyRemap(node, fetch.getRemap());
   }
@@ -711,8 +712,10 @@ public class SubstraitRelNodeConverter
           transform.getTransformation().accept(expressionRexConverter, context));
     }
 
-    java.util.Set<CorrelationId> correlationIds = context.exitScope();
-    relBuilder.filter(correlationIds, condition);
+    // Keep the scope open through the condition and transformations so field-reference
+    // observations use the table row type. With no rel_anchor, its correlation set is always empty.
+    context.exitScope();
+    relBuilder.filter(condition);
     RelNode inputForModify = relBuilder.build();
 
     assert relBuilder.getRelOptSchema() != null;
@@ -946,11 +949,12 @@ public class SubstraitRelNodeConverter
    * rejected rather than silently dropped.
    *
    * @param context the conversion context whose innermost scope is exited
-   * @param relName the relation kind, used in the failure message
+   * @param relType the relation type, used in the failure message
    */
-  private static void exitUncorrelatedScope(Context context, String relName) {
+  private static void exitUncorrelatedScope(Context context, Class<? extends Rel> relType) {
     java.util.Set<CorrelationId> correlationIds = context.exitScope();
     if (!correlationIds.isEmpty()) {
+      String relName = relType.getSimpleName().toLowerCase(Locale.ROOT);
       throw new UnsupportedOperationException(
           "Outer references bound to the " + relName + " input are not supported");
     }
