@@ -439,7 +439,19 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.ListLiteral expr, Context context) throws RuntimeException {
     List<RexNode> args =
         expr.values().stream().map(l -> l.accept(this, context)).collect(Collectors.toList());
-    return rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+    // expr.getType() carries the nullability of the list itself, which Calcite would otherwise
+    // infer as non-nullable from the elements
+    RelDataType listType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(listType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
+  public RexNode visit(Expression.NestedStruct expr, Context context) {
+    List<RexNode> fieldNodes =
+        expr.fields().stream().map(f -> f.accept(this, context)).collect(Collectors.toList());
+    // expr.getType() carries the nullability of the NestedStruct itself
+    RelDataType structType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(structType, SqlStdOperatorTable.ROW, fieldNodes);
   }
 
   @Override
@@ -477,7 +489,25 @@ public class ExpressionRexConverter
                         entry.getKey().accept(this, context),
                         entry.getValue().accept(this, context)))
             .collect(Collectors.toList());
-    return rexBuilder.makeCall(SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, args);
+    // expr.getType() carries the nullability of the map itself, which Calcite would otherwise
+    // infer as non-nullable from the keys and values
+    RelDataType mapType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(mapType, SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, args);
+  }
+
+  @Override
+  public RexNode visit(Expression.NestedMap expr, Context context) {
+    List<RexNode> args =
+        expr.keyValues().stream()
+            .flatMap(
+                keyValue ->
+                    Stream.of(
+                        keyValue.key().accept(this, context),
+                        keyValue.value().accept(this, context)))
+            .collect(Collectors.toList());
+    // expr.getType() carries the nullability of the NestedMap itself
+    RelDataType mapType = typeConverter.toCalcite(typeFactory, expr.getType());
+    return rexBuilder.makeCall(mapType, SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, args);
   }
 
   @Override
