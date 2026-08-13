@@ -39,6 +39,10 @@ class NestedExpressionsTest extends PlanTestBase {
   Expression fieldRef1 = sb.fieldReference(commonTable, 2);
   Expression fieldRef2 = sb.fieldReference(commonTable, 4);
 
+  final Rel nullableIntTable =
+      sb.namedScan(List.of("nullableInts"), List.of("a", "b"), List.of(N.I32, N.I32));
+  Expression nullableIntFieldRef = sb.fieldReference(nullableIntTable, 0);
+
   @Test
   void nestedListWithLiteralsTest() {
     List<Expression> expressionList = new ArrayList<>();
@@ -97,6 +101,65 @@ class NestedExpressionsTest extends PlanTestBase {
             .build();
 
     assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedListMixingNullableLiteralAndFieldReferenceTest() {
+    // Both values are i32?, so this list is homogeneous on the way in. Calcite types every
+    // non-null literal NOT NULL, so the literal comes back non-nullable while the field reference
+    // keeps its nullability. The list still converts, because a nested list compares its element
+    // types disregarding nullability, and it still reports list<i32?>, because the element type is
+    // the nullable union of the values.
+    Expression.NestedList nestedList =
+        Expression.NestedList.builder()
+            .addValues(ExpressionCreator.i32(true, 5))
+            .addValues(nullableIntFieldRef)
+            .build();
+    assertEquals(R.list(N.I32), nestedList.getType());
+
+    Project project =
+        Project.builder()
+            .expressions(List.of(nestedList))
+            .input(nullableIntTable)
+            .remap(Rel.Remap.of(Collections.singleton(2)))
+            .build();
+
+    Expression roundTripped = roundTripExpression(project);
+    Expression.NestedList result = assertInstanceOf(Expression.NestedList.class, roundTripped);
+    assertEquals(nestedList.getType(), result.getType());
+    // The literal itself does not come back nullable, so the round trip is not identity.
+    assertEquals(ExpressionCreator.i32(false, 5), result.values().get(0));
+  }
+
+  @Test
+  void nestedMapMixingNullableLiteralAndFieldReferenceTest() {
+    // As above, for the value side of a map.
+    Expression.NestedMap nestedMap =
+        Expression.NestedMap.builder()
+            .addKeyValues(
+                Expression.NestedMap.KeyValue.of(sb.str("a"), ExpressionCreator.i32(true, 5)))
+            .addKeyValues(Expression.NestedMap.KeyValue.of(sb.str("b"), nullableIntFieldRef))
+            .build();
+    assertEquals(R.map(R.STRING, N.I32), nestedMap.getType());
+
+    Project project =
+        Project.builder()
+            .expressions(List.of(nestedMap))
+            .input(nullableIntTable)
+            .remap(Rel.Remap.of(Collections.singleton(2)))
+            .build();
+
+    Expression roundTripped = roundTripExpression(project);
+    Expression.NestedMap result = assertInstanceOf(Expression.NestedMap.class, roundTripped);
+    assertEquals(nestedMap.getType(), result.getType());
+    assertEquals(ExpressionCreator.i32(false, 5), result.keyValues().get(0).value());
+  }
+
+  /** Converts the given single-expression project to Calcite and back, returning the expression. */
+  private Expression roundTripExpression(Project project) {
+    RelNode relNode = substraitToCalcite.convert(project);
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, converterProvider);
+    return ((Project) substraitRel).getExpressions().get(0);
   }
 
   @Test
