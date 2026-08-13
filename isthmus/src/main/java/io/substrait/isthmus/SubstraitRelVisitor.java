@@ -536,8 +536,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (call.filterArg != -1) {
       builder.preMeasureFilter(FieldReference.newRootStructReference(call.filterArg, inputType));
     }
-    // TODO: handle the collation on the AggregateCall
-    //   https://github.com/substrait-io/substrait-java/issues/215
     return builder.build();
   }
 
@@ -738,7 +736,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     Expression.SortDirection direction = asSortDirection(collation);
 
     return Expression.SortField.builder()
-        .expr(FieldReference.newRootStructReference(collation.getFieldIndex(), inputType))
+        .expr(
+            FieldReference.newRootStructReference(
+                collation.getFieldIndex(), inputType.fields().get(collation.getFieldIndex())))
         .direction(direction)
         .build();
   }
