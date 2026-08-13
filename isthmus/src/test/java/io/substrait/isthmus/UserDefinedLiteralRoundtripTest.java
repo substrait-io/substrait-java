@@ -228,6 +228,23 @@ class UserDefinedLiteralRoundtripTest extends PlanTestBase {
   }
 
   @Test
+  void structEncodedUdtWithNullableStructFieldRoundTrip() {
+    // A struct-encoded UDT is a Calcite ROW that CallConverters.REINTERPRET recognises by its
+    // operand being a StructLiteral. A nullable struct field produces a nullable inner ROW, so
+    // anything that stops a nullable ROW of literals from converting back to a StructLiteral also
+    // breaks the enclosing user-defined literal.
+    assertRoundTrip(
+        ExpressionCreator.userDefinedLiteralStruct(
+            false,
+            NESTED_TYPES_URN,
+            "point",
+            Collections.emptyList(),
+            Arrays.asList(
+                ExpressionCreator.struct(true, ExpressionCreator.i32(true, 1)),
+                ExpressionCreator.i32(false, 100))));
+  }
+
+  @Test
   void parameterizedUdtRoundTrip() {
     Type.Parameter typeParam =
         io.substrait.type.ImmutableType.ParameterDataType.builder()
