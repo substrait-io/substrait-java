@@ -790,7 +790,6 @@ supported_aggregate_functions:
   - "date"
   - "iday"
   - "iyear"
-  - "pt"
   - "pts"
   - "ptstz"
 - source: "datetime"
@@ -802,7 +801,6 @@ supported_aggregate_functions:
   - "date"
   - "iday"
   - "iyear"
-  - "pt"
   - "pts"
   - "ptstz"
 supported_window_functions:

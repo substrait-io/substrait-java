@@ -22,6 +22,7 @@ import io.substrait.util.Util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -649,13 +650,49 @@ public class SimpleExtension {
     }
 
     /**
-     * Returns the resolve Type for the given arguments.
+     * Resolves the concrete output type for the given argument types, applying the declaration's
+     * nullability policy.
      *
-     * @param argumentTypes the argument Types
-     * @return the resolve Type
+     * <p>Pass one type per declared non-enum argument, in declaration order (a variadic
+     * declaration's trailing argument may repeat). Under the default {@code MIRROR} policy the
+     * result is nullable iff any type supplied for a declared <em>value</em> argument is nullable;
+     * under {@code DECLARED_OUTPUT} and {@code DISCRETE} the return expression's own nullability is
+     * authoritative.
+     *
+     * @param argumentTypes the actual types of the non-enum arguments
+     * @return the resolved type
+     * @throws UnsupportedOperationException if the return expression cannot be evaluated
      */
     public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
-      return TypeExpressionEvaluator.evaluateExpression(returnType(), args(), argumentTypes);
+      io.substrait.type.Type base =
+          TypeExpressionEvaluator.evaluateExpression(
+              returnType(), args(), variadic(), argumentTypes);
+      if (nullability() != Nullability.MIRROR) {
+        return base;
+      }
+      return base.withNullable(anyValueArgumentNullable(argumentTypes));
+    }
+
+    private boolean anyValueArgumentNullable(List<io.substrait.type.Type> argumentTypes) {
+      // The supplied types align positionally with the declared non-enum arguments, a variadic
+      // declaration's trailing argument repeating. Only a value argument's nullability mirrors
+      // into the result: a type argument carries a type as data, not an operand that can be null.
+      List<Argument> nonEnumArguments = new ArrayList<>();
+      for (Argument argument : args()) {
+        if (!(argument instanceof EnumArgument)) {
+          nonEnumArguments.add(argument);
+        }
+      }
+      if (nonEnumArguments.isEmpty()) {
+        return false;
+      }
+      for (int i = 0; i < argumentTypes.size(); i++) {
+        Argument declared = nonEnumArguments.get(Math.min(i, nonEnumArguments.size() - 1));
+        if (declared instanceof ValueArgument && argumentTypes.get(i).nullable()) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 

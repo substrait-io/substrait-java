@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.DateString;
@@ -91,31 +92,33 @@ public class LiteralConverter {
    * @throws UnsupportedOperationException if the literal type/value cannot be handled
    */
   public Expression.Literal convert(RexLiteral literal) {
-    // convert type first to guarantee we can handle the value.
-    final Type type = typeConverter.toSubstrait(literal.getType());
-    return convert(literal, type.nullable());
+    return convert(literal, literal.getType());
   }
 
   /**
-   * Converts a RexLiteral to a Substrait Literal with the specified nullability.
+   * Converts a RexLiteral to a Substrait Literal carrying the given result type.
    *
-   * <p>This overload is useful when the target nullability should come from the schema rather than
-   * the literal's own type. For example, Calcite's LogicalValues may have literals with
-   * non-nullable types even when the schema field is nullable.
+   * <p>This overload is useful when the target type comes from a containing schema rather than the
+   * literal itself. Calcite may infer a narrower type for a value in a LogicalValues tuple than for
+   * the corresponding row field. Nullability is taken from {@code resultType}, so callers that need
+   * a nullability other than the literal's own should widen the Calcite type with {@link
+   * org.apache.calcite.rel.type.RelDataTypeFactory#createTypeWithNullability} before calling.
    *
    * @param literal the RexLiteral to convert
-   * @param nullable the nullability to use for the resulting Substrait literal
+   * @param resultType the Calcite type required by the containing schema
    * @return the converted Substrait Literal
    */
-  public Expression.Literal convert(RexLiteral literal, boolean nullable) {
+  public Expression.Literal convert(RexLiteral literal, RelDataType resultType) {
+    // convert type first to guarantee we can handle the value.
+    final Type type = typeConverter.toSubstrait(resultType);
+    final boolean nullable = type.nullable();
     if (literal.isNull()) {
-      final Type type = typeConverter.toSubstrait(literal.getType());
       final Type typeWithNullability =
           nullable ? TypeCreator.asNullable(type) : TypeCreator.asNotNullable(type);
       return ExpressionCreator.typedNull(typeWithNullability);
     }
 
-    switch (literal.getType().getSqlTypeName()) {
+    switch (resultType.getSqlTypeName()) {
       case TINYINT:
         return ExpressionCreator.i8(nullable, i(literal).intValue());
       case SMALLINT:
@@ -145,15 +148,15 @@ public class LiteralConverter {
         {
           BigDecimal bd = bd(literal);
           return ExpressionCreator.decimal(
-              nullable, bd, literal.getType().getPrecision(), literal.getType().getScale());
+              nullable, bd, resultType.getPrecision(), resultType.getScale());
         }
       case VARCHAR:
         {
-          if (literal.getType().getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+          if (resultType.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
             return ExpressionCreator.string(nullable, s(literal));
           }
 
-          return ExpressionCreator.varChar(nullable, s(literal), literal.getType().getPrecision());
+          return ExpressionCreator.varChar(nullable, s(literal), resultType.getPrecision());
         }
       case BINARY:
         return ExpressionCreator.fixedBinary(
@@ -161,7 +164,7 @@ public class LiteralConverter {
             ByteString.copyFrom(
                 padRightIfNeeded(
                     literal.getValueAs(org.apache.calcite.avatica.util.ByteString.class),
-                    literal.getType().getPrecision())));
+                    resultType.getPrecision())));
       case VARBINARY:
         return ExpressionCreator.binary(
             nullable, ByteString.copyFrom(literal.getValueAs(byte[].class)));
@@ -246,21 +249,29 @@ public class LiteralConverter {
         {
           List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
           return ExpressionCreator.struct(
-              nullable, literals.stream().map(this::convert).collect(Collectors.toList()));
+              nullable,
+              IntStream.range(0, literals.size())
+                  .mapToObj(
+                      i -> convert(literals.get(i), resultType.getFieldList().get(i).getType()))
+                  .collect(Collectors.toList()));
         }
 
       case ARRAY:
         {
           List<RexLiteral> literals = (List<RexLiteral>) literal.getValue();
+          RelDataType componentType = Objects.requireNonNull(resultType.getComponentType());
           return ExpressionCreator.list(
-              nullable, literals.stream().map(this::convert).collect(Collectors.toList()));
+              nullable,
+              literals.stream()
+                  .map(nestedLiteral -> convert(nestedLiteral, componentType))
+                  .collect(Collectors.toList()));
         }
 
       default:
         throw new UnsupportedOperationException(
             String.format(
                 "Unable to convert the value of %s of type %s to a literal.",
-                literal, literal.getType().getSqlTypeName()));
+                literal, resultType.getSqlTypeName()));
     }
   }
 

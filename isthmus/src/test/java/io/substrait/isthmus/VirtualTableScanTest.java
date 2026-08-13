@@ -2,14 +2,17 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +20,11 @@ import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
+import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
 class VirtualTableScanTest extends PlanTestBase {
@@ -79,7 +86,8 @@ class VirtualTableScanTest extends PlanTestBase {
   void emptySchemaNonEmptyTable() {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
     assertThrows(
-        AssertionError.class, () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
+        IllegalArgumentException.class,
+        () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
   @Test
@@ -109,6 +117,37 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan =
         createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
     assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void valuesLiteralUsesSchemaType() {
+    RelDataType requiredI32 = typeFactory.createSqlType(SqlTypeName.INTEGER);
+    RelDataType nullableI32 = typeFactory.createTypeWithNullability(requiredI32, true);
+    RelDataType rowType =
+        typeFactory.builder().add("required", requiredI32).add("nullable", nullableI32).build();
+    RelDataType narrowType = typeFactory.createSqlType(SqlTypeName.TINYINT);
+    RexLiteral one = builder.getRexBuilder().makeExactLiteral(BigDecimal.ONE, narrowType);
+    RexLiteral nullValue =
+        builder
+            .getRexBuilder()
+            .makeNullLiteral(typeFactory.createTypeWithNullability(narrowType, true));
+    RexLiteral five = builder.getRexBuilder().makeExactLiteral(BigDecimal.valueOf(5), narrowType);
+    LogicalValues values =
+        LogicalValues.create(
+            builder.getCluster(),
+            rowType,
+            ImmutableList.of(ImmutableList.of(one, nullValue), ImmutableList.of(one, five)));
+
+    VirtualTableScan converted =
+        assertInstanceOf(
+            VirtualTableScan.class, SubstraitRelVisitor.convert(values, converterProvider));
+    assertEquals(List.of(R.I32, N.I32), converted.getInitialSchema().struct().fields());
+    assertEquals(
+        List.of(ExpressionCreator.i32(false, 1), ExpressionCreator.typedNull(N.I32)),
+        converted.getRows().get(0).fields());
+    assertEquals(
+        List.of(ExpressionCreator.i32(false, 1), ExpressionCreator.i32(true, 5)),
+        converted.getRows().get(1).fields());
   }
 
   @SafeVarargs

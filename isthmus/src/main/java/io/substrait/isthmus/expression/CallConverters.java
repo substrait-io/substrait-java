@@ -197,7 +197,12 @@ public class CallConverters {
 
         // number of arguments are always going to be odd (each condition/then combination plus
         // else)
-        assert call.getOperands().size() % 2 == 1;
+        if (call.getOperands().size() % 2 != 1) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "CASE requires an odd number of operands (WHEN/THEN pairs plus ELSE), but got %d",
+                  call.getOperands().size()));
+        }
 
         List<Expression> caseArgs =
             call.getOperands().stream().map(visitor).collect(Collectors.toList());

@@ -1,6 +1,25 @@
 Release Notes
 ---
 
+## [0.99.0](https://github.com/substrait-io/substrait-java/compare/v0.98.0...v0.99.0) (2026-08-09)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** adds `Type.Unbound` and a new
+`TypeVisitor.visit(Type.Unbound)` method that direct `TypeVisitor`
+implementors must handle.
+
+### Features
+
+* **core:** bump substrait to v0.99.0 ([#1042](https://github.com/substrait-io/substrait-java/issues/1042)) ([af0d989](https://github.com/substrait-io/substrait-java/commit/af0d989777bd65d23031d3a826645c1f9bb7a273))
+* **isthmus:** configurable unquoted identifier casing via the ConverterProvider builder ([#1037](https://github.com/substrait-io/substrait-java/issues/1037)) ([0af28cc](https://github.com/substrait-io/substrait-java/commit/0af28cc0332648c852fff9ab1e1026cbba00807c)), closes [#983](https://github.com/substrait-io/substrait-java/issues/983) [#983](https://github.com/substrait-io/substrait-java/issues/983) [#1035](https://github.com/substrait-io/substrait-java/issues/1035) [#1036](https://github.com/substrait-io/substrait-java/issues/1036)
+* **isthmus:** observe scalar function types ([#1015](https://github.com/substrait-io/substrait-java/issues/1015)) ([243be42](https://github.com/substrait-io/substrait-java/commit/243be42d193e305f6a6839735bbc337488c5aa0a))
+* **isthmus:** observe window function return types ([#1059](https://github.com/substrait-io/substrait-java/issues/1059)) ([353fe7b](https://github.com/substrait-io/substrait-java/commit/353fe7b90beebb2f58961a7b678650bffa4eb018))
+
+### Bug Fixes
+
+* **isthmus:** route native-image metadata queries through reflective provider ([#1046](https://github.com/substrait-io/substrait-java/issues/1046)) ([a6d4cb5](https://github.com/substrait-io/substrait-java/commit/a6d4cb508f4b1cb4b81ff9afff7338464b6ba953))
+
 ## [0.98.0](https://github.com/substrait-io/substrait-java/compare/v0.97.0...v0.98.0) (2026-08-02)
 
 ### ⚠ BREAKING CHANGES

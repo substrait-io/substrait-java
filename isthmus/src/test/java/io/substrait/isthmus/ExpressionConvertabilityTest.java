@@ -52,6 +52,13 @@ class ExpressionConvertabilityTest extends PlanTestBase {
   }
 
   @Test
+  void listLiteralWithMixedNullability() throws IOException, SqlParseException {
+    // The values of an ARRAY constructor are not cast to a common type, so mixing a NOT NULL column
+    // with a nullable one yields list values that differ only in nullability.
+    assertFullRoundTrip("select ARRAY[O_ORDERKEY, CAST(O_SHIPPRIORITY AS BIGINT)] from ORDERS");
+  }
+
+  @Test
   void mapLiteral() throws IOException, SqlParseException {
     assertFullRoundTrip("select MAP[1, 'hello'] from ORDERS");
   }

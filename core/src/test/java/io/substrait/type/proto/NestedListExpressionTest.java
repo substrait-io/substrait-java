@@ -1,10 +1,12 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.ImmutableExpression;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +19,7 @@ class NestedListExpressionTest extends TestBase {
   void rejectNestedListWithElementsOfDifferentTypes() {
     ImmutableExpression.NestedList.Builder builder =
         Expression.NestedList.builder().addValues(literalExpression).addValues(sb.i32(12));
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
@@ -35,9 +37,29 @@ class NestedListExpressionTest extends TestBase {
   }
 
   @Test
+  void acceptNestedListWithElementsOfMixedNullability() {
+    // A list of values that differ only in nullability is valid; SQL builds such lists from
+    // ARRAY[not_null_column, nullable_column].
+    Expression.NestedList mixedNullability =
+        Expression.NestedList.builder()
+            .addValues(sb.i32(12))
+            .addValues(ExpressionCreator.typedNull(N.I32))
+            .build();
+    // The element type is the type of the first value, nullability included.
+    assertEquals(R.list(R.I32), mixedNullability.getType());
+
+    io.substrait.relation.Project project =
+        io.substrait.relation.Project.builder()
+            .addExpressions(mixedNullability)
+            .input(sb.emptyVirtualTableScan())
+            .build();
+    verifyRoundTrip(project);
+  }
+
+  @Test
   void rejectEmptyNestedListTest() {
     ImmutableExpression.NestedList.Builder builder = Expression.NestedList.builder();
-    assertThrows(AssertionError.class, builder::build);
+    assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test

@@ -15,7 +15,10 @@ public final class TypeObservation {
   /** The expression category that produced an observation. */
   public enum Source {
     /** A scalar function invocation. */
-    SCALAR_FUNCTION
+    SCALAR_FUNCTION,
+
+    /** A window function invocation. */
+    WINDOW_FUNCTION
   }
 
   private final Source source;

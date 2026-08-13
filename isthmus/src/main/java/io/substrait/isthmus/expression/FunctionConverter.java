@@ -3,6 +3,7 @@ package io.substrait.isthmus.expression;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -12,6 +13,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.StatisticalDistribution;
+import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.extension.SimpleExtension.Argument;
 import io.substrait.function.ParameterizedType;
@@ -134,7 +136,9 @@ public abstract class FunctionConverter<
     signatures.addAll(additionalSignatures);
     signatures.addAll(getSigs());
     this.typeFactory = typeFactory;
-    this.substraitFuncKeyToSqlOperatorMap = ArrayListMultimap.create();
+    // Set-valued: two same-key declarations from different extensions map to the same operator,
+    // and a duplicate entry would make the lookup treat one operator as an ambiguity.
+    this.substraitFuncKeyToSqlOperatorMap = LinkedHashMultimap.create();
 
     ArrayListMultimap<String, F> nameToFn = ArrayListMultimap.<String, F>create();
     for (F f : functions) {
@@ -298,10 +302,14 @@ public abstract class FunctionConverter<
         .filter(
             operator -> {
               SqlKind kind = operator.getKind();
-              // Match distribution value to SqlKind
-              if (StatisticalDistribution.POPULATION.name().equals(distributionValue)) {
+              // Match distribution value to SqlKind. Enum option values are matched
+              // case-insensitively, per the spec — the exactness of the plan's spelling is a
+              // reverse-conversion concern the binding takes care of.
+              if (StatisticalDistribution.POPULATION.name().equalsIgnoreCase(distributionValue)) {
                 return kind == SqlKind.STDDEV_POP || kind == SqlKind.VAR_POP;
-              } else if (StatisticalDistribution.SAMPLE.name().equals(distributionValue)) {
+              } else if (StatisticalDistribution.SAMPLE
+                  .name()
+                  .equalsIgnoreCase(distributionValue)) {
                 return kind == SqlKind.STDDEV_SAMP || kind == SqlKind.VAR_SAMP;
               }
               throw new IllegalArgumentException(
@@ -378,6 +386,123 @@ public abstract class FunctionConverter<
      */
     public boolean allowedArgCount(int count) {
       return argRange.within(count);
+    }
+
+    /**
+     * Returns whether the reverse (Calcite → Substrait) direction would map a call carrying the
+     * given resolved arguments back to exactly the given declaration. Reverse matching first tries
+     * a direct signature-key lookup built from the operand types and takes the <em>last</em>
+     * variant registered under the key that hits — so a plan invoking {@code count(any)} with an
+     * {@code i32} operand reconstructs as {@code count(i32)} whenever that variant exists. Without
+     * a direct hit it consults the same matchers the reverse direction runs — {@code
+     * signatureMatch} over the argument types and output type, then the singular-wildcard chain
+     * over their least restrictive type — and requires the variant they select to be this
+     * declaration.
+     *
+     * <p>The key is built from the plan's arguments rather than from Calcite operands, so it
+     * mirrors the reverse direction only for the argument kinds that survive the round trip as an
+     * operand in the same position: value arguments, and an enum argument in the leading position
+     * the reverse direction prepends it to. A type argument spells itself as its concrete type here
+     * but as {@code type} in the declaration key, so it never matches one; an enum argument on an
+     * operator that does not encode it has no operand at all, and only the caller knows the
+     * operator. Callers must therefore exclude both — as the aggregate caller does before it
+     * reaches here. Where the consulted matchers cannot be reproduced faithfully — non-value
+     * operands past the direct lookup, an argument count the finder rejects, a matcher failure —
+     * this fails towards {@code false}, which costs only a carried binding.
+     *
+     * @param declaration the declaration a plan invoked
+     * @param arguments the invocation's resolved arguments
+     * @param outputType the Substrait output type the converted call will carry
+     * @return {@code true} if re-matching can only reconstruct that declaration
+     */
+    public boolean uniquelyProvides(
+        SimpleExtension.Function declaration, List<ResolvedArgument> arguments, Type outputType) {
+      boolean present = false;
+      for (F function : functions) {
+        if (function.getAnchor().equals(declaration.getAnchor())) {
+          present = true;
+          break;
+        }
+      }
+      if (!present) {
+        return false;
+      }
+      // Mirror of attemptMatch's direct lookup: the key is built from the operand type strings, an
+      // enum operand spelled "req" — candidateKeys also probes "opt", which no declaration key can
+      // contain — and the LAST variant registered under the first key that hits wins.
+      Optional<String> directKey =
+          candidateKeys(arguments).filter(directMap::containsKey).findFirst();
+      if (directKey.isPresent()) {
+        List<F> variants = directMap.get(directKey.get());
+        return variants.get(variants.size() - 1).getAnchor().equals(declaration.getAnchor());
+      }
+      // Without a direct hit the reverse direction runs the coerced and singular-wildcard paths;
+      // consult the same matchers it uses and require them to select this declaration. A call
+      // those matchers cannot be consulted for faithfully — non-value operands, an argument count
+      // the finder rejects outright, or a matcher failure — keeps its binding instead.
+      if (!allowedArgCount(arguments.size())) {
+        return false;
+      }
+      List<Type> valueTypes = new ArrayList<>();
+      for (ResolvedArgument argument : arguments) {
+        if (argument.kind() != ResolvedArgument.Kind.VALUE) {
+          return false;
+        }
+        valueTypes.add(argument.type().orElseThrow(IllegalStateException::new));
+      }
+      try {
+        // matchCoerced consults signatureMatch with the operand types as they are; note it checks
+        // neither per-variant arity (a shorter declaration matches by repeating its trailing
+        // argument) nor anything a wrapper could veto, so the selected variant is authoritative.
+        Optional<F> bySignature = signatureMatch(valueTypes, outputType);
+        if (bySignature.isPresent()) {
+          return bySignature.get().getAnchor().equals(declaration.getAnchor());
+        }
+        // matchByLeastRestrictive consults the singular-wildcard chain with the operands' least
+        // restrictive type; it ignores the output type entirely.
+        if (!singularInputType.isPresent()) {
+          return false;
+        }
+        List<RelDataType> calciteTypes = new ArrayList<>();
+        for (Type valueType : valueTypes) {
+          calciteTypes.add(typeConverter.toCalcite(typeFactory, valueType));
+        }
+        RelDataType leastRestrictive = typeFactory.leastRestrictive(calciteTypes);
+        if (leastRestrictive == null) {
+          return false;
+        }
+        Optional<F> bySingular =
+            singularInputType
+                .get()
+                .tryMatch(typeConverter.toSubstrait(leastRestrictive), outputType);
+        return bySingular.isPresent()
+            && bySingular.get().getAnchor().equals(declaration.getAnchor());
+      } catch (RuntimeException e) {
+        // If the selection cannot be reproduced, the reverse direction is not predictable either;
+        // carrying the binding sidesteps it entirely.
+        return false;
+      }
+    }
+
+    private Stream<String> candidateKeys(List<ResolvedArgument> arguments) {
+      if (arguments.isEmpty()) {
+        return Stream.of(substraitName + ":");
+      }
+      List<List<String>> argTypeLists = new ArrayList<>();
+      for (ResolvedArgument argument : arguments) {
+        if (argument.kind() == ResolvedArgument.Kind.ENUM) {
+          argTypeLists.add(List.of("req", "opt"));
+        } else {
+          argTypeLists.add(
+              List.of(
+                  argument
+                      .type()
+                      .orElseThrow(IllegalStateException::new)
+                      .accept(ToTypeString.INSTANCE)));
+        }
+      }
+      return Utils.crossProduct(argTypeLists)
+          .map(typeList -> substraitName + ":" + String.join("_", typeList));
     }
 
     /**
@@ -559,10 +684,16 @@ public abstract class FunctionConverter<
      * @param rexOperands operand RexNodes
      * @param opTypes operand type strings (Substrait)
      * @return stream of candidate key suffixes to test
+     * @throws IllegalStateException if the operand and operand type counts differ
      */
     private Stream<String> matchKeys(List<RexNode> rexOperands, List<String> opTypes) {
 
-      assert (rexOperands.size() == opTypes.size());
+      if (rexOperands.size() != opTypes.size()) {
+        throw new IllegalStateException(
+            String.format(
+                "Operand count (%d) does not match operand type count (%d)",
+                rexOperands.size(), opTypes.size()));
+      }
 
       if (rexOperands.isEmpty()) {
         return Stream.of("");

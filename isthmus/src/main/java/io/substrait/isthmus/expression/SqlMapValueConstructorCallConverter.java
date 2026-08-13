@@ -3,7 +3,7 @@ package io.substrait.isthmus.expression;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.CallConverter;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +35,8 @@ public class SqlMapValueConstructorCallConverter implements CallConverter {
    *     {@link SqlMapValueConstructor}; otherwise {@link Optional#empty()}.
    * @throws ClassCastException if operands converted by {@code topLevelConverter} are not {@link
    *     Expression.Literal} instances.
-   * @throws AssertionError if the number of operands is not even (expecting key/value pairs).
+   * @throws IllegalArgumentException if the number of operands is not even (expecting key/value
+   *     pairs).
    */
   @Override
   public Optional<Expression> convert(
@@ -49,12 +50,18 @@ public class SqlMapValueConstructorCallConverter implements CallConverter {
 
   private Optional<Expression> toMapLiteral(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
+    if (call.operands.size() % 2 != 0) {
+      throw new IllegalArgumentException(
+          String.format(
+              "SqlMapValueConstructor requires an even number of operands (key/value pairs), but got %d",
+              call.operands.size()));
+    }
     List<Expression.Literal> literals =
         call.operands.stream()
             .map(t -> ((Expression.Literal) topLevelConverter.apply(t)))
             .collect(java.util.stream.Collectors.toList());
-    Map<Expression.Literal, Expression.Literal> items = new HashMap<>();
-    assert literals.size() % 2 == 0;
+    // Insertion-ordered so that the map literal keeps the key order written in the query.
+    Map<Expression.Literal, Expression.Literal> items = new LinkedHashMap<>();
     for (int i = 0; i < literals.size(); i += 2) {
       items.put(literals.get(i), literals.get(i + 1));
     }

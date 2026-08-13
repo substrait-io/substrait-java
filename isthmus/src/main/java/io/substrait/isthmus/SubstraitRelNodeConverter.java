@@ -4,6 +4,9 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
+import io.substrait.extension.FunctionBindingResolver;
+import io.substrait.extension.ResolvedAggregateBinding;
+import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
@@ -54,6 +57,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
@@ -111,6 +115,9 @@ public class SubstraitRelNodeConverter
   /** Type converter to translate between Calcite and Substrait type systems. */
   private final TypeConverter typeConverter;
 
+  /** Controls how aggregate output types are chosen and validated. */
+  private final AggregateConversion aggregateConversion;
+
   /**
    * Creates a new SubstraitRelNodeConverter with the specified extensions, type factory, and
    * relation builder.
@@ -130,7 +137,9 @@ public class SubstraitRelNodeConverter
 
   /**
    * Creates a new SubstraitRelNodeConverter with the specified relation builder and converter
-   * provider.
+   * provider. Aggregate conversion follows the provider's {@link
+   * ConverterProvider#getAggregateConversion()} — the provider is the single configuration channel,
+   * so a subclass overriding that method always takes effect.
    *
    * @param relBuilder the Calcite relation builder
    * @param converterProvider the converter provider containing configuration and converters
@@ -143,6 +152,7 @@ public class SubstraitRelNodeConverter
     this.scalarFunctionConverter = converterProvider.getScalarFunctionConverter();
     this.aggregateFunctionConverter = converterProvider.getAggregateFunctionConverter();
     this.expressionRexConverter = converterProvider.getExpressionRexConverter(this);
+    this.aggregateConversion = converterProvider.getAggregateConversion();
   }
 
   /**
@@ -321,11 +331,23 @@ public class SubstraitRelNodeConverter
             .collect(java.util.stream.Collectors.toList());
     List<RexNode> groupExprs =
         groupExprLists.stream().flatMap(Collection::stream).collect(Collectors.toList());
-    RelBuilder.GroupKey groupKey = relBuilder.groupKey(groupExprs, groupExprLists);
+    // An aggregate with no groupings at all is a global aggregation, i.e. a single empty grouping
+    // set. Handing RelBuilder an empty list of grouping sets instead would leave the Calcite
+    // aggregate with no grouping set at all, and RelBuilder would then re-infer every measure as if
+    // there were no empty group — which is the opposite of what a global aggregation means.
+    boolean globalAggregation = groupExprLists.isEmpty();
+    RelBuilder.GroupKey groupKey =
+        globalAggregation
+            ? relBuilder.groupKey(groupExprs)
+            : relBuilder.groupKey(groupExprs, groupExprLists);
+    // Mirrors how RelBuilder derives an aggregate call's hasEmptyGroup from the grouping sets it
+    // builds out of this group key; the two must agree or the inferred type below is not the one
+    // the call ends up with.
+    boolean hasEmptyGroup = globalAggregation || groupExprLists.stream().anyMatch(List::isEmpty);
 
     List<AggregateCall> aggregateCalls =
         aggregate.getMeasures().stream()
-            .map(measure -> fromMeasure(measure, context))
+            .map(measure -> fromMeasure(measure, context, child, hasEmptyGroup))
             .collect(java.util.stream.Collectors.toList());
 
     Optional<Remap> remap = aggregate.getRemap();
@@ -362,11 +384,70 @@ public class SubstraitRelNodeConverter
       }
     }
 
-    RelNode node = relBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
+    // RelBuilder deduplicates equal aggregate calls, and AggregateCall equality ignores the stored
+    // type: two measures of the same function that differ only by their declared output type would
+    // collapse into one column. Opt out of deduplication for exactly those aggregates — narrowly,
+    // because transform() yields a plain RelBuilder carrying the same cluster and schema but not a
+    // custom builder subclass.
+    RelBuilder aggregateBuilder =
+        hasTypeDistinctDuplicates(aggregateCalls)
+            ? relBuilder.transform(config -> config.withDedupAggregateCalls(false))
+            : relBuilder;
+
+    RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
     return applyRemap(node, remap);
   }
 
-  private AggregateCall fromMeasure(Aggregate.Measure measure, Context context) {
+  /**
+   * Returns whether the binding carries semantics no stock Calcite aggregate operator can express,
+   * so that two invocations differing only in those would be indistinguishable once converted: the
+   * function's options, any phase other than a full initial-to-result aggregation, and type
+   * arguments — only value arguments become Calcite operands, so a type argument cannot be rebuilt
+   * by re-matching. Enum arguments are an operator-dependent case decided by the caller: they are
+   * recoverable only when the operator's kind encodes them (e.g. {@code STDDEV_POP} vs {@code
+   * STDDEV_SAMP}), which {@link AggregateFunctionConverter#encodesEnumArguments} answers.
+   */
+  private static boolean carriesOpaqueSemantics(ResolvedAggregateBinding binding) {
+    return !binding.function().options().isEmpty()
+        || binding.phase() != Expression.AggregationPhase.INITIAL_TO_RESULT
+        || hasTypeArgument(binding);
+  }
+
+  private static boolean hasTypeArgument(ResolvedAggregateBinding binding) {
+    return hasArgumentOfKind(binding, ResolvedArgument.Kind.TYPE);
+  }
+
+  private static boolean hasEnumArgument(ResolvedAggregateBinding binding) {
+    return hasArgumentOfKind(binding, ResolvedArgument.Kind.ENUM);
+  }
+
+  private static boolean hasArgumentOfKind(
+      ResolvedAggregateBinding binding, ResolvedArgument.Kind kind) {
+    for (ResolvedArgument argument : binding.function().arguments()) {
+      if (argument.kind() == kind) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns whether two aggregate calls are equal to Calcite yet carry different types, i.e.
+   * whether deduplicating them would silently give one of them the other's type.
+   */
+  private static boolean hasTypeDistinctDuplicates(List<AggregateCall> aggregateCalls) {
+    Map<AggregateCall, RelDataType> typesByCall = new HashMap<>();
+    for (AggregateCall call : aggregateCalls) {
+      RelDataType existing = typesByCall.putIfAbsent(call, call.getType());
+      if (existing != null && !existing.equals(call.getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private AggregateCall fromMeasure(
+      Aggregate.Measure measure, Context context, RelNode input, boolean hasEmptyGroup) {
     List<FunctionArg> eArgs = measure.getFunction().arguments();
     // Only value (Expression) arguments map to Calcite aggregate operands. Enum arguments such as
     // the std_dev/variance "distribution" are used to disambiguate the operator, not as operands.
@@ -404,7 +485,14 @@ public class SubstraitRelNodeConverter
         measure.getFunction().invocation().equals(Expression.AggregationInvocation.DISTINCT);
 
     SqlAggFunction aggFunction;
-    RelDataType returnType = typeConverter.toCalcite(typeFactory, measure.getFunction().getType());
+    // Resolve the Substrait binding (semantic identity). Validating the signature, options and
+    // declared output type against the extension declaration is a separate, opt-in concern
+    // (EXTENSION_DECLARATION).
+    ResolvedAggregateBinding binding = ResolvedAggregateBinding.resolve(measure.getFunction());
+    if (aggregateConversion.bindingValidation()
+        == AggregateConversion.FunctionBindingValidation.EXTENSION_DECLARATION) {
+      FunctionBindingResolver.validate(binding, measure.getFunction().getType());
+    }
 
     if (operator.get() instanceof SqlAggFunction) {
       aggFunction = (SqlAggFunction) operator.get();
@@ -429,6 +517,76 @@ public class SubstraitRelNodeConverter
               measure.getFunction().sort().stream()
                   .map(sortField -> toRelFieldCollation(sortField, context))
                   .collect(Collectors.toList()));
+    }
+
+    boolean preservePlanType =
+        aggregateConversion.outputTypeSource() == AggregateConversion.OutputTypeSource.PLAN_OUTPUT;
+    boolean opaqueSemantics =
+        carriesOpaqueSemantics(binding)
+            || (hasEnumArgument(binding)
+                && !AggregateFunctionConverter.encodesEnumArguments(aggFunction, binding));
+
+    // Calcite's return-type inference runs inside AggregateCall.create when no type is passed in.
+    // Under PLAN_OUTPUT its result only decides whether the plan's type must travel on a wrapper,
+    // so it is skipped when opaque semantics force the wrapper anyway, and a failure — an operand
+    // shape the operator's inference rule rejects, say an intermediate-state struct fed to a
+    // caller-supplied operator — counts as "diverges" instead of failing a conversion that never
+    // needed the inferred type. Under CALCITE_INFERENCE the inferred type is the output type, so
+    // there is nothing to fall back to and the failure propagates.
+    RelDataType inferredType = null;
+    if (!preservePlanType || !opaqueSemantics) {
+      try {
+        inferredType =
+            AggregateCall.create(
+                    aggFunction,
+                    distinct,
+                    false,
+                    false,
+                    Collections.emptyList(),
+                    argIndex,
+                    filterArg,
+                    null,
+                    relCollation,
+                    hasEmptyGroup,
+                    input,
+                    null,
+                    null)
+                .getType();
+      } catch (RuntimeException e) {
+        if (!preservePlanType) {
+          throw e;
+        }
+      }
+    }
+
+    // Convert the declared type only where it is used: CALCITE_INFERENCE promises to ignore it, and
+    // a type this converter cannot represent must not fail a conversion that never needed it.
+    RelDataType returnType =
+        preservePlanType
+            ? typeConverter.toCalcite(typeFactory, measure.getFunction().getType())
+            : inferredType;
+    boolean typeDiverges = preservePlanType && !returnType.equals(inferredType);
+    // The binding must also travel when dropping it would leave the declaration ambiguous: the
+    // reverse direction re-matches by signature key and by type-driven fallbacks, picking by
+    // registration order, so a declaration another variant can shadow for these argument types
+    // and output type — or one with no reverse mapping at all — is only plan-determined via the
+    // carried binding. The output type consulted is the one the converted call will carry.
+    boolean mustCarryBinding =
+        opaqueSemantics
+            || typeDiverges
+            || !aggregateFunctionConverter.reconstructsUniquely(
+                aggFunction,
+                measure.getFunction().declaration(),
+                binding.function().arguments(),
+                preservePlanType
+                    ? measure.getFunction().getType()
+                    : typeConverter.toSubstrait(returnType));
+    if (mustCarryBinding) {
+      // Calcite would either re-infer a different type, lose semantics its operator cannot
+      // express, or re-match an ambiguous declaration by load order; carry the binding and the
+      // chosen type on a transport wrapper so all of it survives Calcite's re-inference
+      // (RelBuilder / planner rules) and its call deduplication.
+      aggFunction = AggregateFunctions.bind(aggFunction, binding, returnType);
     }
 
     return AggregateCall.create(
@@ -548,15 +706,14 @@ public class SubstraitRelNodeConverter
           transform.getTransformation().accept(expressionRexConverter, context));
     }
 
-    assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable table = relBuilder.getRelOptSchema().getTableForMember(update.getNames());
+    final RelOptTable table = requireRelOptSchema().getTableForMember(update.getNames());
 
     if (table == null) {
       throw new IllegalStateException("Table not found in Calcite catalog: " + update.getNames());
     }
-    final Prepare.CatalogReader catalogReader = (Prepare.CatalogReader) table.getRelOptSchema();
+    final Prepare.CatalogReader catalogReader =
+        requireCatalogReader(table.getRelOptSchema(), update.getNames());
 
-    assert catalogReader != null;
     return LogicalTableModify.create(
         table,
         catalogReader,
@@ -713,9 +870,8 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedWrite write, Context context) {
     RelNode input = write.getInput().accept(this, context);
-    assert relBuilder.getRelOptSchema() != null;
-    final RelOptTable targetTable =
-        relBuilder.getRelOptSchema().getTableForMember(write.getNames());
+    final RelOptSchema relOptSchema = requireRelOptSchema();
+    final RelOptTable targetTable = relOptSchema.getTableForMember(write.getNames());
 
     TableModify.Operation operation;
     switch (write.getOperation()) {
@@ -734,17 +890,62 @@ public class SubstraitRelNodeConverter
                 write.getOperation()));
     }
 
-    // checked by validation
-    assert targetTable != null;
+    if (targetTable == null) {
+      throw new IllegalStateException("Table not found in Calcite catalog: " + write.getNames());
+    }
 
     return LogicalTableModify.create(
         targetTable,
-        (Prepare.CatalogReader) relBuilder.getRelOptSchema(),
+        requireCatalogReader(relOptSchema, write.getNames()),
         input,
         operation,
         null,
         null,
         false);
+  }
+
+  /**
+   * Returns the {@link RelOptSchema} backing the {@link org.apache.calcite.tools.RelBuilder} used
+   * by this converter.
+   *
+   * @return the Calcite catalog to resolve table names against
+   * @throws IllegalStateException if the RelBuilder was created without a RelOptSchema
+   */
+  protected RelOptSchema requireRelOptSchema() {
+    RelOptSchema relOptSchema = relBuilder.getRelOptSchema();
+    if (relOptSchema == null) {
+      throw new IllegalStateException(
+          "The RelBuilder of this converter has no RelOptSchema; a catalog-backed RelBuilder is required to resolve table names");
+    }
+    return relOptSchema;
+  }
+
+  /**
+   * Narrows a {@link RelOptSchema} to the {@link org.apache.calcite.prepare.Prepare.CatalogReader}
+   * that Calcite's table-modification relations require.
+   *
+   * <p>{@link RelOptTable#getRelOptSchema()} is nullable and a {@link RelOptSchema} is not
+   * necessarily a catalog reader, while {@link TableModify} stores the reader without checking it
+   * and only dereferences it later (e.g. from {@code getExpectedInputRowType()}). Validating here
+   * reports the misconfigured catalog instead of failing as a {@link NullPointerException} or
+   * {@link ClassCastException} further downstream.
+   *
+   * @param relOptSchema the schema to narrow, possibly null
+   * @param names the table name being resolved, for the error message
+   * @return the schema as a catalog reader
+   * @throws IllegalStateException if the schema is null or is not a catalog reader
+   */
+  protected static Prepare.CatalogReader requireCatalogReader(
+      RelOptSchema relOptSchema, List<String> names) {
+    if (!(relOptSchema instanceof Prepare.CatalogReader)) {
+      throw new IllegalStateException(
+          String.format(
+              "Cannot read table metadata for %s: expected a %s, but got %s",
+              names,
+              Prepare.CatalogReader.class.getName(),
+              relOptSchema == null ? "null" : relOptSchema.getClass().getName()));
+    }
+    return (Prepare.CatalogReader) relOptSchema;
   }
 
   @Override

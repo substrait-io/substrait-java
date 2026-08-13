@@ -45,6 +45,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
@@ -56,6 +57,7 @@ import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -161,21 +163,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Values values) {
     NamedStruct type = typeConverter.toNamedStruct(values.getRowType());
+    List<RelDataTypeField> rowFields = values.getRowType().getFieldList();
 
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
-    List<Type> schemaFieldTypes = type.struct().fields();
     List<Expression.NestedStruct> structs =
         values.getTuples().stream()
             .map(
                 list -> {
-                  // Use schema nullability since Calcite infers non-nullable for all non-null
-                  // values
+                  // Calcite may infer a narrower type for a tuple literal than for its row field.
+                  // Virtual table rows must use the row field type.
                   List<Expression> fields =
                       IntStream.range(0, list.size())
                           .mapToObj(
                               i ->
-                                  literalConverter.convert(
-                                      list.get(i), schemaFieldTypes.get(i).nullable()))
+                                  literalConverter.convert(list.get(i), rowFields.get(i).getType()))
                           .collect(Collectors.toUnmodifiableList());
                   return ExpressionCreator.nestedStruct(false, fields);
                 })
@@ -791,20 +792,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                   ? AbstractWriteRel.WriteOp.INSERT
                   : AbstractWriteRel.WriteOp.DELETE;
 
-          assert modify.getTable() != null;
+          final RelOptTable table = requireTable(modify);
           return NamedWrite.builder()
               .input(input)
-              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
+              .tableSchema(typeConverter.toNamedStruct(table.getRowType()))
               .operation(op)
               .createMode(AbstractWriteRel.CreateMode.UNSPECIFIED)
               .outputMode(AbstractWriteRel.OutputMode.MODIFIED_RECORDS)
-              .names(modify.getTable().getQualifiedName())
+              .names(table.getQualifiedName())
               .build();
         }
 
       case UPDATE:
         {
-          assert modify.getTable() != null;
+          final RelOptTable table = requireTable(modify);
 
           RelNode input = modify.getInput();
           final Expression condition;
@@ -817,7 +818,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
           List<RexNode> sourceExpressions = getSourceExpressions(modify);
-          List<String> allTableColumnNames = modify.getTable().getRowType().getFieldNames();
+          List<String> allTableColumnNames = table.getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
           for (int i = 0; i < updateColumnNames.size(); i++) {
@@ -840,8 +841,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           }
 
           return NamedUpdate.builder()
-              .tableSchema(typeConverter.toNamedStruct(modify.getTable().getRowType()))
-              .names(modify.getTable().getQualifiedName())
+              .tableSchema(typeConverter.toNamedStruct(table.getRowType()))
+              .names(table.getQualifiedName())
               .condition(condition)
               .transformations(transformations)
               .build();
@@ -850,6 +851,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       default:
         return super.visit(modify);
     }
+  }
+
+  private static RelOptTable requireTable(TableModify modify) {
+    RelOptTable table = modify.getTable();
+    if (table == null) {
+      throw new IllegalArgumentException(
+          String.format(
+              "TableModify with operation %s has no target table", modify.getOperation()));
+    }
+    return table;
   }
 
   private List<RexNode> getSourceExpressions(TableModify modify) {

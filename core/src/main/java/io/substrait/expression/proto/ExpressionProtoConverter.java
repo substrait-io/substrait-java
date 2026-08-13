@@ -477,7 +477,12 @@ public class ExpressionProtoConverter
 
   private Expression.Literal toLiteral(io.substrait.expression.Expression expression) {
     Expression e = toProto(expression);
-    assert e.getRexTypeCase() == Expression.RexTypeCase.LITERAL;
+    if (e.getRexTypeCase() != Expression.RexTypeCase.LITERAL) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Expected a literal expression, but %s was converted to a %s",
+              expression.getClass().getSimpleName(), e.getRexTypeCase()));
+    }
     return e.getLiteral();
   }
 
