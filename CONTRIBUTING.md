@@ -82,8 +82,10 @@ CI — build the whole thing before pushing:
 * **PMD** (`substrait.java-conventions`, ruleset
   `build-logic/src/main/resources/substrait-pmd.xml`) runs via `check` / `build` and fails on
   violations. Common tripwires: missing `@Override`, unused private fields/methods/locals,
-  `var` (rule `UseExplicitTypes` — use explicit types), and `public` JUnit 5 test
-  classes/methods (they must be package-private).
+  `var` (rule `UseExplicitTypes` — use explicit types), `assert` (rule `AvoidAssertStatement` —
+  assertions are disabled unless the JVM runs with `-ea`, so throw `IllegalArgumentException`
+  for caller-facing invariants and `IllegalStateException` for internal ones), and `public`
+  JUnit 5 test classes/methods (they must be package-private).
 * **javadoc** doclint fails the build, but only via `build` / `javadocJar` — run
   `./gradlew :core:javadoc` before pushing.
 * **CI** runs the full `./gradlew build --rerun-tasks` plus `yamllint`, `editorconfig-checker`,
