@@ -528,17 +528,22 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.Lambda expr, Context context) throws RuntimeException {
+    List<RelDataType> parameterTypes =
+        expr.parameters().fields().stream()
+            .map(parameter -> typeConverter.toCalcite(typeFactory, parameter))
+            .collect(Collectors.toList());
     List<RexLambdaRef> parameters =
-        IntStream.range(0, expr.parameters().fields().size())
-            .mapToObj(
-                i ->
-                    new RexLambdaRef(
-                        i,
-                        "p" + i,
-                        typeConverter.toCalcite(typeFactory, expr.parameters().fields().get(i))))
+        IntStream.range(0, parameterTypes.size())
+            .mapToObj(i -> new RexLambdaRef(i, "p" + i, parameterTypes.get(i)))
             .collect(Collectors.toList());
 
-    RexNode body = expr.body().accept(this, context);
+    context.enterLambdaScope(parameterTypes);
+    RexNode body;
+    try {
+      body = expr.body().accept(this, context);
+    } finally {
+      context.exitLambdaScope();
+    }
 
     return rexBuilder.makeLambdaCall(body, parameters);
   }
@@ -846,6 +851,10 @@ public class ExpressionRexConverter
         final FieldReference.StructField field = (FieldReference.StructField) segment;
         rexInputRef =
             new RexInputRef(field.offset(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        observeType(
+            expr,
+            TypeObservation.Source.FIELD_REFERENCE,
+            () -> context.getInputFieldType(field.offset()));
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
@@ -864,8 +873,11 @@ public class ExpressionRexConverter
         final CorrelationId correlationId =
             context.correlationIdForAnchor(
                 anchor, () -> relNodeConverter.getRelBuilder().getCluster().createCorrel());
-        return rexBuilder.makeFieldAccess(
-            rexBuilder.makeCorrel(rowType, correlationId), field.offset());
+        RexNode fieldAccess =
+            rexBuilder.makeFieldAccess(
+                rexBuilder.makeCorrel(rowType, correlationId), field.offset());
+        observeType(expr, TypeObservation.Source.FIELD_REFERENCE, fieldAccess::getType);
+        return fieldAccess;
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
@@ -882,7 +894,13 @@ public class ExpressionRexConverter
       if (segment instanceof FieldReference.StructField) {
         final FieldReference.StructField field = (FieldReference.StructField) segment;
         RelDataType calciteType = typeConverter.toCalcite(typeFactory, expr.getType());
-        return new RexLambdaRef(field.offset(), "p" + field.offset(), calciteType);
+        RexLambdaRef lambdaRef =
+            new RexLambdaRef(field.offset(), "p" + field.offset(), calciteType);
+        observeType(
+            expr,
+            TypeObservation.Source.FIELD_REFERENCE,
+            () -> context.getLambdaParameterType(field.offset()));
+        return lambdaRef;
       } else {
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }

@@ -10,8 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.Switch;
+import io.substrait.expression.FieldReference;
+import io.substrait.expression.LambdaBuilder;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.isthmus.SubstraitRelNodeConverter.AnchoredInput;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -166,6 +169,142 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
         input -> List.of(sb.fieldReference(input, 0)),
         Remap.of(List.of(3)),
         sb.filter(input -> sb.equal(sb.fieldReference(input, 2), sb.str("EUROPE")), commonTable));
+  }
+
+  @Test
+  void observeSuppliedAndInputRootFieldReferenceTypes() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    Context context = Context.newContext();
+    RelDataType rowType =
+        typeFactory.builder().add("actual", SqlTypeName.INTEGER).nullable(false).build();
+    context.enterScope(AnchoredInput.of(Optional.empty(), rowType));
+    FieldReference expr = FieldReference.newRootStructReference(0, R.FP32);
+
+    RexNode calciteExpr = expr.accept(observingConverter, context);
+
+    TypeObservation observation = observed.get();
+    assertEquals(TypeObservation.Source.FIELD_REFERENCE, observation.source());
+    assertSame(expr, observation.expression());
+    assertEquals(R.FP32, observation.suppliedType());
+    assertTrue(observation.inferenceFailure().isEmpty());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I32),
+        observation.inferredType().orElseThrow());
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.FP32), calciteExpr.getType());
+    context.exitScope();
+  }
+
+  @Test
+  void observeMatchingRootFieldReferenceType() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ConverterProvider observingProvider =
+        ConverterProvider.builder().typeObserver(observed::set).build();
+    FieldReference expr = FieldReference.newRootStructReference(0, R.I32);
+    Project query = sb.project(input -> List.of(expr), commonTable);
+
+    new SubstraitToCalcite(observingProvider).convert(query);
+
+    assertSame(expr, observed.get().expression());
+    assertEquals(R.I32, observed.get().suppliedType());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(observingProvider.getTypeFactory(), R.I32),
+        observed.get().inferredType().orElseThrow());
+  }
+
+  @Test
+  void observeAggregateFieldReferenceTypesFromInput() {
+    List<TypeObservation> observations = new ArrayList<>();
+    ConverterProvider observingProvider =
+        ConverterProvider.builder().typeObserver(observations::add).build();
+    Rel query =
+        sb.aggregate(
+            input -> sb.grouping(input, 0), input -> List.of(sb.count(input, 0)), commonTable);
+
+    new SubstraitToCalcite(observingProvider).convert(query);
+
+    assertEquals(2, observations.size());
+    assertTrue(
+        observations.stream()
+            .allMatch(
+                observation ->
+                    observation.source() == TypeObservation.Source.FIELD_REFERENCE
+                        && observation.inferredType().isPresent()));
+  }
+
+  @Test
+  void observeSortFieldReferenceTypeFromInput() {
+    List<TypeObservation> observations = new ArrayList<>();
+    ConverterProvider observingProvider =
+        ConverterProvider.builder().typeObserver(observations::add).build();
+    Rel query = sb.sort(input -> sb.sortFields(input, 0), commonTable);
+
+    new SubstraitToCalcite(observingProvider).convert(query);
+
+    assertEquals(1, observations.size());
+    assertEquals(TypeObservation.Source.FIELD_REFERENCE, observations.get(0).source());
+    assertTrue(observations.get(0).inferredType().isPresent());
+  }
+
+  @Test
+  void reportMissingInputTypeWithoutFailingFieldReferenceConversion() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    FieldReference expr = FieldReference.newRootStructReference(0, R.FP32);
+
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
+
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, R.FP32), calciteExpr.getType());
+    assertSame(expr, observed.get().expression());
+    assertTrue(observed.get().inferredType().isEmpty());
+    IllegalStateException failure =
+        assertInstanceOf(
+            IllegalStateException.class, observed.get().inferenceFailure().orElseThrow());
+    assertEquals("No input row type is available for field reference", failure.getMessage());
+  }
+
+  @Test
+  void observeOuterFieldReferenceType() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ConverterProvider observingProvider =
+        ConverterProvider.builder().typeObserver(observed::set).build();
+    SubstraitRelNodeConverter observingRelNodeConverter =
+        new SubstraitRelNodeConverter(builder, observingProvider);
+    ExpressionRexConverter observingConverter =
+        observingProvider.getExpressionRexConverter(observingRelNodeConverter);
+    Context context = Context.newContext();
+    RelDataType rowType =
+        typeFactory.builder().add("actual", SqlTypeName.INTEGER).nullable(false).build();
+    context.enterScope(AnchoredInput.of(Optional.of(17), rowType));
+    FieldReference expr = FieldReference.newRootStructOuterReferenceByRelReference(0, R.FP32, 17);
+
+    RexNode calciteExpr = expr.accept(observingConverter, context);
+
+    assertEquals(TypeObservation.Source.FIELD_REFERENCE, observed.get().source());
+    assertSame(expr, observed.get().expression());
+    assertEquals(
+        rowType.getFieldList().get(0).getType(), observed.get().inferredType().orElseThrow());
+    assertEquals(rowType.getFieldList().get(0).getType(), calciteExpr.getType());
+    context.exitScope();
+  }
+
+  @Test
+  void observeLambdaParameterReferenceType() {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter = observingConverter(observed::set);
+    LambdaBuilder lambdaBuilder = new LambdaBuilder();
+    Expression.Lambda lambda =
+        lambdaBuilder.lambda(
+            List.of(R.I32),
+            parameters -> FieldReference.builder().from(parameters.ref(0)).type(R.FP32).build());
+
+    lambda.accept(observingConverter, Context.newContext());
+
+    assertEquals(TypeObservation.Source.FIELD_REFERENCE, observed.get().source());
+    assertEquals(R.FP32, observed.get().suppliedType());
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, R.I32),
+        observed.get().inferredType().orElseThrow());
   }
 
   @Test
