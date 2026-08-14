@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,9 +19,11 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.TypeObservation;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
@@ -63,23 +66,25 @@ class FunctionConversionTest extends PlanTestBase {
             windowFnConverter,
             TypeConverter.DEFAULT,
             observed::set);
+    Type outputType = TypeCreator.REQUIRED.precisionTimestamp(6);
     Expression.ScalarFunctionInvocation expr =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "subtract:date_iday",
-            TypeCreator.REQUIRED.DATE,
+            outputType,
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
     RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
-    assertEquals(
-        TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
-        calciteExpr.getType());
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, outputType), calciteExpr.getType());
     assertSame(
         SqlInternalOperators.MINUS_DATE2,
         assertInstanceOf(RexCall.class, calciteExpr).getOperator());
     assertTrue(observed.get().inferenceFailure().isEmpty());
-    assertEquals(calciteExpr.getType(), observed.get().inferredType().orElseThrow());
+    RelDataType inferredType = observed.get().inferredType().orElseThrow();
+    assertEquals(
+        TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE), inferredType);
+    assertNotEquals(calciteExpr.getType(), inferredType);
 
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
     assertEquals(expr, reverse);
