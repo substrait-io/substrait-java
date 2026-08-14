@@ -2,7 +2,9 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -14,12 +16,15 @@ import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.TypeObservation;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
 import io.substrait.type.TypeCreator;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.junit.jupiter.api.Test;
 
@@ -50,10 +55,14 @@ class FunctionConversionTest extends PlanTestBase {
 
   @Test
   void subtractDateIDay() {
-    // When this function is converted to Calcite, if the Calcite type derivation is used an
-    // java.lang.ArrayIndexOutOfBoundsException is thrown. It is quite likely that
-    // this is being mapped to the wrong Calcite function.
-    // TODO: https://github.com/substrait-io/substrait-java/issues/377
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter =
+        new ExpressionRexConverter(
+            typeFactory,
+            scalarFnConverter,
+            windowFnConverter,
+            TypeConverter.DEFAULT,
+            observed::set);
     Expression.ScalarFunctionInvocation expr =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
@@ -62,10 +71,15 @@ class FunctionConversionTest extends PlanTestBase {
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
     assertEquals(
         TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
         calciteExpr.getType());
+    assertSame(
+        SqlInternalOperators.MINUS_DATE2,
+        assertInstanceOf(RexCall.class, calciteExpr).getOperator());
+    assertTrue(observed.get().inferenceFailure().isEmpty());
+    assertEquals(calciteExpr.getType(), observed.get().inferredType().orElseThrow());
 
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
     assertEquals(expr, reverse);
