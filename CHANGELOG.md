@@ -1,6 +1,88 @@
 Release Notes
 ---
 
+## [0.100.0](https://github.com/substrait-io/substrait-java/compare/v0.99.0...v0.100.0) (2026-08-16)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** `ExpressionVisitor` gains
+`visit(Expression.NestedMap)`. Direct implementors must add it;
+implementors extending `AbstractExpressionVisitor` inherit the
+`visitFallback` default and need no change. `NestedList.getType()` now
+reports a nullable element type when any value is nullable, rather than
+the type of the first value. Importing an `Expression.Nested` with no
+arm set now throws `IllegalArgumentException` rather than
+`UnsupportedOperationException`.
+* validation that previously used `assert` now throws
+unconditionally. Callers catching `AssertionError` must catch
+`IllegalArgumentException` or `IllegalStateException` instead, and code
+running without `-ea` — i.e. most deployments — will now see these
+checks fire: `VirtualTableScan` and `Expression.NestedList` reject
+malformed input both from their builders and from `ProtoRelConverter` /
+`ProtoExpressionConverter`, and `VariadicParameterConsistencyValidator`
+throws `IllegalArgumentException` rather than `AssertionError`.
+* **isthmus:** removed LiteralConverter#convert(RexLiteral, boolean)
+* **isthmus-cli:** `isthmus` with no arguments reports the missing SQL on
+stderr and exits 2, where it used to print the usage on stdout and exit
+0; `--help` still does the latter. Passing a query together with `-e` /
+`--expression` is now rejected instead of silently ignoring the query.
+* **isthmus:** An aggregate converted from Substrait to Calcite now
+carries the plan's declared output type instead of Calcite's inferred
+one, and may carry a binding-transport operator instead of the plain
+SqlAggFunction.
+- Output types follow the plan by default
+  (OutputTypeSource.PLAN_OUTPUT); pass an AggregateConversion with
+  OutputTypeSource.CALCITE_INFERENCE to
+  ConverterProvider.builder().aggregateConversion(...) to restore the
+  previous type behavior.
+- Operator identity checks on a converted AggregateCall
+  (call.getAggregation() == SUM) no longer hold for wrapped calls: read
+  the invocation through AggregateFunctions.boundBinding, and call
+  AggregateFunctions.unwrapBound(Aggregate) before executing a
+  converted plan to replace bound calls with their delegates.
+- Rollup, splitting, singleton flattening and static flattening are
+  disabled for wrapped calls, each of which would re-infer the
+  transformed call's type or discard the call, losing the carried type
+  or binding.
+- An aggregate with no groupings converts back to Substrait as a single
+  empty grouping rather than none.
+- ParameterizedType.StringLiteral.isWildcard() now follows the type
+  grammar exactly (any, any0-any9), so a declaration whose parameter
+  name merely starts with "any" no longer matches every argument type
+  nor shares the signature key of any. No shipped extension is
+  affected.
+* **isthmus:** the public
+`io.substrait.isthmus.expression.WindowRelFunctionConverter` is removed.
+No shipped `ConverterProvider` ever instantiated it, so no configured
+conversion path reached it, but it was public API with public
+constructors and a public `convert(...)`, so a downstream that
+constructed it directly will no longer compile. There is no drop-in
+replacement: `WindowFunctionConverter` performs the same signature
+matching against `SimpleExtension.WindowFunctionVariant`, but yields an
+`Expression.WindowFunctionInvocation` rather than a
+`ConsistentPartitionWindow.WindowRelFunctionInvocation`.
+
+### Features
+
+* **core:** support nested map expressions and import nested structs ([#1062](https://github.com/substrait-io/substrait-java/issues/1062)) ([64a08b7](https://github.com/substrait-io/substrait-java/commit/64a08b7db79810e3ec601a45e92979072bf45168))
+* **core:** update to substrait v0.100.0 ([#1082](https://github.com/substrait-io/substrait-java/issues/1082)) ([e65e9d4](https://github.com/substrait-io/substrait-java/commit/e65e9d4c99c265551d0b745fdabd1280d40dffc3))
+* **isthmus-cli:** explain common SQL conversion errors instead of dumping stack traces ([#1060](https://github.com/substrait-io/substrait-java/issues/1060)) ([4a97f9b](https://github.com/substrait-io/substrait-java/commit/4a97f9bbe3c728f3493275430654317c484d5f61))
+* **isthmus:** convert nested struct and map expressions to and from Calcite ([#1063](https://github.com/substrait-io/substrait-java/issues/1063)) ([054be1b](https://github.com/substrait-io/substrait-java/commit/054be1bf29919ce55afd22964e40096e8e6ffd06))
+* **isthmus:** observe field reference types ([#1080](https://github.com/substrait-io/substrait-java/issues/1080)) ([45d64e1](https://github.com/substrait-io/substrait-java/commit/45d64e1f3e03ee7641acee82a8cd2643e0623762))
+* **isthmus:** preserve aggregate output types and semantics through Calcite ([#1017](https://github.com/substrait-io/substrait-java/issues/1017)) ([ac000bc](https://github.com/substrait-io/substrait-java/commit/ac000bc78fa67e97600df20c8ce65c874f372b2e))
+
+### Bug Fixes
+
+* **core:** make ProtoRelConverter.newTopN keep relAnchor on the way back from proto ([#1088](https://github.com/substrait-io/substrait-java/issues/1088)) ([186ef55](https://github.com/substrait-io/substrait-java/commit/186ef55b463480fae15c46ab2f924b202aa15c82))
+* **isthmus:** preserve field types in sort and aggregate references ([#1090](https://github.com/substrait-io/substrait-java/issues/1090)) ([43da396](https://github.com/substrait-io/substrait-java/commit/43da396686843c8774a37163c79a206dcfcd25b8))
+* **isthmus:** use schema types for virtual table literals ([#1065](https://github.com/substrait-io/substrait-java/issues/1065)) ([94900fe](https://github.com/substrait-io/substrait-java/commit/94900fe1da11de522584165538acd088ad9e26a2))
+* replace assert-based validation with real exceptions ([#1058](https://github.com/substrait-io/substrait-java/issues/1058)) ([c6e0f08](https://github.com/substrait-io/substrait-java/commit/c6e0f086b61b18be4c85504b0250c81661294d6a))
+* **spark:** omit dialect entries for types with no Spark sample value ([#1086](https://github.com/substrait-io/substrait-java/issues/1086)) ([4736310](https://github.com/substrait-io/substrait-java/commit/473631024fc33e7e65bfc984d94b83414c8e44cc))
+
+### Code Refactoring
+
+* **isthmus:** remove dead WindowRelFunctionConverter and de-duplicate call converters ([#1014](https://github.com/substrait-io/substrait-java/issues/1014)) ([5af64e9](https://github.com/substrait-io/substrait-java/commit/5af64e998b8f1c3b042075678614a760d044d819))
+
 ## [0.99.0](https://github.com/substrait-io/substrait-java/compare/v0.98.0...v0.99.0) (2026-08-09)
 
 ### ⚠ BREAKING CHANGES
