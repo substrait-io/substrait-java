@@ -1,5 +1,10 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.substrait.plan.Plan;
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,6 +44,16 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
   void dateSubtractIntervalDay() throws Exception {
     String query = "SELECT event_date - INTERVAL '5' DAY FROM events";
     assertFullRoundTrip(query, CREATES);
+  }
+
+  @Test
+  void dateSubtractIntervalUnparsesAsSqlArithmetic() throws Exception {
+    String query = "SELECT event_date - INTERVAL '5' DAY FROM events";
+    Plan plan = assertProtoPlanRoundrip(query, new SqlToSubstrait(), CREATES);
+
+    String generatedSql = new SubstraitToSql().convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
+    assertFalse(generatedSql.contains("DATETIME_SUBTRACT"));
+    assertTrue(generatedSql.contains("- INTERVAL"));
   }
 
   @Test

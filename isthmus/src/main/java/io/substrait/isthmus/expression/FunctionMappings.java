@@ -8,9 +8,13 @@ import java.util.Set;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlBasicFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -74,17 +78,7 @@ public class FunctionMappings {
    * two-operand {@code date - interval_day}, whose result is a precision timestamp. This distinct
    * operator keeps Calcite from treating those incompatible operators as equal.
    */
-  public static final SqlFunction DATETIME_SUBTRACT =
-      SqlBasicFunction.create(
-          "DATETIME_SUBTRACT",
-          FunctionMappings::inferDatetimeSubtractType,
-          OperandTypes.or(
-              OperandTypes.DATETIME_INTERVAL,
-              OperandTypes.sequence(
-                  "DATETIME_SUBTRACT(<DATETIME>, <INTERVAL>, <CHARACTER>)",
-                  OperandTypes.DATETIME,
-                  OperandTypes.INTERVAL,
-                  OperandTypes.CHARACTER)));
+  public static final SqlFunction DATETIME_SUBTRACT = new DatetimeSubtractionFunction();
 
   /** Scalar function mappings. */
   public static final ImmutableList<Sig> SCALAR_SIGS =
@@ -262,6 +256,31 @@ public class FunctionMappings {
       nullable |= binding.getOperandType(i).isNullable();
     }
     return typeFactory.createTypeWithNullability(resultType, nullable);
+  }
+
+  private static final class DatetimeSubtractionFunction extends SqlFunction {
+    private DatetimeSubtractionFunction() {
+      super(
+          "DATETIME_SUBTRACT",
+          SqlKind.OTHER_FUNCTION,
+          FunctionMappings::inferDatetimeSubtractType,
+          null,
+          OperandTypes.or(
+              OperandTypes.DATETIME_INTERVAL,
+              OperandTypes.sequence(
+                  "DATETIME_SUBTRACT(<DATETIME>, <INTERVAL>, <CHARACTER>)",
+                  OperandTypes.DATETIME,
+                  OperandTypes.INTERVAL,
+                  OperandTypes.CHARACTER)),
+          SqlFunctionCategory.NUMERIC);
+    }
+
+    @Override
+    public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+      writer
+          .getDialect()
+          .unparseSqlDatetimeArithmetic(writer, call, SqlKind.MINUS, leftPrec, rightPrec);
+    }
   }
 
   /**
