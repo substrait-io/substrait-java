@@ -696,8 +696,13 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedUpdate update, Context context) {
+    if (update.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedUpdate is not supported: TableModify's row type is a single "
+              + "ROWCOUNT column, not the updated table's columns");
+    }
     relBuilder.scan(update.getNames());
-    context.enterScope(AnchoredInput.of(Optional.empty(), relBuilder.peek().getRowType()));
+    context.enterScope(AnchoredInput.of(update.getRelAnchor(), relBuilder.peek().getRowType()));
     RexNode condition = update.getCondition().accept(expressionRexConverter, context);
 
     NamedStruct tableSchema = update.getTableSchema();
@@ -713,10 +718,7 @@ public class SubstraitRelNodeConverter
           transform.getTransformation().accept(expressionRexConverter, context));
     }
 
-    // Keep the scope open through the condition and transformations so field-reference
-    // observations use the table row type. With no rel_anchor, its correlation set is always empty.
-    context.exitScope();
-    relBuilder.filter(condition);
+    relBuilder.filter(context.exitScope(), condition);
     RelNode inputForModify = relBuilder.build();
 
     final RelOptTable table = requireRelOptSchema().getTableForMember(update.getNames());
