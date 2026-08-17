@@ -79,7 +79,11 @@ class LiteralRoundtripTest extends TestBase {
 
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(
-            false, NESTED_TYPES_URN, "point", java.util.Collections.emptyList(), anyValue);
+            false,
+            DefaultExtensionCatalog.UNSIGNED_INTEGERS,
+            "u8",
+            Collections.emptyList(),
+            anyValue);
 
     verifyRoundTrip(val);
   }
