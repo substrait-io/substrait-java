@@ -551,6 +551,11 @@ public class ProtoRelConverter {
             .tableSchema(tableSchema)
             .addAllTransformations(transformations)
             .condition(converter.from(rel.getCondition()));
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()))
+        .relAnchor(optionalRelAnchor(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
