@@ -1421,6 +1421,8 @@ public class SimpleExtension {
    *
    * @param resourcePaths the resource Paths
    * @return the load
+   * @throws IllegalArgumentException if {@code resourcePaths} is empty, or if any of the paths is
+   *     not present on the classpath
    */
   public static ExtensionCollection load(List<String> resourcePaths) {
     if (resourcePaths.isEmpty()) {
@@ -1432,6 +1434,10 @@ public class SimpleExtension {
             .map(
                 path -> {
                   try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
+                    if (stream == null) {
+                      throw new IllegalArgumentException(
+                          "Extension resource not found on classpath: " + path);
+                    }
                     return load(stream);
                   } catch (IOException e) {
                     throw new UncheckedIOException(e);
@@ -1476,8 +1482,16 @@ public class SimpleExtension {
    *
    * @param stream the stream
    * @return the load
+   * @throws IllegalArgumentException if {@code stream} is null, which is what {@code
+   *     Class#getResourceAsStream} returns for a resource that is not on the classpath
    */
   public static ExtensionCollection load(InputStream stream) {
+    if (stream == null) {
+      throw new IllegalArgumentException(
+          "Extension stream must not be null;"
+              + " Class.getResourceAsStream returns null for a resource that is not on the"
+              + " classpath.");
+    }
     try (Scanner scanner = new Scanner(stream)) {
       scanner.useDelimiter(READ_WHOLE_FILE);
       String content = scanner.next();
