@@ -96,7 +96,7 @@ class LiteralRoundtripTest extends TestBase {
             ExpressionCreator.i32(false, 42), ExpressionCreator.i32(false, 100));
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(
-            false, NESTED_TYPES_URN, "point", java.util.Collections.emptyList(), fields);
+            false, NESTED_TYPES_URN, "point", Collections.emptyList(), fields);
 
     verifyRoundTrip(val);
   }
