@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -101,33 +100,21 @@ class FunctionConversionTest extends PlanTestBase {
   }
 
   static Stream<Arguments> subtractDateIDayTypes() {
-    Type timestamp = TypeCreator.REQUIRED.precisionTimestamp(6);
+    Type maxPrecisionTimestamp = TypeCreator.REQUIRED.precisionTimestamp(6);
     return Stream.of(
-        Arguments.of(Named.of("legacy DATE output", TypeCreator.REQUIRED.DATE), timestamp),
-        Arguments.of(Named.of("spec timestamp output", timestamp), timestamp));
+        Arguments.of(
+            Named.of("legacy DATE output", TypeCreator.REQUIRED.DATE), maxPrecisionTimestamp),
+        Arguments.of(
+            Named.of("spec max-precision output", maxPrecisionTimestamp), maxPrecisionTimestamp),
+        Arguments.of(
+            Named.of("spec non-max-precision output", TypeCreator.REQUIRED.precisionTimestamp(3)),
+            maxPrecisionTimestamp));
   }
 
   @Test
   void datetimeSubtractOperatorHasIndependentIdentity() {
     assertNotEquals(SqlStdOperatorTable.MINUS_DATE, FunctionMappings.DATETIME_SUBTRACT);
     assertNotEquals(SqlInternalOperators.MINUS_DATE2, FunctionMappings.DATETIME_SUBTRACT);
-  }
-
-  @Test
-  void timezoneDatetimeSubtractHasStableDigest() {
-    Expression.ScalarFunctionInvocation expr =
-        sb.scalarFn(
-            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
-            "subtract:ptstz_iyear_str",
-            TypeCreator.REQUIRED.precisionTimestampTZ(3),
-            ExpressionCreator.precisionTimestampTZ(false, 0, 3),
-            ExpressionCreator.intervalYear(false, 1, 0),
-            ExpressionCreator.string(false, "UTC"));
-
-    RexCall calciteExpr =
-        assertInstanceOf(RexCall.class, expr.accept(expressionRexConverter, Context.newContext()));
-    assertSame(FunctionMappings.DATETIME_SUBTRACT, calciteExpr.getOperator());
-    assertDoesNotThrow(calciteExpr::toString);
   }
 
   @Test

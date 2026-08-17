@@ -77,6 +77,10 @@ public class FunctionMappings {
    * interval qualifier operand or return the first operand type. Neither matches Substrait's
    * two-operand {@code date - interval_day}, whose result is a precision timestamp. This distinct
    * operator keeps Calcite from treating those incompatible operators as equal.
+   *
+   * <p>Calcite's Enumerable convention cannot execute this custom operator because it has no {@code
+   * RexImpTable} implementor. It is currently used to preserve conversion semantics and operator
+   * identity.
    */
   public static final SqlFunction DATETIME_SUBTRACT = new DatetimeSubtractionFunction();
 
@@ -244,9 +248,10 @@ public class FunctionMappings {
     RelDataType resultType = datetimeType;
     if (datetimeType.getSqlTypeName() == SqlTypeName.DATE
         && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
-      // Calcite interval literals report their millisecond storage scale rather than the
-      // configured Substrait interval precision. Use the type system constraint so inference does
-      // not silently narrow a precision_timestamp result.
+      // Calcite's interval type does not retain Substrait's interval_day<P> precision, so the
+      // exact timestamp precision cannot be inferred here. Use the type system maximum as a
+      // best-effort inference; ExpressionRexConverter keeps the declared Substrait output type
+      // authoritative.
       int precision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
       resultType = typeFactory.createSqlType(SqlTypeName.TIMESTAMP, precision);
     }
@@ -272,11 +277,17 @@ public class FunctionMappings {
                   OperandTypes.DATETIME,
                   OperandTypes.INTERVAL,
                   OperandTypes.CHARACTER)),
-          SqlFunctionCategory.NUMERIC);
+          SqlFunctionCategory.TIMEDATE);
     }
 
     @Override
     public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+      if (call.operandCount() > 2) {
+        // unparseSqlDatetimeArithmetic treats the third operand as an interval qualifier and
+        // writes it after the closing parenthesis. Substrait uses it as a timezone argument.
+        super.unparse(writer, call, leftPrec, rightPrec);
+        return;
+      }
       writer
           .getDialect()
           .unparseSqlDatetimeArithmetic(writer, call, SqlKind.MINUS, leftPrec, rightPrec);

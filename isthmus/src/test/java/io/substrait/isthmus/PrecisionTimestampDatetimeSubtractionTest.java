@@ -3,7 +3,12 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.plan.Plan;
+import io.substrait.relation.Project;
+import java.util.List;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +59,25 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
     String generatedSql = new SubstraitToSql().convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
     assertFalse(generatedSql.contains("DATETIME_SUBTRACT"));
     assertTrue(generatedSql.contains("- INTERVAL"));
+  }
+
+  @Test
+  void timezoneDatetimeSubtractUnparsesAsFunctionCall() {
+    Expression.ScalarFunctionInvocation subtraction =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            "subtract:ptstz_iyear_str",
+            R.precisionTimestampTZ(3),
+            ExpressionCreator.precisionTimestampTZ(false, 0, 3),
+            ExpressionCreator.intervalYear(false, 1, 0),
+            ExpressionCreator.string(false, "UTC"));
+    Project project = sb.project(input -> List.of(subtraction), sb.emptyVirtualTableScan());
+    Plan plan = sb.plan(sb.root(project, List.of("result")));
+
+    String generatedSql = new SubstraitToSql().convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
+    assertTrue(generatedSql.contains("DATETIME_SUBTRACT("));
+    assertTrue(generatedSql.contains(", 'UTC')"));
+    assertFalse(generatedSql.contains(") 'UTC'"));
   }
 
   @Test
