@@ -613,7 +613,6 @@ public class RelProtoConverter
 
   @Override
   public Rel visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
-    checkNoRelCommon(update);
     UpdateRel.Builder builder =
         UpdateRel.newBuilder()
             .setCommon(common(update))
@@ -931,31 +930,6 @@ public class RelProtoConverter
             .addAllInputs(inputs)
             .setDetail(extensionMulti.getDetail().toProto(this));
     return Rel.newBuilder().setExtensionMulti(builder).build();
-  }
-
-  /**
-   * Rejects {@link RelCommon} data on a relation whose protobuf message has no {@code common}
-   * field. {@code UpdateRel} is the only modeled message without one (spec v0.99.0), so an update
-   * relation cannot express an emit mapping, a hint, a rel anchor or a common advanced extension.
-   * ({@code ReferenceRel} has no {@code common} field either, but it points at another subtree
-   * instead of producing output of its own, and no POJO models it.) The POJO model exposes those
-   * accessors on every {@link io.substrait.relation.Rel}, and an emit mapping additionally changes
-   * {@link io.substrait.relation.Rel#getRecordType()} — serializing such a relation would silently
-   * produce a plan with a different schema, so fail instead.
-   *
-   * @param rel the relation about to be serialized
-   */
-  private static void checkNoRelCommon(io.substrait.relation.Rel rel) {
-    if (rel.getRemap().isPresent()
-        || rel.getHint().isPresent()
-        || rel.getRelAnchor().isPresent()
-        || rel.getCommonExtension().isPresent()) {
-      throw new UnsupportedOperationException(
-          "Relation "
-              + rel.getClass()
-              + " carries RelCommon data (emit mapping, hint, rel anchor or common advanced "
-              + "extension) but its protobuf message has no common field to carry it");
-    }
   }
 
   private RelCommon common(io.substrait.relation.Rel rel) {

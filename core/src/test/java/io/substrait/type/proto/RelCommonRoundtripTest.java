@@ -1,7 +1,6 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.TestBase;
@@ -48,7 +47,6 @@ import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -72,15 +70,6 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RelCommonRoundtripTest extends TestBase {
-
-  /**
-   * Relations whose protobuf message has no {@code common} field and which therefore cannot carry
-   * any {@code RelCommon} data at all. {@code UpdateRel} is the only modeled message without one
-   * (spec v0.99.0); {@code ReferenceRel} has no {@code common} field either, but no POJO models it,
-   * so it cannot reach this set.
-   */
-  static final java.util.Set<Class<? extends Rel>> WITHOUT_REL_COMMON =
-      Collections.singleton(NamedUpdate.class);
 
   static final Hint HINT =
       Hint.builder()
@@ -118,26 +107,6 @@ class RelCommonRoundtripTest extends TestBase {
   @ParameterizedTest(name = "{0}")
   @MethodSource("samples")
   void relCommonRoundtrips(String relationType, Rel rel) {
-    if (WITHOUT_REL_COMMON.contains(relationType(rel))) {
-      // The message has nowhere to carry the data, so serialization must fail loudly instead of
-      // emitting a plan that silently lost it (an emit mapping even changes the record type).
-      // Each field is rejected on its own, so none of them can start being dropped silently.
-      for (Rel sample :
-          Arrays.asList(
-              rel.withRemap(Optional.of(reversedRemap(rel))),
-              rel.withHint(Optional.of(HINT)),
-              rel.withRelAnchor(Optional.of(REL_ANCHOR)),
-              rel.withCommonExtension(Optional.of(COMMON_EXTENSION)),
-              withRelCommon(rel))) {
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> relProtoConverter.toProto(sample),
-            relationType);
-      }
-      // Without any RelCommon data the relation still round-trips.
-      verifyRoundTrip(rel);
-      return;
-    }
     verifyRoundTrip(withRelCommon(rel));
   }
 
