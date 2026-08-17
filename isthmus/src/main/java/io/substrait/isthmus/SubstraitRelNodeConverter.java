@@ -78,11 +78,13 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.Frameworks;
@@ -810,8 +812,15 @@ public class SubstraitRelNodeConverter
         ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
         for (Expression expr : rowExpr.fields()) {
           final Expression.Literal literal = (Expression.Literal) expr;
-          final RexLiteral rexNode = (RexLiteral) literal.accept(expressionRexConverter, context);
-          tupleBuilder.add(rexNode);
+          RexNode rexNode = literal.accept(expressionRexConverter, context);
+          // A nullable literal converts as CAST(literal AS nullable type). LogicalValues tuples
+          // hold bare literals, and the field's nullability is already declared in the row type,
+          // so unwrap the cast here.
+          if (rexNode.isA(SqlKind.CAST)
+              && ((RexCall) rexNode).getOperands().get(0) instanceof RexLiteral) {
+            rexNode = ((RexCall) rexNode).getOperands().get(0);
+          }
+          tupleBuilder.add((RexLiteral) rexNode);
         }
         tuplesBuilder.add(tupleBuilder.build());
       }
