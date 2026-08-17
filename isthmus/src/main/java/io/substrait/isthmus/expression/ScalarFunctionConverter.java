@@ -17,9 +17,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlInternalOperators;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /**
  * Converts Calcite {@link RexCall} scalar functions to Substrait {@link Expression} using known
@@ -68,6 +65,7 @@ public class ScalarFunctionConverter
 
     mappers =
         List.of(
+            new DatetimeSubtractionFunctionMapper(functions),
             new ConcatFunctionMapper(functions),
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions),
@@ -88,20 +86,6 @@ public class ScalarFunctionConverter
     return FunctionMappings.SCALAR_SIGS;
   }
 
-  @Override
-  public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
-      String key, Type outputType, List<FunctionArg> arguments) {
-    return super.getSqlOperatorFromSubstraitFunc(key, outputType, arguments)
-        .map(
-            operator ->
-                // MINUS_DATE models datetime - datetime and derives its interval result from a
-                // third qualifier operand. Substrait datetime subtraction takes an interval as
-                // its second operand, which is the two-operand MINUS_DATE2 form in Calcite.
-                operator == SqlStdOperatorTable.MINUS_DATE
-                    ? SqlInternalOperators.MINUS_DATE2
-                    : operator);
-  }
-
   /**
    * Converts a {@link RexCall} into a Substrait {@link Expression}, applying any registered custom
    * mapping first, then default matching if needed.
@@ -113,16 +97,10 @@ public class ScalarFunctionConverter
   @Override
   public Optional<Expression> convert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
-    RexCall mappedCall =
-        call.op == SqlInternalOperators.MINUS_DATE2
-            ? (RexCall)
-                rexBuilder.makeCall(
-                    call.getType(), SqlStdOperatorTable.MINUS_DATE, call.getOperands())
-            : call;
     // If a mapping applies to this call, use it; otherwise default behavior.
-    return getMappingForCall(mappedCall)
-        .map(mapping -> mappedConvert(mapping, mappedCall, topLevelConverter))
-        .orElseGet(() -> defaultConvert(mappedCall, topLevelConverter));
+    return getMappingForCall(call)
+        .map(mapping -> mappedConvert(mapping, call, topLevelConverter))
+        .orElseGet(() -> defaultConvert(call, topLevelConverter));
   }
 
   private Optional<SubstraitFunctionMapping> getMappingForCall(final RexCall call) {

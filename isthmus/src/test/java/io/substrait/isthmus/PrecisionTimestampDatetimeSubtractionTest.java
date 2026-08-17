@@ -3,8 +3,8 @@ package io.substrait.isthmus;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test class for precision timestamp datetime subtraction operations. Tests the mapping of
- * Calcite's MINUS_DATE operator to Substrait's subtract function for precision_timestamp and
+ * Test class for precision timestamp datetime subtraction operations. Tests the mapping between
+ * Calcite datetime subtraction and Substrait's subtract function for precision_timestamp and
  * precision_timestamp_tz types.
  */
 class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {

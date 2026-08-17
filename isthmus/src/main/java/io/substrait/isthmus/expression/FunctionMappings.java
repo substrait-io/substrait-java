@@ -5,9 +5,12 @@ import io.substrait.isthmus.AggregateFunctions;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlBasicFunction;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -63,6 +66,26 @@ public class FunctionMappings {
           ReturnTypes.ARG0_NULLABLE,
           OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER));
 
+  /**
+   * The Substrait datetime subtraction function.
+   *
+   * <p>Calcite's datetime subtraction operators either infer their return type from a third
+   * interval qualifier operand or return the first operand type. Neither matches Substrait's
+   * two-operand {@code date - interval_day}, whose result is a precision timestamp. This distinct
+   * operator keeps Calcite from treating those incompatible operators as equal.
+   */
+  public static final SqlFunction DATETIME_SUBTRACT =
+      SqlBasicFunction.create(
+          "DATETIME_SUBTRACT",
+          FunctionMappings::inferDatetimeSubtractType,
+          OperandTypes.or(
+              OperandTypes.DATETIME_INTERVAL,
+              OperandTypes.sequence(
+                  "DATETIME_SUBTRACT(<DATETIME>, <INTERVAL>, <CHARACTER>)",
+                  OperandTypes.DATETIME,
+                  OperandTypes.INTERVAL,
+                  OperandTypes.CHARACTER)));
+
   /** Scalar function mappings. */
   public static final ImmutableList<Sig> SCALAR_SIGS =
       ImmutableList.<Sig>builder()
@@ -98,7 +121,7 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.IS_NULL, "is_null"),
               s(SqlStdOperatorTable.IS_NOT_NULL, "is_not_null"),
               s(SqlStdOperatorTable.NOT_EQUALS, "not_equal"),
-              s(SqlStdOperatorTable.MINUS_DATE, "subtract"),
+              s(DATETIME_SUBTRACT, "subtract"),
               s(SqlStdOperatorTable.DATETIME_PLUS, "add"),
               s(SqlStdOperatorTable.EXTRACT, "extract"),
               s(SqlStdOperatorTable.CEIL, "ceil"),
@@ -214,10 +237,32 @@ public class FunctionMappings {
           SqlStdOperatorTable.MINUS,
           resolver(
               SqlStdOperatorTable.MINUS, Set.of("i8", "i16", "i32", "i64", "fp32", "fp64", "dec")),
-          SqlStdOperatorTable.MINUS_DATE,
-          resolver(SqlStdOperatorTable.MINUS_DATE, Set.of("date", "ts", "tstz", "pts", "ptstz")),
+          DATETIME_SUBTRACT,
+          resolver(DATETIME_SUBTRACT, Set.of("date", "ts", "tstz", "pts", "ptstz")),
           SqlStdOperatorTable.BIT_LEFT_SHIFT,
           resolver(SqlStdOperatorTable.BIT_LEFT_SHIFT, Set.of("i8", "i16", "i32", "i64")));
+
+  private static RelDataType inferDatetimeSubtractType(SqlOperatorBinding binding) {
+    RelDataType datetimeType = binding.getOperandType(0);
+    RelDataType intervalType = binding.getOperandType(1);
+    RelDataTypeFactory typeFactory = binding.getTypeFactory();
+
+    RelDataType resultType = datetimeType;
+    if (datetimeType.getSqlTypeName() == SqlTypeName.DATE
+        && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
+      // Calcite interval literals report their millisecond storage scale rather than the
+      // configured Substrait interval precision. Use the type system constraint so inference does
+      // not silently narrow a precision_timestamp result.
+      int precision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+      resultType = typeFactory.createSqlType(SqlTypeName.TIMESTAMP, precision);
+    }
+
+    boolean nullable = false;
+    for (int i = 0; i < binding.getOperandCount(); i++) {
+      nullable |= binding.getOperandType(i).isNullable();
+    }
+    return typeFactory.createTypeWithNullability(resultType, nullable);
+  }
 
   /**
    * Creates a signature mapping entry.
