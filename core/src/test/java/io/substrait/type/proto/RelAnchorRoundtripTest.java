@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.relation.Filter;
+import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.TopN;
+import io.substrait.type.NamedStruct;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,19 @@ class RelAnchorRoundtripTest extends TestBase {
             .build();
 
     verifyRoundTrip(topN);
+  }
+
+  @Test
+  void relAnchorOnNamedUpdate() {
+    Rel update =
+        NamedUpdate.builder()
+            .tableSchema(NamedStruct.of(Arrays.asList("id", "name"), R.struct(R.I64, R.STRING)))
+            .names(Collections.singletonList("test_table"))
+            .relAnchor(9)
+            .condition(sb.bool(true))
+            .build();
+
+    verifyRoundTrip(update);
   }
 
   @Test

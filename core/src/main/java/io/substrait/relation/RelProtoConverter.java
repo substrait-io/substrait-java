@@ -615,6 +615,7 @@ public class RelProtoConverter
   public Rel visit(NamedUpdate update, EmptyVisitationContext context) throws RuntimeException {
     UpdateRel.Builder builder =
         UpdateRel.newBuilder()
+            .setCommon(common(update))
             .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
             .setTableSchema(update.getTableSchema().toProto(typeProtoConverter))
             .addAllTransformations(

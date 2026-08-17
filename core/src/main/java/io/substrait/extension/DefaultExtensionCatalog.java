@@ -60,9 +60,6 @@ public class DefaultExtensionCatalog {
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
 
-  /** Identifier for extension types. */
-  public static final String EXTENSION_TYPES = "extension:io.substrait:extension_types";
-
   /** Extension identifier for unsigned integer types and functions. */
   public static final String UNSIGNED_INTEGERS = "extension:io.substrait:unsigned_integers";
 
@@ -95,7 +92,6 @@ public class DefaultExtensionCatalog {
             .map(c -> String.format("/substrait/extensions/functions_%s.yaml", c))
             .collect(Collectors.toList());
 
-    defaultFiles.add("/substrait/extensions/extension_types.yaml");
     defaultFiles.add("/substrait/extensions/unsigned_integers.yaml");
 
     return SimpleExtension.load(defaultFiles);
