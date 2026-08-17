@@ -1,20 +1,13 @@
 package io.substrait.type.proto;
 
-import static io.substrait.expression.proto.ProtoExpressionConverter.EMPTY_TYPE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.protobuf.Any;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.proto.ExpressionProtoConverter;
-import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
-import io.substrait.relation.ProtoRelConverter;
-import io.substrait.relation.RelProtoConverter;
 import java.math.BigDecimal;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -66,27 +59,9 @@ class LiteralRoundtripTest extends TestBase {
   private static final SimpleExtension.ExtensionCollection NESTED_TYPES_EXTENSIONS =
       SimpleExtension.load(NESTED_TYPES_YAML);
 
-  private static final ExtensionCollector NESTED_TYPES_FUNCTION_COLLECTOR =
-      new ExtensionCollector();
-  private static final RelProtoConverter NESTED_TYPES_REL_PROTO_CONVERTER =
-      new RelProtoConverter(NESTED_TYPES_FUNCTION_COLLECTOR);
-  private static final ProtoRelConverter NESTED_TYPES_PROTO_REL_CONVERTER =
-      new ProtoRelConverter(NESTED_TYPES_FUNCTION_COLLECTOR, NESTED_TYPES_EXTENSIONS);
-  private static final ExpressionProtoConverter NESTED_TYPES_EXPRESSION_TO_PROTO =
-      new ExpressionProtoConverter(
-          NESTED_TYPES_FUNCTION_COLLECTOR, NESTED_TYPES_REL_PROTO_CONVERTER);
-  private static final ProtoExpressionConverter NESTED_TYPES_PROTO_TO_EXPRESSION =
-      new ProtoExpressionConverter(
-          NESTED_TYPES_FUNCTION_COLLECTOR,
-          NESTED_TYPES_EXTENSIONS,
-          EMPTY_TYPE,
-          NESTED_TYPES_PROTO_REL_CONVERTER);
-
-  private void verifyNestedTypesRoundTrip(Expression expression) {
-    io.substrait.proto.Expression protoExpression =
-        NESTED_TYPES_EXPRESSION_TO_PROTO.toProto(expression);
-    Expression result = NESTED_TYPES_PROTO_TO_EXPRESSION.from(protoExpression);
-    assertEquals(expression, result);
+  LiteralRoundtripTest() {
+    // The nested types are additional to the default catalog, which the tests below also draw on.
+    super(DefaultExtensionCatalog.DEFAULT_COLLECTION.merge(NESTED_TYPES_EXTENSIONS));
   }
 
   @Test
@@ -105,9 +80,9 @@ class LiteralRoundtripTest extends TestBase {
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralAny(
             false,
-            DefaultExtensionCatalog.EXTENSION_TYPES,
-            "point",
-            java.util.Collections.emptyList(),
+            DefaultExtensionCatalog.UNSIGNED_INTEGERS,
+            "u8",
+            Collections.emptyList(),
             anyValue);
 
     verifyRoundTrip(val);
@@ -121,11 +96,7 @@ class LiteralRoundtripTest extends TestBase {
             ExpressionCreator.i32(false, 42), ExpressionCreator.i32(false, 100));
     Expression.UserDefinedLiteral val =
         ExpressionCreator.userDefinedLiteralStruct(
-            false,
-            DefaultExtensionCatalog.EXTENSION_TYPES,
-            "point",
-            java.util.Collections.emptyList(),
-            fields);
+            false, NESTED_TYPES_URN, "point", Collections.emptyList(), fields);
 
     verifyRoundTrip(val);
   }
@@ -171,7 +142,7 @@ class LiteralRoundtripTest extends TestBase {
             Collections.emptyList(),
             java.util.Arrays.asList(p1, p2, p3));
 
-    verifyNestedTypesRoundTrip(triangle);
+    verifyRoundTrip(triangle);
   }
 
   /**
@@ -187,7 +158,7 @@ class LiteralRoundtripTest extends TestBase {
         ExpressionCreator.userDefinedLiteralAny(
             false, NESTED_TYPES_URN, "triangle", Collections.emptyList(), triangleAny);
 
-    verifyNestedTypesRoundTrip(triangle);
+    verifyRoundTrip(triangle);
   }
 
   /**
@@ -221,7 +192,7 @@ class LiteralRoundtripTest extends TestBase {
             Collections.emptyList(),
             java.util.Arrays.asList(p1, p2, p3));
 
-    verifyNestedTypesRoundTrip(triangle);
+    verifyRoundTrip(triangle);
   }
 
   /**
@@ -248,7 +219,7 @@ class LiteralRoundtripTest extends TestBase {
                 ExpressionCreator.i32(false, 2),
                 ExpressionCreator.i32(false, 3)));
 
-    verifyNestedTypesRoundTrip(vectorI32);
+    verifyRoundTrip(vectorI32);
   }
 
   /**
@@ -286,7 +257,7 @@ class LiteralRoundtripTest extends TestBase {
                 typeParam, intParam, boolParam, stringParam, nullParam, enumParam),
             java.util.Arrays.asList(ExpressionCreator.i32(false, 42)));
 
-    verifyNestedTypesRoundTrip(multiParam);
+    verifyRoundTrip(multiParam);
   }
 
   /** Verifies that NullLiteral rejects non nullable types. See issue #685. */

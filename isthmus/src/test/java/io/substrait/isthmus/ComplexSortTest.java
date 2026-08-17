@@ -11,6 +11,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.util.Pair;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,11 @@ class ComplexSortTest extends PlanTestBase {
       }
       super.explain_(rel, values);
     }
+  }
+
+  @Test
+  void roundTripInputReferenceSort() throws SqlParseException {
+    assertFullRoundTrip("SELECT L_ORDERKEY FROM LINEITEM ORDER BY L_ORDERKEY");
   }
 
   @Test

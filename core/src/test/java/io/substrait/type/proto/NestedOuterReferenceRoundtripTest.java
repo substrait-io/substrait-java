@@ -4,9 +4,12 @@ import io.substrait.TestBase;
 import io.substrait.expression.FieldReference;
 import io.substrait.relation.Join;
 import io.substrait.relation.LateralJoin;
+import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
+import io.substrait.type.NamedStruct;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -153,6 +156,32 @@ class NestedOuterReferenceRoundtripTest extends TestBase {
             anchoredOrders);
 
     verifyRoundTrip(plan);
+  }
+
+  @Test
+  void idBasedOuterReferenceIntoEnclosingNamedUpdate() {
+    // The same correlation shape as idBasedOuterReferenceIntoEnclosingSubquery, but the enclosing
+    // relation is a NamedUpdate: its own anchor must be registered before its condition (which
+    // hosts the correlated subquery) is converted, or the reference falls back to the subquery's
+    // own root type instead of the update's table schema.
+    int anchor = 1;
+    NamedStruct tableSchema =
+        NamedStruct.of(Arrays.asList("id", "name"), R.struct(R.I64, R.STRING));
+
+    FieldReference outerRef =
+        FieldReference.newRootStructOuterReferenceByRelReference(0, tableSchema.struct(), anchor);
+
+    Rel subquery = sb.filter(input -> sb.equal(sb.fieldReference(input, 0), outerRef), customer);
+
+    Rel update =
+        NamedUpdate.builder()
+            .tableSchema(tableSchema)
+            .names(Collections.singletonList("test_table"))
+            .relAnchor(anchor)
+            .condition(sb.exists(subquery))
+            .build();
+
+    verifyRoundTrip(update);
   }
 
   @Test

@@ -34,12 +34,7 @@ public abstract class TestBase {
   protected ExpressionProtoConverter expressionProtoConverter =
       relProtoConverter.getExpressionProtoConverter();
 
-  protected ProtoExpressionConverter protoExpressionConverter =
-      new ProtoExpressionConverter(
-          functionCollector,
-          DefaultExtensionCatalog.DEFAULT_COLLECTION,
-          EMPTY_TYPE,
-          protoRelConverter);
+  protected ProtoExpressionConverter protoExpressionConverter;
 
   protected TestBase() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
@@ -49,6 +44,11 @@ public abstract class TestBase {
     this.extensions = extensions;
     this.sb = new SubstraitBuilder(extensions);
     this.protoRelConverter = new ProtoRelConverter(functionCollector, extensions);
+    // Must be assigned here rather than in a field initializer: it needs the fully constructed
+    // protoRelConverter to convert subqueries, and the extension collection this instance was
+    // built with to resolve user-defined types.
+    this.protoExpressionConverter =
+        new ProtoExpressionConverter(functionCollector, extensions, EMPTY_TYPE, protoRelConverter);
   }
 
   protected void verifyRoundTrip(Rel rel) {

@@ -132,6 +132,43 @@ class ComplexAggregateTest extends PlanTestBase {
   }
 
   @Test
+  void roundTripPreMeasureFilter() {
+    NamedScan input =
+        sb.namedScan(List.of("example"), List.of("value", "filter"), List.of(R.I32, R.BOOLEAN));
+    Aggregate rel =
+        sb.aggregate(
+            aggregateInput -> emptyGrouping,
+            aggregateInput ->
+                List.of(
+                    withPreMeasureFilter(
+                        sb.sum(aggregateInput, 0), sb.fieldReference(aggregateInput, 1))),
+            input);
+
+    assertFullRoundTrip(rel);
+  }
+
+  @Test
+  void roundTripSortingArguments() {
+    Aggregate rel =
+        sb.aggregate(
+            input -> emptyGrouping,
+            input ->
+                List.of(
+                    withSort(
+                        sb.sum(input, 3),
+                        List.of(
+                            sb.sortField(
+                                sb.fieldReference(input, 1),
+                                Expression.SortDirection.ASC_NULLS_FIRST),
+                            sb.sortField(
+                                sb.fieldReference(input, 2),
+                                Expression.SortDirection.DESC_NULLS_LAST)))),
+            table);
+
+    assertFullRoundTrip(rel);
+  }
+
+  @Test
   void handleComplexGroupingArgument() {
     Aggregate rel =
         sb.aggregate(

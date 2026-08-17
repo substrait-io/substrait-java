@@ -516,6 +516,8 @@ public class ProtoRelConverter {
     NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    optionalRelAnchor(rel.getCommon())
+        .ifPresent(anchor -> anchorScopes.put(anchor, tableSchema.struct()));
     List<NamedUpdate.TransformExpression> transformations =
         new ArrayList<>(rel.getTransformationsCount());
     for (UpdateRel.TransformExpression transformation : rel.getTransformationsList()) {
@@ -531,6 +533,11 @@ public class ProtoRelConverter {
             .tableSchema(tableSchema)
             .addAllTransformations(transformations)
             .condition(converter.from(rel.getCondition()));
+    builder
+        .commonExtension(optionalAdvancedExtension(rel.getCommon()))
+        .remap(optionalRelmap(rel.getCommon()))
+        .hint(optionalHint(rel.getCommon()))
+        .relAnchor(optionalRelAnchor(rel.getCommon()));
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }

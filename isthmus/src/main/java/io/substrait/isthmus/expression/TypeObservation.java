@@ -18,7 +18,10 @@ public final class TypeObservation {
     SCALAR_FUNCTION,
 
     /** A window function invocation. */
-    WINDOW_FUNCTION
+    WINDOW_FUNCTION,
+
+    /** A field reference. */
+    FIELD_REFERENCE
   }
 
   private final Source source;

@@ -616,6 +616,7 @@ public class RelProtoConverter
     checkNoRelCommon(update);
     UpdateRel.Builder builder =
         UpdateRel.newBuilder()
+            .setCommon(common(update))
             .setNamedTable(NamedTable.newBuilder().addAllNames(update.getNames()))
             .setTableSchema(update.getTableSchema().toProto(typeProtoConverter))
             .addAllTransformations(
