@@ -536,6 +536,8 @@ public class ProtoRelConverter {
     NamedStruct tableSchema = newNamedStruct(rel.getTableSchema());
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, tableSchema.struct(), this);
+    optionalRelAnchor(rel.getCommon())
+        .ifPresent(anchor -> anchorScopes.put(anchor, tableSchema.struct()));
     List<NamedUpdate.TransformExpression> transformations =
         new ArrayList<>(rel.getTransformationsCount());
     for (UpdateRel.TransformExpression transformation : rel.getTransformationsList()) {
