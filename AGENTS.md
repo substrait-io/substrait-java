@@ -122,8 +122,8 @@ Proto conversion is split into two directions, and the class name tells you whic
   `RelVisitor` type and fails when one has no sample — but it is keyed on POJO types, not on proto
   `oneof` cases, so a new case mapping to an existing POJO type slips through. `applyRelCommon`
   runs *after* `build()`, so a relation with a `@Value.Check` on one of these fields must also set
-  it on its builder (see `newLateralJoin`). Every modeled relation message now has a `common` field
-  (`UpdateRel` gained one in spec v0.101.0); `ReferenceRel` still has none, but no POJO models it.
+  it on its builder (see `newLateralJoin`). Every modeled relation message has a `common` field;
+  `ReferenceRel` does not, but no POJO models it.
 - POJO types are created with `TypeCreator.REQUIRED` / `TypeCreator.NULLABLE`.
 
 ## Building and testing
