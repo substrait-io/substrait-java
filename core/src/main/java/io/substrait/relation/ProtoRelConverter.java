@@ -1487,10 +1487,13 @@ public class ProtoRelConverter {
    * touching one method rather than every {@code newXxx} converter. Every {@code newXxx} method
    * whose protobuf message carries a {@code common} field must route its result through here.
    *
-   * <p>Each field is only copied when it actually differs from what {@code rel} already carries.
-   * That keeps this method a true no-op for a {@code common { direct {} }} message — including for
-   * custom, non-Immutables {@link Rel} implementations, which inherit {@code Rel}'s throwing {@code
-   * withXxx} defaults and would otherwise fail on a relation that carries no common data at all.
+   * <p>Each field is only copied when the protobuf message actually carries it, and then only when
+   * the converted value differs from what {@code rel} already holds. That keeps this method a true
+   * no-op for a {@code common { direct {} }} message — including for custom, non-Immutables {@link
+   * Rel} implementations, which inherit {@code Rel}'s throwing {@code withXxx} defaults and would
+   * otherwise fail on a relation that carries no common data at all. Gating on presence rather than
+   * on inequality alone also means a relation that derives one of these fields from its input (a
+   * delegating wrapper) is never asked to clear it.
    *
    * <p>Note that the {@code newXxx} method has already called {@code build()} by the time this
    * runs, so a {@code @Value.Check} that requires one of these fields (see {@link LateralJoin})
@@ -1500,27 +1503,45 @@ public class ProtoRelConverter {
    * @param rel the relation to copy the common fields onto
    * @param relCommon the protobuf value to convert
    * @return a copy of {@code rel} carrying the converted common fields, or {@code rel} itself when
-   *     it already carries them
+   *     the message carries none of them or it already carries them
    */
   @SuppressWarnings("unchecked")
   protected <R extends Rel> R applyRelCommon(R rel, io.substrait.proto.RelCommon relCommon) {
     // Every Immutables-generated withXxx returns the concrete relation type, so R is preserved.
     Rel result = rel;
-    Optional<Integer> relAnchor = optionalRelAnchor(relCommon);
-    if (!relAnchor.equals(result.getRelAnchor())) {
-      result = result.withRelAnchor(relAnchor);
+    if (relCommon.hasRelAnchor()) {
+      Optional<Integer> relAnchor = optionalRelAnchor(relCommon);
+      if (!relAnchor.equals(result.getRelAnchor())) {
+        result = result.withRelAnchor(relAnchor);
+      }
     }
-    Optional<Rel.Remap> remap = optionalRelmap(relCommon);
-    if (!remap.equals(result.getRemap())) {
-      result = result.withRemap(remap);
+    if (relCommon.hasEmit()) {
+      Optional<Rel.Remap> remap = optionalRelmap(relCommon);
+      if (!remap.equals(result.getRemap())) {
+        result = result.withRemap(remap);
+      }
     }
-    Optional<AdvancedExtension> commonExtension = optionalAdvancedExtension(relCommon);
-    if (!commonExtension.equals(result.getCommonExtension())) {
-      result = result.withCommonExtension(commonExtension);
+    if (relCommon.hasAdvancedExtension()) {
+      Optional<AdvancedExtension> commonExtension = optionalAdvancedExtension(relCommon);
+      if (!commonExtension.equals(result.getCommonExtension())) {
+        result = result.withCommonExtension(commonExtension);
+      }
     }
-    Optional<Hint> hint = optionalHint(relCommon);
-    if (!hint.equals(result.getHint())) {
-      result = result.withHint(hint);
+    if (relCommon.hasHint()) {
+      Optional<Hint> hint = optionalHint(relCommon);
+      if (!hint.equals(result.getHint())) {
+        result = result.withHint(hint);
+      }
+    }
+    // A custom Rel may return its delegate rather than a re-wrapped copy from one of the withXxx
+    // methods above; blame that override rather than failing the caller's assignment with a bare
+    // ClassCastException.
+    if (!rel.getClass().isInstance(result)) {
+      throw new IllegalStateException(
+          String.format(
+              "%s returned %s from a RelCommon copy method; withRelAnchor/withRemap/withHint/"
+                  + "withCommonExtension must return the same relation type",
+              rel.getClass().getName(), result.getClass().getName()));
     }
     return (R) result;
   }

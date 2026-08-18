@@ -154,6 +154,31 @@ class RelCommonRoundtripTest extends TestBase {
             RelCommon.newBuilder().setDirect(RelCommon.Direct.getDefaultInstance()).build()));
   }
 
+  @Test
+  void applyRelCommonLeavesADelegatingCustomRelAlone() {
+    // PassThroughRel reports Optional.empty() from every accessor, so it cannot catch the case
+    // where applyRelCommon decides a field "differs". A transparent wrapper derives its common data
+    // from its input instead, and so reports data that the enclosing direct{} message does not
+    // carry. applyRelCommon must leave that alone rather than try to clear it, which would destroy
+    // the input's own common data (and here hits Rel's throwing withXxx defaults).
+    ApplyRelCommonConverter converter = new ApplyRelCommonConverter(functionCollector, extensions);
+    Rel inner = withRelCommon(left);
+    Rel custom = new DelegatingRel(inner, left.getRecordType());
+
+    assertTrue(custom.getHint().isPresent());
+    assertTrue(custom.getCommonExtension().isPresent());
+    assertTrue(custom.getRemap().isPresent());
+    assertTrue(custom.getRelAnchor().isPresent());
+    assertEquals(inner.getRecordType(), custom.getRecordType());
+
+    assertEquals(custom, converter.applyRelCommon(custom, RelCommon.getDefaultInstance()));
+    assertEquals(
+        custom,
+        converter.applyRelCommon(
+            custom,
+            RelCommon.newBuilder().setDirect(RelCommon.Direct.getDefaultInstance()).build()));
+  }
+
   /** Exposes {@link ProtoRelConverter#applyRelCommon} so the test can call it directly. */
   static final class ApplyRelCommonConverter extends ProtoRelConverter {
     ApplyRelCommonConverter(
@@ -203,6 +228,62 @@ class RelCommonRoundtripTest extends TestBase {
     @Override
     public Optional<Integer> getRelAnchor() {
       return Optional.empty();
+    }
+
+    @Override
+    public <O, C extends VisitationContext, E extends Exception> O accept(
+        RelVisitor<O, C, E> visitor, C context) {
+      throw new UnsupportedOperationException("not visitable");
+    }
+  }
+
+  /**
+   * A hand-written {@link Rel} that derives all of its {@code RelCommon} data from its input, as a
+   * transparent wrapper would. It inherits {@code Rel}'s throwing {@code withXxx} defaults, so any
+   * attempt to clear one of those fields fails loudly.
+   *
+   * <p>Its derived record type is the input's type <em>before</em> the input's own emit mapping,
+   * which is what makes delegating {@link #getRemap()} correct here: {@code
+   * AbstractRel#getRecordType()} applies the mapping itself, so a wrapper deriving from the input's
+   * already-emitted type has to hold a mapping of its own rather than inherit one.
+   */
+  static final class DelegatingRel extends SingleInputRel {
+    private final Rel input;
+    private final Type.Struct inputRecordTypeBeforeEmit;
+
+    DelegatingRel(Rel input, Type.Struct inputRecordTypeBeforeEmit) {
+      this.input = input;
+      this.inputRecordTypeBeforeEmit = inputRecordTypeBeforeEmit;
+    }
+
+    @Override
+    public Rel getInput() {
+      return input;
+    }
+
+    @Override
+    protected Type.Struct deriveRecordType() {
+      return inputRecordTypeBeforeEmit;
+    }
+
+    @Override
+    public Optional<Rel.Remap> getRemap() {
+      return input.getRemap();
+    }
+
+    @Override
+    public Optional<AdvancedExtension> getCommonExtension() {
+      return input.getCommonExtension();
+    }
+
+    @Override
+    public Optional<Hint> getHint() {
+      return input.getHint();
+    }
+
+    @Override
+    public Optional<Integer> getRelAnchor() {
+      return input.getRelAnchor();
     }
 
     @Override
