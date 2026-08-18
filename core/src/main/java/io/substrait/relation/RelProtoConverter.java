@@ -954,6 +954,9 @@ public class RelProtoConverter
       hint.getAlias().ifPresent(hintBuilder::setAlias);
       hintBuilder.addAllOutputNames(hint.getOutputNames());
 
+      hint.getExtension()
+          .ifPresent(ae -> hintBuilder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+
       if (hint.getStats().isPresent()) {
         io.substrait.hint.Hint.Stats stats = hint.getStats().get();
         Stats.Builder statsBuilder = Stats.newBuilder();
