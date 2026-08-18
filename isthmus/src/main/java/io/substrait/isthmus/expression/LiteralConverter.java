@@ -209,9 +209,15 @@ public class LiteralConverter {
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
           int precision = resultType.getPrecision();
           long value =
-              localDateTime.toEpochSecond(ZoneOffset.UTC) * pow10(precision)
+              localDateTime.toEpochSecond(ZoneOffset.UTC) * LongMath.pow(10, precision)
                   + subsecondsOf(localDateTime.getNano(), precision);
-          // The same Calcite SqlTypeName that toSubstrait maps to precision_timestamp_tz above, so
+          // toEpochSecond floors, and the nanosecond part it leaves behind is always positive, so
+          // a pre-epoch timestamp narrowed to a coarser precision moves back in time rather than
+          // towards the epoch. That is what a timestamp wants — 1969-12-31 23:59:59.5 at second
+          // precision is 23:59:59 — and it is the opposite of the interval case, where the value
+          // is a duration and narrowing shortens it.
+          //
+          // The SqlTypeName below is the same one toSubstrait maps to precision_timestamp_tz, so
           // the literal has to agree with the type its own conversion produced.
           return resultType.getSqlTypeName() == SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE
               ? ExpressionCreator.precisionTimestampTZ(nullable, value, precision)
@@ -311,20 +317,15 @@ public class LiteralConverter {
    * Rescales a nanosecond count to the fractional-second unit a Substrait temporal literal of the
    * given precision is expressed in.
    *
-   * @param nanos the sub-second component in nanoseconds
+   * @param nanos the sub-second component in nanoseconds, which {@code LocalTime} and {@code
+   *     LocalDateTime} both report as a non-negative value
    * @param precision the fractional-second precision of the target literal
    * @return the sub-second component in units of 10^-precision seconds
    */
   private static long subsecondsOf(long nanos, int precision) {
-    return precision >= 9 ? nanos * pow10(precision - 9) : nanos / pow10(9 - precision);
-  }
-
-  private static long pow10(int exponent) {
-    long result = 1;
-    for (int i = 0; i < exponent; i++) {
-      result *= 10;
-    }
-    return result;
+    return precision >= 9
+        ? nanos * LongMath.pow(10, precision - 9)
+        : nanos / LongMath.pow(10, 9 - precision);
   }
 
   /**
