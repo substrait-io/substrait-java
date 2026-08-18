@@ -20,6 +20,8 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
@@ -31,6 +33,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -285,6 +289,33 @@ class CalciteLiteralTest extends CalciteObjs {
     assertEquals(
         ExpressionCreator.precisionTimestamp(false, -500, 3),
         atMilli.accept(rexExpressionConverter));
+  }
+
+  @Test
+  void tSqlTimestampLiteralKeepsTheWrittenPrecision() throws Exception {
+    // The behaviour the breaking-change note is about: a literal written without a fractional part
+    // is TIMESTAMP(0) on the Calcite side, so the plan Isthmus emits declares
+    // precision_timestamp<0>
+    // with a value in seconds rather than precision_timestamp<6> with a value in microseconds.
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, 1704067200L, 0),
+        literalFromSql("TIMESTAMP '2024-01-01 00:00:00'"));
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, 1704067200123L, 3),
+        literalFromSql("TIMESTAMP '2024-01-01 00:00:00.123'"));
+    assertEquals(
+        ExpressionCreator.precisionTime(false, 45045L, 0), literalFromSql("TIME '12:30:45'"));
+  }
+
+  private Expression.Literal literalFromSql(String expression) throws Exception {
+    RelRoot root =
+        SubstraitSqlToCalcite.convertQuery(
+            "SELECT " + expression + " FROM t",
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                "CREATE TABLE t (a INT)"),
+            ConverterProvider.DEFAULT);
+    RexNode projected = ((Project) root.project()).getProjects().get(0);
+    return new LiteralConverter(TypeConverter.DEFAULT).convert((RexLiteral) projected);
   }
 
   private static long timeValue(int precision) {
