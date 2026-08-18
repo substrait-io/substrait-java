@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.function.TypeExpression;
 import io.substrait.isthmus.utils.UserTypeFactory;
@@ -143,10 +145,23 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void intervalDay(boolean nullable) {
-    testType(
-        Type.withNullability(nullable).intervalDay(6),
-        type.createSqlIntervalType(SubstraitTypeSystem.DAY_SECOND_INTERVAL),
-        nullable);
+    for (int precision : new int[] {0, 3, 6}) {
+      testType(
+          Type.withNullability(nullable).intervalDay(precision),
+          type.createSqlIntervalType(SubstraitTypeSystem.daySecondInterval(precision)),
+          nullable);
+    }
+  }
+
+  @Test
+  void intervalDayRejectsPrecisionAboveTheTypeSystemMaximum() {
+    // Same ceiling as the precision_* types: the conversion reports it instead of silently
+    // narrowing to the maximum the Calcite type system is configured for.
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> TypeConverter.DEFAULT.toCalcite(type, TypeCreator.REQUIRED.intervalDay(9)));
+    assertTrue(e.getMessage().contains("unsupported interval_day precision 9"));
   }
 
   @ParameterizedTest

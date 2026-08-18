@@ -234,15 +234,24 @@ public class LiteralConverter {
       case INTERVAL_MINUTE_SECOND:
       case INTERVAL_SECOND:
         {
-          // Calcite represents day/time intervals in milliseconds, despite a default scale of 6
+          // Calcite represents day/time intervals in milliseconds, whatever the type's scale says.
           Long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
           Duration interval = Duration.ofMillis(totalMillis);
 
           long days = interval.toDays();
           long seconds = interval.minusDays(days).toSeconds();
-          int micros = interval.toMillisPart() * 1000;
+          // Report the interval at its declared precision rather than at a fixed 6, so that a
+          // Substrait interval_day<P> keeps its P across a round trip. The value itself carries no
+          // more than milliseconds, so a precision above 3 only widens the unit, never the detail.
+          int precision = resultType.getScale();
+          long millisPart = interval.toMillisPart();
+          int subseconds =
+              precision > 3
+                  ? (int) (millisPart * (long) Math.pow(10, precision - 3))
+                  : (int) (millisPart / (long) Math.pow(10, 3 - precision));
 
-          return ExpressionCreator.intervalDay(nullable, (int) days, (int) seconds, micros, 6);
+          return ExpressionCreator.intervalDay(
+              nullable, (int) days, (int) seconds, subseconds, precision);
         }
 
       case ROW:

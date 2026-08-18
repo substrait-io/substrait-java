@@ -65,7 +65,7 @@ class FunctionConversionTest extends PlanTestBase {
 
   @ParameterizedTest
   @MethodSource("subtractDateIDayTypes")
-  void subtractDateIDay(Type outputType, Type expectedInferredType) {
+  void subtractDateIDay(Type outputType, int intervalPrecision, Type expectedInferredType) {
     AtomicReference<TypeObservation> observed = new AtomicReference<>();
     ExpressionRexConverter observingConverter =
         new ExpressionRexConverter(
@@ -80,7 +80,7 @@ class FunctionConversionTest extends PlanTestBase {
             "subtract:date_iday",
             outputType,
             ExpressionCreator.date(false, 10561),
-            ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
+            ExpressionCreator.intervalDay(false, 120, 0, 0, intervalPrecision));
 
     RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, outputType), calciteExpr.getType());
@@ -103,12 +103,15 @@ class FunctionConversionTest extends PlanTestBase {
     Type maxPrecisionTimestamp = TypeCreator.REQUIRED.precisionTimestamp(6);
     return Stream.of(
         Arguments.of(
-            Named.of("legacy DATE output", TypeCreator.REQUIRED.DATE), maxPrecisionTimestamp),
+            Named.of("legacy DATE output", TypeCreator.REQUIRED.DATE), 6, maxPrecisionTimestamp),
         Arguments.of(
-            Named.of("spec max-precision output", maxPrecisionTimestamp), maxPrecisionTimestamp),
+            Named.of("spec max-precision output", maxPrecisionTimestamp), 6, maxPrecisionTimestamp),
+        // subtract(date, interval_day<P>) -> precision_timestamp<P>: the inferred precision follows
+        // the argument, so this case varies both rather than only the declared output.
         Arguments.of(
-            Named.of("non-max declared output", TypeCreator.REQUIRED.precisionTimestamp(3)),
-            maxPrecisionTimestamp));
+            Named.of("spec non-max precision", TypeCreator.REQUIRED.precisionTimestamp(3)),
+            3,
+            TypeCreator.REQUIRED.precisionTimestamp(3)));
   }
 
   @Test

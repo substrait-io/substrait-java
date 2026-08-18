@@ -19,6 +19,7 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
+import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
@@ -72,14 +73,6 @@ public class ExpressionRexConverter
           -1,
           org.apache.calcite.avatica.util.TimeUnit.MONTH,
           -1,
-          SqlParserPos.QUOTED_ZERO);
-
-  private static final SqlIntervalQualifier DAY_SECOND_INTERVAL =
-      new SqlIntervalQualifier(
-          org.apache.calcite.avatica.util.TimeUnit.DAY,
-          -1,
-          org.apache.calcite.avatica.util.TimeUnit.SECOND,
-          3, // Calcite only supports millisecond at the moment
           SqlParserPos.QUOTED_ZERO);
 
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
@@ -414,10 +407,12 @@ public class ExpressionRexConverter
         expr.precision() > 3
             ? (expr.subseconds() / (int) Math.pow(10, expr.precision() - 3))
             : (expr.subseconds() * (int) Math.pow(10, 3 - expr.precision()));
+    // The value is in milliseconds, which is what Calcite's own interval literals carry, while the
+    // qualifier keeps the declared interval_day<P> so the precision survives the round trip. A
+    // sub-millisecond component therefore does not: it is truncated by the conversion above.
     return rexBuilder.makeIntervalLiteral(
-        // Current Calcite behavior is to store milliseconds since Epoch
         new BigDecimal((expr.days() * MILLIS_IN_DAY + expr.seconds() * 1_000L + milliseconds)),
-        DAY_SECOND_INTERVAL);
+        SubstraitTypeSystem.daySecondInterval(expr.precision()));
   }
 
   @Override

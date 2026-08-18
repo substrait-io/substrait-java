@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SubstraitTypeSystem.DAY_SECOND_INTERVAL;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 
 import io.substrait.function.NullableType;
@@ -342,8 +341,17 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.IntervalDay expr) {
+      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.INTERVAL_DAY);
+      if (expr.precision() > maxPrecision) {
+        throw new IllegalArgumentException(
+            String.format(
+                "unsupported interval_day precision %s, max precision in Calcite type system is set to %s",
+                expr.precision(), maxPrecision));
+      }
       return typeFactory.createTypeWithNullability(
-          typeFactory.createSqlIntervalType(DAY_SECOND_INTERVAL), n(expr));
+          typeFactory.createSqlIntervalType(
+              SubstraitTypeSystem.daySecondInterval(expr.precision())),
+          n(expr));
     }
 
     @Override
