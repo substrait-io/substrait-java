@@ -1,6 +1,7 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.TestBase;
@@ -179,6 +180,28 @@ class RelCommonRoundtripTest extends TestBase {
             RelCommon.newBuilder().setDirect(RelCommon.Direct.getDefaultInstance()).build()));
   }
 
+  @Test
+  void applyRelCommonRejectsACopyMethodThatReturnsAnotherRelation() {
+    // A custom Rel whose withXxx returns its delegate rather than a re-wrapped copy would otherwise
+    // surface as a ClassCastException at the caller's assignment, naming neither culprit.
+    ApplyRelCommonConverter converter = new ApplyRelCommonConverter(functionCollector, extensions);
+    Rel custom = new ForwardingRel(left);
+
+    IllegalStateException failure =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                converter.applyRelCommon(
+                    custom,
+                    RelCommon.newBuilder()
+                        .setDirect(RelCommon.Direct.getDefaultInstance())
+                        .setHint(RelCommon.Hint.newBuilder().setAlias("an_alias").build())
+                        .build()));
+
+    assertTrue(failure.getMessage().contains(ForwardingRel.class.getName()));
+    assertTrue(failure.getMessage().contains(left.getClass().getName()));
+  }
+
   /** Exposes {@link ProtoRelConverter#applyRelCommon} so the test can call it directly. */
   static final class ApplyRelCommonConverter extends ProtoRelConverter {
     ApplyRelCommonConverter(
@@ -284,6 +307,59 @@ class RelCommonRoundtripTest extends TestBase {
     @Override
     public Optional<Integer> getRelAnchor() {
       return input.getRelAnchor();
+    }
+
+    @Override
+    public <O, C extends VisitationContext, E extends Exception> O accept(
+        RelVisitor<O, C, E> visitor, C context) {
+      throw new UnsupportedOperationException("not visitable");
+    }
+  }
+
+  /**
+   * A hand-written {@link Rel} whose copy methods hand back their delegate instead of a re-wrapped
+   * copy of themselves — the override mistake {@code applyRelCommon}'s type guard reports.
+   */
+  static final class ForwardingRel extends SingleInputRel {
+    private final Rel input;
+
+    ForwardingRel(Rel input) {
+      this.input = input;
+    }
+
+    @Override
+    public Rel getInput() {
+      return input;
+    }
+
+    @Override
+    protected Type.Struct deriveRecordType() {
+      return input.getRecordType();
+    }
+
+    @Override
+    public Optional<Rel.Remap> getRemap() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<AdvancedExtension> getCommonExtension() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Hint> getHint() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Integer> getRelAnchor() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Rel withHint(Optional<? extends Hint> hint) {
+      return input.withHint(hint);
     }
 
     @Override
