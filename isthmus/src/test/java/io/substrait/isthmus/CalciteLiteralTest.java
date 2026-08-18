@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.math.LongMath;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.IntervalDayLiteral;
 import io.substrait.expression.Expression.IntervalYearLiteral;
@@ -270,27 +271,35 @@ class CalciteLiteralTest extends CalciteObjs {
     assertEquals(timestampTz, converted.accept(rexExpressionConverter));
   }
 
+  @Test
+  void tPrecisionTimestampBeforeTheEpochFloors() {
+    // Narrowing a pre-epoch timestamp moves it back in time, not towards the epoch: at second
+    // precision 1969-12-31 23:59:59.5 is 23:59:59, i.e. -1. The opposite of the interval case,
+    // where the value is a duration and narrowing shortens it.
+    RexLiteral atSecond = rex.makeTimestampLiteral(new TimestampString("1969-12-31 23:59:59.5"), 0);
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, -1, 0),
+        atSecond.accept(rexExpressionConverter));
+
+    RexLiteral atMilli = rex.makeTimestampLiteral(new TimestampString("1969-12-31 23:59:59.5"), 3);
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, -500, 3),
+        atMilli.accept(rexExpressionConverter));
+  }
+
   private static long timeValue(int precision) {
-    return (14L * 60 * 60 + 22 * 60 + 47) * pow10(precision) + subseconds(precision);
+    return (14L * 60 * 60 + 22 * 60 + 47) * LongMath.pow(10, precision) + subseconds(precision);
   }
 
   private static long timestampValue(int precision) {
     return LocalDateTime.of(2002, 2, 14, 16, 20, 47).toEpochSecond(ZoneOffset.UTC)
-            * pow10(precision)
+            * LongMath.pow(10, precision)
         + subseconds(precision);
   }
 
   /** 123 milliseconds expressed at the given precision, or none at all when there is no room. */
   private static long subseconds(int precision) {
-    return precision < 3 ? 0 : 123 * pow10(precision - 3);
-  }
-
-  private static long pow10(int exponent) {
-    long result = 1;
-    for (int i = 0; i < exponent; i++) {
-      result *= 10;
-    }
-    return result;
+    return precision < 3 ? 0 : 123 * LongMath.pow(10, precision - 3);
   }
 
   @Test
