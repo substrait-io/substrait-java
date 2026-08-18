@@ -25,12 +25,38 @@ object Util {
   val MICROS_PER_SECOND: Long = 1000 * 1000
   val MICROSECOND_PRECISION = 6 // for PrecisionTimestamp(TZ) and IntervalDay types
 
-  def assertMicroseconds(precision: Int): Unit = {
-    // Spark uses microseconds as a Long value as the "physical" type for most time things
-    if (precision != MICROSECOND_PRECISION) {
+  /**
+   * Checks that a Substrait fractional-second precision is one Spark's microsecond representation
+   * can hold. Coarser precisions carry fewer digits, not different ones, so they fit.
+   */
+  def assertRepresentableAsMicroseconds(precision: Int): Unit = {
+    if (precision < 0 || precision > MICROSECOND_PRECISION) {
       throw new UnsupportedOperationException(
-        s"Unsupported precision: $precision. Only microsecond precision ($MICROSECOND_PRECISION) is supported")
+        s"Unsupported precision: $precision. Spark stores time values as microseconds " +
+          s"($MICROSECOND_PRECISION), which cannot represent a finer precision")
     }
+  }
+
+  /**
+   * Rescales a sub-second value from the given Substrait precision to the microseconds Spark uses
+   * as its physical representation.
+   *
+   * A precision coarser than microseconds carries fewer digits, not different ones, so the value
+   * is exact after scaling. A finer one does not fit and is rejected rather than rounded.
+   */
+  def toMicroseconds(value: Long, precision: Int): Long = {
+    assertRepresentableAsMicroseconds(precision)
+    value * powerOfTen(MICROSECOND_PRECISION - precision)
+  }
+
+  private def powerOfTen(exponent: Int): Long = {
+    var result = 1L
+    var i = 0
+    while (i < exponent) {
+      result *= 10
+      i += 1
+    }
+    result
   }
 
   /**

@@ -10,6 +10,9 @@ import org.apache.spark.sql.types._
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
+import io.substrait.expression.ExpressionCreator
+import io.substrait.spark.utils.Util
+import io.substrait.`type`.TypeCreator
 import io.substrait.util.EmptyVisitationContext
 
 import java.time.{Duration, Instant, LocalDate, LocalDateTime, Period}
@@ -236,5 +239,52 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
         .toArray[Integer](IntegerType)
         .sorted
         .sameElements(originalValues))
+  }
+
+  test("coarser Substrait precisions convert to Spark microseconds") {
+    // Spark has one microsecond-based representation, so a coarser precision fits it without loss.
+    // The value has to be scaled to microseconds: taken verbatim it would be wrong by that factor.
+    val cases = Seq(
+      (0, 1L, 1000000L),
+      (3, 1500L, 1500000L),
+      (6, 1500000L, 1500000L)
+    )
+    cases.foreach {
+      case (precision, value, expectedMicros) =>
+        val timestamp = ExpressionCreator.precisionTimestamp(false, value, precision)
+        assert(
+          timestamp
+            .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+            .asInstanceOf[Literal]
+            .value === expectedMicros)
+
+        val timestampTz = ExpressionCreator.precisionTimestampTZ(false, value, precision)
+        assert(
+          timestampTz
+            .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+            .asInstanceOf[Literal]
+            .value === expectedMicros)
+    }
+
+    // The interval carries its sub-second part separately, so only that part is scaled.
+    val interval = ExpressionCreator.intervalDay(false, 1, 2, 500, 3)
+    assert(
+      interval
+        .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+        .asInstanceOf[Literal]
+        .value === (Util.SECONDS_PER_DAY + 2) * Util.MICROS_PER_SECOND + 500000L)
+  }
+
+  test("a precision finer than microseconds is still rejected") {
+    val nanos = ExpressionCreator.precisionTimestamp(false, 1L, 9)
+    val e = intercept[UnsupportedOperationException] {
+      nanos.accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+    }
+    assert(e.getMessage.contains("Unsupported precision: 9"))
+
+    val nanoType = intercept[UnsupportedOperationException] {
+      ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestamp(9))
+    }
+    assert(nanoType.getMessage.contains("Unsupported precision: 9"))
   }
 }

@@ -60,16 +60,18 @@ private class ToSparkType(dfsNames: Seq[String])
   override def visit(expr: Type.Bool): BooleanType = BooleanType
 
   override def visit(expr: Type.PrecisionTimestamp): TimestampNTZType = {
-    Util.assertMicroseconds(expr.precision())
+    // Spark has one timestamp type, stored as microseconds. A coarser Substrait precision maps
+    // onto it without loss; the literal converter scales the value.
+    Util.assertRepresentableAsMicroseconds(expr.precision())
     TimestampNTZType
   }
   override def visit(expr: Type.PrecisionTimestampTZ): TimestampType = {
-    Util.assertMicroseconds(expr.precision())
+    Util.assertRepresentableAsMicroseconds(expr.precision())
     TimestampType
   }
 
   override def visit(expr: Type.IntervalDay): DayTimeIntervalType = {
-    Util.assertMicroseconds(expr.precision())
+    Util.assertRepresentableAsMicroseconds(expr.precision())
     DayTimeIntervalType.DEFAULT
   }
 

@@ -111,26 +111,23 @@ class ToSparkExpression(
       expr: SExpression.PrecisionTimestampLiteral,
       context: EmptyVisitationContext): Literal = {
     // Spark timestamps are stored as a microseconds Long
-    Util.assertMicroseconds(expr.precision())
-    Literal(expr.value(), ToSparkType.convert(expr.getType))
+    Literal(Util.toMicroseconds(expr.value(), expr.precision()), ToSparkType.convert(expr.getType))
   }
 
   override def visit(
       expr: SExpression.PrecisionTimestampTZLiteral,
       context: EmptyVisitationContext): Literal = {
     // Spark timestamps are stored as a microseconds Long
-    Util.assertMicroseconds(expr.precision())
-    Literal(expr.value(), ToSparkType.convert(expr.getType))
+    Literal(Util.toMicroseconds(expr.value(), expr.precision()), ToSparkType.convert(expr.getType))
   }
 
   override def visit(
       expr: SExpression.IntervalDayLiteral,
       context: EmptyVisitationContext): Literal = {
-    Util.assertMicroseconds(expr.precision())
     // Spark uses a single microseconds Long as the "physical" type for DayTimeInterval
     val micros =
       (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROS_PER_SECOND +
-        expr.subseconds()
+        Util.toMicroseconds(expr.subseconds(), expr.precision())
     Literal(micros, ToSparkType.convert(expr.getType))
   }
 
