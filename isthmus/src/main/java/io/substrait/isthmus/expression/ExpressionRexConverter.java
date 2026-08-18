@@ -306,6 +306,12 @@ public class ExpressionRexConverter
    */
   protected TimeString createTimeString(long value, int precision) {
     long unitsPerSecond = unitsPerSecond(precision, "PrecisionTime");
+    if (value < 0 || value >= 86_400L * unitsPerSecond) {
+      // A precision_time is a time of day. Without this an out-of-range value reaches
+      // TimeString.fromMillisOfDay, which reports a corrupt time string rather than the value.
+      throw new IllegalArgumentException(
+          String.format("Cannot handle PrecisionTime with out-of-range value %d.", value));
+    }
     return TimeString.fromMillisOfDay(
             (int) TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
         .withNanos(nanosOf(value, unitsPerSecond));

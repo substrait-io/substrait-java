@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
@@ -143,10 +144,9 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tPrecisionTimestampBeforeTheEpoch() {
-    // 1969-12-31 23:59:59.5 at each precision Calcite can be given. The value is negative and the
-    // sub-second part is not, so splitting it has to floor rather than truncate towards zero:
-    // TimestampString.withNanos rejects the negative remainder truncation leaves behind.
-    assertEquals(new TimestampString("1969-12-31 23:59:59"), timestampStringOf(-1L, 0));
+    // 1969-12-31 23:59:59.5, where the value is negative and the sub-second part is not. Splitting
+    // it has to floor rather than truncate towards zero: TimestampString.withNanos rejects the
+    // negative remainder truncation leaves behind, so both of these threw before this change.
     assertEquals(new TimestampString("1969-12-31 23:59:59.5"), timestampStringOf(-500L, 3));
     assertEquals(new TimestampString("1969-12-31 23:59:59.5"), timestampStringOf(-500_000L, 6));
 
@@ -160,11 +160,26 @@ class CalciteLiteralTest extends CalciteObjs {
     // A time of day is never negative, so this only guards that the shared split did not change
     // what it produced.
     assertEquals(
-        new TimeString("14:22:47.5"),
-        ((RexLiteral)
-                ExpressionCreator.precisionTime(false, (14L * 3600 + 22 * 60 + 47) * 1000 + 500, 3)
-                    .accept(expressionRexConverter, Context.newContext()))
-            .getValueAs(TimeString.class));
+        new TimeString("14:22:47.5"), timeStringOf((14L * 3600 + 22 * 60 + 47) * 1000 + 500, 3));
+  }
+
+  @Test
+  void tPrecisionTimeRejectsAnOutOfRangeValue() {
+    // A precision_time is a time of day, so a day or more is as far outside it as a negative value
+    // is. Left to Calcite that end reports "Hour out of range: [24]" from inside TimeString until
+    // the millisecond count overflows an int, past which the narrowing wraps and 4346734 seconds
+    // converts to 14:22:46 with nothing said. Rejected by value instead.
+    assertEquals(
+        "Cannot handle PrecisionTime with out-of-range value -500.", timeRejectionOf(-500L, 3));
+    assertEquals(
+        "Cannot handle PrecisionTime with out-of-range value 4346734.",
+        timeRejectionOf(4_346_734L, 0));
+    assertEquals(
+        "Cannot handle PrecisionTime with out-of-range value 86400.", timeRejectionOf(86_400L, 0));
+
+    // The last second that is still a time of day, and the first, are not.
+    assertEquals(new TimeString("23:59:59"), timeStringOf(86_399L, 0));
+    assertEquals(new TimeString("00:00:00"), timeStringOf(0L, 0));
   }
 
   private TimestampString timestampStringOf(long value, int precision) {
@@ -172,6 +187,18 @@ class CalciteLiteralTest extends CalciteObjs {
         ExpressionCreator.precisionTimestamp(false, value, precision)
             .accept(expressionRexConverter, Context.newContext());
     return ((RexLiteral) converted).getValueAs(TimestampString.class);
+  }
+
+  private TimeString timeStringOf(long value, int precision) {
+    RexNode converted =
+        ExpressionCreator.precisionTime(false, value, precision)
+            .accept(expressionRexConverter, Context.newContext());
+    return ((RexLiteral) converted).getValueAs(TimeString.class);
+  }
+
+  private String timeRejectionOf(long value, int precision) {
+    return assertThrows(IllegalArgumentException.class, () -> timeStringOf(value, precision))
+        .getMessage();
   }
 
   @Test
