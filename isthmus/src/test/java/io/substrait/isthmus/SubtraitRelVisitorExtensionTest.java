@@ -86,10 +86,17 @@ class SubtraitRelVisitorExtensionTest {
   public static class SubstraitRepeatRel extends SingleInputRel {
     private final Rel input;
     private final int repeatCount;
+    private final Optional<Remap> remap;
 
     public SubstraitRepeatRel(final Rel input, final int repeatCount) {
+      this(input, repeatCount, Optional.empty());
+    }
+
+    private SubstraitRepeatRel(
+        final Rel input, final int repeatCount, final Optional<Remap> remap) {
       this.input = input;
       this.repeatCount = repeatCount;
+      this.remap = remap;
     }
 
     @Override
@@ -104,7 +111,10 @@ class SubtraitRelVisitorExtensionTest {
 
     @Override
     public Optional<Remap> getRemap() {
-      return input.getRemap();
+      // Deliberately not delegated to the input: deriveRecordType() already returns the input's
+      // *emitted* type, so inheriting the input's remap would make AbstractRel.getRecordType()
+      // apply that same mapping a second time.
+      return remap;
     }
 
     @Override
@@ -126,27 +136,28 @@ class SubtraitRelVisitorExtensionTest {
     public Rel withRelAnchor(final int relAnchor) {
       // Delegate to the input, mirroring getRelAnchor(), so this custom Rel can serve as the
       // binding point of an id-based outer reference instead of inheriting Rel's throwing default.
-      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount);
+      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount, remap);
     }
 
     @Override
     public Rel withRelAnchor(final Optional<Integer> relAnchor) {
-      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount);
+      return new SubstraitRepeatRel(input.withRelAnchor(relAnchor), repeatCount, remap);
     }
 
     @Override
     public Rel withRemap(final Optional<? extends Remap> remap) {
-      return new SubstraitRepeatRel(input.withRemap(remap), repeatCount);
+      // Held on this relation rather than pushed down to the input, mirroring getRemap().
+      return new SubstraitRepeatRel(input, repeatCount, remap.map(Remap.class::cast));
     }
 
     @Override
     public Rel withCommonExtension(final Optional<? extends AdvancedExtension> commonExtension) {
-      return new SubstraitRepeatRel(input.withCommonExtension(commonExtension), repeatCount);
+      return new SubstraitRepeatRel(input.withCommonExtension(commonExtension), repeatCount, remap);
     }
 
     @Override
     public Rel withHint(final Optional<? extends Hint> hint) {
-      return new SubstraitRepeatRel(input.withHint(hint), repeatCount);
+      return new SubstraitRepeatRel(input.withHint(hint), repeatCount, remap);
     }
 
     @Override
@@ -312,16 +323,25 @@ class SubtraitRelVisitorExtensionTest {
 
   @Test
   void customRelSupportsTheRestOfTheRelCommonContract() {
-    // The remaining RelCommon copy methods are delegated the same way, so a custom Rel can be
-    // handed to code that stamps an emit mapping, a hint or a common extension onto an arbitrary
-    // relation without hitting Rel's throwing defaults.
+    // The remaining RelCommon copy methods are also overridden, so a custom Rel can be handed to
+    // code that stamps an emit mapping, a hint or a common extension onto an arbitrary relation
+    // without hitting Rel's throwing defaults. The hint and the common extension are delegated to
+    // the input; the emit mapping is held on the wrapper itself, see getRemap().
     final SubstraitBuilder sb = new SubstraitBuilder();
-    final Rel scan = sb.namedScan(List.of("t"), List.of("a"), List.of(TypeCreator.REQUIRED.I64));
+    final Rel scan =
+        sb.namedScan(
+            List.of("t"),
+            List.of("a", "b"),
+            List.of(TypeCreator.REQUIRED.I64, TypeCreator.REQUIRED.STRING));
     final SubstraitRepeatRel repeat = new SubstraitRepeatRel(scan, 3);
 
-    final Rel remapped = repeat.withRemap(Optional.of(Rel.Remap.of(List.of(0))));
+    // A reordering mapping, so that applying it twice would be observable in the record type.
+    final Rel remapped = repeat.withRemap(Optional.of(Rel.Remap.of(List.of(1, 0))));
     assertTrue(remapped instanceof SubstraitRepeatRel);
-    assertEquals(List.of(0), remapped.getRemap().orElseThrow(AssertionError::new).indices());
+    assertEquals(List.of(1, 0), remapped.getRemap().orElseThrow(AssertionError::new).indices());
+    assertEquals(
+        List.of(TypeCreator.REQUIRED.STRING, TypeCreator.REQUIRED.I64),
+        remapped.getRecordType().fields());
 
     final Hint hint = Hint.builder().alias("an_alias").build();
     assertEquals(Optional.of(hint), repeat.withHint(Optional.of(hint)).getHint());
