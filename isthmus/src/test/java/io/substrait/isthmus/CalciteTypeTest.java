@@ -145,7 +145,9 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void intervalDay(boolean nullable) {
-    for (int precision : new int[] {0, 3, 6}) {
+    // Up to 9: for intervals the fractional-second ceiling is getMaxScale, which neither
+    // SubstraitTypeSystem nor Calcite lowers, unlike the datetime types capped at 6.
+    for (int precision : new int[] {0, 3, 6, 9}) {
       testType(
           Type.withNullability(nullable).intervalDay(precision),
           type.createSqlIntervalType(SubstraitTypeSystem.daySecondInterval(precision)),
@@ -153,15 +155,21 @@ class CalciteTypeTest extends CalciteObjs {
     }
   }
 
-  @Test
-  void intervalDayRejectsPrecisionAboveTheTypeSystemMaximum() {
-    // Same ceiling as the precision_* types: the conversion reports it instead of silently
-    // narrowing to the maximum the Calcite type system is configured for.
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 10, 12})
+  void intervalDayRejectsPrecisionOutsideTheTypeSystemRange(int precision) {
+    // Reported rather than silently narrowed to the maximum, as the precision_* conversions
+    // already do. -1 is Calcite's PRECISION_NOT_SPECIFIED, which a qualifier would otherwise
+    // turn back into the default of 6.
     IllegalArgumentException e =
         assertThrows(
             IllegalArgumentException.class,
-            () -> TypeConverter.DEFAULT.toCalcite(type, TypeCreator.REQUIRED.intervalDay(9)));
-    assertTrue(e.getMessage().contains("unsupported interval_day precision 9"));
+            () ->
+                TypeConverter.DEFAULT.toCalcite(type, TypeCreator.REQUIRED.intervalDay(precision)));
+    assertTrue(
+        e.getMessage()
+            .contains("unsupported interval_day precision " + precision + ", Calcite type system"),
+        e.getMessage());
   }
 
   @ParameterizedTest

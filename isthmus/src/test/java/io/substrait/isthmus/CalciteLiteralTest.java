@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
@@ -40,7 +41,7 @@ import org.apache.calcite.util.TimestampString;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class CalciteLiteralTest extends CalciteObjs {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
@@ -215,28 +216,50 @@ class CalciteLiteralTest extends CalciteObjs {
         convertedRex.getValueAs(BigDecimal.class).longValue());
   }
 
-  @ParameterizedTest
-  @ValueSource(ints = {0, 3, 6})
-  void tIntervalDaySecondKeepsItsPrecision(int precision) {
-    // Calcite carries an interval literal's value in milliseconds whatever the type says, so a
-    // half-second is all the detail every precision under test can hold. What varies is the unit
-    // the subseconds component is expressed in, which is what interval_day<P> declares.
-    long millis =
-        TimeUnit.DAYS.toMillis(3)
-            + TimeUnit.HOURS.toMillis(5)
-            + TimeUnit.MINUTES.toMillis(7)
-            + TimeUnit.SECONDS.toMillis(9)
-            + (precision == 0 ? 0 : 500);
-    int subseconds = precision == 0 ? 0 : (int) (500 * Math.pow(10, precision - 3));
-
-    RexLiteral intervalDaySecond =
+  @ParameterizedTest(name = "P={0} {1}ms")
+  @CsvSource({
+    // precision, calcite millis, expected days, seconds, subseconds, millis back
+    "6,      1500,  0,      1,     500000,      1500",
+    "6,     -1500,  0,     -1,    -500000,     -1500",
+    "5,      1500,  0,      1,      50000,      1500",
+    "4,      1500,  0,      1,       5000,      1500",
+    "3,      1500,  0,      1,        500,      1500",
+    "3,     -1500,  0,     -1,       -500,     -1500",
+    "2,      1500,  0,      1,         50,      1500",
+    "1,      1500,  0,      1,          5,      1500",
+    // Below millisecond precision the remainder cannot be represented and is dropped. It is
+    // dropped towards zero, which is why the whole value is scaled before it is taken apart:
+    // Duration would report -1500ms as -2 seconds plus a positive 500ms part.
+    "0,      1500,  0,      1,          0,      1000",
+    "0,     -1500,  0,     -1,          0,     -1000",
+    // A value spanning days, so the decomposition is exercised rather than just the seconds field.
+    "3, 277629500,  3,  18429,        500, 277629500",
+    "3,-277629500, -3, -18429,       -500,-277629500",
+  })
+  void tIntervalDaySecondKeepsItsPrecision(
+      int precision, long calciteMillis, int days, int seconds, long subseconds, long millisBack) {
+    RexLiteral calciteInterval =
         rex.makeIntervalLiteral(
-            new BigDecimal(millis), SubstraitTypeSystem.daySecondInterval(precision));
-    assertEquals(precision, intervalDaySecond.getType().getScale());
+            new BigDecimal(calciteMillis), SubstraitTypeSystem.daySecondInterval(precision));
+    assertEquals(precision, calciteInterval.getType().getScale());
 
-    IntervalDayLiteral intervalDaySecondExpr =
-        ExpressionCreator.intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, subseconds, precision);
-    bitest(intervalDaySecondExpr, intervalDaySecond);
+    IntervalDayLiteral expected =
+        ExpressionCreator.intervalDay(false, days, seconds, subseconds, precision);
+    assertEquals(expected, calciteInterval.accept(rexExpressionConverter));
+
+    RexNode back = expected.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, back.getType().getScale());
+    assertEquals(new BigDecimal(millisBack), ((RexLiteral) back).getValueAs(BigDecimal.class));
+  }
+
+  @Test
+  void tIntervalDayLiteralIsNullableWhenTheSubstraitLiteralIs() {
+    // The interval literal is the one visit that used to build its Calcite type from a qualifier
+    // rather than from the type converter, which lost both the precision bound and this.
+    RexNode nullableInterval =
+        ExpressionCreator.intervalDay(true, 0, 1, 0, 3)
+            .accept(expressionRexConverter, Context.newContext());
+    assertTrue(nullableInterval.getType().isNullable());
   }
 
   @Test

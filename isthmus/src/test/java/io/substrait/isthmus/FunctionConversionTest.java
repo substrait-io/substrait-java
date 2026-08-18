@@ -111,7 +111,15 @@ class FunctionConversionTest extends PlanTestBase {
         Arguments.of(
             Named.of("spec non-max precision", TypeCreator.REQUIRED.precisionTimestamp(3)),
             3,
-            TypeCreator.REQUIRED.precisionTimestamp(3)));
+            TypeCreator.REQUIRED.precisionTimestamp(3)),
+        // Declared and inferred deliberately disagree, so the supplied Substrait type is still
+        // asserted to win over Calcite's inference.
+        Arguments.of(
+            Named.of(
+                "declared output narrower than the argument",
+                TypeCreator.REQUIRED.precisionTimestamp(3)),
+            6,
+            maxPrecisionTimestamp));
   }
 
   @Test

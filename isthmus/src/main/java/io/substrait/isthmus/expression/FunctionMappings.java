@@ -248,13 +248,18 @@ public class FunctionMappings {
     RelDataType resultType = datetimeType;
     if (datetimeType.getSqlTypeName() == SqlTypeName.DATE
         && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
-      // The spec declares subtract(date, interval_day<P>) -> precision_timestamp<P>, and the
-      // interval operand carries P as its fractional-second scale, so the result precision follows
-      // from the argument. Clamped because the two type-system maxima are configured separately.
+      // The spec declares subtract(date, interval_day<P>) -> precision_timestamp<P> (spec
+      // v0.101.0), and the interval operand carries P as its fractional-second scale. The result is
+      // capped at the timestamp maximum, which is lower than the interval one, so an
+      // interval_day<9>
+      // still yields precision_timestamp<6> until the datetime ceiling itself moves (see #995's
+      // subject: TypeConverter rejects precision_timestamp above 6).
       int precision =
-          Math.min(
-              intervalType.getScale(),
-              typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP));
+          Math.max(
+              0,
+              Math.min(
+                  intervalType.getScale(),
+                  typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP)));
       resultType = typeFactory.createSqlType(SqlTypeName.TIMESTAMP, precision);
     }
 

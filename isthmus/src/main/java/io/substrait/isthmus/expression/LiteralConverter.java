@@ -1,5 +1,6 @@
 package io.substrait.isthmus.expression;
 
+import com.google.common.math.LongMath;
 import com.google.protobuf.ByteString;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -8,7 +9,6 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -234,21 +234,27 @@ public class LiteralConverter {
       case INTERVAL_MINUTE_SECOND:
       case INTERVAL_SECOND:
         {
-          // Calcite represents day/time intervals in milliseconds, whatever the type's scale says.
-          Long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
-          Duration interval = Duration.ofMillis(totalMillis);
-
-          long days = interval.toDays();
-          long seconds = interval.minusDays(days).toSeconds();
-          // Report the interval at its declared precision rather than at a fixed 6, so that a
-          // Substrait interval_day<P> keeps its P across a round trip. The value itself carries no
-          // more than milliseconds, so a precision above 3 only widens the unit, never the detail.
+          // Report the interval at the precision the Calcite type declares, so a Substrait
+          // interval_day<P> keeps its P across a round trip. The value is narrowed to whole
+          // milliseconds here — Calcite day-time interval values may carry fractional ones, and
+          // getValueAs(Long.class) is what discards them — and P only sets the unit the subseconds
+          // component is expressed in.
+          long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
           int precision = resultType.getScale();
-          long millisPart = interval.toMillisPart();
-          int subseconds =
+
+          // Scale the whole value first: taking the components apart before narrowing would round a
+          // negative interval away from zero, since Duration keeps its sub-second part positive.
+          long total =
               precision > 3
-                  ? (int) (millisPart * (long) Math.pow(10, precision - 3))
-                  : (int) (millisPart / (long) Math.pow(10, 3 - precision));
+                  ? totalMillis * LongMath.pow(10, precision - 3)
+                  : totalMillis / LongMath.pow(10, 3 - precision);
+          long unitsPerSecond = LongMath.pow(10, precision);
+          long unitsPerDay = TimeUnit.DAYS.toSeconds(1) * unitsPerSecond;
+
+          long days = total / unitsPerDay;
+          long remainder = total - days * unitsPerDay;
+          long seconds = remainder / unitsPerSecond;
+          long subseconds = remainder - seconds * unitsPerSecond;
 
           return ExpressionCreator.intervalDay(
               nullable, (int) days, (int) seconds, subseconds, precision);

@@ -29,21 +29,10 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO);
 
   /**
-   * Interval qualifier from day to fractional second at microsecond precision.
-   *
-   * <p>Conversion of a Substrait {@code interval_day<P>} builds its qualifier from {@code P} via
-   * {@link #daySecondInterval(int)} instead; sharing one constant is what used to drop the
-   * precision.
-   */
-  public static final SqlIntervalQualifier DAY_SECOND_INTERVAL = daySecondInterval(6);
-
-  /**
    * Returns an interval qualifier from day to fractional second at the given precision.
    *
-   * <p>Substrait's {@code interval_day<P>} carries its own fractional-second precision, and Calcite
-   * keeps it: the qualifier's precision becomes the scale of the resulting {@code INTERVAL DAY TO
-   * SECOND} type. Building the qualifier per value rather than sharing one constant is what lets
-   * {@code P} survive the conversion.
+   * <p>The qualifier's precision becomes the scale of the resulting {@code INTERVAL DAY TO SECOND}
+   * type, which is how a Substrait {@code interval_day<P>} carries {@code P} into Calcite.
    *
    * @param precision the fractional-second precision
    * @return the interval qualifier

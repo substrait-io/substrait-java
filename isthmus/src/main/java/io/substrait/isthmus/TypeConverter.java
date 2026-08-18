@@ -341,11 +341,15 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.IntervalDay expr) {
-      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.INTERVAL_DAY);
-      if (expr.precision() > maxPrecision) {
+      // getMaxScale, not getMaxPrecision: for an interval the latter bounds the leading field,
+      // while the fractional-second bound is the scale of the INTERVAL_DAY_SECOND type produced
+      // here. That is also the knob SqlValidatorImpl checks an interval qualifier against, so this
+      // accepts exactly what SQL written as DAY TO SECOND(P) parses to.
+      int maxPrecision = typeFactory.getTypeSystem().getMaxScale(SqlTypeName.INTERVAL_DAY_SECOND);
+      if (expr.precision() < 0 || expr.precision() > maxPrecision) {
         throw new IllegalArgumentException(
             String.format(
-                "unsupported interval_day precision %s, max precision in Calcite type system is set to %s",
+                "unsupported interval_day precision %s, Calcite type system allows 0 to %s",
                 expr.precision(), maxPrecision));
       }
       return typeFactory.createTypeWithNullability(
