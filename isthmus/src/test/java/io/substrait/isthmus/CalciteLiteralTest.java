@@ -142,6 +142,39 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @Test
+  void tPrecisionTimestampBeforeTheEpoch() {
+    // 1969-12-31 23:59:59.5 at each precision Calcite can be given. The value is negative and the
+    // sub-second part is not, so splitting it has to floor rather than truncate towards zero:
+    // TimestampString.withNanos rejects the negative remainder truncation leaves behind.
+    assertEquals(new TimestampString("1969-12-31 23:59:59"), timestampStringOf(-1L, 0));
+    assertEquals(new TimestampString("1969-12-31 23:59:59.5"), timestampStringOf(-500L, 3));
+    assertEquals(new TimestampString("1969-12-31 23:59:59.5"), timestampStringOf(-500_000L, 6));
+
+    // The epoch itself, and a value after it, are unchanged by the same split.
+    assertEquals(new TimestampString("1970-01-01 00:00:00"), timestampStringOf(0L, 3));
+    assertEquals(new TimestampString("1970-01-01 00:00:01.5"), timestampStringOf(1_500L, 3));
+  }
+
+  @Test
+  void tPrecisionTimeKeepsItsSubSecondPart() {
+    // A time of day is never negative, so this only guards that the shared split did not change
+    // what it produced.
+    assertEquals(
+        new TimeString("14:22:47.5"),
+        ((RexLiteral)
+                ExpressionCreator.precisionTime(false, (14L * 3600 + 22 * 60 + 47) * 1000 + 500, 3)
+                    .accept(expressionRexConverter, Context.newContext()))
+            .getValueAs(TimeString.class));
+  }
+
+  private TimestampString timestampStringOf(long value, int precision) {
+    RexNode converted =
+        ExpressionCreator.precisionTimestamp(false, value, precision)
+            .accept(expressionRexConverter, Context.newContext());
+    return ((RexLiteral) converted).getValueAs(TimestampString.class);
+  }
+
+  @Test
   void tDate() {
     bitest(
         ExpressionCreator.date(false, (int) LocalDate.of(2002, 2, 14).toEpochDay()),
