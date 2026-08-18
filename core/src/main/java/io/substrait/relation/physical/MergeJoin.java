@@ -137,14 +137,14 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
 
   private Stream<Type> getLeftTypes() {
     switch (getJoinType()) {
-      case LEFT:
+      case RIGHT:
       case OUTER:
-        return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
-      case LEFT_ANTI:
-      case LEFT_SEMI:
+        return getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
+      case RIGHT_ANTI:
+      case RIGHT_SEMI:
         return Stream.empty();
       default:
-        return getRight().getRecordType().fields().stream();
+        return getLeft().getRecordType().fields().stream();
     }
   }
 
