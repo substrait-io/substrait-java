@@ -118,9 +118,10 @@ Proto conversion is split into two directions, and the class name tells you whic
   one helper per direction: `ProtoRelConverter.applyRelCommon(rel, relCommon)` on the way in and
   `RelProtoConverter.common(Rel)` on the way out. Both are still *called* per relation, so both
   halves are easy to forget: a new `newXxx` must route its result through `applyRelCommon`, and a
-  new `visit` must call `.setCommon(common(rel))`. `RelCommonRoundtripTest` covers every
-  `RelVisitor` type and fails when one has no sample — but it is keyed on POJO types, not on proto
-  `oneof` cases, so a new case mapping to an existing POJO type slips through. `applyRelCommon`
+  new `visit` must call `.setCommon(common(rel))`. `RelCommonRoundtripTest` round-trips every
+  relation in the shared `RelSamples` fixture (see Testing conventions), so a relation added without
+  a sample fails `RelSamplesTest` — but that fixture is keyed on POJO types, not on proto `oneof`
+  cases, so a new case mapping to an existing POJO type slips through. `applyRelCommon`
   runs *after* `build()`, so a relation with a `@Value.Check` on one of these fields must also set
   it on its builder (see `newLateralJoin`). Every modeled relation message has a `common` field;
   `ReferenceRel` does not, but no POJO models it.
@@ -167,6 +168,14 @@ CI runs, and a `:core` change can break the visitor implementors in the other mo
   `verifyRoundTrip(Expression)` / `verifyRoundTrip(Rel)` to assert POJO → proto → POJO
   fidelity. See `core/src/test/java/io/substrait/type/proto/DynamicParameterRoundtripTest.java`
   for the canonical pattern.
+- A test that has to cover *every* relation rather than a hand-picked few uses the shared
+  `core/src/test/java/io/substrait/utils/RelSamples.java` fixture — one sample per `RelVisitor`
+  type, plus a `relTypes()` reflecting over the visitor's `visit` overloads so `RelSamplesTest`
+  fails when a new relation has no sample. Its details are `StringHolder`s, so a consumer extends
+  `StringHolderRoundtripTestBase` rather than `TestBase` directly. Layer the per-relation data under
+  test onto the samples (`Rel.withXxx`, or the `AdvancedExtension` slots
+  `withAdvancedExtensions(...)` fills in) and assert that they carry it, so the round trip cannot
+  pass vacuously.
 
 ## Conventions & workflow
 

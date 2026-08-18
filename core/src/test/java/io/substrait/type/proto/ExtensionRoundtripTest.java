@@ -1,24 +1,19 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.relation.HasExtension;
 import io.substrait.relation.Project;
-import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.TypeCreator;
 import io.substrait.utils.RelSamples;
 import io.substrait.utils.StringHolder;
-import io.substrait.utils.StringHolderHandlingProtoRelConverter;
-import io.substrait.utils.StringHolderHandlingRelProtoConverter;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
@@ -30,16 +25,12 @@ import org.junit.jupiter.api.TestFactory;
  * Verify that the various extension types in {@link io.substrait.relation.Extension} roundtrip
  * correctly.
  *
- * <p>{@link #everyRelWithAnAdvancedExtensionIsCovered()} keeps the coverage exhaustive: every
- * relation type implementing {@link HasExtension} needs a sample, so a converter that reads a
- * rel-level {@code advanced_extension} back but never writes it cannot go unnoticed. Such a
- * converter discards third-party extensions on a read-modify-write roundtrip without raising
- * anything.
+ * <p>The relations come from the shared {@link RelSamples}, whose own test keeps them exhaustive,
+ * so a converter that reads a rel-level {@code advanced_extension} back but never writes it cannot
+ * go unnoticed for want of a sample. Such a converter discards third-party extensions on a
+ * read-modify-write roundtrip without raising anything.
  */
-class ExtensionRoundtripTest extends TestBase {
-
-  final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
+class ExtensionRoundtripTest extends StringHolderRoundtripTestBase {
 
   final Rel commonTable =
       sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -59,15 +50,6 @@ class ExtensionRoundtripTest extends TestBase {
   final Map<Class<? extends Rel>, Rel> relSamples =
       new RelSamples(sb, extensions).withAdvancedExtensions(commonExtension, relExtension);
 
-  @Override
-  protected void verifyRoundTrip(Rel rel) {
-    RelProtoConverter relProtoConverter =
-        new StringHolderHandlingRelProtoConverter(functionCollector);
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    Rel relReturned = protoRelConverter.from(protoRel);
-    assertEquals(rel, relReturned);
-  }
-
   @TestFactory
   Stream<DynamicTest> relExtensions() {
     return relSamples.entrySet().stream()
@@ -78,25 +60,26 @@ class ExtensionRoundtripTest extends TestBase {
   }
 
   @Test
-  void everyRelWithAnAdvancedExtensionIsCovered() {
-    List<Class<?>> relTypes =
-        RelSamples.relTypes().stream()
-            .filter(HasExtension.class::isAssignableFrom)
-            .collect(Collectors.toList());
-    // Without this the check below passes vacuously if the reflection above stops finding rels.
-    assertFalse(relTypes.isEmpty(), "No HasExtension relation types found on RelVisitor");
+  void samplesCarryTheExtensionsUnderTest() {
+    // Guards the roundtrips above against passing vacuously: a converter that reads an
+    // advanced_extension back but never writes it still roundtrips a sample that carries none.
+    assertTrue(
+        relSamples.values().stream().anyMatch(HasExtension.class::isInstance),
+        "No HasExtension relation samples found");
 
-    List<String> uncovered =
-        relTypes.stream()
-            .filter(relType -> !relSamples.containsKey(relType))
-            .map(Class::getSimpleName)
-            .sorted()
-            .collect(Collectors.toList());
-
-    assertEquals(
-        Collections.emptyList(),
-        uncovered,
-        "Relation types implementing HasExtension without an advanced extension roundtrip sample");
+    for (Map.Entry<Class<? extends Rel>, Rel> sample : relSamples.entrySet()) {
+      String relType = sample.getKey().getSimpleName();
+      assertEquals(
+          Optional.of(commonExtension),
+          sample.getValue().getCommonExtension(),
+          relType + " carries no common-level advanced extension");
+      if (sample.getValue() instanceof HasExtension) {
+        assertEquals(
+            Optional.of(relExtension),
+            ((HasExtension) sample.getValue()).getExtension(),
+            relType + " carries no rel-level advanced extension");
+      }
+    }
   }
 
   @Nested

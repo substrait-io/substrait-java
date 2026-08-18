@@ -4,54 +4,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.substrait.TestBase;
-import io.substrait.expression.Expression;
-import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.WindowBound;
 import io.substrait.extension.AdvancedExtension;
-import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
 import io.substrait.proto.RelCommon;
-import io.substrait.relation.AbstractWriteRel;
-import io.substrait.relation.ConsistentPartitionWindow;
-import io.substrait.relation.Expand;
-import io.substrait.relation.ExtensionDdl;
-import io.substrait.relation.ExtensionLeaf;
-import io.substrait.relation.ExtensionMulti;
-import io.substrait.relation.ExtensionSingle;
-import io.substrait.relation.ExtensionTable;
-import io.substrait.relation.ExtensionWrite;
-import io.substrait.relation.Join;
 import io.substrait.relation.LateralJoin;
-import io.substrait.relation.LocalFiles;
-import io.substrait.relation.NamedDdl;
-import io.substrait.relation.NamedUpdate;
+import io.substrait.relation.NamedScan;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelVisitor;
-import io.substrait.relation.Set;
 import io.substrait.relation.SingleInputRel;
-import io.substrait.relation.VirtualTableScan;
-import io.substrait.relation.extensions.EmptyDetail;
-import io.substrait.relation.physical.BroadcastExchange;
-import io.substrait.relation.physical.HashJoin;
-import io.substrait.relation.physical.MergeJoin;
-import io.substrait.relation.physical.MultiBucketExchange;
-import io.substrait.relation.physical.NestedLoopJoin;
-import io.substrait.relation.physical.RoundRobinExchange;
-import io.substrait.relation.physical.ScatterExchange;
-import io.substrait.relation.physical.SingleBucketExchange;
-import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.util.VisitationContext;
+import io.substrait.utils.RelSamples;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -65,12 +36,12 @@ import org.junit.jupiter.params.provider.MethodSource;
  * Rel#getCommonExtension() common extension} and {@link Rel#getRelAnchor() rel anchor} — through a
  * POJO → proto → POJO round trip.
  *
- * <p>{@link #everyRelationTypeIsCovered()} keeps the sample set exhaustive: it fails when a
- * relation is added to {@link RelVisitor} without a sample here, so a new relation cannot silently
- * miss its {@code RelCommon} wiring.
+ * <p>The samples are the shared {@link RelSamples}, kept exhaustive by their own test: a relation
+ * added to {@link RelVisitor} without a sample fails there, so it cannot silently miss its {@code
+ * RelCommon} wiring here.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RelCommonRoundtripTest extends TestBase {
+class RelCommonRoundtripTest extends StringHolderRoundtripTestBase {
 
   static final Hint HINT =
       Hint.builder()
@@ -95,15 +66,10 @@ class RelCommonRoundtripTest extends TestBase {
 
   static final int REL_ANCHOR = 11;
 
-  final Rel left =
-      sb.namedScan(
-          Arrays.asList("left_table"), Arrays.asList("a", "b"), Arrays.asList(R.I64, R.STRING));
+  final Map<Class<? extends Rel>, Rel> relSamples = new RelSamples(sb, extensions).samples();
 
-  final Rel right =
-      sb.namedScan(
-          Arrays.asList("right_table"), Arrays.asList("c", "d"), Arrays.asList(R.I64, R.STRING));
-
-  final NamedStruct schema = NamedStruct.of(Arrays.asList("a", "b"), R.struct(R.I64, R.STRING));
+  /** A plain relation for the hand-written {@link Rel}s below to wrap. */
+  final Rel scan = relSamples.get(NamedScan.class);
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("samples")
@@ -112,25 +78,9 @@ class RelCommonRoundtripTest extends TestBase {
   }
 
   @Test
-  void everyRelationTypeIsCovered() {
-    java.util.Set<Class<?>> visitable =
-        Arrays.stream(RelVisitor.class.getDeclaredMethods())
-            .filter(method -> "visit".equals(method.getName()))
-            .map(method -> method.getParameterTypes()[0])
-            .collect(Collectors.toCollection(HashSet::new));
-
-    java.util.Set<Class<?>> sampled =
-        allRelationTypes().stream()
-            .map(RelCommonRoundtripTest::relationType)
-            .collect(Collectors.toCollection(HashSet::new));
-
-    assertEquals(visitable, sampled, "every relation type needs a RelCommon round-trip sample");
-  }
-
-  @Test
   void samplesCarryTheDataUnderTest() {
     // Guards the round-trip assertions above against silently asserting on empty optionals.
-    for (Rel rel : allRelationTypes()) {
+    for (Rel rel : relSamples.values()) {
       Rel sample = withRelCommon(rel);
       assertEquals(Optional.of(HINT), sample.getHint());
       assertEquals(Optional.of(COMMON_EXTENSION), sample.getCommonExtension());
@@ -145,7 +95,7 @@ class RelCommonRoundtripTest extends TestBase {
     // documented extension point that every newXxx must route through, so it must not fail on a
     // relation whose common message carries no data.
     ApplyRelCommonConverter converter = new ApplyRelCommonConverter(functionCollector, extensions);
-    Rel custom = new PassThroughRel(left);
+    Rel custom = new PassThroughRel(scan);
 
     assertEquals(custom, converter.applyRelCommon(custom, RelCommon.getDefaultInstance()));
     assertEquals(
@@ -163,8 +113,8 @@ class RelCommonRoundtripTest extends TestBase {
     // carry. applyRelCommon must leave that alone rather than try to clear it, which would destroy
     // the input's own common data (and here hits Rel's throwing withXxx defaults).
     ApplyRelCommonConverter converter = new ApplyRelCommonConverter(functionCollector, extensions);
-    Rel inner = withRelCommon(left);
-    Rel custom = new DelegatingRel(inner, left.getRecordType());
+    Rel inner = withRelCommon(scan);
+    Rel custom = new DelegatingRel(inner, scan.getRecordType());
 
     assertTrue(custom.getHint().isPresent());
     assertTrue(custom.getCommonExtension().isPresent());
@@ -185,7 +135,7 @@ class RelCommonRoundtripTest extends TestBase {
     // A custom Rel whose withXxx returns its delegate rather than a re-wrapped copy would otherwise
     // surface as a ClassCastException at the caller's assignment, naming neither culprit.
     ApplyRelCommonConverter converter = new ApplyRelCommonConverter(functionCollector, extensions);
-    Rel custom = new ForwardingRel(left);
+    Rel custom = new ForwardingRel(scan);
 
     IllegalStateException failure =
         assertThrows(
@@ -199,7 +149,7 @@ class RelCommonRoundtripTest extends TestBase {
                         .build()));
 
     assertTrue(failure.getMessage().contains(ForwardingRel.class.getName()));
-    assertTrue(failure.getMessage().contains(left.getClass().getName()));
+    assertTrue(failure.getMessage().contains(scan.getClass().getName()));
   }
 
   /** Exposes {@link ProtoRelConverter#applyRelCommon} so the test can call it directly. */
@@ -370,8 +320,8 @@ class RelCommonRoundtripTest extends TestBase {
   }
 
   Stream<Arguments> samples() {
-    return allRelationTypes().stream()
-        .map(rel -> Arguments.of(relationType(rel).getSimpleName(), rel));
+    return relSamples.entrySet().stream()
+        .map(sample -> Arguments.of(sample.getKey().getSimpleName(), sample.getValue()));
   }
 
   /**
@@ -399,177 +349,5 @@ class RelCommonRoundtripTest extends TestBase {
       indices.add(i);
     }
     return Rel.Remap.of(indices);
-  }
-
-  /** The declared relation type of {@code rel}, i.e. the type its generated Immutable extends. */
-  static Class<?> relationType(Rel rel) {
-    return rel.getClass().getSuperclass();
-  }
-
-  /** One sample of every relation type reachable through {@link RelVisitor}. */
-  List<Rel> allRelationTypes() {
-    List<Rel> rels = new ArrayList<>();
-
-    // Read relations
-    rels.add(left);
-    rels.add(
-        VirtualTableScan.builder()
-            .initialSchema(schema)
-            .addRows(
-                Expression.NestedStruct.builder()
-                    .addFields(ExpressionCreator.i64(false, 1))
-                    .addFields(ExpressionCreator.string(false, "one"))
-                    .build())
-            .build());
-    rels.add(LocalFiles.builder().initialSchema(schema).build());
-    // A real schema rather than EmptyDetail's empty one, so the reversed emit mapping is non-empty
-    // and the assertions cover the order of RelCommon.Emit.output_mapping for this relation too.
-    rels.add(ExtensionTable.from(new EmptyDetail()).initialSchema(schema).build());
-
-    // Logical relations
-    rels.add(sb.filter(input -> sb.equal(sb.fieldReference(input, 0), sb.i64(1)), left));
-    rels.add(sb.limit(10, left));
-    rels.add(sb.project(input -> Arrays.asList(sb.fieldReference(input, 0)), left));
-    rels.add(
-        sb.aggregate(
-            input -> sb.grouping(input, 0), input -> Arrays.asList(sb.count(input, 0)), left));
-    rels.add(sb.sort(input -> sb.sortFields(input, 0), left));
-    rels.add(
-        sb.innerJoin(
-            inputs -> sb.equal(sb.fieldReference(inputs, 0), sb.fieldReference(inputs, 2)),
-            left,
-            right));
-    rels.add(sb.cross(left, right));
-    rels.add(sb.set(Set.SetOp.UNION_ALL, left, right));
-    rels.add(
-        sb.expand(
-            input ->
-                Arrays.asList(
-                    Expand.ConsistentField.builder()
-                        .expression(sb.fieldReference(input, 0))
-                        .build()),
-            left));
-    rels.add(
-        LateralJoin.builder()
-            .left(left)
-            .right(right)
-            .joinType(Join.JoinType.INNER)
-            .relAnchor(7)
-            .build());
-    rels.add(consistentPartitionWindow());
-
-    // Physical relations
-    rels.add(sb.topN(input -> sb.sortFields(input, 0), 0, 10, left));
-    rels.add(sb.hashJoin(Arrays.asList(0), Arrays.asList(0), HashJoin.JoinType.INNER, left, right));
-    rels.add(
-        sb.mergeJoin(Arrays.asList(0), Arrays.asList(0), MergeJoin.JoinType.INNER, left, right));
-    rels.add(
-        sb.nestedLoopJoin(
-            inputs -> sb.equal(sb.fieldReference(inputs, 0), sb.fieldReference(inputs, 2)),
-            NestedLoopJoin.JoinType.INNER,
-            left,
-            right));
-    rels.add(BroadcastExchange.builder().input(left).partitionCount(1).build());
-    rels.add(RoundRobinExchange.builder().input(left).exact(true).partitionCount(1).build());
-    rels.add(
-        ScatterExchange.builder()
-            .input(left)
-            .addFields(sb.fieldReference(left, 0))
-            .partitionCount(1)
-            .build());
-    rels.add(
-        SingleBucketExchange.builder()
-            .input(left)
-            .expression(sb.fieldReference(left, 0))
-            .partitionCount(1)
-            .build());
-    rels.add(
-        MultiBucketExchange.builder()
-            .input(left)
-            .expression(sb.fieldReference(left, 0))
-            .constrainedToCount(true)
-            .partitionCount(1)
-            .build());
-
-    // Write, DDL and update relations
-    rels.add(
-        sb.namedWrite(
-            Arrays.asList("target_table"),
-            Arrays.asList("a", "b"),
-            AbstractWriteRel.WriteOp.INSERT,
-            AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
-            AbstractWriteRel.OutputMode.NO_OUTPUT,
-            left));
-    rels.add(
-        ExtensionWrite.builder()
-            .input(left)
-            .detail(new EmptyDetail())
-            .tableSchema(schema)
-            .operation(ExtensionWrite.WriteOp.INSERT)
-            .createMode(ExtensionWrite.CreateMode.APPEND_IF_EXISTS)
-            .outputMode(ExtensionWrite.OutputMode.NO_OUTPUT)
-            .build());
-    rels.add(
-        NamedDdl.builder()
-            .names(Arrays.asList("target_table"))
-            .tableSchema(schema)
-            .tableDefaults(tableDefaults())
-            .operation(NamedDdl.DdlOp.CREATE)
-            .object(NamedDdl.DdlObject.TABLE)
-            .build());
-    rels.add(
-        ExtensionDdl.builder()
-            .detail(new EmptyDetail())
-            .tableSchema(schema)
-            .tableDefaults(tableDefaults())
-            .operation(ExtensionDdl.DdlOp.ALTER)
-            .object(ExtensionDdl.DdlObject.TABLE)
-            .build());
-    rels.add(
-        sb.namedUpdate(
-            Arrays.asList("target_table"),
-            Arrays.asList("a"),
-            Arrays.asList(
-                NamedUpdate.TransformExpression.builder()
-                    .columnTarget(0)
-                    .transformation(sb.i64(1))
-                    .build()),
-            sb.bool(true),
-            false));
-
-    // Extension relations
-    rels.add(ExtensionLeaf.from(new EmptyDetail()).build());
-    rels.add(ExtensionSingle.from(new EmptyDetail(), left).build());
-    rels.add(ExtensionMulti.from(new EmptyDetail(), Arrays.asList(left, right)).build());
-
-    return rels;
-  }
-
-  private Expression.StructLiteral tableDefaults() {
-    return ExpressionCreator.struct(
-        false, ExpressionCreator.i64(false, 1), ExpressionCreator.string(false, "one"));
-  }
-
-  private Rel consistentPartitionWindow() {
-    SimpleExtension.WindowFunctionVariant lead =
-        extensions.getWindowFunction(
-            SimpleExtension.FunctionAnchor.of(
-                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    return ConsistentPartitionWindow.builder()
-        .input(left)
-        .addWindowFunctions(
-            ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
-                .declaration(lead)
-                .arguments(Arrays.asList(sb.fieldReference(left, 0)))
-                .outputType(R.I64)
-                .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-                .invocation(Expression.AggregationInvocation.ALL)
-                .lowerBound(WindowBound.Unbounded.UNBOUNDED)
-                .upperBound(WindowBound.Following.CURRENT_ROW)
-                .boundsType(Expression.WindowBoundsType.RANGE)
-                .build())
-        .addPartitionExpressions(sb.fieldReference(left, 1))
-        .sorts(sb.sortFields(left, 0))
-        .build();
   }
 }
