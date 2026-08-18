@@ -39,10 +39,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class CalciteLiteralTest extends CalciteObjs {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
@@ -232,12 +232,65 @@ class CalciteLiteralTest extends CalciteObjs {
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
-  @Disabled("Not clear what the right literal mapping is.")
-  @Test
-  void tTimestampTZ() {
-    // Calcite has TimestampWithTimeZoneString but it doesn't appear to be available as a literal or
-    // data type.
-    // (Doesn't exist in SqlTypeName.)
+  @ParameterizedTest
+  @ValueSource(ints = {0, 3, 6})
+  void tPrecisionTimeKeepsItsPrecision(int precision) {
+    Expression.PrecisionTimeLiteral time =
+        ExpressionCreator.precisionTime(false, timeValue(precision), precision);
+
+    RexNode converted = time.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(time, converted.accept(rexExpressionConverter));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 3, 6})
+  void tPrecisionTimestampKeepsItsPrecision(int precision) {
+    PrecisionTimestampLiteral timestamp =
+        ExpressionCreator.precisionTimestamp(false, timestampValue(precision), precision);
+
+    RexNode converted = timestamp.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(timestamp, converted.accept(rexExpressionConverter));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 3, 6})
+  void tPrecisionTimestampTZStaysTimeZoned(int precision) {
+    // Calcite has no dedicated timestamp-with-time-zone literal, but it does have the
+    // TIMESTAMP_WITH_LOCAL_TIME_ZONE type that TypeConverter maps precision_timestamp_tz to, so a
+    // literal of that type is the mapping — and it must not come back as a plain
+    // precision_timestamp.
+    Expression.PrecisionTimestampTZLiteral timestampTz =
+        ExpressionCreator.precisionTimestampTZ(false, timestampValue(precision), precision);
+
+    RexNode converted = timestampTz.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, converted.getType().getSqlTypeName());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(timestampTz, converted.accept(rexExpressionConverter));
+  }
+
+  private static long timeValue(int precision) {
+    return (14L * 60 * 60 + 22 * 60 + 47) * pow10(precision) + subseconds(precision);
+  }
+
+  private static long timestampValue(int precision) {
+    return LocalDateTime.of(2002, 2, 14, 16, 20, 47).toEpochSecond(ZoneOffset.UTC)
+            * pow10(precision)
+        + subseconds(precision);
+  }
+
+  /** 123 milliseconds expressed at the given precision, or none at all when there is no room. */
+  private static long subseconds(int precision) {
+    return precision < 3 ? 0 : 123 * pow10(precision - 3);
+  }
+
+  private static long pow10(int exponent) {
+    long result = 1;
+    for (int i = 0; i < exponent; i++) {
+      result *= 10;
+    }
+    return result;
   }
 
   @Test

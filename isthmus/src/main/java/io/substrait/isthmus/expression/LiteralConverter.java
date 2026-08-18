@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
@@ -196,10 +197,9 @@ public class LiteralConverter {
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
-          long nanos = localTime.toNanoOfDay();
-          long micros = TimeUnit.NANOSECONDS.toMicros(nanos);
-          return ExpressionCreator.precisionTime(nullable, micros, 6);
+          int precision = resultType.getPrecision();
+          return ExpressionCreator.precisionTime(
+              nullable, subsecondsOf(localTime.toNanoOfDay(), precision), precision);
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -207,12 +207,15 @@ public class LiteralConverter {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
           LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          // Calcite supports up to microsecond precision (6)
-          long epochSeconds = localDateTime.toEpochSecond(ZoneOffset.UTC);
-          long epochMicros =
-              TimeUnit.SECONDS.toMicros(epochSeconds)
-                  + TimeUnit.NANOSECONDS.toMicros(localDateTime.getNano());
-          return ExpressionCreator.precisionTimestamp(nullable, epochMicros, 6);
+          int precision = resultType.getPrecision();
+          long value =
+              localDateTime.toEpochSecond(ZoneOffset.UTC) * pow10(precision)
+                  + subsecondsOf(localDateTime.getNano(), precision);
+          // The same Calcite SqlTypeName that toSubstrait maps to precision_timestamp_tz above, so
+          // the literal has to agree with the type its own conversion produced.
+          return resultType.getSqlTypeName() == SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE
+              ? ExpressionCreator.precisionTimestampTZ(nullable, value, precision)
+              : ExpressionCreator.precisionTimestamp(nullable, value, precision);
         }
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
@@ -302,6 +305,26 @@ public class LiteralConverter {
   public static byte[] padRightIfNeeded(
       org.apache.calcite.avatica.util.ByteString bytes, int length) {
     return padRightIfNeeded(bytes.getBytes(), length);
+  }
+
+  /**
+   * Rescales a nanosecond count to the fractional-second unit a Substrait temporal literal of the
+   * given precision is expressed in.
+   *
+   * @param nanos the sub-second component in nanoseconds
+   * @param precision the fractional-second precision of the target literal
+   * @return the sub-second component in units of 10^-precision seconds
+   */
+  private static long subsecondsOf(long nanos, int precision) {
+    return precision >= 9 ? nanos * pow10(precision - 9) : nanos / pow10(9 - precision);
+  }
+
+  private static long pow10(int exponent) {
+    long result = 1;
+    for (int i = 0; i < exponent; i++) {
+      result *= 10;
+    }
+    return result;
   }
 
   /**

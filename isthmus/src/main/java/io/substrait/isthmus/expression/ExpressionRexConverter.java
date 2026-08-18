@@ -349,11 +349,14 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(PrecisionTimestampTZLiteral expr, Context context) throws RuntimeException {
-    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_TZ);
+    // TIMESTAMP_WITH_LOCAL_TIME_ZONE, not TIMESTAMP_TZ: that is the name TypeConverter maps
+    // precision_timestamp_tz to, and the only one SubstraitTypeSystem configures a maximum for.
+    int maxPrecision =
+        typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
     if (expr.precision() > maxPrecision) {
       throw new IllegalArgumentException(
           String.format(
-              "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
+              "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
               expr.precision(), maxPrecision));
     }
 

@@ -159,8 +159,11 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void supportedPrecisionForPrecisionTimestampTZLiteral() {
+    // The same set the non-TZ literal supports: SubstraitTypeSystem configures a maximum of 6 for
+    // TIMESTAMP_WITH_LOCAL_TIME_ZONE, and the TZ literal is checked against that name too.
     assertPrecisionTimestampTZLiteral(0);
     assertPrecisionTimestampTZLiteral(3);
+    assertPrecisionTimestampTZLiteral(6);
   }
 
   void assertPrecisionTimestampTZLiteral(int precision) {
@@ -213,7 +216,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(4);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(5);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(6);
+
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(7);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(8);
 
