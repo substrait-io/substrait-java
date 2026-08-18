@@ -2,7 +2,11 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -12,16 +16,27 @@ import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.expression.TypeObservation;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Verify that "problematic" Substrait functions can be converted to Calcite and back successfully
@@ -48,27 +63,58 @@ class FunctionConversionTest extends PlanTestBase {
           windowFnConverter,
           TypeConverter.DEFAULT);
 
-  @Test
-  void subtractDateIDay() {
-    // When this function is converted to Calcite, if the Calcite type derivation is used an
-    // java.lang.ArrayIndexOutOfBoundsException is thrown. It is quite likely that
-    // this is being mapped to the wrong Calcite function.
-    // TODO: https://github.com/substrait-io/substrait-java/issues/377
+  @ParameterizedTest
+  @MethodSource("subtractDateIDayTypes")
+  void subtractDateIDay(Type outputType, Type expectedInferredType) {
+    AtomicReference<TypeObservation> observed = new AtomicReference<>();
+    ExpressionRexConverter observingConverter =
+        new ExpressionRexConverter(
+            typeFactory,
+            scalarFnConverter,
+            windowFnConverter,
+            TypeConverter.DEFAULT,
+            observed::set);
     Expression.ScalarFunctionInvocation expr =
         sb.scalarFn(
             DefaultExtensionCatalog.FUNCTIONS_DATETIME,
             "subtract:date_iday",
-            TypeCreator.REQUIRED.DATE,
+            outputType,
             ExpressionCreator.date(false, 10561),
             ExpressionCreator.intervalDay(false, 120, 0, 0, 6));
 
-    RexNode calciteExpr = expr.accept(expressionRexConverter, Context.newContext());
-    assertEquals(
-        TypeConverter.DEFAULT.toCalcite(typeFactory, TypeCreator.REQUIRED.DATE),
-        calciteExpr.getType());
+    RexNode calciteExpr = expr.accept(observingConverter, Context.newContext());
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, outputType), calciteExpr.getType());
+    assertSame(
+        FunctionMappings.DATETIME_SUBTRACT,
+        assertInstanceOf(RexCall.class, calciteExpr).getOperator());
+    TypeObservation observation = observed.get();
+    assertNotNull(observation, "no type observation was recorded");
+    observation
+        .inferenceFailure()
+        .ifPresent(failure -> fail("Calcite return-type inference failed", failure));
+    RelDataType inferredType = observation.inferredType().orElseThrow();
+    assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, expectedInferredType), inferredType);
 
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
     assertEquals(expr, reverse);
+  }
+
+  static Stream<Arguments> subtractDateIDayTypes() {
+    Type maxPrecisionTimestamp = TypeCreator.REQUIRED.precisionTimestamp(6);
+    return Stream.of(
+        Arguments.of(
+            Named.of("legacy DATE output", TypeCreator.REQUIRED.DATE), maxPrecisionTimestamp),
+        Arguments.of(
+            Named.of("spec max-precision output", maxPrecisionTimestamp), maxPrecisionTimestamp),
+        Arguments.of(
+            Named.of("non-max declared output", TypeCreator.REQUIRED.precisionTimestamp(3)),
+            maxPrecisionTimestamp));
+  }
+
+  @Test
+  void datetimeSubtractOperatorHasIndependentIdentity() {
+    assertNotEquals(SqlStdOperatorTable.MINUS_DATE, FunctionMappings.DATETIME_SUBTRACT);
+    assertNotEquals(SqlInternalOperators.MINUS_DATE2, FunctionMappings.DATETIME_SUBTRACT);
   }
 
   @Test
