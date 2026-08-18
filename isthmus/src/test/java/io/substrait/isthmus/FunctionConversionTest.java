@@ -107,7 +107,7 @@ class FunctionConversionTest extends PlanTestBase {
         Arguments.of(
             Named.of("spec max-precision output", maxPrecisionTimestamp), maxPrecisionTimestamp),
         Arguments.of(
-            Named.of("spec non-max-precision output", TypeCreator.REQUIRED.precisionTimestamp(3)),
+            Named.of("non-max declared output", TypeCreator.REQUIRED.precisionTimestamp(3)),
             maxPrecisionTimestamp));
   }
 
