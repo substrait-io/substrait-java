@@ -646,6 +646,9 @@ public class RelProtoConverter
                 exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
             .setCommon(common(exchange))
             .setInput(toProto(exchange.getInput()));
+    exchange
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -663,6 +666,9 @@ public class RelProtoConverter
                 exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
             .setCommon(common(exchange))
             .setInput(toProto(exchange.getInput()));
+    exchange
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -681,6 +687,9 @@ public class RelProtoConverter
                 exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
             .setCommon(common(exchange))
             .setInput(toProto(exchange.getInput()));
+    exchange
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -696,6 +705,9 @@ public class RelProtoConverter
                 exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
             .setCommon(common(exchange))
             .setInput(toProto(exchange.getInput()));
+    exchange
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExchange(builder).build();
   }
 
@@ -710,6 +722,9 @@ public class RelProtoConverter
                 exchange.getTargets().stream().map(this::toProto).collect(Collectors.toList()))
             .setCommon(common(exchange))
             .setInput(toProto(exchange.getInput()));
+    exchange
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setExchange(builder).build();
   }
 

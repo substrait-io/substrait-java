@@ -1,54 +1,36 @@
 package io.substrait.type.proto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.extension.AdvancedExtension;
-import io.substrait.relation.Aggregate;
-import io.substrait.relation.Cross;
-import io.substrait.relation.Expand;
-import io.substrait.relation.ExtensionLeaf;
-import io.substrait.relation.ExtensionMulti;
-import io.substrait.relation.ExtensionSingle;
-import io.substrait.relation.ExtensionTable;
-import io.substrait.relation.Fetch;
-import io.substrait.relation.Filter;
-import io.substrait.relation.Join;
-import io.substrait.relation.LateralJoin;
-import io.substrait.relation.LocalFiles;
-import io.substrait.relation.NamedScan;
+import io.substrait.relation.HasExtension;
 import io.substrait.relation.Project;
-import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
-import io.substrait.relation.RelProtoConverter;
-import io.substrait.relation.Set;
-import io.substrait.relation.Sort;
-import io.substrait.relation.VirtualTableScan;
-import io.substrait.relation.physical.HashJoin;
-import io.substrait.relation.physical.MergeJoin;
-import io.substrait.relation.physical.NestedLoopJoin;
-import io.substrait.type.NamedStruct;
-import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
+import io.substrait.utils.RelSamples;
 import io.substrait.utils.StringHolder;
-import io.substrait.utils.StringHolderHandlingProtoRelConverter;
-import io.substrait.utils.StringHolderHandlingRelProtoConverter;
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 
 /**
  * Verify that the various extension types in {@link io.substrait.relation.Extension} roundtrip
  * correctly.
+ *
+ * <p>The relations come from the shared {@link RelSamples}, whose own test keeps them exhaustive,
+ * so a converter that reads a rel-level {@code advanced_extension} back but never writes it cannot
+ * go unnoticed for want of a sample. Such a converter discards third-party extensions on a
+ * read-modify-write roundtrip without raising anything.
  */
-class ExtensionRoundtripTest extends TestBase {
-
-  final ProtoRelConverter protoRelConverter =
-      new StringHolderHandlingProtoRelConverter(functionCollector, extensions);
+class ExtensionRoundtripTest extends StringHolderRoundtripTestBase {
 
   final Rel commonTable =
       sb.namedScan(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -59,253 +41,45 @@ class ExtensionRoundtripTest extends TestBase {
           .addOptimizations(new StringHolder("COMMON OPTIMIZATION"))
           .build();
 
-  final StringHolder detail = new StringHolder("DETAIL");
-
   final AdvancedExtension relExtension =
       AdvancedExtension.builder()
           .enhancement(new StringHolder("REL ENHANCEMENT"))
           .addOptimizations(new StringHolder("REL OPTIMIZATION"))
           .build();
 
-  @Override
-  protected void verifyRoundTrip(Rel rel) {
-    RelProtoConverter relProtoConverter =
-        new StringHolderHandlingRelProtoConverter(functionCollector);
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    Rel relReturned = protoRelConverter.from(protoRel);
-    assertEquals(rel, relReturned);
+  final Map<Class<? extends Rel>, Rel> relSamples =
+      new RelSamples(sb, extensions).withAdvancedExtensions(commonExtension, relExtension);
+
+  @TestFactory
+  Stream<DynamicTest> relExtensions() {
+    return relSamples.entrySet().stream()
+        .map(
+            sample ->
+                DynamicTest.dynamicTest(
+                    sample.getKey().getSimpleName(), () -> verifyRoundTrip(sample.getValue())));
   }
 
   @Test
-  void virtualTable() {
-    Rel rel =
-        VirtualTableScan.builder()
-            .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
-            .addRows(Expression.NestedStruct.builder().fields(Collections.emptyList()).build())
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
+  void samplesCarryTheExtensionsUnderTest() {
+    // Guards the roundtrips above against passing vacuously: a converter that reads an
+    // advanced_extension back but never writes it still roundtrips a sample that carries none.
+    assertTrue(
+        relSamples.values().stream().anyMatch(HasExtension.class::isInstance),
+        "No HasExtension relation samples found");
 
-  @Test
-  void localFiles() {
-    Rel rel =
-        LocalFiles.builder()
-            .initialSchema(
-                NamedStruct.of(
-                    Collections.emptyList(), Type.Struct.builder().nullable(false).build()))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void namedScan() {
-    Rel rel =
-        NamedScan.builder()
-            .from(
-                sb.namedScan(
-                    Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void extensionTable() {
-    Rel rel = ExtensionTable.from(detail).build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void filter() {
-    Rel rel =
-        Filter.builder()
-            .from(sb.filter(__ -> sb.bool(true), commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void fetch() {
-    Rel rel =
-        Fetch.builder()
-            .from(sb.fetch(1, 2, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void aggregate() {
-    Rel rel =
-        Aggregate.builder()
-            .from(sb.aggregate(sb::grouping, __ -> Collections.emptyList(), commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void sort() {
-    Rel rel =
-        Sort.builder()
-            .from(sb.sort(__ -> Collections.emptyList(), commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void join() {
-    Rel rel =
-        Join.builder()
-            .from(sb.innerJoin(__ -> sb.bool(true), commonTable, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void lateralJoin() {
-    Rel rel =
-        LateralJoin.builder()
-            .left(commonTable)
-            .right(commonTable)
-            .condition(sb.bool(true))
-            .joinType(Join.JoinType.INNER)
-            .relAnchor(1)
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void hashJoin() {
-    // with empty keys
-    List<Integer> leftEmptyKeys = Collections.emptyList();
-    List<Integer> rightEmptyKeys = Collections.emptyList();
-    Rel relWithoutKeys =
-        HashJoin.builder()
-            .from(
-                sb.hashJoin(
-                    leftEmptyKeys,
-                    rightEmptyKeys,
-                    HashJoin.JoinType.INNER,
-                    commonTable,
-                    commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(relWithoutKeys);
-  }
-
-  @Test
-  void mergeJoin() {
-    // with empty keys
-    List<Integer> leftEmptyKeys = Collections.emptyList();
-    List<Integer> rightEmptyKeys = Collections.emptyList();
-    Rel relWithoutKeys =
-        MergeJoin.builder()
-            .from(
-                sb.mergeJoin(
-                    leftEmptyKeys,
-                    rightEmptyKeys,
-                    MergeJoin.JoinType.INNER,
-                    commonTable,
-                    commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(relWithoutKeys);
-  }
-
-  @Test
-  void nestedLoopJoin() {
-    Rel rel =
-        NestedLoopJoin.builder()
-            .from(
-                sb.nestedLoopJoin(
-                    __ -> sb.bool(true), NestedLoopJoin.JoinType.INNER, commonTable, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void project() {
-    Rel rel =
-        Project.builder()
-            .from(sb.project(__ -> Collections.emptyList(), commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void expand() {
-    Rel rel =
-        Expand.builder()
-            .from(sb.expand(__ -> Collections.emptyList(), commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void set() {
-    Rel rel =
-        Set.builder()
-            .from(sb.set(Set.SetOp.UNION_ALL, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void extensionSingleRel() {
-    Rel rel = ExtensionSingle.from(detail, commonTable).commonExtension(commonExtension).build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void extensionMultiRel() {
-    Rel rel =
-        ExtensionMulti.from(detail, commonTable, commonTable)
-            .commonExtension(commonExtension)
-            .build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void extensionLeafRel() {
-    Rel rel = ExtensionLeaf.from(detail).commonExtension(commonExtension).build();
-    verifyRoundTrip(rel);
-  }
-
-  @Test
-  void cross() {
-    Rel rel =
-        Cross.builder()
-            .from(sb.cross(commonTable, commonTable))
-            .commonExtension(commonExtension)
-            .extension(relExtension)
-            .build();
-    verifyRoundTrip(rel);
+    for (Map.Entry<Class<? extends Rel>, Rel> sample : relSamples.entrySet()) {
+      String relType = sample.getKey().getSimpleName();
+      assertEquals(
+          Optional.of(commonExtension),
+          sample.getValue().getCommonExtension(),
+          relType + " carries no common-level advanced extension");
+      if (sample.getValue() instanceof HasExtension) {
+        assertEquals(
+            Optional.of(relExtension),
+            ((HasExtension) sample.getValue()).getExtension(),
+            relType + " carries no rel-level advanced extension");
+      }
+    }
   }
 
   @Nested
