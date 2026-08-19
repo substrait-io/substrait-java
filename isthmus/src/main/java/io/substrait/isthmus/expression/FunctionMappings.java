@@ -248,11 +248,17 @@ public class FunctionMappings {
     RelDataType resultType = datetimeType;
     if (datetimeType.getSqlTypeName() == SqlTypeName.DATE
         && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
-      // Isthmus builds every interval_day with SubstraitTypeSystem.DAY_SECOND_INTERVAL, which
-      // pins the fractional-second precision at 6, so the operand no longer carries Substrait's
-      // interval_day<P>. Use the type system maximum as a best-effort inference;
-      // ExpressionRexConverter keeps the declared Substrait output type authoritative.
-      int precision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
+      // The spec declares subtract(date, interval_day<P>) -> precision_timestamp<P> (spec
+      // v0.101.0), and the interval operand carries P as its fractional-second scale. The result
+      // is capped at the timestamp maximum, which is lower than the interval one, so an
+      // interval_day<9> still yields precision_timestamp<6> until the Substrait->Calcite
+      // conversion accepts a precision_timestamp above 6.
+      int precision =
+          Math.max(
+              0,
+              Math.min(
+                  intervalType.getScale(),
+                  typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP)));
       resultType = typeFactory.createSqlType(SqlTypeName.TIMESTAMP, precision);
     }
 

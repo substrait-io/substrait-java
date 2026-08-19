@@ -74,14 +74,6 @@ public class ExpressionRexConverter
           -1,
           SqlParserPos.QUOTED_ZERO);
 
-  private static final SqlIntervalQualifier DAY_SECOND_INTERVAL =
-      new SqlIntervalQualifier(
-          org.apache.calcite.avatica.util.TimeUnit.DAY,
-          -1,
-          org.apache.calcite.avatica.util.TimeUnit.SECOND,
-          3, // Calcite only supports millisecond at the moment
-          SqlParserPos.QUOTED_ZERO);
-
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
 
   /** Calcite {@link RelDataTypeFactory} used for creating and managing relational types. */
@@ -414,10 +406,15 @@ public class ExpressionRexConverter
         expr.precision() > 3
             ? (expr.subseconds() / (int) Math.pow(10, expr.precision() - 3))
             : (expr.subseconds() * (int) Math.pow(10, 3 - expr.precision()));
-    return rexBuilder.makeIntervalLiteral(
-        // Current Calcite behavior is to store milliseconds since Epoch
+    // The value is in milliseconds, which is what Calcite's own interval literals carry, while the
+    // type keeps the declared interval_day<P> so the precision survives the round trip. A
+    // sub-millisecond component therefore does not: it is truncated by the conversion above.
+    // Taking the type from the converter rather than building a qualifier here is what applies the
+    // precision bound and the literal's nullability, as every other literal visit does.
+    return rexBuilder.makeLiteral(
         new BigDecimal((expr.days() * MILLIS_IN_DAY + expr.seconds() * 1_000L + milliseconds)),
-        DAY_SECOND_INTERVAL);
+        typeConverter.toCalcite(typeFactory, expr.getType()),
+        true);
   }
 
   @Override

@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
 import io.substrait.expression.Expression;
@@ -39,6 +40,8 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class CalciteLiteralTest extends CalciteObjs {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
@@ -213,28 +216,66 @@ class CalciteLiteralTest extends CalciteObjs {
         convertedRex.getValueAs(BigDecimal.class).longValue());
   }
 
-  @Test
-  void tIntervalMillisecond() {
-    // Calcite stores milliseconds since Epoch, so test only millisecond precision
-    BigDecimal bd =
-        new BigDecimal(
-            TimeUnit.DAYS.toMillis(3)
-                + TimeUnit.HOURS.toMillis(5)
-                + TimeUnit.MINUTES.toMillis(7)
-                + TimeUnit.SECONDS.toMillis(9)
-                + 500); // '3-5:7:9.500' day to second (6)
-    RexLiteral intervalDaySecond =
+  @ParameterizedTest(name = "P={0} {1}ms")
+  @CsvSource({
+    // precision, calcite millis, expected days, seconds, subseconds, millis back
+    "6,      1500,  0,      1,     500000,      1500",
+    "6,     -1500,  0,     -1,    -500000,     -1500",
+    "5,      1500,  0,      1,      50000,      1500",
+    "4,      1500,  0,      1,       5000,      1500",
+    "3,      1500,  0,      1,        500,      1500",
+    "3,     -1500,  0,     -1,       -500,     -1500",
+    "2,      1500,  0,      1,         50,      1500",
+    "1,      1500,  0,      1,          5,      1500",
+    // Below millisecond precision the remainder cannot be represented and is dropped, towards
+    // zero: the millisecond remainder keeps the dividend's sign, where Duration would report
+    // -1500ms as -2 seconds plus a positive 500ms part.
+    "0,      1500,  0,      1,          0,      1000",
+    "0,     -1500,  0,     -1,          0,     -1000",
+    // A value spanning days, so the decomposition is exercised rather than just the seconds field.
+    "3, 277629500,  3,  18429,        500, 277629500",
+    "3,-277629500, -3, -18429,       -500,-277629500",
+    // The spec's maximum day count at the highest precision the type system allows. Scaling the
+    // whole value into those units would overflow a long; scaling only the remainder does not.
+    "9, 315360000000500, 3650000, 0,  500000000, 315360000000500",
+    "9,-315360000000500,-3650000, 0, -500000000,-315360000000500",
+  })
+  void tIntervalDaySecondKeepsItsPrecision(
+      int precision, long calciteMillis, int days, int seconds, long subseconds, long millisBack) {
+    RexLiteral calciteInterval =
         rex.makeIntervalLiteral(
-            bd,
-            new SqlIntervalQualifier(
-                org.apache.calcite.avatica.util.TimeUnit.DAY,
-                -1,
-                org.apache.calcite.avatica.util.TimeUnit.SECOND,
-                3,
-                SqlParserPos.ZERO));
-    IntervalDayLiteral intervalDaySecondExpr =
-        ExpressionCreator.intervalDay(false, 3, 5 * 3600 + 7 * 60 + 9, 500_000, 6);
-    bitest(intervalDaySecondExpr, intervalDaySecond);
+            new BigDecimal(calciteMillis), SubstraitTypeSystem.daySecondInterval(precision));
+    assertEquals(precision, calciteInterval.getType().getScale());
+
+    IntervalDayLiteral expected =
+        ExpressionCreator.intervalDay(false, days, seconds, subseconds, precision);
+    assertEquals(expected, calciteInterval.accept(rexExpressionConverter));
+
+    RexNode back = expected.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, back.getType().getScale());
+    assertEquals(new BigDecimal(millisBack), ((RexLiteral) back).getValueAs(BigDecimal.class));
+  }
+
+  @Test
+  void tIntervalDayLiteralIsNullableWhenTheSubstraitLiteralIs() {
+    // The interval literal is the one visit that used to build its Calcite type from a qualifier
+    // rather than from the type converter, which lost both the precision bound and this.
+    RexNode nullableInterval =
+        ExpressionCreator.intervalDay(true, 0, 1, 0, 3)
+            .accept(expressionRexConverter, Context.newContext());
+    assertTrue(nullableInterval.getType().isNullable());
+  }
+
+  @Test
+  void tIntervalDaySecondTruncatesBelowMillisecond() {
+    // Calcite's interval literals carry milliseconds, so the sub-millisecond part of an
+    // interval_day<6> does not survive the conversion. The precision does.
+    IntervalDayLiteral withMicros = ExpressionCreator.intervalDay(false, 0, 0, 500_123, 6);
+    RexNode convertedRex = withMicros.accept(expressionRexConverter, Context.newContext());
+    assertEquals(6, convertedRex.getType().getScale());
+    assertEquals(
+        ExpressionCreator.intervalDay(false, 0, 0, 500_000, 6),
+        convertedRex.accept(rexExpressionConverter));
   }
 
   @Test

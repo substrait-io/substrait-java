@@ -1,6 +1,8 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.function.TypeExpression;
 import io.substrait.isthmus.utils.UserTypeFactory;
@@ -143,10 +145,31 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void intervalDay(boolean nullable) {
-    testType(
-        Type.withNullability(nullable).intervalDay(6),
-        type.createSqlIntervalType(SubstraitTypeSystem.DAY_SECOND_INTERVAL),
-        nullable);
+    // Up to 9: for intervals the fractional-second ceiling is getMaxScale, which neither
+    // SubstraitTypeSystem nor Calcite lowers, unlike the datetime types capped at 6.
+    for (int precision : new int[] {0, 3, 6, 9}) {
+      testType(
+          Type.withNullability(nullable).intervalDay(precision),
+          type.createSqlIntervalType(SubstraitTypeSystem.daySecondInterval(precision)),
+          nullable);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 10, 12})
+  void intervalDayRejectsPrecisionOutsideTheTypeSystemRange(int precision) {
+    // Reported rather than silently narrowed to the maximum, as the precision_* conversions
+    // already do. -1 is Calcite's PRECISION_NOT_SPECIFIED, which a qualifier would otherwise
+    // turn back into the default of 6.
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                TypeConverter.DEFAULT.toCalcite(type, TypeCreator.REQUIRED.intervalDay(precision)));
+    assertTrue(
+        e.getMessage()
+            .contains("unsupported interval_day precision " + precision + ", Calcite type system"),
+        e.getMessage());
   }
 
   @ParameterizedTest

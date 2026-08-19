@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import static io.substrait.isthmus.SubstraitTypeSystem.DAY_SECOND_INTERVAL;
 import static io.substrait.isthmus.SubstraitTypeSystem.YEAR_MONTH_INTERVAL;
 
 import io.substrait.function.NullableType;
@@ -342,8 +341,21 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.IntervalDay expr) {
+      // getMaxScale, not getMaxPrecision: for an interval the latter bounds the leading field,
+      // while the fractional-second bound is the scale of the INTERVAL_DAY_SECOND type produced
+      // here. That is also the knob SqlValidatorImpl checks an interval qualifier against, so this
+      // accepts exactly what SQL written as DAY TO SECOND(P) parses to.
+      int maxPrecision = typeFactory.getTypeSystem().getMaxScale(SqlTypeName.INTERVAL_DAY_SECOND);
+      if (expr.precision() < 0 || expr.precision() > maxPrecision) {
+        throw new IllegalArgumentException(
+            String.format(
+                "unsupported interval_day precision %s, Calcite type system allows 0 to %s",
+                expr.precision(), maxPrecision));
+      }
       return typeFactory.createTypeWithNullability(
-          typeFactory.createSqlIntervalType(DAY_SECOND_INTERVAL), n(expr));
+          typeFactory.createSqlIntervalType(
+              SubstraitTypeSystem.daySecondInterval(expr.precision())),
+          n(expr));
     }
 
     @Override

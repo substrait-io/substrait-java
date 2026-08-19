@@ -1,5 +1,6 @@
 package io.substrait.isthmus.expression;
 
+import com.google.common.math.LongMath;
 import com.google.protobuf.ByteString;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -8,7 +9,6 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -234,15 +234,30 @@ public class LiteralConverter {
       case INTERVAL_MINUTE_SECOND:
       case INTERVAL_SECOND:
         {
-          // Calcite represents day/time intervals in milliseconds, despite a default scale of 6
-          Long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
-          Duration interval = Duration.ofMillis(totalMillis);
+          // Report the interval at the precision the Calcite type declares, so a Substrait
+          // interval_day<P> keeps its P across a round trip. The value is narrowed to whole
+          // milliseconds here — Calcite day-time interval values may carry fractional ones, and
+          // getValueAs(Long.class) is what discards them — and P only sets the unit the subseconds
+          // component is expressed in.
+          long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
+          int precision = resultType.getScale();
 
-          long days = interval.toDays();
-          long seconds = interval.minusDays(days).toSeconds();
-          int micros = interval.toMillisPart() * 1000;
+          // Decompose in milliseconds and scale only the sub-second remainder. Scaling the whole
+          // value first overflows a long past ~292 years at P=9, well inside the spec's
+          // [-3,650,000..3,650,000] day range. Integer division truncates towards zero and the
+          // remainder keeps the dividend's sign, so a negative interval still narrows towards zero.
+          long millisPerDay = TimeUnit.DAYS.toMillis(1);
+          long days = totalMillis / millisPerDay;
+          long remainder = totalMillis - days * millisPerDay;
+          long seconds = remainder / 1_000L;
+          long millisPart = remainder - seconds * 1_000L;
+          long subseconds =
+              precision > 3
+                  ? millisPart * LongMath.pow(10, precision - 3)
+                  : millisPart / LongMath.pow(10, 3 - precision);
 
-          return ExpressionCreator.intervalDay(nullable, (int) days, (int) seconds, micros, 6);
+          return ExpressionCreator.intervalDay(
+              nullable, (int) days, (int) seconds, subseconds, precision);
         }
 
       case ROW:
