@@ -59,6 +59,10 @@ private class ToSparkType(dfsNames: Seq[String])
 
   override def visit(expr: Type.Bool): BooleanType = BooleanType
 
+  // These three keep rejecting anything but microsecond precision. Spark's types carry no
+  // precision of their own, so mapping a coarser one onto them would silently reinterpret the
+  // values it describes — a column of millisecond counts read as microsecond counts. The literal
+  // conversions rescale instead, which they can do because they hold the value.
   override def visit(expr: Type.PrecisionTimestamp): TimestampNTZType = {
     Util.assertMicroseconds(expr.precision())
     TimestampNTZType

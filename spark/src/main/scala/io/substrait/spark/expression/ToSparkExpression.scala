@@ -107,31 +107,42 @@ class ToSparkExpression(
     Literal(expr.value(), ToSparkType.convert(expr.getType))
   }
 
+  // The three temporal literals below rescale their value into microseconds and land in the
+  // microsecond type, rather than converting the type they declare. ToSparkType rejects any other
+  // precision, because a Spark type carries none of its own and a type conversion has no value to
+  // rescale; here the value is in hand, so a coarser precision converts without loss.
   override def visit(
       expr: SExpression.PrecisionTimestampLiteral,
       context: EmptyVisitationContext): Literal = {
-    // Spark timestamps are stored as a microseconds Long
-    Util.assertMicroseconds(expr.precision())
-    Literal(expr.value(), ToSparkType.convert(expr.getType))
+    val creator = Type.withNullability(expr.nullable())
+    Literal(
+      Util.toMicroseconds(expr.value(), expr.precision()),
+      ToSparkType.convert(creator.precisionTimestamp(Util.MICROSECOND_PRECISION)))
   }
 
   override def visit(
       expr: SExpression.PrecisionTimestampTZLiteral,
       context: EmptyVisitationContext): Literal = {
-    // Spark timestamps are stored as a microseconds Long
-    Util.assertMicroseconds(expr.precision())
-    Literal(expr.value(), ToSparkType.convert(expr.getType))
+    val creator = Type.withNullability(expr.nullable())
+    Literal(
+      Util.toMicroseconds(expr.value(), expr.precision()),
+      ToSparkType.convert(creator.precisionTimestampTZ(Util.MICROSECOND_PRECISION)))
   }
 
   override def visit(
       expr: SExpression.IntervalDayLiteral,
       context: EmptyVisitationContext): Literal = {
-    Util.assertMicroseconds(expr.precision())
     // Spark uses a single microseconds Long as the "physical" type for DayTimeInterval
+    val seconds =
+      Math.addExact(
+        Math.multiplyExact(expr.days().toLong, Util.SECONDS_PER_DAY),
+        expr.seconds().toLong)
     val micros =
-      (expr.days() * Util.SECONDS_PER_DAY + expr.seconds()) * Util.MICROS_PER_SECOND +
-        expr.subseconds()
-    Literal(micros, ToSparkType.convert(expr.getType))
+      Math.addExact(
+        Math.multiplyExact(seconds, Util.MICROS_PER_SECOND),
+        Util.toMicroseconds(expr.subseconds(), expr.precision()))
+    val creator = Type.withNullability(expr.nullable())
+    Literal(micros, ToSparkType.convert(creator.intervalDay(Util.MICROSECOND_PRECISION)))
   }
 
   override def visit(

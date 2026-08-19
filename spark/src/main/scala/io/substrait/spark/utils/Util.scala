@@ -25,12 +25,41 @@ object Util {
   val MICROS_PER_SECOND: Long = 1000 * 1000
   val MICROSECOND_PRECISION = 6 // for PrecisionTimestamp(TZ) and IntervalDay types
 
+  /** Indexed by exponent, which [[toMicroseconds]] bounds to 0..MICROSECOND_PRECISION. */
+  private val POWERS_OF_TEN: Array[Long] =
+    Array(1L, 10L, 100L, 1000L, 10000L, 100000L, 1000000L)
+
+  /**
+   * Checks that a Substrait fractional-second precision is one a Spark type can carry.
+   *
+   * Spark has a single microsecond-based representation for each of these types, so the precision
+   * has to be exactly microseconds. A coarser one describes values in different units, and a type
+   * conversion has no values in hand to rescale — see [[toMicroseconds]], which is what the literal
+   * conversions use where a value is available.
+   */
   def assertMicroseconds(precision: Int): Unit = {
-    // Spark uses microseconds as a Long value as the "physical" type for most time things
     if (precision != MICROSECOND_PRECISION) {
       throw new UnsupportedOperationException(
-        s"Unsupported precision: $precision. Only microsecond precision ($MICROSECOND_PRECISION) is supported")
+        s"Unsupported precision: $precision. Spark stores time values as microseconds, so a type " +
+          s"must declare a precision of exactly $MICROSECOND_PRECISION; a value at a coarser " +
+          s"precision is converted by rescaling it")
     }
+  }
+
+  /**
+   * Rescales a sub-second value from the given Substrait precision to the microseconds Spark uses
+   * as its physical representation.
+   *
+   * A precision coarser than microseconds carries fewer digits, not different ones, so the value is
+   * exact after scaling. A finer one does not fit and is rejected rather than rounded.
+   */
+  def toMicroseconds(value: Long, precision: Int): Long = {
+    if (precision < 0 || precision > MICROSECOND_PRECISION) {
+      throw new UnsupportedOperationException(
+        s"Unsupported precision: $precision. Spark stores time values as microseconds, " +
+          s"so the precision must be between 0 and $MICROSECOND_PRECISION")
+    }
+    Math.multiplyExact(value, POWERS_OF_TEN(MICROSECOND_PRECISION - precision))
   }
 
   /**
