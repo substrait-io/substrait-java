@@ -4,10 +4,11 @@ This page provides some orientation and recommendations on how to get the best r
 
 1. [Contributor License Agreement](#contributor-license-agreement)
 2. [The specification is the source of truth](#the-specification-is-the-source-of-truth)
-3. [Commit conventions](#commit-conventions)
-4. [Pull requests](#pull-requests)
-5. [Style Guide](#style-guide)
-6. [Building and testing](#building-and-testing)
+3. [Claiming an issue](#claiming-an-issue)
+4. [Commit conventions](#commit-conventions)
+5. [Pull requests](#pull-requests)
+6. [Style Guide](#style-guide)
+7. [Building and testing](#building-and-testing)
 
 ## Contributor License Agreement
 
@@ -20,6 +21,10 @@ Substrait Java is an implementation of the [Substrait specification](https://sub
 Where the spec is genuinely unclear, don't settle it here. Survey the ecosystem for an existing consensus first. The closest comparison is the sibling language bindings listed under [Active Libraries](https://substrait.io/community/active_libraries/) — `substrait-go`, `substrait-python`, and `substrait-rs` solve the same modeling problem at the same layer, so how they represent a construct is directly relevant; that page also marks which bindings are unmaintained, and a stale binding's choice is weaker evidence. For questions about runtime semantics rather than modeling, the engines under [Powered by Substrait](https://substrait.io/community/powered_by/) (DataFusion, DuckDB, Acero, Velox, Gluten) are the better reference.
 
 If they agree, follow that de facto consensus and say so in the PR. If they disagree, or none of them cover the case, raise a clarification issue in [`substrait-io/substrait`](https://github.com/substrait-io/substrait/issues) or bring it to the [community](https://substrait.io/community/) channels rather than encoding a guess — and record the open question in the PR so the assumption stays reviewable.
+
+## Claiming an issue
+
+If you want to work on an issue, please comment on it before you start — a maintainer can only assign an issue to you once you have commented on it, and the assignment is what tells everyone else that the work is already being taken care of.
 
 ## Commit Conventions
 
