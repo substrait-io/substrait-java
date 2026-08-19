@@ -29,7 +29,10 @@ case class Dialect(
 
 // Types section
 case class TypeMetadata(name: String, supported_as_column: Boolean)
-case class SupportedType(`type`: String, system_metadata: TypeMetadata, max_precision: Option[Integer] = None)
+case class SupportedType(
+    `type`: String,
+    system_metadata: TypeMetadata,
+    max_precision: Option[Integer] = None)
 
 // Functions section
 case class FunctionMetadata(name: String, notation: String)
@@ -94,8 +97,7 @@ class DialectGenerator {
     // Generate the dialect YAML
     val mapper = YAMLMapper
       .builder()
-      .defaultPropertyInclusion(
-        JsonInclude.Value.ALL_NON_ABSENT)
+      .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_ABSENT)
       .addModule(DefaultScalaModule)
       .build()
     val yaml = mapper.writeValueAsString(generate())
@@ -127,9 +129,18 @@ class DialectGenerator {
       SupportedType("FIXED_CHAR", TypeMetadata("StringType", true)),
       SupportedType("BINARY", TypeMetadata("BinaryType", true)),
       SupportedType("BOOL", TypeMetadata("BooleanType", true)),
-      SupportedType("PRECISION_TIMESTAMP", TypeMetadata("TimestampNTZType", true), max_precision = Some(9)),
-      SupportedType("PRECISION_TIMESTAMP_TZ", TypeMetadata("TimestampType", true), max_precision = Some(9)),
-      SupportedType("INTERVAL_DAY", TypeMetadata("DayTimeIntervalType", true), max_precision = Some(9)),
+      SupportedType(
+        "PRECISION_TIMESTAMP",
+        TypeMetadata("TimestampNTZType", true),
+        max_precision = Some(9)),
+      SupportedType(
+        "PRECISION_TIMESTAMP_TZ",
+        TypeMetadata("TimestampType", true),
+        max_precision = Some(9)),
+      SupportedType(
+        "INTERVAL_DAY",
+        TypeMetadata("DayTimeIntervalType", true),
+        max_precision = Some(9)),
       SupportedType("INTERVAL_YEAR", TypeMetadata("YearMonthIntervalType", true)),
       SupportedType("LIST", TypeMetadata("ArrayType", true)),
       SupportedType("MAP", TypeMetadata("MapType", true)),

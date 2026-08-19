@@ -646,7 +646,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     if (remap.isEmpty) {
       return plan
     }
-    val projectExprs = plan.output.map { case ne: NamedExpression => ne.toAttribute }.map(toNamedExpression)
+    val projectExprs =
+      plan.output.map { case ne: NamedExpression => ne.toAttribute }.map(toNamedExpression)
     Project(remap.get().indices().asScala.map(i => projectExprs(i)).toSeq, plan)
   }
 

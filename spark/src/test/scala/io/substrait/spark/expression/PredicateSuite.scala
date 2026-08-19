@@ -16,13 +16,14 @@
  */
 package io.substrait.spark.expression
 
+import org.apache.spark.SparkFunSuite
+import org.apache.spark.sql.catalyst.expressions.{And, Literal, Or}
+
+import io.substrait.`type`.TypeCreator
 import io.substrait.dsl.SubstraitBuilder
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.extension.DefaultExtensionCatalog
-import io.substrait.`type`.TypeCreator
 import io.substrait.util.EmptyVisitationContext
-import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.catalyst.expressions.{And, Literal, Or}
 import org.scalatest.Assertions.assertResult
 
 import scala.jdk.CollectionConverters._
@@ -145,7 +146,9 @@ class PredicateSuite extends SparkFunSuite with SubstraitExpressionTestBase {
     // Verify the result is nested Or expressions: Or(Or(Or(Or(a, b), c), d), e)
     // reduceLeft creates: ((((a OR b) OR c) OR d) OR e)
     sparkExpr match {
-      case Or(Or(Or(Or(Literal(a, _), Literal(b, _)), Literal(c, _)), Literal(d, _)), Literal(e, _)) =>
+      case Or(
+            Or(Or(Or(Literal(a, _), Literal(b, _)), Literal(c, _)), Literal(d, _)),
+            Literal(e, _)) =>
         assertResult(false)(a)
         assertResult(false)(b)
         assertResult(true)(c)
@@ -173,7 +176,9 @@ class PredicateSuite extends SparkFunSuite with SubstraitExpressionTestBase {
 
     // Verify the structure: Or(And(And(a, b), c), And(d, e))
     sparkExpr match {
-      case Or(And(And(Literal(a, _), Literal(b, _)), Literal(c, _)), And(Literal(d, _), Literal(e, _))) =>
+      case Or(
+            And(And(Literal(a, _), Literal(b, _)), Literal(c, _)),
+            And(Literal(d, _), Literal(e, _))) =>
         assertResult(true)(a)
         assertResult(true)(b)
         assertResult(false)(c)

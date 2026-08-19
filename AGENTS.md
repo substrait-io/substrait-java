@@ -165,8 +165,11 @@ CI runs, and a `:core` change can break the visitor implementors in the other mo
   change that compiles on one variant can still break another. Compiling only
   `:spark:spark-3.5_2.12` misses 2.13 breaks — also run
   `./gradlew :spark:spark-4.0_2.13:compileScala`, or build all three with `:spark:build`.
-- Formatting is done by the **parent** `:spark` project (`./gradlew :spark:spotlessApply`);
-  spotless is disabled in the variant subprojects.
+- Formatting is done by the **parent** `:spark` project (`./gradlew :spark:spotlessApply`) —
+  scalafmt against `spark/.scalafmt.conf`, with an explicit `src/**/*.scala` target because that
+  project has no Scala source set of its own. Enforcement lives there too: `:spark:spotlessCheck`
+  fails the build on drift. The variant subprojects set `isEnforceCheck = false` precisely so the
+  shared source isn't formatted three times over — don't add a Scala step to them.
 
 ## Testing conventions
 

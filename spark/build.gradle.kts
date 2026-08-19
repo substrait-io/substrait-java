@@ -3,6 +3,22 @@
 
 plugins {
   id("base") // Provides lifecycle tasks like clean, build, assemble
+  alias(libs.plugins.spotless)
+}
+
+// The Scala source lives here (spark/src) and is compiled by each variant subproject against a
+// different Spark/Scala version, so it is formatted once here rather than three times over -- which
+// is why the variants set `isEnforceCheck = false`. An explicit target is required because this
+// project has no Scala source set of its own to infer one from; it covers both the shared
+// src/{main,test}/scala trees and the per-version src/*/spark-<major.minor> overlays.
+spotless {
+  scala {
+    target("src/**/*.scala")
+    // Keep this version in step with the `version` recorded in .scalafmt.conf, which is what
+    // IntelliJ's scalafmt integration reads.
+    scalafmt("3.8.1").configFile(".scalafmt.conf")
+    toggleOffOn()
+  }
 }
 
 // Aggregate task to build all variants
@@ -12,7 +28,7 @@ tasks.register("buildAllVariants") {
   dependsOn(
     ":spark:spark-3.4_2.12:build",
     ":spark:spark-3.5_2.12:build",
-    ":spark:spark-4.0_2.13:build"
+    ":spark:spark-4.0_2.13:build",
   )
 }
 
@@ -23,20 +39,18 @@ tasks.register("publishAllVariants") {
   dependsOn(
     ":spark:spark-3.4_2.12:publishToMavenLocal",
     ":spark:spark-3.5_2.12:publishToMavenLocal",
-    ":spark:spark-4.0_2.13:publishToMavenLocal"
+    ":spark:spark-4.0_2.13:publishToMavenLocal",
   )
 }
 
 // Make the default build task build all variants
-tasks.named("build") {
-  dependsOn("buildAllVariants")
-}
+tasks.named("build") { dependsOn("buildAllVariants") }
 
 // Make clean task clean all variants
 tasks.named("clean") {
   dependsOn(
     ":spark:spark-3.4_2.12:clean",
     ":spark:spark-3.5_2.12:clean",
-    ":spark:spark-4.0_2.13:clean"
+    ":spark:spark-4.0_2.13:clean",
   )
 }

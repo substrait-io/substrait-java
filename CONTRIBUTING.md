@@ -60,14 +60,17 @@ Keep that footer **last, with nothing after it** — below the rationale and bel
 Changes must adhere to the style guide and this will be verified by the continuous integration build.
 
 * Java code style is [Google style](https://google.github.io/styleguide/javaguide.html).
+* Scala code style is defined by [`spark/.scalafmt.conf`](spark/.scalafmt.conf).
 
-Java code style is checked by [Spotless](https://github.com/diffplug/spotless)
-with [google-java-format](https://github.com/google/google-java-format) during the build.
+Both are checked by [Spotless](https://github.com/diffplug/spotless) during the build —
+Java with [google-java-format](https://github.com/google/google-java-format), Scala with
+[scalafmt](https://scalameta.org/scalafmt/). The Scala step is configured on the parent
+`:spark` project, because the Scala source is shared by the variant subprojects rather than
+owned by any one of them.
 
 ### Automatically fixing code style issues
 
-Java code style issues can be fixed from the command line using
-`./gradlew spotlessApply`.
+Code style issues can be fixed from the command line using `./gradlew spotlessApply`.
 
 ### Configuring the Code Formatter for Intellij IDEA and Eclipse
 
@@ -107,7 +110,8 @@ high-level build and the native-image executable. Useful narrower tasks while it
   (see [Gradle & JDK 17](#gradle--jdk-17)).
 * **Spark variants:** the Scala source is shared across `spark-3.4_2.12`, `spark-3.5_2.12`, and
   `spark-4.0_2.13`; `./gradlew :spark:build` builds all three, or compile one with
-  `./gradlew :spark:spark-3.5_2.12:compileScala`. Formatting runs from the parent `:spark`.
+  `./gradlew :spark:spark-3.5_2.12:compileScala`. Formatting runs from the parent `:spark`
+  (`./gradlew :spark:spotlessApply`), not from the variants.
 
 Some checks are **not** wired into `compileJava` / `test`, so they can pass locally yet fail
 CI — build the whole thing before pushing:
