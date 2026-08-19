@@ -227,14 +227,18 @@ class CalciteLiteralTest extends CalciteObjs {
     "3,     -1500,  0,     -1,       -500,     -1500",
     "2,      1500,  0,      1,         50,      1500",
     "1,      1500,  0,      1,          5,      1500",
-    // Below millisecond precision the remainder cannot be represented and is dropped. It is
-    // dropped towards zero, which is why the whole value is scaled before it is taken apart:
-    // Duration would report -1500ms as -2 seconds plus a positive 500ms part.
+    // Below millisecond precision the remainder cannot be represented and is dropped, towards
+    // zero: the millisecond remainder keeps the dividend's sign, where Duration would report
+    // -1500ms as -2 seconds plus a positive 500ms part.
     "0,      1500,  0,      1,          0,      1000",
     "0,     -1500,  0,     -1,          0,     -1000",
     // A value spanning days, so the decomposition is exercised rather than just the seconds field.
     "3, 277629500,  3,  18429,        500, 277629500",
     "3,-277629500, -3, -18429,       -500,-277629500",
+    // The spec's maximum day count at the highest precision the type system allows. Scaling the
+    // whole value into those units would overflow a long; scaling only the remainder does not.
+    "9, 315360000000500, 3650000, 0,  500000000, 315360000000500",
+    "9,-315360000000500,-3650000, 0, -500000000,-315360000000500",
   })
   void tIntervalDaySecondKeepsItsPrecision(
       int precision, long calciteMillis, int days, int seconds, long subseconds, long millisBack) {

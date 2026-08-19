@@ -242,19 +242,19 @@ public class LiteralConverter {
           long totalMillis = Objects.requireNonNull(literal.getValueAs(Long.class));
           int precision = resultType.getScale();
 
-          // Scale the whole value first: taking the components apart before narrowing would round a
-          // negative interval away from zero, since Duration keeps its sub-second part positive.
-          long total =
+          // Decompose in milliseconds and scale only the sub-second remainder. Scaling the whole
+          // value first overflows a long past ~292 years at P=9, well inside the spec's
+          // [-3,650,000..3,650,000] day range. Integer division truncates towards zero and the
+          // remainder keeps the dividend's sign, so a negative interval still narrows towards zero.
+          long millisPerDay = TimeUnit.DAYS.toMillis(1);
+          long days = totalMillis / millisPerDay;
+          long remainder = totalMillis - days * millisPerDay;
+          long seconds = remainder / 1_000L;
+          long millisPart = remainder - seconds * 1_000L;
+          long subseconds =
               precision > 3
-                  ? totalMillis * LongMath.pow(10, precision - 3)
-                  : totalMillis / LongMath.pow(10, 3 - precision);
-          long unitsPerSecond = LongMath.pow(10, precision);
-          long unitsPerDay = TimeUnit.DAYS.toSeconds(1) * unitsPerSecond;
-
-          long days = total / unitsPerDay;
-          long remainder = total - days * unitsPerDay;
-          long seconds = remainder / unitsPerSecond;
-          long subseconds = remainder - seconds * unitsPerSecond;
+                  ? millisPart * LongMath.pow(10, precision - 3)
+                  : millisPart / LongMath.pow(10, 3 - precision);
 
           return ExpressionCreator.intervalDay(
               nullable, (int) days, (int) seconds, subseconds, precision);

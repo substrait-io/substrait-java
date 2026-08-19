@@ -249,11 +249,10 @@ public class FunctionMappings {
     if (datetimeType.getSqlTypeName() == SqlTypeName.DATE
         && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
       // The spec declares subtract(date, interval_day<P>) -> precision_timestamp<P> (spec
-      // v0.101.0), and the interval operand carries P as its fractional-second scale. The result is
-      // capped at the timestamp maximum, which is lower than the interval one, so an
-      // interval_day<9>
-      // still yields precision_timestamp<6> until the datetime ceiling itself moves (see #995's
-      // subject: TypeConverter rejects precision_timestamp above 6).
+      // v0.101.0), and the interval operand carries P as its fractional-second scale. The result
+      // is capped at the timestamp maximum, which is lower than the interval one, so an
+      // interval_day<9> still yields precision_timestamp<6> until the Substrait->Calcite
+      // conversion accepts a precision_timestamp above 6.
       int precision =
           Math.max(
               0,
