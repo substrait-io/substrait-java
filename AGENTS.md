@@ -7,11 +7,17 @@ human-facing docs first, then keep the codebase-specific notes below in mind.
 
 - **[`readme.md`](readme.md)** — what the project is, the module overview, and how to build
   and run it.
-- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — commit conventions, the style guide, and the
-  build / test / format / PMD command mechanics plus the JDK 17 daemon and GraalVM
-  native-image setup.
+- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — how the spec relates to this repo, commit
+  conventions, the style guide, and the build / test / format / PMD command mechanics plus
+  the JDK 17 daemon and GraalVM native-image setup.
 
-For GitHub work (issues, PRs), use the `gh` CLI.
+This repo *implements* the Substrait spec; it does not define it. Read
+[the spec is the source of truth](CONTRIBUTING.md#the-specification-is-the-source-of-truth)
+before changing behavior. The failure mode to avoid is filling a gap in the spec with
+something plausible and then describing it as spec-defined. When you cannot find the spec's
+answer, say so explicitly instead of picking one silently: check the sibling bindings listed
+at [Active Libraries](https://substrait.io/community/active_libraries/) for an existing
+consensus, and surface what is still unresolved in the PR.
 
 ## Module layout
 
@@ -180,10 +186,12 @@ CI runs, and a `:core` change can break the visitor implementors in the other mo
 ## Conventions & workflow
 
 - **Keep PR descriptions high-signal.** The PR title and body together become the
-  squash-merge commit message that `semantic-release` uses to build `CHANGELOG.md`, so they
-  must together form a valid conventional commit (see
-  [`CONTRIBUTING.md`](CONTRIBUTING.md#commit-conventions)). Beyond that, leave out the noise
-  agents tend to add:
+  squash-merge commit message that `semantic-release` uses to build `CHANGELOG.md` — the body
+  is changelog input, not a review scratchpad. Follow
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-requests) rather than
+  [`.github/pull_request_template.md`](.github/pull_request_template.md), which a PR opened
+  with an explicitly supplied body never shows you. Beyond forming a valid conventional
+  commit, leave out the noise agents tend to add:
   - **Lists of files touched** — they're in the diff.
   - **Claims that CI-verified things pass** — e.g. "tests pass", "spotless clean". If they
     didn't, the checks would be red.
@@ -193,6 +201,13 @@ CI runs, and a `:core` change can break the visitor implementors in the other mo
   `spec v0.88.0`). Keep commit bodies free of git trailers (`Signed-off-by`,
   `Co-authored-by`, tool-attribution lines) — `semantic-release` builds the changelog from
   the commit message and history here doesn't carry them.
+- **A `BREAKING CHANGE:` footer goes last, with nothing after it.** The conventional-commits
+  parser ends the note only at another footer keyword or an issue reference, so any other
+  trailing line — prose, an attribution line, a stray comment marker — is absorbed into the
+  note and published verbatim in the release notes. This is why the rule above matters most
+  here: a trailer you shouldn't have written stays buried in a normal commit, but lands in
+  the release notes of a breaking one. Mark the title with `!` too (`feat(core)!: …`); see
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#breaking-changes).
 - **No GitHub issue/PR references in source** (comments or Javadoc) — they belong in
   commit messages and PR descriptions. `Closes #NNN` in the commit/PR body is fine;
   in the code, describe behavior and spec version (e.g. `spec v0.88.0`) instead.
