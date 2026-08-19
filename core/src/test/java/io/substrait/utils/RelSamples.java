@@ -118,39 +118,11 @@ public class RelSamples {
    * @return the samples, keyed by relation type
    */
   public Map<Class<? extends Rel>, Rel> samples() {
-    return samples(Optional.empty());
-  }
-
-  /**
-   * The same samples, each carrying the {@link AdvancedExtension} slots its type supports: the
-   * common-level one on every {@link Rel}, and the rel-level one on {@link HasExtension}
-   * implementors.
-   *
-   * @param commonExtension the common-level extension every sample carries
-   * @param relExtension the rel-level extension every {@link HasExtension} sample carries
-   * @return the samples, keyed by relation type
-   */
-  public Map<Class<? extends Rel>, Rel> withAdvancedExtensions(
-      AdvancedExtension commonExtension, AdvancedExtension relExtension) {
-    Map<Class<? extends Rel>, Rel> stamped = new LinkedHashMap<>();
-    samples(Optional.of(relExtension))
-        .forEach(
-            (relType, rel) ->
-                stamped.put(relType, rel.withCommonExtension(Optional.of(commonExtension))));
-    return stamped;
-  }
-
-  /**
-   * The sample bodies. The common-level extension is layered on afterwards with {@code
-   * Rel.withCommonExtension}, but the rel-level one has to be set here: {@link HasExtension}
-   * declares no matching copy method.
-   */
-  private Map<Class<? extends Rel>, Rel> samples(Optional<AdvancedExtension> relExtension) {
     Map<Class<? extends Rel>, Rel> samples = new LinkedHashMap<>();
 
     // Read relations. The NamedScan sample is a copy of left rather than left itself, which is the
     // input of most other samples and has to stay free of the data under test.
-    samples.put(NamedScan.class, NamedScan.builder().from(left).extension(relExtension).build());
+    samples.put(NamedScan.class, NamedScan.builder().from(left).build());
     samples.put(
         VirtualTableScan.class,
         VirtualTableScan.builder()
@@ -160,32 +132,24 @@ public class RelSamples {
                     .addFields(ExpressionCreator.i64(false, 1))
                     .addFields(ExpressionCreator.string(false, "one"))
                     .build())
-            .extension(relExtension)
             .build());
-    samples.put(
-        LocalFiles.class,
-        LocalFiles.builder().initialSchema(schema).extension(relExtension).build());
+    samples.put(LocalFiles.class, LocalFiles.builder().initialSchema(schema).build());
     // A real schema rather than the detail's empty one, so data derived from this sample's fields
     // is
     // non-empty here too. from(detail) seeds the schema, so the override has to follow it.
-    samples.put(
-        ExtensionTable.class,
-        ExtensionTable.from(detail).initialSchema(schema).extension(relExtension).build());
+    samples.put(ExtensionTable.class, ExtensionTable.from(detail).initialSchema(schema).build());
 
     // Logical relations
     samples.put(
         Filter.class,
         Filter.builder()
             .from(sb.filter(input -> sb.equal(sb.fieldReference(input, 0), sb.i64(1)), left))
-            .extension(relExtension)
             .build());
-    samples.put(
-        Fetch.class, Fetch.builder().from(sb.limit(10, left)).extension(relExtension).build());
+    samples.put(Fetch.class, Fetch.builder().from(sb.limit(10, left)).build());
     samples.put(
         Project.class,
         Project.builder()
             .from(sb.project(input -> Arrays.asList(sb.fieldReference(input, 0)), left))
-            .extension(relExtension)
             .build());
     samples.put(
         Aggregate.class,
@@ -195,14 +159,9 @@ public class RelSamples {
                     input -> sb.grouping(input, 0),
                     input -> Arrays.asList(sb.count(input, 0)),
                     left))
-            .extension(relExtension)
             .build());
     samples.put(
-        Sort.class,
-        Sort.builder()
-            .from(sb.sort(input -> sb.sortFields(input, 0), left))
-            .extension(relExtension)
-            .build());
+        Sort.class, Sort.builder().from(sb.sort(input -> sb.sortFields(input, 0), left)).build());
     samples.put(
         Join.class,
         Join.builder()
@@ -211,16 +170,9 @@ public class RelSamples {
                     inputs -> sb.equal(sb.fieldReference(inputs, 0), sb.fieldReference(inputs, 2)),
                     left,
                     right))
-            .extension(relExtension)
             .build());
-    samples.put(
-        Cross.class, Cross.builder().from(sb.cross(left, right)).extension(relExtension).build());
-    samples.put(
-        Set.class,
-        Set.builder()
-            .from(sb.set(Set.SetOp.UNION_ALL, left, right))
-            .extension(relExtension)
-            .build());
+    samples.put(Cross.class, Cross.builder().from(sb.cross(left, right)).build());
+    samples.put(Set.class, Set.builder().from(sb.set(Set.SetOp.UNION_ALL, left, right)).build());
     samples.put(
         Expand.class,
         Expand.builder()
@@ -232,7 +184,6 @@ public class RelSamples {
                                 .expression(sb.fieldReference(input, 0))
                                 .build()),
                     left))
-            .extension(relExtension)
             .build());
     // The anchor is set on the builder rather than layered on, because LateralJoin checks for it on
     // every copy. A consumer stamping its own anchor has to leave this one alone: the right input
@@ -244,24 +195,19 @@ public class RelSamples {
             .right(right)
             .joinType(Join.JoinType.INNER)
             .relAnchor(7)
-            .extension(relExtension)
             .build());
-    samples.put(ConsistentPartitionWindow.class, consistentPartitionWindow(relExtension));
+    samples.put(ConsistentPartitionWindow.class, consistentPartitionWindow());
 
     // Physical relations
     samples.put(
         TopN.class,
-        TopN.builder()
-            .from(sb.topN(input -> sb.sortFields(input, 0), 0, 10, left))
-            .extension(relExtension)
-            .build());
+        TopN.builder().from(sb.topN(input -> sb.sortFields(input, 0), 0, 10, left)).build());
     samples.put(
         HashJoin.class,
         HashJoin.builder()
             .from(
                 sb.hashJoin(
                     Arrays.asList(0), Arrays.asList(0), HashJoin.JoinType.INNER, left, right))
-            .extension(relExtension)
             .build());
     samples.put(
         MergeJoin.class,
@@ -269,7 +215,6 @@ public class RelSamples {
             .from(
                 sb.mergeJoin(
                     Arrays.asList(0), Arrays.asList(0), MergeJoin.JoinType.INNER, left, right))
-            .extension(relExtension)
             .build());
     samples.put(
         NestedLoopJoin.class,
@@ -280,26 +225,18 @@ public class RelSamples {
                     NestedLoopJoin.JoinType.INNER,
                     left,
                     right))
-            .extension(relExtension)
             .build());
     samples.put(
-        BroadcastExchange.class,
-        BroadcastExchange.builder().input(left).partitionCount(1).extension(relExtension).build());
+        BroadcastExchange.class, BroadcastExchange.builder().input(left).partitionCount(1).build());
     samples.put(
         RoundRobinExchange.class,
-        RoundRobinExchange.builder()
-            .input(left)
-            .exact(true)
-            .partitionCount(1)
-            .extension(relExtension)
-            .build());
+        RoundRobinExchange.builder().input(left).exact(true).partitionCount(1).build());
     samples.put(
         ScatterExchange.class,
         ScatterExchange.builder()
             .input(left)
             .addFields(sb.fieldReference(left, 0))
             .partitionCount(1)
-            .extension(relExtension)
             .build());
     samples.put(
         SingleBucketExchange.class,
@@ -307,7 +244,6 @@ public class RelSamples {
             .input(left)
             .expression(sb.fieldReference(left, 0))
             .partitionCount(1)
-            .extension(relExtension)
             .build());
     samples.put(
         MultiBucketExchange.class,
@@ -316,7 +252,6 @@ public class RelSamples {
             .expression(sb.fieldReference(left, 0))
             .constrainedToCount(true)
             .partitionCount(1)
-            .extension(relExtension)
             .build());
 
     // Write, DDL and update relations
@@ -331,7 +266,6 @@ public class RelSamples {
                     AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
                     AbstractWriteRel.OutputMode.NO_OUTPUT,
                     left))
-            .extension(relExtension)
             .build());
     samples.put(
         ExtensionWrite.class,
@@ -342,7 +276,6 @@ public class RelSamples {
             .operation(ExtensionWrite.WriteOp.INSERT)
             .createMode(ExtensionWrite.CreateMode.APPEND_IF_EXISTS)
             .outputMode(ExtensionWrite.OutputMode.NO_OUTPUT)
-            .extension(relExtension)
             .build());
     // CREATE VIEW rather than CREATE TABLE, so that this sample carries a view definition: writing
     // one is per-relation code and the DDL round-trip test only covers the extension variant.
@@ -355,7 +288,6 @@ public class RelSamples {
             .operation(NamedDdl.DdlOp.CREATE)
             .object(NamedDdl.DdlObject.VIEW)
             .viewDefinition(left)
-            .extension(relExtension)
             .build());
     samples.put(
         ExtensionDdl.class,
@@ -365,7 +297,6 @@ public class RelSamples {
             .tableDefaults(tableDefaults())
             .operation(ExtensionDdl.DdlOp.ALTER)
             .object(ExtensionDdl.DdlObject.TABLE)
-            .extension(relExtension)
             .build());
     samples.put(
         NamedUpdate.class,
@@ -381,7 +312,6 @@ public class RelSamples {
                             .build()),
                     sb.bool(true),
                     false))
-            .extension(relExtension)
             .build());
 
     // Extension relations. These do not implement HasExtension, so they carry no rel-level
@@ -397,12 +327,41 @@ public class RelSamples {
     return samples;
   }
 
+  /**
+   * The same samples, each carrying the {@link AdvancedExtension} slots its type supports: the
+   * common-level one on every {@link Rel}, and the rel-level one on {@link HasExtension}
+   * implementors.
+   *
+   * @param commonExtension the common-level extension every sample carries
+   * @param relExtension the rel-level extension every {@link HasExtension} sample carries
+   * @return the samples, keyed by relation type
+   */
+  public Map<Class<? extends Rel>, Rel> withAdvancedExtensions(
+      AdvancedExtension commonExtension, AdvancedExtension relExtension) {
+    Map<Class<? extends Rel>, Rel> stamped = new LinkedHashMap<>();
+    samples()
+        .forEach(
+            (relType, rel) -> {
+              // Both slots are layered on rather than set on each builder, so a relation added
+              // to the samples above carries them without per-relation code. The cast is what
+              // HasExtension#withExtension returning HasExtension costs, and never fails for
+              // the Immutables-backed samples here: their generated override returns the
+              // concrete relation.
+              Rel extended =
+                  rel instanceof HasExtension
+                      ? (Rel) ((HasExtension) rel).withExtension(Optional.of(relExtension))
+                      : rel;
+              stamped.put(relType, extended.withCommonExtension(Optional.of(commonExtension)));
+            });
+    return stamped;
+  }
+
   private Expression.StructLiteral tableDefaults() {
     return ExpressionCreator.struct(
         false, ExpressionCreator.i64(false, 1), ExpressionCreator.string(false, "one"));
   }
 
-  private Rel consistentPartitionWindow(Optional<AdvancedExtension> relExtension) {
+  private Rel consistentPartitionWindow() {
     SimpleExtension.WindowFunctionVariant lead =
         extensions.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
@@ -422,7 +381,6 @@ public class RelSamples {
                 .build())
         .addPartitionExpressions(sb.fieldReference(left, 1))
         .sorts(sb.sortFields(left, 0))
-        .extension(relExtension)
         .build();
   }
 }
