@@ -1,6 +1,7 @@
 package io.substrait.spark
 
 import io.substrait.spark.expression.{ToSparkExpression, ToSubstraitLiteral}
+import io.substrait.spark.utils.Util
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
@@ -10,9 +11,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.substrait.SparkTypeUtil
 import org.apache.spark.unsafe.types.UTF8String
 
-import io.substrait.expression.ExpressionCreator
-import io.substrait.spark.utils.Util
 import io.substrait.`type`.TypeCreator
+import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.util.EmptyVisitationContext
 
 import java.time.{Duration, Instant, LocalDate, LocalDateTime, Period}
@@ -241,50 +241,88 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
         .sameElements(originalValues))
   }
 
-  test("coarser Substrait precisions convert to Spark microseconds") {
-    // Spark has one microsecond-based representation, so a coarser precision fits it without loss.
-    // The value has to be scaled to microseconds: taken verbatim it would be wrong by that factor.
-    val cases = Seq(
-      (0, 1L, 1000000L),
-      (3, 1500L, 1500000L),
-      (6, 1500000L, 1500000L)
-    )
-    cases.foreach {
-      case (precision, value, expectedMicros) =>
-        val timestamp = ExpressionCreator.precisionTimestamp(false, value, precision)
-        assert(
-          timestamp
-            .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
-            .asInstanceOf[Literal]
-            .value === expectedMicros)
+  private def sparkLiteral(literal: SExpression.Literal): Literal =
+    literal.accept(toSparkExpression, EmptyVisitationContext.INSTANCE).asInstanceOf[Literal]
 
-        val timestampTz = ExpressionCreator.precisionTimestampTZ(false, value, precision)
-        assert(
-          timestampTz
-            .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
-            .asInstanceOf[Literal]
-            .value === expectedMicros)
-    }
-
-    // The interval carries its sub-second part separately, so only that part is scaled.
-    val interval = ExpressionCreator.intervalDay(false, 1, 2, 500, 3)
+  private def rejects(precision: Int)(convert: => Any): Unit =
     assert(
-      interval
-        .accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
-        .asInstanceOf[Literal]
-        .value === (Util.SECONDS_PER_DAY + 2) * Util.MICROS_PER_SECOND + 500000L)
+      intercept[UnsupportedOperationException](convert).getMessage
+        .contains(s"Unsupported precision: $precision"))
+
+  test("a temporal literal coarser than microseconds is rescaled") {
+    // Spark has one microsecond-based representation per type, so a coarser precision fits without
+    // loss — but only once the value is scaled. Taken verbatim it is wrong by exactly that factor.
+    Seq((0, 1L, 1000000L), (1, 15L, 1500000L), (3, 1500L, 1500000L), (6, 1500000L, 1500000L))
+      .foreach {
+        case (precision, value, micros) =>
+          val ntz = sparkLiteral(ExpressionCreator.precisionTimestamp(false, value, precision))
+          assert(ntz.value === micros)
+          assert(ntz.dataType === TimestampNTZType)
+
+          val tz = sparkLiteral(ExpressionCreator.precisionTimestampTZ(false, value, precision))
+          assert(tz.value === micros)
+          assert(tz.dataType === TimestampType)
+      }
   }
 
-  test("a precision finer than microseconds is still rejected") {
-    val nanos = ExpressionCreator.precisionTimestamp(false, 1L, 9)
-    val e = intercept[UnsupportedOperationException] {
-      nanos.accept(toSparkExpression, EmptyVisitationContext.INSTANCE)
+  test("an interval literal scales only its sub-second part") {
+    // days and seconds are whole units whatever the precision; only subseconds is expressed in
+    // 1e(-P) units, so it is the one field that moves.
+    Seq((0, 0L, 0L), (1, 5L, 500000L), (3, 500L, 500000L), (6, 500000L, 500000L)).foreach {
+      case (precision, subseconds, micros) =>
+        val interval =
+          sparkLiteral(ExpressionCreator.intervalDay(false, 1, 2, subseconds, precision))
+        assert(interval.value === (Util.SECONDS_PER_DAY + 2) * Util.MICROS_PER_SECOND + micros)
+        assert(interval.dataType === DayTimeIntervalType.DEFAULT)
     }
-    assert(e.getMessage.contains("Unsupported precision: 9"))
+  }
 
-    val nanoType = intercept[UnsupportedOperationException] {
-      ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestamp(9))
-    }
-    assert(nanoType.getMessage.contains("Unsupported precision: 9"))
+  test("a precision finer than microseconds is rejected for every carrier") {
+    rejects(9)(sparkLiteral(ExpressionCreator.precisionTimestamp(false, 1L, 9)))
+    rejects(9)(sparkLiteral(ExpressionCreator.precisionTimestampTZ(false, 1L, 9)))
+    rejects(9)(sparkLiteral(ExpressionCreator.intervalDay(false, 0, 0, 1L, 9)))
+
+    rejects(9)(ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestamp(9)))
+    rejects(9)(ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestampTZ(9)))
+    rejects(9)(ToSparkType.convert(TypeCreator.REQUIRED.intervalDay(9)))
+  }
+
+  test("a negative precision is rejected, naming the range rather than one end of it") {
+    // Reachable from the wire: the literal's precision is a plain int32 in algebra.proto and core
+    // does not bound it, so the message has to cover both directions of the range.
+    val e = intercept[UnsupportedOperationException](Util.toMicroseconds(1L, -1))
+    assert(e.getMessage.contains("Unsupported precision: -1"))
+    assert(e.getMessage.contains("between 0 and 6"))
+  }
+
+  test("rescaling reports overflow instead of wrapping") {
+    // The scaling multiply is not reachable from any instant Spark can represent, but a sentinel
+    // value wraps into a plausible one: Long.MaxValue at precision 0 used to come out as
+    // -1000000, one second before the epoch.
+    intercept[ArithmeticException](Util.toMicroseconds(Long.MaxValue, 0))
+    intercept[ArithmeticException](Util.toMicroseconds(Long.MinValue, 0))
+
+    // The same for the interval, whose day count is a whole-unit multiply of its own.
+    intercept[ArithmeticException](
+      sparkLiteral(ExpressionCreator.intervalDay(false, Int.MaxValue, 0, 0L, 6)))
+  }
+
+  test("a coarser precision on a type is rejected, since a type has no value to rescale") {
+    // A Spark type carries no precision of its own, so mapping precision_timestamp<3> onto
+    // TimestampNTZType would reinterpret millisecond counts as microsecond ones. Only the literal
+    // conversions relax this, because only they hold a value.
+    rejects(3)(ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestamp(3)))
+    rejects(3)(ToSparkType.convert(TypeCreator.REQUIRED.precisionTimestampTZ(3)))
+    rejects(3)(ToSparkType.convert(TypeCreator.REQUIRED.intervalDay(3)))
+
+    // The path that makes this matter: a cast to a coarser precision becomes a cast between two
+    // TimestampNTZTypes, which truncates nothing, so the value would keep its finer resolution.
+    val cast = SExpression.Cast
+      .builder()
+      .input(ExpressionCreator.precisionTimestamp(false, 1234567L, 6))
+      .`type`(TypeCreator.REQUIRED.precisionTimestamp(3))
+      .failureBehavior(SExpression.FailureBehavior.THROW_EXCEPTION)
+      .build()
+    rejects(3)(cast.accept(toSparkExpression, EmptyVisitationContext.INSTANCE))
   }
 }

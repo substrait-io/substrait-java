@@ -46,7 +46,7 @@ class SparkDialectParseTest {
             .filter(t -> t.type() == TypeKind.PRECISION_TIMESTAMP)
             .findFirst()
             .orElseThrow();
-    assertEquals(9, precisionTimestamp.maxPrecision().orElse(-1));
+    assertEquals(6, precisionTimestamp.maxPrecision().orElse(-1));
   }
 
   @Test

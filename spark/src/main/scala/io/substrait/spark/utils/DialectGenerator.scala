@@ -129,18 +129,21 @@ class DialectGenerator {
       SupportedType("FIXED_CHAR", TypeMetadata("StringType", true)),
       SupportedType("BINARY", TypeMetadata("BinaryType", true)),
       SupportedType("BOOL", TypeMetadata("BooleanType", true)),
+      // Spark stores these as microseconds and carries no precision on the type itself, so the
+      // maximum it supports is the microsecond one. Reading this from Util keeps the declaration
+      // and the conversion guard from drifting apart.
       SupportedType(
         "PRECISION_TIMESTAMP",
         TypeMetadata("TimestampNTZType", true),
-        max_precision = Some(9)),
+        max_precision = Some(Util.MICROSECOND_PRECISION)),
       SupportedType(
         "PRECISION_TIMESTAMP_TZ",
         TypeMetadata("TimestampType", true),
-        max_precision = Some(9)),
+        max_precision = Some(Util.MICROSECOND_PRECISION)),
       SupportedType(
         "INTERVAL_DAY",
         TypeMetadata("DayTimeIntervalType", true),
-        max_precision = Some(9)),
+        max_precision = Some(Util.MICROSECOND_PRECISION)),
       SupportedType("INTERVAL_YEAR", TypeMetadata("YearMonthIntervalType", true)),
       SupportedType("LIST", TypeMetadata("ArrayType", true)),
       SupportedType("MAP", TypeMetadata("MapType", true)),
