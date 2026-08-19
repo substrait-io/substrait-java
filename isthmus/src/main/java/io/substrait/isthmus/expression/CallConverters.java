@@ -66,7 +66,10 @@ public class CallConverters {
           RexNode operand = call.getOperands().get(0);
           if (operand instanceof RexLiteral && !((RexLiteral) operand).isNull()) {
             RexLiteral literal = (RexLiteral) operand;
-            if (type.equalsIgnoringNullability(typeConverter.toSubstrait(literal.getType()))) {
+            Type literalType = typeConverter.toSubstrait(literal.getType());
+            // Nullability only: an exact no-op cast is not this representation and stays an
+            // Expression.Cast, so a plan that carries one keeps carrying it.
+            if (!type.equals(literalType) && type.equalsIgnoringNullability(literalType)) {
               return literalConverter.convert(literal, call.getType());
             }
           }

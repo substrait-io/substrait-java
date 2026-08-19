@@ -87,6 +87,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 
@@ -815,10 +816,16 @@ public class SubstraitRelNodeConverter
           RexNode rexNode = literal.accept(expressionRexConverter, context);
           // A nullable literal converts as CAST(literal AS nullable type). LogicalValues tuples
           // hold bare literals, and the field's nullability is already declared in the row type,
-          // so unwrap the cast here.
-          if (rexNode.isA(SqlKind.CAST)
-              && ((RexCall) rexNode).getOperands().get(0) instanceof RexLiteral) {
-            rexNode = ((RexCall) rexNode).getOperands().get(0);
+          // so unwrap that cast here. Only that one: a cast that changes anything else is doing
+          // work, and dropping it would leave the literal under a row type that does not describe
+          // it. Such a tuple is malformed whatever happens to the cast, and the cast below is what
+          // reports it.
+          if (rexNode.isA(SqlKind.CAST)) {
+            RexNode castOperand = ((RexCall) rexNode).getOperands().get(0);
+            if (castOperand instanceof RexLiteral
+                && SqlTypeUtil.equalSansNullability(rexNode.getType(), castOperand.getType())) {
+              rexNode = castOperand;
+            }
           }
           tupleBuilder.add((RexLiteral) rexNode);
         }
