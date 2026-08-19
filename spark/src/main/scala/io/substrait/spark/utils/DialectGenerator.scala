@@ -1,48 +1,35 @@
 package io.substrait.spark.utils
 
-import io.substrait.spark.SparkExtension.{COLLECTION, SparkScalarFunctions}
+import io.substrait.spark.SparkExtension
 import io.substrait.spark.expression.FunctionMappings.{AGGREGATE_SIGS, SCALAR_SIGS, WINDOW_SIGS}
 import io.substrait.spark.expression.Sig
 
 import org.apache.spark.sql.catalyst.expressions.{BinaryOperator, Expression, Literal}
 import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, DoubleType, FloatType, IntegerType, LongType, ShortType, TimestampNTZType, TimestampType, YearMonthIntervalType}
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
+import io.substrait.dialect.{DdlWriteType, Dialect, DialectFunction, ExpressionKind, JoinType, Notation, ReadType, RelationKind, SetOperation, SubqueryType, SupportedExpression, SupportedRelation, SupportedType, SystemFunctionMetadata, SystemTypeMetadata, TypeKind}
 import io.substrait.extension.SimpleExtension
 
 import java.io.{File, FileWriter, InputStream, OutputStreamWriter}
 
+import scala.collection.immutable.SortedMap
 import scala.jdk.CollectionConverters._
 
-case class Dialect(
-    name: String,
-    supported_types: Seq[SupportedType],
-    supported_expressions: Seq[Any],
-    supported_relations: Seq[Any],
-    dependencies: Map[String, String],
-    supported_scalar_functions: Seq[SupportedFunction],
-    supported_aggregate_functions: Seq[SupportedFunction],
-    supported_window_functions: Seq[SupportedFunction])
+/** Exists so `dependencies` can be derived from exactly the extensions the functions reference. */
+private case class SourcedFunction(urn: String, function: DialectFunction)
 
-// Types section
-case class TypeMetadata(name: String, supported_as_column: Boolean)
-case class SupportedType(
-    `type`: String,
-    system_metadata: TypeMetadata,
-    max_precision: Option[Integer] = None)
+/**
+ * Generates the Substrait dialect describing what this integration supports.
+ *
+ * The function collections are the ones the runtime converters bind against: a dialect derived from
+ * a wider collection would advertise functions that then fail to bind.
+ */
+class DialectGenerator(
+    scalarFunctions: Seq[SimpleExtension.ScalarFunctionVariant],
+    aggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant],
+    windowFunctions: Seq[SimpleExtension.WindowFunctionVariant]) {
 
-// Functions section
-case class FunctionMetadata(name: String, notation: String)
-case class SupportedFunction(
-    source: String,
-    name: String,
-    system_metadata: FunctionMetadata,
-    supported_impls: Seq[String])
-
-class DialectGenerator {
   // The dialect schema ships on the classpath in the substrait-packaging extensions artifact.
   val schemaResource = "/substrait/text/dialect_schema.yaml"
 
@@ -54,53 +41,32 @@ class DialectGenerator {
     stream
   }
 
-  private val sourceURNs = Map(
-    "extension:io.substrait:functions_aggregate_approx" -> "aggregate_approx",
-    "extension:io.substrait:functions_aggregate_generic" -> "aggregate_generic",
-    "extension:io.substrait:functions_arithmetic" -> "arithmetic",
-    "extension:io.substrait:functions_arithmetic_decimal" -> "arithmetic_decimal",
-    "extension:io.substrait:functions_boolean" -> "boolean",
-    "extension:io.substrait:functions_comparison" -> "comparison",
-    "extension:io.substrait:functions_datetime" -> "datetime",
-    "extension:io.substrait:functions_logarithmic" -> "logarithmic",
-    "extension:io.substrait:functions_rounding" -> "rounding",
-    "extension:io.substrait:functions_rounding_decimal" -> "rounding_decimal",
-    "extension:io.substrait:functions_string" -> "string",
-    "extension:substrait:spark" -> "spark"
-  )
-
   def generate(): Dialect = {
-    val types = supportedTypes()
-    val expressions = supportedExpressions()
-    val relations = supportedRelations()
-    val scalars = SCALAR_SIGS.flatMap(supportedFunctions(SparkScalarFunctions))
-    val aggregates =
-      AGGREGATE_SIGS
-        .flatMap(supportedFunctions(COLLECTION.aggregateFunctions().asScala.toSeq))
-    val windows =
-      WINDOW_SIGS
-        .flatMap(supportedFunctions(COLLECTION.windowFunctions().asScala.toSeq))
+    val scalars = SCALAR_SIGS.flatMap(supportedFunctions(scalarFunctions))
+    val aggregates = AGGREGATE_SIGS.flatMap(supportedFunctions(aggregateFunctions))
+    val windows = WINDOW_SIGS.flatMap(supportedFunctions(windowFunctions))
 
-    Dialect(
-      "Spark Dialect",
-      types,
-      expressions,
-      relations,
-      sourceURNs.map(_.swap),
-      scalars.sortBy(f => (f.source, f.name)),
-      aggregates.sortBy(f => (f.source, f.name)),
-      windows.sortBy(f => (f.source, f.name))
-    )
+    val builder = Dialect
+      .builder()
+      .name("Spark Dialect")
+      .addAllSupportedTypes(supportedTypes().asJava)
+      .addAllSupportedExpressions(supportedExpressions().asJava)
+      .addAllSupportedRelations(supportedRelations().asJava)
+      .addAllSupportedScalarFunctions(sortedFunctions(scalars).asJava)
+      .addAllSupportedAggregateFunctions(sortedFunctions(aggregates).asJava)
+      .addAllSupportedWindowFunctions(sortedFunctions(windows).asJava)
+
+    // The builder keeps insertion order, so feeding it a SortedMap emits the dependencies in
+    // alias order rather than in an order that depends on how a Scala version hashes Strings.
+    dependencies(scalars ++ aggregates ++ windows).foreach {
+      case (alias, urn) => builder.putDependencies(alias, urn)
+    }
+
+    builder.build()
   }
 
   def generateYaml(): String = {
-    // Generate the dialect YAML
-    val mapper = YAMLMapper
-      .builder()
-      .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_ABSENT)
-      .addModule(DefaultScalaModule)
-      .build()
-    val yaml = mapper.writeValueAsString(generate())
+    val yaml = Dialect.toYaml(generate())
 
     // Validate against the substrait dialect schema
     val jsonSchemaFactory = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
@@ -114,96 +80,151 @@ class DialectGenerator {
     yaml
   }
 
+  /**
+   * The alias a dialect function's `source` refers to. Derived rather than looked up, so an
+   * extension the generator has not seen before cannot produce an empty `source` that dangles
+   * against the `dependencies` block.
+   */
+  private[spark] def dependencyAlias(urn: String): String =
+    urn.substring(urn.lastIndexOf(':') + 1).stripPrefix("functions_")
+
+  /**
+   * The `dependencies` block, keyed by alias and built from exactly the extensions the emitted
+   * functions reference, so no unreferenced alias is published. A `source` on anything other than a
+   * function -- a `USER_DEFINED` supported type is the only other place the schema allows one --
+   * would have to be folded in here too.
+   */
+  private def dependencies(functions: Seq[SourcedFunction]): SortedMap[String, String] =
+    functions.map(_.urn).distinct.foldLeft(SortedMap.empty[String, String]) {
+      (deps, urn) =>
+        val alias = dependencyAlias(urn)
+        deps.get(alias) match {
+          case Some(other) if other != urn =>
+            throw new IllegalStateException(
+              s"Dependency alias '$alias' is claimed by both '$other' and '$urn'")
+          case _ => deps + (alias -> urn)
+        }
+    }
+
+  // Ordered by source and name, with the implementations as a tie-breaker, so that the section does
+  // not inherit the hash order the URN groups were collected in. (source, name) is unique within a
+  // Sig; a tie needs two Sigs of the same name matching the same extension, where the remaining
+  // order is the SIGS list's.
+  private def sortedFunctions(functions: Seq[SourcedFunction]): Seq[DialectFunction] =
+    functions
+      .map(_.function)
+      .sortBy(f => (f.source(), f.name(), f.supportedImpls().asScala.mkString(",")))
+
   private def supportedTypes(): Seq[SupportedType] = {
     Seq(
-      SupportedType("I8", TypeMetadata("ByteType", true)),
-      SupportedType("I16", TypeMetadata("ShortType", true)),
-      SupportedType("I32", TypeMetadata("IntegerType", true)),
-      SupportedType("I64", TypeMetadata("LongType", true)),
-      SupportedType("FP32", TypeMetadata("FloatType", true)),
-      SupportedType("FP64", TypeMetadata("DoubleType", true)),
-      SupportedType("DECIMAL", TypeMetadata("DecimalType", true)),
-      SupportedType("DATE", TypeMetadata("DateType", true)),
-      SupportedType("STRING", TypeMetadata("StringType", true)),
-      SupportedType("VARCHAR", TypeMetadata("StringType", true)),
-      SupportedType("FIXED_CHAR", TypeMetadata("StringType", true)),
-      SupportedType("BINARY", TypeMetadata("BinaryType", true)),
-      SupportedType("BOOL", TypeMetadata("BooleanType", true)),
+      supportedType(TypeKind.I8, "ByteType"),
+      supportedType(TypeKind.I16, "ShortType"),
+      supportedType(TypeKind.I32, "IntegerType"),
+      supportedType(TypeKind.I64, "LongType"),
+      supportedType(TypeKind.FP32, "FloatType"),
+      supportedType(TypeKind.FP64, "DoubleType"),
+      supportedType(TypeKind.DECIMAL, "DecimalType"),
+      supportedType(TypeKind.DATE, "DateType"),
+      supportedType(TypeKind.STRING, "StringType"),
+      supportedType(TypeKind.VARCHAR, "StringType"),
+      supportedType(TypeKind.FIXED_CHAR, "StringType"),
+      supportedType(TypeKind.BINARY, "BinaryType"),
+      supportedType(TypeKind.BOOL, "BooleanType"),
       // Spark stores these as microseconds and carries no precision on the type itself, so the
       // maximum it supports is the microsecond one. Reading this from Util keeps the declaration
       // and the conversion guard from drifting apart.
-      SupportedType(
-        "PRECISION_TIMESTAMP",
-        TypeMetadata("TimestampNTZType", true),
-        max_precision = Some(Util.MICROSECOND_PRECISION)),
-      SupportedType(
-        "PRECISION_TIMESTAMP_TZ",
-        TypeMetadata("TimestampType", true),
-        max_precision = Some(Util.MICROSECOND_PRECISION)),
-      SupportedType(
-        "INTERVAL_DAY",
-        TypeMetadata("DayTimeIntervalType", true),
-        max_precision = Some(Util.MICROSECOND_PRECISION)),
-      SupportedType("INTERVAL_YEAR", TypeMetadata("YearMonthIntervalType", true)),
-      SupportedType("LIST", TypeMetadata("ArrayType", true)),
-      SupportedType("MAP", TypeMetadata("MapType", true)),
-      SupportedType("STRUCT", TypeMetadata("StructType", true))
+      supportedType(
+        TypeKind.PRECISION_TIMESTAMP,
+        "TimestampNTZType",
+        Some(Util.MICROSECOND_PRECISION)),
+      supportedType(
+        TypeKind.PRECISION_TIMESTAMP_TZ,
+        "TimestampType",
+        Some(Util.MICROSECOND_PRECISION)),
+      supportedType(TypeKind.INTERVAL_DAY, "DayTimeIntervalType", Some(Util.MICROSECOND_PRECISION)),
+      supportedType(TypeKind.INTERVAL_YEAR, "YearMonthIntervalType"),
+      supportedType(TypeKind.LIST, "ArrayType"),
+      supportedType(TypeKind.MAP, "MapType"),
+      supportedType(TypeKind.STRUCT, "StructType")
     )
   }
 
-  private def supportedExpressions(): Seq[Any] = {
+  private def supportedType(
+      kind: TypeKind,
+      sparkType: String,
+      maxPrecision: Option[Int] = None): SupportedType = {
+    val builder = SupportedType
+      .builder()
+      .`type`(kind)
+      .systemMetadata(SystemTypeMetadata.builder().name(sparkType).supportedAsColumn(true).build())
+    maxPrecision.foreach(precision => builder.maxPrecision(precision))
+    builder.build()
+  }
+
+  private def supportedExpressions(): Seq[SupportedExpression] = {
     Seq(
-      "LITERAL",
-      "SELECTION",
-      "SCALAR_FUNCTION",
-      "IF_THEN",
-      "SINGULAR_OR_LIST",
-      "CAST",
-      Map(
-        "expression" -> "SUBQUERY",
-        "subquery_types" -> Seq("SCALAR", "IN_PREDICATE")
-      )
+      SupportedExpression.of(ExpressionKind.LITERAL),
+      SupportedExpression.of(ExpressionKind.SELECTION),
+      SupportedExpression.of(ExpressionKind.SCALAR_FUNCTION),
+      SupportedExpression.of(ExpressionKind.IF_THEN),
+      SupportedExpression.of(ExpressionKind.SINGULAR_OR_LIST),
+      SupportedExpression.of(ExpressionKind.CAST),
+      SupportedExpression
+        .builder()
+        .expression(ExpressionKind.SUBQUERY)
+        .addSubqueryTypes(SubqueryType.SCALAR, SubqueryType.IN_PREDICATE)
+        .build()
     )
   }
 
-  private def supportedRelations(): Seq[Any] = {
+  private def supportedRelations(): Seq[SupportedRelation] = {
     Seq(
-      "FILTER",
-      "FETCH",
-      "AGGREGATE",
-      "SORT",
-      "PROJECT",
-      "CROSS",
-      "UPDATE",
-      "CONSISTENT_PARTITION_WINDOW",
-      "EXPAND",
-      "WRITE",
-      Map(
-        "relation" -> "READ",
-        "read_types" -> Seq("VIRTUAL_TABLE", "LOCAL_FILES", "NAMED_TABLE")
-      ),
-      Map(
-        "relation" -> "DDL",
-        "write_types" -> Seq("NAMED_OBJECT")
-      ),
-      Map(
-        "relation" -> "JOIN",
-        "join_types" -> Seq("INNER", "OUTER", "LEFT", "RIGHT", "LEFT_SEMI", "LEFT_ANTI")
-      ),
-      Map(
-        "relation" -> "SET",
-        "operations" -> Seq("UNION_ALL")
-      )
+      SupportedRelation.of(RelationKind.FILTER),
+      SupportedRelation.of(RelationKind.FETCH),
+      SupportedRelation.of(RelationKind.AGGREGATE),
+      SupportedRelation.of(RelationKind.SORT),
+      SupportedRelation.of(RelationKind.PROJECT),
+      SupportedRelation.of(RelationKind.CROSS),
+      SupportedRelation.of(RelationKind.UPDATE),
+      SupportedRelation.of(RelationKind.CONSISTENT_PARTITION_WINDOW),
+      SupportedRelation.of(RelationKind.EXPAND),
+      SupportedRelation.of(RelationKind.WRITE),
+      SupportedRelation
+        .builder()
+        .relation(RelationKind.READ)
+        .addReadTypes(ReadType.VIRTUAL_TABLE, ReadType.LOCAL_FILES, ReadType.NAMED_TABLE)
+        .build(),
+      SupportedRelation
+        .builder()
+        .relation(RelationKind.DDL)
+        .addDdlWriteTypes(DdlWriteType.NAMED_OBJECT)
+        .build(),
+      SupportedRelation
+        .builder()
+        .relation(RelationKind.JOIN)
+        .addJoinTypes(
+          JoinType.INNER,
+          JoinType.OUTER,
+          JoinType.LEFT,
+          JoinType.RIGHT,
+          JoinType.LEFT_SEMI,
+          JoinType.LEFT_ANTI)
+        .build(),
+      SupportedRelation
+        .builder()
+        .relation(RelationKind.SET)
+        .addOperations(SetOperation.UNION_ALL)
+        .build()
     )
   }
 
   // The supported functions section is generated from the existing FunctionMappings code.
   private def supportedFunctions(functions: Seq[SimpleExtension.Function])(
-      sig: Sig): Seq[SupportedFunction] = {
-    val inst = if (classOf[Expression].isAssignableFrom(sig.expClass)) {
+      sig: Sig): Seq[SourcedFunction] = {
+    val expr = if (classOf[Expression].isAssignableFrom(sig.expClass)) {
       val cons = sig.expClass.getDeclaredConstructors.minBy(c => c.getParameterCount)
       val i = cons.getParameterCount
-      i match {
+      val inst = i match {
         case 0 => cons.newInstance()
         case 1 => cons.newInstance(null)
         case 2 => cons.newInstance(null, null)
@@ -212,67 +233,68 @@ class DialectGenerator {
           throw new UnsupportedOperationException(
             s"${sig.expClass} constructor requires $i parameters")
       }
+      inst.asInstanceOf[Expression]
     } else {
       throw new UnsupportedOperationException(s"${sig.expClass} is not an Expression")
     }
 
-    val sqlName = inst match {
+    val sqlName = expr match {
       case bo: BinaryOperator => bo.sqlOperator
-      case e: Expression => e.prettyName
-      case _ => "NO NAME"
+      case e => e.prettyName
     }
 
-    val notation = inst match {
-      case _: BinaryOperator => "INFIX"
-      case _ => "FUNCTION"
+    val notation = expr match {
+      case _: BinaryOperator => Notation.INFIX
+      case _ => Notation.FUNCTION
     }
 
     // create a map of function parameter variants grouped by URN
     val variants = functions.filter(_.name() == sig.name)
-    val groups: Map[String, Seq[String]] = inst match {
-      case expr: Expression =>
-        variants
-          .map {
-            v =>
-              {
-                val signature = v.key().split(":", 2).apply(1)
-                // generate sample arguments for this variant
-                val args: Seq[Option[Literal]] = if (signature.isEmpty) {
-                  Seq.empty
-                } else {
-                  signature.split("_").toSeq.map(argValue)
-                }
-                // A variant is only supported if every argument type has a Spark
-                // equivalent. Probing an unmappable type with a placeholder literal
-                // would let permissive type checks pass and report support that
-                // Spark does not have.
-                if (
-                  args.forall(_.isDefined) && expr.children != null
-                  && expr.children.size == args.size
-                  && expr.withNewChildren(args.flatten).checkInputDataTypes().isSuccess
-                ) {
-                  (v.urn, signature)
-                } else {
-                  ("FAILED", signature)
-                }
+    val groups: Map[String, Seq[String]] =
+      variants
+        .map {
+          v =>
+            {
+              val signature = v.key().split(":", 2).apply(1)
+              // generate sample arguments for this variant
+              val args: Seq[Option[Literal]] = if (signature.isEmpty) {
+                Seq.empty
+              } else {
+                signature.split("_").toSeq.map(argValue)
               }
-          }
-          .groupBy(_._1) // group by URN
-          .filter(_._1 != "FAILED")
-          .view
-          .map { case (k, v) => (k, v.map(_._2)) }
-          .toMap
-      case _ =>
-        println(s"NO INPUT TYPES")
-        Map.empty
-    }
+              // A variant is only supported if every argument type has a Spark
+              // equivalent. Probing an unmappable type with a placeholder literal
+              // would let permissive type checks pass and report support that
+              // Spark does not have.
+              if (
+                args.forall(_.isDefined) && expr.children != null
+                && expr.children.size == args.size
+                && expr.withNewChildren(args.flatten).checkInputDataTypes().isSuccess
+              ) {
+                (v.urn, signature)
+              } else {
+                ("FAILED", signature)
+              }
+            }
+        }
+        .groupBy(_._1) // group by URN
+        .filter(_._1 != "FAILED")
+        .view
+        .map { case (k, v) => (k, v.map(_._2)) }
+        .toMap
     groups.map {
       case (urn, sigs) =>
-        SupportedFunction(
-          sourceURNs.getOrElse(urn, ""),
-          sig.name,
-          FunctionMetadata(sqlName, notation),
-          sigs.sorted)
+        SourcedFunction(
+          urn,
+          DialectFunction
+            .builder()
+            .source(dependencyAlias(urn))
+            .name(sig.name)
+            .systemMetadata(
+              SystemFunctionMetadata.builder().name(sqlName).notation(notation).build())
+            .addAllSupportedImpls(sigs.sorted.asJava)
+            .build()
+        )
     }.toSeq
   }
 
@@ -305,7 +327,12 @@ class DialectGenerator {
   }
 }
 
-object DialectGenerator extends DialectGenerator {
+object DialectGenerator
+  extends DialectGenerator(
+    SparkExtension.SparkScalarFunctions,
+    SparkExtension.SparkAggregateFunctions,
+    SparkExtension.SparkWindowFunctions) {
+
   def main(args: Array[String]) = {
     val yaml = generateYaml()
 

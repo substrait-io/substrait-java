@@ -162,6 +162,9 @@ tasks {
     dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
 
+    // DialectSuite reads the published dialect, so a change to it has to invalidate the tests.
+    inputs.file("../spark_dialect.yaml").withPropertyName("publishedDialect")
+
     // Set system properties for variant identification
     systemProperty("spark.version", sparkVersion)
     systemProperty("scala.version", scalaVersion)
