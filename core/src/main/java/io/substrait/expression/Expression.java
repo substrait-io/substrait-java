@@ -443,7 +443,7 @@ public interface Expression extends FunctionArg {
 
     @Override
     public Type getType() {
-      return Type.withNullability(nullable()).precisionTimestamp(precision());
+      return Type.withNullability(nullable()).precisionTime(precision());
     }
 
     /**
