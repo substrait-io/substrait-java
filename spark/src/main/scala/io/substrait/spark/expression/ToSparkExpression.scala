@@ -273,8 +273,8 @@ class ToSparkExpression(
 
     expr.declaration().name() match {
       // Special handling for multi-variate AND/OR operators
-      case "and" if args.size > 2 => args.reduceLeft { (left, right) => And(left, right) }
-      case "or" if args.size > 2 => args.reduceLeft { (left, right) => Or(left, right) }
+      case "and" if args.size > 2 => args.reduceLeft((left, right) => And(left, right))
+      case "or" if args.size > 2 => args.reduceLeft((left, right) => Or(left, right))
       case _ =>
         scalarFunctionConverter
           .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)

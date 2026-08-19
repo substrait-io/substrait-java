@@ -713,7 +713,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .producer("substrait-spark")
           .build())
       .executionBehavior(
-        ImmutableExecutionBehavior.builder()
+        ImmutableExecutionBehavior
+          .builder()
           .variableEvaluationMode(VariableEvaluationMode.PER_PLAN)
           .build())
       .roots(
