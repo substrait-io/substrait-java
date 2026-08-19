@@ -189,8 +189,11 @@ CI runs, and a `:core` change can break the visitor implementors in the other mo
 ## Conventions & workflow
 
 - **Keep PR descriptions high-signal.** The PR title and body together become the
-  squash-merge commit message that `semantic-release` uses to build `CHANGELOG.md` — the body
-  is changelog input, not a review scratchpad. Follow
+  squash-merge commit message, which `semantic-release` parses in full — but only the
+  **title** is published, as the `CHANGELOG.md` entry and in the release notes. The body
+  reaches neither, with one exception: a `BREAKING CHANGE:` footer, whose note is emitted
+  verbatim (see below). It is still the commit body that `git log` and every reviewer reads,
+  and still where that footer is found, so it is not a review scratchpad. Follow
   [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-requests) rather than
   [`.github/pull_request_template.md`](.github/pull_request_template.md), which a PR opened
   with an explicitly supplied body never shows you. Beyond forming a valid conventional
