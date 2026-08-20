@@ -32,14 +32,14 @@ public final class AggregateConversion {
      *
      * <p>Type derivation is fail-closed: a function whose return expression the derivation does not
      * yet support is rejected rather than assumed valid, so this mode is not adoptable for plans
-     * that use such functions. On the standard extension catalog the unsupported shapes are the
-     * parameterized type classes other than decimal — {@code varchar<L1>}, {@code fixedchar<L1>},
-     * {@code precision_time<P>}, {@code precision_timestamp<P>}, {@code precision_timestamp_tz<P>},
-     * {@code interval_day<P>}, {@code list<anyN>}, parameterized structs — and multi-line return
-     * programs; for example {@code concat}, {@code concat_ws}, {@code assume_timezone} and the
-     * {@code strptime_*} family are rejected today. {@code quantile}'s output type cannot be
+     * that use such functions. On the standard extension catalog what remains unsupported is a
+     * return of {@code list<anyN>} ({@code filter}, {@code sort}, {@code transform}, {@code
+     * string_split}, {@code regexp_string_split}, {@code regexp_match_substring_all}) and a
+     * multi-line return program ({@code add}, {@code subtract}, {@code multiply}, {@code divide},
+     * {@code modulus}, {@code ceil}, {@code floor}, {@code round}, the {@code bitwise_*} family,
+     * {@code assume_timezone} and {@code strptime_*}). {@code quantile}'s output type cannot be
      * derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
-     * carries no identity to bind (spec v0.99.0).
+     * carries no identity to bind (spec v0.101.0).
      */
     EXTENSION_DECLARATION
   }

@@ -23,15 +23,21 @@ import java.util.OptionalInt;
  * UnsupportedOperationException}. The evaluator never falls back to a caller-supplied type: an
  * unresolved expression is an error, not a default.
  *
- * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}) and parameterized
- * decimals ({@code DECIMAL<P,S>}). What actually fails on the standard extension catalog is the
- * other parameterized type classes — {@code varchar<L1>}, {@code fixedchar<L1>}, {@code
- * precision_time<P>}, {@code precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code
- * interval_day<P>}, {@code list<anyN>}, parameterized structs — and multi-line return programs;
- * {@code concat}, {@code concat_ws}, {@code assume_timezone} and the {@code strptime_*} family are
- * all rejected today. Among the standard aggregates, {@code quantile} is the one whose output type
- * cannot be derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
- * carries no identity to bind (spec v0.99.0).
+ * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}), and the parameterized
+ * type classes whose parameter is an integer to substitute: {@code DECIMAL<P,S>}, {@code
+ * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
+ * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
+ * interval_compound<P>}. The last two of those are supported for symmetry; no standard extension
+ * declares them parameterized today.
+ *
+ * <p>What still fails on the standard extension catalog is a return of {@code list<anyN>}, whose
+ * parameter is a type to evaluate rather than an integer to substitute ({@code filter}, {@code
+ * sort}, {@code transform}, {@code string_split}, {@code regexp_string_split}, {@code
+ * regexp_match_substring_all}), and a multi-line return program ({@code add}, {@code subtract},
+ * {@code multiply}, {@code divide}, {@code modulus}, {@code ceil}, {@code floor}, {@code round},
+ * the {@code bitwise_*} family, {@code assume_timezone} and {@code strptime_*}). Among the standard
+ * aggregates, {@code quantile} cannot be derived at all: its declared return {@code LIST?<any>}
+ * uses a plain {@code any}, which carries no identity to bind (spec v0.101.0).
  */
 public class TypeExpressionEvaluator {
 
@@ -173,6 +179,53 @@ public class TypeExpressionEvaluator {
         Type.Decimal actualDecimal = (Type.Decimal) actual;
         bindInteger(declaredDecimal.precision().value(), actualDecimal.precision(), bindNames);
         bindInteger(declaredDecimal.scale().value(), actualDecimal.scale(), bindNames);
+      } else if (declared instanceof ParameterizedType.FixedChar
+          && actual instanceof Type.FixedChar) {
+        bindInteger(
+            ((ParameterizedType.FixedChar) declared).length().value(),
+            ((Type.FixedChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.VarChar && actual instanceof Type.VarChar) {
+        bindInteger(
+            ((ParameterizedType.VarChar) declared).length().value(),
+            ((Type.VarChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.FixedBinary
+          && actual instanceof Type.FixedBinary) {
+        bindInteger(
+            ((ParameterizedType.FixedBinary) declared).length().value(),
+            ((Type.FixedBinary) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTime
+          && actual instanceof Type.PrecisionTime) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTime) declared).precision().value(),
+            ((Type.PrecisionTime) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestamp
+          && actual instanceof Type.PrecisionTimestamp) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestamp) declared).precision().value(),
+            ((Type.PrecisionTimestamp) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestampTZ
+          && actual instanceof Type.PrecisionTimestampTZ) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestampTZ) declared).precision().value(),
+            ((Type.PrecisionTimestampTZ) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalDay
+          && actual instanceof Type.IntervalDay) {
+        bindInteger(
+            ((ParameterizedType.IntervalDay) declared).precision().value(),
+            ((Type.IntervalDay) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalCompound
+          && actual instanceof Type.IntervalCompound) {
+        bindInteger(
+            ((ParameterizedType.IntervalCompound) declared).precision().value(),
+            ((Type.IntervalCompound) actual).precision(),
+            bindNames);
       }
     }
 
@@ -243,6 +296,53 @@ public class TypeExpressionEvaluator {
       int precision = resolveInteger(decimal.precision().value());
       int scale = resolveInteger(decimal.scale().value());
       return TypeCreator.of(decimal.nullable()).decimal(precision, scale);
+    }
+
+    @Override
+    public Type visit(ParameterizedType.FixedChar fixedChar) {
+      return TypeCreator.of(fixedChar.nullable())
+          .fixedChar(resolveInteger(fixedChar.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.VarChar varChar) {
+      return TypeCreator.of(varChar.nullable()).varChar(resolveInteger(varChar.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.FixedBinary fixedBinary) {
+      return TypeCreator.of(fixedBinary.nullable())
+          .fixedBinary(resolveInteger(fixedBinary.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTime precisionTime) {
+      return TypeCreator.of(precisionTime.nullable())
+          .precisionTime(resolveInteger(precisionTime.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestamp precisionTimestamp) {
+      return TypeCreator.of(precisionTimestamp.nullable())
+          .precisionTimestamp(resolveInteger(precisionTimestamp.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestampTZ precisionTimestampTZ) {
+      return TypeCreator.of(precisionTimestampTZ.nullable())
+          .precisionTimestampTZ(resolveInteger(precisionTimestampTZ.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalDay intervalDay) {
+      return TypeCreator.of(intervalDay.nullable())
+          .intervalDay(resolveInteger(intervalDay.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalCompound intervalCompound) {
+      return TypeCreator.of(intervalCompound.nullable())
+          .intervalCompound(resolveInteger(intervalCompound.precision().value()));
     }
 
     @Override
