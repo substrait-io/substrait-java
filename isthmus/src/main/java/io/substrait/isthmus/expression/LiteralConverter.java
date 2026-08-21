@@ -197,7 +197,7 @@ public class LiteralConverter {
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          int precision = resultType.getPrecision();
+          int precision = TypeConverter.precisionOf(resultType);
           return ExpressionCreator.precisionTime(
               nullable, subsecondsOf(localTime.toNanoOfDay(), precision), precision);
         }
@@ -207,7 +207,7 @@ public class LiteralConverter {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
           LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          int precision = resultType.getPrecision();
+          int precision = TypeConverter.precisionOf(resultType);
           long value =
               localDateTime.toEpochSecond(ZoneOffset.UTC) * LongMath.pow(10, precision)
                   + subsecondsOf(localDateTime.getNano(), precision);

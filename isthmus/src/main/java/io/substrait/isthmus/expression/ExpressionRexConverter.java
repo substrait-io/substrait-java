@@ -1,6 +1,7 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.math.LongMath;
 import io.substrait.expression.AbstractExpressionVisitor;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
@@ -19,6 +20,7 @@ import io.substrait.expression.WindowBound;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
+import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
@@ -273,13 +275,8 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(PrecisionTimeLiteral expr, Context context) throws RuntimeException {
-    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
-    if (expr.precision() > maxPrecision) {
-      throw new IllegalArgumentException(
-          String.format(
-              "unsupported precision_time precision %s, max precision in Calcite type system is set to %s",
-              expr.precision(), maxPrecision));
-    }
+    SubstraitTypeSystem.requireSupportedPrecision(
+        typeFactory.getTypeSystem(), SqlTypeName.TIME, "precision_time", expr.precision());
 
     return preserveNullability(
         rexBuilder.makeTimeLiteral(
@@ -290,15 +287,9 @@ public class ExpressionRexConverter
   /**
    * Creates a TimeString from a time value with the specified precision.
    *
-   * <p>The time unit for the value is dictated by the supplied precision, with the following valid
-   * values:
-   *
-   * <ul>
-   *   <li>0 - seconds
-   *   <li>3 - milliseconds
-   *   <li>6 - microseconds
-   *   <li>9 - nanoseconds
-   * </ul>
+   * <p>The time unit for the value is dictated by the supplied precision: the value counts
+   * 10^-precision seconds, so precision 0 is seconds, 3 milliseconds, 6 microseconds and 9
+   * nanoseconds, and every precision in between is a unit of its own.
    *
    * @param value the time value in the appropriate unit based on precision
    * @param precision the precision level
@@ -333,13 +324,11 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(PrecisionTimestampLiteral expr, Context context) throws RuntimeException {
-    int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
-    if (expr.precision() > maxPrecision) {
-      throw new IllegalArgumentException(
-          String.format(
-              "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
-              expr.precision(), maxPrecision));
-    }
+    SubstraitTypeSystem.requireSupportedPrecision(
+        typeFactory.getTypeSystem(),
+        SqlTypeName.TIMESTAMP,
+        "precision_timestamp",
+        expr.precision());
 
     return preserveNullability(
         rexBuilder.makeTimestampLiteral(
@@ -350,15 +339,13 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(PrecisionTimestampTZLiteral expr, Context context) throws RuntimeException {
     // TIMESTAMP_WITH_LOCAL_TIME_ZONE, not TIMESTAMP_TZ: that is the name TypeConverter maps
-    // precision_timestamp_tz to, and the only one SubstraitTypeSystem configures a maximum for.
-    int maxPrecision =
-        typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
-    if (expr.precision() > maxPrecision) {
-      throw new IllegalArgumentException(
-          String.format(
-              "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
-              expr.precision(), maxPrecision));
-    }
+    // precision_timestamp_tz to, so the bound checked here is the one the converted type is
+    // built against.
+    SubstraitTypeSystem.requireSupportedPrecision(
+        typeFactory.getTypeSystem(),
+        SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+        "precision_timestamp_tz",
+        expr.precision());
 
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
@@ -376,25 +363,23 @@ public class ExpressionRexConverter
   /**
    * Returns how many units of a temporal value at the given precision make up one second.
    *
+   * <p>Every precision from 0 to 9 is a unit, not just the multiples of three: {@code
+   * algebra.proto} documents what 0, 3, 6, 9 and 12 mean and leaves the field an unbounded {@code
+   * int32}, and Calcite types a literal by the fractional digits actually written, so {@code
+   * TIMESTAMP '2024-01-01 00:00:00.12'} is precision 2.
+   *
    * @param precision the fractional-second precision
    * @param typeName the Substrait type being converted, for the failure message
    * @return the number of units per second
-   * @throws IllegalArgumentException if the precision is not one Calcite can be given
+   * @throws IllegalArgumentException if the precision is finer than nanoseconds or negative
    */
   private static long unitsPerSecond(int precision, String typeName) {
-    switch (precision) {
-      case 0:
-        return 1L;
-      case 3:
-        return 1_000L;
-      case 6:
-        return 1_000_000L;
-      case 9:
-        return 1_000_000_000L;
-      default:
-        throw new IllegalArgumentException(
-            String.format("Cannot handle %s with precision %d.", typeName, precision));
+    if (precision < 0 || precision > 9) {
+      // A nanosecond is the finest unit a TimeString or TimestampString carries.
+      throw new IllegalArgumentException(
+          String.format("Cannot handle %s with precision %d.", typeName, precision));
     }
+    return LongMath.pow(10, precision);
   }
 
   /**

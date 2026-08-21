@@ -142,8 +142,15 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void supportedPrecisionForPrecisionTimestampLiteral() {
+    // Every precision up to the maximum SubstraitTypeSystem configures, not just the multiples of
+    // three: Calcite types a literal by the fractional digits written, so a two-digit one is
+    // precision 2.
     assertPrecisionTimestampLiteral(0);
+    assertPrecisionTimestampLiteral(1);
+    assertPrecisionTimestampLiteral(2);
     assertPrecisionTimestampLiteral(3);
+    assertPrecisionTimestampLiteral(4);
+    assertPrecisionTimestampLiteral(5);
     assertPrecisionTimestampLiteral(6);
   }
 
@@ -162,7 +169,11 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     // The same set the non-TZ literal supports: SubstraitTypeSystem configures a maximum of 6 for
     // TIMESTAMP_WITH_LOCAL_TIME_ZONE, and the TZ literal is checked against that name too.
     assertPrecisionTimestampTZLiteral(0);
+    assertPrecisionTimestampTZLiteral(1);
+    assertPrecisionTimestampTZLiteral(2);
     assertPrecisionTimestampTZLiteral(3);
+    assertPrecisionTimestampTZLiteral(4);
+    assertPrecisionTimestampTZLiteral(5);
     assertPrecisionTimestampTZLiteral(6);
   }
 
@@ -180,11 +191,6 @@ class ExpressionConvertabilityTest extends PlanTestBase {
   void unsupportedPrecisionForPrecisionTimestampLiteral() {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(-1);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(1);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(2);
-
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(4);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(5);
 
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(7);
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(8);
@@ -211,11 +217,6 @@ class ExpressionConvertabilityTest extends PlanTestBase {
   void unsupportedPrecisionPrecisionTimestampTZLiteral() {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(-1);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(1);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(2);
-
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(4);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(5);
 
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(7);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(8);
