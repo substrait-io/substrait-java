@@ -65,6 +65,24 @@ public class TypeConverter {
   }
 
   /**
+   * Returns the fractional-second precision of a Calcite temporal type, reading an unspecified
+   * precision as zero.
+   *
+   * <p>A temporal type built from a Java class rather than a SQL type name -- how a reflective
+   * schema exposes a {@code java.sql.Time} or {@code java.sql.Timestamp} column -- carries {@link
+   * RelDataType#PRECISION_NOT_SPECIFIED}. Calcite's own {@code RexBuilder.clean} reads that
+   * sentinel as precision 0; left as -1 it would travel into the Substrait type and the literals
+   * built at it.
+   *
+   * @param type the Calcite temporal type
+   * @return the fractional-second precision, never negative
+   */
+  public static int precisionOf(final RelDataType type) {
+    int precision = type.getPrecision();
+    return precision == RelDataType.PRECISION_NOT_SPECIFIED ? 0 : precision;
+  }
+
+  /**
    * Converts a Calcite {@link RelDataType} to a Substrait {@link Type}.
    *
    * @param type Calcite type to convert.
@@ -145,11 +163,11 @@ public class TypeConverter {
       case DATE:
         return creator.DATE;
       case TIME:
-        return creator.precisionTime(type.getPrecision());
+        return creator.precisionTime(precisionOf(type));
       case TIMESTAMP:
-        return creator.precisionTimestamp(type.getPrecision());
+        return creator.precisionTimestamp(precisionOf(type));
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-        return creator.precisionTimestampTZ(type.getPrecision());
+        return creator.precisionTimestampTZ(precisionOf(type));
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
       case INTERVAL_MONTH:
@@ -298,38 +316,28 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.PrecisionTime expr) {
-      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIME);
-      if (expr.precision() > maxPrecision) {
-        throw new IllegalArgumentException(
-            String.format(
-                "unsupported precision_time precision %s, max precision in Calcite type system is set to %s",
-                expr.precision(), maxPrecision));
-      }
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(), SqlTypeName.TIME, "precision_time", expr.precision());
       return t(n(expr), SqlTypeName.TIME, expr.precision());
     }
 
     @Override
     public RelDataType visit(Type.PrecisionTimestamp expr) {
-      int maxPrecision = typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP);
-      if (expr.precision() > maxPrecision) {
-        throw new IllegalArgumentException(
-            String.format(
-                "unsupported precision_timestamp precision %s, max precision in Calcite type system is set to %s",
-                expr.precision(), maxPrecision));
-      }
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(),
+          SqlTypeName.TIMESTAMP,
+          "precision_timestamp",
+          expr.precision());
       return t(n(expr), SqlTypeName.TIMESTAMP, expr.precision());
     }
 
     @Override
     public RelDataType visit(Type.PrecisionTimestampTZ expr) throws RuntimeException {
-      int maxPrecision =
-          typeFactory.getTypeSystem().getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
-      if (expr.precision() > maxPrecision) {
-        throw new IllegalArgumentException(
-            String.format(
-                "unsupported precision_timestamp_tz precision %s, max precision in Calcite type system is set to %s",
-                expr.precision(), maxPrecision));
-      }
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(),
+          SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+          "precision_timestamp_tz",
+          expr.precision());
       return t(n(expr), SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, expr.precision());
     }
 
