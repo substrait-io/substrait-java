@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexUtil;
@@ -38,28 +39,44 @@ public class CallConverters {
    * <p>On SAFE_CAST, sets {@link Expression.FailureBehavior#RETURN_NULL}; otherwise
    * THROW_EXCEPTION.
    *
+   * <p>A cast that changes nothing but nullability over a non-null literal is how {@link
+   * ExpressionRexConverter} represents a nullable Substrait literal (Calcite types every non-null
+   * {@link RexLiteral} NOT NULL), so it converts back to a literal carrying the cast's nullability
+   * rather than to an {@link Expression.Cast}.
+   *
    * @see ExpressionCreator#cast(Type, Expression, Expression.FailureBehavior)
    */
   public static final Function<TypeConverter, SimpleCallConverter> CAST =
-      typeConverter ->
-          (call, visitor) -> {
-            Expression.FailureBehavior failureBehavior;
-            switch (call.getKind()) {
-              case CAST:
-                failureBehavior = Expression.FailureBehavior.THROW_EXCEPTION;
-                break;
-              case SAFE_CAST:
-                failureBehavior = Expression.FailureBehavior.RETURN_NULL;
-                break;
-              default:
-                return null;
-            }
+      typeConverter -> {
+        LiteralConverter literalConverter = new LiteralConverter(typeConverter);
+        return (call, visitor) -> {
+          Expression.FailureBehavior failureBehavior;
+          switch (call.getKind()) {
+            case CAST:
+              failureBehavior = Expression.FailureBehavior.THROW_EXCEPTION;
+              break;
+            case SAFE_CAST:
+              failureBehavior = Expression.FailureBehavior.RETURN_NULL;
+              break;
+            default:
+              return null;
+          }
 
-            return ExpressionCreator.cast(
-                typeConverter.toSubstrait(call.getType()),
-                visitor.apply(call.getOperands().get(0)),
-                failureBehavior);
-          };
+          Type type = typeConverter.toSubstrait(call.getType());
+          RexNode operand = call.getOperands().get(0);
+          if (operand instanceof RexLiteral && !((RexLiteral) operand).isNull()) {
+            RexLiteral literal = (RexLiteral) operand;
+            Type literalType = typeConverter.toSubstrait(literal.getType());
+            // Nullability only: an exact no-op cast is not this representation and stays an
+            // Expression.Cast, so a plan that carries one keeps carrying it.
+            if (!type.equals(literalType) && type.equalsIgnoringNullability(literalType)) {
+              return literalConverter.convert(literal, call.getType());
+            }
+          }
+
+          return ExpressionCreator.cast(type, visitor.apply(operand), failureBehavior);
+        };
+      };
 
   /**
    * {@link SqlKind#REINTERPRET} is utilized by Isthmus to represent and store {@link

@@ -152,6 +152,23 @@ public class ExpressionRexConverter
     this.relNodeConverter = substraitRelNodeConverter;
   }
 
+  /**
+   * Applies a nullable Substrait literal type to the {@link RexNode} built for its value.
+   *
+   * <p>Calcite gives every non-null {@link org.apache.calcite.rex.RexLiteral} a NOT NULL type, so a
+   * nullable literal is represented as {@code CAST(literal AS nullable type)} — the same shape
+   * {@link RexBuilder#makeLiteral(Object, RelDataType, boolean)} produces on a type mismatch.
+   * {@link CallConverters#CAST} recognizes the nullability-only cast over a literal and folds it
+   * back into a nullable literal on the way to Substrait.
+   */
+  private RexNode preserveNullability(RexNode node, Type type) {
+    RelDataType calciteType = typeConverter.toCalcite(typeFactory, type);
+    if (node.getType().isNullable() == calciteType.isNullable()) {
+      return node;
+    }
+    return rexBuilder.makeAbstractCast(calciteType, node, false);
+  }
+
   @Override
   public RexNode visit(Expression.NullLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(null, typeConverter.toCalcite(typeFactory, expr.getType()));
@@ -179,48 +196,50 @@ public class ExpressionRexConverter
 
   @Override
   public RexNode visit(Expression.BoolLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value());
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.I8Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.I16Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.I32Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.I64Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.FP32Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.FP64Literal expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
   public RexNode visit(Expression.FixedCharLiteral expr, Context context) throws RuntimeException {
-    return rexBuilder.makeLiteral(expr.value());
+    return rexBuilder.makeLiteral(
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
@@ -262,8 +281,10 @@ public class ExpressionRexConverter
               expr.precision(), maxPrecision));
     }
 
-    return rexBuilder.makeTimeLiteral(
-        createTimeString(expr.value(), expr.precision()), expr.precision());
+    return preserveNullability(
+        rexBuilder.makeTimeLiteral(
+            createTimeString(expr.value(), expr.precision()), expr.precision()),
+        expr.getType());
   }
 
   /**
@@ -327,7 +348,7 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(Expression.DateLiteral expr, Context context) throws RuntimeException {
     return rexBuilder.makeLiteral(
-        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()));
+        expr.value(), typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
@@ -340,8 +361,10 @@ public class ExpressionRexConverter
               expr.precision(), maxPrecision));
     }
 
-    return rexBuilder.makeTimestampLiteral(
-        getTimestampString(expr.value(), expr.precision()), expr.precision());
+    return preserveNullability(
+        rexBuilder.makeTimestampLiteral(
+            getTimestampString(expr.value(), expr.precision()), expr.precision()),
+        expr.getType());
   }
 
   @Override
@@ -356,7 +379,8 @@ public class ExpressionRexConverter
 
     return rexBuilder.makeLiteral(
         getTimestampString(expr.value(), expr.precision()),
-        typeConverter.toCalcite(typeFactory, expr.getType()));
+        typeConverter.toCalcite(typeFactory, expr.getType()),
+        true);
   }
 
   private TimestampString getTimestampString(long value, int precision) {
@@ -395,8 +419,10 @@ public class ExpressionRexConverter
   @Override
   public RexNode visit(Expression.IntervalYearLiteral expr, Context context)
       throws RuntimeException {
-    return rexBuilder.makeIntervalLiteral(
-        new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL);
+    return preserveNullability(
+        rexBuilder.makeIntervalLiteral(
+            new BigDecimal(expr.years() * 12 + expr.months()), YEAR_MONTH_INTERVAL),
+        expr.getType());
   }
 
   @Override
@@ -421,7 +447,8 @@ public class ExpressionRexConverter
   public RexNode visit(Expression.DecimalLiteral expr, Context context) throws RuntimeException {
     byte[] value = expr.value().toByteArray();
     BigDecimal decimal = DecimalUtil.getBigDecimalFromBytes(value, expr.scale(), 16);
-    return rexBuilder.makeLiteral(decimal, typeConverter.toCalcite(typeFactory, expr.getType()));
+    return rexBuilder.makeLiteral(
+        decimal, typeConverter.toCalcite(typeFactory, expr.getType()), true);
   }
 
   @Override
