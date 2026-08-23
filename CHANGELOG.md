@@ -1,6 +1,56 @@
 Release Notes
 ---
 
+## [0.101.0](https://github.com/substrait-io/substrait-java/compare/v0.100.0...v0.101.0) (2026-08-23)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** Substrait→Calcite conversion now represents a nullable
+literal as a cast of the literal to its nullable type where it
+previously produced a bare literal with a non-nullable type, and
+converted row types become nullable accordingly. Calcite→Substrait
+conversion folds nullability-only casts over literals into nullable
+literals instead of Expression.Cast.
+* **isthmus:** an `interval_day` precision outside 0 to 9 is now
+rejected instead of silently narrowed to 6. The bound is
+`getMaxScale(INTERVAL_DAY_SECOND)`, the same one Calcite validates an
+interval qualifier against, so nothing that parses from SQL is refused.
+Converted Calcite types and generated SQL now carry the interval's
+declared precision, so `INTERVAL ... DAY TO SECOND(P)` replaces the
+previous fixed `DAY TO SECOND(3)`. A Calcite interval literal whose
+declared scale is below 3 now converts to a Substrait `interval_day` at
+that scale, dropping the millisecond remainder towards zero, where it
+previously reported `interval_day<6>` and kept it.
+* **isthmus:** Converted Substrait datetime subtraction expressions
+now use an Isthmus-owned operator without a Calcite Enumerable
+implementation. Consumers executing these plans through the Enumerable
+convention must provide an implementation or handle this operator before
+execution.
+* **core:** `DefaultExtensionCatalog.EXTENSION_TYPES` is removed
+and `extension:io.substrait:extension_types` is no longer loaded into
+`DEFAULT_COLLECTION`, so code referencing the constant no longer
+compiles and plans referencing that URN — including previously
+serialized ones — no longer import. To keep reading existing plans,
+declare the point and line types in your own YAML under the original
+URN.
+
+### Features
+
+* **core:** add HasExtension.withExtension for type-agnostic copies ([#1135](https://github.com/substrait-io/substrait-java/issues/1135)) ([14dc253](https://github.com/substrait-io/substrait-java/commit/14dc25390e8ee010cc97b1c1ce69c20addc86fea))
+* **core:** handle RelCommon data for every relation type ([#1069](https://github.com/substrait-io/substrait-java/issues/1069)) ([6b5ba4e](https://github.com/substrait-io/substrait-java/commit/6b5ba4e5a4d88536145c12c360563e8cea583e7c))
+* **core:** update to Substrait v0.101.0 ([#1103](https://github.com/substrait-io/substrait-java/issues/1103)) ([317a3ec](https://github.com/substrait-io/substrait-java/commit/317a3ec600ad724e994d9b059e63c8ed8c56821e))
+
+### Bug Fixes
+
+* **core:** derive MergeJoin's record type from both inputs ([#1112](https://github.com/substrait-io/substrait-java/issues/1112)) ([e4c5a9e](https://github.com/substrait-io/substrait-java/commit/e4c5a9e943e8afdd0f8255375c2f75cd7370d9bd))
+* **core:** derive precision_time from PrecisionTimeLiteral ([#1136](https://github.com/substrait-io/substrait-java/issues/1136)) ([102bece](https://github.com/substrait-io/substrait-java/commit/102bece59948480896281ef3b85523eed9ed3059))
+* **core:** report the missing path when an extension resource is absent ([#1115](https://github.com/substrait-io/substrait-java/issues/1115)) ([45181fb](https://github.com/substrait-io/substrait-java/commit/45181fb4845777fb473033a02d2969e27749568e))
+* **core:** write rel-level advanced extensions on exchange rels ([#1101](https://github.com/substrait-io/substrait-java/issues/1101)) ([c08f84d](https://github.com/substrait-io/substrait-java/commit/c08f84da848689e5a20c207964a6cab5f35bad23))
+* **isthmus:** preserve interval_day precision in both conversion directions ([#1120](https://github.com/substrait-io/substrait-java/issues/1120)) ([741d4bf](https://github.com/substrait-io/substrait-java/commit/741d4bff9153625bb1a39f481e03b204e310a789))
+* **isthmus:** preserve literal nullability converting to Calcite ([#1110](https://github.com/substrait-io/substrait-java/issues/1110)) ([3b46130](https://github.com/substrait-io/substrait-java/commit/3b46130462302f8a1f526b5baad3c5e6879a2a2e))
+* **isthmus:** use a distinct datetime subtraction operator ([#1099](https://github.com/substrait-io/substrait-java/issues/1099)) ([d14f0fd](https://github.com/substrait-io/substrait-java/commit/d14f0fdf7ec59d08562f1b822f28669485ed8cea))
+* **spark:** accept Substrait precisions coarser than microseconds ([#1128](https://github.com/substrait-io/substrait-java/issues/1128)) ([961f83e](https://github.com/substrait-io/substrait-java/commit/961f83e5337d53b119b294c8042ca98267569d8a))
+
 ## [0.100.0](https://github.com/substrait-io/substrait-java/compare/v0.99.0...v0.100.0) (2026-08-16)
 
 ### ⚠ BREAKING CHANGES
