@@ -1,7 +1,7 @@
 [versions]
 antlr = "4.13.2"
 calcite = "1.42.0"
-classgraph = "4.8.192"
+classgraph = "4.8.193"
 graal = "25.0.2"
 graal-plugin = "1.1.9"
 gradle-extensions = "4.0.0"
