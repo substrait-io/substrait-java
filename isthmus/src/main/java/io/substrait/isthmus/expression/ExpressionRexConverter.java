@@ -305,36 +305,16 @@ public class ExpressionRexConverter
    * @return a TimeString representing the time value
    */
   protected TimeString createTimeString(long value, int precision) {
-    switch (precision) {
-      case 0:
-        return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(value));
-      case 3:
-        {
-          long seconds = TimeUnit.MILLISECONDS.toSeconds(value);
-          int fracSecondsInNano =
-              (int) (TimeUnit.MILLISECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
-          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
-      case 6:
-        {
-          long seconds = TimeUnit.MICROSECONDS.toSeconds(value);
-          int fracSecondsInNano =
-              (int) (TimeUnit.MICROSECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
-          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
-      case 9:
-        {
-          long seconds = TimeUnit.NANOSECONDS.toSeconds(value);
-          int fracSecondsInNano = (int) (value - TimeUnit.SECONDS.toNanos(seconds));
-          return TimeString.fromMillisOfDay((int) TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
-      default:
-        throw new IllegalArgumentException(
-            String.format("Cannot handle PrecisionTime with precision %d.", precision));
+    long unitsPerSecond = unitsPerSecond(precision, "PrecisionTime");
+    if (value < 0 || value >= 86_400L * unitsPerSecond) {
+      // A precision_time is a time of day. Without this an out-of-range value reaches
+      // TimeString.fromMillisOfDay, which reports a corrupt time string rather than the value.
+      throw new IllegalArgumentException(
+          String.format("Cannot handle PrecisionTime with out-of-range value %d.", value));
     }
+    return TimeString.fromMillisOfDay(
+            (int) TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
+        .withNanos(nanosOf(value, unitsPerSecond));
   }
 
   @Override
@@ -384,36 +364,58 @@ public class ExpressionRexConverter
   }
 
   private TimestampString getTimestampString(long value, int precision) {
+    long unitsPerSecond = unitsPerSecond(precision, "PrecisionTimestamp");
+    return TimestampString.fromMillisSinceEpoch(
+            TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
+        .withNanos(nanosOf(value, unitsPerSecond));
+  }
+
+  /**
+   * Returns how many units of a temporal value at the given precision make up one second.
+   *
+   * @param precision the fractional-second precision
+   * @param typeName the Substrait type being converted, for the failure message
+   * @return the number of units per second
+   * @throws IllegalArgumentException if the precision is not one Calcite can be given
+   */
+  private static long unitsPerSecond(int precision, String typeName) {
     switch (precision) {
       case 0:
-        return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(value));
+        return 1L;
       case 3:
-        {
-          long seconds = TimeUnit.MILLISECONDS.toSeconds(value);
-          int fracSecondsInNano =
-              (int) (TimeUnit.MILLISECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
-          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
+        return 1_000L;
       case 6:
-        {
-          long seconds = TimeUnit.MICROSECONDS.toSeconds(value);
-          int fracSecondsInNano =
-              (int) (TimeUnit.MICROSECONDS.toNanos(value) - TimeUnit.SECONDS.toNanos(seconds));
-          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
+        return 1_000_000L;
       case 9:
-        {
-          long seconds = TimeUnit.NANOSECONDS.toSeconds(value);
-          int fracSecondsInNano = (int) (value - TimeUnit.SECONDS.toNanos(seconds));
-          return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
-              .withNanos(fracSecondsInNano);
-        }
+        return 1_000_000_000L;
       default:
         throw new IllegalArgumentException(
-            String.format("Cannot handle PrecisionTimestamp with precision %d.", precision));
+            String.format("Cannot handle %s with precision %d.", typeName, precision));
     }
+  }
+
+  /**
+   * Returns the whole seconds in a temporal value, rounding towards negative infinity rather than
+   * towards zero. Before the epoch the value is negative, and both {@link TimeString#withNanos} and
+   * {@link TimestampString#withNanos} reject the negative remainder that truncation would leave.
+   *
+   * @param value the temporal value
+   * @param unitsPerSecond the number of units of that value per second
+   * @return the whole seconds
+   */
+  private static long secondsOf(long value, long unitsPerSecond) {
+    return Math.floorDiv(value, unitsPerSecond);
+  }
+
+  /**
+   * Returns the sub-second part of a temporal value in nanoseconds, always in [0, 1_000_000_000).
+   *
+   * @param value the temporal value
+   * @param unitsPerSecond the number of units of that value per second
+   * @return the sub-second part in nanoseconds
+   */
+  private static int nanosOf(long value, long unitsPerSecond) {
+    return (int) (Math.floorMod(value, unitsPerSecond) * (1_000_000_000L / unitsPerSecond));
   }
 
   @Override
