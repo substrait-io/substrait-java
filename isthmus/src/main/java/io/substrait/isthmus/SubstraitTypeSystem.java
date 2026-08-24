@@ -110,7 +110,6 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
       case TIME:
-      case TIME_WITH_LOCAL_TIME_ZONE:
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         return 6;

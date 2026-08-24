@@ -162,6 +162,20 @@ class SubstraitTypeSystemTest {
   }
 
   @Test
+  void timeWithLocalTimeZoneHasNoSubstraitMaxPrecision() {
+    // Substrait has precision_timestamp_tz but no time-with-timezone counterpart, so this type
+    // converts in neither direction and there is no Substrait maximum to report for it.
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            TypeConverter.DEFAULT.toSubstrait(
+                TYPE_FACTORY.createSqlType(SqlTypeName.TIME_WITH_LOCAL_TIME_ZONE, 3)));
+    assertEquals(
+        RelDataTypeSystem.DEFAULT.getMaxPrecision(SqlTypeName.TIME_WITH_LOCAL_TIME_ZONE),
+        typeSystem.getMaxPrecision(SqlTypeName.TIME_WITH_LOCAL_TIME_ZONE));
+  }
+
+  @Test
   void canCreateDecimalWithMaxPrecision() {
     RelDataType decimalType = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, 38, 10);
     assertEquals(38, decimalType.getPrecision());
