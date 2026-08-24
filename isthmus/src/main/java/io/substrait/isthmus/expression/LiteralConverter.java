@@ -199,7 +199,7 @@ public class LiteralConverter {
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
           int precision = TypeConverter.precisionOf(resultType);
           return ExpressionCreator.precisionTime(
-              nullable, subsecondsOf(localTime.toNanoOfDay(), precision), precision);
+              nullable, rescaleNanos(localTime.toNanoOfDay(), precision), precision);
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -210,7 +210,7 @@ public class LiteralConverter {
           int precision = TypeConverter.precisionOf(resultType);
           long value =
               localDateTime.toEpochSecond(ZoneOffset.UTC) * LongMath.pow(10, precision)
-                  + subsecondsOf(localDateTime.getNano(), precision);
+                  + rescaleNanos(localDateTime.getNano(), precision);
           // toEpochSecond floors, and the nanosecond part it leaves behind is always positive, so
           // a pre-epoch timestamp narrowed to a coarser precision moves back in time rather than
           // towards the epoch. That is what a timestamp wants — 1969-12-31 23:59:59.5 at second
@@ -317,12 +317,13 @@ public class LiteralConverter {
    * Rescales a nanosecond count to the fractional-second unit a Substrait temporal literal of the
    * given precision is expressed in.
    *
-   * @param nanos the sub-second component in nanoseconds, which {@code LocalTime} and {@code
-   *     LocalDateTime} both report as a non-negative value
+   * @param nanos a non-negative nanosecond count: a whole time of day for a {@code precision_time},
+   *     the sub-second remainder for a {@code precision_timestamp}. Non-negativity is the
+   *     precondition the division relies on, since it truncates towards zero rather than flooring.
    * @param precision the fractional-second precision of the target literal
-   * @return the sub-second component in units of 10^-precision seconds
+   * @return {@code nanos} in units of 10^-precision seconds
    */
-  private static long subsecondsOf(long nanos, int precision) {
+  private static long rescaleNanos(long nanos, int precision) {
     return precision >= 9
         ? nanos * LongMath.pow(10, precision - 9)
         : nanos / LongMath.pow(10, 9 - precision);

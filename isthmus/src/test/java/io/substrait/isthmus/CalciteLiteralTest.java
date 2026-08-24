@@ -334,10 +334,9 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tSqlTimestampLiteralKeepsTheWrittenPrecision() throws Exception {
-    // The behaviour the breaking-change note is about: a literal written without a fractional part
-    // is TIMESTAMP(0) on the Calcite side, so the plan Isthmus emits declares
-    // precision_timestamp<0>
-    // with a value in seconds rather than precision_timestamp<6> with a value in microseconds.
+    // A literal written without a fractional part is TIMESTAMP(0) on the Calcite side, so the
+    // plan Isthmus emits declares precision_timestamp<0> with a value in seconds rather than
+    // precision_timestamp<6> with a value in microseconds.
     assertEquals(
         ExpressionCreator.precisionTimestamp(false, 1704067200L, 0),
         literalFromSql("TIMESTAMP '2024-01-01 00:00:00'"));
