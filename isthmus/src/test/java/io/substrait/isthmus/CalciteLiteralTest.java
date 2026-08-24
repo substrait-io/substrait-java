@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.math.LongMath;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.IntervalDayLiteral;
 import io.substrait.expression.Expression.IntervalYearLiteral;
@@ -19,6 +20,8 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
@@ -30,6 +33,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -39,10 +45,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class CalciteLiteralTest extends CalciteObjs {
   protected static final SimpleExtension.ExtensionCollection EXTENSION_COLLECTION =
@@ -232,12 +238,148 @@ class CalciteLiteralTest extends CalciteObjs {
     bitest(ts, rex.makeTimestampLiteral(tsx, 6));
   }
 
-  @Disabled("Not clear what the right literal mapping is.")
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  void tPrecisionTimeKeepsItsPrecision(int precision) {
+    Expression.PrecisionTimeLiteral time =
+        ExpressionCreator.precisionTime(false, timeValue(precision), precision);
+
+    RexNode converted = time.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(time, converted.accept(rexExpressionConverter));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  void tPrecisionTimestampKeepsItsPrecision(int precision) {
+    PrecisionTimestampLiteral timestamp =
+        ExpressionCreator.precisionTimestamp(false, timestampValue(precision), precision);
+
+    RexNode converted = timestamp.accept(expressionRexConverter, Context.newContext());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(timestamp, converted.accept(rexExpressionConverter));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  void tPrecisionTimestampTZStaysTimeZoned(int precision) {
+    // Calcite has no dedicated timestamp-with-time-zone literal, but it does have the
+    // TIMESTAMP_WITH_LOCAL_TIME_ZONE type that TypeConverter maps precision_timestamp_tz to, so a
+    // literal of that type is the mapping — and it must not come back as a plain
+    // precision_timestamp.
+    Expression.PrecisionTimestampTZLiteral timestampTz =
+        ExpressionCreator.precisionTimestampTZ(false, timestampValue(precision), precision);
+
+    RexNode converted = timestampTz.accept(expressionRexConverter, Context.newContext());
+    assertEquals(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE, converted.getType().getSqlTypeName());
+    assertEquals(precision, converted.getType().getPrecision());
+    assertEquals(timestampTz, converted.accept(rexExpressionConverter));
+  }
+
   @Test
-  void tTimestampTZ() {
-    // Calcite has TimestampWithTimeZoneString but it doesn't appear to be available as a literal or
-    // data type.
-    // (Doesn't exist in SqlTypeName.)
+  void tTemporalLiteralAtASchemaTypeWithoutAPrecision() {
+    // visit(Values) converts each literal at the row type of the containing schema, and a type
+    // built from a Java class rather than a SQL type name -- how a reflective schema exposes a
+    // java.sql.Time column -- carries PRECISION_NOT_SPECIFIED. Read as a precision, that divides
+    // a TIME value by 10^10 and takes a TIMESTAMP into Guava's "exponent (-1) must be >= 0".
+    JavaTypeFactory javaTypeFactory = (JavaTypeFactory) type;
+    RelDataType javaTime = javaTypeFactory.createJavaType(java.sql.Time.class);
+    RelDataType javaTimestamp = javaTypeFactory.createJavaType(java.sql.Timestamp.class);
+    assertEquals(RelDataType.PRECISION_NOT_SPECIFIED, javaTime.getPrecision());
+
+    LiteralConverter literalConverter = new LiteralConverter(TypeConverter.DEFAULT);
+    assertEquals(
+        ExpressionCreator.precisionTime(true, 45045L, 0),
+        literalConverter.convert((RexLiteral) rex.makeLiteral(45_045_000, javaTime), javaTime));
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(true, 1_704_067_200L, 0),
+        literalConverter.convert(
+            (RexLiteral) rex.makeLiteral(1_704_067_200_000L, javaTimestamp), javaTimestamp));
+
+    // The column type the literal sits in is read the same way, so the two agree.
+    assertEquals(
+        TypeCreator.NULLABLE.precisionTime(0), TypeConverter.DEFAULT.toSubstrait(javaTime));
+    assertEquals(
+        TypeCreator.NULLABLE.precisionTimestamp(0),
+        TypeConverter.DEFAULT.toSubstrait(javaTimestamp));
+  }
+
+  @Test
+  void tPrecisionTimestampBeforeTheEpochFloors() {
+    // Narrowing a pre-epoch timestamp moves it back in time, not towards the epoch: at second
+    // precision 1969-12-31 23:59:59.5 is 23:59:59, i.e. -1. The opposite of the interval case,
+    // where the value is a duration and narrowing shortens it.
+    RexLiteral atSecond = rex.makeTimestampLiteral(new TimestampString("1969-12-31 23:59:59.5"), 0);
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, -1, 0),
+        atSecond.accept(rexExpressionConverter));
+
+    RexLiteral atMilli = rex.makeTimestampLiteral(new TimestampString("1969-12-31 23:59:59.5"), 3);
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, -500, 3),
+        atMilli.accept(rexExpressionConverter));
+
+    // Precision 1 is where the .5 survives RexBuilder's rounding and the two directions differ:
+    // truncating towards zero would give 0 here and read back as the epoch itself.
+    RexLiteral atTenth = rex.makeTimestampLiteral(new TimestampString("1969-12-31 23:59:59.5"), 1);
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, -5, 1), atTenth.accept(rexExpressionConverter));
+    assertEquals(
+        new TimestampString("1969-12-31 23:59:59.5"),
+        ((RexLiteral)
+                ExpressionCreator.precisionTimestamp(false, -5, 1)
+                    .accept(expressionRexConverter, Context.newContext()))
+            .getValueAs(TimestampString.class));
+  }
+
+  @Test
+  void tSqlTimestampLiteralKeepsTheWrittenPrecision() throws Exception {
+    // A literal written without a fractional part is TIMESTAMP(0) on the Calcite side, so the
+    // plan Isthmus emits declares precision_timestamp<0> with a value in seconds rather than
+    // precision_timestamp<6> with a value in microseconds.
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, 1704067200L, 0),
+        literalFromSql("TIMESTAMP '2024-01-01 00:00:00'"));
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, 1704067200123L, 3),
+        literalFromSql("TIMESTAMP '2024-01-01 00:00:00.123'"));
+    assertEquals(
+        ExpressionCreator.precisionTime(false, 45045L, 0), literalFromSql("TIME '12:30:45'"));
+
+    // The precision is not a multiple of three either: Calcite types the literal by the fractional
+    // digits written, and two of them is precision 2.
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, 170406720012L, 2),
+        literalFromSql("TIMESTAMP '2024-01-01 00:00:00.12'"));
+    assertEquals(
+        ExpressionCreator.precisionTime(false, 450454L, 1), literalFromSql("TIME '12:30:45.4'"));
+  }
+
+  private Expression.Literal literalFromSql(String expression) throws Exception {
+    RelRoot root =
+        SubstraitSqlToCalcite.convertQuery(
+            "SELECT " + expression + " FROM t",
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                "CREATE TABLE t (a INT)"),
+            ConverterProvider.DEFAULT);
+    RexNode projected = ((Project) root.project()).getProjects().get(0);
+    return new LiteralConverter(TypeConverter.DEFAULT).convert((RexLiteral) projected);
+  }
+
+  private static long timeValue(int precision) {
+    return (14L * 60 * 60 + 22 * 60 + 47) * LongMath.pow(10, precision) + subseconds(precision);
+  }
+
+  private static long timestampValue(int precision) {
+    return LocalDateTime.of(2002, 2, 14, 16, 20, 47).toEpochSecond(ZoneOffset.UTC)
+            * LongMath.pow(10, precision)
+        + subseconds(precision);
+  }
+
+  /** 123 milliseconds expressed at the given precision, or none at all when there is no room. */
+  private static long subseconds(int precision) {
+    // The first `precision` digits of .123456, so no precision is left with an empty fraction.
+    return 123_456L / LongMath.pow(10, 6 - precision);
   }
 
   @Test

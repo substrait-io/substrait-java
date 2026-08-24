@@ -54,6 +54,31 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   public SubstraitTypeSystem() {}
 
   /**
+   * Checks that a Substrait fractional-second precision is one the Calcite type system in effect
+   * allows for the type it converts to, and reports the bound it exceeds if it is not.
+   *
+   * @param typeSystem the type system the converted type will live under, which need not be this
+   *     one
+   * @param typeName the Calcite type name the Substrait type converts to
+   * @param substraitTypeName the Substrait type name, for the failure message
+   * @param precision the fractional-second precision carried by the Substrait type or literal
+   * @throws IllegalArgumentException if the precision exceeds what the type system allows
+   */
+  public static void requireSupportedPrecision(
+      final RelDataTypeSystem typeSystem,
+      final SqlTypeName typeName,
+      final String substraitTypeName,
+      final int precision) {
+    int maxPrecision = typeSystem.getMaxPrecision(typeName);
+    if (precision > maxPrecision) {
+      throw new IllegalArgumentException(
+          String.format(
+              "unsupported %s precision %s, max precision in Calcite type system is set to %s",
+              substraitTypeName, precision, maxPrecision));
+    }
+  }
+
+  /**
    * Returns the maximum precision for the given SQL type.
    *
    * @param typeName The {@link SqlTypeName} for which precision is requested.
