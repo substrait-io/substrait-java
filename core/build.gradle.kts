@@ -162,7 +162,12 @@ tasks {
     relocate("org.antlr.v4.runtime", "io.substrait.org.antlr.v4.runtime")
   }
 
-  jar { manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") } }
+  jar {
+    // shadowJar takes the unclassified name, so the plain jar needs one of its own: two tasks
+    // writing one path leaves it to the task graph which of them consumers end up with.
+    archiveClassifier.set("plain")
+    manifest { from("build/generated/sources/manifest/META-INF/MANIFEST.MF") }
+  }
 
   // Set the release instead of using a Java 8 toolchain since ANTLR requires Java 11+ to run.
   // Only set the compile release since JUnit 6 requires Java 17 to run tests.
@@ -170,6 +175,25 @@ tasks {
     options.release = 8
     dependsOn("writeManifest")
   }
+}
+
+// Only shadowJar's output carries the io.substrait.antlr parser and its relocated ANTLR runtime,
+// so it is what consumers and the publication have to resolve. Declaring it as the outgoing
+// artifact is what lets Gradle derive the task dependency, for every consumer and for signing.
+listOf("apiElements", "runtimeElements").forEach { variant ->
+  configurations.named(variant) {
+    outgoing.artifacts.clear()
+    outgoing.artifact(tasks.shadowJar)
+  }
+}
+
+// The bundled deps are declared on shadowImplementation, which is kept out of the POM on purpose,
+// so shadow's injected variant would be published advertising no dependencies at all. Its file is
+// the jar the runtime variant now serves anyway.
+(components["java"] as AdhocComponentWithVariants).withVariantsFromConfiguration(
+  configurations["shadowRuntimeElements"]
+) {
+  skip()
 }
 
 java {
