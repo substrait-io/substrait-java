@@ -146,16 +146,6 @@ dependencies {
 spotless { isEnforceCheck = false }
 
 tasks {
-  // Ensure shadowJar runs before compilation, but skip core tests
-  named("compileJava") {
-    dependsOn(":core:shadowJar")
-    mustRunAfter(":core:compileJava")
-  }
-  named("compileScala") {
-    dependsOn(":core:shadowJar")
-    mustRunAfter(":core:compileJava")
-  }
-
   jar {
     manifest {
       from("../../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
@@ -164,7 +154,6 @@ tasks {
   }
 
   test {
-    dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
 
     // Set system properties for variant identification
