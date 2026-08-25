@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
@@ -148,6 +149,195 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         List.of(ExpressionCreator.i32(false, 1), ExpressionCreator.i32(true, 5)),
         converted.getRows().get(1).fields());
+  }
+
+  @Test
+  void structColumnRoundTrip() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema, List.of(ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalValues(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], tuples=[[{ [1, 2.0E0] }]])\n",
+        explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  /**
+   * Two struct columns, so that the names cannot be recovered by taking the first columns worth of
+   * the schema's flattened list: the second column's name sits at index 3, not at index 1.
+   */
+  @Test
+  void severalStructColumnsRoundTrip() {
+    NamedStruct schema =
+        NamedStruct.of(
+            List.of("first", "a", "b", "second", "c"),
+            R.struct(R.struct(R.I32, R.FP64), R.struct(R.STRING)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(
+                ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0)),
+                ExpressionCreator.struct(false, sb.str("x"))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalValues(type=[RecordType(RecordType(INTEGER a, DOUBLE b) first, RecordType(VARCHAR c) second)], tuples=[[{ [1, 2.0E0], ['x'] }]])\n",
+        explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  /**
+   * A struct column whose fields are not all literals is a row of expressions like any other, so it
+   * takes the projection encoding -- with the schema's names on it, which is what makes the
+   * projection's declared type acceptable to Calcite.
+   */
+  @Test
+  void structColumnWithAComputedField() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(
+                ExpressionCreator.nestedStruct(
+                    false, sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(2.0))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(*(6, 2), 2.0E0:DOUBLE)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /**
+   * A list literal converts to Calcite's array constructor, a call rather than a literal, so a list
+   * column takes the projection encoding too. It used to be handed to a Values tuple, which holds
+   * nothing but literals, and the conversion died on the cast.
+   */
+  @Test
+  void listColumnConverts() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(R.list(R.I32)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema, List.of(ExpressionCreator.list(false, sb.i32(1), sb.i32(2))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ARRAY(1, 2)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /**
+   * Calcite has no nullable literal of a row, so a struct value in a nullable column cannot be a
+   * Values tuple whatever it holds, and the row takes the projection encoding. Pinned as a
+   * conversion rather than a round trip because a nullable struct does not survive one: Calcite
+   * pushes a row's nullability down into its fields, so the schema comes back with nullable fields.
+   */
+  @Test
+  void nullableStructColumnConverts() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema, List.of(ExpressionCreator.struct(true, sb.i32(1), sb.fp64(2.0))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /** A null struct has no fields to rename, but the tuple still needs it at the column's type. */
+  @Test
+  void nullStructColumnConverts() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema, List.of(ExpressionCreator.typedNull(N.struct(R.I32, R.FP64))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalValues(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], tuples=[[{ null }]])\n",
+        explain(relNode));
+  }
+
+  /**
+   * A struct one level down, inside a list column: the names the schema gives it have to reach it
+   * there too, or the projection that holds the row is rejected on them.
+   */
+  @Test
+  void structInListColumnConverts() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "a"), R.struct(R.list(R.struct(R.I32))));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(ExpressionCreator.list(false, ExpressionCreator.struct(false, sb.i32(1)))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ARRAY([1:INTEGER]:RecordType(INTEGER NOT NULL a))]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /** The same one level down inside a map, where the names reach a key and a value alike. */
+  @Test
+  void structInMapColumnConverts() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("col1", "a"), R.struct(R.map(R.STRING, R.struct(R.I32))));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(
+                ExpressionCreator.map(
+                    false, Map.of(sb.str("k"), ExpressionCreator.struct(false, sb.i32(1))))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[MAP('k':VARCHAR, [1:INTEGER]:RecordType(INTEGER NOT NULL a))]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /**
+   * A nullable struct nested in a column: renaming it gives back a ROW call rather than a literal,
+   * so the struct around it cannot be rebuilt as a literal either.
+   */
+  @Test
+  void nullableStructInsideStructColumnConverts() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "inner", "a"), R.struct(R.struct(N.struct(R.I32))));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(ExpressionCreator.struct(false, ExpressionCreator.struct(true, sb.i32(1)))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(ROW(1))]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
   }
 
   @SafeVarargs

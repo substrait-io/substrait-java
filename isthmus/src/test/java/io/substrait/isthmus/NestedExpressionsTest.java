@@ -284,6 +284,23 @@ class NestedExpressionsTest extends PlanTestBase {
   }
 
   @Test
+  void nullableStructLiteralWithNonNullFieldsTest() {
+    // The fields being non-null is what makes this one different: every field converts to a
+    // Calcite literal, and the struct's own nullability has to survive that.
+    Expression.StructLiteral structLiteral =
+        ExpressionCreator.struct(true, ExpressionCreator.i32(false, 7));
+
+    Project project =
+        Project.builder().expressions(List.of(structLiteral)).input(emptyTable).build();
+
+    RelNode relNode = substraitToCalcite.convert(project);
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions);
+    Expression roundTripped = ((Project) substraitRel).getExpressions().get(0);
+    assertEquals(ImmutableExpression.StructLiteral.class, roundTripped.getClass());
+    assertTrue(((Expression.StructLiteral) roundTripped).nullable());
+  }
+
+  @Test
   void nestedStructWithNonLiteralsTest() {
     Expression.NestedStruct nonLiteralNestedStruct =
         Expression.NestedStruct.builder()
