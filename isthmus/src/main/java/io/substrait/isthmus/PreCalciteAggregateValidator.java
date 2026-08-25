@@ -7,7 +7,9 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Project;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -119,11 +121,18 @@ public class PreCalciteAggregateValidator {
     // New expressions to include in the project before the aggregate
     private final List<Expression> newExpressions;
 
+    // The field reference each grouping expression was projected out to. A field grouped on by
+    // several grouping sets is one column of the aggregate's output, so it has to stay one column
+    // of the project underneath it: two copies of it would each be missing from a grouping set,
+    // and Calcite would make both of them nullable.
+    private final Map<Expression, Expression> projectedGroupingExpressions;
+
     // Tracks the offset of the next expression added
     private int expressionOffset;
 
     private PreCalciteAggregateTransformer(Aggregate aggregate) {
       this.newExpressions = new ArrayList<>();
+      this.projectedGroupingExpressions = new HashMap<>();
       this.expressionOffset = aggregate.getInput().getRecordType().fields().size();
     }
 
@@ -193,7 +202,9 @@ public class PreCalciteAggregateValidator {
 
     private Aggregate.Grouping updateGrouping(Aggregate.Grouping grouping) {
       List<Expression> newGroupingExpressions =
-          grouping.getExpressions().stream().map(this::projectOut).collect(Collectors.toList());
+          grouping.getExpressions().stream()
+              .map(expr -> projectedGroupingExpressions.computeIfAbsent(expr, this::projectOut))
+              .collect(Collectors.toList());
       return Aggregate.Grouping.builder().expressions(newGroupingExpressions).build();
     }
 

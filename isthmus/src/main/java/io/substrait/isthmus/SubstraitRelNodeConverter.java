@@ -50,9 +50,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -410,7 +412,61 @@ public class SubstraitRelNodeConverter
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
     // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
     // relation carries.
-    return applyOutputNames(applyRemap(node, remap), aggregate, child);
+    return applyOutputNames(
+        applyRemap(node, inConvertedGroupingOrder(remap, groupExprs, aggregateCalls.size())),
+        aggregate,
+        child);
+  }
+
+  /**
+   * Returns the emit mapping of a converted aggregate with its indices translated from the order
+   * the relation declares its output in to the order the converted aggregate emits it.
+   *
+   * <p>Substrait takes the grouping columns of an aggregate to be the distinct grouping expressions
+   * in the order they first appear across its grouping sets. Calcite takes them from a bit set, so
+   * it emits them ordered by field index. A relation whose grouping sets first mention field 1 and
+   * then field 0 declares them in that order, and its emit mapping indexes that order, while the
+   * aggregate underneath emits field 0 first.
+   *
+   * <p>An aggregate that emits directly and declares an order Calcite does not produce gets a
+   * mapping it did not carry, which is what puts the columns back in the declared order.
+   *
+   * @param remap the emit mapping the relation carries, indexing its declared output
+   * @param groupExprs the converted grouping expressions, in declared order, with duplicates
+   * @param callCount the number of aggregate calls, including any grouping-set index
+   * @return the mapping to apply to the converted aggregate
+   */
+  private static Optional<Remap> inConvertedGroupingOrder(
+      Optional<Remap> remap, List<RexNode> groupExprs, int callCount) {
+    List<RexNode> declared = new ArrayList<>(new LinkedHashSet<>(groupExprs));
+    if (!declared.stream().allMatch(RexInputRef.class::isInstance)) {
+      // The conversion projects expressions that are not field references below the aggregate, in
+      // the order they were declared, and groups over that projection, so the orders agree.
+      return remap;
+    }
+    List<RexNode> converted =
+        declared.stream()
+            .sorted(Comparator.comparingInt(expr -> ((RexInputRef) expr).getIndex()))
+            .collect(Collectors.toList());
+    if (converted.equals(declared)) {
+      return remap;
+    }
+    List<Integer> declaredToConverted = new ArrayList<>();
+    for (RexNode expression : declared) {
+      declaredToConverted.add(converted.indexOf(expression));
+    }
+    for (int call = 0; call < callCount; call++) {
+      declaredToConverted.add(declared.size() + call);
+    }
+    return Optional.of(
+        Remap.of(
+            remap
+                .map(
+                    mapping ->
+                        mapping.indices().stream()
+                            .map(declaredToConverted::get)
+                            .collect(Collectors.toList()))
+                .orElse(declaredToConverted)));
   }
 
   /**

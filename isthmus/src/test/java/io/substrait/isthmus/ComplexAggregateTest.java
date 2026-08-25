@@ -10,7 +10,15 @@ import io.substrait.relation.NamedScan;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.util.List;
+import java.util.Optional;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.junit.jupiter.api.Test;
 
 class ComplexAggregateTest extends PlanTestBase {
@@ -212,6 +220,130 @@ class ComplexAggregateTest extends PlanTestBase {
                 table));
 
     validateAggregateTransformation(rel, expectedFinal);
+  }
+
+  @Test
+  void outOfOrderGroupingSetsHaveCorrectCalciteType() {
+    // Each grouping set holds one field and is trivially in order, but the aggregate declares
+    // field 2 before field 0, while Calcite emits its grouping columns in ascending field order.
+    Rel rel =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 2), sb.grouping(input, 0)),
+            input -> List.of(),
+            Optional.of(Rel.Remap.of(List.of(0, 1))),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+
+    RelNode relNode = substraitToCalcite.convert(rel);
+
+    assertRowMatch(relNode.getRowType(), N.STRING, N.I64);
+  }
+
+  @Test
+  void groupingFieldSharedBySetsStaysOneColumn() {
+    // Field 2 is grouped on twice. It is one column of the aggregate's output, so it has to stay
+    // one column of the project the conversion puts underneath it.
+    Rel rel =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 2, 0), sb.grouping(input, 2)),
+            input -> List.of(),
+            Optional.of(Rel.Remap.of(List.of(0, 1))),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+
+    RelNode relNode = substraitToCalcite.convert(rel);
+
+    assertRowMatch(relNode.getRowType(), R.STRING, N.I64);
+  }
+
+  @Test
+  void aReferenceOverOutOfOrderGroupingSetsReachesTheColumnItNames() {
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 2), sb.grouping(input, 0)),
+            input -> List.of(),
+            Optional.empty(),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+    // Field 0 of the aggregate is the field it groups on first, the string.
+    Rel project =
+        io.substrait.relation.Project.builder()
+            .input(aggregate)
+            .remap(Rel.Remap.offset(3, 1))
+            .addExpressions(sb.fieldReference(aggregate, 0))
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(project);
+
+    assertRowMatch(relNode.getRowType(), N.STRING);
+  }
+
+  @Test
+  void anAggregateOverOutOfOrderGroupingSetsRoundTrips() {
+    // The grouping columns survive the trip in the order the aggregate declares them, rather than
+    // in the order Calcite happens to emit them. Only those columns are compared: the grouping-set
+    // index comes back as an i64, because the conversion builds Calcite's GROUP_ID call as a
+    // BIGINT and Calcite folds it to a literal of that type, which is a separate difference.
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 2), sb.grouping(input, 0)),
+            input -> List.of(),
+            Optional.empty(),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+
+    RelNode relNode = substraitToCalcite.convert(aggregate);
+    Rel converted =
+        SubstraitRelVisitor.convert(
+                RelRoot.of(relNode, org.apache.calcite.sql.SqlKind.SELECT), converterProvider)
+            .getInput();
+
+    List<Type> declared = aggregate.getRecordType().fields();
+    List<Type> roundTripped = converted.getRecordType().fields();
+    assertEquals(declared.size(), roundTripped.size());
+    assertEquals(declared.subList(0, 2), roundTripped.subList(0, 2));
+  }
+
+  @Test
+  void anExplicitGroupIdCallKeepsTheDeclaredColumnOrder() {
+    // Calcite folds GROUP_ID() into a literal wherever it can work out the answer, so a plan that
+    // still carries the call has to be built rather than parsed. Its grouping sets mention field 3
+    // before field 2, which is the order the converted relation has to declare its columns in --
+    // the shape a query whose grouping sets are followed by another key produces.
+    org.apache.calcite.tools.RelBuilder relBuilder =
+        new RelCreator(TPCH_CATALOG).createRelBuilder();
+    RelNode scan = relBuilder.scan("LINEITEM").build();
+    AggregateCall groupId =
+        AggregateCall.create(
+            SqlStdOperatorTable.GROUP_ID,
+            false,
+            false,
+            false,
+            List.of(),
+            List.of(),
+            -1,
+            null,
+            RelCollations.EMPTY,
+            typeFactory.createSqlType(SqlTypeName.BIGINT),
+            null);
+    RelNode calciteAggregate =
+        LogicalAggregate.create(
+            scan,
+            List.of(),
+            ImmutableBitSet.of(0, 1, 2, 3),
+            List.of(ImmutableBitSet.of(0, 1, 3), ImmutableBitSet.of(2, 3)),
+            List.of(groupId));
+
+    Rel rel =
+        SubstraitRelVisitor.convert(
+                RelRoot.of(calciteAggregate, org.apache.calcite.sql.SqlKind.SELECT),
+                converterProvider)
+            .getInput();
+
+    // What the relation says it emits is what the Calcite aggregate it came from emits. The
+    // grouping-set index is left out of the comparison: Calcite types its GROUP_ID column BIGINT
+    // while Substrait gives the aggregate an i32 one, which is a difference of its own.
+    List<Type> emitted = rel.getRecordType().fields();
+    assertEquals(5, emitted.size());
+    assertRowMatch(
+        typeFactory.createStructType(calciteAggregate.getRowType().getFieldList().subList(0, 4)),
+        emitted.subList(0, 4));
   }
 
   @Test
