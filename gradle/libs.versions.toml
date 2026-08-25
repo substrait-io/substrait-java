@@ -31,7 +31,7 @@ spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
 spotless = "8.10.0"
 # substrait-packaging artifacts, versioned by the Substrait spec release they are generated from.
-substrait-packaging = "0.101.0"
+substrait-packaging = "0.102.0"
 testcontainers = "2.0.5"
 validator = "3.0.6"
 

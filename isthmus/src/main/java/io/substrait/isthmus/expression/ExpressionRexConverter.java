@@ -811,14 +811,23 @@ public class ExpressionRexConverter
 
     @Override
     public RexWindowBound visit(WindowBound.Preceding preceding) {
-      BigDecimal offset = BigDecimal.valueOf(preceding.offset());
+      BigDecimal offset = BigDecimal.valueOf(toLiteralOffset(preceding.offset()));
       return RexWindowBounds.preceding(rexBuilder.makeBigintLiteral(offset));
     }
 
     @Override
     public RexWindowBound visit(WindowBound.Following following) {
-      BigDecimal offset = BigDecimal.valueOf(following.offset());
+      BigDecimal offset = BigDecimal.valueOf(toLiteralOffset(following.offset()));
       return RexWindowBounds.following(rexBuilder.makeBigintLiteral(offset));
+    }
+
+    private static long toLiteralOffset(io.substrait.expression.Expression offset) {
+      return WindowBound.toLiteralOffset(offset)
+          .orElseThrow(
+              () ->
+                  new UnsupportedOperationException(
+                      "Calcite window bounds only support a literal positive offset, got: "
+                          + offset));
     }
 
     @Override

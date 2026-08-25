@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import java.util.Optional;
 import org.immutables.value.Value;
 
 /**
@@ -14,6 +15,46 @@ public interface WindowBound {
 
   /** Shared instance representing an unbounded frame bound. */
   Unbounded UNBOUNDED = ImmutableWindowBound.Unbounded.builder().build();
+
+  /**
+   * Returns the offset as a strictly positive {@code int64} literal, if it is representable as one.
+   * Mirrors the spec's rule that the legacy {@code offset} field can only carry the int64-literal
+   * equivalent of {@code offset_expr}.
+   *
+   * @param offset the offset expression of a {@link Preceding} or {@link Following} bound
+   * @return the literal value, or empty if the expression is not a plain, strictly positive {@code
+   *     i64} literal
+   */
+  static Optional<Long> toLiteralOffset(Expression offset) {
+    if (offset instanceof Expression.I64Literal) {
+      long value = ((Expression.I64Literal) offset).value();
+      if (value > 0) {
+        return Optional.of(value);
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Validates a window's bounds type against its bounds, per the spec's rule that {@code
+   * bounds_type} is required whenever either bound is {@link CurrentRow}, {@link Preceding}, or
+   * {@link Following} (i.e. whenever a bound is not {@link Unbounded}).
+   *
+   * @param boundsType the window's bounds type
+   * @param lowerBound the window's lower bound
+   * @param upperBound the window's upper bound
+   * @throws IllegalArgumentException if {@code boundsType} is {@code UNSPECIFIED} despite a bound
+   *     that requires one
+   */
+  static void checkBoundsType(
+      Expression.WindowBoundsType boundsType, WindowBound lowerBound, WindowBound upperBound) {
+    if (boundsType == Expression.WindowBoundsType.UNSPECIFIED
+        && (!(lowerBound instanceof Unbounded) || !(upperBound instanceof Unbounded))) {
+      throw new IllegalArgumentException(
+          "bounds_type is required when either window bound is CurrentRow, Preceding, or"
+              + " Following, but was BOUNDS_TYPE_UNSPECIFIED");
+    }
+  }
 
   /**
    * Visitor over the concrete {@link WindowBound} kinds.
@@ -65,23 +106,33 @@ public interface WindowBound {
    */
   <R, E extends Throwable> R accept(WindowBoundVisitor<R, E> visitor);
 
-  /** A bound a fixed number of rows before the current row. */
+  /** A bound a fixed distance before the current row. */
   @Value.Immutable
   abstract class Preceding implements WindowBound {
     /**
-     * Returns the number of rows preceding the current row.
+     * Returns the expression evaluating to the distance preceding the current row.
      *
-     * @return the offset
+     * @return the offset expression
      */
-    public abstract long offset();
+    public abstract Expression offset();
 
     /**
-     * Creates a {@link Preceding} bound with the given offset.
+     * Creates a {@link Preceding} bound with the given literal row offset.
      *
      * @param offset the number of rows preceding the current row
      * @return the preceding bound
      */
     public static Preceding of(long offset) {
+      return of(ExpressionCreator.i64(false, offset));
+    }
+
+    /**
+     * Creates a {@link Preceding} bound with the given offset expression.
+     *
+     * @param offset the expression evaluating to the distance preceding the current row
+     * @return the preceding bound
+     */
+    public static Preceding of(Expression offset) {
       return ImmutableWindowBound.Preceding.builder().offset(offset).build();
     }
 
@@ -91,15 +142,15 @@ public interface WindowBound {
     }
   }
 
-  /** A bound a fixed number of rows after the current row. */
+  /** A bound a fixed distance after the current row. */
   @Value.Immutable
   abstract class Following implements WindowBound {
     /**
-     * Returns the number of rows following the current row.
+     * Returns the expression evaluating to the distance following the current row.
      *
-     * @return the offset
+     * @return the offset expression
      */
-    public abstract long offset();
+    public abstract Expression offset();
 
     /**
      * Creates a {@link Following} bound with the given offset.
@@ -108,6 +159,16 @@ public interface WindowBound {
      * @return the following bound
      */
     public static Following of(long offset) {
+      return of(ExpressionCreator.i64(false, offset));
+    }
+
+    /**
+     * Creates a {@link Following} bound with the given offset expression.
+     *
+     * @param offset the expression evaluating to the distance following the current row
+     * @return the following bound
+     */
+    public static Following of(Expression offset) {
       return ImmutableWindowBound.Following.builder().offset(offset).build();
     }
 

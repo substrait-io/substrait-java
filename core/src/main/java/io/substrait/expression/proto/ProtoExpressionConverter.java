@@ -397,6 +397,9 @@ public class ProtoExpressionConverter {
 
     WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
+    Expression.WindowBoundsType boundsType =
+        Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType());
+    WindowBound.checkBoundsType(boundsType, lowerBound, upperBound);
 
     return Expression.WindowFunctionInvocation.builder()
         .arguments(args)
@@ -405,7 +408,7 @@ public class ProtoExpressionConverter {
         .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
         .partitionBy(partitionExprs)
         .sort(sortFields)
-        .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
@@ -440,13 +443,16 @@ public class ProtoExpressionConverter {
 
     WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
+    Expression.WindowBoundsType boundsType =
+        Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType());
+    WindowBound.checkBoundsType(boundsType, lowerBound, upperBound);
 
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .arguments(args)
         .declaration(declaration)
         .outputType(protoTypeConverter.from(windowRelFunction.getOutputType()))
         .aggregationPhase(Expression.AggregationPhase.fromProto(windowRelFunction.getPhase()))
-        .boundsType(Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType()))
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(Expression.AggregationInvocation.fromProto(windowRelFunction.getInvocation()))
@@ -457,9 +463,14 @@ public class ProtoExpressionConverter {
   private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
     switch (bound.getKindCase()) {
       case PRECEDING:
-        return WindowBound.Preceding.of(bound.getPreceding().getOffset());
+        // Per the spec, consumers must use offset_expr when it is set and ignore offset.
+        return bound.getPreceding().hasOffsetExpr()
+            ? WindowBound.Preceding.of(from(bound.getPreceding().getOffsetExpr()))
+            : WindowBound.Preceding.of(bound.getPreceding().getOffset());
       case FOLLOWING:
-        return WindowBound.Following.of(bound.getFollowing().getOffset());
+        return bound.getFollowing().hasOffsetExpr()
+            ? WindowBound.Following.of(from(bound.getFollowing().getOffsetExpr()))
+            : WindowBound.Following.of(bound.getFollowing().getOffset());
       case CURRENT_ROW:
         return WindowBound.CURRENT_ROW;
       case UNBOUNDED:

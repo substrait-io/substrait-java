@@ -773,8 +773,8 @@ public class ExpressionProtoConverter
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
-    Expression.WindowFunction.Bound lowerBound = BoundConverter.convert(expr.lowerBound());
-    Expression.WindowFunction.Bound upperBound = BoundConverter.convert(expr.upperBound());
+    Expression.WindowFunction.Bound lowerBound = BoundConverter.convert(expr.lowerBound(), this);
+    Expression.WindowFunction.Bound upperBound = BoundConverter.convert(expr.upperBound(), this);
 
     return Expression.newBuilder()
         .setWindowFunction(
@@ -844,34 +844,42 @@ public class ExpressionProtoConverter
   /** Converts a {@link WindowBound} to its protobuf {@link Expression.WindowFunction.Bound}. */
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
-    private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
+
+    private final ExpressionProtoConverter exprProtoConverter;
 
     /**
      * Converts the given window bound to its protobuf representation.
      *
      * @param bound the window bound to convert
+     * @param exprProtoConverter the converter used to convert a {@link WindowBound.Preceding}/
+     *     {@link WindowBound.Following} offset expression
      * @return the proto window bound
      */
-    public static Expression.WindowFunction.Bound convert(WindowBound bound) {
-      return bound.accept(TO_BOUND_VISITOR);
+    public static Expression.WindowFunction.Bound convert(
+        WindowBound bound, ExpressionProtoConverter exprProtoConverter) {
+      return bound.accept(new BoundConverter(exprProtoConverter));
     }
 
-    private BoundConverter() {}
+    private BoundConverter(ExpressionProtoConverter exprProtoConverter) {
+      this.exprProtoConverter = exprProtoConverter;
+    }
 
     @Override
     public Expression.WindowFunction.Bound visit(WindowBound.Preceding preceding) {
-      return Expression.WindowFunction.Bound.newBuilder()
-          .setPreceding(
-              Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(preceding.offset()))
-          .build();
+      Expression.WindowFunction.Bound.Preceding.Builder builder =
+          Expression.WindowFunction.Bound.Preceding.newBuilder()
+              .setOffsetExpr(exprProtoConverter.toProto(preceding.offset()));
+      WindowBound.toLiteralOffset(preceding.offset()).ifPresent(builder::setOffset);
+      return Expression.WindowFunction.Bound.newBuilder().setPreceding(builder).build();
     }
 
     @Override
     public Expression.WindowFunction.Bound visit(WindowBound.Following following) {
-      return Expression.WindowFunction.Bound.newBuilder()
-          .setFollowing(
-              Expression.WindowFunction.Bound.Following.newBuilder().setOffset(following.offset()))
-          .build();
+      Expression.WindowFunction.Bound.Following.Builder builder =
+          Expression.WindowFunction.Bound.Following.newBuilder()
+              .setOffsetExpr(exprProtoConverter.toProto(following.offset()));
+      WindowBound.toLiteralOffset(following.offset()).ifPresent(builder::setOffset);
+      return Expression.WindowFunction.Bound.newBuilder().setFollowing(builder).build();
     }
 
     @Override

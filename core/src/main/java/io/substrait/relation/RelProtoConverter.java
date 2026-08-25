@@ -780,8 +780,8 @@ public class RelProtoConverter
                   .addAllOptions(options)
                   .setFunctionReference(extensionCollector.getFunctionReference(f.declaration()))
                   .setBoundsType(f.boundsType().toProto())
-                  .setLowerBound(BoundConverter.convert(f.lowerBound()))
-                  .setUpperBound(BoundConverter.convert(f.upperBound()))
+                  .setLowerBound(BoundConverter.convert(f.lowerBound(), exprProtoConverter))
+                  .setUpperBound(BoundConverter.convert(f.upperBound(), exprProtoConverter))
                   .build();
             })
         .collect(Collectors.toList());
