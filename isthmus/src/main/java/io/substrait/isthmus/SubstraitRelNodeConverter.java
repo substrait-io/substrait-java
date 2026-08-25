@@ -64,6 +64,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
@@ -407,6 +408,8 @@ public class SubstraitRelNodeConverter
             : relBuilder;
 
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
+    // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
+    // relation carries.
     return applyOutputNames(applyRemap(node, remap), aggregate);
   }
 
@@ -1136,8 +1139,12 @@ public class SubstraitRelNodeConverter
   }
 
   /**
-   * Applies the {@code RelCommon} data of a relation to the node it was converted into: its emit
-   * mapping first, and then the alternative output field names of its hint.
+   * Applies the parts of a relation's {@code RelCommon} that Calcite can hold: its emit mapping
+   * first, and then the alternative output field names of its hint.
+   *
+   * <p>The rest is dropped. A Calcite {@code RelNode} has no place for a relation's alias, its
+   * statistics, the computations it saves or loads, or its anchor, and inventing one would mean
+   * defining a convention on every consumer's behalf.
    *
    * @param relNode the node the relation was converted into
    * @param rel the relation being converted
@@ -1151,17 +1158,21 @@ public class SubstraitRelNodeConverter
    * Applies the alternative output field names a relation carries in its hint to the node it was
    * converted into.
    *
-   * <p>The names are applied where they fit the node the conversion already produced, which is a
-   * projection: the one a {@link Project} is converted into, or the one added for a relation with
-   * an emit mapping. Renaming any other node would mean adding a projection the plan never asked
-   * for, so there the names are dropped instead. A name list that does not fit the relation is
-   * dropped as well, rather than failing the conversion: a hint holds no meaning of its own and
-   * should not be able to break an otherwise valid plan.
+   * <p>The names are applied to the projection this relation's own conversion produced: the one a
+   * {@link Project} becomes, or the one {@link #applyRemap(RelNode, Optional)} adds for a relation
+   * with an emit mapping. Anywhere else they are dropped, rather than renaming a node that stands
+   * for another relation or adding a projection the plan never asked for. That leaves a relation
+   * converted into a bare Calcite operator, such as an aggregate that emits its output directly,
+   * without its names.
    *
    * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
    * them belong to the type of the expression that produces the field, which a projection cannot
    * restate: Calcite compares the two, nested names included, and rejects a projection whose row
    * type says something the expressions do not.
+   *
+   * <p>A name list that does not fit the relation is dropped as well, rather than failing the
+   * conversion: a hint holds no meaning of its own and should not be able to break an otherwise
+   * valid plan.
    *
    * @param relNode the node to rename, with any emit mapping already applied
    * @param rel the relation being converted
@@ -1169,33 +1180,35 @@ public class SubstraitRelNodeConverter
    */
   protected RelNode applyOutputNames(RelNode relNode, Rel rel) {
     List<String> names = rel.getHint().map(Hint::getOutputNames).orElse(List.of());
-    if (names.isEmpty() || !(relNode instanceof org.apache.calcite.rel.core.Project)) {
+    boolean ownsProjection = rel instanceof Project || rel.getRemap().isPresent();
+    if (names.isEmpty()
+        || !ownsProjection
+        || !(relNode instanceof org.apache.calcite.rel.core.Project)) {
       return relNode;
     }
-    List<Type> fields = rel.getRecordType().fields();
     org.apache.calcite.rel.core.Project project = (org.apache.calcite.rel.core.Project) relNode;
     RelDataType rowType = project.getRowType();
+    List<Type> fields = rel.getRecordType().fields();
     if (names.size() != NamedFieldCountingTypeVisitor.countNames(rel.getRecordType())
         || fields.size() != rowType.getFieldCount()) {
       return relNode;
     }
     List<String> fieldNames = new ArrayList<>(fields.size());
-    for (int index = 0, name = 0; index < fields.size(); index++) {
-      fieldNames.add(names.get(name));
-      name += 1 + NamedFieldCountingTypeVisitor.countNames(fields.get(index));
+    for (int field = 0, nameIndex = 0; field < fields.size(); field++) {
+      fieldNames.add(names.get(nameIndex));
+      nameIndex += 1 + NamedFieldCountingTypeVisitor.countNames(fields.get(field));
     }
     if (new HashSet<>(fieldNames).size() != fieldNames.size()) {
       // Calcite requires the field names of a projection to be distinct, and uniquifying the names
       // here would hand back names the producer did not ask for.
       return relNode;
     }
-    List<RelDataType> fieldTypes =
-        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
     return project.copy(
         project.getTraitSet(),
         project.getInput(),
         project.getProjects(),
-        typeFactory.createStructType(rowType.getStructKind(), fieldTypes, fieldNames));
+        typeFactory.createStructType(
+            rowType.getStructKind(), RelOptUtil.getFieldTypeList(rowType), fieldNames));
   }
 
   /**

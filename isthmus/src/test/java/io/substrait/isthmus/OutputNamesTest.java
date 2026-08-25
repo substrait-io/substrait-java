@@ -143,24 +143,77 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
-  void namesAnAggregateOverSeveralGroupingSets() {
-    // The conversion rewrites the emit mapping of an aggregate over more than one grouping set, so
-    // the node the names land on is not the one the relation's own mapping describes.
+  void leavesAnAggregateThatEmitsDirectlyAlone() {
+    // The conversion of an aggregate over several grouping sets ends in a projection, but that
+    // projection carries the grouping-set index rather than this relation's emit mapping, and the
+    // columns underneath it are ordered by Calcite's group key rather than by the relation's own
+    // record type. Names are dropped rather than pinned onto columns chosen by something else.
     Rel aggregate =
         sb.aggregate(
             input -> List.of(sb.grouping(input, 0), sb.grouping(input, 1)),
             input -> List.of(sb.count(input, 0)),
             Optional.empty(),
             scan);
-    Rel named =
-        aggregate.withHint(
-            Optional.of(Hint.builder().addOutputNames("k1", "k2", "n", "g").build()));
 
     RelNode plain = substraitToCalcite.convert(aggregate);
-    RelNode node = substraitToCalcite.convert(named);
+    RelNode node =
+        substraitToCalcite.convert(
+            aggregate.withHint(
+                Optional.of(Hint.builder().addOutputNames("k1", "k2", "n", "g").build())));
 
-    assertEquals(List.of("a", "b", "$f2", "$f3"), plain.getRowType().getFieldNames());
-    assertEquals(List.of("k1", "k2", "n", "g"), node.getRowType().getFieldNames());
+    assertEquals(plain.getRowType().getFieldNames(), node.getRowType().getFieldNames());
+  }
+
+  @Test
+  void namesTheOutputOfAJoinWithAnEmitMapping() {
+    Rel join =
+        sb.innerJoin(
+            input -> sb.equal(sb.fieldReference(input, 0), sb.fieldReference(input, 2)),
+            Rel.Remap.of(List.of(2, 0)),
+            scan,
+            scan);
+    Rel named = join.withHint(Optional.of(Hint.builder().addOutputNames("right", "left").build()));
+
+    assertEquals(
+        List.of("right", "left"), substraitToCalcite.convert(named).getRowType().getFieldNames());
+  }
+
+  @Test
+  void leavesARelationWithAnIdentityEmitMappingAlone() {
+    // An identity mapping needs no projection, so there is no node to hang the names on.
+    Rel filter =
+        Filter.builder()
+            .input(scan)
+            .condition(sb.equal(sb.fieldReference(scan, 0), sb.i64(1)))
+            .remap(Rel.Remap.of(List.of(0, 1)))
+            .hint(Hint.builder().addOutputNames("k", "v").build())
+            .build();
+
+    RelNode node = substraitToCalcite.convert(filter);
+
+    assertEquals(List.of("a", "b"), node.getRowType().getFieldNames());
+    assertEquals(0, countProjections(node));
+  }
+
+  @Test
+  void leavesTheNamesOfAnotherRelationAlone() {
+    // The always-true condition means Calcite builds no filter at all, so the node on top is the
+    // projection of the inner relation, with the names that relation asked for.
+    Rel inner =
+        Project.builder()
+            .input(scan)
+            .remap(Rel.Remap.offset(2, 1))
+            .addExpressions(sb.add(sb.fieldReference(scan, 0), sb.i64(1)))
+            .hint(Hint.builder().addOutputNames("inner").build())
+            .build();
+    Rel filter =
+        Filter.builder()
+            .input(inner)
+            .condition(sb.bool(true))
+            .hint(Hint.builder().addOutputNames("outer").build())
+            .build();
+
+    assertEquals(List.of("inner"), substraitToCalcite.convert(filter).getRowType().getFieldNames());
   }
 
   private static int countProjections(RelNode node) {
