@@ -8,6 +8,7 @@ import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.hint.Hint;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
@@ -40,7 +41,9 @@ import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.type.NamedFieldCountingTypeVisitor;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayDeque;
@@ -194,13 +197,13 @@ public class SubstraitRelNodeConverter
     context.enterScope(AnchoredInput.of(filter.getInput().getRelAnchor(), input.getRowType()));
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
     RelNode node = relBuilder.push(input).filter(context.exitScope(), filterCondition).build();
-    return applyRemap(node, filter.getRemap());
+    return applyRelCommon(node, filter);
   }
 
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
-    return applyRemap(node, namedScan.getRemap());
+    return applyRelCommon(node, namedScan);
   }
 
   @Override
@@ -225,7 +228,7 @@ public class SubstraitRelNodeConverter
 
     RelNode node =
         relBuilder.push(child).project(rexExprs, List.of(), false, context.exitScope()).build();
-    return applyRemap(node, project.getRemap());
+    return applyRelCommon(node, project);
   }
 
   @Override
@@ -235,7 +238,7 @@ public class SubstraitRelNodeConverter
     // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
     RelNode node =
         relBuilder.push(left).push(right).join(JoinRelType.INNER, relBuilder.literal(true)).build();
-    return applyRemap(node, cross.getRemap());
+    return applyRelCommon(node, cross);
   }
 
   @Override
@@ -252,7 +255,7 @@ public class SubstraitRelNodeConverter
     JoinRelType joinType = asJoinRelType(join);
     RelNode node =
         relBuilder.push(left).push(right).join(joinType, condition, context.exitScope()).build();
-    return applyRemap(node, join.getRemap());
+    return applyRelCommon(node, join);
   }
 
   private JoinRelType asJoinRelType(Join join) {
@@ -292,7 +295,7 @@ public class SubstraitRelNodeConverter
             });
     RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
-    return applyRemap(node, set.getRemap());
+    return applyRelCommon(node, set);
   }
 
   private RelBuilder getRelBuilder(Set set) {
@@ -404,7 +407,7 @@ public class SubstraitRelNodeConverter
             : relBuilder;
 
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
-    return applyRemap(node, remap);
+    return applyOutputNames(applyRemap(node, remap), aggregate);
   }
 
   /**
@@ -622,7 +625,7 @@ public class SubstraitRelNodeConverter
             .collect(Collectors.toList());
     exitUncorrelatedScope(context, Sort.class);
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
-    return applyRemap(node, sort.getRemap());
+    return applyRelCommon(node, sort);
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
@@ -663,7 +666,7 @@ public class SubstraitRelNodeConverter
         fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
     exitUncorrelatedScope(context, Fetch.class);
     RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
-    return applyRemap(node, fetch.getRemap());
+    return applyRelCommon(node, fetch);
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
@@ -1130,6 +1133,69 @@ public class SubstraitRelNodeConverter
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  /**
+   * Applies the {@code RelCommon} data of a relation to the node it was converted into: its emit
+   * mapping first, and then the alternative output field names of its hint.
+   *
+   * @param relNode the node the relation was converted into
+   * @param rel the relation being converted
+   * @return the node, remapped and renamed
+   */
+  protected RelNode applyRelCommon(RelNode relNode, Rel rel) {
+    return applyOutputNames(applyRemap(relNode, rel.getRemap()), rel);
+  }
+
+  /**
+   * Applies the alternative output field names a relation carries in its hint to the node it was
+   * converted into.
+   *
+   * <p>The names are applied where they fit the node the conversion already produced, which is a
+   * projection: the one a {@link Project} is converted into, or the one added for a relation with
+   * an emit mapping. Renaming any other node would mean adding a projection the plan never asked
+   * for, so there the names are dropped instead. A name list that does not fit the relation is
+   * dropped as well, rather than failing the conversion: a hint holds no meaning of its own and
+   * should not be able to break an otherwise valid plan.
+   *
+   * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
+   * them belong to the type of the expression that produces the field, which a projection cannot
+   * restate: Calcite compares the two, nested names included, and rejects a projection whose row
+   * type says something the expressions do not.
+   *
+   * @param relNode the node to rename, with any emit mapping already applied
+   * @param rel the relation being converted
+   * @return the renamed node, or the node unchanged where the names do not apply
+   */
+  protected RelNode applyOutputNames(RelNode relNode, Rel rel) {
+    List<String> names = rel.getHint().map(Hint::getOutputNames).orElse(List.of());
+    if (names.isEmpty() || !(relNode instanceof org.apache.calcite.rel.core.Project)) {
+      return relNode;
+    }
+    List<Type> fields = rel.getRecordType().fields();
+    org.apache.calcite.rel.core.Project project = (org.apache.calcite.rel.core.Project) relNode;
+    RelDataType rowType = project.getRowType();
+    if (names.size() != NamedFieldCountingTypeVisitor.countNames(rel.getRecordType())
+        || fields.size() != rowType.getFieldCount()) {
+      return relNode;
+    }
+    List<String> fieldNames = new ArrayList<>(fields.size());
+    for (int index = 0, name = 0; index < fields.size(); index++) {
+      fieldNames.add(names.get(name));
+      name += 1 + NamedFieldCountingTypeVisitor.countNames(fields.get(index));
+    }
+    if (new HashSet<>(fieldNames).size() != fieldNames.size()) {
+      // Calcite requires the field names of a projection to be distinct, and uniquifying the names
+      // here would hand back names the producer did not ask for.
+      return relNode;
+    }
+    List<RelDataType> fieldTypes =
+        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
+    return project.copy(
+        project.getTraitSet(),
+        project.getInput(),
+        project.getProjects(),
+        typeFactory.createStructType(rowType.getStructKind(), fieldTypes, fieldNames));
   }
 
   /**
