@@ -8,9 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.WindowBound;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.TypeCreator;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -279,6 +283,53 @@ class OuterReferenceConverterTest extends TestBase {
 
     assertThrows(
         UnsupportedOperationException.class, () -> OuterReferenceConverter.toIdBased(plan));
+  }
+
+  @Test
+  void outerReferenceInsideWindowBoundOffsetIsConverted() {
+    // The outer reference lives inside the window bound's offset expression, not in a Filter
+    // condition. ExpressionCopyOnWriteVisitor must recurse into lowerBound()/upperBound() for
+    // OuterReferenceConverter (built on it) to ever see this reference at all.
+    SimpleExtension.WindowFunctionVariant declaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+
+    Rel stepsOut =
+        sb.project(
+            input ->
+                List.of(
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 ->
+                                List.of(
+                                    Expression.WindowFunctionInvocation.builder()
+                                        .declaration(declaration)
+                                        .arguments(List.of(sb.fieldReference(input2, 0)))
+                                        .partitionBy(Collections.emptyList())
+                                        .sort(Collections.emptyList())
+                                        .outputType(TypeCreator.NULLABLE.I64)
+                                        .aggregationPhase(
+                                            Expression.AggregationPhase.INITIAL_TO_RESULT)
+                                        .invocation(Expression.AggregationInvocation.ALL)
+                                        .lowerBound(
+                                            WindowBound.Preceding.of(
+                                                FieldReference.newRootStructOuterReference(
+                                                    1, TypeCreator.REQUIRED.I64, 1)))
+                                        .upperBound(WindowBound.CURRENT_ROW)
+                                        .boundsType(Expression.WindowBoundsType.RANGE)
+                                        .build()),
+                            Remap.of(List.of(1)),
+                            customerTableScan),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2, 3)),
+            orderTableScan);
+
+    Rel idBased = OuterReferenceConverter.toIdBased(stepsOut);
+
+    assertNotEquals(stepsOut, idBased);
+    assertEquals(stepsOut, OuterReferenceConverter.toStepsOut(idBased));
   }
 
   /** A one-step correlated-subquery plan whose outer reference binds to {@code bindingScan}. */

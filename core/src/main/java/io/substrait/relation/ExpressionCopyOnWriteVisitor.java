@@ -9,6 +9,7 @@ import io.substrait.expression.ExpressionVisitor;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.ImmutableExpression;
+import io.substrait.expression.WindowBound;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
 import java.util.Optional;
@@ -337,8 +338,10 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     Optional<List<Expression>> partitionBy = visitExprList(wfi.partitionBy(), context);
     Optional<List<Expression.SortField>> sort =
         transformList(wfi.sort(), context, this::visitSortField);
+    Optional<WindowBound> lowerBound = visitWindowBound(wfi.lowerBound(), context);
+    Optional<WindowBound> upperBound = visitWindowBound(wfi.upperBound(), context);
 
-    if (allEmpty(arguments, partitionBy, sort)) {
+    if (allEmpty(arguments, partitionBy, sort, lowerBound, upperBound)) {
       return Optional.empty();
     }
     return Optional.of(
@@ -347,7 +350,36 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
             .arguments(arguments.orElse(wfi.arguments()))
             .partitionBy(partitionBy.orElse(wfi.partitionBy()))
             .sort(sort.orElse(wfi.sort()))
+            .lowerBound(lowerBound.orElse(wfi.lowerBound()))
+            .upperBound(upperBound.orElse(wfi.upperBound()))
             .build());
+  }
+
+  /**
+   * Rewrites a {@link WindowBound.Preceding}/{@link WindowBound.Following} offset expression,
+   * returning a new bound if it changed. {@link WindowBound.CurrentRow}/{@link
+   * WindowBound.Unbounded} carry no expression and are always unchanged.
+   *
+   * @param bound the window bound to rewrite
+   * @param context the visitation context
+   * @return the rewritten bound, or empty if unchanged
+   * @throws E if the visit fails
+   */
+  protected Optional<WindowBound> visitWindowBound(
+      WindowBound bound, EmptyVisitationContext context) throws E {
+    if (bound instanceof WindowBound.Preceding) {
+      return ((WindowBound.Preceding) bound)
+          .offset()
+          .accept(this, context)
+          .map(WindowBound.Preceding::of);
+    }
+    if (bound instanceof WindowBound.Following) {
+      return ((WindowBound.Following) bound)
+          .offset()
+          .accept(this, context)
+          .map(WindowBound.Following::of);
+    }
+    return Optional.empty();
   }
 
   @Override
