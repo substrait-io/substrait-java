@@ -265,10 +265,19 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
    *
    * @param subQuery the subquery node
    * @return the converted Substrait expression
-   * @throws UnsupportedOperationException for unsupported subquery operators
+   * @throws UnsupportedOperationException for an unsupported subquery operator, or when this
+   *     converter was built without a relation visitor
    */
   @Override
   public Expression visitSubQuery(RexSubQuery subQuery) {
+    if (relVisitor == null) {
+      // A converter built without one converts expressions that stand alone, an extended
+      // expression among them. Say so rather than dereferencing it.
+      throw new UnsupportedOperationException(
+          String.format(
+              "This converter has no relation visitor, so it cannot convert the subquery %s",
+              subQuery));
+    }
     Rel rel = relVisitor.apply(subQuery.rel);
 
     if (subQuery.getOperator() == SqlStdOperatorTable.EXISTS) {

@@ -4,10 +4,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import java.io.IOException;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgram;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -89,5 +98,35 @@ class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
     };
 
     assertProtoExtendedExpressionRoundtrip(expressions);
+  }
+
+  /**
+   * The converter this path builds has no relation to visit, so a subquery cannot be converted on
+   * it. What the path accepts today never produces one -- a constant scalar subquery folds before
+   * the conversion sees it, and IN and EXISTS are rejected by Calcite's own validation -- so this
+   * pins the converter rather than a SQL expression that reaches it.
+   */
+  @Test
+  void aSubqueryIsRejectedRatherThanDereferencingTheMissingVisitor() {
+    RexBuilder rexBuilder = new RexBuilder(SubstraitTypeSystem.TYPE_FACTORY);
+    RelOptCluster cluster =
+        RelOptCluster.create(new HepPlanner(HepProgram.builder().build()), rexBuilder);
+    RelNode oneRow =
+        LogicalValues.create(
+            cluster,
+            SubstraitTypeSystem.TYPE_FACTORY.builder().add("a", SqlTypeName.INTEGER).build(),
+            ImmutableList.of(
+                ImmutableList.of(
+                    rexBuilder.makeExactLiteral(
+                        java.math.BigDecimal.ONE,
+                        SubstraitTypeSystem.TYPE_FACTORY.createSqlType(SqlTypeName.INTEGER)))));
+    RexSubQuery subQuery = RexSubQuery.scalar(oneRow);
+
+    UnsupportedOperationException rejected =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                ConverterProvider.DEFAULT.getRexExpressionConverter(null).visitSubQuery(subQuery));
+    assertTrue(rejected.getMessage().contains("no relation visitor"), rejected.getMessage());
   }
 }

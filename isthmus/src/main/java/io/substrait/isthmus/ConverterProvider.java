@@ -356,8 +356,9 @@ public class ConverterProvider {
    * A {@link RexExpressionConverter} converts Calcite {@link org.apache.calcite.rex.RexNode}s to
    * Substrait equivalents.
    *
-   * @param srv the SubstraitRelVisitor to use for nested relation conversions, or {@code null} when
-   *     the expressions being converted stand alone and cannot contain a subquery
+   * @param srv the SubstraitRelVisitor to use for nested relation conversions, or {@code null}
+   *     where the expressions being converted stand alone; the converter then rejects a subquery
+   *     rather than converting one
    * @return a new RexExpressionConverter instance
    */
   public RexExpressionConverter getRexExpressionConverter(SubstraitRelVisitor srv) {
