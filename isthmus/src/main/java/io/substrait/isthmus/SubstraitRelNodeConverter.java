@@ -439,14 +439,18 @@ public class SubstraitRelNodeConverter
   private static Optional<Remap> inConvertedGroupingOrder(
       Optional<Remap> remap, List<RexNode> groupExprs, int callCount) {
     List<RexNode> declared = new ArrayList<>(new LinkedHashSet<>(groupExprs));
-    if (!declared.stream().allMatch(RexInputRef.class::isInstance)) {
-      // The conversion projects expressions that are not field references below the aggregate, in
-      // the order they were declared, and groups over that projection, so the orders agree.
-      return remap;
-    }
+    // Calcite emits the grouping columns in the order they sit in the aggregate's input: a field
+    // reference where its field sits, and anything else -- an outer reference, which the transform
+    // above leaves alone -- in the projection Calcite adds after them, in the order it was
+    // declared. Sorting is stable, so giving the second kind one key keeps that order among them.
     List<RexNode> converted =
         declared.stream()
-            .sorted(Comparator.comparingInt(expr -> ((RexInputRef) expr).getIndex()))
+            .sorted(
+                Comparator.comparingInt(
+                    expr ->
+                        expr instanceof RexInputRef
+                            ? ((RexInputRef) expr).getIndex()
+                            : Integer.MAX_VALUE))
             .collect(Collectors.toList());
     if (converted.equals(declared)) {
       return remap;

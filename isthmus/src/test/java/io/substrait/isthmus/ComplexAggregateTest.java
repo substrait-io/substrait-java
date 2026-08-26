@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
@@ -355,5 +356,40 @@ class ComplexAggregateTest extends PlanTestBase {
             sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
     RelNode relNode = substraitToCalcite.convert(rel);
     assertRowMatch(relNode.getRowType(), R.STRING, R.I64);
+  }
+
+  /**
+   * A grouping expression that is not a field reference into the aggregate's input -- an outer
+   * reference, which the pre-Calcite transform leaves alone rather than projecting out -- is put by
+   * Calcite in a projection after the input's own fields, so it is emitted last however early the
+   * aggregate declares it. The emit mapping has to follow it there.
+   */
+  @Test
+  void outOfOrderGroupingSetsOverAnOuterReference() {
+    Rel outer = sb.namedScan(List.of("bar"), List.of("x"), List.of(R.I64)).withRelAnchor(1);
+    Rel inner =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    Aggregate aggregate =
+        Aggregate.builder()
+            .input(inner)
+            .addGroupings(
+                Aggregate.Grouping.builder()
+                    .addExpressions(
+                        FieldReference.newRootStructOuterReferenceByRelReference(0, R.I64, 1))
+                    .build())
+            .addGroupings(
+                Aggregate.Grouping.builder().addExpressions(sb.fieldReference(inner, 2)).build())
+            // The first grouping column the aggregate declares, which is the outer reference.
+            .remap(Rel.Remap.of(List.of(0)))
+            .build();
+
+    Rel root =
+        sb.project(
+            input -> List.of(sb.scalarSubquery(aggregate, N.I64)), Rel.Remap.of(List.of(1)), outer);
+
+    RelNode relNode = substraitToCalcite.convert(root);
+
+    assertRowMatch(relNode.getRowType(), N.I64);
   }
 }
