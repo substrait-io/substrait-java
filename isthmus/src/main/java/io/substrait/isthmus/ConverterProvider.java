@@ -105,6 +105,12 @@ public class ConverterProvider {
   /** Converter for Substrait types to Calcite types and vice versa. */
   protected TypeConverter typeConverter;
 
+  /**
+   * Caller-supplied {@link CallConverter}s, consulted ahead of the built-in ones. See {@link
+   * #getCallConverters()}.
+   */
+  protected final List<CallConverter> additionalCallConverters;
+
   /** The execution behavior configuration for plans created by this converter. */
   protected final Plan.ExecutionBehavior executionBehavior;
 
@@ -228,6 +234,7 @@ public class ConverterProvider {
             .orElse(builder.sqlParserConfig);
     this.typeObserver = builder.typeObserver;
     this.aggregateConversion = builder.aggregateConversion;
+    this.additionalCallConverters = List.copyOf(builder.additionalCallConverters);
 
     this.scalarFunctionConverter =
         builder.scalarFunctionConverter.orElseGet(
@@ -371,11 +378,21 @@ public class ConverterProvider {
    * {@link CallConverter}s are used to convert Calcite {@link org.apache.calcite.rex.RexCall}s to
    * Substrait equivalents.
    *
+   * <p>The converters are consulted in order and the first one to return a result wins. Any {@link
+   * Builder#additionalCallConverters(List) additional converters} come first, so a caller whose
+   * dialect gives a call different semantics can claim it before the built-in converter for it
+   * does.
+   *
+   * <p>This list covers plain calls only. A windowed call is a {@link
+   * org.apache.calcite.rex.RexOver}, which {@link
+   * io.substrait.isthmus.expression.RexExpressionConverter} routes to the window function converter
+   * without consulting these.
+   *
    * @return a list of CallConverter instances
    */
   public List<CallConverter> getCallConverters() {
-    ArrayList<CallConverter> callConverters =
-        new ArrayList<>(CallConverters.defaults(typeConverter));
+    ArrayList<CallConverter> callConverters = new ArrayList<>(additionalCallConverters);
+    callConverters.addAll(CallConverters.defaults(typeConverter));
     callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
     callConverters.add(scalarFunctionConverter);
     return callConverters;
@@ -585,6 +602,7 @@ public class ConverterProvider {
     private TypeObserver typeObserver = TypeObserver.NOOP;
     private AggregateConversion aggregateConversion = AggregateConversion.DEFAULT;
     private Optional<Casing> unquotedCasing = Optional.empty();
+    private List<CallConverter> additionalCallConverters = List.of();
 
     // Derived from the extensions and type factory at build time when left unset.
     private Optional<ScalarFunctionConverter> scalarFunctionConverter = Optional.empty();
@@ -685,6 +703,24 @@ public class ConverterProvider {
      */
     public Builder aggregateConversion(AggregateConversion aggregateConversion) {
       this.aggregateConversion = Objects.requireNonNull(aggregateConversion, "aggregateConversion");
+      return this;
+    }
+
+    /**
+     * Sets {@link CallConverter}s for calls the built-in converters do not handle, or handle
+     * differently than the caller's dialect needs. Like the other setters this replaces what was
+     * configured before rather than adding to it.
+     *
+     * <p>They are consulted ahead of the built-in converters, so one of them may claim a call a
+     * built-in converter would otherwise have taken, and they do not apply to windowed calls. See
+     * {@link ConverterProvider#getCallConverters()}.
+     *
+     * @param additionalCallConverters the call converters to consult first
+     * @return this builder
+     */
+    public Builder additionalCallConverters(List<CallConverter> additionalCallConverters) {
+      this.additionalCallConverters =
+          List.copyOf(Objects.requireNonNull(additionalCallConverters, "additionalCallConverters"));
       return this;
     }
 
