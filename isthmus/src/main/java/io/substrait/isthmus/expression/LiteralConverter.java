@@ -78,6 +78,44 @@ public class LiteralConverter {
     return ((NlsString) literal.getValue()).getValue();
   }
 
+  /**
+   * Builds a character literal of the Substrait type the containing conversion already produced,
+   * rather than deriving the form a second time from the Calcite type. A {@link
+   * io.substrait.isthmus.UserTypeMapper} can map a Calcite character type to any of the three, and
+   * only the first derivation consults it.
+   *
+   * @param type the Substrait type this literal must carry
+   * @param nullable whether the literal is nullable
+   * @param value the literal's text
+   * @return the literal
+   */
+  private static Expression.Literal characterLiteral(Type type, boolean nullable, String value) {
+    if (type instanceof Type.Str) {
+      return ExpressionCreator.string(nullable, value);
+    }
+    if (type instanceof Type.VarChar) {
+      return ExpressionCreator.varChar(nullable, value, ((Type.VarChar) type).length());
+    }
+    if (type instanceof Type.FixedChar) {
+      // A fixedchar literal carries no length of its own — Expression.FixedCharLiteral derives it
+      // from the text — so the text has to be the declared width or the two disagree. Padding is
+      // also what CHAR(n) means: 'a' in a CHAR(3) is 'a  '.
+      int length = ((Type.FixedChar) type).length();
+      if (value.length() > length) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Character value '%s' is longer than the fixedchar<%d> it is declared as",
+                value, length));
+      }
+      return ExpressionCreator.fixedChar(nullable, value + " ".repeat(length - value.length()));
+    }
+    throw new UnsupportedOperationException(
+        String.format(
+            "A Calcite character type converted to %s, which has no character literal form; a "
+                + "UserTypeMapper returning it cannot be applied to the literal '%s'",
+            type, value));
+  }
+
   private static BigDecimal bd(RexLiteral literal) {
     return (BigDecimal) literal.getValue();
   }
@@ -134,8 +172,7 @@ public class LiteralConverter {
         {
           Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
-            NlsString nls = (NlsString) val;
-            return ExpressionCreator.fixedChar(nullable, nls.getValue());
+            return characterLiteral(type, nullable, ((NlsString) val).getValue());
           }
           throw new UnsupportedOperationException("Unable to handle char type: " + val);
         }
@@ -152,13 +189,7 @@ public class LiteralConverter {
               nullable, bd, resultType.getPrecision(), resultType.getScale());
         }
       case VARCHAR:
-        {
-          if (resultType.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
-            return ExpressionCreator.string(nullable, s(literal));
-          }
-
-          return ExpressionCreator.varChar(nullable, s(literal), resultType.getPrecision());
-        }
+        return characterLiteral(type, nullable, s(literal));
       case BINARY:
         return ExpressionCreator.fixedBinary(
             nullable,
