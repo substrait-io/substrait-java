@@ -35,7 +35,8 @@ dependencies {
 }
 
 tasks.jar {
-  dependsOn("$sparkProject:jar", ":core:jar", ":core:shadowJar")
+  // zipTree drops the task dependencies the resolved classpath carried, so declare it here.
+  dependsOn(configurations.runtimeClasspath)
 
   isZip64 = true
   exclude("META-INF/*.RSA")
@@ -53,5 +54,3 @@ tasks.named<Test>("test") {
 }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
-
-tasks.pmdMain { dependsOn(":core:shadowJar") }
