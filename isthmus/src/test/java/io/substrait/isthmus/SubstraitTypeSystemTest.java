@@ -3,6 +3,11 @@ package io.substrait.isthmus;
 import static io.substrait.isthmus.SubstraitTypeSystem.TYPE_FACTORY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.plan.Plan;
+import io.substrait.type.TypeCreator;
+import java.util.List;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -90,5 +95,23 @@ class SubstraitTypeSystemTest {
     assertEquals(19, defaultMaxScale);
     assertEquals(38, typeSystem.getMaxPrecision(SqlTypeName.DECIMAL));
     assertEquals(38, typeSystem.getMaxScale(SqlTypeName.DECIMAL));
+  }
+
+  /**
+   * The cap reaches the conversion from SQL as well. Calcite narrows a declared width to its
+   * maximum silently rather than reporting that it cannot hold it, so before this a cast wider than
+   * the default came out of the conversion as a {@code varchar<65536>}.
+   */
+  @Test
+  void aWideVarcharDeclaredInSqlKeepsItsLength() throws Exception {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE t (a VARCHAR(10))");
+
+    Plan plan = new SqlToSubstrait().convert("SELECT CAST(a AS VARCHAR(100000)) FROM t", catalog);
+
+    assertEquals(
+        List.of(TypeCreator.NULLABLE.varChar(100000)),
+        plan.getRoots().get(0).getInput().getRecordType().fields());
   }
 }
