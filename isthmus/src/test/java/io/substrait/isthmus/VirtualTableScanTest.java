@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
@@ -151,8 +152,14 @@ class VirtualTableScanTest extends PlanTestBase {
         converted.getRows().get(1).fields());
   }
 
+  /**
+   * A struct column takes the projection encoding whatever it holds. Calcite has a row literal, but
+   * it orders Values tuples by casting each value to {@link Comparable} and a row literal's value
+   * is a list of {@link RexLiteral}s, which are not -- so a second row is enough to make one throw,
+   * here and in whatever the consumer's planner does with the relation afterwards.
+   */
   @Test
-  void structColumnRoundTrip() {
+  void structColumnConverts() {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
@@ -161,10 +168,48 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalValues(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], tuples=[[{ [1, 2.0E0] }]])\n",
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
+  }
 
-    assertFullRoundTrip(virtualTableScan);
+  /** The row after the first is where a row literal in a tuple would be compared to another. */
+  @Test
+  void twoStructRowsConvert() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0))),
+            List.of(ExpressionCreator.struct(false, sb.i32(3), sb.fp64(4.0))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalProject(inputs=[0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n"
+            + "    LogicalProject(exprs=[[ROW(3, 4.0E0:DOUBLE)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        explain(relNode));
+  }
+
+  /**
+   * A schema struct that is itself nullable says nothing about the relation: a row type describes
+   * the columns, and Calcite derives one NOT NULL everywhere else. What the nullability does reach
+   * is the columns -- Calcite makes a struct's fields nullable along with the struct -- which is
+   * the same row type the conversion built before it was given the schema's names.
+   */
+  @Test
+  void nullableSchemaStructGivesANotNullRowType() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), N.struct(R.I32));
+    VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(sb.i32(1)));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals("RecordType(INTEGER col1) NOT NULL", relNode.getRowType().getFullTypeString());
   }
 
   /**
@@ -172,7 +217,7 @@ class VirtualTableScanTest extends PlanTestBase {
    * the schema's flattened list: the second column's name sits at index 3, not at index 1.
    */
   @Test
-  void severalStructColumnsRoundTrip() {
+  void severalStructColumnsConvert() {
     NamedStruct schema =
         NamedStruct.of(
             List.of("first", "a", "b", "second", "c"),
@@ -186,10 +231,11 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalValues(type=[RecordType(RecordType(INTEGER a, DOUBLE b) first, RecordType(VARCHAR c) second)], tuples=[[{ [1, 2.0E0], ['x'] }]])\n",
+        "LogicalProject(inputs=[0..1])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE), ROW('x':VARCHAR)]])\n"
+            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
-
-    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -277,6 +323,63 @@ class VirtualTableScanTest extends PlanTestBase {
   }
 
   /**
+   * A value that cannot take the type its column is declared at is reported here. Calcite types a
+   * scalar subquery nullable -- no row means no value -- whatever the Substrait expression says its
+   * type is, so this row cannot stand in a NOT NULL column. Without the check the relation is built
+   * at the declared type regardless, and Calcite reports the mismatch through an {@code assert},
+   * which says nothing unless assertions are on.
+   */
+  @Test
+  void aValueThatCannotTakeItsColumnsTypeIsReported() {
+    VirtualTableScan inner =
+        createVirtualTableScan(NamedStruct.of(List.of("a"), R.struct(R.I32)), List.of(sb.i32(7)));
+    Expression subquery = Expression.ScalarSubquery.builder().input(inner).type(R.I32).build();
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(NamedStruct.of(List.of("col1"), R.struct(R.I32)), List.of(subquery));
+
+    IllegalArgumentException reported =
+        assertThrows(
+            IllegalArgumentException.class, () -> substraitToCalcite.convert(virtualTableScan));
+    assertTrue(
+        reported.getMessage().contains("is not the INTEGER NOT NULL its column is declared at"),
+        reported.getMessage());
+  }
+
+  /**
+   * A list and a map convert to a constructor call, except when they are null: then they are a
+   * literal, carrying the placeholder name Calcite derives, and the tuple needs them at the
+   * column's own type just as a struct does.
+   */
+  @Test
+  void nullListColumnConverts() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(N.list(R.I32)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(schema, List.of(ExpressionCreator.typedNull(N.list(R.I32))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalValues(type=[RecordType(INTEGER ARRAY col1)], tuples=[[{ null }]])\n",
+        explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  @Test
+  void nullMapColumnConverts() {
+    NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(N.map(R.STRING, R.I32)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema, List.of(ExpressionCreator.typedNull(N.map(R.STRING, R.I32))));
+
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+    assertEquals(
+        "LogicalValues(type=[RecordType((VARCHAR, INTEGER) MAP col1)], tuples=[[{ null }]])\n",
+        explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
+  }
+
+  /**
    * A struct one level down, inside a list column: the names the schema gives it have to reach it
    * there too, or the projection that holds the row is rejected on them.
    */
@@ -292,7 +395,7 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "LogicalProject(inputs=[0])\n"
             + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ARRAY([1:INTEGER]:RecordType(INTEGER NOT NULL a))]])\n"
+            + "    LogicalProject(exprs=[[ARRAY(ROW(1))]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
   }
@@ -313,7 +416,7 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "LogicalProject(inputs=[0])\n"
             + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[MAP('k':VARCHAR, [1:INTEGER]:RecordType(INTEGER NOT NULL a))]])\n"
+            + "    LogicalProject(exprs=[[MAP('k':VARCHAR, ROW(1))]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
   }

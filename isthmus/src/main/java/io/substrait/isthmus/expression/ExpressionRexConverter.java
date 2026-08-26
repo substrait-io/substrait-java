@@ -446,21 +446,6 @@ public class ExpressionRexConverter
     List<RexNode> fieldNodes =
         expr.fields().stream().map(f -> f.accept(this, context)).collect(Collectors.toList());
     RelDataType structType = typeConverter.toCalcite(typeFactory, expr.getType());
-    // Calcite has a literal of its own for a row of literals, and the reverse conversion reads
-    // one, so build that rather than a ROW call whenever the fields allow it: a call is an
-    // expression, and the places that hold only literals -- a LogicalValues tuple -- cannot take
-    // it. A field that converted to a call of its own (a nullable literal becomes a cast) leaves
-    // no choice but the ROW call, and so does a nullable struct: Calcite has no nullable literal
-    // of a row, and building one at that type gives a literal typed NOT NULL, which would drop
-    // the nullability this expression carries.
-    if (fieldNodes.stream().allMatch(field -> field instanceof RexLiteral)) {
-      List<RexLiteral> fieldLiterals =
-          fieldNodes.stream().map(RexLiteral.class::cast).collect(Collectors.toList());
-      RexNode asLiteral = rexBuilder.makeLiteral(fieldLiterals, structType);
-      if (asLiteral.getType().equals(structType)) {
-        return asLiteral;
-      }
-    }
     return rexBuilder.makeCall(structType, SqlStdOperatorTable.ROW, fieldNodes);
   }
 
