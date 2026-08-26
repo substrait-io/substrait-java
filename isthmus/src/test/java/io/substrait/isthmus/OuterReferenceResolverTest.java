@@ -1,9 +1,13 @@
 package io.substrait.isthmus;
 
+import io.substrait.isthmus.calcite.rel.VirtualTable;
+import java.util.List;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Holder;
@@ -127,6 +131,40 @@ class OuterReferenceResolverTest extends PlanTestBase {
     Assertions.assertNotNull(anchor0);
     Assertions.assertNotNull(anchor1);
     Assertions.assertNotEquals(anchor0, anchor1);
+  }
+
+  /**
+   * A virtual table's rows are expressions, and a subquery among them is a tree the resolver only
+   * reaches through the row: a subquery's relation is not an input, so walking inputs never gets
+   * there and a correlation declared inside it is left unbound.
+   */
+  @Test
+  void correlationInsideASubqueryInAVirtualTableRow() {
+    final Holder<RexCorrelVariable> cor0 = Holder.empty();
+    final RelNode correlated =
+        tpcDsRelBuilder
+            .scan("tpcds", "STORE_SALES")
+            .variable(cor0::set)
+            .scan("tpcds", "ITEM")
+            .filter(
+                tpcDsRelBuilder.equals(
+                    tpcDsRelBuilder.field("I_ITEM_SK"),
+                    tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK")))
+            .project(tpcDsRelBuilder.field("I_ITEM_SK"))
+            .correlate(JoinRelType.INNER, cor0.get().id, tpcDsRelBuilder.field(2, 0, "SS_ITEM_SK"))
+            .project(tpcDsRelBuilder.field("SS_ITEM_SK"))
+            .build();
+    final RexNode subQuery = RexSubQuery.scalar(correlated);
+
+    final RelNode virtualTable =
+        new VirtualTable(
+            tpcDsRelBuilder.getCluster(),
+            tpcDsRelBuilder.getCluster().traitSetOf(Convention.NONE),
+            tpcDsRelBuilder.getTypeFactory().builder().add("col1", subQuery.getType()).build(),
+            List.of(List.of(subQuery)));
+
+    final OuterReferenceResolver resolver = resolve(virtualTable);
+    Assertions.assertNotNull(resolver.anchorForCorrelationId(cor0.get().id));
   }
 
   /**

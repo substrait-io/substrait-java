@@ -66,13 +66,10 @@ class VirtualTableScanTest extends PlanTestBase {
     // Check the specific Calcite encoding
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0..1])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[2, +(4.4E0:DOUBLE, 4.5E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n"
-            + "    LogicalProject(exprs=[[*(6, 2), 8.8E0:DOUBLE]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(INTEGER col1, DOUBLE col2)], rows=[[{ 2, +(4.4E0:DOUBLE, 4.5E0:DOUBLE) }, { *(6, 2), 8.8E0:DOUBLE }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   @Test
@@ -171,11 +168,10 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(1, 2.0E0:DOUBLE) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /** The row after the first is where a row literal in a tuple would be compared to another. */
@@ -191,13 +187,10 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n"
-            + "    LogicalProject(exprs=[[ROW(3, 4.0E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(1, 2.0E0:DOUBLE) }, { ROW(3, 4.0E0:DOUBLE) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -234,11 +227,10 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0..1])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE), ROW('x':VARCHAR)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) first, RecordType(VARCHAR c) second)], rows=[[{ ROW(1, 2.0E0:DOUBLE), ROW('x':VARCHAR) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -259,10 +251,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(*(6, 2), 2.0E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(*(6, 2), 2.0E0:DOUBLE) }]])\n",
         explain(relNode));
   }
 
@@ -280,10 +269,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ARRAY(1, 2)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(INTEGER ARRAY col1)], rows=[[{ ARRAY(1, 2) }]])\n",
         explain(relNode));
   }
 
@@ -303,10 +289,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(1, 2.0E0:DOUBLE)]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(1, 2.0E0:DOUBLE) }]])\n",
         explain(relNode));
   }
 
@@ -396,10 +379,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ARRAY(ROW(1))]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(INTEGER a) ARRAY col1)], rows=[[{ ARRAY(ROW(1)) }]])\n",
         explain(relNode));
   }
 
@@ -417,10 +397,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[MAP('k':VARCHAR, ROW(1))]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType((VARCHAR, RecordType(INTEGER a)) MAP col1)], rows=[[{ MAP('k':VARCHAR, ROW(1)) }]])\n",
         explain(relNode));
   }
 
@@ -439,10 +416,7 @@ class VirtualTableScanTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
-        "LogicalProject(inputs=[0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(exprs=[[ROW(ROW(1))]])\n"
-            + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
+        "VirtualTable(type=[RecordType(RecordType(RecordType(INTEGER a) inner) outer)], rows=[[{ ROW(ROW(1)) }]])\n",
         explain(relNode));
   }
 

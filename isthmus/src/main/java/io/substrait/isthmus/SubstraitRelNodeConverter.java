@@ -11,6 +11,7 @@ import io.substrait.extension.SimpleExtension;
 import io.substrait.hint.Hint;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
+import io.substrait.isthmus.calcite.rel.VirtualTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
@@ -63,6 +64,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -78,7 +80,6 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableModify;
-import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -924,45 +925,18 @@ public class SubstraitRelNodeConverter
           LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
           virtualTableScan);
     } else {
-      // A row that does not fit a LogicalValues tuple is computed instead: we create a
-      // LogicalProject for each row to compute its values, and combine them together using a
-      // LogicalUnion. For example the following:
-      //
-      //   VirtualTable
-      //     (e1, e2)
-      //     (e3, e4)
-      //
-      //  Becomes:
-      //
-      //   LogicalUnion(all=[true])
-      //     LogicalProject(exprs=[e1, e2])
-      //       <Empty Row>
-      //     LogicalProject(exprs=[e3, e4])
-      //       <Empty Row>
-      //
-
-      RelDataType emptyRowType = typeFactory.createStructType(List.of(), List.of());
-      ImmutableList<ImmutableList<RexLiteral>> emptyRowValue = ImmutableList.of(ImmutableList.of());
-
-      List<RelNode> projects = new ArrayList<>();
-      for (final List<RexNode> rexRow : convertedRows) {
-        RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyRowValue);
-        RelNode project =
-            LogicalProject.create(
-                values, Collections.emptyList(), rexRow, rowType, Collections.emptySet());
-        projects.add(project);
-      }
-      RelNode union = LogicalUnion.create(projects, true);
-
-      // Apply a final LogicalProject on top to capture the field names from the VirtualTable
-      List<RexNode> topProjectExprs = new ArrayList<>();
-      for (int i = 0; i < rowType.getFieldCount(); i++) {
-        topProjectExprs.add(rexBuilder.makeInputRef(union, i));
-      }
-      RelNode topProject =
-          LogicalProject.create(
-              union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
-      return applyRelCommon(topProject, virtualTableScan, topProject);
+      // A row that does not fit a LogicalValues tuple keeps its expressions, in a relation of our
+      // own: Calcite has none that holds them, and expanding the table into a projection per row
+      // does not come back -- the projection is what converts back, and the table is gone. A
+      // consumer whose planner only knows Calcite's own relations can expand it with
+      // VirtualTableExpansionRule.
+      return applyRelCommon(
+          new VirtualTable(
+              relBuilder.getCluster(),
+              relBuilder.getCluster().traitSetOf(Convention.NONE),
+              rowType,
+              convertedRows),
+          virtualTableScan);
     }
   }
 

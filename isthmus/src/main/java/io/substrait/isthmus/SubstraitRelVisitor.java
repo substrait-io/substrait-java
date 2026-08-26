@@ -8,6 +8,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
+import io.substrait.isthmus.calcite.rel.VirtualTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -971,6 +972,26 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
+   * Handles the isthmus {@link VirtualTable}, which is what a virtual table whose rows are not all
+   * literals converts to.
+   *
+   * @param virtualTable Calcite virtual table
+   * @return Substrait virtual table scan
+   */
+  public Rel handleVirtualTable(VirtualTable virtualTable) {
+    List<Expression.NestedStruct> rows = new ArrayList<>(virtualTable.getRows().size());
+    for (List<RexNode> row : virtualTable.getRows()) {
+      List<Expression> fields =
+          row.stream().map(this::toExpression).collect(Collectors.toUnmodifiableList());
+      rows.add(ExpressionCreator.nestedStruct(false, fields));
+    }
+    return VirtualTableScan.builder()
+        .initialSchema(typeConverter.toNamedStruct(virtualTable.getRowType()))
+        .addAllRows(rows)
+        .build();
+  }
+
+  /**
    * Visits other Calcite nodes (e.g., DDL wrappers).
    *
    * @param other Calcite node
@@ -984,6 +1005,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
+
+    } else if (other instanceof VirtualTable) {
+      return handleVirtualTable((VirtualTable) other);
     }
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
