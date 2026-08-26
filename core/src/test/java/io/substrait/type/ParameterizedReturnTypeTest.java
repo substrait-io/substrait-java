@@ -6,7 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.function.ParameterizedType;
+import io.substrait.function.TypeExpression;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -86,5 +89,57 @@ class ParameterizedReturnTypeTest {
   void mirrorNullabilityStillApplies() {
     // The declared return is non-null; MIRROR makes it nullable because an argument is.
     assertEquals(N.intervalDay(6), resolve("multiply:i8_iday", R.I8, N.intervalDay(6)));
+  }
+
+  /**
+   * The two return shapes the evaluator does not derive, pinned by the variants that carry them so
+   * that the list in {@link TypeExpressionEvaluator}'s Javadoc cannot go stale on its own. A
+   * parameter that is a type to evaluate rather than an integer to substitute is the first; a
+   * multi-line return program is the second.
+   */
+  @Test
+  void theReturnShapesThatAreNotDerivedYet() {
+    assertEquals(
+        List.of(
+            "filter:list_func",
+            "quantile:req_req_i64_any",
+            "regexp_match_substring_all:vchar_vchar_i64_i64",
+            "regexp_string_split:vchar_vchar",
+            "sort:list",
+            "string_split:vchar_vchar",
+            "transform:list_func"),
+        variantsReturning(ParameterizedType.ListType.class));
+
+    assertEquals(
+        List.of(
+            "add:dec_dec",
+            "assume_timezone:date_str_i8",
+            "bitwise_and:dec_dec",
+            "bitwise_or:dec_dec",
+            "bitwise_xor:dec_dec",
+            "ceil:dec",
+            "divide:dec_dec",
+            "floor:dec",
+            "modulus:dec_dec",
+            "multiply:dec_dec",
+            "round:dec_i32",
+            "strptime_time:str_str_i8",
+            "strptime_timestamp:str_str_i8",
+            "strptime_timestamp:str_str_str_i8",
+            "subtract:dec_dec"),
+        variantsReturning(TypeExpression.ReturnProgram.class));
+  }
+
+  private static List<String> variantsReturning(Class<?> returnShape) {
+    return Stream.of(
+            EXTENSIONS.scalarFunctions(),
+            EXTENSIONS.aggregateFunctions(),
+            EXTENSIONS.windowFunctions())
+        .flatMap(List::stream)
+        .filter(f -> returnShape.isInstance(f.returnType()))
+        .map(SimpleExtension.Function::key)
+        .distinct()
+        .sorted()
+        .collect(Collectors.toList());
   }
 }

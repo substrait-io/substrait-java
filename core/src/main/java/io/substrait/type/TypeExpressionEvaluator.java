@@ -33,11 +33,13 @@ import java.util.OptionalInt;
  * <p>What still fails on the standard extension catalog is a return of {@code list<anyN>}, whose
  * parameter is a type to evaluate rather than an integer to substitute ({@code filter}, {@code
  * sort}, {@code transform}, {@code string_split}, {@code regexp_string_split}, {@code
- * regexp_match_substring_all}), and a multi-line return program ({@code add}, {@code subtract},
- * {@code multiply}, {@code divide}, {@code modulus}, {@code ceil}, {@code floor}, {@code round},
- * the {@code bitwise_*} family, {@code assume_timezone} and {@code strptime_*}). Among the standard
- * aggregates, {@code quantile} cannot be derived at all: its declared return {@code LIST?<any>}
- * uses a plain {@code any}, which carries no identity to bind (spec v0.101.0).
+ * regexp_match_substring_all}), and a multi-line return program -- the decimal variants of {@code
+ * add}, {@code subtract}, {@code multiply}, {@code divide}, {@code modulus}, {@code ceil}, {@code
+ * floor}, {@code round} and the {@code bitwise_*} family, together with {@code
+ * assume_timezone:date_str_i8} and the {@code strptime_*} family. Among the standard aggregates,
+ * {@code quantile} cannot be derived at all: its declared return {@code LIST?<any>} uses a plain
+ * {@code any}, which carries no identity to bind. Both lists are pinned against the catalog by
+ * {@code ParameterizedReturnTypeTest}, which is spec v0.101.0 today.
  */
 public class TypeExpressionEvaluator {
 
