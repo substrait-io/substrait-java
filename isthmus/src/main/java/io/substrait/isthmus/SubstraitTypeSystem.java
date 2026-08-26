@@ -81,12 +81,24 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   /**
    * Returns the maximum precision for the given SQL type.
    *
+   * <p>For the three types that carry a length across the Substrait boundary — {@link
+   * SqlTypeName#CHAR}, {@link SqlTypeName#VARCHAR} and {@link SqlTypeName#BINARY}, holding {@code
+   * fixedchar}, {@code varchar} and {@code fixed_binary} — this is Substrait's own limit: those
+   * lengths are 32-bit integers. Calcite's default of 65536 is narrower, and the type factory caps
+   * a converted type at it rather than reporting that it cannot represent the declared width.
+   * {@link SqlTypeName#VARBINARY} is left alone because Substrait's {@code binary} carries no
+   * length for it to lose.
+   *
    * @param typeName The {@link SqlTypeName} for which precision is requested.
    * @return Maximum precision for the type.
    */
   @Override
   public int getMaxPrecision(final SqlTypeName typeName) {
     switch (typeName) {
+      case CHAR:
+      case VARCHAR:
+      case BINARY:
+        return Integer.MAX_VALUE;
       case INTERVAL_DAY:
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:

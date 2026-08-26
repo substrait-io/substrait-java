@@ -15,6 +15,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class CalciteTypeTest extends CalciteObjs {
@@ -218,6 +219,42 @@ class CalciteTypeTest extends CalciteObjs {
     assertEquals(
         TypeCreator.NULLABLE.fixedChar(1),
         TypeConverter.DEFAULT.toSubstrait(javaTypeFactory.createJavaType(Character.class)));
+  }
+
+  /**
+   * A width above Calcite's default 65536 cap, for each type whose length crosses the Substrait
+   * boundary. The expected precision is asserted directly rather than through {@link #testType},
+   * whose expectation is built with the same type factory and would be narrowed alongside the value
+   * under test.
+   */
+  @ParameterizedTest
+  @CsvSource({
+    "CHAR, 65537",
+    "CHAR, 2147483647",
+    "VARCHAR, 65537",
+    "VARCHAR, 2147483647",
+    "BINARY, 65537",
+    "BINARY, 2147483647"
+  })
+  void wideLengthCarryingTypesKeepTheirLength(SqlTypeName typeName, int length) {
+    TypeExpression substrait;
+    switch (typeName) {
+      case CHAR:
+        substrait = TypeCreator.REQUIRED.fixedChar(length);
+        break;
+      case VARCHAR:
+        substrait = TypeCreator.REQUIRED.varChar(length);
+        break;
+      default:
+        substrait = TypeCreator.REQUIRED.fixedBinary(length);
+        break;
+    }
+
+    RelDataType calcite = TypeConverter.DEFAULT.toCalcite(type, substrait, null);
+
+    assertEquals(typeName, calcite.getSqlTypeName());
+    assertEquals(length, calcite.getPrecision());
+    assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
   }
 
   @ParameterizedTest

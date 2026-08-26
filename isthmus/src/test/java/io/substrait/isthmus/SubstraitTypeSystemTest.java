@@ -43,6 +43,37 @@ class SubstraitTypeSystemTest {
   }
 
   @Test
+  void lengthCarryingTypesMaxPrecisionIsSubstraitsOwnLimit() {
+    assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.VARCHAR));
+    assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.CHAR));
+    assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.BINARY));
+  }
+
+  /** Substrait's {@code binary} carries no length, so VARBINARY has none to lose. */
+  @Test
+  void varbinaryKeepsTheCalciteDefault() {
+    assertEquals(65536, typeSystem.getMaxPrecision(SqlTypeName.VARBINARY));
+  }
+
+  /**
+   * Calcite's default caps a character type at 65536, which is narrower than the {@code int} length
+   * Substrait declares, so a wider converted type would be silently narrowed by the type factory.
+   */
+  @Test
+  void lengthCarryingTypesMaxPrecisionDiffersFromDefaultTypeSystem() {
+    assertEquals(65536, RelDataTypeSystem.DEFAULT.getMaxPrecision(SqlTypeName.VARCHAR));
+    assertEquals(65536, RelDataTypeSystem.DEFAULT.getMaxPrecision(SqlTypeName.CHAR));
+    assertEquals(65536, RelDataTypeSystem.DEFAULT.getMaxPrecision(SqlTypeName.BINARY));
+  }
+
+  @Test
+  void canCreateCharacterTypesWiderThanTheCalciteDefault() {
+    assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.VARCHAR, 100_000).getPrecision());
+    assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.CHAR, 100_000).getPrecision());
+    assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.BINARY, 100_000).getPrecision());
+  }
+
+  @Test
   void canCreateDecimalWithMaxPrecision() {
     RelDataType decimalType = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, 38, 10);
     assertEquals(38, decimalType.getPrecision());
