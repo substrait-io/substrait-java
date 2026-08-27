@@ -33,6 +33,9 @@ public class ExpressionProtoConverter
   /** Collects function and type references encountered during conversion. */
   protected final ExtensionCollector extensionCollector;
 
+  /** Converts window bounds to their protobuf representation. */
+  private final BoundConverter boundConverter;
+
   /**
    * Creates a converter that registers references with the given collector.
    *
@@ -44,6 +47,7 @@ public class ExpressionProtoConverter
     this.extensionCollector = extensionCollector;
     this.relProtoConverter = relProtoConverter;
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
+    this.boundConverter = new BoundConverter(this);
   }
 
   /**
@@ -103,6 +107,16 @@ public class ExpressionProtoConverter
    */
   protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return typeProtoConverter.toProto(type);
+  }
+
+  /**
+   * Converts a window bound to its protobuf representation.
+   *
+   * @param bound the window bound to convert
+   * @return the proto window bound
+   */
+  public Expression.WindowFunction.Bound toProto(WindowBound bound) {
+    return boundConverter.convert(bound);
   }
 
   @Override
@@ -773,8 +787,8 @@ public class ExpressionProtoConverter
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
-    Expression.WindowFunction.Bound lowerBound = BoundConverter.convert(expr.lowerBound(), this);
-    Expression.WindowFunction.Bound upperBound = BoundConverter.convert(expr.upperBound(), this);
+    Expression.WindowFunction.Bound lowerBound = toProto(expr.lowerBound());
+    Expression.WindowFunction.Bound upperBound = toProto(expr.upperBound());
 
     return Expression.newBuilder()
         .setWindowFunction(
@@ -851,13 +865,10 @@ public class ExpressionProtoConverter
      * Converts the given window bound to its protobuf representation.
      *
      * @param bound the window bound to convert
-     * @param exprProtoConverter the converter used to convert a {@link WindowBound.Preceding}/
-     *     {@link WindowBound.Following} offset expression
      * @return the proto window bound
      */
-    public static Expression.WindowFunction.Bound convert(
-        WindowBound bound, ExpressionProtoConverter exprProtoConverter) {
-      return bound.accept(new BoundConverter(exprProtoConverter));
+    public Expression.WindowFunction.Bound convert(WindowBound bound) {
+      return bound.accept(this);
     }
 
     private BoundConverter(ExpressionProtoConverter exprProtoConverter) {

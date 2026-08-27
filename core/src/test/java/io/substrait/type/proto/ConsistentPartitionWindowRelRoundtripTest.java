@@ -10,13 +10,14 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.WindowBound;
-import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.relation.ConsistentPartitionWindow;
+import io.substrait.relation.ImmutableConsistentPartitionWindow;
 import io.substrait.relation.Rel;
 import java.util.Arrays;
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
@@ -172,7 +173,7 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
                         .invocation(Expression.AggregationInvocation.ALL)
                         .lowerBound(WindowBound.Preceding.of(sb.fieldReference(input, 0)))
-                        .upperBound(WindowBound.Following.CURRENT_ROW)
+                        .upperBound(WindowBound.CURRENT_ROW)
                         .boundsType(Expression.WindowBoundsType.RANGE)
                         .build()))
             .partitionExpressions(Arrays.asList(sb.fieldReference(input, 1)))
@@ -190,17 +191,40 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
     assertTrue(protoWindowFunction.getLowerBound().getPreceding().hasOffsetExpr());
     assertEquals(0, protoWindowFunction.getLowerBound().getPreceding().getOffset());
 
-    io.substrait.relation.Rel rel2 = protoRelConverter.from(protoRel);
-    assertEquals(rel1, rel2);
+    verifyRoundTrip(rel1);
+  }
+
+  @Test
+  void windowFunctionInvocationRoundtripWithNonLiteralOffsetExpr() {
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    // Unlike the relation-level fixture above, this bare expression has no enclosing relation to
+    // resolve field references against, so the offset is a scalar function call over literals.
+    Expression.WindowFunctionInvocation wfi =
+        Expression.WindowFunctionInvocation.builder()
+            .declaration(windowFunctionDeclaration)
+            .arguments(Collections.emptyList())
+            .partitionBy(Collections.emptyList())
+            .sort(Collections.emptyList())
+            .outputType(R.I64)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .lowerBound(WindowBound.Preceding.of(sb.add(sb.i64(2), sb.i64(3))))
+            .upperBound(WindowBound.CURRENT_ROW)
+            .boundsType(Expression.WindowBoundsType.RANGE)
+            .build();
+
+    verifyRoundTrip(wfi);
   }
 
   @Test
   void precedingOffsetExprRoundtripsThroughLiteralOffsetForBackwardCompat() {
-    // A literal offset_expr must also populate the legacy field, per the spec's migration note.
+    // We populate the legacy field for compatibility: the spec says producers may set both, and
+    // its "must" only constrains the value when both are set.
     io.substrait.proto.Expression.WindowFunction.Bound proto =
-        ExpressionProtoConverter.BoundConverter.convert(
-            WindowBound.Preceding.of(ExpressionCreator.i64(false, 5)),
-            relProtoConverter.getExpressionProtoConverter());
+        expressionProtoConverter.toProto(WindowBound.Preceding.of(ExpressionCreator.i64(false, 5)));
 
     assertTrue(proto.getPreceding().hasOffsetExpr());
     assertEquals(5, proto.getPreceding().getOffset());
@@ -213,26 +237,21 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
     Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
-    // bounds_type is required whenever a bound isn't Unbounded; UNSPECIFIED here must be rejected.
-    Rel rel =
-        ConsistentPartitionWindow.builder()
-            .input(input)
-            .windowFunctions(
-                Arrays.asList(
-                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
-                        .declaration(windowFunctionDeclaration)
-                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
-                        .outputType(R.I64)
-                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
-                        .invocation(Expression.AggregationInvocation.ALL)
-                        .lowerBound(WindowBound.Preceding.of(5))
-                        .upperBound(WindowBound.CURRENT_ROW)
-                        .boundsType(Expression.WindowBoundsType.UNSPECIFIED)
-                        .build()))
-            .build();
+    // bounds_type is required whenever a bound isn't Unbounded; UNSPECIFIED here must be
+    // rejected. The check runs in a @Value.Check, so it fires at construction time rather than
+    // only when a plan is later read back from proto.
+    ImmutableConsistentPartitionWindow.WindowRelFunctionInvocation.Builder invocationBuilder =
+        ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+            .declaration(windowFunctionDeclaration)
+            .arguments(Arrays.asList(sb.fieldReference(input, 0)))
+            .outputType(R.I64)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .lowerBound(WindowBound.Preceding.of(5))
+            .upperBound(WindowBound.CURRENT_ROW)
+            .boundsType(Expression.WindowBoundsType.UNSPECIFIED);
 
-    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
-    assertThrows(IllegalArgumentException.class, () -> protoRelConverter.from(protoRel));
+    assertThrows(IllegalArgumentException.class, invocationBuilder::build);
   }
 
   @Test
@@ -270,27 +289,19 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
         extensions.getWindowFunction(
             SimpleExtension.FunctionAnchor.of(
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
-    SimpleExtension.ScalarFunctionVariant addDeclaration =
-        extensions.scalarFunctions().stream()
-            .filter(s -> s.name().equalsIgnoreCase("add"))
-            .findFirst()
-            .orElseThrow(AssertionError::new);
     SimpleExtension.ScalarFunctionVariant subtractDeclaration =
-        extensions.scalarFunctions().stream()
-            .filter(s -> s.name().equalsIgnoreCase("subtract"))
-            .findFirst()
-            .orElseThrow(AssertionError::new);
+        extensions.getScalarFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "subtract:i64_i64"));
     // Consumes the first anchor so a coincidental match with an isolated collector can't hide.
     int decoyAnchor = functionCollector.getFunctionReference(subtractDeclaration);
 
     Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
 
     Expression.ScalarFunctionInvocation argAdd =
-        ExpressionCreator.scalarFunction(
-            addDeclaration, R.I64, sb.fieldReference(input, 0), ExpressionCreator.i64(false, 1));
+        sb.add(sb.fieldReference(input, 0), ExpressionCreator.i64(false, 1));
     Expression.ScalarFunctionInvocation offsetAdd =
-        ExpressionCreator.scalarFunction(
-            addDeclaration, R.I64, sb.fieldReference(input, 0), ExpressionCreator.i64(false, 2));
+        sb.add(sb.fieldReference(input, 0), ExpressionCreator.i64(false, 2));
 
     Rel rel =
         ConsistentPartitionWindow.builder()
@@ -306,6 +317,12 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .lowerBound(WindowBound.Preceding.of(offsetAdd))
                         .upperBound(WindowBound.CURRENT_ROW)
                         .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()))
+            .sorts(
+                Arrays.asList(
+                    Expression.SortField.builder()
+                        .expr(sb.fieldReference(input, 0))
+                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
                         .build()))
             .build();
 

@@ -108,10 +108,19 @@ public class WindowFunctionConverter
             : Expression.AggregationInvocation.ALL;
 
     // Calcite only supports ROW or RANGE mode
+    boolean isRows = window.isRows();
     Expression.WindowBoundsType boundsType =
-        window.isRows() ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
-    WindowBound lowerBound = toWindowBound(window.getLowerBound());
-    WindowBound upperBound = toWindowBound(window.getUpperBound());
+        isRows ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
+    // The spec requires a RANGE bound's offset type to be compatible with the single ordering
+    // expression's type (add(T, D) -> T).
+    Optional<RelDataType> orderingType =
+        window.orderKeys == null || window.orderKeys.isEmpty()
+            ? Optional.empty()
+            : Optional.of(window.orderKeys.get(0).left.getType());
+    WindowBound lowerBound =
+        toWindowBound(window.getLowerBound(), isRows, orderingType, call.rexExpressionConverter);
+    WindowBound upperBound =
+        toWindowBound(window.getUpperBound(), isRows, orderingType, call.rexExpressionConverter);
 
     return ExpressionCreator.windowFunction(
         function,

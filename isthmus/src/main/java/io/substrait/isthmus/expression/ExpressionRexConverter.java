@@ -668,8 +668,8 @@ public class ExpressionRexConverter
                 })
             .collect(ImmutableList.toImmutableList());
 
-    RexWindowBound lowerBound = ToRexWindowBound.lowerBound(rexBuilder, expr.lowerBound());
-    RexWindowBound upperBound = ToRexWindowBound.upperBound(rexBuilder, expr.upperBound());
+    RexWindowBound lowerBound = ToRexWindowBound.lowerBound(this, context, expr.lowerBound());
+    RexWindowBound upperBound = ToRexWindowBound.upperBound(this, context, expr.upperBound());
 
     boolean rowMode = isRowMode(expr);
     boolean distinct = isDistinct(expr);
@@ -757,7 +757,9 @@ public class ExpressionRexConverter
       case RANGE:
         return false;
       case UNSPECIFIED:
-        throw new IllegalArgumentException("bounds type on window function must be specified");
+        // Only valid when both bounds are Unbounded (enforced by WindowFunctionInvocation's
+        // @Value.Check), so the frame spans the whole partition regardless of ROWS vs RANGE.
+        return true;
       default:
         throw new IllegalArgumentException(
             "Unsupported window function bounds type: " + boundsType);
@@ -784,61 +786,6 @@ public class ExpressionRexConverter
         expr.needles().stream().map(e -> e.accept(this, context)).collect(Collectors.toList());
     RelNode rel = expr.haystack().accept(relNodeConverter, context);
     return RexSubQuery.in(rel, ImmutableList.copyOf(needles));
-  }
-
-  static class ToRexWindowBound
-      implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
-
-    private final RexBuilder rexBuilder;
-    private final RexWindowBound unboundedVariant;
-
-    static RexWindowBound lowerBound(RexBuilder rexBuilder, WindowBound bound) {
-      // per the spec, unbounded on the lower bound means the start of the partition
-      // thus UNBOUNDED_PRECEDING should be used when bound is unbounded
-      return bound.accept(new ToRexWindowBound(rexBuilder, RexWindowBounds.UNBOUNDED_PRECEDING));
-    }
-
-    static RexWindowBound upperBound(RexBuilder rexBuilder, WindowBound bound) {
-      // per the spec, unbounded on the upper bound means the end of the partition
-      // thus UNBOUNDED_FOLLOWING should be used when bound is unbounded
-      return bound.accept(new ToRexWindowBound(rexBuilder, RexWindowBounds.UNBOUNDED_FOLLOWING));
-    }
-
-    private ToRexWindowBound(RexBuilder rexBuilder, RexWindowBound unboundedVariant) {
-      this.rexBuilder = rexBuilder;
-      this.unboundedVariant = unboundedVariant;
-    }
-
-    @Override
-    public RexWindowBound visit(WindowBound.Preceding preceding) {
-      BigDecimal offset = BigDecimal.valueOf(toLiteralOffset(preceding.offset()));
-      return RexWindowBounds.preceding(rexBuilder.makeBigintLiteral(offset));
-    }
-
-    @Override
-    public RexWindowBound visit(WindowBound.Following following) {
-      BigDecimal offset = BigDecimal.valueOf(toLiteralOffset(following.offset()));
-      return RexWindowBounds.following(rexBuilder.makeBigintLiteral(offset));
-    }
-
-    private static long toLiteralOffset(io.substrait.expression.Expression offset) {
-      return WindowBound.toLiteralOffset(offset)
-          .orElseThrow(
-              () ->
-                  new UnsupportedOperationException(
-                      "Calcite window bounds only support a literal positive offset, got: "
-                          + offset));
-    }
-
-    @Override
-    public RexWindowBound visit(WindowBound.CurrentRow currentRow) {
-      return RexWindowBounds.CURRENT_ROW;
-    }
-
-    @Override
-    public RexWindowBound visit(WindowBound.Unbounded unbounded) {
-      return unboundedVariant;
-    }
   }
 
   private String convert(FunctionArg a) {
@@ -1022,6 +969,57 @@ public class ExpressionRexConverter
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.getType());
     return rexBuilder.makeCall(
         returnType, CurrentTimezoneFunction.INSTANCE, Collections.emptyList());
+  }
+
+  static class ToRexWindowBound
+      implements WindowBound.WindowBoundVisitor<RexWindowBound, RuntimeException> {
+
+    private final Context context;
+    private final ExpressionRexConverter converter;
+    private final RexWindowBound unboundedVariant;
+
+    static RexWindowBound lowerBound(
+        ExpressionRexConverter converter, Context context, WindowBound bound) {
+      // per the spec, unbounded on the lower bound means the start of the partition
+      // thus UNBOUNDED_PRECEDING should be used when bound is unbounded
+      return bound.accept(
+          new ToRexWindowBound(converter, context, RexWindowBounds.UNBOUNDED_PRECEDING));
+    }
+
+    static RexWindowBound upperBound(
+        ExpressionRexConverter converter, Context context, WindowBound bound) {
+      // per the spec, unbounded on the upper bound means the end of the partition
+      // thus UNBOUNDED_FOLLOWING should be used when bound is unbounded
+      return bound.accept(
+          new ToRexWindowBound(converter, context, RexWindowBounds.UNBOUNDED_FOLLOWING));
+    }
+
+    private ToRexWindowBound(
+        ExpressionRexConverter converter, Context context, RexWindowBound unboundedVariant) {
+      this.converter = converter;
+      this.context = context;
+      this.unboundedVariant = unboundedVariant;
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Preceding preceding) {
+      return RexWindowBounds.preceding(preceding.offset().accept(converter, context));
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Following following) {
+      return RexWindowBounds.following(following.offset().accept(converter, context));
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.CurrentRow currentRow) {
+      return RexWindowBounds.CURRENT_ROW;
+    }
+
+    @Override
+    public RexWindowBound visit(WindowBound.Unbounded unbounded) {
+      return unboundedVariant;
+    }
   }
 
   /**

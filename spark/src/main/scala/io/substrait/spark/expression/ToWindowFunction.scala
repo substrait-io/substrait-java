@@ -142,13 +142,18 @@ object ToWindowFunction {
   }
 
   private def toLiteralOffset(offset: SExpression): Int = {
-    WindowBound
+    val value = WindowBound
       .toLiteralOffset(offset)
       .orElseThrow(
         () =>
           new UnsupportedOperationException(
             s"Spark window bounds only support a literal positive offset, got: $offset"))
-      .intValue()
+      .longValue()
+    if (value > Int.MaxValue) {
+      throw new UnsupportedOperationException(
+        s"Spark window bounds only support offsets up to ${Int.MaxValue}, got: $value")
+    }
+    value.toInt
   }
 
   def apply(functions: Seq[SimpleExtension.WindowFunctionVariant]): ToWindowFunction = {

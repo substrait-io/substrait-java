@@ -26,13 +26,19 @@ public interface WindowBound {
    *     i64} literal
    */
   static Optional<Long> toLiteralOffset(Expression offset) {
+    long value;
     if (offset instanceof Expression.I64Literal) {
-      long value = ((Expression.I64Literal) offset).value();
-      if (value > 0) {
-        return Optional.of(value);
-      }
+      value = ((Expression.I64Literal) offset).value();
+    } else if (offset instanceof Expression.I32Literal) {
+      value = ((Expression.I32Literal) offset).value();
+    } else if (offset instanceof Expression.I16Literal) {
+      value = ((Expression.I16Literal) offset).value();
+    } else if (offset instanceof Expression.I8Literal) {
+      value = ((Expression.I8Literal) offset).value();
+    } else {
+      return Optional.empty();
     }
-    return Optional.empty();
+    return value > 0 ? Optional.of(value) : Optional.empty();
   }
 
   /**
@@ -117,9 +123,11 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Preceding} bound with the given literal row offset.
+     * Creates a {@link Preceding} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
+     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
+     * {@link #of(Expression)} there.
      *
-     * @param offset the number of rows preceding the current row
+     * @param offset the row offset preceding the current row
      * @return the preceding bound
      */
     public static Preceding of(long offset) {
@@ -153,9 +161,11 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Following} bound with the given offset.
+     * Creates a {@link Following} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
+     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
+     * {@link #of(Expression)} there.
      *
-     * @param offset the number of rows following the current row
+     * @param offset the row offset following the current row
      * @return the following bound
      */
     public static Following of(long offset) {

@@ -399,7 +399,6 @@ public class ProtoExpressionConverter {
     WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
     Expression.WindowBoundsType boundsType =
         Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType());
-    WindowBound.checkBoundsType(boundsType, lowerBound, upperBound);
 
     return Expression.WindowFunctionInvocation.builder()
         .arguments(args)
@@ -445,7 +444,6 @@ public class ProtoExpressionConverter {
     WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
     Expression.WindowBoundsType boundsType =
         Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType());
-    WindowBound.checkBoundsType(boundsType, lowerBound, upperBound);
 
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .arguments(args)
@@ -463,14 +461,29 @@ public class ProtoExpressionConverter {
   private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
     switch (bound.getKindCase()) {
       case PRECEDING:
-        // Per the spec, consumers must use offset_expr when it is set and ignore offset.
-        return bound.getPreceding().hasOffsetExpr()
-            ? WindowBound.Preceding.of(from(bound.getPreceding().getOffsetExpr()))
-            : WindowBound.Preceding.of(bound.getPreceding().getOffset());
+        {
+          io.substrait.proto.Expression.WindowFunction.Bound.Preceding preceding =
+              bound.getPreceding();
+          // Per the spec, consumers must use offset_expr when it is set and ignore offset.
+          if (preceding.hasOffsetExpr()) {
+            return WindowBound.Preceding.of(from(preceding.getOffsetExpr()));
+          }
+          // offset has no presence, so zero means unset, and a zero offset means CurrentRow.
+          return preceding.getOffset() == 0
+              ? WindowBound.CURRENT_ROW
+              : WindowBound.Preceding.of(preceding.getOffset());
+        }
       case FOLLOWING:
-        return bound.getFollowing().hasOffsetExpr()
-            ? WindowBound.Following.of(from(bound.getFollowing().getOffsetExpr()))
-            : WindowBound.Following.of(bound.getFollowing().getOffset());
+        {
+          io.substrait.proto.Expression.WindowFunction.Bound.Following following =
+              bound.getFollowing();
+          if (following.hasOffsetExpr()) {
+            return WindowBound.Following.of(from(following.getOffsetExpr()));
+          }
+          return following.getOffset() == 0
+              ? WindowBound.CURRENT_ROW
+              : WindowBound.Following.of(following.getOffset());
+        }
       case CURRENT_ROW:
         return WindowBound.CURRENT_ROW;
       case UNBOUNDED:

@@ -1629,13 +1629,16 @@ public interface Expression extends FunctionArg {
     public abstract AggregationInvocation invocation();
 
     /**
-     * Validates that variadic arguments satisfy the parameter consistency requirement. When
-     * CONSISTENT, all variadic arguments must have the same type (ignoring nullability). When
-     * INCONSISTENT, arguments can have different types.
+     * Validates that variadic arguments satisfy the parameter consistency requirement, and that
+     * {@code bounds_type} is set whenever a window bound requires it.
+     *
+     * <p>When CONSISTENT, all variadic arguments must have the same type (ignoring nullability).
+     * When INCONSISTENT, arguments can have different types.
      */
     @Value.Check
     protected void check() {
       VariadicParameterConsistencyValidator.validate(declaration(), arguments());
+      WindowBound.checkBoundsType(boundsType(), lowerBound(), upperBound());
     }
 
     /**

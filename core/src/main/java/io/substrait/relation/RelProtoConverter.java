@@ -4,7 +4,6 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.proto.ExpressionProtoConverter;
-import io.substrait.expression.proto.ExpressionProtoConverter.BoundConverter;
 import io.substrait.expression.proto.MaskExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
@@ -780,8 +779,8 @@ public class RelProtoConverter
                   .addAllOptions(options)
                   .setFunctionReference(extensionCollector.getFunctionReference(f.declaration()))
                   .setBoundsType(f.boundsType().toProto())
-                  .setLowerBound(BoundConverter.convert(f.lowerBound(), exprProtoConverter))
-                  .setUpperBound(BoundConverter.convert(f.upperBound(), exprProtoConverter))
+                  .setLowerBound(exprProtoConverter.toProto(f.lowerBound()))
+                  .setUpperBound(exprProtoConverter.toProto(f.upperBound()))
                   .build();
             })
         .collect(Collectors.toList());
