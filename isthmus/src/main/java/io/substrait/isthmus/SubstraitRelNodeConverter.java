@@ -54,6 +54,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -83,6 +84,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -791,51 +793,60 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+    // A schema's names are one per field at every level of the struct, in depth-first order, so
+    // they have to be handed to the conversion rather than paired with the row type afterwards:
+    // with a nested struct anywhere in the schema the two lists do not even have the same length.
+    final NamedStruct schema = virtualTableScan.getInitialSchema();
+    // A relation's row type says what its columns are, not whether a value is there, and Calcite
+    // builds one NOT NULL wherever it derives one -- so a nullable schema struct contributes its
+    // fields and not its nullability.
     final RelDataType rowType =
-        typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
+        typeFactory.createTypeWithNullability(
+            typeConverter.toCalcite(typeFactory, schema.struct(), schema.names()), false);
 
-    final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
+    List<List<RexNode>> convertedRows = new ArrayList<>();
+    // The same values with the cast a nullable literal converts as taken off, which is the form a
+    // LogicalValues tuple would hold them in -- where they are literals at all.
+    List<List<RexNode>> tupleValues = new ArrayList<>();
+    for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+      List<RexNode> convertedRow = new ArrayList<>();
+      List<RexNode> tupleRow = new ArrayList<>();
+      for (int column = 0; column < rowExpr.fields().size(); column++) {
+        Expression field = rowExpr.fields().get(column);
+        RelDataType declaredType = rowType.getFieldList().get(column).getType();
+        RexNode value =
+            valueAsDeclared(field.accept(expressionRexConverter, context), declaredType);
+        convertedRow.add(value);
+        // Only a converted literal has its nullability cast taken off. A cast the plan carries
+        // itself is doing work -- it has a failure behavior, and it is part of what round-trips --
+        // so a row holding one is computed rather than tabulated.
+        tupleRow.add(field instanceof Expression.Literal ? unwrapNullabilityCast(value) : value);
+      }
+      convertedRows.add(convertedRow);
+      tupleValues.add(tupleRow);
+    }
 
-    final List<RelDataType> fieldTypes =
-        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
-
-    final RelDataType rowTypeWithNames =
-        typeFactory.createStructType(fieldTypes, correctFieldNames);
-
-    // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
-    // standard LogicalValues relation.
-    boolean allLiterals =
-        virtualTableScan.getRows().stream()
-            .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
-    if (allLiterals) {
+    // A LogicalValues tuple holds nothing but literals, and whether a value is one is a property of
+    // what it converts to rather than of the Substrait expression it came from: a struct converts
+    // to a ROW call and a list to an array constructor, literal or not. Neither belongs in a tuple
+    // anyway -- Calcite orders tuples by casting each value to Comparable, and the value of a row
+    // literal is a list of RexLiterals, which are not.
+    boolean encodableAsTuples =
+        tupleValues.stream().flatMap(List::stream).allMatch(value -> value instanceof RexLiteral);
+    if (encodableAsTuples) {
       ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
-      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+      for (final List<RexNode> tupleRow : tupleValues) {
         ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
-        for (Expression expr : rowExpr.fields()) {
-          final Expression.Literal literal = (Expression.Literal) expr;
-          RexNode rexNode = literal.accept(expressionRexConverter, context);
-          // A nullable literal converts as CAST(literal AS nullable type). LogicalValues tuples
-          // hold bare literals, and the field's nullability is already declared in the row type,
-          // so unwrap that cast here. Only that one: a cast that changes anything else is doing
-          // work, and dropping it would leave the literal under a row type that does not describe
-          // it. Such a tuple is malformed whatever happens to the cast, and the cast below is what
-          // reports it.
-          if (rexNode.isA(SqlKind.CAST)) {
-            RexNode castOperand = ((RexCall) rexNode).getOperands().get(0);
-            if (castOperand instanceof RexLiteral
-                && SqlTypeUtil.equalSansNullability(rexNode.getType(), castOperand.getType())) {
-              rexNode = castOperand;
-            }
-          }
-          tupleBuilder.add((RexLiteral) rexNode);
+        for (RexNode value : tupleRow) {
+          tupleBuilder.add((RexLiteral) value);
         }
         tuplesBuilder.add(tupleBuilder.build());
       }
-      return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
+      return LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build());
     } else {
-      // When a VirtualTable contains non-literal expressions, they cannot be put directly into a
-      // LogicalValues relation. Instead, we create a LogicalProject for each row to compute its
-      // values, and combine them together using a LogicalUnion. For example the following:
+      // A row that does not fit a LogicalValues tuple is computed instead: we create a
+      // LogicalProject for each row to compute its values, and combine them together using a
+      // LogicalUnion. For example the following:
       //
       //   VirtualTable
       //     (e1, e2)
@@ -854,11 +865,7 @@ public class SubstraitRelNodeConverter
       ImmutableList<ImmutableList<RexLiteral>> emptyRowValue = ImmutableList.of(ImmutableList.of());
 
       List<RelNode> projects = new ArrayList<>();
-      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
-        List<RexNode> rexRow = new ArrayList<>();
-        for (Expression field : rowExpr.fields()) {
-          rexRow.add(field.accept(expressionRexConverter, context));
-        }
+      for (final List<RexNode> rexRow : convertedRows) {
         RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyRowValue);
         RelNode project =
             LogicalProject.create(
@@ -873,12 +880,134 @@ public class SubstraitRelNodeConverter
         topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
       return LogicalProject.create(
-          union,
-          Collections.emptyList(),
-          topProjectExprs,
-          rowTypeWithNames,
-          Collections.emptySet());
+          union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
     }
+  }
+
+  /**
+   * Gives a converted row value the type its column is declared at.
+   *
+   * <p>A Substrait struct type has no field names of its own -- a schema names every field once, at
+   * the relation level -- so a struct-valued expression converts carrying the placeholder names
+   * Calcite derives for it, while the row type built from the schema carries the schema's own.
+   * Calcite compares field names when it checks a value against the type it is declared at, so a
+   * struct is rejected on that difference alone, wherever in the column's type it sits.
+   *
+   * <p>Names are what a row, list or map value is rebuilt for: a row's field types are checked
+   * against the schema when the {@link VirtualTableScan} is built, so a value that is one of those
+   * agrees with its declared type on everything a Substrait type says. It can still be stamped
+   * nullable where it was not -- Calcite makes a struct's fields nullable along with the struct,
+   * and a value that cannot be null stands in a column that can. A value that cannot take the
+   * declared type at all -- a call returning a struct, say, whose names are not the declared ones
+   * -- is reported here: {@link LogicalProject} and {@link LogicalValues} check the row type they
+   * are handed with an {@code assert}, which says nothing at all unless assertions are on.
+   *
+   * @param value the converted row value
+   * @param declaredType the type its column is declared at
+   * @return the value, at {@code declaredType}
+   * @throws IllegalArgumentException if the value cannot be given that type
+   */
+  private RexNode valueAsDeclared(RexNode value, RelDataType declaredType) {
+    RexNode declared = renamedAsDeclared(value, declaredType);
+    if (!fitsDeclared(declared.getType(), declaredType)) {
+      throw new IllegalArgumentException(
+          String.format(
+              "A virtual table's value %s converts to the type %s, which is not the %s its column is declared at",
+              value, declared.getType().getFullTypeString(), declaredType.getFullTypeString()));
+    }
+    return declared;
+  }
+
+  /**
+   * Whether a converted value can stand at the type it is declared at.
+   *
+   * <p>A value that cannot be null stands in a column that can: Calcite makes a struct's fields
+   * nullable along with the struct, so the fields of a nullable struct are declared that way
+   * whatever the values in them are. The other direction is a mismatch, and so is any difference
+   * beyond nullability -- a field name included, which is the one this rename is about.
+   */
+  private boolean fitsDeclared(RelDataType valueType, RelDataType declaredType) {
+    return SqlTypeUtil.equalSansNullability(typeFactory, valueType, declaredType)
+        && (declaredType.isNullable() || !valueType.isNullable());
+  }
+
+  private RexNode renamedAsDeclared(RexNode value, RelDataType declaredType) {
+    if (value.getType().equals(declaredType)) {
+      return value;
+    }
+    if (value instanceof RexLiteral && ((RexLiteral) value).isNull()) {
+      // A null value has no fields to rename, only a type to take -- and a list or a map converts
+      // to a literal when it is null and to a constructor call otherwise, so this is where those
+      // two are named as much as a struct is.
+      return rexBuilder.makeNullLiteral(declaredType);
+    }
+    switch (declaredType.getSqlTypeName()) {
+      case ROW:
+        return nameRowFieldsAsDeclared(value, declaredType);
+      case ARRAY:
+        return nameArrayItemsAsDeclared(value, declaredType);
+      case MAP:
+        return nameMapEntriesAsDeclared(value, declaredType);
+      default:
+        return value;
+    }
+  }
+
+  private RexNode nameRowFieldsAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.ROW)) {
+      return value;
+    }
+    List<RexNode> fields = ((RexCall) value).getOperands();
+    if (fields.size() != declaredType.getFieldCount()) {
+      return value;
+    }
+    List<RexNode> renamed = new ArrayList<>();
+    for (int field = 0; field < fields.size(); field++) {
+      renamed.add(
+          valueAsDeclared(fields.get(field), declaredType.getFieldList().get(field).getType()));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.ROW, renamed);
+  }
+
+  private RexNode nameArrayItemsAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.ARRAY_VALUE_CONSTRUCTOR)) {
+      return value;
+    }
+    RelDataType itemType = Objects.requireNonNull(declaredType.getComponentType());
+    List<RexNode> renamed = new ArrayList<>();
+    for (RexNode item : ((RexCall) value).getOperands()) {
+      renamed.add(valueAsDeclared(item, itemType));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, renamed);
+  }
+
+  private RexNode nameMapEntriesAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.MAP_VALUE_CONSTRUCTOR)) {
+      return value;
+    }
+    RelDataType keyType = Objects.requireNonNull(declaredType.getKeyType());
+    RelDataType entryType = Objects.requireNonNull(declaredType.getValueType());
+    List<RexNode> operands = ((RexCall) value).getOperands();
+    List<RexNode> renamed = new ArrayList<>();
+    for (int operand = 0; operand < operands.size(); operand++) {
+      // the constructor takes keys and values alternating
+      renamed.add(valueAsDeclared(operands.get(operand), operand % 2 == 0 ? keyType : entryType));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, renamed);
+  }
+
+  /**
+   * Unwraps the cast a nullable literal converts as, returning any other node unchanged.
+   *
+   * <p>A nullable literal converts as {@code CAST(literal AS nullable type)}. LogicalValues tuples
+   * hold bare literals, and the field's nullability is already declared in the row type, so that
+   * cast has to come off before the literal can go into a tuple.
+   *
+   * @param rexNode the converted node
+   * @return the literal the cast wraps, or {@code rexNode} itself
+   */
+  private RexNode unwrapNullabilityCast(RexNode rexNode) {
+    return RexUtil.removeNullabilityCast(typeFactory, rexNode);
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {

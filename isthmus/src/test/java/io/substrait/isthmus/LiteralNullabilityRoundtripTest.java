@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
@@ -17,6 +16,7 @@ import io.substrait.type.NamedStruct;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Function;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
@@ -116,8 +116,10 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
 
   /**
    * A cast doing more than nullability is not this representation, so the tuple unwrap leaves it
-   * alone. A varchar literal longer than its declared length is malformed input either way; the
-   * point is that it stays loud instead of landing in a row type that does not describe it.
+   * alone -- and a row whose values are not literals to Calcite is not a Values row at all, so it
+   * takes the projection encoding with the cast still on it. The literal here is malformed input:
+   * its value is longer than the length it declares, and nothing rejects it, here or in the POJO
+   * that holds it. What this pins is only the cast, which is the part the conversion decides.
    */
   @Test
   void tupleUnwrapLeavesATruncatingCastAlone() {
@@ -128,7 +130,41 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
                 ExpressionCreator.nestedStruct(
                     false, ExpressionCreator.varChar(false, "abcdef", 3)))
             .build();
-    assertThrows(ClassCastException.class, () -> substraitToCalcite.convert(overlong));
+
+    assertEquals(
+        "LogicalProject(A=[$0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(A=[CAST('abcdef'):VARCHAR(3) NOT NULL])\n"
+            + "      LogicalValues(tuples=[[{  }]])\n",
+        RelOptUtil.toString(substraitToCalcite.convert(overlong)));
+  }
+
+  /**
+   * The unwrap reads the Substrait expression, not just the Calcite node: a cast the plan carries
+   * itself looks exactly like the one a nullable literal converts as, and dropping it would lose
+   * its failure behavior and the {@link Expression.Cast} the round trip owes back. So a row holding
+   * one is computed rather than tabulated.
+   */
+  @Test
+  void aDeclaredNullabilityCastKeepsTheRowOffTheTuplePath() {
+    VirtualTableScan castRow =
+        VirtualTableScan.builder()
+            .initialSchema(NamedStruct.of(List.of("A"), R.struct(N.I32)))
+            .addRows(
+                ExpressionCreator.nestedStruct(
+                    false,
+                    ExpressionCreator.cast(
+                        N.I32,
+                        ExpressionCreator.i32(false, 5),
+                        Expression.FailureBehavior.THROW_EXCEPTION)))
+            .build();
+
+    assertEquals(
+        "LogicalProject(A=[$0])\n"
+            + "  LogicalUnion(all=[true])\n"
+            + "    LogicalProject(A=[CAST(5):INTEGER])\n"
+            + "      LogicalValues(tuples=[[{  }]])\n",
+        RelOptUtil.toString(substraitToCalcite.convert(castRow)));
   }
 
   /**
