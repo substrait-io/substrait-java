@@ -6,25 +6,44 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
+import org.apache.calcite.rel.type.RelDataType;
 
 /** Represents a CREATE VIEW DDL operation in Calcite's relational algebra. */
 public class CreateView extends SingleRel {
   private final List<String> viewName;
+  private final RelDataType viewSchema;
 
   private CreateView(
-      RelOptCluster cluster, RelTraitSet traitSet, List<String> viewName, RelNode input) {
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      List<String> viewName,
+      RelDataType viewSchema,
+      RelNode input) {
     super(cluster, traitSet, input);
     this.viewName = viewName;
+    this.viewSchema = viewSchema;
+  }
+
+  /**
+   * CreateView Constructor, taking the row type of the input as the schema of the view to create.
+   *
+   * @param viewName view name components
+   * @param input RelNode input
+   */
+  public CreateView(List<String> viewName, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), viewName, input.getRowType(), input);
   }
 
   /**
    * CreateView Constructor.
    *
    * @param viewName view name components
+   * @param viewSchema the schema of the view to create, which the definition fills but need not
+   *     name the same way
    * @param input RelNode input
    */
-  public CreateView(List<String> viewName, RelNode input) {
-    this(input.getCluster(), input.getTraitSet(), viewName, input);
+  public CreateView(List<String> viewName, RelDataType viewSchema, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), viewName, viewSchema, input);
   }
 
   /**
@@ -35,7 +54,9 @@ public class CreateView extends SingleRel {
    */
   @Override
   public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw).item("viewName", getViewName());
+    return super.explainTerms(pw)
+        .item("viewName", getViewName())
+        .item("viewSchema", getViewSchema());
   }
 
   /**
@@ -52,7 +73,7 @@ public class CreateView extends SingleRel {
       throw new IllegalArgumentException(
           "CreateView requires exactly one input, but got " + inputs.size());
     }
-    return new CreateView(getCluster(), traitSet, viewName, inputs.get(0));
+    return new CreateView(getCluster(), traitSet, viewName, viewSchema, inputs.get(0));
   }
 
   /**
@@ -62,5 +83,16 @@ public class CreateView extends SingleRel {
    */
   public List<String> getViewName() {
     return viewName;
+  }
+
+  /**
+   * Returns the schema of the view to create. A view definition declares it, and it is not the row
+   * type of the definition: the two hold the same columns, but the names are the ones the statement
+   * gives them.
+   *
+   * @return the schema of the view this node creates
+   */
+  public RelDataType getViewSchema() {
+    return viewSchema;
   }
 }

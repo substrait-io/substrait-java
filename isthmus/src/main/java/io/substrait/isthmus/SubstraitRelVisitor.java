@@ -889,11 +889,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .collect(Collectors.toList());
   }
 
-  private NamedStruct getSchema(final RelNode queryRelRoot) {
-    final RelDataType rowType = queryRelRoot.getRowType();
-    return typeConverter.toNamedStruct(rowType);
-  }
-
   /**
    * Handles Calcite {@link CreateTable} as Substrait CTAS. (Create Table As Select)
    *
@@ -903,7 +898,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public Rel handleCreateTable(CreateTable createTable) {
     RelNode input = createTable.getInput();
     Rel inputRel = apply(input);
-    NamedStruct schema = getSchema(input);
+    NamedStruct schema = typeConverter.toNamedStruct(createTable.getTableSchema());
     return NamedWrite.builder()
         .input(inputRel)
         .tableSchema(schema)
@@ -928,7 +923,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     return NamedDdl.builder()
         .viewDefinition(inputRel)
-        .tableSchema(getSchema(input))
+        .tableSchema(typeConverter.toNamedStruct(createView.getViewSchema()))
         .tableDefaults(defaults)
         .operation(AbstractDdlRel.DdlOp.CREATE)
         .object(AbstractDdlRel.DdlObject.VIEW)
