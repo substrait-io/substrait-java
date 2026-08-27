@@ -216,8 +216,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
     // An identity projection (input refs in order, with matching types) passes every input field
-    // through unchanged and only ever renames fields. Substrait carries output names on Plan.Root,
-    // not on the Project, so emitting one here is redundant: the reverse conversion drops it, which
+    // through unchanged and only ever renames fields. Substrait carries output names on Plan.Root
+    // and, for a single relation, in its hint -- neither of them a Project, and this conversion
+    // writes no hints -- so emitting one here is redundant: the reverse conversion drops it, which
     // leaves the two sides structurally different and breaks round-trips. Skip it instead. Output
     // names are still preserved because convert(RelRoot, ...) takes them from validatedRowType.
     if (RexUtil.isIdentity(project.getProjects(), project.getInput().getRowType())) {

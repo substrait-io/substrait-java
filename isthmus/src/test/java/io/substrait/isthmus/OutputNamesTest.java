@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.hint.Hint;
+import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.relation.Filter;
 import io.substrait.relation.ImmutableProject;
 import io.substrait.relation.Project;
@@ -96,16 +97,19 @@ class OutputNamesTest extends PlanTestBase {
   void keepsCalciteNamesWithoutAHint() {
     RelNode node = substraitToCalcite.convert(projectWithHint(Optional.empty()));
 
+    // Calcite's own name for an expression that has none. The tests that drop a name list compare
+    // against this conversion rather than repeating it.
     assertEquals(List.of("$f2"), node.getRowType().getFieldNames());
   }
 
   @Test
   void dropsNamesThatDoNotFitTheRelation() {
+    RelNode plain = substraitToCalcite.convert(projectWithHint(Optional.empty()));
     RelNode node =
         substraitToCalcite.convert(
             projectWithHint(Optional.of(Hint.builder().addOutputNames("x", "y", "z").build())));
 
-    assertEquals(List.of("$f2"), node.getRowType().getFieldNames());
+    assertEquals(plain.getRowType().getFieldNames(), node.getRowType().getFieldNames());
   }
 
   @Test
@@ -127,19 +131,40 @@ class OutputNamesTest extends PlanTestBase {
   @Test
   void dropsNamesThatRepeat() {
     // Calcite requires the field names of a projection to be distinct.
-    Rel project =
-        Project.builder()
-            .input(scan)
-            .remap(Rel.Remap.offset(2, 2))
-            .addExpressions(
-                sb.add(sb.fieldReference(scan, 0), sb.i64(1)),
-                sb.add(sb.fieldReference(scan, 0), sb.i64(2)))
-            .hint(Hint.builder().addOutputNames("same", "same").build())
-            .build();
+    Rel project = twoColumnProject();
+    RelNode named =
+        substraitToCalcite.convert(
+            project.withHint(Optional.of(Hint.builder().addOutputNames("same", "same").build())));
 
-    RelNode node = substraitToCalcite.convert(project);
+    assertEquals(
+        substraitToCalcite.convert(project).getRowType().getFieldNames(),
+        named.getRowType().getFieldNames());
+  }
 
-    assertEquals(List.of("$f2", "$f3"), node.getRowType().getFieldNames());
+  @Test
+  void dropsNamesThatAreEmpty() {
+    // Calcite reads an empty field name as the star identifier, so a projection carrying one
+    // renders as SELECT ... AS *, which does not parse. The spec does not say whether a name may
+    // be empty; dropping the list is the reading that cannot produce such a plan.
+    Rel project = twoColumnProject();
+    RelNode plain = substraitToCalcite.convert(project);
+    RelNode named =
+        substraitToCalcite.convert(
+            project.withHint(Optional.of(Hint.builder().addOutputNames("", "x").build())));
+
+    assertEquals(plain.getRowType().getFieldNames(), named.getRowType().getFieldNames());
+    assertEquals(
+        SubstraitSqlDialect.toSql(plain).getSql(), SubstraitSqlDialect.toSql(named).getSql());
+  }
+
+  private Rel twoColumnProject() {
+    return Project.builder()
+        .input(scan)
+        .remap(Rel.Remap.offset(2, 2))
+        .addExpressions(
+            sb.add(sb.fieldReference(scan, 0), sb.i64(1)),
+            sb.add(sb.fieldReference(scan, 0), sb.i64(2)))
+        .build();
   }
 
   @Test
@@ -199,21 +224,78 @@ class OutputNamesTest extends PlanTestBase {
   void leavesTheNamesOfAnotherRelationAlone() {
     // The always-true condition means Calcite builds no filter at all, so the node on top is the
     // projection of the inner relation, with the names that relation asked for.
-    Rel inner =
-        Project.builder()
-            .input(scan)
-            .remap(Rel.Remap.offset(2, 1))
-            .addExpressions(sb.add(sb.fieldReference(scan, 0), sb.i64(1)))
-            .hint(Hint.builder().addOutputNames("inner").build())
-            .build();
     Rel filter =
         Filter.builder()
-            .input(inner)
+            .input(hintedInnerProject())
             .condition(sb.bool(true))
             .hint(Hint.builder().addOutputNames("outer").build())
             .build();
 
     assertEquals(List.of("inner"), substraitToCalcite.convert(filter).getRowType().getFieldNames());
+  }
+
+  @Test
+  void namesAProjectionWithoutAnEmitMapping() {
+    // A projection is the one relation whose conversion produces a Calcite projection of its own,
+    // with no emit mapping needed to ask for one.
+    Rel project =
+        Project.builder()
+            .input(scan)
+            .addExpressions(sb.add(sb.fieldReference(scan, 0), sb.i64(1)))
+            .hint(Hint.builder().addOutputNames("a", "b", "total").build())
+            .build();
+
+    RelNode node = substraitToCalcite.convert(project);
+
+    assertEquals(List.of("a", "b", "total"), node.getRowType().getFieldNames());
+    assertEquals(1, countProjections(node));
+  }
+
+  @Test
+  void leavesTheNamesOfAnotherRelationAloneWhenItsOwnOperatorIsElided() {
+    // Same as above, with an emit mapping that changes nothing either: Calcite builds no filter
+    // and no projection, so the node on top is still the inner relation's, hint and all.
+    Rel filter =
+        Filter.builder()
+            .input(hintedInnerProject())
+            .condition(sb.bool(true))
+            .remap(Rel.Remap.of(List.of(0)))
+            .hint(Hint.builder().addOutputNames("outer").build())
+            .build();
+
+    assertEquals(List.of("inner"), substraitToCalcite.convert(filter).getRowType().getFieldNames());
+  }
+
+  @Test
+  void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
+    // An aggregate over several grouping sets orders its grouping columns by first appearance,
+    // where Calcite orders them by group key: the record type reads (b, a, count, index) and the
+    // converted node (a, b, count, ...), so the names would land on columns the plan does not name.
+    Rel scan3 =
+        sb.namedScan(List.of("t3"), List.of("a", "b", "c"), List.of(R.I64, N.STRING, R.FP64));
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 1), sb.grouping(input, 0)),
+            input -> List.of(sb.count(input, 0)),
+            Optional.of(Rel.Remap.of(List.of(0, 1, 2, 3))),
+            scan3);
+
+    RelNode plain = substraitToCalcite.convert(aggregate);
+    RelNode named =
+        substraitToCalcite.convert(
+            aggregate.withHint(
+                Optional.of(Hint.builder().addOutputNames("k_b", "k_a", "n", "gs").build())));
+
+    assertEquals(plain.getRowType().getFieldNames(), named.getRowType().getFieldNames());
+  }
+
+  private Rel hintedInnerProject() {
+    return Project.builder()
+        .input(scan)
+        .remap(Rel.Remap.offset(2, 1))
+        .addExpressions(sb.add(sb.fieldReference(scan, 0), sb.i64(1)))
+        .hint(Hint.builder().addOutputNames("inner").build())
+        .build();
   }
 
   private static int countProjections(RelNode node) {
