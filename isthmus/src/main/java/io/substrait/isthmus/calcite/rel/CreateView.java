@@ -21,7 +21,7 @@ public class CreateView extends SingleRel {
       RelNode input) {
     super(cluster, traitSet, input);
     this.viewName = viewName;
-    this.viewSchema = viewSchema;
+    this.viewSchema = DdlSchemas.requireFilledBy(viewSchema, input, "view");
   }
 
   /**
@@ -47,6 +47,17 @@ public class CreateView extends SingleRel {
   }
 
   /**
+   * Returns the schema of the view this node creates, which is what it produces: the input fills
+   * it, and its own columns are the ones the statement declares.
+   *
+   * @return the schema of the view this node creates
+   */
+  @Override
+  protected RelDataType deriveRowType() {
+    return viewSchema;
+  }
+
+  /**
    * Explains the node terms for plan output.
    *
    * @param pw plan writer
@@ -56,7 +67,7 @@ public class CreateView extends SingleRel {
   public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("viewName", getViewName())
-        .item("viewSchema", getViewSchema());
+        .item("viewSchema", getViewSchema().getFullTypeString());
   }
 
   /**
@@ -86,9 +97,9 @@ public class CreateView extends SingleRel {
   }
 
   /**
-   * Returns the schema of the view to create. A view definition declares it, and it is not the row
-   * type of the definition: the two hold the same columns, but the names are the ones the statement
-   * gives them.
+   * Returns the schema of the view to create: the one the statement declares where this node was
+   * built with it, and the row type of the definition otherwise. A declared schema holds the same
+   * columns as the definition, under the names -- and the types -- the statement gives them.
    *
    * @return the schema of the view this node creates
    */

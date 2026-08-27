@@ -22,7 +22,7 @@ public class CreateTable extends SingleRel {
       RelNode input) {
     super(cluster, traitSet, input);
     this.tableName = tableName;
-    this.tableSchema = tableSchema;
+    this.tableSchema = DdlSchemas.requireFilledBy(tableSchema, input, "table");
   }
 
   /**
@@ -48,6 +48,17 @@ public class CreateTable extends SingleRel {
   }
 
   /**
+   * Returns the schema of the table this node creates, which is what it produces: the input fills
+   * it, and its own columns are the ones the statement declares.
+   *
+   * @return the schema of the table this node creates
+   */
+  @Override
+  protected RelDataType deriveRowType() {
+    return tableSchema;
+  }
+
+  /**
    * Explains the node terms for plan output.
    *
    * @param pw plan writer
@@ -57,7 +68,7 @@ public class CreateTable extends SingleRel {
   public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("tableName", getTableName())
-        .item("tableSchema", getTableSchema());
+        .item("tableSchema", getTableSchema().getFullTypeString());
   }
 
   /**
@@ -87,8 +98,9 @@ public class CreateTable extends SingleRel {
   }
 
   /**
-   * Returns the schema of the table to create. A CTAS declares it, and it is not the row type of
-   * the input: the two hold the same columns, but the names are the ones the statement gives them.
+   * Returns the schema of the table to create: the one the statement declares where this node was
+   * built with it, and the row type of the input otherwise. A declared schema holds the same
+   * columns as the input, under the names -- and the types -- the statement gives them.
    *
    * @return the schema of the table this node creates
    */

@@ -786,6 +786,12 @@ public class SubstraitRelNodeConverter
       throw new IllegalArgumentException("NamedDdl view definition must be set");
     }
 
+    if (!namedDdl.getTableDefaults().fields().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Default values on a NamedDdl are not supported: a Calcite CreateView has nowhere to put "
+              + "them, and the spec has table_defaults report a full list of them");
+    }
+
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
     return new CreateView(namedDdl.getNames(), toRowType(namedDdl.getTableSchema()), relNode);

@@ -1,9 +1,12 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
+import io.substrait.plan.Plan;
 import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractWriteRel;
 import io.substrait.relation.NamedDdl;
@@ -14,7 +17,7 @@ import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
@@ -41,9 +44,9 @@ class DdlRoundtripTest extends PlanTestBase {
   }
 
   /**
-   * The names a CTAS declares are the ones the table gets, and they are not the names of the
-   * columns filling it: a projection names its own columns whatever Calcite derives, here $f2 and
-   * $f3.
+   * The schema a CTAS declares is the one the table gets, and it is not the row type of the columns
+   * filling it: a projection names its own columns whatever Calcite derives, here $f2 and $f3, and
+   * the declared types here are ones the input does not produce either.
    */
   @Test
   void createTableKeepsTheSchemaItDeclares() {
@@ -57,13 +60,10 @@ class DdlRoundtripTest extends PlanTestBase {
             .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
             .build();
 
-    RelNode calcite = new SubstraitToCalcite(converterProvider, catalogReader).convert(ctas);
-    Rel converted = SubstraitRelVisitor.convert(copied(calcite), converterProvider);
-
-    assertEquals(declaredSchema(), ((NamedWrite) converted).getTableSchema());
+    assertFullRoundTrip(ctas);
   }
 
-  /** The same for a view: its definition fills the columns, the statement names them. */
+  /** The same for a view: its definition fills the columns, the statement declares them. */
   @Test
   void createViewKeepsTheSchemaItDeclares() {
     NamedDdl createView =
@@ -76,22 +76,105 @@ class DdlRoundtripTest extends PlanTestBase {
             .object(AbstractDdlRel.DdlObject.VIEW)
             .build();
 
-    RelNode calcite = new SubstraitToCalcite(converterProvider, catalogReader).convert(createView);
-    Rel converted = SubstraitRelVisitor.convert(copied(calcite), converterProvider);
+    // Not assertFullRoundTrip: converting a NamedDdl without a catalog collects the schema by
+    // walking the plan with RelCopyOnWriteVisitor, whose visit(NamedDdl) throws.
+    Rel converted =
+        SubstraitRelVisitor.convert(
+            new SubstraitToCalcite(converterProvider, catalogReader).convert(createView),
+            converterProvider);
 
     assertEquals(declaredSchema(), ((NamedDdl) converted).getTableSchema());
   }
 
   /**
-   * Copies the node the way a planner rewriting its input does, so that the schema has to be
-   * carried rather than derived when the conversion reads it back.
+   * A Calcite CreateView has nowhere to put the default values a DDL relation reports, and the spec
+   * has that field report a full list of them, so a plan carrying any is refused rather than
+   * converted into one that has lost them.
    */
-  private RelNode copied(RelNode node) {
-    return node.copy(node.getTraitSet(), node.getInputs());
+  @Test
+  void aViewWithDefaultValuesIsRefused() {
+    NamedDdl withDefaults =
+        NamedDdl.builder()
+            .viewDefinition(computedColumns())
+            .names(List.of("dst1"))
+            .tableSchema(declaredSchema())
+            .tableDefaults(
+                ExpressionCreator.struct(
+                    false, ExpressionCreator.i32(false, 0), ExpressionCreator.i32(false, 0)))
+            .operation(AbstractDdlRel.DdlOp.CREATE)
+            .object(AbstractDdlRel.DdlObject.VIEW)
+            .build();
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> new SubstraitToCalcite(converterProvider, catalogReader).convert(withDefaults));
+  }
+
+  @Test
+  void createTableTakesTheColumnsTheStatementNames() throws SqlParseException {
+    assertEquals(
+        List.of("TOTAL", "DOUBLED"),
+        schemaOf("create table dst1 (total, doubled) as select intcol + 1, intcol + 2 from src1")
+            .names());
+  }
+
+  @Test
+  void createTableTakesTheColumnTypesTheStatementDeclares() throws SqlParseException {
+    NamedStruct schema =
+        schemaOf(
+            "create table dst1 (total bigint, doubled bigint not null)"
+                + " as select intcol + 1, intcol + 2 from src1");
+
+    assertEquals(List.of("TOTAL", "DOUBLED"), schema.names());
+    assertEquals(TypeCreator.REQUIRED.struct(N.I64, R.I64), schema.struct());
+  }
+
+  @Test
+  void createViewTakesTheColumnsTheStatementNames() throws SqlParseException {
+    assertEquals(
+        List.of("TOTAL", "DOUBLED"),
+        schemaOf("create view dst1 (total, doubled) as select intcol + 1, intcol + 2 from src1")
+            .names());
+  }
+
+  @Test
+  void aStatementWithoutAColumnListKeepsTheNamesTheQueryProduces() throws SqlParseException {
+    assertEquals(
+        List.of("TOTAL"),
+        schemaOf("create table dst1 as select intcol + 1 as total from src1").names());
+  }
+
+  /**
+   * A DDL node produces the object it creates, not the query filling it, so the root over it is
+   * named by the declared schema. The two disagree here: the query names its columns EXPR$0 and
+   * EXPR$1.
+   */
+  @Test
+  void theRootOverACreateStatementIsNamedByTheDeclaredSchema() throws SqlParseException {
+    RelRoot root =
+        SubstraitSqlToCalcite.convertQueries(
+                "create table dst1 (total, doubled) as select intcol + 1, intcol + 2 from src1",
+                catalogReader,
+                converterProvider)
+            .get(0);
+
+    Plan.Root converted = SubstraitRelVisitor.convert(root, converterProvider);
+
+    assertEquals(List.of("TOTAL", "DOUBLED"), converted.getNames());
+  }
+
+  /** The schema of the object a single DDL statement creates, as Substrait records it. */
+  private NamedStruct schemaOf(String sql) throws SqlParseException {
+    RelRoot root =
+        SubstraitSqlToCalcite.convertQueries(sql, catalogReader, converterProvider).get(0);
+    Rel converted = SubstraitRelVisitor.convert(root.rel, converterProvider);
+    return converted instanceof NamedWrite
+        ? ((NamedWrite) converted).getTableSchema()
+        : ((NamedDdl) converted).getTableSchema();
   }
 
   private NamedStruct declaredSchema() {
-    return NamedStruct.of(List.of("total", "doubled"), TypeCreator.REQUIRED.struct(N.I32, N.I32));
+    return NamedStruct.of(List.of("total", "doubled"), TypeCreator.REQUIRED.struct(R.I64, N.I32));
   }
 
   private Rel computedColumns() {
