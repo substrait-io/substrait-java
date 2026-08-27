@@ -364,7 +364,10 @@ public class SubstraitRelNodeConverter
             .collect(java.util.stream.Collectors.toList());
 
     Optional<Remap> remap = aggregate.getRemap();
-    final int lastFieldIndex = groupExprs.size() + aggregateCalls.size();
+    // A field grouped on by several sets is one column of the relation, so the grouping-set index
+    // sits after the distinct grouping expressions, not after every mention of them.
+    final int groupColumnCount = new LinkedHashSet<>(groupExprs).size();
+    final int lastFieldIndex = groupColumnCount + aggregateCalls.size();
 
     // map grouping set index if it is not removed via remap
     final boolean emitDirect = remap.isEmpty();
@@ -384,7 +387,9 @@ public class SubstraitRelNodeConverter
               RelCollations.EMPTY,
               typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
               null));
-      final int groupingCallIndex = aggregateCalls.size() - 1;
+      // The call was appended, so it is the last column of the converted aggregate: the grouping
+      // columns come first, then the calls.
+      final int groupingCallIndex = groupColumnCount + aggregateCalls.size() - 1;
       if (groupingSetIndexGetsRemapped) {
         List<Integer> remapList = new LinkedList<>(remap.get().indices());
         for (int i = 0; i < remapList.size(); i++) {

@@ -169,10 +169,11 @@ class OutputNamesTest extends PlanTestBase {
 
   @Test
   void leavesAnAggregateThatEmitsDirectlyAlone() {
-    // The conversion of an aggregate over several grouping sets ends in a projection, but that
-    // projection carries the grouping-set index rather than this relation's emit mapping, and the
-    // columns underneath it are ordered by Calcite's group key rather than by the relation's own
-    // record type. Names are dropped rather than pinned onto columns chosen by something else.
+    // The conversion of an aggregate over several grouping sets ends in a projection that carries
+    // the grouping-set index. Its other columns are the relation's own, in the declared order, but
+    // that one comes back as Calcite's folded GROUP_ID literal -- a BIGINT where the relation
+    // declares an i32 -- so the names are dropped rather than pinned onto a column whose type the
+    // plan does not describe.
     Rel aggregate =
         sb.aggregate(
             input -> List.of(sb.grouping(input, 0), sb.grouping(input, 1)),

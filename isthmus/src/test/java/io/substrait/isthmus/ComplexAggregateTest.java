@@ -12,6 +12,7 @@ import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.util.List;
 import java.util.Optional;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
@@ -253,6 +254,53 @@ class ComplexAggregateTest extends PlanTestBase {
     RelNode relNode = substraitToCalcite.convert(rel);
 
     assertRowMatch(relNode.getRowType(), R.STRING, N.I64);
+  }
+
+  /**
+   * A relation that keeps its grouping-set index maps it to the column the conversion adds for it,
+   * which sits after the grouping columns and the measures. Calcite folds the {@code GROUP_ID} call
+   * into a literal, so that is what the column holds -- which value it holds is a separate question
+   * from which column it is.
+   */
+  @Test
+  void theGroupingSetIndexIsTheColumnTheConversionAddedForIt() {
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 2), sb.grouping(input, 0)),
+            input -> List.of(sb.count(input, 0)),
+            Optional.of(Rel.Remap.of(List.of(0, 1, 2, 3))),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+
+    RelNode relNode = substraitToCalcite.convert(aggregate);
+
+    assertEquals(
+        "LogicalProject(c=[$1], a=[$0], $f2=[$2], $f3=[0:BIGINT])\n"
+            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0}, {2}]], agg#0=[COUNT($0)])\n"
+            + "    LogicalTableScan(table=[[foo]])\n",
+        RelOptUtil.toString(relNode));
+  }
+
+  /**
+   * Field 0 is grouped on by both sets and is one column of the output, so the grouping-set index
+   * is the fourth column and not the fifth. Counting every mention of a grouping expression put it
+   * past the end, and the mapping then kept an index the converted aggregate did not have.
+   */
+  @Test
+  void aGroupingFieldSharedBySetsLeavesTheGroupingSetIndexWhereItIs() {
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 0, 2), sb.grouping(input, 0)),
+            input -> List.of(sb.count(input, 0)),
+            Optional.of(Rel.Remap.of(List.of(0, 1, 2, 3))),
+            sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
+
+    RelNode relNode = substraitToCalcite.convert(aggregate);
+
+    assertEquals(
+        "LogicalProject(a=[$0], c=[$1], $f2=[$2], $f3=[0:BIGINT])\n"
+            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0, 2}, {0}]], agg#0=[COUNT($0)])\n"
+            + "    LogicalTableScan(table=[[foo]])\n",
+        RelOptUtil.toString(relNode));
   }
 
   @Test
