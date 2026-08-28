@@ -385,6 +385,14 @@ class ComplexAggregateTest extends PlanTestBase {
                 converterProvider)
             .getInput();
 
+    // The mapping is what carries the difference, and it is asserted directly: the sets mention
+    // fields 0, 1 and 3 before 2, so the relation declares them in that order, while the aggregate
+    // underneath emits them by field index. Types alone would not show it -- three of these four
+    // columns are BIGINT.
+    assertEquals(
+        Optional.of(Rel.Remap.of(List.of(0, 1, 3, 2, 4))),
+        ((io.substrait.relation.Aggregate) rel).getRemap());
+
     // What the relation says it emits is what the Calcite aggregate it came from emits. The
     // grouping-set index is left out of the comparison: Calcite types its GROUP_ID column BIGINT
     // while Substrait gives the aggregate an i32 one, which is a difference of its own.
