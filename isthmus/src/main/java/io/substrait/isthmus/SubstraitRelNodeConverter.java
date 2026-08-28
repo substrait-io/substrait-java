@@ -8,6 +8,7 @@ import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.hint.Hint;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
@@ -40,7 +41,9 @@ import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.type.NamedFieldCountingTypeVisitor;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayDeque;
@@ -61,6 +64,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
@@ -194,13 +198,13 @@ public class SubstraitRelNodeConverter
     context.enterScope(AnchoredInput.of(filter.getInput().getRelAnchor(), input.getRowType()));
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
     RelNode node = relBuilder.push(input).filter(context.exitScope(), filterCondition).build();
-    return applyRemap(node, filter.getRemap());
+    return applyRelCommon(node, filter, input);
   }
 
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
-    return applyRemap(node, namedScan.getRemap());
+    return applyRelCommon(node, namedScan);
   }
 
   @Override
@@ -225,7 +229,7 @@ public class SubstraitRelNodeConverter
 
     RelNode node =
         relBuilder.push(child).project(rexExprs, List.of(), false, context.exitScope()).build();
-    return applyRemap(node, project.getRemap());
+    return applyRelCommon(node, project, child);
   }
 
   @Override
@@ -235,7 +239,7 @@ public class SubstraitRelNodeConverter
     // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
     RelNode node =
         relBuilder.push(left).push(right).join(JoinRelType.INNER, relBuilder.literal(true)).build();
-    return applyRemap(node, cross.getRemap());
+    return applyRelCommon(node, cross, left, right);
   }
 
   @Override
@@ -252,7 +256,7 @@ public class SubstraitRelNodeConverter
     JoinRelType joinType = asJoinRelType(join);
     RelNode node =
         relBuilder.push(left).push(right).join(joinType, condition, context.exitScope()).build();
-    return applyRemap(node, join.getRemap());
+    return applyRelCommon(node, join, left, right);
   }
 
   private JoinRelType asJoinRelType(Join join) {
@@ -285,14 +289,15 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(Set set, Context context) throws RuntimeException {
-    set.getInputs()
-        .forEach(
-            input -> {
-              relBuilder.push(input.accept(this, context));
-            });
+    List<RelNode> inputs = new ArrayList<>(set.getInputs().size());
+    for (Rel input : set.getInputs()) {
+      RelNode converted = input.accept(this, context);
+      inputs.add(converted);
+      relBuilder.push(converted);
+    }
     RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
-    return applyRemap(node, set.getRemap());
+    return applyRelCommon(node, set, inputs.toArray(new RelNode[0]));
   }
 
   private RelBuilder getRelBuilder(Set set) {
@@ -404,7 +409,9 @@ public class SubstraitRelNodeConverter
             : relBuilder;
 
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
-    return applyRemap(node, remap);
+    // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
+    // relation carries.
+    return applyOutputNames(applyRemap(node, remap), aggregate, child);
   }
 
   /**
@@ -622,7 +629,7 @@ public class SubstraitRelNodeConverter
             .collect(Collectors.toList());
     exitUncorrelatedScope(context, Sort.class);
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
-    return applyRemap(node, sort.getRemap());
+    return applyRelCommon(node, sort, child);
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
@@ -663,7 +670,7 @@ public class SubstraitRelNodeConverter
         fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
     exitUncorrelatedScope(context, Fetch.class);
     RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
-    return applyRemap(node, fetch.getRemap());
+    return applyRelCommon(node, fetch, child);
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
@@ -1130,6 +1137,119 @@ public class SubstraitRelNodeConverter
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  /**
+   * Applies the parts of a relation's {@code RelCommon} that Calcite can hold: its emit mapping
+   * first, and then the alternative output field names of its hint.
+   *
+   * <p>The rest is dropped. A Calcite {@code RelNode} has no place for a relation's alias, its
+   * statistics, the computations it saves or loads, or its common advanced extension, and inventing
+   * one would mean defining a convention on every consumer's behalf. Its anchor is consumed by the
+   * correlation machinery instead.
+   *
+   * @param relNode the node the relation was converted into
+   * @param rel the relation being converted
+   * @param inputs the nodes this relation's inputs were converted into
+   * @return the node, remapped and renamed
+   */
+  protected RelNode applyRelCommon(RelNode relNode, Rel rel, RelNode... inputs) {
+    return applyOutputNames(applyRemap(relNode, rel.getRemap()), rel, inputs);
+  }
+
+  /**
+   * Applies the alternative output field names a relation carries in its hint to the node it was
+   * converted into.
+   *
+   * <p>The names are applied to the projection this relation's own conversion produced: the one a
+   * {@link Project} becomes, or the one {@link #applyRemap(RelNode, Optional)} adds for a relation
+   * with an emit mapping. Anywhere else they are dropped, rather than renaming a node that stands
+   * for another relation or adding a projection the plan never asked for. A relation converted into
+   * a bare Calcite operator therefore keeps the names Calcite derives, and so does one Calcite
+   * builds no operator for at all -- a filter that cannot filter, a sort with no sort fields, an
+   * identity emit mapping -- where the node handed back is the input's, which is what the given
+   * inputs are compared against.
+   *
+   * <p>They are dropped as well where the columns of that projection are not the columns of the
+   * relation's record type, type by type. An aggregate over several grouping sets orders its
+   * grouping columns by first appearance where Calcite orders them by group key, so the two
+   * disagree on what the third column is, and binding the names by position would name columns the
+   * plan does not name.
+   *
+   * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
+   * them belong to the type of the expression that produces the field, which a projection cannot
+   * restate: Calcite compares the two, nested names included, and rejects a projection whose row
+   * type says something the expressions do not.
+   *
+   * <p>A name list that does not fit the relation is dropped as well, rather than failing the
+   * conversion: a hint holds no meaning of its own and should not be able to break an otherwise
+   * valid plan.
+   *
+   * <p>The names live in the row type of the projection, which Calcite treats as non-semantic: a
+   * planner may discard them, and two projections that differ only in their names share one digest.
+   * They describe the tree as it is returned here, and do not survive planning.
+   *
+   * @param relNode the node to rename, with any emit mapping already applied
+   * @param rel the relation being converted
+   * @param inputs the nodes this relation's inputs were converted into
+   * @return the renamed node, or the node unchanged where the names do not apply
+   */
+  protected RelNode applyOutputNames(RelNode relNode, Rel rel, RelNode... inputs) {
+    List<String> names = rel.getHint().map(Hint::getOutputNames).orElse(List.of());
+    if (names.isEmpty() || !(relNode instanceof org.apache.calcite.rel.core.Project)) {
+      return relNode;
+    }
+    for (RelNode input : inputs) {
+      if (relNode == input) {
+        return relNode;
+      }
+    }
+    org.apache.calcite.rel.core.Project project = (org.apache.calcite.rel.core.Project) relNode;
+    RelDataType rowType = project.getRowType();
+    List<Type> fields = rel.getRecordType().fields();
+    if (names.size() != NamedFieldCountingTypeVisitor.countNames(rel.getRecordType())
+        || fields.size() != rowType.getFieldCount()
+        || !describesColumnsOf(fields, rowType)) {
+      return relNode;
+    }
+    List<String> fieldNames = new ArrayList<>(fields.size());
+    for (int field = 0, nameIndex = 0; field < fields.size(); field++) {
+      fieldNames.add(names.get(nameIndex));
+      nameIndex += 1 + NamedFieldCountingTypeVisitor.countNames(fields.get(field));
+    }
+    if (fieldNames.stream().anyMatch(String::isEmpty)
+        || new HashSet<>(fieldNames).size() != fieldNames.size()) {
+      // Calcite requires the field names of a projection to be distinct and non-empty -- it reads
+      // an empty one as the star identifier -- and uniquifying the names here would hand back names
+      // the producer did not ask for.
+      return relNode;
+    }
+    return project.copy(
+        project.getTraitSet(),
+        project.getInput(),
+        project.getProjects(),
+        typeFactory.createStructType(
+            rowType.getStructKind(), RelOptUtil.getFieldTypeList(rowType), fieldNames));
+  }
+
+  /**
+   * Returns whether the given row type holds the given fields, one for one and in the same order,
+   * ignoring nullability: Calcite derives that from the expression producing the column, and a
+   * relation's record type says what its columns are, not whether a value is there.
+   *
+   * @param fields the field types of a relation's record type
+   * @param rowType the row type of the node it was converted into
+   * @return whether the two describe the same columns in the same order
+   */
+  private boolean describesColumnsOf(List<Type> fields, RelDataType rowType) {
+    for (int field = 0; field < fields.size(); field++) {
+      RelDataType declared = typeConverter.toCalcite(typeFactory, fields.get(field));
+      if (!SqlTypeUtil.equalSansNullability(
+          declared, rowType.getFieldList().get(field).getType())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
