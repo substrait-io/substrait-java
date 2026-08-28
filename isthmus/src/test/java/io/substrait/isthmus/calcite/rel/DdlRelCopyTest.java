@@ -68,6 +68,55 @@ class DdlRelCopyTest extends PlanTestBase {
   }
 
   /**
+   * Two columns of one object cannot share a name: Calcite reads a row type as a scope, and
+   * `createStructType` does not uniquify what it is given.
+   */
+  @Test
+  void aSchemaThatNamesTwoColumnsTheSameIsRejected() {
+    RelDataType repeated =
+        typeFactory.createStructType(
+            List.of(
+                typeFactory.createSqlType(SqlTypeName.BIGINT),
+                typeFactory.createSqlType(SqlTypeName.BIGINT)),
+            List.of("same", "same"));
+    RelNode twoColumns = builder.values(new String[] {"a", "b"}, 1, 2).build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new CreateTable(List.of("FOO"), repeated, twoColumns));
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateView(List.of("FOO"), repeated, twoColumns));
+  }
+
+  /**
+   * A struct reached through a collection is a level of the schema like any other: the flattened
+   * name list a schema carries names its fields, and the row type the conversion builds holds them
+   * in a scope of their own.
+   */
+  @Test
+  void aSchemaThatRepeatsANameInsideACollectionIsRejected() {
+    RelDataType bigint = typeFactory.createSqlType(SqlTypeName.BIGINT);
+    RelDataType repeated =
+        typeFactory.createStructType(List.of(bigint, bigint), List.of("same", "same"));
+    RelDataType inArray =
+        typeFactory.createStructType(
+            List.of(typeFactory.createArrayType(repeated, -1)), List.of("c"));
+    RelDataType inMap =
+        typeFactory.createStructType(
+            List.of(typeFactory.createMapType(bigint, repeated)), List.of("c"));
+    RelNode oneColumn = builder.values(new String[] {"a"}, 1).build();
+
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateTable(List.of("FOO"), inArray, oneColumn));
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateTable(List.of("FOO"), inMap, oneColumn));
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateView(List.of("FOO"), inArray, oneColumn));
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateView(List.of("FOO"), inMap, oneColumn));
+  }
+
+  /**
    * The declared schema names the object's columns and the input fills them, so it has to be a
    * struct of as many leaf fields as the input produces. The names and the types are the
    * statement's own -- a CTAS may declare both -- so neither is checked.

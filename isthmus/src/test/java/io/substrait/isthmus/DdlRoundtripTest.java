@@ -145,6 +145,17 @@ class DdlRoundtripTest extends PlanTestBase {
   }
 
   /**
+   * A statement naming two columns the same declares a schema no object can have, and Calcite
+   * builds the row type it is given without uniquifying it, so the conversion refuses instead.
+   */
+  @Test
+  void aStatementThatNamesTwoColumnsTheSameIsRefused() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> schemaOf("create table d (a, a) as select intcol, intcol from src1"));
+  }
+
+  /**
    * A DDL node produces the object it creates, not the query filling it, so the root over it is
    * named by the declared schema. The two disagree here: the query names its columns EXPR$0 and
    * EXPR$1.
