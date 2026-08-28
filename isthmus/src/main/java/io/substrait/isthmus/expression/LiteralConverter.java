@@ -94,6 +94,9 @@ public class LiteralConverter {
       return ExpressionCreator.string(nullable, value);
     }
     if (type instanceof Type.VarChar) {
+      // Unlike a fixedchar, a varchar literal carries a length of its own, so a value shorter than
+      // it is what the type means. A value longer than it is malformed, and nothing rejects it --
+      // here or in the POJO that holds it.
       return ExpressionCreator.varChar(nullable, value, ((Type.VarChar) type).length());
     }
     if (type instanceof Type.FixedChar) {
