@@ -786,9 +786,15 @@ public class SubstraitRelNodeConverter
       throw new IllegalArgumentException("NamedDdl view definition must be set");
     }
 
+    if (!namedDdl.getTableDefaults().fields().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Default values on a NamedDdl are not supported: a Calcite CreateView has nowhere to put "
+              + "them, and the spec has table_defaults report a full list of them");
+    }
+
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
-    return new CreateView(namedDdl.getNames(), relNode);
+    return new CreateView(namedDdl.getNames(), toRowType(namedDdl.getTableSchema()), relNode);
   }
 
   @Override
@@ -1010,6 +1016,16 @@ public class SubstraitRelNodeConverter
     return RexUtil.removeNullabilityCast(typeFactory, rexNode);
   }
 
+  /**
+   * Converts the schema a DDL relation declares into the row type that describes it.
+   *
+   * @param schema the declared schema, whose names are one per field at every level of the struct
+   * @return the row type of the object the statement creates
+   */
+  private RelDataType toRowType(NamedStruct schema) {
+    return typeConverter.toCalcite(typeFactory, schema.struct(), schema.names());
+  }
+
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
     if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
         || namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
@@ -1024,7 +1040,7 @@ public class SubstraitRelNodeConverter
 
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
-    return new CreateTable(namedWrite.getNames(), relNode);
+    return new CreateTable(namedWrite.getNames(), toRowType(namedWrite.getTableSchema()), relNode);
   }
 
   @Override
