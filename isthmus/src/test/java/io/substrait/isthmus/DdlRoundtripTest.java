@@ -174,6 +174,40 @@ class DdlRoundtripTest extends PlanTestBase {
     assertEquals(List.of("TOTAL", "DOUBLED"), converted.getNames());
   }
 
+  /**
+   * A write and a DDL relation produce the object they act on rather than columns to select from --
+   * a TableModify's row type is a single ROWCOUNT column, a CreateTable and a CreateView the object
+   * they create -- so an emit mapping over one has nothing to apply to and is refused rather than
+   * dropped.
+   */
+  @Test
+  void anEmitMappingOnAWriteOrADdlIsRefused() {
+    NamedWrite ctas =
+        NamedWrite.builder()
+            .input(computedColumns())
+            .names(List.of("dst1"))
+            .tableSchema(declaredSchema())
+            .operation(AbstractWriteRel.WriteOp.CTAS)
+            .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
+            .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+            .remap(Rel.Remap.of(List.of(0)))
+            .build();
+    NamedDdl createView =
+        NamedDdl.builder()
+            .viewDefinition(computedColumns())
+            .names(List.of("dst1"))
+            .tableSchema(declaredSchema())
+            .tableDefaults(ExpressionCreator.struct(false))
+            .operation(AbstractDdlRel.DdlOp.CREATE)
+            .object(AbstractDdlRel.DdlObject.VIEW)
+            .remap(Rel.Remap.of(List.of(0)))
+            .build();
+    SubstraitToCalcite converter = new SubstraitToCalcite(converterProvider, catalogReader);
+
+    assertThrows(UnsupportedOperationException.class, () -> converter.convert(ctas));
+    assertThrows(UnsupportedOperationException.class, () -> converter.convert(createView));
+  }
+
   /** The schema of the object a single DDL statement creates, as Substrait records it. */
   private NamedStruct schemaOf(String sql) throws SqlParseException {
     RelRoot root =

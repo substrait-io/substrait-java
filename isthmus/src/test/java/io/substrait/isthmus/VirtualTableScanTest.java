@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.hint.Hint;
+import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
@@ -441,6 +443,41 @@ class VirtualTableScanTest extends PlanTestBase {
             + "    LogicalProject(exprs=[[ROW(ROW(1))]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
+  }
+
+  /**
+   * The emit mapping of a virtual table selects its columns like any other relation's: the scan
+   * produced the whole table and dropped what the mapping leaves out.
+   */
+  @Test
+  void anEmitMappingSelectsTheColumnsItNames() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertEquals(List.of("col2"), relNode.getRowType().getFieldNames());
+    assertEquals(
+        List.of(R.STRING),
+        SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
+  }
+
+  /** The names of its hint reach the projection the mapping adds, as they do elsewhere. */
+  @Test
+  void outputNamesReachTheProjectionTheMappingAdds() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .hint(Hint.builder().addOutputNames("label").build())
+            .build();
+
+    assertEquals(List.of("label"), substraitToCalcite.convert(table).getRowType().getFieldNames());
   }
 
   @SafeVarargs

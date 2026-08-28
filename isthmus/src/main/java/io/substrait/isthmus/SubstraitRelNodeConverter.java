@@ -789,6 +789,12 @@ public class SubstraitRelNodeConverter
               namedDdl.getObject()));
     }
 
+    if (namedDdl.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedDdl is not supported: a CreateView produces the view it creates, "
+              + "not columns to select from");
+    }
+
     if (namedDdl.getViewDefinition().isEmpty()) {
       throw new IllegalArgumentException("NamedDdl view definition must be set");
     }
@@ -855,7 +861,9 @@ public class SubstraitRelNodeConverter
         }
         tuplesBuilder.add(tupleBuilder.build());
       }
-      return LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build());
+      return applyRelCommon(
+          LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+          virtualTableScan);
     } else {
       // A row that does not fit a LogicalValues tuple is computed instead: we create a
       // LogicalProject for each row to compute its values, and combine them together using a
@@ -892,8 +900,10 @@ public class SubstraitRelNodeConverter
       for (int i = 0; i < rowType.getFieldCount(); i++) {
         topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
-      return LogicalProject.create(
-          union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
+      return applyRelCommon(
+          LogicalProject.create(
+              union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet()),
+          virtualTableScan);
     }
   }
 
@@ -1052,6 +1062,12 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedWrite write, Context context) {
+    if (write.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedWrite is not supported: a TableModify's row type is a single "
+              + "ROWCOUNT column and a CreateTable produces the table it creates, neither of them "
+              + "columns to select from");
+    }
     RelNode input = write.getInput().accept(this, context);
     final RelOptSchema relOptSchema = requireRelOptSchema();
     final RelOptTable targetTable = relOptSchema.getTableForMember(write.getNames());
