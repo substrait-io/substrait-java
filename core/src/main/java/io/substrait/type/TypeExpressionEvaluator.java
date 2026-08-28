@@ -27,8 +27,9 @@ import java.util.OptionalInt;
  * type classes whose parameter is an integer to substitute: {@code DECIMAL<P,S>}, {@code
  * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
  * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
- * interval_compound<P>}. The last two of those are supported for symmetry; no standard extension
- * declares them parameterized today.
+ * interval_compound<P>}. No standard extension returns a parameterized {@code fixedbinary} or
+ * {@code interval_compound} -- those two are supported for symmetry, and pinned against
+ * hand-written declarations rather than the catalog.
  *
  * <p>What still fails on the standard extension catalog is a return of {@code list<anyN>}, whose
  * parameter is a type to evaluate rather than an integer to substitute ({@code filter}, {@code

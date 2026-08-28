@@ -85,6 +85,40 @@ class ParameterizedReturnTypeTest {
         resolve("add:ptstz_iyear_str", R.precisionTimestampTZ(9), R.INTERVAL_YEAR, R.STRING));
   }
 
+  /**
+   * fixedbinary and interval_compound are the two parameterized shapes no standard extension
+   * declares as a return, so they are pinned against a hand-written declaration instead of the
+   * catalog.
+   */
+  @Test
+  void theShapesTheCatalogDoesNotDeclareDeriveToo() {
+    assertEquals(
+        R.fixedBinary(9),
+        derive(
+            ParameterizedType.FixedBinary.builder().nullable(false).length(parameter("L1")).build(),
+            R.fixedBinary(9)));
+    assertEquals(
+        R.intervalCompound(3),
+        derive(
+            ParameterizedType.IntervalCompound.builder()
+                .nullable(false)
+                .precision(parameter("P"))
+                .build(),
+            R.intervalCompound(3)));
+  }
+
+  private static ParameterizedType.StringLiteral parameter(String name) {
+    return ParameterizedType.StringLiteral.builder().nullable(false).value(name).build();
+  }
+
+  /** Derives the return of a one-argument declaration whose argument has the return's own shape. */
+  private static Type derive(ParameterizedType declaredReturn, Type actual) {
+    return TypeExpressionEvaluator.evaluateExpression(
+        declaredReturn,
+        List.of(SimpleExtension.ValueArgument.builder().value(declaredReturn).name("arg1").build()),
+        List.of(actual));
+  }
+
   @Test
   void mirrorNullabilityStillApplies() {
     // The declared return is non-null; MIRROR makes it nullable because an argument is.
