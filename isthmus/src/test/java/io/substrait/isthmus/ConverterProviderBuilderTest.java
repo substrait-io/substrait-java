@@ -17,9 +17,11 @@ import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
@@ -34,6 +36,7 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -180,7 +183,7 @@ class ConverterProviderBuilderTest {
   }
 
   @Nested
-  class AdditionalCallConverters {
+  class CallConverterTransform {
 
     /** A function no built-in {@link CallConverter} claims. */
     private final SqlFunction unclaimed =
@@ -213,6 +216,53 @@ class ConverterProviderBuilderTest {
       return node.accept(provider.getRexExpressionConverter(null));
     }
 
+    /**
+     * A windowed call goes to the window function converter, but the expressions inside it do not:
+     * its operands, partition keys and sort keys are converted like any others, so a caller's
+     * converter is consulted for them.
+     */
+    @Test
+    void areConsultedForTheExpressionsInsideAWindowedCall() {
+      List<String> seen = new ArrayList<>();
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(
+                  prepending(
+                      (call, top) -> {
+                        seen.add(call.getOperator().getName());
+                        return Optional.empty();
+                      }))
+              .build();
+      RelBuilder relBuilder = new RelCreator().createRelBuilder();
+      relBuilder.values(new String[] {"a"}, 1, 2);
+      RexNode over =
+          relBuilder
+              .aggregateCall(SqlStdOperatorTable.ROW_NUMBER)
+              .over()
+              .partitionBy(
+                  relBuilder.call(
+                      SqlStdOperatorTable.PLUS, relBuilder.field("a"), relBuilder.literal(1)))
+              .orderBy(
+                  relBuilder.call(
+                      SqlStdOperatorTable.MINUS, relBuilder.field("a"), relBuilder.literal(2)))
+              .rowsUnbounded()
+              .toRex();
+
+      over.accept(provider.getRexExpressionConverter(null));
+
+      assertEquals(List.of("+", "-"), seen);
+    }
+
+    /** A transform putting the given converter ahead of the built-in ones. */
+    private UnaryOperator<List<CallConverter>> prepending(CallConverter converter) {
+      return builtIns -> {
+        List<CallConverter> converters = new ArrayList<>();
+        converters.add(converter);
+        converters.addAll(builtIns);
+        return converters;
+      };
+    }
+
     private CallConverter claiming(Predicate<RexCall> claims, Expression result) {
       return (call, topLevelConverter) ->
           claims.test(call) ? Optional.of(result) : Optional.empty();
@@ -231,8 +281,8 @@ class ConverterProviderBuilderTest {
       Expression sentinel = ExpressionCreator.i64(false, 1);
       ConverterProvider provider =
           ConverterProvider.builder()
-              .additionalCallConverters(
-                  List.of(claiming(call -> call.getOperator() == unclaimed, sentinel)))
+              .callConverters(
+                  prepending(claiming(call -> call.getOperator() == unclaimed, sentinel)))
               .build();
 
       assertEquals(sentinel, convert(provider, unclaimedCall()));
@@ -255,8 +305,8 @@ class ConverterProviderBuilderTest {
       Expression sentinel = ExpressionCreator.i64(false, 2);
       ConverterProvider provider =
           ConverterProvider.builder()
-              .additionalCallConverters(
-                  List.of(
+              .callConverters(
+                  prepending(
                       claiming(call -> call.getOperator() == SqlStdOperatorTable.CAST, sentinel)))
               .build();
 

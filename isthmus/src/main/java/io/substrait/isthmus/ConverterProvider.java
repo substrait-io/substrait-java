@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -106,10 +107,10 @@ public class ConverterProvider {
   protected TypeConverter typeConverter;
 
   /**
-   * Caller-supplied {@link CallConverter}s, consulted ahead of the built-in ones. See {@link
+   * The transform applied to the assembled {@link CallConverter} list. See {@link
    * #getCallConverters()}.
    */
-  protected final List<CallConverter> additionalCallConverters;
+  protected final UnaryOperator<List<CallConverter>> callConverters;
 
   /** The execution behavior configuration for plans created by this converter. */
   protected final Plan.ExecutionBehavior executionBehavior;
@@ -234,7 +235,7 @@ public class ConverterProvider {
             .orElse(builder.sqlParserConfig);
     this.typeObserver = builder.typeObserver;
     this.aggregateConversion = builder.aggregateConversion;
-    this.additionalCallConverters = List.copyOf(builder.additionalCallConverters);
+    this.callConverters = builder.callConverters;
 
     this.scalarFunctionConverter =
         builder.scalarFunctionConverter.orElseGet(
@@ -378,24 +379,24 @@ public class ConverterProvider {
    * {@link CallConverter}s are used to convert Calcite {@link org.apache.calcite.rex.RexCall}s to
    * Substrait equivalents.
    *
-   * <p>The converters are consulted in order and the first one to return a result wins. Any {@link
-   * Builder#additionalCallConverters(List) additional converters} come first, so a caller whose
-   * dialect gives a call different semantics can claim it before the built-in converter for it
-   * does.
+   * <p>The converters are consulted in order and the first one to return a result wins. The
+   * built-in ones are assembled here and handed to the {@link Builder#callConverters(UnaryOperator)
+   * transform} a caller configured, which decides where its own converters sit: ahead of a built-in
+   * one to claim a call it would otherwise take, or behind them to catch what none of them claims.
    *
-   * <p>This list covers plain calls only. A windowed call is a {@link
-   * org.apache.calcite.rex.RexOver}, which {@link
-   * io.substrait.isthmus.expression.RexExpressionConverter} routes to the window function converter
-   * without consulting these.
+   * <p>Some calls never reach this list: the {@link org.apache.calcite.rex.RexOver} node of a
+   * windowed call, an aggregate call, a {@link org.apache.calcite.rex.RexSubQuery}, and the
+   * reference expression of a {@link org.apache.calcite.rex.RexFieldAccess} outside the item,
+   * input-reference and field-access kinds it walks through. A windowed call's operands, partition
+   * keys and sort keys are converted through this list as usual.
    *
    * @return a list of CallConverter instances
    */
   public List<CallConverter> getCallConverters() {
-    ArrayList<CallConverter> callConverters = new ArrayList<>(additionalCallConverters);
-    callConverters.addAll(CallConverters.defaults(typeConverter));
-    callConverters.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
-    callConverters.add(scalarFunctionConverter);
-    return callConverters;
+    ArrayList<CallConverter> builtIns = new ArrayList<>(CallConverters.defaults(typeConverter));
+    builtIns.add(CallConverters.CREATE_SEARCH_CONV.apply(new RexBuilder(typeFactory)));
+    builtIns.add(scalarFunctionConverter);
+    return callConverters.apply(builtIns);
   }
 
   // Substrait To Calcite Processing
@@ -602,7 +603,7 @@ public class ConverterProvider {
     private TypeObserver typeObserver = TypeObserver.NOOP;
     private AggregateConversion aggregateConversion = AggregateConversion.DEFAULT;
     private Optional<Casing> unquotedCasing = Optional.empty();
-    private List<CallConverter> additionalCallConverters = List.of();
+    private UnaryOperator<List<CallConverter>> callConverters = UnaryOperator.identity();
 
     // Derived from the extensions and type factory at build time when left unset.
     private Optional<ScalarFunctionConverter> scalarFunctionConverter = Optional.empty();
@@ -707,20 +708,26 @@ public class ConverterProvider {
     }
 
     /**
-     * Sets {@link CallConverter}s for calls the built-in converters do not handle, or handle
-     * differently than the caller's dialect needs. Like the other setters this replaces what was
-     * configured before rather than adding to it.
+     * Sets a transform over the assembled {@link CallConverter} list, letting a caller insert,
+     * replace, reorder or remove converters. The list handed to the operator is mutable and holds
+     * the built-in converters in the order {@link ConverterProvider#getCallConverters()} assembles
+     * them; the list the operator returns is the one used.
      *
-     * <p>They are consulted ahead of the built-in converters, so one of them may claim a call a
-     * built-in converter would otherwise have taken, and they do not apply to windowed calls. See
-     * {@link ConverterProvider#getCallConverters()}.
+     * <p>Where a caller's converter sits is its own decision. Ahead of the built-in ones it claims
+     * a call one of them would otherwise take -- which is what a dialect that gives a call
+     * different semantics needs, and also what puts it ahead of {@code CAST}, {@code REINTERPRET}
+     * and {@code ROW}, this repository's encoding of nullable and user-defined literals rather than
+     * dialect behaviour. Behind them it catches only what none of them claims.
      *
-     * @param additionalCallConverters the call converters to consult first
+     * <p>The transform runs on every call to {@link ConverterProvider#getCallConverters()}, so it
+     * sees the scalar function converter and the type converter as they are then, rather than as
+     * they were when the provider was built.
+     *
+     * @param callConverters the transform to apply to the assembled list
      * @return this builder
      */
-    public Builder additionalCallConverters(List<CallConverter> additionalCallConverters) {
-      this.additionalCallConverters =
-          List.copyOf(Objects.requireNonNull(additionalCallConverters, "additionalCallConverters"));
+    public Builder callConverters(UnaryOperator<List<CallConverter>> callConverters) {
+      this.callConverters = Objects.requireNonNull(callConverters, "callConverters");
       return this;
     }
 
