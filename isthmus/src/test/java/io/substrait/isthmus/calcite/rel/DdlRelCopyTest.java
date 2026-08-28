@@ -68,6 +68,27 @@ class DdlRelCopyTest extends PlanTestBase {
   }
 
   /**
+   * Two columns of one object cannot share a name: Calcite reads a row type as a scope, and
+   * `createStructType` does not uniquify what it is given.
+   */
+  @Test
+  void aSchemaThatNamesTwoColumnsTheSameIsRejected() {
+    RelDataType repeated =
+        typeFactory.createStructType(
+            List.of(
+                typeFactory.createSqlType(SqlTypeName.BIGINT),
+                typeFactory.createSqlType(SqlTypeName.BIGINT)),
+            List.of("same", "same"));
+    RelNode twoColumns = builder.values(new String[] {"a", "b"}, 1, 2).build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new CreateTable(List.of("FOO"), repeated, twoColumns));
+    assertThrows(
+        IllegalArgumentException.class, () -> new CreateView(List.of("FOO"), repeated, twoColumns));
+  }
+
+  /**
    * The declared schema names the object's columns and the input fills them, so it has to be a
    * struct of as many leaf fields as the input produces. The names and the types are the
    * statement's own -- a CTAS may declare both -- so neither is checked.
