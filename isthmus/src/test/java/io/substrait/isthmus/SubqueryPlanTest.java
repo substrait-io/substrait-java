@@ -362,8 +362,7 @@ class SubqueryPlanTest extends PlanTestBase {
   /**
    * A converter built without a relation visitor converts expressions that stand alone -- an
    * extended expression among them -- so a subquery cannot be converted on it. No SQL reaches this
-   * guard today: validating an extended expression that holds a subquery throws inside Calcite
-   * first, scalar and IN/EXISTS alike, so the converter is pinned directly.
+   * guard today, so the converter is pinned directly.
    */
   @Test
   void aSubqueryIsRejectedWhereThereIsNoRelationVisitor() {
@@ -410,11 +409,7 @@ class SubqueryPlanTest extends PlanTestBase {
     RexNode subQuery = RexSubQuery.scalar(builder.values(new String[] {"a"}, 1).build());
     RexNode call =
         rexBuilder.makeCall(
-            SqlStdOperatorTable.SESSION_USER.getReturnTypeInference() == null
-                ? subQuery.getType()
-                : subQuery.getType(),
-            SqlStdOperatorTable.NULLIF,
-            java.util.List.of(subQuery, subQuery));
+            subQuery.getType(), SqlStdOperatorTable.NULLIF, java.util.List.of(subQuery, subQuery));
 
     IllegalArgumentException reported =
         assertThrows(
