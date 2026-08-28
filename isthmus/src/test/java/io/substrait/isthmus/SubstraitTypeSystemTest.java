@@ -2,6 +2,8 @@ package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SubstraitTypeSystem.TYPE_FACTORY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
@@ -9,7 +11,9 @@ import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +80,30 @@ class SubstraitTypeSystemTest {
     assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.VARCHAR, 100_000).getPrecision());
     assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.CHAR, 100_000).getPrecision());
     assertEquals(100_000, TYPE_FACTORY.createSqlType(SqlTypeName.BINARY, 100_000).getPrecision());
+  }
+
+  /**
+   * The conversion takes whatever type factory it is handed, and one built on Calcite's default
+   * type system cannot hold these widths. Narrowing them is what this fix is about, so a factory
+   * that would narrow is reported rather than followed.
+   */
+  @Test
+  void aFactoryThatCannotHoldTheDeclaredLengthIsReported() {
+    RelDataTypeFactory defaultFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                TypeConverter.DEFAULT.toCalcite(
+                    defaultFactory, TypeCreator.REQUIRED.varChar(100_000), null));
+    assertTrue(e.getMessage().contains("65536"), e.getMessage());
+
+    assertEquals(
+        100_000,
+        TypeConverter.DEFAULT
+            .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.varChar(100_000), null)
+            .getPrecision());
   }
 
   @Test

@@ -376,17 +376,41 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.FixedChar expr) {
-      return t(n(expr), SqlTypeName.CHAR, expr.length());
+      return withLength(n(expr), SqlTypeName.CHAR, expr.length());
     }
 
     @Override
     public RelDataType visit(Type.VarChar expr) {
-      return t(n(expr), SqlTypeName.VARCHAR, expr.length());
+      return withLength(n(expr), SqlTypeName.VARCHAR, expr.length());
     }
 
     @Override
     public RelDataType visit(Type.FixedBinary expr) {
-      return t(n(expr), SqlTypeName.BINARY, expr.length());
+      return withLength(n(expr), SqlTypeName.BINARY, expr.length());
+    }
+
+    /**
+     * Returns the type the given factory builds for a declared length, having checked that it holds
+     * it. A factory caps a width at its type system's maximum without saying so, and this
+     * conversion takes whatever factory it is handed, so a factory whose limits are not Substrait's
+     * would otherwise return a type narrower than the plan declares.
+     *
+     * @param nullable whether the type is nullable
+     * @param typeName the Calcite type name to build
+     * @param length the declared length
+     * @return the built type
+     * @throws IllegalArgumentException if the factory built a type of another length
+     */
+    private RelDataType withLength(boolean nullable, SqlTypeName typeName, int length) {
+      RelDataType type = t(nullable, typeName, length);
+      if (type.getPrecision() != length) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The type factory cannot hold %s(%d), which it narrowed to %s; its type system"
+                    + " allows up to %d",
+                typeName, length, type, typeFactory.getTypeSystem().getMaxPrecision(typeName)));
+      }
+      return type;
     }
 
     @Override
