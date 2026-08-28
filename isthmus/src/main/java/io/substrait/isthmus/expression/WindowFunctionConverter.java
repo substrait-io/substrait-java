@@ -111,8 +111,8 @@ public class WindowFunctionConverter
     boolean isRows = window.isRows();
     Expression.WindowBoundsType boundsType =
         isRows ? Expression.WindowBoundsType.ROWS : Expression.WindowBoundsType.RANGE;
-    // The spec requires a RANGE bound's offset type to be compatible with the single ordering
-    // expression's type (add(T, D) -> T).
+    // RANGE offset type must match the ordering expression's type (add(T, D) -> T). Taking the
+    // first key is safe: Calcite's SqlWindow#validate rejects >1 key for a non-symbolic bound.
     Optional<RelDataType> orderingType =
         window.orderKeys == null || window.orderKeys.isEmpty()
             ? Optional.empty()

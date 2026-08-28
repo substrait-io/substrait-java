@@ -5,6 +5,8 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.WindowBound;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Optional;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
@@ -104,12 +106,44 @@ public class WindowBoundConverter {
     if (type instanceof Type.I64) {
       return Optional.of(ExpressionCreator.i64(false, value));
     } else if (type instanceof Type.I32) {
-      return Optional.of(ExpressionCreator.i32(false, (int) value));
+      return fitsIn(value, Integer.MIN_VALUE, Integer.MAX_VALUE)
+          ? Optional.of(ExpressionCreator.i32(false, (int) value))
+          : Optional.empty();
     } else if (type instanceof Type.I16) {
-      return Optional.of(ExpressionCreator.i16(false, (int) value));
+      return fitsIn(value, Short.MIN_VALUE, Short.MAX_VALUE)
+          ? Optional.of(ExpressionCreator.i16(false, (int) value))
+          : Optional.empty();
     } else if (type instanceof Type.I8) {
-      return Optional.of(ExpressionCreator.i8(false, (int) value));
+      return fitsIn(value, Byte.MIN_VALUE, Byte.MAX_VALUE)
+          ? Optional.of(ExpressionCreator.i8(false, (int) value))
+          : Optional.empty();
+    } else if (type instanceof Type.Decimal) {
+      Type.Decimal decimal = (Type.Decimal) type;
+      // encodeDecimalIntoBytes never checks the declared precision, only a fixed 16-byte cap.
+      return digitCount(value) + decimal.scale() <= decimal.precision()
+          ? Optional.of(
+              ExpressionCreator.decimal(
+                  false, BigDecimal.valueOf(value), decimal.precision(), decimal.scale()))
+          : Optional.empty();
+    } else if (type instanceof Type.FP64) {
+      double asDouble = (double) value;
+      return (long) asDouble == value
+          ? Optional.of(ExpressionCreator.fp64(false, asDouble))
+          : Optional.empty();
+    } else if (type instanceof Type.FP32) {
+      float asFloat = (float) value;
+      return (long) asFloat == value
+          ? Optional.of(ExpressionCreator.fp32(false, asFloat))
+          : Optional.empty();
     }
     return Optional.empty();
+  }
+
+  private static boolean fitsIn(long value, long min, long max) {
+    return value >= min && value <= max;
+  }
+
+  private static int digitCount(long value) {
+    return BigInteger.valueOf(value).abs().toString().length();
   }
 }
