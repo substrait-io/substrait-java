@@ -711,7 +711,8 @@ public class ConverterProvider {
      * Sets a transform over the assembled {@link CallConverter} list, letting a caller insert,
      * replace, reorder or remove converters. The list handed to the operator is mutable and holds
      * the built-in converters in the order {@link ConverterProvider#getCallConverters()} assembles
-     * them; the list the operator returns is the one used.
+     * them; the list the operator returns is the one used, and must be mutable too, since a
+     * subclass may append to it.
      *
      * <p>Where a caller's converter sits is its own decision. Ahead of the built-in ones it claims
      * a call one of them would otherwise take -- which is what a dialect that gives a call

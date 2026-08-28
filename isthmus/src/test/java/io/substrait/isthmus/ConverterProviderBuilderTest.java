@@ -253,6 +253,22 @@ class ConverterProviderBuilderTest {
       assertEquals(List.of("+", "-"), seen);
     }
 
+    /**
+     * A subclass appends to what {@code super.getCallConverters()} returns -- which is now the list
+     * the transform handed back -- so the transform has to leave it mutable.
+     */
+    @Test
+    void leaveTheListMutableForASubclassToAppendTo() {
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(prepending(claiming(call -> false, null)))
+              .build();
+
+      List<CallConverter> converters = provider.getCallConverters();
+
+      assertDoesNotThrow(() -> converters.add(claiming(call -> false, null)));
+    }
+
     /** A transform putting the given converter ahead of the built-in ones. */
     private UnaryOperator<List<CallConverter>> prepending(CallConverter converter) {
       return builtIns -> {
