@@ -447,7 +447,9 @@ class VirtualTableScanTest extends PlanTestBase {
 
   /**
    * The emit mapping of a virtual table selects its columns like any other relation's: the scan
-   * produced the whole table and dropped what the mapping leaves out.
+   * produces the whole table and a projection drops what the mapping leaves out. That projection is
+   * what converts back, so such a scan returns as a projection over one -- the same shape every
+   * relation with a mapping comes back as.
    */
   @Test
   void anEmitMappingSelectsTheColumnsItNames() {
@@ -464,6 +466,25 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         List.of(R.STRING),
         SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
+  }
+
+  /**
+   * Without a mapping there is no projection to name, and a virtual table's own schema already
+   * names its columns, so the hint is left where it is rather than rebuilding the table around it.
+   */
+  @Test
+  void outputNamesWithoutAMappingAreLeftAlone() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .hint(Hint.builder().addOutputNames("x", "y").build())
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertInstanceOf(LogicalValues.class, relNode);
+    assertEquals(List.of("col1", "col2"), relNode.getRowType().getFieldNames());
   }
 
   /** The names of its hint reach the projection the mapping adds, as they do elsewhere. */
