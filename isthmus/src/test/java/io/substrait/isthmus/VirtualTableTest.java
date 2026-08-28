@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
@@ -199,6 +200,35 @@ class VirtualTableTest extends PlanTestBase {
     Rel converted = SubstraitRelVisitor.convert(union, extensions);
     assertInstanceOf(io.substrait.relation.Set.class, converted);
     assertEquals(List.of(N.I32), converted.getRecordType().fields());
+  }
+
+  /** The relation stands on its own: it has no inputs, and a copy cannot give it any. */
+  @Test
+  void theRelationTakesNoInputs() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+
+    assertEquals(List.of(), table.getInputs());
+    assertEquals(
+        RelOptUtil.toString(table),
+        RelOptUtil.toString(table.copy(table.getTraitSet(), List.of())));
+    assertThrows(
+        IllegalArgumentException.class, () -> table.copy(table.getTraitSet(), List.of(table)));
+  }
+
+  /**
+   * A table of no rows does not reach the relation through a conversion -- a virtual table with no
+   * rows has no row that fails to fit a tuple, so it converts to an empty {@code LogicalValues} --
+   * but a consumer can build one, and the expansion of no rows is that same empty table.
+   */
+  @Test
+  void theRuleExpandsATableOfNoRowsIntoAnEmptyValues() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+    RelNode empty =
+        new VirtualTable(table.getCluster(), table.getTraitSet(), table.getRowType(), List.of());
+
+    RelNode expanded = plan(empty, VirtualTableExpansionRule.INSTANCE);
+
+    assertEquals("LogicalValues(tuples=[[]])\n", RelOptUtil.toString(expanded));
   }
 
   /**
