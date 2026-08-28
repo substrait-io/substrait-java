@@ -204,14 +204,13 @@ class ConverterProviderBuilderTest {
           rex.makeInputRef(TYPE_FACTORY.createSqlType(SqlTypeName.INTEGER), 0));
     }
 
+    /**
+     * Converts through the provider's own {@link RexExpressionConverter}, which is what every
+     * conversion path uses, rather than assembling one out of the provider's parts: whether the
+     * added converters reach a conversion at all is what these tests are about.
+     */
     private Expression convert(ConverterProvider provider, RexNode node) {
-      RexExpressionConverter converter =
-          new RexExpressionConverter(
-              null,
-              provider.getCallConverters(),
-              provider.getWindowFunctionConverter(),
-              provider.getTypeConverter());
-      return node.accept(converter);
+      return node.accept(provider.getRexExpressionConverter(null));
     }
 
     private CallConverter claiming(Predicate<RexCall> claims, Expression result) {
