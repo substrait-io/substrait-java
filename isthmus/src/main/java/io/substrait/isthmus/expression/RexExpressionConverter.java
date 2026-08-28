@@ -217,7 +217,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
    *
    * @param fieldAccess the field access
    * @return the converted Substrait expression
-   * @throws UnsupportedOperationException for unsupported reference kinds
+   * @throws UnsupportedOperationException for an unsupported reference kind, or when this converter
+   *     was built without a relation visitor and the reference is an outer one
    */
   @Override
   public Expression visitFieldAccess(RexFieldAccess fieldAccess) {
@@ -225,6 +226,15 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     switch (kind) {
       case CORREL_VARIABLE:
         {
+          if (relVisitor == null) {
+            // As for a subquery: a converter built without one converts expressions that stand
+            // alone, and an outer reference is bound by a relation there is none of here.
+            throw new UnsupportedOperationException(
+                String.format(
+                    "This converter has no relation visitor, so it cannot convert the outer"
+                        + " reference %s",
+                    fieldAccess));
+          }
           CorrelationId correlationId = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
           Integer anchor = relVisitor.getOuterReferenceAnchor(correlationId);
           if (anchor == null) {

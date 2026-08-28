@@ -12,8 +12,11 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -98,6 +101,26 @@ class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
     };
 
     assertProtoExtendedExpressionRoundtrip(expressions);
+  }
+
+  /** The same for an outer reference, which is bound by a relation there is none of here. */
+  @Test
+  void anOuterReferenceIsRejectedRatherThanDereferencingTheMissingVisitor() {
+    RexBuilder rexBuilder = new RexBuilder(SubstraitTypeSystem.TYPE_FACTORY);
+    RexNode correlated =
+        rexBuilder.makeCorrel(
+            SubstraitTypeSystem.TYPE_FACTORY.builder().add("a", SqlTypeName.INTEGER).build(),
+            new CorrelationId(0));
+    RexFieldAccess fieldAccess = (RexFieldAccess) rexBuilder.makeFieldAccess(correlated, 0);
+
+    UnsupportedOperationException rejected =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                ConverterProvider.DEFAULT
+                    .getRexExpressionConverter(null)
+                    .visitFieldAccess(fieldAccess));
+    assertTrue(rejected.getMessage().contains("no relation visitor"), rejected.getMessage());
   }
 
   /**
