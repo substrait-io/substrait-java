@@ -1,6 +1,30 @@
 Release Notes
 ---
 
+## [0.102.0](https://github.com/substrait-io/substrait-java/compare/v0.101.0...v0.102.0) (2026-08-30)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** a Calcite `TIME` or `TIMESTAMP` literal now converts to
+a Substrait literal carrying its own precision rather than always
+precision 6, so a plan built from `TIMESTAMP '2024-01-01 00:00:00'`
+declares `precision_timestamp<0>` with a value in seconds where it
+previously declared `precision_timestamp<6>` with a value in
+microseconds. A `TIMESTAMP WITH LOCAL TIME ZONE` literal converts to
+`precision_timestamp_tz` instead of `precision_timestamp`.
+
+### Features
+
+* **isthmus:** apply hint.output_names when converting a plan to Calcite ([#1158](https://github.com/substrait-io/substrait-java/issues/1158)) ([fdc78c0](https://github.com/substrait-io/substrait-java/commit/fdc78c0a0ea7fbbc4f3055cce40779277b567ea6))
+
+### Bug Fixes
+
+* **isthmus:** convert a virtual table with a struct column ([#1153](https://github.com/substrait-io/substrait-java/issues/1153)) ([e07d093](https://github.com/substrait-io/substrait-java/commit/e07d093ad93ffe478e27aa16c6cd312902eede8e))
+* **isthmus:** convert pre-epoch temporal literals instead of throwing ([#1127](https://github.com/substrait-io/substrait-java/issues/1127)) ([fcfc36c](https://github.com/substrait-io/substrait-java/commit/fcfc36c333a3a8253ecb9188a01a7f1b6827efb7))
+* **isthmus:** convert temporal literals at their declared type ([#1121](https://github.com/substrait-io/substrait-java/issues/1121)) ([d331f47](https://github.com/substrait-io/substrait-java/commit/d331f47af99abbb53d4a4f52fd878ebdf3b1167d))
+* **isthmus:** keep the schema a CTAS or a created view declares ([#1181](https://github.com/substrait-io/substrait-java/issues/1181)) ([40bd9da](https://github.com/substrait-io/substrait-java/commit/40bd9daaad46a8120c94359545aaad8f930f9485))
+* **isthmus:** refuse a created object's schema that names two columns the same ([#1188](https://github.com/substrait-io/substrait-java/issues/1188)) ([5ce7fb9](https://github.com/substrait-io/substrait-java/commit/5ce7fb94adcc8397b2744499a5ff56c17b6e1112))
+
 ## [0.101.0](https://github.com/substrait-io/substrait-java/compare/v0.100.0...v0.101.0) (2026-08-23)
 
 ### ⚠ BREAKING CHANGES
