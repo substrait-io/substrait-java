@@ -216,8 +216,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(org.apache.calcite.rel.core.Project project) {
     // An identity projection (input refs in order, with matching types) passes every input field
-    // through unchanged and only ever renames fields. Substrait carries output names on Plan.Root,
-    // not on the Project, so emitting one here is redundant: the reverse conversion drops it, which
+    // through unchanged and only ever renames fields. Substrait carries output names on Plan.Root
+    // and, for a single relation, in its hint -- neither of them a Project, and this conversion
+    // writes no hints -- so emitting one here is redundant: the reverse conversion drops it, which
     // leaves the two sides structurally different and breaks round-trips. Skip it instead. Output
     // names are still preserved because convert(RelRoot, ...) takes them from validatedRowType.
     if (RexUtil.isIdentity(project.getProjects(), project.getInput().getRowType())) {
@@ -889,11 +890,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .collect(Collectors.toList());
   }
 
-  private NamedStruct getSchema(final RelNode queryRelRoot) {
-    final RelDataType rowType = queryRelRoot.getRowType();
-    return typeConverter.toNamedStruct(rowType);
-  }
-
   /**
    * Handles Calcite {@link CreateTable} as Substrait CTAS. (Create Table As Select)
    *
@@ -903,7 +899,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public Rel handleCreateTable(CreateTable createTable) {
     RelNode input = createTable.getInput();
     Rel inputRel = apply(input);
-    NamedStruct schema = getSchema(input);
+    NamedStruct schema = typeConverter.toNamedStruct(createTable.getTableSchema());
     return NamedWrite.builder()
         .input(inputRel)
         .tableSchema(schema)
@@ -928,7 +924,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     return NamedDdl.builder()
         .viewDefinition(inputRel)
-        .tableSchema(getSchema(input))
+        .tableSchema(typeConverter.toNamedStruct(createView.getViewSchema()))
         .tableDefaults(defaults)
         .operation(AbstractDdlRel.DdlOp.CREATE)
         .object(AbstractDdlRel.DdlObject.VIEW)

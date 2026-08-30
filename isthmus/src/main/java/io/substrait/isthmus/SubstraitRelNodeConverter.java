@@ -8,6 +8,7 @@ import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.hint.Hint;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
@@ -40,7 +41,9 @@ import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.RoundRobinExchange;
 import io.substrait.relation.physical.ScatterExchange;
 import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.type.NamedFieldCountingTypeVisitor;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
 import java.util.ArrayDeque;
@@ -54,12 +57,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
@@ -83,6 +88,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -192,13 +198,13 @@ public class SubstraitRelNodeConverter
     context.enterScope(AnchoredInput.of(filter.getInput().getRelAnchor(), input.getRowType()));
     RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
     RelNode node = relBuilder.push(input).filter(context.exitScope(), filterCondition).build();
-    return applyRemap(node, filter.getRemap());
+    return applyRelCommon(node, filter, input);
   }
 
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
-    return applyRemap(node, namedScan.getRemap());
+    return applyRelCommon(node, namedScan);
   }
 
   @Override
@@ -223,7 +229,7 @@ public class SubstraitRelNodeConverter
 
     RelNode node =
         relBuilder.push(child).project(rexExprs, List.of(), false, context.exitScope()).build();
-    return applyRemap(node, project.getRemap());
+    return applyRelCommon(node, project, child);
   }
 
   @Override
@@ -233,7 +239,7 @@ public class SubstraitRelNodeConverter
     // Calcite represents CROSS JOIN as the equivalent INNER JOIN with true condition
     RelNode node =
         relBuilder.push(left).push(right).join(JoinRelType.INNER, relBuilder.literal(true)).build();
-    return applyRemap(node, cross.getRemap());
+    return applyRelCommon(node, cross, left, right);
   }
 
   @Override
@@ -250,7 +256,7 @@ public class SubstraitRelNodeConverter
     JoinRelType joinType = asJoinRelType(join);
     RelNode node =
         relBuilder.push(left).push(right).join(joinType, condition, context.exitScope()).build();
-    return applyRemap(node, join.getRemap());
+    return applyRelCommon(node, join, left, right);
   }
 
   private JoinRelType asJoinRelType(Join join) {
@@ -283,14 +289,15 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(Set set, Context context) throws RuntimeException {
-    set.getInputs()
-        .forEach(
-            input -> {
-              relBuilder.push(input.accept(this, context));
-            });
+    List<RelNode> inputs = new ArrayList<>(set.getInputs().size());
+    for (Rel input : set.getInputs()) {
+      RelNode converted = input.accept(this, context);
+      inputs.add(converted);
+      relBuilder.push(converted);
+    }
     RelBuilder builder = getRelBuilder(set);
     RelNode node = builder.build();
-    return applyRemap(node, set.getRemap());
+    return applyRelCommon(node, set, inputs.toArray(new RelNode[0]));
   }
 
   private RelBuilder getRelBuilder(Set set) {
@@ -402,7 +409,9 @@ public class SubstraitRelNodeConverter
             : relBuilder;
 
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
-    return applyRemap(node, remap);
+    // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
+    // relation carries.
+    return applyOutputNames(applyRemap(node, remap), aggregate, child);
   }
 
   /**
@@ -620,7 +629,7 @@ public class SubstraitRelNodeConverter
             .collect(Collectors.toList());
     exitUncorrelatedScope(context, Sort.class);
     RelNode node = relBuilder.push(child).sort(sortExpressions).build();
-    return applyRemap(node, sort.getRemap());
+    return applyRelCommon(node, sort, child);
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
@@ -661,7 +670,7 @@ public class SubstraitRelNodeConverter
         fetch.getCount().map(e -> e.accept(expressionRexConverter, context)).orElse(null);
     exitUncorrelatedScope(context, Fetch.class);
     RelNode node = relBuilder.push(child).sortLimit(offset, count, ImmutableList.of()).build();
-    return applyRemap(node, fetch.getRemap());
+    return applyRelCommon(node, fetch, child);
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
@@ -784,58 +793,73 @@ public class SubstraitRelNodeConverter
       throw new IllegalArgumentException("NamedDdl view definition must be set");
     }
 
+    if (!namedDdl.getTableDefaults().fields().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Default values on a NamedDdl are not supported: a Calcite CreateView has nowhere to put "
+              + "them, and the spec has table_defaults report a full list of them");
+    }
+
     Rel viewDefinition = namedDdl.getViewDefinition().get();
     RelNode relNode = viewDefinition.accept(this, context);
-    return new CreateView(namedDdl.getNames(), relNode);
+    return new CreateView(namedDdl.getNames(), toRowType(namedDdl.getTableSchema()), relNode);
   }
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+    // A schema's names are one per field at every level of the struct, in depth-first order, so
+    // they have to be handed to the conversion rather than paired with the row type afterwards:
+    // with a nested struct anywhere in the schema the two lists do not even have the same length.
+    final NamedStruct schema = virtualTableScan.getInitialSchema();
+    // A relation's row type says what its columns are, not whether a value is there, and Calcite
+    // builds one NOT NULL wherever it derives one -- so a nullable schema struct contributes its
+    // fields and not its nullability.
     final RelDataType rowType =
-        typeConverter.toCalcite(typeFactory, virtualTableScan.getInitialSchema().struct());
+        typeFactory.createTypeWithNullability(
+            typeConverter.toCalcite(typeFactory, schema.struct(), schema.names()), false);
 
-    final List<String> correctFieldNames = virtualTableScan.getInitialSchema().names();
+    List<List<RexNode>> convertedRows = new ArrayList<>();
+    // The same values with the cast a nullable literal converts as taken off, which is the form a
+    // LogicalValues tuple would hold them in -- where they are literals at all.
+    List<List<RexNode>> tupleValues = new ArrayList<>();
+    for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+      List<RexNode> convertedRow = new ArrayList<>();
+      List<RexNode> tupleRow = new ArrayList<>();
+      for (int column = 0; column < rowExpr.fields().size(); column++) {
+        Expression field = rowExpr.fields().get(column);
+        RelDataType declaredType = rowType.getFieldList().get(column).getType();
+        RexNode value =
+            valueAsDeclared(field.accept(expressionRexConverter, context), declaredType);
+        convertedRow.add(value);
+        // Only a converted literal has its nullability cast taken off. A cast the plan carries
+        // itself is doing work -- it has a failure behavior, and it is part of what round-trips --
+        // so a row holding one is computed rather than tabulated.
+        tupleRow.add(field instanceof Expression.Literal ? unwrapNullabilityCast(value) : value);
+      }
+      convertedRows.add(convertedRow);
+      tupleValues.add(tupleRow);
+    }
 
-    final List<RelDataType> fieldTypes =
-        rowType.getFieldList().stream().map(RelDataTypeField::getType).collect(Collectors.toList());
-
-    final RelDataType rowTypeWithNames =
-        typeFactory.createStructType(fieldTypes, correctFieldNames);
-
-    // When all expression in the VirtualTable are literals, we can encode it in Calcite as a
-    // standard LogicalValues relation.
-    boolean allLiterals =
-        virtualTableScan.getRows().stream()
-            .allMatch(row -> row.fields().stream().allMatch(e -> e instanceof Expression.Literal));
-    if (allLiterals) {
+    // A LogicalValues tuple holds nothing but literals, and whether a value is one is a property of
+    // what it converts to rather than of the Substrait expression it came from: a struct converts
+    // to a ROW call and a list to an array constructor, literal or not. Neither belongs in a tuple
+    // anyway -- Calcite orders tuples by casting each value to Comparable, and the value of a row
+    // literal is a list of RexLiterals, which are not.
+    boolean encodableAsTuples =
+        tupleValues.stream().flatMap(List::stream).allMatch(value -> value instanceof RexLiteral);
+    if (encodableAsTuples) {
       ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = ImmutableList.builder();
-      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
+      for (final List<RexNode> tupleRow : tupleValues) {
         ImmutableList.Builder<RexLiteral> tupleBuilder = ImmutableList.builder();
-        for (Expression expr : rowExpr.fields()) {
-          final Expression.Literal literal = (Expression.Literal) expr;
-          RexNode rexNode = literal.accept(expressionRexConverter, context);
-          // A nullable literal converts as CAST(literal AS nullable type). LogicalValues tuples
-          // hold bare literals, and the field's nullability is already declared in the row type,
-          // so unwrap that cast here. Only that one: a cast that changes anything else is doing
-          // work, and dropping it would leave the literal under a row type that does not describe
-          // it. Such a tuple is malformed whatever happens to the cast, and the cast below is what
-          // reports it.
-          if (rexNode.isA(SqlKind.CAST)) {
-            RexNode castOperand = ((RexCall) rexNode).getOperands().get(0);
-            if (castOperand instanceof RexLiteral
-                && SqlTypeUtil.equalSansNullability(rexNode.getType(), castOperand.getType())) {
-              rexNode = castOperand;
-            }
-          }
-          tupleBuilder.add((RexLiteral) rexNode);
+        for (RexNode value : tupleRow) {
+          tupleBuilder.add((RexLiteral) value);
         }
         tuplesBuilder.add(tupleBuilder.build());
       }
-      return LogicalValues.create(relBuilder.getCluster(), rowTypeWithNames, tuplesBuilder.build());
+      return LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build());
     } else {
-      // When a VirtualTable contains non-literal expressions, they cannot be put directly into a
-      // LogicalValues relation. Instead, we create a LogicalProject for each row to compute its
-      // values, and combine them together using a LogicalUnion. For example the following:
+      // A row that does not fit a LogicalValues tuple is computed instead: we create a
+      // LogicalProject for each row to compute its values, and combine them together using a
+      // LogicalUnion. For example the following:
       //
       //   VirtualTable
       //     (e1, e2)
@@ -854,11 +878,7 @@ public class SubstraitRelNodeConverter
       ImmutableList<ImmutableList<RexLiteral>> emptyRowValue = ImmutableList.of(ImmutableList.of());
 
       List<RelNode> projects = new ArrayList<>();
-      for (final Expression.NestedStruct rowExpr : virtualTableScan.getRows()) {
-        List<RexNode> rexRow = new ArrayList<>();
-        for (Expression field : rowExpr.fields()) {
-          rexRow.add(field.accept(expressionRexConverter, context));
-        }
+      for (final List<RexNode> rexRow : convertedRows) {
         RelNode values = LogicalValues.create(relBuilder.getCluster(), emptyRowType, emptyRowValue);
         RelNode project =
             LogicalProject.create(
@@ -873,12 +893,144 @@ public class SubstraitRelNodeConverter
         topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
       return LogicalProject.create(
-          union,
-          Collections.emptyList(),
-          topProjectExprs,
-          rowTypeWithNames,
-          Collections.emptySet());
+          union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
     }
+  }
+
+  /**
+   * Gives a converted row value the type its column is declared at.
+   *
+   * <p>A Substrait struct type has no field names of its own -- a schema names every field once, at
+   * the relation level -- so a struct-valued expression converts carrying the placeholder names
+   * Calcite derives for it, while the row type built from the schema carries the schema's own.
+   * Calcite compares field names when it checks a value against the type it is declared at, so a
+   * struct is rejected on that difference alone, wherever in the column's type it sits.
+   *
+   * <p>Names are what a row, list or map value is rebuilt for: a row's field types are checked
+   * against the schema when the {@link VirtualTableScan} is built, so a value that is one of those
+   * agrees with its declared type on everything a Substrait type says. It can still be stamped
+   * nullable where it was not -- Calcite makes a struct's fields nullable along with the struct,
+   * and a value that cannot be null stands in a column that can. A value that cannot take the
+   * declared type at all -- a call returning a struct, say, whose names are not the declared ones
+   * -- is reported here: {@link LogicalProject} and {@link LogicalValues} check the row type they
+   * are handed with an {@code assert}, which says nothing at all unless assertions are on.
+   *
+   * @param value the converted row value
+   * @param declaredType the type its column is declared at
+   * @return the value, at {@code declaredType}
+   * @throws IllegalArgumentException if the value cannot be given that type
+   */
+  private RexNode valueAsDeclared(RexNode value, RelDataType declaredType) {
+    RexNode declared = renamedAsDeclared(value, declaredType);
+    if (!fitsDeclared(declared.getType(), declaredType)) {
+      throw new IllegalArgumentException(
+          String.format(
+              "A virtual table's value %s converts to the type %s, which is not the %s its column is declared at",
+              value, declared.getType().getFullTypeString(), declaredType.getFullTypeString()));
+    }
+    return declared;
+  }
+
+  /**
+   * Whether a converted value can stand at the type it is declared at.
+   *
+   * <p>A value that cannot be null stands in a column that can: Calcite makes a struct's fields
+   * nullable along with the struct, so the fields of a nullable struct are declared that way
+   * whatever the values in them are. The other direction is a mismatch, and so is any difference
+   * beyond nullability -- a field name included, which is the one this rename is about.
+   */
+  private boolean fitsDeclared(RelDataType valueType, RelDataType declaredType) {
+    return SqlTypeUtil.equalSansNullability(typeFactory, valueType, declaredType)
+        && (declaredType.isNullable() || !valueType.isNullable());
+  }
+
+  private RexNode renamedAsDeclared(RexNode value, RelDataType declaredType) {
+    if (value.getType().equals(declaredType)) {
+      return value;
+    }
+    if (value instanceof RexLiteral && ((RexLiteral) value).isNull()) {
+      // A null value has no fields to rename, only a type to take -- and a list or a map converts
+      // to a literal when it is null and to a constructor call otherwise, so this is where those
+      // two are named as much as a struct is.
+      return rexBuilder.makeNullLiteral(declaredType);
+    }
+    switch (declaredType.getSqlTypeName()) {
+      case ROW:
+        return nameRowFieldsAsDeclared(value, declaredType);
+      case ARRAY:
+        return nameArrayItemsAsDeclared(value, declaredType);
+      case MAP:
+        return nameMapEntriesAsDeclared(value, declaredType);
+      default:
+        return value;
+    }
+  }
+
+  private RexNode nameRowFieldsAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.ROW)) {
+      return value;
+    }
+    List<RexNode> fields = ((RexCall) value).getOperands();
+    if (fields.size() != declaredType.getFieldCount()) {
+      return value;
+    }
+    List<RexNode> renamed = new ArrayList<>();
+    for (int field = 0; field < fields.size(); field++) {
+      renamed.add(
+          valueAsDeclared(fields.get(field), declaredType.getFieldList().get(field).getType()));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.ROW, renamed);
+  }
+
+  private RexNode nameArrayItemsAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.ARRAY_VALUE_CONSTRUCTOR)) {
+      return value;
+    }
+    RelDataType itemType = Objects.requireNonNull(declaredType.getComponentType());
+    List<RexNode> renamed = new ArrayList<>();
+    for (RexNode item : ((RexCall) value).getOperands()) {
+      renamed.add(valueAsDeclared(item, itemType));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, renamed);
+  }
+
+  private RexNode nameMapEntriesAsDeclared(RexNode value, RelDataType declaredType) {
+    if (!value.isA(SqlKind.MAP_VALUE_CONSTRUCTOR)) {
+      return value;
+    }
+    RelDataType keyType = Objects.requireNonNull(declaredType.getKeyType());
+    RelDataType entryType = Objects.requireNonNull(declaredType.getValueType());
+    List<RexNode> operands = ((RexCall) value).getOperands();
+    List<RexNode> renamed = new ArrayList<>();
+    for (int operand = 0; operand < operands.size(); operand++) {
+      // the constructor takes keys and values alternating
+      renamed.add(valueAsDeclared(operands.get(operand), operand % 2 == 0 ? keyType : entryType));
+    }
+    return rexBuilder.makeCall(declaredType, SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, renamed);
+  }
+
+  /**
+   * Unwraps the cast a nullable literal converts as, returning any other node unchanged.
+   *
+   * <p>A nullable literal converts as {@code CAST(literal AS nullable type)}. LogicalValues tuples
+   * hold bare literals, and the field's nullability is already declared in the row type, so that
+   * cast has to come off before the literal can go into a tuple.
+   *
+   * @param rexNode the converted node
+   * @return the literal the cast wraps, or {@code rexNode} itself
+   */
+  private RexNode unwrapNullabilityCast(RexNode rexNode) {
+    return RexUtil.removeNullabilityCast(typeFactory, rexNode);
+  }
+
+  /**
+   * Converts the schema a DDL relation declares into the row type that describes it.
+   *
+   * @param schema the declared schema, whose names are one per field at every level of the struct
+   * @return the row type of the object the statement creates
+   */
+  private RelDataType toRowType(NamedStruct schema) {
+    return typeConverter.toCalcite(typeFactory, schema.struct(), schema.names());
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
@@ -895,7 +1047,7 @@ public class SubstraitRelNodeConverter
 
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
-    return new CreateTable(namedWrite.getNames(), relNode);
+    return new CreateTable(namedWrite.getNames(), toRowType(namedWrite.getTableSchema()), relNode);
   }
 
   @Override
@@ -985,6 +1137,119 @@ public class SubstraitRelNodeConverter
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  /**
+   * Applies the parts of a relation's {@code RelCommon} that Calcite can hold: its emit mapping
+   * first, and then the alternative output field names of its hint.
+   *
+   * <p>The rest is dropped. A Calcite {@code RelNode} has no place for a relation's alias, its
+   * statistics, the computations it saves or loads, or its common advanced extension, and inventing
+   * one would mean defining a convention on every consumer's behalf. Its anchor is consumed by the
+   * correlation machinery instead.
+   *
+   * @param relNode the node the relation was converted into
+   * @param rel the relation being converted
+   * @param inputs the nodes this relation's inputs were converted into
+   * @return the node, remapped and renamed
+   */
+  protected RelNode applyRelCommon(RelNode relNode, Rel rel, RelNode... inputs) {
+    return applyOutputNames(applyRemap(relNode, rel.getRemap()), rel, inputs);
+  }
+
+  /**
+   * Applies the alternative output field names a relation carries in its hint to the node it was
+   * converted into.
+   *
+   * <p>The names are applied to the projection this relation's own conversion produced: the one a
+   * {@link Project} becomes, or the one {@link #applyRemap(RelNode, Optional)} adds for a relation
+   * with an emit mapping. Anywhere else they are dropped, rather than renaming a node that stands
+   * for another relation or adding a projection the plan never asked for. A relation converted into
+   * a bare Calcite operator therefore keeps the names Calcite derives, and so does one Calcite
+   * builds no operator for at all -- a filter that cannot filter, a sort with no sort fields, an
+   * identity emit mapping -- where the node handed back is the input's, which is what the given
+   * inputs are compared against.
+   *
+   * <p>They are dropped as well where the columns of that projection are not the columns of the
+   * relation's record type, type by type. An aggregate over several grouping sets orders its
+   * grouping columns by first appearance where Calcite orders them by group key, so the two
+   * disagree on what the third column is, and binding the names by position would name columns the
+   * plan does not name.
+   *
+   * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
+   * them belong to the type of the expression that produces the field, which a projection cannot
+   * restate: Calcite compares the two, nested names included, and rejects a projection whose row
+   * type says something the expressions do not.
+   *
+   * <p>A name list that does not fit the relation is dropped as well, rather than failing the
+   * conversion: a hint holds no meaning of its own and should not be able to break an otherwise
+   * valid plan.
+   *
+   * <p>The names live in the row type of the projection, which Calcite treats as non-semantic: a
+   * planner may discard them, and two projections that differ only in their names share one digest.
+   * They describe the tree as it is returned here, and do not survive planning.
+   *
+   * @param relNode the node to rename, with any emit mapping already applied
+   * @param rel the relation being converted
+   * @param inputs the nodes this relation's inputs were converted into
+   * @return the renamed node, or the node unchanged where the names do not apply
+   */
+  protected RelNode applyOutputNames(RelNode relNode, Rel rel, RelNode... inputs) {
+    List<String> names = rel.getHint().map(Hint::getOutputNames).orElse(List.of());
+    if (names.isEmpty() || !(relNode instanceof org.apache.calcite.rel.core.Project)) {
+      return relNode;
+    }
+    for (RelNode input : inputs) {
+      if (relNode == input) {
+        return relNode;
+      }
+    }
+    org.apache.calcite.rel.core.Project project = (org.apache.calcite.rel.core.Project) relNode;
+    RelDataType rowType = project.getRowType();
+    List<Type> fields = rel.getRecordType().fields();
+    if (names.size() != NamedFieldCountingTypeVisitor.countNames(rel.getRecordType())
+        || fields.size() != rowType.getFieldCount()
+        || !describesColumnsOf(fields, rowType)) {
+      return relNode;
+    }
+    List<String> fieldNames = new ArrayList<>(fields.size());
+    for (int field = 0, nameIndex = 0; field < fields.size(); field++) {
+      fieldNames.add(names.get(nameIndex));
+      nameIndex += 1 + NamedFieldCountingTypeVisitor.countNames(fields.get(field));
+    }
+    if (fieldNames.stream().anyMatch(String::isEmpty)
+        || new HashSet<>(fieldNames).size() != fieldNames.size()) {
+      // Calcite requires the field names of a projection to be distinct and non-empty -- it reads
+      // an empty one as the star identifier -- and uniquifying the names here would hand back names
+      // the producer did not ask for.
+      return relNode;
+    }
+    return project.copy(
+        project.getTraitSet(),
+        project.getInput(),
+        project.getProjects(),
+        typeFactory.createStructType(
+            rowType.getStructKind(), RelOptUtil.getFieldTypeList(rowType), fieldNames));
+  }
+
+  /**
+   * Returns whether the given row type holds the given fields, one for one and in the same order,
+   * ignoring nullability: Calcite derives that from the expression producing the column, and a
+   * relation's record type says what its columns are, not whether a value is there.
+   *
+   * @param fields the field types of a relation's record type
+   * @param rowType the row type of the node it was converted into
+   * @return whether the two describe the same columns in the same order
+   */
+  private boolean describesColumnsOf(List<Type> fields, RelDataType rowType) {
+    for (int field = 0; field < fields.size(); field++) {
+      RelDataType declared = typeConverter.toCalcite(typeFactory, fields.get(field));
+      if (!SqlTypeUtil.equalSansNullability(
+          declared, rowType.getFieldList().get(field).getType())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

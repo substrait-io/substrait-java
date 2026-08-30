@@ -6,26 +6,56 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
+import org.apache.calcite.rel.type.RelDataType;
 
 /** Represents a CREATE TABLE DDL operation in Calcite's relational algebra. */
 public class CreateTable extends SingleRel {
 
   private final List<String> tableName;
+  private final RelDataType tableSchema;
 
   private CreateTable(
-      RelOptCluster cluster, RelTraitSet traitSet, List<String> tableName, RelNode input) {
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      List<String> tableName,
+      RelDataType tableSchema,
+      RelNode input) {
     super(cluster, traitSet, input);
     this.tableName = tableName;
+    this.tableSchema = DdlSchemas.requireFilledBy(tableSchema, input, "table");
+  }
+
+  /**
+   * CreateTable Constructor, taking the row type of the input as the schema of the table to create.
+   *
+   * @param tableName tablename components
+   * @param input RelNode input
+   */
+  public CreateTable(List<String> tableName, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), tableName, input.getRowType(), input);
   }
 
   /**
    * CreateTable Constructor.
    *
    * @param tableName tablename components
+   * @param tableSchema the schema of the table to create, which the input fills but need not name
+   *     the same way
    * @param input RelNode input
    */
-  public CreateTable(List<String> tableName, RelNode input) {
-    this(input.getCluster(), input.getTraitSet(), tableName, input);
+  public CreateTable(List<String> tableName, RelDataType tableSchema, RelNode input) {
+    this(input.getCluster(), input.getTraitSet(), tableName, tableSchema, input);
+  }
+
+  /**
+   * Returns the schema of the table this node creates, which is what it produces: the input fills
+   * it, and its own columns are the ones the statement declares.
+   *
+   * @return the schema of the table this node creates
+   */
+  @Override
+  protected RelDataType deriveRowType() {
+    return tableSchema;
   }
 
   /**
@@ -36,7 +66,9 @@ public class CreateTable extends SingleRel {
    */
   @Override
   public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw).item("tableName", getTableName());
+    return super.explainTerms(pw)
+        .item("tableName", getTableName())
+        .item("tableSchema", getTableSchema().getFullTypeString());
   }
 
   /**
@@ -53,7 +85,7 @@ public class CreateTable extends SingleRel {
       throw new IllegalArgumentException(
           "CreateTable requires exactly one input, but got " + inputs.size());
     }
-    return new CreateTable(getCluster(), traitSet, tableName, inputs.get(0));
+    return new CreateTable(getCluster(), traitSet, tableName, tableSchema, inputs.get(0));
   }
 
   /**
@@ -63,5 +95,16 @@ public class CreateTable extends SingleRel {
    */
   public List<String> getTableName() {
     return tableName;
+  }
+
+  /**
+   * Returns the schema of the table to create: the one the statement declares where this node was
+   * built with it, and the row type of the input otherwise. A declared schema holds the same
+   * columns as the input, under the names -- and the types -- the statement gives them.
+   *
+   * @return the schema of the table this node creates
+   */
+  public RelDataType getTableSchema() {
+    return tableSchema;
   }
 }

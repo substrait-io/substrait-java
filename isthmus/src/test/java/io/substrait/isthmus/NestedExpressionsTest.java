@@ -11,6 +11,7 @@ import io.substrait.expression.ImmutableExpression;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
+import io.substrait.relation.Filter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
@@ -281,6 +282,41 @@ class NestedExpressionsTest extends PlanTestBase {
         Project.builder().expressions(List.of(structLiteral)).input(emptyTable).build();
 
     assertFullRoundTrip(project);
+  }
+
+  /**
+   * Calcite simplifies a comparison of two literals by comparing them, and a row literal does not
+   * survive that: its value is a list of {@link org.apache.calcite.rex.RexLiteral}s, which are not
+   * {@link Comparable}. A struct literal converts to a ROW call, which the simplification leaves
+   * alone -- in a projection, where the comparison is simplified in place, and in a filter, where
+   * the whole predicate is.
+   */
+  @Test
+  void comparingTwoStructLiteralsInAProjectTest() {
+    Expression comparison =
+        sb.equal(
+            ExpressionCreator.struct(false, ExpressionCreator.i32(false, 1)),
+            ExpressionCreator.struct(false, ExpressionCreator.i32(false, 2)));
+
+    Project project = Project.builder().expressions(List.of(comparison)).input(emptyTable).build();
+
+    RelNode relNode = substraitToCalcite.convert(project);
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions);
+    assertEquals(comparison, ((Project) substraitRel).getExpressions().get(0));
+  }
+
+  @Test
+  void comparingTwoStructLiteralsInAFilterTest() {
+    Expression comparison =
+        sb.equal(
+            ExpressionCreator.struct(false, ExpressionCreator.i32(false, 1)),
+            ExpressionCreator.struct(false, ExpressionCreator.i32(false, 2)));
+
+    Filter filter = Filter.builder().condition(comparison).input(emptyTable).build();
+
+    RelNode relNode = substraitToCalcite.convert(filter);
+    Rel substraitRel = SubstraitRelVisitor.convert(relNode, extensions);
+    assertEquals(comparison, ((Filter) substraitRel).getCondition());
   }
 
   @Test
