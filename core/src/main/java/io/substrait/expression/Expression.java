@@ -1629,8 +1629,9 @@ public interface Expression extends FunctionArg {
     public abstract AggregationInvocation invocation();
 
     /**
-     * Validates that variadic arguments satisfy the parameter consistency requirement, and that
-     * {@code bounds_type} is set whenever a window bound requires it.
+     * Validates that variadic arguments satisfy the parameter consistency requirement, that {@code
+     * bounds_type} is set whenever a window bound requires it, and that a RANGE bound with a
+     * Preceding or Following side has exactly one, non-CLUSTERED ordering expression.
      *
      * <p>When CONSISTENT, all variadic arguments must have the same type (ignoring nullability).
      * When INCONSISTENT, arguments can have different types.
@@ -1639,6 +1640,7 @@ public interface Expression extends FunctionArg {
     protected void check() {
       VariadicParameterConsistencyValidator.validate(declaration(), arguments());
       WindowBound.checkBoundsType(boundsType(), lowerBound(), upperBound());
+      WindowBound.checkRangeOrdering(boundsType(), lowerBound(), upperBound(), sort());
     }
 
     /**

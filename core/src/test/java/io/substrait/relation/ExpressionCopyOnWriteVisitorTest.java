@@ -98,7 +98,12 @@ class ExpressionCopyOnWriteVisitorTest extends TestBase {
             .declaration(declaration)
             .arguments(Collections.emptyList())
             .partitionBy(Collections.emptyList())
-            .sort(Collections.emptyList())
+            .sort(
+                Collections.singletonList(
+                    Expression.SortField.builder()
+                        .expr(sb.i32(1))
+                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                        .build()))
             .outputType(R.I64)
             .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
             .invocation(Expression.AggregationInvocation.ALL)
@@ -114,6 +119,12 @@ class ExpressionCopyOnWriteVisitorTest extends TestBase {
         Optional.of(
             Expression.WindowFunctionInvocation.builder()
                 .from(wfi)
+                .sort(
+                    Collections.singletonList(
+                        Expression.SortField.builder()
+                            .expr(sb.i32(-1))
+                            .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                            .build()))
                 .lowerBound(WindowBound.Preceding.of(sb.i32(-5)))
                 .upperBound(WindowBound.Following.of(sb.i32(-7)))
                 .build()),

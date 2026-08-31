@@ -44,6 +44,21 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
   public abstract List<SortField> getSorts();
 
   /**
+   * Validates that a RANGE bound with a Preceding or Following side has exactly one, non-CLUSTERED
+   * ordering expression, for every window function invocation.
+   */
+  @Value.Check
+  protected void check() {
+    for (WindowRelFunctionInvocation windowFunction : getWindowFunctions()) {
+      WindowBound.checkRangeOrdering(
+          windowFunction.boundsType(),
+          windowFunction.lowerBound(),
+          windowFunction.upperBound(),
+          getSorts());
+    }
+  }
+
+  /**
    * Derives the output record type by appending window outputs to the input type.
    *
    * @return the resulting struct type

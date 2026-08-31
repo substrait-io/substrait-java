@@ -202,12 +202,19 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                 DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
     // Unlike the relation-level fixture above, this bare expression has no enclosing relation to
     // resolve field references against, so the offset is a scalar function call over literals.
+    // A RANGE bound with a Preceding side requires exactly one ordering expression, carried here
+    // directly on the invocation since there is no enclosing relation to hold it.
     Expression.WindowFunctionInvocation wfi =
         Expression.WindowFunctionInvocation.builder()
             .declaration(windowFunctionDeclaration)
             .arguments(Collections.emptyList())
             .partitionBy(Collections.emptyList())
-            .sort(Collections.emptyList())
+            .sort(
+                Collections.singletonList(
+                    Expression.SortField.builder()
+                        .expr(sb.i64(1))
+                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                        .build()))
             .outputType(R.I64)
             .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
             .invocation(Expression.AggregationInvocation.ALL)
@@ -252,6 +259,108 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
             .boundsType(Expression.WindowBoundsType.UNSPECIFIED);
 
     assertThrows(IllegalArgumentException.class, invocationBuilder::build);
+  }
+
+  @Test
+  void rangePrecedingWithoutASingleOrderingExpressionIsRejected() {
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
+    // A RANGE bound with a Preceding side requires exactly one ordering expression on the
+    // enclosing relation; this fixture has none. The check runs in a @Value.Check, so it fires at
+    // construction time rather than only when a plan is later read back from proto.
+    ImmutableConsistentPartitionWindow.Builder relBuilder =
+        ConsistentPartitionWindow.builder()
+            .input(input)
+            .windowFunctions(
+                Arrays.asList(
+                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+                        .declaration(windowFunctionDeclaration)
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
+                        .outputType(R.I64)
+                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                        .invocation(Expression.AggregationInvocation.ALL)
+                        .lowerBound(WindowBound.Preceding.of(5))
+                        .upperBound(WindowBound.CURRENT_ROW)
+                        .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()));
+
+    assertThrows(IllegalArgumentException.class, relBuilder::build);
+  }
+
+  @Test
+  void rangePrecedingWithTwoOrderingExpressionsIsRejected() {
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    Rel input =
+        sb.namedScan(Arrays.asList("test"), Arrays.asList("a", "b"), Arrays.asList(R.I64, R.I64));
+    // A RANGE bound with a Preceding side requires exactly one ordering expression; this fixture
+    // has two.
+    ImmutableConsistentPartitionWindow.Builder relBuilder =
+        ConsistentPartitionWindow.builder()
+            .input(input)
+            .windowFunctions(
+                Arrays.asList(
+                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+                        .declaration(windowFunctionDeclaration)
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
+                        .outputType(R.I64)
+                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                        .invocation(Expression.AggregationInvocation.ALL)
+                        .lowerBound(WindowBound.Preceding.of(5))
+                        .upperBound(WindowBound.CURRENT_ROW)
+                        .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()))
+            .sorts(
+                Arrays.asList(
+                    Expression.SortField.builder()
+                        .expr(sb.fieldReference(input, 0))
+                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                        .build(),
+                    Expression.SortField.builder()
+                        .expr(sb.fieldReference(input, 1))
+                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                        .build()));
+
+    assertThrows(IllegalArgumentException.class, relBuilder::build);
+  }
+
+  @Test
+  void rangePrecedingWithClusteredOrderingIsRejected() {
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
+    // A RANGE bound with a Preceding side cannot use SORT_DIRECTION_CLUSTERED for its ordering
+    // expression.
+    ImmutableConsistentPartitionWindow.Builder relBuilder =
+        ConsistentPartitionWindow.builder()
+            .input(input)
+            .windowFunctions(
+                Arrays.asList(
+                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+                        .declaration(windowFunctionDeclaration)
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
+                        .outputType(R.I64)
+                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                        .invocation(Expression.AggregationInvocation.ALL)
+                        .lowerBound(WindowBound.Preceding.of(5))
+                        .upperBound(WindowBound.CURRENT_ROW)
+                        .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()))
+            .sorts(
+                Arrays.asList(
+                    Expression.SortField.builder()
+                        .expr(sb.fieldReference(input, 0))
+                        .direction(Expression.SortDirection.CLUSTERED)
+                        .build()));
+
+    assertThrows(IllegalArgumentException.class, relBuilder::build);
   }
 
   @Test

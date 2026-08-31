@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
 
@@ -59,6 +60,46 @@ public interface WindowBound {
       throw new IllegalArgumentException(
           "bounds_type is required when either window bound is CurrentRow, Preceding, or"
               + " Following, but was BOUNDS_TYPE_UNSPECIFIED");
+    }
+  }
+
+  /**
+   * Validates a RANGE window's ordering against its bounds, per the spec's rule that a RANGE frame
+   * with a {@link Preceding} or {@link Following} bound must have exactly one ordering expression,
+   * which must not use {@code SORT_DIRECTION_CLUSTERED}.
+   *
+   * @param boundsType the window's bounds type
+   * @param lowerBound the window's lower bound
+   * @param upperBound the window's upper bound
+   * @param sorts the window's ordering expressions
+   * @throws IllegalArgumentException if {@code boundsType} is {@code RANGE}, either bound is {@link
+   *     Preceding} or {@link Following}, and {@code sorts} does not contain exactly one ordering
+   *     expression, or that expression uses {@code SORT_DIRECTION_CLUSTERED}
+   */
+  static void checkRangeOrdering(
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      List<Expression.SortField> sorts) {
+    boolean needsSingleOrdering =
+        boundsType == Expression.WindowBoundsType.RANGE
+            && (lowerBound instanceof Preceding
+                || lowerBound instanceof Following
+                || upperBound instanceof Preceding
+                || upperBound instanceof Following);
+    if (!needsSingleOrdering) {
+      return;
+    }
+    if (sorts.size() != 1) {
+      throw new IllegalArgumentException(
+          "a RANGE bound with a Preceding or Following side requires exactly one ordering"
+              + " expression, but found "
+              + sorts.size());
+    }
+    if (sorts.get(0).direction() == Expression.SortDirection.CLUSTERED) {
+      throw new IllegalArgumentException(
+          "a RANGE bound with a Preceding or Following side cannot use"
+              + " SORT_DIRECTION_CLUSTERED for its ordering expression");
     }
   }
 
