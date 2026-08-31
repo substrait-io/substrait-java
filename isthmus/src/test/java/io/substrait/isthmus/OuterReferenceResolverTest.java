@@ -135,35 +135,64 @@ class OuterReferenceResolverTest extends PlanTestBase {
   /**
    * A virtual table's rows are expressions, and a subquery among them is a tree the resolver only
    * reaches through the row: a subquery's relation is not an input, so walking inputs never gets
-   * there and a correlation declared inside it is left unbound.
+   * there and a correlation the subquery declares is left unbound.
+   *
+   * <p>The table itself declares nothing. It is a leaf with no inputs and so no fields to bind an
+   * id to, which puts a row's outer reference where one in a {@link
+   * org.apache.calcite.rel.core.Project} expression sits: bound by the relation around it, here the
+   * correlate the table is the right input of.
    */
   @Test
   void correlationInsideASubqueryInAVirtualTableRow() {
     final Holder<RexCorrelVariable> cor0 = Holder.empty();
-    final RelNode correlated =
-        tpcDsRelBuilder
-            .scan("tpcds", "STORE_SALES")
-            .variable(cor0::set)
-            .scan("tpcds", "ITEM")
-            .filter(
-                tpcDsRelBuilder.equals(
-                    tpcDsRelBuilder.field("I_ITEM_SK"),
-                    tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK")))
-            .project(tpcDsRelBuilder.field("I_ITEM_SK"))
-            .correlate(JoinRelType.INNER, cor0.get().id, tpcDsRelBuilder.field(2, 0, "SS_ITEM_SK"))
-            .project(tpcDsRelBuilder.field("SS_ITEM_SK"))
-            .build();
-    final RexNode subQuery = RexSubQuery.scalar(correlated);
+    final Holder<RexCorrelVariable> cor1 = Holder.empty();
+    tpcDsRelBuilder.scan("tpcds", "STORE_SALES").variable(cor0::set);
+
+    // SELECT i_item_sk FROM item
+    // WHERE i_item_sk = $cor0.ss_item_sk
+    //   AND i_item_sk = (SELECT p_promo_sk FROM promotion WHERE p_item_sk = item.i_item_sk)
+    tpcDsRelBuilder.scan("tpcds", "ITEM").variable(cor1::set);
+    final RexNode promoOfItem =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .scan("tpcds", "PROMOTION")
+                .filter(
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("P_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor1.get(), "I_ITEM_SK")))
+                .project(tpcDsRelBuilder.field("P_PROMO_SK"))
+                .build());
+    final RexNode itemOfSale =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .filter(
+                    List.of(cor1.get().id),
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("I_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK")),
+                    tpcDsRelBuilder.equals(tpcDsRelBuilder.field("I_ITEM_SK"), promoOfItem))
+                .project(tpcDsRelBuilder.field("I_ITEM_SK"))
+                .build());
 
     final RelNode virtualTable =
         VirtualTable.create(
             tpcDsRelBuilder.getCluster(),
-            tpcDsRelBuilder.getTypeFactory().builder().add("col1", subQuery.getType()).build(),
-            java.util.Set.of(cor0.get().id),
-            List.of(List.of(subQuery)));
+            tpcDsRelBuilder.getTypeFactory().builder().add("col1", itemOfSale.getType()).build(),
+            List.of(List.of(itemOfSale)));
+    final RelNode calciteRel =
+        tpcDsRelBuilder
+            .push(virtualTable)
+            .correlate(JoinRelType.INNER, cor0.get().id, tpcDsRelBuilder.field(2, 0, "SS_ITEM_SK"))
+            .build();
 
-    final OuterReferenceResolver resolver = resolve(virtualTable);
-    Assertions.assertNotNull(resolver.anchorForCorrelationId(cor0.get().id));
+    final OuterReferenceResolver resolver = resolve(calciteRel);
+    final Integer anchor0 = resolver.anchorForCorrelationId(cor0.get().id);
+    // Bound by the filter inside the row's subquery, which nothing but the row walk reaches.
+    final Integer anchor1 = resolver.anchorForCorrelationId(cor1.get().id);
+
+    Assertions.assertNotNull(anchor0);
+    Assertions.assertNotNull(anchor1);
+    Assertions.assertNotEquals(anchor0, anchor1);
   }
 
   /**

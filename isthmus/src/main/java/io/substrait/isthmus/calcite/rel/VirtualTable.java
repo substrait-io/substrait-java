@@ -131,6 +131,10 @@ public class VirtualTable extends AbstractRelNode {
    * join, and by {@code RelDecorrelator}: a consumer's planner leaves it unexpanded, and the
    * variables it resolves against have to travel with the relation that holds it.
    *
+   * <p>Only a consumer populates it. A conversion never does: an id is bound to a relation whose
+   * fields the reference names, and a leaf with no inputs has none, so an outer reference in a row
+   * belongs to the relation around the table the way one in a projection's expression does.
+   *
    * @return the correlation variables
    */
   @Override
