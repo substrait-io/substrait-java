@@ -720,6 +720,10 @@ public class ConverterProvider {
      * and {@code ROW}, this repository's encoding of nullable and user-defined literals rather than
      * dialect behaviour. Behind them it catches only what none of them claims.
      *
+     * <p>A converter must not pass the call it is claiming to the top-level converter, which
+     * re-enters this list from the start and recurses without end. To build on a built-in
+     * converter's result, call that converter directly rather than routing back through the list.
+     *
      * <p>The transform runs on every call to {@link ConverterProvider#getCallConverters()}, so it
      * sees the scalar function converter and the type converter as they are then, rather than as
      * they were when the provider was built.
