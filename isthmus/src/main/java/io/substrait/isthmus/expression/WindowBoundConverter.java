@@ -31,6 +31,8 @@ public class WindowBoundConverter {
    * @return the corresponding Substrait {@link WindowBound}
    * @throws IllegalStateException if the bound is not one of CURRENT ROW, UNBOUNDED, PRECEDING, or
    *     FOLLOWING
+   * @throws UnsupportedOperationException if a RANGE offset's integral literal does not fit the
+   *     ordering expression's exact type
    */
   public static WindowBound toWindowBound(
       RexWindowBound rexWindowBound,
@@ -45,18 +47,18 @@ public class WindowBoundConverter {
     }
 
     RexNode node = rexWindowBound.getOffset();
-    Expression offset =
-        normalizeIntegralOffset(
-            node.accept(rexExpressionConverter),
-            isRows,
-            orderingType,
-            rexExpressionConverter.getTypeConverter());
+    Expression converted = node.accept(rexExpressionConverter);
 
     // Per the spec, zero is not a valid offset; it is equivalent to CurrentRow, and producers
-    // should emit CurrentRow rather than a zero offset_expr.
-    if (integralValue(offset).filter(value -> value == 0).isPresent()) {
+    // should emit CurrentRow rather than a zero offset_expr. Checked before retyping: a zero
+    // offset needs no representation in the ordering expression's type.
+    if (integralValue(converted).filter(value -> value == 0).isPresent()) {
       return WindowBound.CURRENT_ROW;
     }
+
+    Expression offset =
+        normalizeIntegralOffset(
+            converted, isRows, orderingType, rexExpressionConverter.getTypeConverter());
 
     if (rexWindowBound.isPreceding()) {
       return WindowBound.Preceding.of(offset);
@@ -82,10 +84,19 @@ public class WindowBoundConverter {
       // The spec requires a BOUNDS_TYPE_ROWS offset_expr to be int64.
       return ExpressionCreator.i64(false, value.get());
     }
-    // BOUNDS_TYPE_RANGE: keep add(T, D) -> T defined for the ordering expression's type T.
+    // BOUNDS_TYPE_RANGE: an exact type match is isthmus's own policy, not a spec mandate.
     return orderingType
         .map(typeConverter::toSubstrait)
-        .flatMap(type -> integralLiteralOfType(type, value.get()))
+        .map(
+            type ->
+                integralLiteralOfType(type, value.get())
+                    .orElseThrow(
+                        () ->
+                            new UnsupportedOperationException(
+                                "RANGE window offset "
+                                    + value.get()
+                                    + " does not fit the ordering expression's type "
+                                    + type)))
         .orElse(offset);
   }
 

@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -83,8 +84,8 @@ class WindowBoundConverterTest extends CalciteObjs {
 
   @Test
   void rangeIntegralOffsetTakesTheOrderingExpressionType() {
-    // Per the spec, a RANGE offset's type D must keep add(T, D) -> T defined for the ordering
-    // expression's type T -- forcing it to int64 would break that for, e.g., an i32 column.
+    // isthmus requires a RANGE offset's type to exactly match the ordering expression's type T --
+    // forcing it to int64 would break that for, e.g., an i32 column.
     RexNode offset = c(5, SqlTypeName.INTEGER);
     RexWindowBound bound = RexWindowBounds.preceding(offset);
     RelDataType orderingType = t(SqlTypeName.INTEGER);
@@ -94,6 +95,64 @@ class WindowBoundConverterTest extends CalciteObjs {
             bound, false, Optional.of(orderingType), rexExpressionConverter);
 
     assertEquals(WindowBound.Preceding.of(ExpressionCreator.i32(false, 5)), converted);
+  }
+
+  @Test
+  void rangeOffsetOutOfRangeForOrderingTypeThrows() {
+    // Calcite's SqlWindow#validateFrameBoundary only checks the bound's type family against the
+    // ordering type for RANGE, not its range, so an offset that doesn't fit the ordering column's
+    // narrower type must be rejected here rather than silently kept as the literal's own type.
+    RexNode offset = c(100000, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.SMALLINT);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            WindowBoundConverter.toWindowBound(
+                bound, false, Optional.of(orderingType), rexExpressionConverter));
+  }
+
+  @Test
+  void rangeOffsetExceedingDecimalPrecisionThrows() {
+    RexNode offset = c(12345, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.DECIMAL, 5, 2);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            WindowBoundConverter.toWindowBound(
+                bound, false, Optional.of(orderingType), rexExpressionConverter));
+  }
+
+  @Test
+  void rangeOffsetFailingFloatRoundTripThrows() {
+    // 16_777_217 (2^24 + 1) is the first integer a 24-bit float mantissa cannot represent exactly.
+    RexNode offset = c(16777217, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.REAL);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            WindowBoundConverter.toWindowBound(
+                bound, false, Optional.of(orderingType), rexExpressionConverter));
+  }
+
+  @Test
+  void rangeOffsetAgainstUnsupportedOrderingTypeThrows() {
+    // integralLiteralOfType has no case for a temporal ordering column, so no non-zero offset can
+    // ever be retyped to it.
+    RexNode offset = c(5, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.TIMESTAMP);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            WindowBoundConverter.toWindowBound(
+                bound, false, Optional.of(orderingType), rexExpressionConverter));
   }
 
   @Test
