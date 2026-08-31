@@ -992,10 +992,24 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
       List<Expression> fields = new ArrayList<>(row.size());
       for (int column = 0; column < row.size(); column++) {
         RexNode value = row.get(column);
-        fields.add(
+        RelDataType declaredType = rowFields.get(column).getType();
+        Expression converted =
             value instanceof RexLiteral
-                ? literalConverter.convert((RexLiteral) value, rowFields.get(column).getType())
-                : toExpression(value));
+                ? literalConverter.convert((RexLiteral) value, declaredType)
+                : toExpression(value);
+        // A value that is not a literal is converted from the expressions it is built of and
+        // takes its type from them, which the declared type cannot be put back on: casting at it
+        // would put an expression in the output the input did not have. Refused here rather than
+        // left to VirtualTableScan, whose check compares the two types without promoting either.
+        Type declared = typeConverter.toSubstrait(declaredType);
+        if (!converted.getType().equals(declared)) {
+          throw new UnsupportedOperationException(
+              String.format(
+                  "A virtual table's value %s converts to %s where its column is declared %s: "
+                      + "isthmus cannot convert a value that does not carry its column's type",
+                  value, converted.getType(), declared));
+        }
+        fields.add(converted);
       }
       rows.add(ExpressionCreator.nestedStruct(false, fields));
     }

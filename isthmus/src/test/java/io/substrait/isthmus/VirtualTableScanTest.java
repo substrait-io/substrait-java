@@ -410,6 +410,32 @@ class VirtualTableScanTest extends PlanTestBase {
   }
 
   /**
+   * A computed field inside a nullable struct is where the row type stops being able to say what
+   * the schema said: Calcite pushes the struct's nullability into its fields, and a value built
+   * from expressions takes its type from them, so the trip back cannot rebuild the declared type.
+   * Reported here rather than as a type mismatch from {@link VirtualTableScan}'s own check.
+   */
+  @Test
+  void aComputedFieldInsideANullableStructIsReportedOnTheWayBack() {
+    NamedStruct schema =
+        NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
+    VirtualTableScan virtualTableScan =
+        createVirtualTableScan(
+            schema,
+            List.of(
+                ExpressionCreator.nestedStruct(
+                    true, List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(2.0)))));
+    RelNode relNode = substraitToCalcite.convert(virtualTableScan);
+
+    assertTrue(
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> SubstraitRelVisitor.convert(relNode, converterProvider))
+            .getMessage()
+            .contains("does not carry its column's type"));
+  }
+
+  /**
    * A nullable struct nested in a column: renaming it gives back a ROW call rather than a literal,
    * so the struct around it cannot be rebuilt as a literal either. Pinned as a conversion rather
    * than a round trip for the same reason as its sibling above: Calcite pushes a struct's
