@@ -135,6 +135,16 @@ public class LiteralConverter {
       // In characters rather than UTF-16 code units: the spec gives a fixedchar its length in
       // characters, where it spells a string's out in UTF-8 bytes.
       int length = ((Type.FixedChar) type).length();
+      // Only the negative end. The spec puts a fixedchar's width in [1..2147483647] (spec
+      // v0.101.0), but Calcite types the empty character literal as a CHAR(0) and its DDL parser
+      // takes a CHAR(0) column, so refusing a zero width here would stop ordinary SQL converting.
+      if (length < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                Locale.ROOT,
+                "A fixedchar cannot declare a negative width, and this one is %d",
+                length));
+      }
       int characters = value.codePointCount(0, value.length());
       if (characters > length) {
         throw new IllegalArgumentException(
@@ -150,7 +160,7 @@ public class LiteralConverter {
             String.format(
                 Locale.ROOT,
                 "A fixedchar<%d> literal cannot be built from '%s': padding it to that width takes "
-                    + "%d characters, more than a Java String holds",
+                    + "%d UTF-16 code units, more than a Java String holds",
                 length,
                 value,
                 padded));

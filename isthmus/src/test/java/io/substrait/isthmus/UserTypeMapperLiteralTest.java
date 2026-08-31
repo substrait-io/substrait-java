@@ -241,6 +241,25 @@ class UserTypeMapperLiteralTest extends PlanTestBase {
     assertTrue(e.getMessage().contains("more than a Java String holds"), e.getMessage());
   }
 
+  /**
+   * A mapper answers with a Substrait type directly, so nothing between it and the padding here
+   * holds its width to what a fixedchar can declare. A zero width is left alone: the spec puts the
+   * range at [1..2147483647], but ordinary SQL produces a CHAR(0) today.
+   */
+  @Test
+  void aNegativeFixedCharWidthIsRefused() {
+    RexLiteral literal = (RexLiteral) builder.getRexBuilder().makeLiteral("a");
+    RelDataType charType = typeFactory.createSqlType(SqlTypeName.CHAR, 1);
+    LiteralConverter negative =
+        new LiteralConverter(
+            typeConverterMapping(nullable -> TypeCreator.of(nullable).fixedChar(-5)));
+
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> negative.convert(literal, charType));
+
+    assertTrue(e.getMessage().contains("negative width, and this one is -5"), e.getMessage());
+  }
+
   /** A projection of a character literal, which no schema stands behind. */
   private RelNode charLiteralProject() {
     RelNode input = builder.values(new String[] {"i"}, 1).build();
