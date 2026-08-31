@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -88,14 +89,17 @@ public class LiteralConverter {
    * type has no character literal form to build, and reaching one would need the value's encoding
    * in that type, which {@link io.substrait.isthmus.UserTypeMapper} has no way to give.
    *
+   * <p>Whether the literal is nullable comes from the mapped type either way, which is what the
+   * containing conversion took it from before the type reached here.
+   *
    * @param mappedType the Substrait type the containing conversion produced
-   * @param nullable whether the literal is nullable
    * @param value the literal's text
    * @param calciteType the Calcite type the literal was declared as
    * @return the literal
    */
   private static Expression.Literal characterLiteral(
-      Type mappedType, boolean nullable, String value, RelDataType calciteType) {
+      Type mappedType, String value, RelDataType calciteType) {
+    boolean nullable = mappedType.nullable();
     Type type =
         mappedType instanceof Type.Str
                 || mappedType instanceof Type.VarChar
@@ -115,14 +119,19 @@ public class LiteralConverter {
       // A fixedchar literal carries no length of its own — Expression.FixedCharLiteral derives it
       // from the text — so the text has to be the declared width or the two disagree. Padding is
       // also what CHAR(n) means: 'a' in a CHAR(3) is 'a  '.
+      // In characters rather than UTF-16 code units: the spec gives a fixedchar its length in
+      // characters, where it spells a string's out in UTF-8 bytes.
       int length = ((Type.FixedChar) type).length();
-      if (value.length() > length) {
+      int characters = value.codePointCount(0, value.length());
+      if (characters > length) {
         throw new IllegalArgumentException(
             String.format(
+                Locale.ROOT,
                 "Character value '%s' is longer than the fixedchar<%d> it is declared as",
-                value, length));
+                value,
+                length));
       }
-      return ExpressionCreator.fixedChar(nullable, value + " ".repeat(length - value.length()));
+      return ExpressionCreator.fixedChar(nullable, value + " ".repeat(length - characters));
     }
     throw new IllegalStateException(
         String.format(
@@ -185,7 +194,7 @@ public class LiteralConverter {
         {
           Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
-            return characterLiteral(type, nullable, ((NlsString) val).getValue(), resultType);
+            return characterLiteral(type, ((NlsString) val).getValue(), resultType);
           }
           throw new UnsupportedOperationException("Unable to handle char type: " + val);
         }
@@ -202,7 +211,7 @@ public class LiteralConverter {
               nullable, bd, resultType.getPrecision(), resultType.getScale());
         }
       case VARCHAR:
-        return characterLiteral(type, nullable, s(literal), resultType);
+        return characterLiteral(type, s(literal), resultType);
       case BINARY:
         return ExpressionCreator.fixedBinary(
             nullable,

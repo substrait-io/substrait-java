@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -8,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.relation.Project;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.Type;
@@ -21,7 +23,10 @@ import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.NlsString;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +42,11 @@ class UserTypeMapperLiteralTest extends PlanTestBase {
    * Maps Calcite's character types to whatever the test asks for, leaving everything else alone.
    */
   private static ConverterProvider providerMapping(Function<Boolean, Type> characterTypes) {
+    return ConverterProvider.builder().typeConverter(typeConverterMapping(characterTypes)).build();
+  }
+
+  /** The same mapping, for a test that converts a literal rather than a relation. */
+  private static TypeConverter typeConverterMapping(Function<Boolean, Type> characterTypes) {
     UserTypeMapper mapper =
         new UserTypeMapper() {
           @Nullable
@@ -55,7 +65,7 @@ class UserTypeMapperLiteralTest extends PlanTestBase {
             return null;
           }
         };
-    return ConverterProvider.builder().typeConverter(new TypeConverter(mapper)).build();
+    return new TypeConverter(mapper);
   }
 
   private LogicalValues charValues(boolean withNull) {
@@ -165,23 +175,51 @@ class UserTypeMapperLiteralTest extends PlanTestBase {
         List.of(ExpressionCreator.fixedChar(false, "a  ")), converted.getRows().get(0).fields());
   }
 
+  /**
+   * Asserted on the conversion of the literal rather than of a relation holding it: {@link
+   * VirtualTableScan} rejects a row disagreeing with its schema with the same exception type, so a
+   * relation-level assertion passes whether this guard is there or not.
+   */
   @Test
   void aCharacterValueWiderThanItsDeclaredTypeIsRejected() {
-    ConverterProvider provider =
-        providerMapping(
-            nullable ->
-                nullable ? TypeCreator.NULLABLE.fixedChar(1) : TypeCreator.REQUIRED.fixedChar(1));
+    LiteralConverter converter =
+        new LiteralConverter(
+            typeConverterMapping(nullable -> TypeCreator.of(nullable).fixedChar(1)));
+    RexLiteral literal = (RexLiteral) builder.getRexBuilder().makeLiteral("abc");
     RelDataType charType = typeFactory.createSqlType(SqlTypeName.CHAR, 3);
-    RelDataType rowType = typeFactory.builder().add("c", charType).build();
-    LogicalValues values =
-        LogicalValues.create(
-            builder.getCluster(),
-            rowType,
-            ImmutableList.of(ImmutableList.of(builder.getRexBuilder().makeLiteral("abc"))));
 
     IllegalArgumentException e =
-        assertThrows(IllegalArgumentException.class, () -> convert(provider, values));
+        assertThrows(IllegalArgumentException.class, () -> converter.convert(literal, charType));
     assertTrue(e.getMessage().contains("fixedchar<1>"), e.getMessage());
+  }
+
+  /**
+   * A fixedchar's width is a count of characters -- the spec gives a string's length in UTF-8 bytes
+   * and a fixedchar's in characters -- so one astral character fills a {@code fixedchar<1>} and
+   * leaves two spaces to pad in a {@code fixedchar<3>}.
+   */
+  @Test
+  void aFixedCharWidthCountsCharactersRatherThanCodeUnits() {
+    LiteralConverter converter = new LiteralConverter(TypeConverter.DEFAULT);
+    // Calcite's default charset is ISO-8859-1, which cannot hold the character at all.
+    RexLiteral clef =
+        builder
+            .getRexBuilder()
+            .makeCharLiteral(
+                new NlsString(
+                    "\uD834\uDD1E",
+                    ConversionUtil.NATIVE_UTF16_CHARSET_NAME,
+                    SqlCollation.IMPLICIT));
+
+    assertAll(
+        () ->
+            assertEquals(
+                ExpressionCreator.fixedChar(false, "\uD834\uDD1E"),
+                converter.convert(clef, typeFactory.createSqlType(SqlTypeName.CHAR, 1))),
+        () ->
+            assertEquals(
+                ExpressionCreator.fixedChar(false, "\uD834\uDD1E  "),
+                converter.convert(clef, typeFactory.createSqlType(SqlTypeName.CHAR, 3))));
   }
 
   /** A projection of a character literal, which no schema stands behind. */
