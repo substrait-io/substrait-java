@@ -1,7 +1,9 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -175,10 +177,10 @@ class DdlRoundtripTest extends PlanTestBase {
   }
 
   /**
-   * A write and a DDL relation produce the object they act on rather than columns to select from --
-   * a TableModify's row type is a single ROWCOUNT column, a CreateTable and a CreateView the object
-   * they create -- so an emit mapping over one has nothing to apply to and is refused rather than
-   * dropped.
+   * Neither a write nor a DDL relation gives an emit mapping columns to select from: isthmus
+   * converts a write to a TableModify whose row type is a single ROWCOUNT column, and has nowhere
+   * to put a projection between a CreateView's definition and the view it creates. A mapping over
+   * either is refused rather than dropped.
    */
   @Test
   void anEmitMappingOnAWriteOrADdlIsRefused() {
@@ -204,8 +206,18 @@ class DdlRoundtripTest extends PlanTestBase {
             .build();
     SubstraitToCalcite converter = new SubstraitToCalcite(converterProvider, catalogReader);
 
-    assertThrows(UnsupportedOperationException.class, () -> converter.convert(ctas));
-    assertThrows(UnsupportedOperationException.class, () -> converter.convert(createView));
+    assertAll(
+        () ->
+            assertTrue(
+                assertThrows(UnsupportedOperationException.class, () -> converter.convert(ctas))
+                    .getMessage()
+                    .contains("Emit mapping on a NamedWrite is not supported")),
+        () ->
+            assertTrue(
+                assertThrows(
+                        UnsupportedOperationException.class, () -> converter.convert(createView))
+                    .getMessage()
+                    .contains("Emit mapping on a NamedDdl is not supported")));
   }
 
   /** The schema of the object a single DDL statement creates, as Substrait records it. */

@@ -81,7 +81,6 @@ import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -789,14 +788,14 @@ public class SubstraitRelNodeConverter
               namedDdl.getObject()));
     }
 
-    if (namedDdl.getRemap().isPresent()) {
-      throw new UnsupportedOperationException(
-          "Emit mapping on a NamedDdl is not supported: a CreateView produces the view it creates, "
-              + "not columns to select from");
-    }
-
     if (namedDdl.getViewDefinition().isEmpty()) {
       throw new IllegalArgumentException("NamedDdl view definition must be set");
+    }
+
+    if (namedDdl.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedDdl is not supported: isthmus has no place for a projection "
+              + "between a CreateView's definition and the view it creates");
     }
 
     if (!namedDdl.getTableDefaults().fields().isEmpty()) {
@@ -812,6 +811,11 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+    if (virtualTableScan.getProjection().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Projection on a VirtualTableScan is not supported: its columns would have to be "
+              + "masked before an emit mapping selects from them");
+    }
     // A schema's names are one per field at every level of the struct, in depth-first order, so
     // they have to be handed to the conversion rather than paired with the row type afterwards:
     // with a nested struct anywhere in the schema the two lists do not even have the same length.
@@ -900,10 +904,10 @@ public class SubstraitRelNodeConverter
       for (int i = 0; i < rowType.getFieldCount(); i++) {
         topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
-      return applyRelCommon(
+      RelNode topProject =
           LogicalProject.create(
-              union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet()),
-          virtualTableScan);
+              union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
+      return applyRelCommon(topProject, virtualTableScan, topProject);
     }
   }
 
@@ -1064,9 +1068,9 @@ public class SubstraitRelNodeConverter
   public RelNode visit(NamedWrite write, Context context) {
     if (write.getRemap().isPresent()) {
       throw new UnsupportedOperationException(
-          "Emit mapping on a NamedWrite is not supported: a TableModify's row type is a single "
-              + "ROWCOUNT column and a CreateTable produces the table it creates, neither of them "
-              + "columns to select from");
+          "Emit mapping on a NamedWrite is not supported: isthmus converts a write to a "
+              + "TableModify whose row type is a single ROWCOUNT column, dropping the write's "
+              + "output_mode, so the mapping has no columns to select from");
     }
     RelNode input = write.getInput().accept(this, context);
     final RelOptSchema relOptSchema = requireRelOptSchema();
@@ -1305,14 +1309,11 @@ public class SubstraitRelNodeConverter
 
   private RelNode applyRemap(RelNode relNode, Rel.Remap remap) {
     RelDataType rowType = relNode.getRowType();
-    List<String> fieldNames = rowType.getFieldNames();
+    // By index rather than by name: a virtual table's row type comes straight from its schema,
+    // which Calcite never uniquifies, so a name can stand for more than one field.
     List<RexNode> rexList =
         remap.indices().stream()
-            .map(
-                index -> {
-                  RelDataTypeField t = rowType.getField(fieldNames.get(index), true, false);
-                  return new RexInputRef(index, t.getValue());
-                })
+            .map(index -> new RexInputRef(index, rowType.getFieldList().get(index).getType()))
             .collect(java.util.stream.Collectors.toList());
     return relBuilder.push(relNode).project(rexList).build();
   }
