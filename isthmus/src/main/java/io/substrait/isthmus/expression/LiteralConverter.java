@@ -60,6 +60,19 @@ public class LiteralConverter {
           .append(CALCITE_LOCAL_TIME_FORMATTER)
           .toFormatter();
 
+  /**
+   * The longest text a {@code fixedchar} literal can be padded to.
+   *
+   * <p>A Java {@link String} holds its characters in an array, and this is the largest one a JVM
+   * allocates, so a wider literal cannot be built whatever the heap. {@code String.repeat} reports
+   * that as an {@link OutOfMemoryError}, which no {@code catch (Exception)} sees and which names
+   * neither the column nor the value. A width the heap alone cannot hold still fails as one.
+   *
+   * <p>The width a fixedchar may declare is the spec's {@code [1..2147483647]}; what a plan's
+   * target engine actually supports is a dialect's answer, not this.
+   */
+  private static final int MAX_PADDED_LENGTH = Integer.MAX_VALUE - 8;
+
   private final TypeConverter typeConverter;
 
   /**
@@ -130,6 +143,17 @@ public class LiteralConverter {
                 "Character value '%s' is longer than the fixedchar<%d> it is declared as",
                 value,
                 length));
+      }
+      long padded = (long) value.length() + ((long) length - characters);
+      if (padded > MAX_PADDED_LENGTH) {
+        throw new IllegalArgumentException(
+            String.format(
+                Locale.ROOT,
+                "A fixedchar<%d> literal cannot be built from '%s': padding it to that width takes "
+                    + "%d characters, more than a Java String holds",
+                length,
+                value,
+                padded));
       }
       return ExpressionCreator.fixedChar(nullable, value + " ".repeat(length - characters));
     }

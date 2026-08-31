@@ -222,6 +222,25 @@ class UserTypeMapperLiteralTest extends PlanTestBase {
                 converter.convert(clef, typeFactory.createSqlType(SqlTypeName.CHAR, 3))));
   }
 
+  /**
+   * A mapper hands the literal its type directly, so no type-system ceiling stands between a width
+   * and the padding it asks for. A width no Java String can hold is refused where the padding
+   * happens, rather than reaching {@code String.repeat} as an {@link OutOfMemoryError}.
+   */
+  @Test
+  void aWidthNoStringCanHoldIsRefusedRatherThanPadded() {
+    LiteralConverter converter =
+        new LiteralConverter(
+            typeConverterMapping(
+                nullable -> TypeCreator.of(nullable).fixedChar(Integer.MAX_VALUE)));
+    RexLiteral literal = (RexLiteral) builder.getRexBuilder().makeLiteral("a");
+    RelDataType charType = typeFactory.createSqlType(SqlTypeName.CHAR, 1);
+
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> converter.convert(literal, charType));
+    assertTrue(e.getMessage().contains("more than a Java String holds"), e.getMessage());
+  }
+
   /** A projection of a character literal, which no schema stands behind. */
   private RelNode charLiteralProject() {
     RelNode input = builder.values(new String[] {"i"}, 1).build();
