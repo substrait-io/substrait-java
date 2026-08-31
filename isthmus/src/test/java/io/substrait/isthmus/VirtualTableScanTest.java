@@ -253,6 +253,8 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(*(6, 2), 2.0E0:DOUBLE) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -271,6 +273,8 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType(INTEGER ARRAY col1)], rows=[[{ ARRAY(1, 2) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -381,6 +385,8 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType(RecordType(INTEGER a) ARRAY col1)], rows=[[{ ARRAY(ROW(1)) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /** The same one level down inside a map, where the names reach a key and a value alike. */
@@ -399,11 +405,15 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType((VARCHAR, RecordType(INTEGER a)) MAP col1)], rows=[[{ MAP('k':VARCHAR, ROW(1)) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
    * A nullable struct nested in a column: renaming it gives back a ROW call rather than a literal,
-   * so the struct around it cannot be rebuilt as a literal either.
+   * so the struct around it cannot be rebuilt as a literal either. Pinned as a conversion rather
+   * than a round trip for the same reason as its sibling above: Calcite pushes a struct's
+   * nullability down into its fields, so the schema comes back with nullable fields.
    */
   @Test
   void nullableStructInsideStructColumnConverts() {

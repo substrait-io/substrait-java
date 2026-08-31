@@ -2,7 +2,6 @@ package io.substrait.isthmus;
 
 import io.substrait.isthmus.calcite.rel.VirtualTable;
 import java.util.List;
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -157,10 +156,10 @@ class OuterReferenceResolverTest extends PlanTestBase {
     final RexNode subQuery = RexSubQuery.scalar(correlated);
 
     final RelNode virtualTable =
-        new VirtualTable(
+        VirtualTable.create(
             tpcDsRelBuilder.getCluster(),
-            tpcDsRelBuilder.getCluster().traitSetOf(Convention.NONE),
             tpcDsRelBuilder.getTypeFactory().builder().add("col1", subQuery.getType()).build(),
+            java.util.Set.of(cor0.get().id),
             List.of(List.of(subQuery)));
 
     final OuterReferenceResolver resolver = resolve(virtualTable);

@@ -1,30 +1,28 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import io.substrait.expression.Expression;
 import io.substrait.isthmus.calcite.rel.VirtualTable;
 import io.substrait.isthmus.calcite.rel.rules.VirtualTableExpansionRule;
+import io.substrait.isthmus.sql.SubstraitSqlDialect;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.hep.HepPlanner;
-import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
@@ -45,6 +43,7 @@ class VirtualTableTest extends PlanTestBase {
 
   private VirtualTableScan computedRows() {
     return virtualTable(
+        schema,
         List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5))),
         List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
   }
@@ -57,7 +56,7 @@ class VirtualTableTest extends PlanTestBase {
   @Test
   void theRuleExpandsTheRowsIntoAUnionOfProjections() {
     RelNode expanded =
-        plan(substraitToCalcite.convert(computedRows()), VirtualTableExpansionRule.INSTANCE);
+        plan(substraitToCalcite.convert(computedRows()), VirtualTableExpansionRule.instance());
 
     assertEquals(
         "LogicalUnion(all=[true])\n"
@@ -74,8 +73,8 @@ class VirtualTableTest extends PlanTestBase {
     RelNode expanded =
         plan(
             substraitToCalcite.convert(
-                virtualTable(List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)))),
-            VirtualTableExpansionRule.INSTANCE);
+                virtualTable(schema, List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)))),
+            VirtualTableExpansionRule.instance());
 
     assertEquals(
         "LogicalProject(col1=[*(6, 2)], col2=[8.8E0:DOUBLE])\n"
@@ -91,10 +90,10 @@ class VirtualTableTest extends PlanTestBase {
   @Test
   void theExpansionDoesNotConvertBackToAVirtualTable() {
     RelNode expanded =
-        plan(substraitToCalcite.convert(computedRows()), VirtualTableExpansionRule.INSTANCE);
+        plan(substraitToCalcite.convert(computedRows()), VirtualTableExpansionRule.instance());
 
     assertInstanceOf(
-        io.substrait.relation.Set.class, SubstraitRelVisitor.convert(expanded, extensions));
+        io.substrait.relation.Set.class, SubstraitRelVisitor.convert(expanded, converterProvider));
   }
 
   /**
@@ -105,15 +104,19 @@ class VirtualTableTest extends PlanTestBase {
    */
   @Test
   void theRelationSurvivesPlanning() {
+    VirtualTableScan table = computedRows();
+    Project project =
+        Project.builder().input(table).expressions(List.of(sb.fieldReference(table, 0))).build();
+
     RelNode planned =
         plan(
-            substraitToCalcite.convert(computedRows()),
+            substraitToCalcite.convert(project),
             CoreRules.UNION_REMOVE,
             CoreRules.UNION_MERGE,
             CoreRules.PROJECT_MERGE);
 
-    assertInstanceOf(VirtualTable.class, planned);
-    assertEquals(computedRows(), SubstraitRelVisitor.convert(planned, extensions));
+    Rel converted = SubstraitRelVisitor.convert(planned, converterProvider);
+    assertEquals(table, assertInstanceOf(Project.class, converted).getInput());
   }
 
   /**
@@ -153,30 +156,10 @@ class VirtualTableTest extends PlanTestBase {
     Project project =
         Project.builder().input(table).expressions(List.of(sb.fieldReference(table, 0))).build();
 
-    Rel converted = SubstraitRelVisitor.convert(substraitToCalcite.convert(project), extensions);
+    Rel converted =
+        SubstraitRelVisitor.convert(substraitToCalcite.convert(project), converterProvider);
 
     assertEquals(table, assertInstanceOf(Project.class, converted).getInput());
-  }
-
-  /**
-   * A union someone wrote out of single-row projections is a union. It converts to the same Calcite
-   * tree the expansion does, so nothing in the tree can tell the two apart -- which is why the
-   * table is recognised by its own type instead.
-   */
-  @Test
-  void aHandWrittenUnionOfSingleRowProjectionsStaysAUnion() {
-    RelDataType i32 = typeFactory.createSqlType(SqlTypeName.INTEGER);
-    RexBuilder rexBuilder = builder.getRexBuilder();
-
-    RelNode union =
-        LogicalUnion.create(
-            List.of(
-                singleRowProjection(rexBuilder.makeExactLiteral(BigDecimal.ONE, i32)),
-                singleRowProjection(rexBuilder.makeExactLiteral(BigDecimal.valueOf(2), i32))),
-            true);
-
-    assertInstanceOf(
-        io.substrait.relation.Set.class, SubstraitRelVisitor.convert(union, extensions));
   }
 
   /**
@@ -197,7 +180,7 @@ class VirtualTableTest extends PlanTestBase {
                 singleRowProjection(rexBuilder.makeNullLiteral(nullableI32))),
             true);
 
-    Rel converted = SubstraitRelVisitor.convert(union, extensions);
+    Rel converted = SubstraitRelVisitor.convert(union, converterProvider);
     assertInstanceOf(io.substrait.relation.Set.class, converted);
     assertEquals(List.of(N.I32), converted.getRecordType().fields());
   }
@@ -223,12 +206,99 @@ class VirtualTableTest extends PlanTestBase {
   @Test
   void theRuleExpandsATableOfNoRowsIntoAnEmptyValues() {
     RelNode table = substraitToCalcite.convert(computedRows());
-    RelNode empty =
-        new VirtualTable(table.getCluster(), table.getTraitSet(), table.getRowType(), List.of());
+    RelNode empty = VirtualTable.create(table.getCluster(), table.getRowType(), List.of());
 
-    RelNode expanded = plan(empty, VirtualTableExpansionRule.INSTANCE);
+    RelNode expanded = plan(empty, VirtualTableExpansionRule.instance());
 
     assertEquals("LogicalValues(tuples=[[]])\n", RelOptUtil.toString(expanded));
+  }
+
+  /**
+   * SQL generation is the consumer the rule exists for: {@link
+   * org.apache.calcite.rel.rel2sql.RelToSqlConverter} knows Calcite's own relations only, and
+   * throws an {@code AssertionError} naming anything else -- unconditionally, so assertions being
+   * off does not help. Both of isthmus' entry points expand before they convert.
+   */
+  @Test
+  void sqlGenerationExpandsTheTable() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+    io.substrait.plan.Plan plan = sb.plan(sb.root(computedRows(), List.of("col1", "col2")));
+
+    assertAll(
+        () ->
+            assertEquals(
+                "SELECT 2 AS \"col1\", 4.4E0 + 4.5E0 AS \"col2\"\n"
+                    + "FROM (VALUES ()) AS \"t\"\n"
+                    + "UNION ALL\n"
+                    + "SELECT 6 * 2 AS \"col1\", 8.8E0 AS \"col2\"\n"
+                    + "FROM (VALUES ()) AS \"t\"",
+                SubstraitSqlDialect.toSql(table).getSql()),
+        () ->
+            assertEquals(
+                1,
+                new SubstraitToSql(converterProvider)
+                    .convert(plan, SubstraitSqlDialect.DEFAULT)
+                    .size()));
+  }
+
+  /**
+   * The rows have to fit the row type: the projection this used to be built as gave that check for
+   * free through {@code RexUtil.compatibleTypes}, and {@code AbstractRelNode.isValid} succeeds
+   * whatever it is handed.
+   */
+  @Test
+  void theRowsHaveToFitTheRowType() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+    RelDataType rowType = table.getRowType();
+    RexBuilder rexBuilder = table.getCluster().getRexBuilder();
+    RexNode i32 =
+        rexBuilder.makeExactLiteral(BigDecimal.ONE, typeFactory.createSqlType(SqlTypeName.INTEGER));
+
+    assertAll(
+        () ->
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> VirtualTable.create(table.getCluster(), rowType, List.of(List.of(i32)))),
+        () ->
+            assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    VirtualTable.create(table.getCluster(), rowType, List.of(List.of(i32, i32)))));
+  }
+
+  /**
+   * A schema may name two columns the same -- the spec asks only that the names are a depth-first
+   * list -- and the table carries them as they are. The expansion cannot: a Calcite projection
+   * requires distinct names, so it uniquifies them there rather than failing on a table that
+   * converts and round-trips.
+   */
+  @Test
+  void theExpansionUniquifiesRepeatedFieldNames() {
+    NamedStruct repeated = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.FP64));
+    RelNode table =
+        substraitToCalcite.convert(
+            virtualTable(repeated, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))));
+
+    assertEquals(List.of("c", "c"), table.getRowType().getFieldNames());
+    assertEquals(
+        List.of("c", "c1"),
+        plan(table, VirtualTableExpansionRule.instance()).getRowType().getFieldNames());
+  }
+
+  /**
+   * The relation costs what its expansion costs. The inherited estimate is a row count alone, which
+   * is less than the projection per row the rule builds, so a cost-based planner would fire the
+   * rule and then keep the relation it started from.
+   */
+  @Test
+  void theRelationCostsWhatItsExpansionCosts() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+    RelNode expanded = plan(table, VirtualTableExpansionRule.instance());
+    RelMetadataQuery mq = table.getCluster().getMetadataQuery();
+
+    assertFalse(
+        mq.getCumulativeCost(table).isLt(mq.getCumulativeCost(expanded)),
+        mq.getCumulativeCost(table) + " < " + mq.getCumulativeCost(expanded));
   }
 
   /**
@@ -242,24 +312,5 @@ class VirtualTableTest extends PlanTestBase {
     RelDataType rowType = typeFactory.builder().add("col1", value.getType()).build();
     return LogicalProject.create(
         emptyRow, Collections.emptyList(), List.of(value), rowType, Collections.emptySet());
-  }
-
-  @SafeVarargs
-  private VirtualTableScan virtualTable(List<Expression>... rows) {
-    List<Expression.NestedStruct> structs =
-        Arrays.stream(rows)
-            .map(row -> Expression.NestedStruct.builder().addAllFields(row).build())
-            .collect(Collectors.toList());
-    return VirtualTableScan.builder().initialSchema(schema).addAllRows(structs).build();
-  }
-
-  private RelNode plan(RelNode rel, RelOptRule... rules) {
-    HepProgramBuilder program = new HepProgramBuilder();
-    for (RelOptRule rule : rules) {
-      program.addRuleInstance(rule);
-    }
-    HepPlanner planner = new HepPlanner(program.build());
-    planner.setRoot(rel);
-    return planner.findBestExp();
   }
 }

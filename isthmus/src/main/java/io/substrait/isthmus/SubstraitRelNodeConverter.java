@@ -64,7 +64,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -931,12 +930,7 @@ public class SubstraitRelNodeConverter
       // consumer whose planner only knows Calcite's own relations can expand it with
       // VirtualTableExpansionRule.
       return applyRelCommon(
-          new VirtualTable(
-              relBuilder.getCluster(),
-              relBuilder.getCluster().traitSetOf(Convention.NONE),
-              rowType,
-              convertedRows),
-          virtualTableScan);
+          VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows), virtualTableScan);
     }
   }
 

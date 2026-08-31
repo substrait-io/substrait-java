@@ -1,6 +1,5 @@
 package io.substrait.isthmus;
 
-import io.substrait.isthmus.calcite.rel.VirtualTable;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -116,12 +115,12 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
 
   @Override
   public RelNode visitOther(RelNode other) throws RuntimeException {
-    if (other instanceof VirtualTable) {
-      // A virtual table's rows are expressions, and a subquery among them binds outer references
-      // like one anywhere else. A subquery's relation is not an input, so walking inputs never
-      // reaches it; Filter and Project scan their own before they get here.
-      other.accept(rexVisitor);
-    }
+    // A relation's own expressions can hold a subquery binding outer references, and a subquery's
+    // relation is not an input, so walking inputs never reaches it. Filter and Project scan theirs
+    // before they get here; a virtual table's rows, and a join, calc or sort condition, arrive
+    // here. AbstractRelNode.accept(RexShuttle) returns the relation itself, so the result is the
+    // one already in the tree.
+    other.accept(rexVisitor);
     for (RelNode child : other.getInputs()) {
       reverseAccept(child);
     }

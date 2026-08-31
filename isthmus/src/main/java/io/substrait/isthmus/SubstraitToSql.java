@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.isthmus.calcite.rel.rules.VirtualTableExpansionRule;
 import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Root;
 import io.substrait.relation.Rel;
@@ -66,6 +67,8 @@ public class SubstraitToSql extends SqlConverterBase {
    *
    * @param plan the Substrait {@link Plan} to convert to SQL, must not be null
    * @param dialect the {@link SqlDialect} to generate the SQL strings for, must not be null
+   *     <p>Any {@link io.substrait.isthmus.calcite.rel.VirtualTable} the conversion produced is
+   *     expanded first: {@link RelToSqlConverter} knows Calcite's own relations only.
    * @return list containing a SQL string for each {@link Plan.Root} in {@code plan}
    */
   public List<String> convert(Plan plan, SqlDialect dialect) {
@@ -75,7 +78,9 @@ public class SubstraitToSql extends SqlConverterBase {
     for (Root root : plan.getRoots()) {
       result.add(
           relToSql
-              .visitRoot(substraitToCalcite.convert(root).project(true))
+              .visitRoot(
+                  VirtualTableExpansionRule.expandAll(
+                      substraitToCalcite.convert(root).project(true)))
               .asStatement()
               .toSqlString(dialect)
               .getSql());

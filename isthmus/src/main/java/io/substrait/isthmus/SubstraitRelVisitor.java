@@ -62,6 +62,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
@@ -972,17 +973,30 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   }
 
   /**
-   * Handles the isthmus {@link VirtualTable}, which is what a virtual table whose rows are not all
+   * Converts the isthmus {@link VirtualTable}, which is what a virtual table whose rows are not all
    * literals converts to.
    *
    * @param virtualTable Calcite virtual table
    * @return Substrait virtual table scan
    */
-  public Rel handleVirtualTable(VirtualTable virtualTable) {
+  @Override
+  public Rel visit(VirtualTable virtualTable) {
+    // At the row type's field types rather than the values' own, as visit(Values) does: a literal
+    // narrower than its column -- Calcite infers one for a tuple value, and pushes a struct's
+    // nullability down into its fields -- would otherwise disagree with the schema built from the
+    // same row type, and VirtualTableScan rejects the relation on that.
+    List<RelDataTypeField> rowFields = virtualTable.getRowType().getFieldList();
+    LiteralConverter literalConverter = new LiteralConverter(typeConverter);
     List<Expression.NestedStruct> rows = new ArrayList<>(virtualTable.getRows().size());
     for (List<RexNode> row : virtualTable.getRows()) {
-      List<Expression> fields =
-          row.stream().map(this::toExpression).collect(Collectors.toUnmodifiableList());
+      List<Expression> fields = new ArrayList<>(row.size());
+      for (int column = 0; column < row.size(); column++) {
+        RexNode value = row.get(column);
+        fields.add(
+            value instanceof RexLiteral
+                ? literalConverter.convert((RexLiteral) value, rowFields.get(column).getType())
+                : toExpression(value));
+      }
       rows.add(ExpressionCreator.nestedStruct(false, fields));
     }
     return VirtualTableScan.builder()
@@ -1005,9 +1019,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
     } else if (other instanceof CreateView) {
       return handleCreateView((CreateView) other);
-
-    } else if (other instanceof VirtualTable) {
-      return handleVirtualTable((VirtualTable) other);
     }
     throw new UnsupportedOperationException("Unable to handle node: " + other);
   }
