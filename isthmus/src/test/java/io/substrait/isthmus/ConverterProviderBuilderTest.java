@@ -2,21 +2,41 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
+import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.TypeObserver;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.tools.RelBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -159,6 +179,154 @@ class ConverterProviderBuilderTest {
           SqlConformanceEnum.PRAGMATIC_2003, casingLast.getSqlParserConfig().conformance());
       assertEquals(
           SqlConformanceEnum.PRAGMATIC_2003, casingFirst.getSqlParserConfig().conformance());
+    }
+  }
+
+  @Nested
+  class CallConverterTransform {
+
+    /** A function no built-in {@link CallConverter} claims. */
+    private final SqlFunction unclaimed =
+        new SqlFunction(
+            "UNCLAIMED",
+            SqlKind.OTHER_FUNCTION,
+            ReturnTypes.BIGINT,
+            null,
+            OperandTypes.NILADIC,
+            SqlFunctionCategory.USER_DEFINED_FUNCTION);
+
+    private final RexBuilder rex = new RexBuilder(TYPE_FACTORY);
+
+    private RexNode unclaimedCall() {
+      return rex.makeCall(TYPE_FACTORY.createSqlType(SqlTypeName.BIGINT), unclaimed, List.of());
+    }
+
+    private RexNode castCall() {
+      return rex.makeAbstractCast(
+          TYPE_FACTORY.createSqlType(SqlTypeName.BIGINT),
+          rex.makeInputRef(TYPE_FACTORY.createSqlType(SqlTypeName.INTEGER), 0));
+    }
+
+    /**
+     * Converts through the provider's own {@link RexExpressionConverter}, which is what every
+     * conversion path uses, rather than assembling one out of the provider's parts: whether the
+     * added converters reach a conversion at all is what these tests are about.
+     */
+    private Expression convert(ConverterProvider provider, RexNode node) {
+      return node.accept(provider.getRexExpressionConverter(null));
+    }
+
+    /**
+     * A windowed call goes to the window function converter, but the expressions inside it do not:
+     * its operands, partition keys and sort keys are converted like any others, so a caller's
+     * converter is consulted for them.
+     */
+    @Test
+    void areConsultedForTheExpressionsInsideAWindowedCall() {
+      List<String> seen = new ArrayList<>();
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(
+                  prepending(
+                      (call, top) -> {
+                        seen.add(call.getOperator().getName());
+                        return Optional.empty();
+                      }))
+              .build();
+      RelBuilder relBuilder = new RelCreator().createRelBuilder();
+      relBuilder.values(new String[] {"a"}, 1, 2);
+      RexNode over =
+          relBuilder
+              .aggregateCall(SqlStdOperatorTable.ROW_NUMBER)
+              .over()
+              .partitionBy(
+                  relBuilder.call(
+                      SqlStdOperatorTable.PLUS, relBuilder.field("a"), relBuilder.literal(1)))
+              .orderBy(
+                  relBuilder.call(
+                      SqlStdOperatorTable.MINUS, relBuilder.field("a"), relBuilder.literal(2)))
+              .rowsUnbounded()
+              .toRex();
+
+      over.accept(provider.getRexExpressionConverter(null));
+
+      assertEquals(List.of("+", "-"), seen);
+    }
+
+    /**
+     * A subclass appends to what {@code super.getCallConverters()} returns -- which is now the list
+     * the transform handed back -- so the transform has to leave it mutable.
+     */
+    @Test
+    void leaveTheListMutableForASubclassToAppendTo() {
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(prepending(claiming(call -> false, null)))
+              .build();
+
+      List<CallConverter> converters = provider.getCallConverters();
+
+      assertDoesNotThrow(() -> converters.add(claiming(call -> false, null)));
+    }
+
+    /** A transform putting the given converter ahead of the built-in ones. */
+    private UnaryOperator<List<CallConverter>> prepending(CallConverter converter) {
+      return builtIns -> {
+        List<CallConverter> converters = new ArrayList<>();
+        converters.add(converter);
+        converters.addAll(builtIns);
+        return converters;
+      };
+    }
+
+    private CallConverter claiming(Predicate<RexCall> claims, Expression result) {
+      return (call, topLevelConverter) ->
+          claims.test(call) ? Optional.of(result) : Optional.empty();
+    }
+
+    /** Without the extra converter, nothing in the built-in set handles the call. */
+    @Test
+    void areNeededForACallNoBuiltInConverterHandles() {
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> convert(ConverterProvider.builder().build(), unclaimedCall()));
+    }
+
+    @Test
+    void handleACallNoBuiltInConverterHandles() {
+      Expression sentinel = ExpressionCreator.i64(false, 1);
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(
+                  prepending(claiming(call -> call.getOperator() == unclaimed, sentinel)))
+              .build();
+
+      assertEquals(sentinel, convert(provider, unclaimedCall()));
+    }
+
+    /** The built-in CAST converter is what handles this call when nothing is added. */
+    @Test
+    void builtInConverterHandlesCastWhenNoneAreAdded() {
+      assertInstanceOf(
+          Expression.Cast.class, convert(ConverterProvider.builder().build(), castCall()));
+    }
+
+    /**
+     * A caller whose dialect gives a call different semantics has to be able to claim it before the
+     * built-in converter for it does, which is what overriding {@link
+     * ConverterProvider#getCallConverters()} allowed.
+     */
+    @Test
+    void areConsultedBeforeTheBuiltInOnes() {
+      Expression sentinel = ExpressionCreator.i64(false, 2);
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .callConverters(
+                  prepending(
+                      claiming(call -> call.getOperator() == SqlStdOperatorTable.CAST, sentinel)))
+              .build();
+
+      assertEquals(sentinel, convert(provider, castCall()));
     }
   }
 
