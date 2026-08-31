@@ -33,6 +33,7 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
+import org.jspecify.annotations.Nullable;
 
 /**
  * ConverterProvider provides a single-point of configuration for a number of conversions: {@code
@@ -356,10 +357,12 @@ public class ConverterProvider {
    * A {@link RexExpressionConverter} converts Calcite {@link org.apache.calcite.rex.RexNode}s to
    * Substrait equivalents.
    *
-   * @param srv the SubstraitRelVisitor to use for nested relation conversions
+   * @param srv the SubstraitRelVisitor to use for nested relation conversions, or {@code null}
+   *     where the expressions being converted stand alone; the converter then rejects a subquery
+   *     rather than converting one
    * @return a new RexExpressionConverter instance
    */
-  public RexExpressionConverter getRexExpressionConverter(SubstraitRelVisitor srv) {
+  public RexExpressionConverter getRexExpressionConverter(@Nullable SubstraitRelVisitor srv) {
     return new RexExpressionConverter(
         srv, getCallConverters(), getWindowFunctionConverter(), getTypeConverter());
   }
