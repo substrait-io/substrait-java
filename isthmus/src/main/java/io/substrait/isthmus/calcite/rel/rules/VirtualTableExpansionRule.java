@@ -134,7 +134,10 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
    *
    * <p>Written out rather than generated: the generated implementation copies {@link
    * RelRule.Config#description()}, which Calcite declares nullable, and so imports {@code
-   * javax.annotation.Nullable} -- which isthmus does not have on its compile classpath.
+   * javax.annotation.Nullable} -- which isthmus does not have on its compile classpath. The
+   * annotation lands in the builder method that copies from the supertype, where {@code
+   * Value.Style}'s {@code allowedClasspathAnnotations}, {@code nullableAnnotation} and {@code
+   * fallbackNullableAnnotation} do not reach it.
    *
    * <p>{@link #relBuilderFactory()} is inert: the expansion is built directly and never asks the
    * call for a builder. The interface requires an answer, so this is Calcite's own default.
