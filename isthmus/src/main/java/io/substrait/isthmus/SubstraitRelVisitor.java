@@ -415,10 +415,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(aggCalls);
 
     if (groupings.size() > 1) {
-      // Substrait declares the grouping columns of an aggregate as the distinct grouping
-      // expressions in the order they first appear across its grouping sets, while Calcite emits
-      // them ordered by field index. Where the two differ, the emit mapping carries the reordering,
-      // so that a parent converted from the same Calcite plan finds its columns where it left them.
+      // substrait-java declares the grouping columns of an aggregate as the distinct grouping
+      // expressions in the order they first appear across its grouping sets -- the reconstruction
+      // it puts in place of the shared grouping-expression list the spec orders them by, which the
+      // POJO cannot hold -- while Calcite emits them ordered by field index. Where the two differ,
+      // the emit mapping carries the reordering, so that a parent converted from the same Calcite
+      // plan finds its columns where it left them.
       List<Integer> groupingRemap = calciteGroupingOrder(groupings);
 
       // remove the grouping set index if there was no explicit GROUP_ID() function call
@@ -503,10 +505,11 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * Returns, for each grouping column of the converted Calcite aggregate, the position that column
    * holds in the output the Substrait aggregate declares.
    *
-   * <p>Substrait takes the grouping columns to be the distinct grouping expressions in the order
-   * they first appear across the grouping sets; Calcite takes them from a bit set and so emits them
-   * ordered by field index. Reading the result as an emit mapping presents the aggregate's output
-   * in Calcite's order.
+   * <p>substrait-java takes the grouping columns to be the distinct grouping expressions in the
+   * order they first appear across the grouping sets, reconstructing the shared list the spec
+   * orders them by (spec v0.101.0); Calcite takes them from a bit set and so emits them ordered by
+   * field index. Reading the result as an emit mapping presents the aggregate's output in Calcite's
+   * order.
    *
    * @param groupings the grouping sets of the converted aggregate
    * @return the declared position of each grouping column, in the order Calcite emits them
