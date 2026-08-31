@@ -403,6 +403,94 @@ class ComplexAggregateTest extends PlanTestBase {
         emitted.subList(0, 4));
   }
 
+  /**
+   * A lone grouping set gives every mention of an expression a column of its own -- {@code
+   * Aggregate.deriveRecordType} dedups the grouping expressions only across several sets -- while
+   * Calcite's grouping bit set cannot hold a field twice. So a repeated field reaches Calcite as
+   * two columns of the projection the conversion puts underneath the aggregate.
+   */
+  @Test
+  void aGroupingSetNamingAFieldTwiceKeepsAColumnPerMention() {
+    Rel scan =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    RelNode relNode =
+        substraitToCalcite.convert(
+            sb.aggregate(input -> sb.grouping(input, 2, 0, 2), input -> List.of(), scan));
+
+    assertRowMatch(relNode.getRowType(), R.STRING, R.I64, R.STRING);
+  }
+
+  /** The same repeat under an emit mapping, whose indices count the columns the aggregate holds. */
+  @Test
+  void aGroupingSetNamingAFieldTwiceUnderAnEmitMappingKeepsAColumnPerMention() {
+    Rel scan =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    RelNode relNode =
+        substraitToCalcite.convert(
+            sb.aggregate(
+                input -> List.of(sb.grouping(input, 2, 0, 2)),
+                input -> List.of(),
+                Optional.of(Rel.Remap.of(List.of(2, 0))),
+                scan));
+
+    assertRowMatch(relNode.getRowType(), R.STRING, R.STRING);
+  }
+
+  /** A repeat the grouping fields are in ascending order for reaches Calcite the same way. */
+  @Test
+  void anAscendingGroupingSetNamingAFieldTwiceKeepsAColumnPerMention() {
+    Rel scan =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    RelNode relNode =
+        substraitToCalcite.convert(
+            sb.aggregate(input -> sb.grouping(input, 0, 2, 2), input -> List.of(), scan));
+
+    assertRowMatch(relNode.getRowType(), R.I64, R.STRING, R.STRING);
+  }
+
+  /** And so does a repeat of an expression the transformer has to project out anyway. */
+  @Test
+  void aGroupingSetNamingAnExpressionTwiceKeepsAColumnPerMention() {
+    Rel scan =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    RelNode relNode =
+        substraitToCalcite.convert(
+            sb.aggregate(
+                input ->
+                    sb.grouping(
+                        sb.add(sb.fieldReference(input, 0), sb.i64(42)),
+                        sb.add(sb.fieldReference(input, 0), sb.i64(42))),
+                input -> List.of(),
+                scan));
+
+    assertRowMatch(relNode.getRowType(), R.I64, R.I64);
+  }
+
+  /**
+   * The order the fields are grouped in is carried by the emit mapping, so it is no longer a reason
+   * to rewrite the input: the aggregate reads the relation it was given, and the declared order is
+   * a projection above it rather than below.
+   */
+  @Test
+  void outOfOrderGroupingKeysLeaveTheInputAlone() {
+    Rel scan =
+        sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING));
+
+    RelNode relNode =
+        substraitToCalcite.convert(
+            sb.aggregate(input -> sb.grouping(input, 2, 0), input -> List.of(), scan));
+
+    assertEquals(
+        "LogicalProject(c=[$1], a=[$0])\n"
+            + "  LogicalAggregate(group=[{0, 2}])\n"
+            + "    LogicalTableScan(table=[[foo]])\n",
+        RelOptUtil.toString(relNode));
+  }
+
   @Test
   void outOfOrderGroupingKeysHaveCorrectCalciteType() {
     Rel rel =
