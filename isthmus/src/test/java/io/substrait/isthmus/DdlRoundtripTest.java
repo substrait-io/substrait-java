@@ -1,7 +1,9 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -172,6 +174,50 @@ class DdlRoundtripTest extends PlanTestBase {
     Plan.Root converted = SubstraitRelVisitor.convert(root, converterProvider);
 
     assertEquals(List.of("TOTAL", "DOUBLED"), converted.getNames());
+  }
+
+  /**
+   * Neither a write nor a DDL relation gives an emit mapping columns to select from: isthmus
+   * converts a write to a TableModify whose row type is a single ROWCOUNT column, and has nowhere
+   * to put a projection between a CreateView's definition and the view it creates. A mapping over
+   * either is refused rather than dropped.
+   */
+  @Test
+  void anEmitMappingOnAWriteOrADdlIsRefused() {
+    NamedWrite ctas =
+        NamedWrite.builder()
+            .input(computedColumns())
+            .names(List.of("dst1"))
+            .tableSchema(declaredSchema())
+            .operation(AbstractWriteRel.WriteOp.CTAS)
+            .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
+            .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
+            .remap(Rel.Remap.of(List.of(0)))
+            .build();
+    NamedDdl createView =
+        NamedDdl.builder()
+            .viewDefinition(computedColumns())
+            .names(List.of("dst1"))
+            .tableSchema(declaredSchema())
+            .tableDefaults(ExpressionCreator.struct(false))
+            .operation(AbstractDdlRel.DdlOp.CREATE)
+            .object(AbstractDdlRel.DdlObject.VIEW)
+            .remap(Rel.Remap.of(List.of(0)))
+            .build();
+    SubstraitToCalcite converter = new SubstraitToCalcite(converterProvider, catalogReader);
+
+    assertAll(
+        () ->
+            assertTrue(
+                assertThrows(UnsupportedOperationException.class, () -> converter.convert(ctas))
+                    .getMessage()
+                    .contains("Emit mapping on a NamedWrite is not supported")),
+        () ->
+            assertTrue(
+                assertThrows(
+                        UnsupportedOperationException.class, () -> converter.convert(createView))
+                    .getMessage()
+                    .contains("Emit mapping on a NamedDdl is not supported")));
   }
 
   /** The schema of the object a single DDL statement creates, as Substrait records it. */

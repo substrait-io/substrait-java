@@ -9,6 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.MaskExpression;
+import io.substrait.hint.Hint;
+import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.io.PrintWriter;
@@ -441,6 +444,132 @@ class VirtualTableScanTest extends PlanTestBase {
             + "    LogicalProject(exprs=[[ROW(ROW(1))]])\n"
             + "      LogicalValues(type=[RecordType()], tuples=[[{  }]])\n",
         explain(relNode));
+  }
+
+  /**
+   * The emit mapping of a virtual table selects its columns like any other relation's: the scan
+   * produces the whole table and a projection drops what the mapping leaves out. That projection is
+   * what converts back, so such a scan returns as a projection over one -- the same shape every
+   * relation with a mapping comes back as.
+   */
+  @Test
+  void anEmitMappingSelectsTheColumnsItNames() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertEquals(List.of("col2"), relNode.getRowType().getFieldNames());
+    assertEquals(
+        List.of(R.STRING),
+        SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
+  }
+
+  /**
+   * Without a mapping there is no projection to name, and a virtual table's own schema already
+   * names its columns, so the hint is left where it is rather than rebuilding the table around it.
+   */
+  @Test
+  void outputNamesWithoutAMappingAreLeftAlone() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .hint(Hint.builder().addOutputNames("x", "y").build())
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertInstanceOf(LogicalValues.class, relNode);
+    assertEquals(List.of("col1", "col2"), relNode.getRowType().getFieldNames());
+  }
+
+  /**
+   * A projection masks a read relation's columns before anything else selects from them -- {@link
+   * io.substrait.relation.AbstractReadRel#deriveRecordType()} applies it to the initial schema --
+   * so an emit mapping's indices count the columns it leaves. Isthmus builds the row type from the
+   * unmasked schema and reads the projection nowhere, so a scan carrying one is refused rather than
+   * converted against the wrong columns.
+   */
+  @Test
+  void aProjectionOnAVirtualTableIsRefused() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .projection(
+                MaskExpression.builder()
+                    .select(
+                        MaskExpression.StructSelect.builder()
+                            .addStructItems(MaskExpression.StructItem.of(1))
+                            .build())
+                    .build())
+            .build();
+
+    assertTrue(
+        assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(table))
+            .getMessage()
+            .contains("Projection on a VirtualTableScan is not supported"));
+  }
+
+  /**
+   * A virtual table's row type carries the names its schema gives it, which nothing uniquifies, so
+   * the mapping has to select its columns by index: resolving a field by name would give the
+   * projection the type of the first column sharing it.
+   */
+  @Test
+  void anEmitMappingSelectsByIndexWhereTwoColumnsShareAName() {
+    NamedStruct schema = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertEquals(
+        List.of(R.STRING),
+        SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
+  }
+
+  /**
+   * The same as {@link #outputNamesWithoutAMappingAreLeftAlone()} for a table whose rows are
+   * computed. That one comes back under a projection of its own, which is not one a mapping added
+   * and so not one the names are for.
+   */
+  @Test
+  void outputNamesWithoutAMappingAreLeftAloneOnAComputedTable() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(
+                createVirtualTableScan(
+                    schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
+            .hint(Hint.builder().addOutputNames("x", "y").build())
+            .build();
+
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertEquals(List.of("col1", "col2"), relNode.getRowType().getFieldNames());
+  }
+
+  /** The names of its hint reach the projection the mapping adds, as they do elsewhere. */
+  @Test
+  void outputNamesReachTheProjectionTheMappingAdds() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .hint(Hint.builder().addOutputNames("label").build())
+            .build();
+
+    assertEquals(List.of("label"), substraitToCalcite.convert(table).getRowType().getFieldNames());
   }
 
   @SafeVarargs
