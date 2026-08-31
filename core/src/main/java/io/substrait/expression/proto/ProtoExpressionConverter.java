@@ -397,6 +397,8 @@ public class ProtoExpressionConverter {
 
     WindowBound lowerBound = toWindowBound(windowFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowFunction.getUpperBound());
+    Expression.WindowBoundsType boundsType =
+        Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType());
 
     return Expression.WindowFunctionInvocation.builder()
         .arguments(args)
@@ -405,7 +407,7 @@ public class ProtoExpressionConverter {
         .aggregationPhase(Expression.AggregationPhase.fromProto(windowFunction.getPhase()))
         .partitionBy(partitionExprs)
         .sort(sortFields)
-        .boundsType(Expression.WindowBoundsType.fromProto(windowFunction.getBoundsType()))
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(Expression.AggregationInvocation.fromProto(windowFunction.getInvocation()))
@@ -440,13 +442,15 @@ public class ProtoExpressionConverter {
 
     WindowBound lowerBound = toWindowBound(windowRelFunction.getLowerBound());
     WindowBound upperBound = toWindowBound(windowRelFunction.getUpperBound());
+    Expression.WindowBoundsType boundsType =
+        Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType());
 
     return ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
         .arguments(args)
         .declaration(declaration)
         .outputType(protoTypeConverter.from(windowRelFunction.getOutputType()))
         .aggregationPhase(Expression.AggregationPhase.fromProto(windowRelFunction.getPhase()))
-        .boundsType(Expression.WindowBoundsType.fromProto(windowRelFunction.getBoundsType()))
+        .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)
         .invocation(Expression.AggregationInvocation.fromProto(windowRelFunction.getInvocation()))
@@ -457,9 +461,29 @@ public class ProtoExpressionConverter {
   private WindowBound toWindowBound(io.substrait.proto.Expression.WindowFunction.Bound bound) {
     switch (bound.getKindCase()) {
       case PRECEDING:
-        return WindowBound.Preceding.of(bound.getPreceding().getOffset());
+        {
+          io.substrait.proto.Expression.WindowFunction.Bound.Preceding preceding =
+              bound.getPreceding();
+          // Per the spec, consumers must use offset_expr when it is set and ignore offset.
+          if (preceding.hasOffsetExpr()) {
+            return WindowBound.Preceding.of(from(preceding.getOffsetExpr()));
+          }
+          // offset has no presence, so zero means unset, and a zero offset means CurrentRow.
+          return preceding.getOffset() == 0
+              ? WindowBound.CURRENT_ROW
+              : WindowBound.Preceding.of(preceding.getOffset());
+        }
       case FOLLOWING:
-        return WindowBound.Following.of(bound.getFollowing().getOffset());
+        {
+          io.substrait.proto.Expression.WindowFunction.Bound.Following following =
+              bound.getFollowing();
+          if (following.hasOffsetExpr()) {
+            return WindowBound.Following.of(from(following.getOffsetExpr()));
+          }
+          return following.getOffset() == 0
+              ? WindowBound.CURRENT_ROW
+              : WindowBound.Following.of(following.getOffset());
+        }
       case CURRENT_ROW:
         return WindowBound.CURRENT_ROW;
       case UNBOUNDED:

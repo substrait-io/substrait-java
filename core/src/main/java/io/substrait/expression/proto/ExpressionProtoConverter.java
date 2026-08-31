@@ -33,6 +33,9 @@ public class ExpressionProtoConverter
   /** Collects function and type references encountered during conversion. */
   protected final ExtensionCollector extensionCollector;
 
+  /** Converts window bounds to their protobuf representation. */
+  private final BoundConverter boundConverter;
+
   /**
    * Creates a converter that registers references with the given collector.
    *
@@ -44,6 +47,7 @@ public class ExpressionProtoConverter
     this.extensionCollector = extensionCollector;
     this.relProtoConverter = relProtoConverter;
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
+    this.boundConverter = new BoundConverter(this);
   }
 
   /**
@@ -103,6 +107,16 @@ public class ExpressionProtoConverter
    */
   protected io.substrait.proto.Type toProto(io.substrait.type.Type type) {
     return typeProtoConverter.toProto(type);
+  }
+
+  /**
+   * Converts a window bound to its protobuf representation.
+   *
+   * @param bound the window bound to convert
+   * @return the proto window bound
+   */
+  public Expression.WindowFunction.Bound toProto(WindowBound bound) {
+    return boundConverter.convert(bound);
   }
 
   @Override
@@ -773,8 +787,8 @@ public class ExpressionProtoConverter
                         .build())
             .collect(java.util.stream.Collectors.toList());
 
-    Expression.WindowFunction.Bound lowerBound = BoundConverter.convert(expr.lowerBound());
-    Expression.WindowFunction.Bound upperBound = BoundConverter.convert(expr.upperBound());
+    Expression.WindowFunction.Bound lowerBound = toProto(expr.lowerBound());
+    Expression.WindowFunction.Bound upperBound = toProto(expr.upperBound());
 
     return Expression.newBuilder()
         .setWindowFunction(
@@ -844,7 +858,8 @@ public class ExpressionProtoConverter
   /** Converts a {@link WindowBound} to its protobuf {@link Expression.WindowFunction.Bound}. */
   public static class BoundConverter
       implements WindowBound.WindowBoundVisitor<Expression.WindowFunction.Bound, RuntimeException> {
-    private static final BoundConverter TO_BOUND_VISITOR = new BoundConverter();
+
+    private final ExpressionProtoConverter exprProtoConverter;
 
     /**
      * Converts the given window bound to its protobuf representation.
@@ -852,26 +867,30 @@ public class ExpressionProtoConverter
      * @param bound the window bound to convert
      * @return the proto window bound
      */
-    public static Expression.WindowFunction.Bound convert(WindowBound bound) {
-      return bound.accept(TO_BOUND_VISITOR);
+    public Expression.WindowFunction.Bound convert(WindowBound bound) {
+      return bound.accept(this);
     }
 
-    private BoundConverter() {}
+    private BoundConverter(ExpressionProtoConverter exprProtoConverter) {
+      this.exprProtoConverter = exprProtoConverter;
+    }
 
     @Override
     public Expression.WindowFunction.Bound visit(WindowBound.Preceding preceding) {
-      return Expression.WindowFunction.Bound.newBuilder()
-          .setPreceding(
-              Expression.WindowFunction.Bound.Preceding.newBuilder().setOffset(preceding.offset()))
-          .build();
+      Expression.WindowFunction.Bound.Preceding.Builder builder =
+          Expression.WindowFunction.Bound.Preceding.newBuilder()
+              .setOffsetExpr(exprProtoConverter.toProto(preceding.offset()));
+      WindowBound.toLiteralOffset(preceding.offset()).ifPresent(builder::setOffset);
+      return Expression.WindowFunction.Bound.newBuilder().setPreceding(builder).build();
     }
 
     @Override
     public Expression.WindowFunction.Bound visit(WindowBound.Following following) {
-      return Expression.WindowFunction.Bound.newBuilder()
-          .setFollowing(
-              Expression.WindowFunction.Bound.Following.newBuilder().setOffset(following.offset()))
-          .build();
+      Expression.WindowFunction.Bound.Following.Builder builder =
+          Expression.WindowFunction.Bound.Following.newBuilder()
+              .setOffsetExpr(exprProtoConverter.toProto(following.offset()));
+      WindowBound.toLiteralOffset(following.offset()).ifPresent(builder::setOffset);
+      return Expression.WindowFunction.Bound.newBuilder().setFollowing(builder).build();
     }
 
     @Override

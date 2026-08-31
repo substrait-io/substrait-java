@@ -129,16 +129,31 @@ object ToWindowFunction {
     bound.accept(new WindowBoundVisitor[Expression, Exception] {
 
       override def visit(preceding: WindowBound.Preceding): Expression =
-        Literal(-preceding.offset().intValue())
+        Literal(-toLiteralOffset(preceding.offset()))
 
       override def visit(following: WindowBound.Following): Expression =
-        Literal(following.offset().intValue())
+        Literal(toLiteralOffset(following.offset()))
 
       override def visit(currentRow: WindowBound.CurrentRow): Expression = CurrentRow
 
       override def visit(unbounded: WindowBound.Unbounded): Expression =
         if (isLower) UnboundedPreceding else UnboundedFollowing
     })
+  }
+
+  private def toLiteralOffset(offset: SExpression): Int = {
+    val value = WindowBound
+      .toLiteralOffset(offset)
+      .orElseThrow(
+        () =>
+          new UnsupportedOperationException(
+            s"Spark window bounds only support a literal positive offset, got: $offset"))
+      .longValue()
+    if (value > Int.MaxValue) {
+      throw new UnsupportedOperationException(
+        s"Spark window bounds only support offsets up to ${Int.MaxValue}, got: $value")
+    }
+    value.toInt
   }
 
   def apply(functions: Seq[SimpleExtension.WindowFunctionVariant]): ToWindowFunction = {

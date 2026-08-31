@@ -99,6 +99,15 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
   }
 
   /**
+   * Returns the converter used for Calcite/Substrait type mappings.
+   *
+   * @return the type converter
+   */
+  public TypeConverter getTypeConverter() {
+    return typeConverter;
+  }
+
+  /**
    * Converts a {@link RexInputRef} to a root struct field reference.
    *
    * @param inputRef the input reference

@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
@@ -164,6 +165,16 @@ class WindowFunctionTest extends PlanTestBase {
       assertFullRoundTrip(
           String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
     }
+
+    @Test
+    void rangePrecedingWithIntervalOffset() throws IOException, SqlParseException {
+      // Regression test: an INTERVAL offset is not in SqlTypeName.EXACT_TYPES, so the old
+      // WindowBoundConverter rejected it outright, even though a temporal RANGE frame needs one.
+      String overClause =
+          "partition by O_CUSTKEY order by O_ORDERDATE range between interval '1' day preceding and current row";
+      assertFullRoundTrip(
+          String.format("select min(O_SHIPPRIORITY) over (%s) from ORDERS", overClause));
+    }
   }
 
   @Nested
@@ -256,5 +267,28 @@ class WindowFunctionTest extends PlanTestBase {
             sb.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
 
     assertFullRoundTrip(rel);
+  }
+
+  @Test
+  void unspecifiedBoundsTypeWithUnboundedBoundsConvertsToCalcite() {
+    Rel rel =
+        sb.project(
+            input ->
+                List.of(
+                    sb.windowFn(
+                        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+                        "lead:any",
+                        R.FP64,
+                        Expression.AggregationPhase.INITIAL_TO_RESULT,
+                        Expression.AggregationInvocation.ALL,
+                        Expression.WindowBoundsType.UNSPECIFIED,
+                        WindowBound.UNBOUNDED,
+                        WindowBound.UNBOUNDED,
+                        sb.fieldReference(input, 0))),
+            sb.remap(1),
+            sb.namedScan(List.of("window_test"), List.of("a"), List.of(R.FP64)));
+
+    // No round trip: Calcite has no "unspecified" bounds concept, so it always comes back ROWS.
+    assertDoesNotThrow(() -> substraitToCalcite.convert(rel));
   }
 }
