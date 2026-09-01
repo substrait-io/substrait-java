@@ -14,6 +14,7 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
@@ -177,6 +178,37 @@ class SubstraitTypeSystemTest {
     assertEquals(19, defaultMaxScale);
     assertEquals(38, typeSystem.getMaxPrecision(SqlTypeName.DECIMAL));
     assertEquals(38, typeSystem.getMaxScale(SqlTypeName.DECIMAL));
+  }
+
+  /**
+   * A type system whose DECIMAL maximum is above the spec's 38 would let a wider decimal through
+   * the factory, and {@code toSubstrait} refuses it on the way back -- so the type would convert in
+   * with no way out. The bound is the spec's rather than the factory's for that reason.
+   */
+  @Test
+  void aDecimalPrecisionAboveTheSpecsCeilingIsRefused() {
+    RelDataTypeFactory wideFactory =
+        new SqlTypeFactoryImpl(
+            new RelDataTypeSystemImpl() {
+              @Override
+              public int getMaxPrecision(SqlTypeName typeName) {
+                return typeName == SqlTypeName.DECIMAL ? 76 : super.getMaxPrecision(typeName);
+              }
+
+              @Override
+              public int getMaxScale(SqlTypeName typeName) {
+                return typeName == SqlTypeName.DECIMAL ? 76 : super.getMaxScale(typeName);
+              }
+            });
+
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                TypeConverter.DEFAULT.toCalcite(
+                    wideFactory, TypeCreator.REQUIRED.decimal(45, 2), null));
+
+    assertTrue(e.getMessage().contains("above the 38 the spec allows"), e.getMessage());
   }
 
   /**

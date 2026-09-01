@@ -31,6 +31,9 @@ import org.jspecify.annotations.Nullable;
  */
 public class TypeConverter {
 
+  /** The widest precision the spec gives a decimal: {@code DECIMAL<P, S>} puts P at 38 or less. */
+  private static final int MAX_DECIMAL_PRECISION = 38;
+
   private final UserTypeMapper userTypeMapper;
 
   /**
@@ -143,7 +146,7 @@ public class TypeConverter {
         return creator.FP64;
       case DECIMAL:
         {
-          if (type.getPrecision() > 38) {
+          if (type.getPrecision() > MAX_DECIMAL_PRECISION) {
             throw new UnsupportedOperationException(
                 "unsupported decimal precision " + type.getPrecision());
           }
@@ -441,6 +444,15 @@ public class TypeConverter {
             String.format(
                 "A decimal cannot declare a negative precision, and this one is %d",
                 expr.precision()));
+      }
+      // The spec's own ceiling, not just the factory's: handed a type system whose DECIMAL maximum
+      // is above it, the factory builds the type and the outbound conversion above then refuses it,
+      // so the type would convert in and have no way back.
+      if (expr.precision() > MAX_DECIMAL_PRECISION) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a precision of %d, above the %d the spec allows",
+                expr.precision(), MAX_DECIMAL_PRECISION));
       }
       SubstraitTypeSystem.requireSupportedPrecision(
           typeFactory.getTypeSystem(), SqlTypeName.DECIMAL, "decimal", expr.precision());
