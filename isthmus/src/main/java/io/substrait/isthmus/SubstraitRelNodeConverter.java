@@ -55,7 +55,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -363,16 +362,17 @@ public class SubstraitRelNodeConverter
             .map(measure -> fromMeasure(measure, context, child, hasEmptyGroup))
             .collect(java.util.stream.Collectors.toList());
 
-    Optional<Remap> remap = aggregate.getRemap();
+    final Optional<Remap> remap = aggregate.getRemap();
     // A field grouped on by several sets is one column of the relation, so the grouping-set index
     // sits after the distinct grouping expressions, not after every mention of them.
     final int groupColumnCount = new LinkedHashSet<>(groupExprs).size();
-    final int lastFieldIndex = groupColumnCount + aggregateCalls.size();
+    final int groupingSetIndex = groupColumnCount + aggregateCalls.size();
 
-    // map grouping set index if it is not removed via remap
+    // The index is a column of the converted aggregate only where the relation emits it: an
+    // aggregate that maps its output away does not need the call at all.
     final boolean emitDirect = remap.isEmpty();
     final boolean groupingSetIndexGetsRemapped =
-        remap.map(r -> r.indices().contains(lastFieldIndex)).orElse(false);
+        remap.map(r -> r.indices().contains(groupingSetIndex)).orElse(false);
     if (aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped)) {
       aggregateCalls.add(
           AggregateCall.create(
@@ -387,19 +387,6 @@ public class SubstraitRelNodeConverter
               RelCollations.EMPTY,
               typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
               null));
-      // The call was appended, so it is the last column of the converted aggregate: the grouping
-      // columns come first, then the calls.
-      final int groupingCallIndex = groupColumnCount + aggregateCalls.size() - 1;
-      if (groupingSetIndexGetsRemapped) {
-        List<Integer> remapList = new LinkedList<>(remap.get().indices());
-        for (int i = 0; i < remapList.size(); i++) {
-          if (remapList.get(i).equals(lastFieldIndex)) {
-            // replace last field index with field index of the GROUP_ID() function call
-            remapList.set(i, groupingCallIndex);
-          }
-        }
-        remap = Optional.of(Remap.of(remapList));
-      }
     }
 
     exitUncorrelatedScope(context, Aggregate.class);
