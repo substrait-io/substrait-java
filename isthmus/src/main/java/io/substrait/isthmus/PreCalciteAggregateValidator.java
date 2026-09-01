@@ -7,7 +7,10 @@ import io.substrait.expression.FunctionArg;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.Project;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -34,7 +37,28 @@ public class PreCalciteAggregateValidator {
     return aggregate.getMeasures().stream()
             .allMatch(PreCalciteAggregateValidator::isValidCalciteMeasure)
         && aggregate.getGroupings().stream()
-            .allMatch(PreCalciteAggregateValidator::isValidCalciteGrouping);
+            .allMatch(PreCalciteAggregateValidator::isValidCalciteGrouping)
+        && aLoneGroupingSetNamesEachExpressionOnce(aggregate);
+  }
+
+  /**
+   * Checks that an aggregate holding one grouping set does not name an expression in it twice.
+   *
+   * <p>Calcite holds a grouping set in an {@link org.apache.calcite.util.ImmutableBitSet}, which
+   * cannot hold a field twice, while a lone grouping set gives each mention a column of its own --
+   * {@code Aggregate.deriveRecordType} dedups the grouping expressions only across several sets. So
+   * a repeat has to reach Calcite as two columns of the relation underneath, which is what the
+   * transformer makes of it.
+   *
+   * @param aggregate the aggregate relation
+   * @return {@code true} if valid, {@code false} otherwise
+   */
+  private static boolean aLoneGroupingSetNamesEachExpressionOnce(Aggregate aggregate) {
+    if (aggregate.getGroupings().size() != 1) {
+      return true;
+    }
+    List<Expression> expressions = aggregate.getGroupings().get(0).getExpressions();
+    return new HashSet<>(expressions).size() == expressions.size();
   }
 
   /**
@@ -60,32 +84,19 @@ public class PreCalciteAggregateValidator {
   }
 
   /**
-   * Checks if an {@link Aggregate.Grouping} uses only {@link FieldReference}s and ensures grouping
-   * fields are in ascending order.
+   * Checks if an {@link Aggregate.Grouping} uses only {@link FieldReference}s.
+   *
+   * <p>The order the fields are grouped in is not a reason to rewrite the aggregate. Calcite holds
+   * a grouping set in an {@link org.apache.calcite.util.ImmutableBitSet} and emits its grouping
+   * columns in ascending field order whatever order they were declared in, so a plan grouping on
+   * (0, 2, 1) reaches Calcite as (0, 1, 2); the conversion carries the declared order in the emit
+   * mapping instead.
    *
    * @param grouping the aggregate grouping to validate
    * @return {@code true} if valid, {@code false} otherwise
    */
   private static boolean isValidCalciteGrouping(Aggregate.Grouping grouping) {
-    if (!grouping.getExpressions().stream().allMatch(e -> isSimpleFieldReference(e))) {
-      return false;
-    }
-
-    // Calcite stores grouping fields in an ImmutableBitSet and does not track the order of the
-    // grouping fields. The output record shape that Calcite generates ALWAYS has the groupings in
-    // ascending field order. This causes issues with Substrait in cases where the grouping fields
-    // in Substrait are not defined in ascending order.
-
-    // For example, if a grouping is defined as (0, 2, 1) in Substrait, Calcite will output it as
-    // (0, 1, 2), which means that the Calcite output will no longer line up with the expectations
-    // of the Substrait plan.
-
-    List<Integer> groupingFields =
-        grouping.getExpressions().stream()
-            .map(expr -> getFieldRefOffset((FieldReference) expr))
-            .collect(Collectors.toList());
-
-    return isOrdered(groupingFields);
+    return grouping.getExpressions().stream().allMatch(e -> isSimpleFieldReference(e));
   }
 
   private static boolean isSimpleFieldReference(FunctionArg e) {
@@ -97,43 +108,39 @@ public class PreCalciteAggregateValidator {
     return segments.size() == 1 && segments.get(0) instanceof FieldReference.StructField;
   }
 
-  private static int getFieldRefOffset(FieldReference fr) {
-    return ((FieldReference.StructField) fr.segments().get(0)).offset();
-  }
-
-  private static boolean isOrdered(List<Integer> list) {
-    for (int i = 1; i < list.size(); i++) {
-      if (list.get(i - 1) > list.get(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   /**
-   * Transforms invalid aggregates into Calcite-compatible form by projecting non-field expressions
-   * and reordering groupings.
+   * Transforms invalid aggregates into Calcite-compatible form by projecting out the grouping
+   * expressions Calcite cannot hold as they are.
    */
   public static class PreCalciteAggregateTransformer {
 
     // New expressions to include in the project before the aggregate
     private final List<Expression> newExpressions;
 
+    // The field reference each grouping expression was projected out to, kept only where the
+    // aggregate's own record type shares a column between mentions of one expression: with several
+    // grouping sets a field grouped on by two of them is one column of the output, so it has to
+    // stay one column of the project underneath -- two copies of it would each be missing from a
+    // set, and Calcite would make both nullable. A lone grouping set gives every mention a column
+    // of its own, so there the map is not consulted.
+    private final Map<Expression, Expression> projectedGroupingExpressions;
+
+    private final boolean groupingColumnsAreShared;
+
     // Tracks the offset of the next expression added
     private int expressionOffset;
 
     private PreCalciteAggregateTransformer(Aggregate aggregate) {
       this.newExpressions = new ArrayList<>();
+      this.projectedGroupingExpressions = new HashMap<>();
+      this.groupingColumnsAreShared = aggregate.getGroupings().size() > 1;
       this.expressionOffset = aggregate.getInput().getRecordType().fields().size();
     }
 
     /**
-     * Rewrites an {@link Aggregate} so that it can be converted to Calcite by:
-     *
-     * <ul>
-     *   <li>Projecting non-field references before aggregation
-     *   <li>Ensuring groupings are in ascending order
-     * </ul>
+     * Rewrites an {@link Aggregate} so that it can be converted to Calcite by projecting the
+     * grouping expressions and the measures' non-field arguments out before the aggregation, so
+     * that each is a field reference of its own.
      *
      * @param aggregate the original Substrait aggregate
      * @return a transformed Calcite-compatible aggregate
@@ -193,7 +200,13 @@ public class PreCalciteAggregateValidator {
 
     private Aggregate.Grouping updateGrouping(Aggregate.Grouping grouping) {
       List<Expression> newGroupingExpressions =
-          grouping.getExpressions().stream().map(this::projectOut).collect(Collectors.toList());
+          grouping.getExpressions().stream()
+              .map(
+                  expr ->
+                      groupingColumnsAreShared
+                          ? projectedGroupingExpressions.computeIfAbsent(expr, this::projectOut)
+                          : projectOut(expr))
+              .collect(Collectors.toList());
       return Aggregate.Grouping.builder().expressions(newGroupingExpressions).build();
     }
 

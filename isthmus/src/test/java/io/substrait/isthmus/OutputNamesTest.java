@@ -169,10 +169,11 @@ class OutputNamesTest extends PlanTestBase {
 
   @Test
   void leavesAnAggregateThatEmitsDirectlyAlone() {
-    // The conversion of an aggregate over several grouping sets ends in a projection, but that
-    // projection carries the grouping-set index rather than this relation's emit mapping, and the
-    // columns underneath it are ordered by Calcite's group key rather than by the relation's own
-    // record type. Names are dropped rather than pinned onto columns chosen by something else.
+    // The conversion of an aggregate over several grouping sets ends in a projection that carries
+    // the grouping-set index. Its other columns are the relation's own, in the declared order, but
+    // that one comes back as Calcite's folded GROUP_ID literal -- a BIGINT where the relation
+    // declares an i32 -- so the names are dropped rather than pinned onto a column whose type the
+    // plan does not describe.
     Rel aggregate =
         sb.aggregate(
             input -> List.of(sb.grouping(input, 0), sb.grouping(input, 1)),
@@ -267,10 +268,34 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
+  void namesAnAggregateWhoseGroupingColumnsCalciteOrdersDifferently() {
+    // The grouping sets first mention field 1 and then field 0, so the relation declares its
+    // grouping columns as (b, a) where the aggregate underneath emits (a, b). The emit mapping the
+    // conversion adds puts them back in the declared order, which is what lets the names be bound
+    // by position at all. The mapping drops the grouping-set index, so every remaining column is
+    // one the relation declares.
+    Rel scan3 =
+        sb.namedScan(List.of("t3"), List.of("a", "b", "c"), List.of(R.I64, N.STRING, R.FP64));
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 1), sb.grouping(input, 0)),
+            input -> List.of(sb.count(input, 0)),
+            Optional.of(Rel.Remap.of(List.of(0, 1, 2))),
+            scan3);
+
+    RelNode named =
+        substraitToCalcite.convert(
+            aggregate.withHint(
+                Optional.of(Hint.builder().addOutputNames("k_b", "k_a", "n").build())));
+
+    assertEquals(List.of("k_b", "k_a", "n"), named.getRowType().getFieldNames());
+  }
+
+  @Test
   void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
-    // An aggregate over several grouping sets orders its grouping columns by first appearance,
-    // where Calcite orders them by group key: the record type reads (b, a, count, index) and the
-    // converted node (a, b, count, ...), so the names would land on columns the plan does not name.
+    // Same aggregate with the grouping-set index emitted: the relation types it i32 where the
+    // GROUP_ID call the conversion appends is i64, so the fourth column is not the fourth column
+    // the relation declares and the names would land on a column the plan does not name.
     Rel scan3 =
         sb.namedScan(List.of("t3"), List.of("a", "b", "c"), List.of(R.I64, N.STRING, R.FP64));
     Rel aggregate =
