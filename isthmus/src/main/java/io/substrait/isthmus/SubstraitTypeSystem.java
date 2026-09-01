@@ -83,7 +83,7 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
    *
    * <p>For the three types that carry a length across the Substrait boundary — {@link
    * SqlTypeName#CHAR}, {@link SqlTypeName#VARCHAR} and {@link SqlTypeName#BINARY}, holding {@code
-   * fixedchar}, {@code varchar} and {@code fixed_binary} — this is Substrait's own limit: those
+   * fixedchar}, {@code varchar} and {@code fixedbinary} — this is Substrait's own limit: those
    * lengths are 32-bit integers. Calcite's default of 65536 is narrower, and the type factory caps
    * a converted type at it rather than reporting that it cannot represent the declared width.
    *
