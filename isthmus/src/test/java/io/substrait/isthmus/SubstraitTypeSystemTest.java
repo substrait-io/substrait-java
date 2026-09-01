@@ -185,6 +185,44 @@ class SubstraitTypeSystemTest {
    * the default came out of the conversion as a {@code varchar<65536>}.
    */
   /**
+   * The same two ends as a length, for the same reasons: -1 is Calcite's unspecified precision, so
+   * the factory answers with an unparameterised DECIMAL whose precision reads back as the type
+   * system's maximum, and a scale past the maximum is narrowed rather than reported. Calcite
+   * reports a zero or negative scale and a zero precision itself.
+   */
+  @Test
+  void aDecimalParameterOutsideWhatTheFactoryHoldsIsRefused() {
+    RelDataTypeFactory defaultFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+
+    assertAll(
+        () -> {
+          IllegalArgumentException e =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () ->
+                      TypeConverter.DEFAULT.toCalcite(
+                          TYPE_FACTORY, TypeCreator.REQUIRED.decimal(-1, 0), null));
+          assertTrue(
+              e.getMessage().contains("negative precision, and this one is -1"), e.getMessage());
+        },
+        () -> {
+          IllegalArgumentException e =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () ->
+                      TypeConverter.DEFAULT.toCalcite(
+                          defaultFactory, TypeCreator.REQUIRED.decimal(19, 25), null));
+          assertTrue(e.getMessage().contains("max scale"), e.getMessage());
+        },
+        () ->
+            assertEquals(
+                25,
+                TypeConverter.DEFAULT
+                    .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.decimal(19, 25), null)
+                    .getScale()));
+  }
+
+  /**
    * The raised maximum is also Calcite's overflow threshold for concatenation, in {@code
    * ReturnTypes.DYADIC_STRING_SUM_PRECISION}: a sum of widths past it falls back to an
    * unparameterised type. So two columns nowhere near the old cap decide the result type between

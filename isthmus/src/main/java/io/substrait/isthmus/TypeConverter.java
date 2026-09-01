@@ -433,8 +433,18 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.Decimal expr) {
+      // Before the factory, for the reason the lengths are: -1 is Calcite's unspecified precision,
+      // so a negative one is answered with an unparameterised DECIMAL whose precision reads back as
+      // the type system's maximum. A zero or negative scale Calcite reports itself.
+      if (expr.precision() < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a negative precision, and this one is %d",
+                expr.precision()));
+      }
       SubstraitTypeSystem.requireSupportedPrecision(
           typeFactory.getTypeSystem(), SqlTypeName.DECIMAL, "decimal", expr.precision());
+      SubstraitTypeSystem.requireSupportedScale(typeFactory.getTypeSystem(), expr.scale());
       return t(n(expr), SqlTypeName.DECIMAL, expr.precision(), expr.scale());
     }
 
