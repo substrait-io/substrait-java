@@ -56,12 +56,9 @@ class SubstraitTypeSystemTest {
     assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.VARCHAR));
     assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.CHAR));
     assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.BINARY));
-  }
-
-  /** Substrait's {@code binary} carries no length, so VARBINARY has none to lose. */
-  @Test
-  void varbinaryKeepsTheCalciteDefault() {
-    assertEquals(65536, typeSystem.getMaxPrecision(SqlTypeName.VARBINARY));
+    // Substrait's binary carries no length of its own, but Calcite unifies a ragged binary union
+    // through this type, so a cap here caps the union.
+    assertEquals(Integer.MAX_VALUE, typeSystem.getMaxPrecision(SqlTypeName.VARBINARY));
   }
 
   /**
@@ -104,6 +101,22 @@ class SubstraitTypeSystemTest {
         TypeConverter.DEFAULT
             .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.varChar(100_000), null)
             .getPrecision());
+  }
+
+  /**
+   * A union of fixed-width binaries of different widths is unified as a VARBINARY, so leaving that
+   * type at Calcite's default would reimpose the cap the wide types are raised past -- on a type
+   * wider than one of the union's own inputs.
+   */
+  @Test
+  void aRaggedBinaryUnionKeepsTheWidestWidth() {
+    RelDataType wide = TYPE_FACTORY.createSqlType(SqlTypeName.BINARY, 100_000);
+    RelDataType narrow = TYPE_FACTORY.createSqlType(SqlTypeName.BINARY, 5);
+
+    RelDataType unified = TYPE_FACTORY.leastRestrictive(List.of(wide, narrow));
+
+    assertEquals(SqlTypeName.VARBINARY, unified.getSqlTypeName());
+    assertEquals(100_000, unified.getPrecision());
   }
 
   @Test
