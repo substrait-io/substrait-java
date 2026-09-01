@@ -1246,10 +1246,10 @@ public class SubstraitRelNodeConverter
    * inputs are compared against.
    *
    * <p>They are dropped as well where the columns of that projection are not the columns of the
-   * relation's record type, type by type. An aggregate over several grouping sets orders its
-   * grouping columns by first appearance where Calcite orders them by group key, so the two
-   * disagree on what the third column is, and binding the names by position would name columns the
-   * plan does not name.
+   * relation's record type, type by type. An aggregate over several grouping sets types its
+   * grouping-set index i32, where the GROUP_ID call standing for it is i64, so the two disagree on
+   * what the last column is and binding the names by position would name columns the plan does not
+   * name.
    *
    * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
    * them belong to the type of the expression that produces the field, which a projection cannot

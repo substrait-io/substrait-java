@@ -393,9 +393,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
 
     // Number of distinct grouping-expression output fields produced by the aggregate.
-    // Used by the no-GROUP_ID remap and the LITERAL_AGG project wrapper below.
-    // The GROUP_ID remap branch intentionally uses a non-distinct count instead (see comment
-    // there).
+    // Used by both remap branches and by the LITERAL_AGG project wrapper below.
     final int groupingFieldCount =
         Math.toIntExact(
             groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
