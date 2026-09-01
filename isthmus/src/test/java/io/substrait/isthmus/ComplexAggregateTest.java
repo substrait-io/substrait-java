@@ -404,6 +404,58 @@ class ComplexAggregateTest extends PlanTestBase {
   }
 
   /**
+   * Every other fixture here swaps two columns, and a transposition is its own inverse, so a
+   * mapping replaced by the one that undoes it would go unnoticed. These two sets mention fields 0
+   * and 3 before 1 and 2, which makes the mapping a three-cycle: the relation declares (a, d, b, c)
+   * where the aggregate underneath emits (a, b, c, d), and the inverse would declare (a, c, d, b).
+   */
+  @Test
+  void anAggregateOverGroupingSetsInANonSwapOrderKeepsTheDeclaredOrder() {
+    Rel aggregate =
+        sb.aggregate(
+            input -> List.of(sb.grouping(input, 0, 3), sb.grouping(input, 1, 2)),
+            input -> List.of(),
+            Optional.empty(),
+            sb.namedScan(
+                List.of("foo"),
+                List.of("a", "b", "c", "d"),
+                List.of(R.I64, R.STRING, R.FP64, R.BOOLEAN)));
+
+    RelNode relNode = substraitToCalcite.convert(aggregate);
+
+    assertEquals(
+        "LogicalProject(a=[$0], d=[$3], b=[$1], c=[$2], $f4=[0:BIGINT])\n"
+            + "  LogicalAggregate(group=[{0, 1, 2, 3}], groups=[[{0, 3}, {1, 2}]])\n"
+            + "    LogicalTableScan(table=[[foo]])\n",
+        RelOptUtil.toString(relNode));
+  }
+
+  /** The same shape in the other direction, asserted on the mapping the conversion produces. */
+  @Test
+  void groupingSetsInANonSwapOrderGiveAMappingThatIsNotItsOwnInverse() {
+    org.apache.calcite.tools.RelBuilder relBuilder =
+        new RelCreator(TPCH_CATALOG).createRelBuilder();
+    RelNode scan = relBuilder.scan("LINEITEM").build();
+    RelNode calciteAggregate =
+        LogicalAggregate.create(
+            scan,
+            List.of(),
+            ImmutableBitSet.of(0, 1, 2, 3),
+            List.of(ImmutableBitSet.of(0, 3), ImmutableBitSet.of(1, 2)),
+            List.of());
+
+    Rel rel =
+        SubstraitRelVisitor.convert(
+                RelRoot.of(calciteAggregate, org.apache.calcite.sql.SqlKind.SELECT),
+                converterProvider)
+            .getInput();
+
+    assertEquals(
+        Optional.of(Rel.Remap.of(List.of(0, 2, 3, 1))),
+        ((io.substrait.relation.Aggregate) rel).getRemap());
+  }
+
+  /**
    * A lone grouping set gives every mention of an expression a column of its own -- {@code
    * Aggregate.deriveRecordType} dedups the grouping expressions only across several sets -- while
    * Calcite's grouping bit set cannot hold a field twice. So a repeated field reaches Calcite as
