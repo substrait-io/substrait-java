@@ -95,7 +95,7 @@ class SubstraitTypeSystemTest {
             () ->
                 TypeConverter.DEFAULT.toCalcite(
                     defaultFactory, TypeCreator.REQUIRED.varChar(100_000), null));
-    assertTrue(e.getMessage().contains("65536"), e.getMessage());
+    assertTrue(e.getMessage().contains("allows up to 65536"), e.getMessage());
 
     assertEquals(
         100_000,
@@ -184,6 +184,30 @@ class SubstraitTypeSystemTest {
    * maximum silently rather than reporting that it cannot hold it, so before this a cast wider than
    * the default came out of the conversion as a {@code varchar<65536>}.
    */
+  /**
+   * A decimal loses its precision to a foreign factory the same silent way a length does: Calcite's
+   * default type system caps it at 19, and the narrowed type reads back as one the plan never
+   * declared.
+   */
+  @Test
+  void aFactoryThatCannotHoldTheDeclaredPrecisionIsReported() {
+    RelDataTypeFactory defaultFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                TypeConverter.DEFAULT.toCalcite(
+                    defaultFactory, TypeCreator.REQUIRED.decimal(38, 10), null));
+    assertTrue(e.getMessage().contains("is set to 19"), e.getMessage());
+
+    assertEquals(
+        38,
+        TypeConverter.DEFAULT
+            .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.decimal(38, 10), null)
+            .getPrecision());
+  }
+
   @Test
   void aWideVarcharDeclaredInSqlKeepsItsLength() throws Exception {
     CalciteCatalogReader catalog =

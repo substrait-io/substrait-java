@@ -226,6 +226,8 @@ public class TypeConverter {
    * @return Calcite relational type.
    * @throws UnsupportedOperationException if the expression contains unsupported precision or
    *     user-defined types cannot be mapped.
+   * @throws IllegalArgumentException if a declared length or precision is negative, or the given
+   *     factory cannot hold it.
    */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory, TypeExpression typeExpression) {
@@ -242,6 +244,8 @@ public class TypeConverter {
    * @return Calcite relational type.
    * @throws UnsupportedOperationException if the expression contains unsupported precision or
    *     user-defined types cannot be mapped.
+   * @throws IllegalArgumentException if a declared length or precision is negative, or the given
+   *     factory cannot hold it.
    */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory,
@@ -429,6 +433,8 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.Decimal expr) {
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(), SqlTypeName.DECIMAL, "decimal", expr.precision());
       return t(n(expr), SqlTypeName.DECIMAL, expr.precision(), expr.scale());
     }
 
