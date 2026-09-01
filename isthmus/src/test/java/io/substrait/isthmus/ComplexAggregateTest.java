@@ -8,6 +8,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.util.List;
@@ -18,8 +19,10 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.junit.jupiter.api.Test;
 
@@ -313,7 +316,7 @@ class ComplexAggregateTest extends PlanTestBase {
             sb.namedScan(List.of("foo"), List.of("a", "b", "c"), List.of(R.I64, R.I64, R.STRING)));
     // Field 0 of the aggregate is the field it groups on first, the string.
     Rel project =
-        io.substrait.relation.Project.builder()
+        Project.builder()
             .input(aggregate)
             .remap(Rel.Remap.offset(3, 1))
             .addExpressions(sb.fieldReference(aggregate, 0))
@@ -339,8 +342,7 @@ class ComplexAggregateTest extends PlanTestBase {
 
     RelNode relNode = substraitToCalcite.convert(aggregate);
     Rel converted =
-        SubstraitRelVisitor.convert(
-                RelRoot.of(relNode, org.apache.calcite.sql.SqlKind.SELECT), converterProvider)
+        SubstraitRelVisitor.convert(RelRoot.of(relNode, SqlKind.SELECT), converterProvider)
             .getInput();
 
     List<Type> declared = aggregate.getRecordType().fields();
@@ -355,8 +357,7 @@ class ComplexAggregateTest extends PlanTestBase {
     // still carries the call has to be built rather than parsed. Its grouping sets mention field 3
     // before field 2, which is the order the converted relation has to declare its columns in --
     // the shape a query whose grouping sets are followed by another key produces.
-    org.apache.calcite.tools.RelBuilder relBuilder =
-        new RelCreator(TPCH_CATALOG).createRelBuilder();
+    RelBuilder relBuilder = new RelCreator(TPCH_CATALOG).createRelBuilder();
     RelNode scan = relBuilder.scan("LINEITEM").build();
     AggregateCall groupId =
         AggregateCall.create(
@@ -380,18 +381,14 @@ class ComplexAggregateTest extends PlanTestBase {
             List.of(groupId));
 
     Rel rel =
-        SubstraitRelVisitor.convert(
-                RelRoot.of(calciteAggregate, org.apache.calcite.sql.SqlKind.SELECT),
-                converterProvider)
+        SubstraitRelVisitor.convert(RelRoot.of(calciteAggregate, SqlKind.SELECT), converterProvider)
             .getInput();
 
     // The mapping is what carries the difference, and it is asserted directly: the sets mention
     // fields 0, 1 and 3 before 2, so the relation declares them in that order, while the aggregate
     // underneath emits them by field index. Types alone would not show it -- three of these four
     // columns are BIGINT.
-    assertEquals(
-        Optional.of(Rel.Remap.of(List.of(0, 1, 3, 2, 4))),
-        ((io.substrait.relation.Aggregate) rel).getRemap());
+    assertEquals(Optional.of(Rel.Remap.of(List.of(0, 1, 3, 2, 4))), ((Aggregate) rel).getRemap());
 
     // What the relation says it emits is what the Calcite aggregate it came from emits. The
     // grouping-set index is left out of the comparison: Calcite types its GROUP_ID column BIGINT
@@ -433,8 +430,7 @@ class ComplexAggregateTest extends PlanTestBase {
   /** The same shape in the other direction, asserted on the mapping the conversion produces. */
   @Test
   void groupingSetsInANonSwapOrderGiveAMappingThatIsNotItsOwnInverse() {
-    org.apache.calcite.tools.RelBuilder relBuilder =
-        new RelCreator(TPCH_CATALOG).createRelBuilder();
+    RelBuilder relBuilder = new RelCreator(TPCH_CATALOG).createRelBuilder();
     RelNode scan = relBuilder.scan("LINEITEM").build();
     RelNode calciteAggregate =
         LogicalAggregate.create(
@@ -445,14 +441,10 @@ class ComplexAggregateTest extends PlanTestBase {
             List.of());
 
     Rel rel =
-        SubstraitRelVisitor.convert(
-                RelRoot.of(calciteAggregate, org.apache.calcite.sql.SqlKind.SELECT),
-                converterProvider)
+        SubstraitRelVisitor.convert(RelRoot.of(calciteAggregate, SqlKind.SELECT), converterProvider)
             .getInput();
 
-    assertEquals(
-        Optional.of(Rel.Remap.of(List.of(0, 2, 3, 1))),
-        ((io.substrait.relation.Aggregate) rel).getRemap());
+    assertEquals(Optional.of(Rel.Remap.of(List.of(0, 2, 3, 1))), ((Aggregate) rel).getRemap());
   }
 
   /**
