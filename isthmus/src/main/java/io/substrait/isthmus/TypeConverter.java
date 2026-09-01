@@ -444,7 +444,15 @@ public class TypeConverter {
       }
       SubstraitTypeSystem.requireSupportedPrecision(
           typeFactory.getTypeSystem(), SqlTypeName.DECIMAL, "decimal", expr.precision());
-      SubstraitTypeSystem.requireSupportedScale(typeFactory.getTypeSystem(), expr.scale());
+      // The spec puts a decimal's scale in [0..P]. No factory reports a scale above the precision:
+      // Calcite builds the type as asked, and its own maximum cannot catch it either, since both
+      // type systems here set maxScale equal to maxPrecision.
+      if (expr.scale() > expr.precision()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a scale of %d above its precision of %d",
+                expr.scale(), expr.precision()));
+      }
       return t(n(expr), SqlTypeName.DECIMAL, expr.precision(), expr.scale());
     }
 

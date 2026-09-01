@@ -180,20 +180,15 @@ class SubstraitTypeSystemTest {
   }
 
   /**
-   * The cap reaches the conversion from SQL as well. Calcite narrows a declared width to its
-   * maximum silently rather than reporting that it cannot hold it, so before this a cast wider than
-   * the default came out of the conversion as a {@code varchar<65536>}.
-   */
-  /**
-   * The same two ends as a length, for the same reasons: -1 is Calcite's unspecified precision, so
-   * the factory answers with an unparameterised DECIMAL whose precision reads back as the type
-   * system's maximum, and a scale past the maximum is narrowed rather than reported. Calcite
-   * reports a zero or negative scale and a zero precision itself.
+   * Two ends the factory does not report. A precision of -1 is Calcite's unspecified precision, so
+   * it answers with an unparameterised DECIMAL whose precision reads back as the type system's
+   * maximum. A scale above the precision is outside the spec's {@code 0 <= S <= P} and Calcite
+   * builds it anyway, where its own maximum would not catch it: both type systems here set {@code
+   * maxScale} equal to {@code maxPrecision}, so a scale within the precision is within that too.
+   * Calcite reports a zero or negative scale and a zero precision itself.
    */
   @Test
-  void aDecimalParameterOutsideWhatTheFactoryHoldsIsRefused() {
-    RelDataTypeFactory defaultFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
-
+  void aDecimalParameterOutsideItsDeclaredBoundsIsRefused() {
     assertAll(
         () -> {
           IllegalArgumentException e =
@@ -211,14 +206,14 @@ class SubstraitTypeSystemTest {
                   IllegalArgumentException.class,
                   () ->
                       TypeConverter.DEFAULT.toCalcite(
-                          defaultFactory, TypeCreator.REQUIRED.decimal(19, 25), null));
-          assertTrue(e.getMessage().contains("max scale"), e.getMessage());
+                          TYPE_FACTORY, TypeCreator.REQUIRED.decimal(19, 25), null));
+          assertTrue(e.getMessage().contains("scale of 25 above its precision"), e.getMessage());
         },
         () ->
             assertEquals(
-                25,
+                19,
                 TypeConverter.DEFAULT
-                    .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.decimal(19, 25), null)
+                    .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.decimal(19, 19), null)
                     .getScale()));
   }
 
@@ -265,6 +260,11 @@ class SubstraitTypeSystemTest {
             .getPrecision());
   }
 
+  /**
+   * The cap reaches the conversion from SQL as well. Calcite narrows a declared width to its
+   * maximum silently rather than reporting that it cannot hold it, so before this a cast wider than
+   * the default came out of the conversion as a {@code varchar<65536>}.
+   */
   @Test
   void aWideVarcharDeclaredInSqlKeepsItsLength() throws Exception {
     CalciteCatalogReader catalog =

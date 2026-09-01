@@ -79,25 +79,6 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   }
 
   /**
-   * Checks that a Substrait decimal scale is one the Calcite type system in effect allows, and
-   * reports the bound it exceeds if it is not.
-   *
-   * @param typeSystem the type system the converted type will live under, which need not be this
-   *     one
-   * @param scale the scale carried by the Substrait type
-   * @throws IllegalArgumentException if the scale exceeds what the type system allows
-   */
-  public static void requireSupportedScale(final RelDataTypeSystem typeSystem, final int scale) {
-    int maxScale = typeSystem.getMaxScale(SqlTypeName.DECIMAL);
-    if (scale > maxScale) {
-      throw new IllegalArgumentException(
-          String.format(
-              "unsupported decimal scale %s, max scale in Calcite type system is set to %s",
-              scale, maxScale));
-    }
-  }
-
-  /**
    * Returns the maximum precision for the given SQL type.
    *
    * <p>For the three types that carry a length across the Substrait boundary — {@link
