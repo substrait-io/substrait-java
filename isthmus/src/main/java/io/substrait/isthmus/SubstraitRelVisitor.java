@@ -505,9 +505,8 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    *
    * <p>substrait-java takes the grouping columns to be the distinct grouping expressions in the
    * order they first appear across the grouping sets, reconstructing the shared list the spec
-   * orders them by (spec v0.101.0); Calcite takes them from a bit set and so emits them ordered by
-   * field index. Reading the result as an emit mapping presents the aggregate's output in Calcite's
-   * order.
+   * orders them by; Calcite takes them from a bit set and so emits them ordered by field index.
+   * Reading the result as an emit mapping presents the aggregate's output in Calcite's order.
    *
    * @param groupings the grouping sets of the converted aggregate
    * @return the declared position of each grouping column, in the order Calcite emits them

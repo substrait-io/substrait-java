@@ -418,10 +418,10 @@ public class SubstraitRelNodeConverter
    * expressions in the order they first appear across its grouping sets. The spec orders them by
    * the relation's shared grouping-expression list, which each set's expression references index
    * into; the POJO models a per-set expression list and cannot hold that list's order, so
-   * first-appearance is the reconstruction this library reads and writes (spec v0.101.0). Calcite
-   * takes them from a bit set, so it emits them ordered by field index. A relation whose grouping
-   * sets first mention field 1 and then field 0 declares them in that order, and its emit mapping
-   * indexes that order, while the aggregate underneath emits field 0 first.
+   * first-appearance is the reconstruction this library reads and writes. Calcite takes them from a
+   * bit set, so it emits them ordered by field index. A relation whose grouping sets first mention
+   * field 1 and then field 0 declares them in that order, and its emit mapping indexes that order,
+   * while the aggregate underneath emits field 0 first.
    *
    * <p>An aggregate that emits directly and declares an order Calcite does not produce gets a
    * mapping it did not carry, which is what puts the columns back in the declared order.
