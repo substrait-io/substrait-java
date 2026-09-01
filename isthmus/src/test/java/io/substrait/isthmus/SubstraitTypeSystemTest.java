@@ -185,6 +185,25 @@ class SubstraitTypeSystemTest {
    * the default came out of the conversion as a {@code varchar<65536>}.
    */
   /**
+   * The raised maximum is also Calcite's overflow threshold for concatenation, in {@code
+   * ReturnTypes.DYADIC_STRING_SUM_PRECISION}: a sum of widths past it falls back to an
+   * unparameterised type. So two columns nowhere near the old cap decide the result type between
+   * them, and the conversion emitted a {@code string} for them before.
+   */
+  @Test
+  void concatenatingTwoVarcharsKeepsTheSumOfTheirWidths() throws Exception {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE t (a VARCHAR(40000), b VARCHAR(40000))");
+
+    Plan plan = new SqlToSubstrait().convert("SELECT a || b FROM t", catalog);
+
+    assertEquals(
+        List.of(TypeCreator.NULLABLE.varChar(80000)),
+        plan.getRoots().get(0).getInput().getRecordType().fields());
+  }
+
+  /**
    * A decimal loses its precision to a foreign factory the same silent way a length does: Calcite's
    * default type system caps it at 19, and the narrowed type reads back as one the plan never
    * declared.

@@ -245,9 +245,11 @@ class CalciteTypeTest extends CalciteObjs {
       case VARCHAR:
         substrait = TypeCreator.REQUIRED.varChar(length);
         break;
-      default:
+      case BINARY:
         substrait = TypeCreator.REQUIRED.fixedBinary(length);
         break;
+      default:
+        throw new IllegalArgumentException("no Substrait type mapped for " + typeName);
     }
 
     RelDataType calcite = TypeConverter.DEFAULT.toCalcite(type, substrait, null);
