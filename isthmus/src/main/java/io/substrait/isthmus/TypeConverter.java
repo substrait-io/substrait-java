@@ -150,7 +150,15 @@ public class TypeConverter {
           return creator.decimal(type.getPrecision(), type.getScale());
         }
       case CHAR:
-        return creator.fixedChar(type.getPrecision());
+        {
+          // A char or Character JavaType carries no precision of its own, which Calcite reads as
+          // its default of 1. Without this a reflective schema derives fixedchar<-1>, a width
+          // outside the [1..2147483647] the spec allows.
+          if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+            return creator.fixedChar(1);
+          }
+          return creator.fixedChar(type.getPrecision());
+        }
       case VARCHAR:
         {
           if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {

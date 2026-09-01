@@ -202,6 +202,24 @@ class CalciteTypeTest extends CalciteObjs {
     testType(Type.withNullability(nullable).varChar(74), SqlTypeName.VARCHAR, nullable, 74);
   }
 
+  /**
+   * A char or Character column of a reflective schema carries no width of its own, which Calcite
+   * reads as its default of 1. A fixedchar of the unspecified width would be a {@code
+   * fixedchar<-1>}, outside the [1..2147483647] the spec allows.
+   */
+  @Test
+  void aJavaCharColumnTakesCalcitesDefaultWidth() {
+    org.apache.calcite.adapter.java.JavaTypeFactory javaTypeFactory =
+        (org.apache.calcite.adapter.java.JavaTypeFactory) type;
+
+    assertEquals(
+        TypeCreator.REQUIRED.fixedChar(1),
+        TypeConverter.DEFAULT.toSubstrait(javaTypeFactory.createJavaType(char.class)));
+    assertEquals(
+        TypeCreator.NULLABLE.fixedChar(1),
+        TypeConverter.DEFAULT.toSubstrait(javaTypeFactory.createJavaType(Character.class)));
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void decimal(boolean nullable) {
