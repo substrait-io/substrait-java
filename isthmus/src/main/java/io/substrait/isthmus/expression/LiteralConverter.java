@@ -135,9 +135,9 @@ public class LiteralConverter {
       // In characters rather than UTF-16 code units: the spec gives a fixedchar its length in
       // characters, where it spells a string's out in UTF-8 bytes.
       int length = ((Type.FixedChar) type).length();
-      // Only the negative end. The spec puts a fixedchar's width in [1..2147483647] (spec
-      // v0.101.0), but Calcite types the empty character literal as a CHAR(0) and its DDL parser
-      // takes a CHAR(0) column, so refusing a zero width here would stop ordinary SQL converting.
+      // Only the negative end. The spec puts a fixedchar's width in [1..2147483647], but Calcite
+      // types the empty character literal as a CHAR(0) and its DDL parser takes a CHAR(0) column,
+      // so refusing a zero width here would stop ordinary SQL converting.
       if (length < 0) {
         throw new IllegalArgumentException(
             String.format(
