@@ -10,6 +10,7 @@ out/**
 .pmdCache
 gradle.lockfile
 settings-gradle.lockfile
+osv-scanner
 
 # VS Code ignores
 .vscode
