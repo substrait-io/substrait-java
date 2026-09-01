@@ -395,13 +395,27 @@ public class TypeConverter {
      * conversion takes whatever factory it is handed, so a factory whose limits are not Substrait's
      * would otherwise return a type narrower than the plan declares.
      *
+     * <p>A negative length is refused before the factory is asked, because asking tells us nothing:
+     * with assertions off the factory stores the negative and reports it back, so the width below
+     * certifies itself, and with them on Calcite raises a bare {@code AssertionError} in place of
+     * this message. A length of -1 is Calcite's unspecified precision besides, so the factory
+     * answers with an unparameterised type whose precision equals what was asked for. A zero length
+     * is left to the factory: the spec puts a fixedchar's width at 1 or more, but Calcite types the
+     * empty character literal as a {@code CHAR(0)}, so plans carrying one exist.
+     *
      * @param nullable whether the type is nullable
      * @param typeName the Calcite type name to build
      * @param length the declared length
      * @return the built type
-     * @throws IllegalArgumentException if the factory built a type of another length
+     * @throws IllegalArgumentException if the length is negative, or the factory built a type of
+     *     another length
      */
     private RelDataType withLength(boolean nullable, SqlTypeName typeName, int length) {
+      if (length < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A %s cannot declare a negative length, and this one is %d", typeName, length));
+      }
       RelDataType type = t(nullable, typeName, length);
       if (type.getPrecision() != length) {
         throw new IllegalArgumentException(

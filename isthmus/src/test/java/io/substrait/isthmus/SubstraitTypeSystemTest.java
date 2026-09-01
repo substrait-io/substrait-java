@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static io.substrait.isthmus.SubstraitTypeSystem.TYPE_FACTORY;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,6 +102,46 @@ class SubstraitTypeSystemTest {
         TypeConverter.DEFAULT
             .toCalcite(TYPE_FACTORY, TypeCreator.REQUIRED.varChar(100_000), null)
             .getPrecision());
+  }
+
+  /**
+   * Asking the factory first cannot tell a negative width from a width it holds: with assertions
+   * off it stores the negative and reports it back, and -1 is its unspecified precision besides, so
+   * the answer equals what was asked for either way.
+   */
+  @Test
+  void aNegativeLengthIsRefusedBeforeTheFactoryIsAsked() {
+    assertAll(
+        () -> {
+          IllegalArgumentException e =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () ->
+                      TypeConverter.DEFAULT.toCalcite(
+                          TYPE_FACTORY, TypeCreator.REQUIRED.varChar(-5), null));
+          assertTrue(
+              e.getMessage().contains("negative length, and this one is -5"), e.getMessage());
+        },
+        () -> {
+          IllegalArgumentException e =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () ->
+                      TypeConverter.DEFAULT.toCalcite(
+                          TYPE_FACTORY, TypeCreator.REQUIRED.fixedChar(-1), null));
+          assertTrue(
+              e.getMessage().contains("negative length, and this one is -1"), e.getMessage());
+        },
+        () -> {
+          IllegalArgumentException e =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () ->
+                      TypeConverter.DEFAULT.toCalcite(
+                          TYPE_FACTORY, TypeCreator.REQUIRED.fixedBinary(-5), null));
+          assertTrue(
+              e.getMessage().contains("negative length, and this one is -5"), e.getMessage());
+        });
   }
 
   /**
