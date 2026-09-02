@@ -15,6 +15,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class CalciteTypeTest extends CalciteObjs {
@@ -200,6 +201,62 @@ class CalciteTypeTest extends CalciteObjs {
   @ValueSource(booleans = {true, false})
   void varchar(boolean nullable) {
     testType(Type.withNullability(nullable).varChar(74), SqlTypeName.VARCHAR, nullable, 74);
+  }
+
+  /**
+   * A char or Character column of a reflective schema carries no width of its own, which Calcite
+   * reads as its default of 1. A fixedchar of the unspecified width would be a {@code
+   * fixedchar<-1>}, outside the [1..2147483647] the spec allows.
+   */
+  @Test
+  void aJavaCharColumnTakesCalcitesDefaultWidth() {
+    org.apache.calcite.adapter.java.JavaTypeFactory javaTypeFactory =
+        (org.apache.calcite.adapter.java.JavaTypeFactory) type;
+
+    assertEquals(
+        TypeCreator.REQUIRED.fixedChar(1),
+        TypeConverter.DEFAULT.toSubstrait(javaTypeFactory.createJavaType(char.class)));
+    assertEquals(
+        TypeCreator.NULLABLE.fixedChar(1),
+        TypeConverter.DEFAULT.toSubstrait(javaTypeFactory.createJavaType(Character.class)));
+  }
+
+  /**
+   * A width above Calcite's default 65536 cap, for each type whose length crosses the Substrait
+   * boundary. The expected precision is asserted directly rather than through {@link #testType},
+   * whose expectation is built with the same type factory and would be narrowed alongside the value
+   * under test.
+   */
+  @ParameterizedTest
+  @CsvSource({
+    "CHAR, 65537",
+    "CHAR, 2147483647",
+    "VARCHAR, 65537",
+    "VARCHAR, 2147483647",
+    "BINARY, 65537",
+    "BINARY, 2147483647"
+  })
+  void wideLengthCarryingTypesKeepTheirLength(SqlTypeName typeName, int length) {
+    TypeExpression substrait;
+    switch (typeName) {
+      case CHAR:
+        substrait = TypeCreator.REQUIRED.fixedChar(length);
+        break;
+      case VARCHAR:
+        substrait = TypeCreator.REQUIRED.varChar(length);
+        break;
+      case BINARY:
+        substrait = TypeCreator.REQUIRED.fixedBinary(length);
+        break;
+      default:
+        throw new IllegalArgumentException("no Substrait type mapped for " + typeName);
+    }
+
+    RelDataType calcite = TypeConverter.DEFAULT.toCalcite(type, substrait, null);
+
+    assertEquals(typeName, calcite.getSqlTypeName());
+    assertEquals(length, calcite.getPrecision());
+    assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
   }
 
   @ParameterizedTest

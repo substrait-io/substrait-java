@@ -31,6 +31,9 @@ import org.jspecify.annotations.Nullable;
  */
 public class TypeConverter {
 
+  /** The widest precision the spec gives a decimal: {@code DECIMAL<P, S>} puts P at 38 or less. */
+  private static final int MAX_DECIMAL_PRECISION = 38;
+
   private final UserTypeMapper userTypeMapper;
 
   /**
@@ -143,14 +146,22 @@ public class TypeConverter {
         return creator.FP64;
       case DECIMAL:
         {
-          if (type.getPrecision() > 38) {
+          if (type.getPrecision() > MAX_DECIMAL_PRECISION) {
             throw new UnsupportedOperationException(
                 "unsupported decimal precision " + type.getPrecision());
           }
           return creator.decimal(type.getPrecision(), type.getScale());
         }
       case CHAR:
-        return creator.fixedChar(type.getPrecision());
+        {
+          // A char or Character JavaType carries no precision of its own, which Calcite reads as
+          // its default of 1. Without this a reflective schema derives fixedchar<-1>, a width
+          // outside the [1..2147483647] the spec allows.
+          if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+            return creator.fixedChar(1);
+          }
+          return creator.fixedChar(type.getPrecision());
+        }
       case VARCHAR:
         {
           if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
@@ -218,6 +229,8 @@ public class TypeConverter {
    * @return Calcite relational type.
    * @throws UnsupportedOperationException if the expression contains unsupported precision or
    *     user-defined types cannot be mapped.
+   * @throws IllegalArgumentException if a declared length or precision is negative, or the given
+   *     factory cannot hold it.
    */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory, TypeExpression typeExpression) {
@@ -234,6 +247,8 @@ public class TypeConverter {
    * @return Calcite relational type.
    * @throws UnsupportedOperationException if the expression contains unsupported precision or
    *     user-defined types cannot be mapped.
+   * @throws IllegalArgumentException if a declared length or precision is negative, or the given
+   *     factory cannot hold it.
    */
   public RelDataType toCalcite(
       RelDataTypeFactory relDataTypeFactory,
@@ -368,21 +383,88 @@ public class TypeConverter {
 
     @Override
     public RelDataType visit(Type.FixedChar expr) {
-      return t(n(expr), SqlTypeName.CHAR, expr.length());
+      return withLength(n(expr), SqlTypeName.CHAR, expr.length());
     }
 
     @Override
     public RelDataType visit(Type.VarChar expr) {
-      return t(n(expr), SqlTypeName.VARCHAR, expr.length());
+      return withLength(n(expr), SqlTypeName.VARCHAR, expr.length());
     }
 
     @Override
     public RelDataType visit(Type.FixedBinary expr) {
-      return t(n(expr), SqlTypeName.BINARY, expr.length());
+      return withLength(n(expr), SqlTypeName.BINARY, expr.length());
+    }
+
+    /**
+     * Returns the type the given factory builds for a declared length, having checked that it holds
+     * it. A factory caps a width at its type system's maximum without saying so, and this
+     * conversion takes whatever factory it is handed, so a factory whose limits are not Substrait's
+     * would otherwise return a type narrower than the plan declares.
+     *
+     * <p>A negative length is refused before the factory is asked, because asking tells us nothing:
+     * with assertions off the factory stores the negative and reports it back, so the width below
+     * certifies itself, and with them on Calcite raises a bare {@code AssertionError} in place of
+     * this message. A length of -1 is Calcite's unspecified precision besides, so the factory
+     * answers with an unparameterised type whose precision equals what was asked for. A zero length
+     * is left to the factory: the spec puts a fixedchar's width at 1 or more, but Calcite types the
+     * empty character literal as a {@code CHAR(0)}, so plans carrying one exist.
+     *
+     * @param nullable whether the type is nullable
+     * @param typeName the Calcite type name to build
+     * @param length the declared length
+     * @return the built type
+     * @throws IllegalArgumentException if the length is negative, or the factory built a type of
+     *     another length
+     */
+    private RelDataType withLength(boolean nullable, SqlTypeName typeName, int length) {
+      if (length < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A %s cannot declare a negative length, and this one is %d", typeName, length));
+      }
+      RelDataType type = t(nullable, typeName, length);
+      if (type.getPrecision() != length) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The type factory cannot hold %s(%d), which it narrowed to %s; its type system"
+                    + " allows up to %d",
+                typeName, length, type, typeFactory.getTypeSystem().getMaxPrecision(typeName)));
+      }
+      return type;
     }
 
     @Override
     public RelDataType visit(Type.Decimal expr) {
+      // Before the factory, for the reason the lengths are: -1 is Calcite's unspecified precision,
+      // so a negative one is answered with an unparameterised DECIMAL whose precision reads back as
+      // the type system's maximum. A zero or negative scale Calcite reports itself.
+      if (expr.precision() < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a negative precision, and this one is %d",
+                expr.precision()));
+      }
+      // The spec's own ceiling, not just the factory's: handed a type system whose DECIMAL maximum
+      // is above it, the factory builds the type and the outbound conversion above then refuses it,
+      // so the type would convert in and have no way back.
+      if (expr.precision() > MAX_DECIMAL_PRECISION) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a precision of %d, above the %d the spec allows",
+                expr.precision(), MAX_DECIMAL_PRECISION));
+      }
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(), SqlTypeName.DECIMAL, "decimal", expr.precision());
+      // The spec puts a decimal's scale in [0..P]. No factory reports a scale above the precision:
+      // Calcite builds the type as asked, and its own maximum cannot catch it either, since both
+      // type systems here set maxScale equal to maxPrecision.
+      if (expr.scale() > expr.precision()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "A decimal cannot declare a scale of %d above its precision of %d",
+                expr.scale(), expr.precision()));
+      }
       return t(n(expr), SqlTypeName.DECIMAL, expr.precision(), expr.scale());
     }
 

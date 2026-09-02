@@ -50,7 +50,9 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
    */
   public SqlExpressionToSubstrait(ConverterProvider converterProvider) {
     super(converterProvider);
-    this.rexConverter = new RexExpressionConverter(converterProvider.getScalarFunctionConverter());
+    // The provider is the single source of the converter, so an expression converts the same way
+    // here as it does inside a plan. There is no relation to visit: an expression stands alone.
+    this.rexConverter = converterProvider.getRexExpressionConverter(null);
   }
 
   /** Bundled result carrying validator, catalog reader, and name/type and name/node maps. */

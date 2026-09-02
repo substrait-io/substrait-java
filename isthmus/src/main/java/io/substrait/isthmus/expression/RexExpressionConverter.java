@@ -148,9 +148,24 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     return String.format(
         "Unable to convert call %s(%s).",
         call.getOperator().getName(),
-        call.getOperands().stream()
-            .map(t -> t.accept(this).getType().accept(new StringTypeVisitor()))
-            .collect(Collectors.joining(", ")));
+        call.getOperands().stream().map(this::operandTypeName).collect(Collectors.joining(", ")));
+  }
+
+  /**
+   * Names an operand's type for a failure message, reading it off the node rather than converting
+   * the operand again. The call being reported is one this converter could not convert, and an
+   * operand it cannot convert either -- a subquery where there is no relation visitor, say -- would
+   * report its own failure in place of the one being described.
+   *
+   * @param operand the operand to name the type of
+   * @return the Substrait name of its type, or the Calcite one where the type does not convert
+   */
+  private String operandTypeName(RexNode operand) {
+    try {
+      return typeConverter.toSubstrait(operand.getType()).accept(new StringTypeVisitor());
+    } catch (RuntimeException e) {
+      return operand.getType().getFullTypeString();
+    }
   }
 
   /**
@@ -170,9 +185,21 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
    * @param over the windowed call
    * @return the converted Substrait expression
    * @throws IllegalArgumentException if {@code IGNORE NULLS} is used or conversion fails
+   * @throws UnsupportedOperationException if this converter was built without a window function
+   *     converter
    */
   @Override
   public Expression visitOver(RexOver over) {
+    if (windowFunctionConverter == null) {
+      // As for a subquery and an outer reference: three of this class's four constructors leave
+      // the collaborator null, and a converter built by one of them cannot convert a windowed call.
+      throw new UnsupportedOperationException(
+          String.format(
+              "This converter has no window function converter, so it cannot convert the windowed"
+                  + " call %s",
+              over));
+    }
+
     if (over.ignoreNulls()) {
       throw new IllegalArgumentException("IGNORE NULLS cannot be expressed in Substrait");
     }
@@ -226,7 +253,8 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
    *
    * @param fieldAccess the field access
    * @return the converted Substrait expression
-   * @throws UnsupportedOperationException for unsupported reference kinds
+   * @throws UnsupportedOperationException for an unsupported reference kind, or when this converter
+   *     was built without a relation visitor and the reference is an outer one
    */
   @Override
   public Expression visitFieldAccess(RexFieldAccess fieldAccess) {
@@ -234,6 +262,15 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
     switch (kind) {
       case CORREL_VARIABLE:
         {
+          if (relVisitor == null) {
+            // As for a subquery: a converter built without one converts expressions that stand
+            // alone, and an outer reference is bound by a relation there is none of here.
+            throw new UnsupportedOperationException(
+                String.format(
+                    "This converter has no relation visitor, so it cannot convert the outer"
+                        + " reference %s",
+                    fieldAccess));
+          }
           CorrelationId correlationId = ((RexCorrelVariable) fieldAccess.getReferenceExpr()).id;
           Integer anchor = relVisitor.getOuterReferenceAnchor(correlationId);
           if (anchor == null) {
@@ -274,10 +311,19 @@ public class RexExpressionConverter implements RexVisitor<Expression> {
    *
    * @param subQuery the subquery node
    * @return the converted Substrait expression
-   * @throws UnsupportedOperationException for unsupported subquery operators
+   * @throws UnsupportedOperationException for an unsupported subquery operator, or when this
+   *     converter was built without a relation visitor
    */
   @Override
   public Expression visitSubQuery(RexSubQuery subQuery) {
+    if (relVisitor == null) {
+      // A converter built without one converts expressions that stand alone, an extended
+      // expression among them. Say so rather than dereferencing it.
+      throw new UnsupportedOperationException(
+          String.format(
+              "This converter has no relation visitor, so it cannot convert the subquery %s",
+              subQuery));
+    }
     Rel rel = relVisitor.apply(subQuery.rel);
 
     if (subQuery.getOperator() == SqlStdOperatorTable.EXISTS) {

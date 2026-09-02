@@ -40,6 +40,7 @@ import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -392,9 +393,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     }
 
     // Number of distinct grouping-expression output fields produced by the aggregate.
-    // Used by the no-GROUP_ID remap and the LITERAL_AGG project wrapper below.
-    // The GROUP_ID remap branch intentionally uses a non-distinct count instead (see comment
-    // there).
+    // Used by both remap branches and by the LITERAL_AGG project wrapper below.
     final int groupingFieldCount =
         Math.toIntExact(
             groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
@@ -414,32 +413,35 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(aggCalls);
 
     if (groupings.size() > 1) {
+      // substrait-java declares the grouping columns of an aggregate as the distinct grouping
+      // expressions in the order they first appear across its grouping sets -- the reconstruction
+      // it puts in place of the shared grouping-expression list the spec orders them by, which the
+      // POJO cannot hold -- while Calcite emits them ordered by field index. Where the two differ,
+      // the emit mapping carries the reordering, so that a parent converted from the same Calcite
+      // plan finds its columns where it left them.
+      List<Integer> groupingRemap = calciteGroupingOrder(groupings);
+
       // remove the grouping set index if there was no explicit GROUP_ID() function call
       if (groupIdCalls.isEmpty()) {
-        builder.remap(Remap.offset(0, groupingFieldCount + aggCalls.size()));
+        List<Integer> remap = new ArrayList<>(groupingRemap);
+        for (int call = 0; call < aggCalls.size(); call++) {
+          remap.add(groupingFieldCount + call);
+        }
+        builder.remap(Remap.of(remap));
       } else {
-        // remap grouping set index at the field positions where the GROUP_ID() function calls were.
-        // Use the non-distinct total here: when grouping sets share expressions the aggregate
-        // output
-        // contains one slot per (groupingSet × expression) entry, not one per distinct expression.
-        final int groupingFieldCountWithDuplicates =
-            Math.toIntExact(groupings.stream().flatMap(g -> g.getExpressions().stream()).count());
+        // remap grouping set index at the field positions where the GROUP_ID() function calls were
         final int filterAggCallCount = aggCalls.size();
-        final Integer groupingSetIndex = groupingFieldCountWithDuplicates + filterAggCallCount;
+        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
 
-        final List<Integer> remap =
-            IntStream.range(0, groupingFieldCountWithDuplicates)
-                .mapToObj(i -> i)
-                .collect(Collectors.toCollection(ArrayList::new));
+        final List<Integer> remap = new ArrayList<>(groupingRemap);
 
         for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
           AggregateCall aggCall = aggregate.getAggCallList().get(i);
           if (filteredAggCalls.contains(aggCall)) {
             remap.add(
-                i + groupingFieldCountWithDuplicates,
-                filteredAggCalls.indexOf(aggCall) + groupingFieldCountWithDuplicates);
+                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
           } else if (groupIdCalls.contains(aggCall)) {
-            remap.add(i + groupingFieldCountWithDuplicates, groupingSetIndex);
+            remap.add(i + groupingFieldCount, groupingSetIndex);
           } else {
             // this should never get triggered
             throw new IllegalStateException(
@@ -495,6 +497,42 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .expressions(projectExprs)
         .input(aggRel)
         .build();
+  }
+
+  /**
+   * Returns, for each grouping column of the converted Calcite aggregate, the position that column
+   * holds in the output the Substrait aggregate declares.
+   *
+   * <p>substrait-java takes the grouping columns to be the distinct grouping expressions in the
+   * order they first appear across the grouping sets, reconstructing the shared list the spec
+   * orders them by; Calcite takes them from a bit set and so emits them ordered by field index.
+   * Reading the result as an emit mapping presents the aggregate's output in Calcite's order.
+   *
+   * @param groupings the grouping sets of the converted aggregate
+   * @return the declared position of each grouping column, in the order Calcite emits them
+   */
+  private static List<Integer> calciteGroupingOrder(List<Grouping> groupings) {
+    List<Expression> declared =
+        groupings.stream()
+            .flatMap(grouping -> grouping.getExpressions().stream())
+            .distinct()
+            .collect(Collectors.toList());
+    return declared.stream()
+        .sorted(Comparator.comparingInt(SubstraitRelVisitor::groupingFieldOffset))
+        .map(declared::indexOf)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns the field the given grouping expression references.
+   *
+   * @param expression a grouping expression, as built by {@link #fromGroupSet(ImmutableBitSet,
+   *     Rel)}
+   * @return the offset of the field it references
+   */
+  private static int groupingFieldOffset(Expression expression) {
+    FieldReference reference = (FieldReference) expression;
+    return ((FieldReference.StructField) reference.segments().get(0)).offset();
   }
 
   Aggregate.Grouping fromGroupSet(ImmutableBitSet bitSet, Rel input) {

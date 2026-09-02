@@ -645,6 +645,31 @@ class CalciteLiteralTest extends CalciteObjs {
             false));
   }
 
+  /** A varchar literal carries the width its column declares, not the length of its text. */
+  @Test
+  void tVarCharCarriesTheDeclaredWidth() {
+    RexLiteral literal = (RexLiteral) rex.makeLiteral("a");
+
+    assertEquals(
+        ExpressionCreator.varChar(false, "a", 10),
+        new LiteralConverter(TypeConverter.DEFAULT).convert(literal, t(SqlTypeName.VARCHAR, 10)));
+  }
+
+  /**
+   * A VARCHAR with no declared width is a Substrait {@code string}, which carries none. A
+   * reflective schema's String column is where one comes from.
+   */
+  @Test
+  void tVarCharWithoutADeclaredWidthIsAString() {
+    RexLiteral literal = (RexLiteral) rex.makeLiteral("a");
+    RelDataType unspecified =
+        ((org.apache.calcite.adapter.java.JavaTypeFactory) type).createJavaType(String.class);
+
+    assertEquals(
+        ExpressionCreator.string(true, "a"),
+        new LiteralConverter(TypeConverter.DEFAULT).convert(literal, unspecified));
+  }
+
   @Test
   void tStructUsesResultFieldTypes() {
     RelDataType literalType = type.createStructType(List.of(t(SqlTypeName.TINYINT)), List.of("c1"));

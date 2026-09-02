@@ -50,10 +50,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -81,7 +82,6 @@ import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -362,13 +362,17 @@ public class SubstraitRelNodeConverter
             .map(measure -> fromMeasure(measure, context, child, hasEmptyGroup))
             .collect(java.util.stream.Collectors.toList());
 
-    Optional<Remap> remap = aggregate.getRemap();
-    final int lastFieldIndex = groupExprs.size() + aggregateCalls.size();
+    final Optional<Remap> remap = aggregate.getRemap();
+    // A field grouped on by several sets is one column of the relation, so the grouping-set index
+    // sits after the distinct grouping expressions, not after every mention of them.
+    final int groupColumnCount = new LinkedHashSet<>(groupExprs).size();
+    final int groupingSetIndex = groupColumnCount + aggregateCalls.size();
 
-    // map grouping set index if it is not removed via remap
+    // The index is a column of the converted aggregate only where the relation emits it: an
+    // aggregate that maps its output away does not need the call at all.
     final boolean emitDirect = remap.isEmpty();
     final boolean groupingSetIndexGetsRemapped =
-        remap.map(r -> r.indices().contains(lastFieldIndex)).orElse(false);
+        remap.map(r -> r.indices().contains(groupingSetIndex)).orElse(false);
     if (aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped)) {
       aggregateCalls.add(
           AggregateCall.create(
@@ -383,17 +387,6 @@ public class SubstraitRelNodeConverter
               RelCollations.EMPTY,
               typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
               null));
-      final int groupingCallIndex = aggregateCalls.size() - 1;
-      if (groupingSetIndexGetsRemapped) {
-        List<Integer> remapList = new LinkedList<>(remap.get().indices());
-        for (int i = 0; i < remapList.size(); i++) {
-          if (remapList.get(i).equals(lastFieldIndex)) {
-            // replace last field index with field index of the GROUP_ID() function call
-            remapList.set(i, groupingCallIndex);
-          }
-        }
-        remap = Optional.of(Remap.of(remapList));
-      }
     }
 
     exitUncorrelatedScope(context, Aggregate.class);
@@ -411,7 +404,68 @@ public class SubstraitRelNodeConverter
     RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
     // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
     // relation carries.
-    return applyOutputNames(applyRemap(node, remap), aggregate, child);
+    return applyOutputNames(
+        applyRemap(node, inConvertedGroupingOrder(remap, groupExprs, aggregateCalls.size())),
+        aggregate,
+        child);
+  }
+
+  /**
+   * Returns the emit mapping of a converted aggregate with its indices translated from the order
+   * the relation declares its output in to the order the converted aggregate emits it.
+   *
+   * <p>substrait-java takes the grouping columns of an aggregate to be the distinct grouping
+   * expressions in the order they first appear across its grouping sets. The spec orders them by
+   * the relation's shared grouping-expression list, which each set's expression references index
+   * into; the POJO models a per-set expression list and cannot hold that list's order, so
+   * first-appearance is the reconstruction this library reads and writes. Calcite takes them from a
+   * bit set, so it emits them ordered by field index. A relation whose grouping sets first mention
+   * field 1 and then field 0 declares them in that order, and its emit mapping indexes that order,
+   * while the aggregate underneath emits field 0 first.
+   *
+   * <p>An aggregate that emits directly and declares an order Calcite does not produce gets a
+   * mapping it did not carry, which is what puts the columns back in the declared order.
+   *
+   * @param remap the emit mapping the relation carries, indexing its declared output
+   * @param groupExprs the converted grouping expressions, in declared order, with duplicates
+   * @param callCount the number of aggregate calls, including any grouping-set index
+   * @return the mapping to apply to the converted aggregate
+   */
+  private static Optional<Remap> inConvertedGroupingOrder(
+      Optional<Remap> remap, List<RexNode> groupExprs, int callCount) {
+    List<RexNode> declared = new ArrayList<>(new LinkedHashSet<>(groupExprs));
+    // Calcite emits the grouping columns in the order they sit in the aggregate's input: a field
+    // reference where its field sits, and anything else -- an outer reference, which the transform
+    // above leaves alone -- in the projection Calcite adds after them, in the order it was
+    // declared. Sorting is stable, so giving the second kind one key keeps that order among them.
+    List<RexNode> converted =
+        declared.stream()
+            .sorted(
+                Comparator.comparingInt(
+                    expr ->
+                        expr instanceof RexInputRef
+                            ? ((RexInputRef) expr).getIndex()
+                            : Integer.MAX_VALUE))
+            .collect(Collectors.toList());
+    if (converted.equals(declared)) {
+      return remap;
+    }
+    List<Integer> declaredToConverted = new ArrayList<>();
+    for (RexNode expression : declared) {
+      declaredToConverted.add(converted.indexOf(expression));
+    }
+    for (int call = 0; call < callCount; call++) {
+      declaredToConverted.add(declared.size() + call);
+    }
+    return Optional.of(
+        Remap.of(
+            remap
+                .map(
+                    mapping ->
+                        mapping.indices().stream()
+                            .map(declaredToConverted::get)
+                            .collect(Collectors.toList()))
+                .orElse(declaredToConverted)));
   }
 
   /**
@@ -793,6 +847,12 @@ public class SubstraitRelNodeConverter
       throw new IllegalArgumentException("NamedDdl view definition must be set");
     }
 
+    if (namedDdl.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedDdl is not supported: isthmus has no place for a projection "
+              + "between a CreateView's definition and the view it creates");
+    }
+
     if (!namedDdl.getTableDefaults().fields().isEmpty()) {
       throw new UnsupportedOperationException(
           "Default values on a NamedDdl are not supported: a Calcite CreateView has nowhere to put "
@@ -806,6 +866,11 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
+    if (virtualTableScan.getProjection().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Projection on a VirtualTableScan is not supported: its columns would have to be "
+              + "masked before an emit mapping selects from them");
+    }
     // A schema's names are one per field at every level of the struct, in depth-first order, so
     // they have to be handed to the conversion rather than paired with the row type afterwards:
     // with a nested struct anywhere in the schema the two lists do not even have the same length.
@@ -855,7 +920,9 @@ public class SubstraitRelNodeConverter
         }
         tuplesBuilder.add(tupleBuilder.build());
       }
-      return LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build());
+      return applyRelCommon(
+          LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+          virtualTableScan);
     } else {
       // A row that does not fit a LogicalValues tuple is computed instead: we create a
       // LogicalProject for each row to compute its values, and combine them together using a
@@ -892,8 +959,10 @@ public class SubstraitRelNodeConverter
       for (int i = 0; i < rowType.getFieldCount(); i++) {
         topProjectExprs.add(rexBuilder.makeInputRef(union, i));
       }
-      return LogicalProject.create(
-          union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
+      RelNode topProject =
+          LogicalProject.create(
+              union, Collections.emptyList(), topProjectExprs, rowType, Collections.emptySet());
+      return applyRelCommon(topProject, virtualTableScan, topProject);
     }
   }
 
@@ -1052,6 +1121,12 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(NamedWrite write, Context context) {
+    if (write.getRemap().isPresent()) {
+      throw new UnsupportedOperationException(
+          "Emit mapping on a NamedWrite is not supported: isthmus converts a write to a "
+              + "TableModify whose row type is a single ROWCOUNT column, dropping the write's "
+              + "output_mode, so the mapping has no columns to select from");
+    }
     RelNode input = write.getInput().accept(this, context);
     final RelOptSchema relOptSchema = requireRelOptSchema();
     final RelOptTable targetTable = relOptSchema.getTableForMember(write.getNames());
@@ -1171,10 +1246,10 @@ public class SubstraitRelNodeConverter
    * inputs are compared against.
    *
    * <p>They are dropped as well where the columns of that projection are not the columns of the
-   * relation's record type, type by type. An aggregate over several grouping sets orders its
-   * grouping columns by first appearance where Calcite orders them by group key, so the two
-   * disagree on what the third column is, and binding the names by position would name columns the
-   * plan does not name.
+   * relation's record type, type by type. An aggregate over several grouping sets types its
+   * grouping-set index i32, where the GROUP_ID call standing for it is i64, so the two disagree on
+   * what the last column is and binding the names by position would name columns the plan does not
+   * name.
    *
    * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
    * them belong to the type of the expression that produces the field, which a projection cannot
@@ -1289,14 +1364,11 @@ public class SubstraitRelNodeConverter
 
   private RelNode applyRemap(RelNode relNode, Rel.Remap remap) {
     RelDataType rowType = relNode.getRowType();
-    List<String> fieldNames = rowType.getFieldNames();
+    // By index rather than by name: a virtual table's row type comes straight from its schema,
+    // which Calcite never uniquifies, so a name can stand for more than one field.
     List<RexNode> rexList =
         remap.indices().stream()
-            .map(
-                index -> {
-                  RelDataTypeField t = rowType.getField(fieldNames.get(index), true, false);
-                  return new RexInputRef(index, t.getValue());
-                })
+            .map(index -> new RexInputRef(index, rowType.getFieldList().get(index).getType()))
             .collect(java.util.stream.Collectors.toList());
     return relBuilder.push(relNode).project(rexList).build();
   }
