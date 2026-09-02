@@ -167,4 +167,35 @@ class WindowBoundConverterTest extends CalciteObjs {
 
     assertEquals(WindowBound.CURRENT_ROW, converted);
   }
+
+  @Test
+  void zeroOffsetBecomesCurrentRowEvenWhenItWouldNotFitTheDecimalOrderingType() {
+    // Regression test: a zero offset must short-circuit to CurrentRow before retyping is
+    // attempted. digitCount(0) is 1, so retyping 0 against DECIMAL(5,5) would otherwise throw
+    // (1 + scale(5) > precision(5)), even though zero always needs no representation at all.
+    RexNode offset = c(0, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.DECIMAL, 5, 5);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
+  void zeroOffsetBecomesCurrentRowEvenAgainstAnUnsupportedOrderingType() {
+    // Regression test: integralLiteralOfType has no case for TIMESTAMP, so retyping a zero offset
+    // against it would otherwise throw, even though zero always needs no representation at all.
+    RexNode offset = c(0, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.TIMESTAMP);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
 }
