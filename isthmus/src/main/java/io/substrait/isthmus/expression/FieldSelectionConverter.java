@@ -102,8 +102,7 @@ public class FieldSelectionConverter implements CallConverter {
             return Optional.empty();
           }
           if (literal instanceof Expression.NullLiteral) {
-            return Optional.of(
-                ExpressionCreator.typedNull(typeConverter.toSubstrait(call.getType())));
+            return nullIfInputCanBeDiscarded(call, input);
           }
 
           Optional<Long> index = toLong(literal);
@@ -113,8 +112,7 @@ public class FieldSelectionConverter implements CallConverter {
           // Substrait negative offsets count from the end of the list. Calcite treats an index
           // below the operator's base as out of range, including zero for one-based ITEM.
           if (index.get() < operator.offset) {
-            return Optional.of(
-                ExpressionCreator.typedNull(typeConverter.toSubstrait(call.getType())));
+            return nullIfInputCanBeDiscarded(call, input);
           }
           long offset = index.get() - operator.offset;
           if (offset > Integer.MAX_VALUE) {
@@ -144,6 +142,17 @@ public class FieldSelectionConverter implements CallConverter {
         }
     }
 
+    return Optional.empty();
+  }
+
+  private Optional<Expression> nullIfInputCanBeDiscarded(RexCall call, Expression input) {
+    // Calcite still evaluates the array operand for a null or out-of-range index. Only literals
+    // and references into an existing record are safe to omit; even deterministic calls can fail.
+    if (input instanceof Literal
+        || (input instanceof FieldReference
+            && ((FieldReference) input).inputExpression().isEmpty())) {
+      return Optional.of(ExpressionCreator.typedNull(typeConverter.toSubstrait(call.getType())));
+    }
     return Optional.empty();
   }
 
