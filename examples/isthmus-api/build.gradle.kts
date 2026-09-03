@@ -18,5 +18,3 @@ application { mainClass = "io.substrait.examples.IsthmusAppExamples" }
 tasks.named<Test>("test") { useJUnitPlatform() }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
-
-tasks.pmdMain { dependsOn(":core:shadowJar") }

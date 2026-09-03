@@ -8,6 +8,7 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.WindowBound;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
@@ -649,8 +650,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
       throws E {
     Optional<List<FunctionArg>> functionArgs =
         visitFunctionArguments(windowRelFunctionInvocation.arguments(), context);
+    Optional<WindowBound> lowerBound =
+        getExpressionCopyOnWriteVisitor()
+            .visitWindowBound(windowRelFunctionInvocation.lowerBound(), context);
+    Optional<WindowBound> upperBound =
+        getExpressionCopyOnWriteVisitor()
+            .visitWindowBound(windowRelFunctionInvocation.upperBound(), context);
 
-    if (allEmpty(functionArgs)) {
+    if (allEmpty(functionArgs, lowerBound, upperBound)) {
       return Optional.empty();
     }
 
@@ -658,6 +665,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
         ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
             .from(windowRelFunctionInvocation)
             .arguments(functionArgs.orElse(windowRelFunctionInvocation.arguments()))
+            .lowerBound(lowerBound.orElse(windowRelFunctionInvocation.lowerBound()))
+            .upperBound(upperBound.orElse(windowRelFunctionInvocation.upperBound()))
             .build());
   }
 

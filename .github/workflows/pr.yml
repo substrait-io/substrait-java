@@ -46,21 +46,21 @@ jobs:
           - isthmus-cli
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
       - name: Scan
-        run: make component=${{ matrix.project }} scan
+        run: make scan-${{ matrix.project }}
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -96,7 +96,7 @@ jobs:
         os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v7
-    - uses: actions/setup-java@v5
+    - uses: actions/setup-java@v6
       with:
         java-version: 25
         distribution: graalvm

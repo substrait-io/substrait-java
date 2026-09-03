@@ -39,9 +39,11 @@ Examples of commit messages can be seen [here](https://www.conventionalcommits.o
 
 ## Pull requests
 
-Pull requests are squash-merged, and the **PR title and description become the commit message** that `semantic-release` parses to build [`CHANGELOG.md`](CHANGELOG.md). The title is the subject and the description is the body, so the two together must form a valid conventional commit; CI checks both and comments on the PR when they don't. [`.github/pull_request_template.md`](.github/pull_request_template.md) restates that where you write the description.
+Pull requests are squash-merged, and the **PR title and description become the commit message** that `semantic-release` parses. The title is the subject and the description is the body, so the two together must form a valid conventional commit; CI checks both and comments on the PR when they don't. [`.github/pull_request_template.md`](.github/pull_request_template.md) restates that where you write the description. A maintainer can edit the body while merging, so write it as though it will be kept verbatim.
 
-Because the description is changelog input rather than a review scratchpad, leave out anything the diff and the CI checks already show:
+Only the **title** is published — as the [`CHANGELOG.md`](CHANGELOG.md) entry and in the GitHub release notes. The description reaches neither, with one exception: a `BREAKING CHANGE:` footer, whose note is emitted verbatim (see [Breaking changes](#breaking-changes)). So write the title to stand on its own. The description still matters for two other reasons — `semantic-release` scans all of it for that footer, and it is the commit body that `git log` and every reviewer reads.
+
+Keep it to what those readers need, and leave out anything the diff and the CI checks already show:
 
 * **Lists of files touched** — they are in the diff.
 * **Claims that CI-verified things pass** — "tests pass", "spotless clean". If they didn't, the checks would be red.

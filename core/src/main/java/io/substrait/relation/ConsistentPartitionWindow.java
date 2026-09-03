@@ -154,6 +154,12 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
      */
     public abstract Expression.WindowBoundsType boundsType();
 
+    /** Validates that {@code bounds_type} is set whenever a window bound requires it. */
+    @Value.Check
+    protected void check() {
+      WindowBound.checkBoundsType(boundsType(), lowerBound(), upperBound());
+    }
+
     /**
      * Creates a builder for {@link WindowRelFunctionInvocation}.
      *

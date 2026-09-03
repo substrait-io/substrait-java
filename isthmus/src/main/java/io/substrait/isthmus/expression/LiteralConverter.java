@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
@@ -58,6 +60,19 @@ public class LiteralConverter {
           .append(CALCITE_LOCAL_TIME_FORMATTER)
           .toFormatter();
 
+  /**
+   * The longest text a {@code fixedchar} literal can be padded to.
+   *
+   * <p>A Java {@link String} holds its characters in an array, and this is the largest one a JVM
+   * allocates, so a wider literal cannot be built whatever the heap. {@code String.repeat} reports
+   * that as an {@link OutOfMemoryError}, which no {@code catch (Exception)} sees and which names
+   * neither the column nor the value. A width the heap alone cannot hold still fails as one.
+   *
+   * <p>The width a fixedchar may declare is the spec's {@code [1..2147483647]}; what a plan's
+   * target engine actually supports is a dialect's answer, not this.
+   */
+  private static final int MAX_PADDED_LENGTH = Integer.MAX_VALUE - 8;
+
   private final TypeConverter typeConverter;
 
   /**
@@ -75,6 +90,86 @@ public class LiteralConverter {
 
   private static String s(RexLiteral literal) {
     return ((NlsString) literal.getValue()).getValue();
+  }
+
+  /**
+   * Builds a character literal of the Substrait type the containing conversion already produced,
+   * rather than deriving the form a second time from the Calcite type. A {@link
+   * io.substrait.isthmus.UserTypeMapper} can map a Calcite character type to any of the three, and
+   * only the first derivation consults it.
+   *
+   * <p>A mapping to something outside the character family keeps the form Calcite declares. Its
+   * type has no character literal form to build, and reaching one would need the value's encoding
+   * in that type, which {@link io.substrait.isthmus.UserTypeMapper} has no way to give.
+   *
+   * <p>Whether the literal is nullable comes from the mapped type either way, which is what the
+   * containing conversion took it from before the type reached here.
+   *
+   * @param mappedType the Substrait type the containing conversion produced
+   * @param value the literal's text
+   * @param calciteType the Calcite type the literal was declared as
+   * @return the literal
+   */
+  private static Expression.Literal characterLiteral(
+      Type mappedType, String value, RelDataType calciteType) {
+    boolean nullable = mappedType.nullable();
+    Type type =
+        mappedType instanceof Type.Str
+                || mappedType instanceof Type.VarChar
+                || mappedType instanceof Type.FixedChar
+            ? mappedType
+            : TypeConverter.DEFAULT.toSubstrait(calciteType);
+    if (type instanceof Type.Str) {
+      return ExpressionCreator.string(nullable, value);
+    }
+    if (type instanceof Type.VarChar) {
+      // Unlike a fixedchar, a varchar literal carries a length of its own, so a value shorter than
+      // it is what the type means. A value longer than it is malformed, and nothing rejects it --
+      // here or in the POJO that holds it.
+      return ExpressionCreator.varChar(nullable, value, ((Type.VarChar) type).length());
+    }
+    if (type instanceof Type.FixedChar) {
+      // A fixedchar literal carries no length of its own — Expression.FixedCharLiteral derives it
+      // from the text — so the text has to be the declared width or the two disagree. Padding is
+      // also what CHAR(n) means: 'a' in a CHAR(3) is 'a  '.
+      // In characters rather than UTF-16 code units: the spec gives a fixedchar its length in
+      // characters, where it spells a string's out in UTF-8 bytes.
+      int length = ((Type.FixedChar) type).length();
+      // Only the negative end. The spec puts a fixedchar's width in [1..2147483647], but Calcite
+      // types the empty character literal as a CHAR(0) and its DDL parser takes a CHAR(0) column,
+      // so refusing a zero width here would stop ordinary SQL converting.
+      if (length < 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                Locale.ROOT,
+                "A fixedchar cannot declare a negative width, and this one is %d",
+                length));
+      }
+      int characters = value.codePointCount(0, value.length());
+      if (characters > length) {
+        throw new IllegalArgumentException(
+            String.format(
+                Locale.ROOT,
+                "Character value '%s' is longer than the fixedchar<%d> it is declared as",
+                value,
+                length));
+      }
+      long padded = (long) value.length() + ((long) length - characters);
+      if (padded > MAX_PADDED_LENGTH) {
+        throw new IllegalArgumentException(
+            String.format(
+                Locale.ROOT,
+                "A fixedchar<%d> literal cannot be built from '%s': padding it to that width takes "
+                    + "%d UTF-16 code units, more than a Java String holds",
+                length,
+                value,
+                padded));
+      }
+      return ExpressionCreator.fixedChar(nullable, value + " ".repeat(length - characters));
+    }
+    throw new IllegalStateException(
+        String.format(
+            "A Calcite character type converted to %s, which is not a character type", type));
   }
 
   private static BigDecimal bd(RexLiteral literal) {
@@ -133,8 +228,7 @@ public class LiteralConverter {
         {
           Comparable<?> val = literal.getValue();
           if (val instanceof NlsString) {
-            NlsString nls = (NlsString) val;
-            return ExpressionCreator.fixedChar(nullable, nls.getValue());
+            return characterLiteral(type, ((NlsString) val).getValue(), resultType);
           }
           throw new UnsupportedOperationException("Unable to handle char type: " + val);
         }
@@ -151,13 +245,7 @@ public class LiteralConverter {
               nullable, bd, resultType.getPrecision(), resultType.getScale());
         }
       case VARCHAR:
-        {
-          if (resultType.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
-            return ExpressionCreator.string(nullable, s(literal));
-          }
-
-          return ExpressionCreator.varChar(nullable, s(literal), resultType.getPrecision());
-        }
+        return characterLiteral(type, s(literal), resultType);
       case BINARY:
         return ExpressionCreator.fixedBinary(
             nullable,
@@ -196,10 +284,9 @@ public class LiteralConverter {
         {
           TimeString time = literal.getValueAs(TimeString.class);
           LocalTime localTime = LocalTime.parse(time.toString(), CALCITE_LOCAL_TIME_FORMATTER);
-          // Calcite supports up to microsecond precision (6), convert nanoseconds to microseconds
-          long nanos = localTime.toNanoOfDay();
-          long micros = TimeUnit.NANOSECONDS.toMicros(nanos);
-          return ExpressionCreator.precisionTime(nullable, micros, 6);
+          int precision = TypeConverter.precisionOf(resultType);
+          return ExpressionCreator.precisionTime(
+              nullable, rescaleNanos(localTime.toNanoOfDay(), precision), precision);
         }
       case TIMESTAMP:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -207,12 +294,21 @@ public class LiteralConverter {
           TimestampString timestamp = literal.getValueAs(TimestampString.class);
           LocalDateTime localDateTime =
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
-          // Calcite supports up to microsecond precision (6)
-          long epochSeconds = localDateTime.toEpochSecond(ZoneOffset.UTC);
-          long epochMicros =
-              TimeUnit.SECONDS.toMicros(epochSeconds)
-                  + TimeUnit.NANOSECONDS.toMicros(localDateTime.getNano());
-          return ExpressionCreator.precisionTimestamp(nullable, epochMicros, 6);
+          int precision = TypeConverter.precisionOf(resultType);
+          long value =
+              localDateTime.toEpochSecond(ZoneOffset.UTC) * LongMath.pow(10, precision)
+                  + rescaleNanos(localDateTime.getNano(), precision);
+          // toEpochSecond floors, and the nanosecond part it leaves behind is always positive, so
+          // a pre-epoch timestamp narrowed to a coarser precision moves back in time rather than
+          // towards the epoch. That is what a timestamp wants — 1969-12-31 23:59:59.5 at second
+          // precision is 23:59:59 — and it is the opposite of the interval case, where the value
+          // is a duration and narrowing shortens it.
+          //
+          // The SqlTypeName below is the same one toSubstrait maps to precision_timestamp_tz, so
+          // the literal has to agree with the type its own conversion produced.
+          return resultType.getSqlTypeName() == SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE
+              ? ExpressionCreator.precisionTimestampTZ(nullable, value, precision)
+              : ExpressionCreator.precisionTimestamp(nullable, value, precision);
         }
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
@@ -302,6 +398,22 @@ public class LiteralConverter {
   public static byte[] padRightIfNeeded(
       org.apache.calcite.avatica.util.ByteString bytes, int length) {
     return padRightIfNeeded(bytes.getBytes(), length);
+  }
+
+  /**
+   * Rescales a nanosecond count to the fractional-second unit a Substrait temporal literal of the
+   * given precision is expressed in.
+   *
+   * @param nanos a non-negative nanosecond count: a whole time of day for a {@code precision_time},
+   *     the sub-second remainder for a {@code precision_timestamp}. Non-negativity is the
+   *     precondition the division relies on, since it truncates towards zero rather than flooring.
+   * @param precision the fractional-second precision of the target literal
+   * @return {@code nanos} in units of 10^-precision seconds
+   */
+  private static long rescaleNanos(long nanos, int precision) {
+    return precision >= 9
+        ? nanos * LongMath.pow(10, precision - 9)
+        : nanos / LongMath.pow(10, 9 - precision);
   }
 
   /**

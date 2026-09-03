@@ -147,17 +147,12 @@ dependencies {
 spotless { isEnforceCheck = false }
 
 tasks.register<JavaExec>("dialect") {
-  dependsOn(":core:shadowJar")
   classpath = java.sourceSets["main"].runtimeClasspath
   mainClass = "io.substrait.spark.utils.DialectGenerator"
   args = listOf("../spark_dialect.yaml")
 }
 
 tasks {
-  // Ensure shadowJar runs before compilation
-  named("compileJava") { dependsOn(":core:shadowJar") }
-  named("compileScala") { dependsOn(":core:shadowJar") }
-
   jar {
     manifest {
       from("../../core/build/generated/sources/manifest/META-INF/MANIFEST.MF")
@@ -166,7 +161,6 @@ tasks {
   }
 
   test {
-    dependsOn(":core:shadowJar")
     useJUnitPlatform { includeEngines("scalatest") }
 
     // DialectSuite reads the published dialect, so a change to it has to invalidate the tests.

@@ -3,14 +3,22 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.util.JsonFormat;
+import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.Plan;
 import java.io.IOException;
+import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
 
@@ -349,5 +357,87 @@ class SubqueryPlanTest extends PlanTestBase {
   void correlatedScalarSubQueryInSelect() throws Exception {
     String sql = asString("subquery/nested_scalar_subquery_in_select.sql");
     assertSqlSubstraitRelRoundTrip(sql);
+  }
+
+  /**
+   * A converter built without a relation visitor converts expressions that stand alone -- an
+   * extended expression among them -- so a subquery cannot be converted on it. No SQL reaches this
+   * guard today, so the converter is pinned directly.
+   */
+  @Test
+  void aSubqueryIsRejectedWhereThereIsNoRelationVisitor() {
+    RexSubQuery subQuery = RexSubQuery.scalar(builder.values(new String[] {"a"}, 1).build());
+
+    UnsupportedOperationException rejected =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                ConverterProvider.DEFAULT.getRexExpressionConverter(null).visitSubQuery(subQuery));
+    assertTrue(rejected.getMessage().contains("no relation visitor"), rejected.getMessage());
+  }
+
+  /** The same for an outer reference, which is bound by a relation there is none of here. */
+  @Test
+  void anOuterReferenceIsRejectedWhereThereIsNoRelationVisitor() {
+    RexBuilder rexBuilder = builder.getRexBuilder();
+    RexFieldAccess fieldAccess =
+        (RexFieldAccess)
+            rexBuilder.makeFieldAccess(
+                rexBuilder.makeCorrel(
+                    builder.values(new String[] {"a"}, 1).build().getRowType(),
+                    new CorrelationId(0)),
+                0);
+
+    UnsupportedOperationException rejected =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                ConverterProvider.DEFAULT
+                    .getRexExpressionConverter(null)
+                    .visitFieldAccess(fieldAccess));
+    assertTrue(rejected.getMessage().contains("no relation visitor"), rejected.getMessage());
+  }
+
+  /**
+   * The message for a call this converter cannot convert names its operands' types, and reading
+   * them off the nodes is what keeps it about the call: converting an operand again would report
+   * that operand's own failure -- a subquery where there is no relation visitor -- in place of it.
+   */
+  @Test
+  void anUnconvertibleCallWithASubqueryOperandReportsTheCall() {
+    RexBuilder rexBuilder = builder.getRexBuilder();
+    RexNode subQuery = RexSubQuery.scalar(builder.values(new String[] {"a"}, 1).build());
+    RexNode call =
+        rexBuilder.makeCall(
+            subQuery.getType(), SqlStdOperatorTable.NULLIF, java.util.List.of(subQuery, subQuery));
+
+    IllegalArgumentException reported =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> call.accept(ConverterProvider.DEFAULT.getRexExpressionConverter(null)));
+    assertTrue(reported.getMessage().startsWith("Unable to convert call"), reported.getMessage());
+  }
+
+  /**
+   * The same for a windowed call: three of the four {@link RexExpressionConverter} constructors
+   * leave the window function converter null, and a converter built by one of them names what is
+   * missing rather than dereferencing it.
+   */
+  @Test
+  void aWindowedCallIsRejectedWhereThereIsNoWindowFunctionConverter() {
+    builder.values(new String[] {"a"}, 1);
+    RexNode over =
+        builder
+            .aggregateCall(SqlStdOperatorTable.ROW_NUMBER)
+            .over()
+            .orderBy(builder.field("a"))
+            .rowsUnbounded()
+            .toRex();
+
+    UnsupportedOperationException rejected =
+        assertThrows(
+            UnsupportedOperationException.class, () -> over.accept(new RexExpressionConverter()));
+    assertTrue(
+        rejected.getMessage().contains("no window function converter"), rejected.getMessage());
   }
 }
