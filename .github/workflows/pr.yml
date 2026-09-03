@@ -52,8 +52,23 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
+      - name: Generate lockfile
+        run: make ${{ matrix.project }}/gradle.lockfile
       - name: Scan
-        run: make scan-${{ matrix.project }}
+        id: scan
+        run: |
+          docker run --rm \
+            --volume './:/src' \
+            ghcr.io/google/osv-scanner:latest \
+            scan source \
+            --config=/src/osv-scanner.toml \
+            --lockfile /src/${{ matrix.project }}/gradle.lockfile \
+            --format=markdown \
+            --output-file=/src/osv-scanner.md
+      - name: Report failure
+        if: ${{ failure() && steps.scan.conclusion == 'failure' }}
+        run: |
+          cat osv-scanner.md >> ${GITHUB_STEP_SUMMARY}
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest
