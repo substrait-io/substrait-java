@@ -52,17 +52,11 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
-      - name: Generate lockfile
-        run: make ${{ matrix.project }}/gradle.lockfile
       - name: Scan
         id: scan
-        run: |
-          make install-osv-scanner
-          ./osv-scanner scan source \
-            --config=osv-scanner.toml \
-            --lockfile=${{ matrix.project }}/gradle.lockfile \
-            --format=markdown \
-            --output-file=osv-scanner.md
+        run: make scan-${{ matrix.project }}
+        env:
+          OSV_SCANNER_ARGS: --format=markdown --output-file=osv-scanner.md
       - name: Report failure
         if: ${{ failure() && steps.scan.conclusion == 'failure' }}
         run: |
